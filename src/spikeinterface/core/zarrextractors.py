@@ -557,7 +557,7 @@ def add_traces_to_zarr(
     {}
     """
     from .job_tools import (
-        ensure_chunk_size,
+        ensure_recording_chunk_size,
         fix_job_kwargs,
         ChunkRecordingExecutor,
     )
@@ -572,7 +572,7 @@ def add_traces_to_zarr(
         dtype = recording.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    chunk_size = ensure_recording_chunk_size(recording, **job_kwargs)
 
     # create zarr datasets files
     zarr_datasets = []

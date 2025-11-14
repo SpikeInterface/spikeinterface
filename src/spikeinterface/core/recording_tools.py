@@ -12,7 +12,7 @@ import numpy as np
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (
-    ensure_chunk_size,
+    ensure_recording_chunk_size,
     ensure_n_jobs,
     divide_segment_into_chunks,
     fix_job_kwargs,
@@ -183,7 +183,7 @@ def write_binary_recording_file_handle(
         dtype = recording.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    chunk_size = ensure_recording_chunk_size(recording, **job_kwargs)
 
     if chunk_size is not None and time_axis == 1:
         print("Chunking disabled due to 'time_axis' == 1")
@@ -410,7 +410,7 @@ def write_to_h5_dataset_format(
 
     dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
 
-    chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
+    chunk_size = ensure_recording_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
         # Handle deprecated return_scaled parameter

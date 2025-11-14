@@ -94,7 +94,7 @@ from .core_tools import (
 from .job_tools import (
     get_best_job_kwargs,
     ensure_n_jobs,
-    ensure_chunk_size,
+    ensure_recording_chunk_size,
     ChunkRecordingExecutor,
     split_job_kwargs,
     fix_job_kwargs,

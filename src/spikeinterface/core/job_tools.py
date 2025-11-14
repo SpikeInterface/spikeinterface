@@ -7,7 +7,6 @@ import numpy as np
 import platform
 import os
 import warnings
-from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
 import sys
@@ -338,7 +337,7 @@ class BaseChunkExecutor:
 
     def __init__(
         self,
-        extractor: BaseExtractor,
+        extractor: "BaseExtractor",
         func,
         init_func,
         init_args,
@@ -395,7 +394,7 @@ class BaseChunkExecutor:
         self.need_worker_index = need_worker_index
 
         if verbose:
-            chunk_memory = self.get_chunk_memory(extractor)
+            chunk_memory = self.get_chunk_memory()
             total_memory = chunk_memory * self.n_jobs
             chunk_duration = self.chunk_size / extractor.sampling_frequency
             chunk_memory_str = convert_bytes_to_str(chunk_memory)
@@ -624,6 +623,7 @@ class ChunkRecordingExecutor(BaseChunkExecutor):
         max_threads_per_worker=1,
         need_worker_index=False,
     ):
+        self.recording = recording
         super().__init__(
             recording,
             func,
@@ -644,7 +644,6 @@ class ChunkRecordingExecutor(BaseChunkExecutor):
             max_threads_per_worker=max_threads_per_worker,
             need_worker_index=need_worker_index,
         )
-        self.recording = recording
 
     def run(self, recording_slices=None):
         """
@@ -653,12 +652,14 @@ class ChunkRecordingExecutor(BaseChunkExecutor):
         return super().run(slices=recording_slices)
 
     def get_chunk_memory(self):
-        return self.chunk_size * self.recording.get_dtpye().itemsize * self.recording.get_num_channels()
+        return self.chunk_size * self.recording.get_dtype().itemsize * self.recording.get_num_channels()
 
     def ensure_chunk_size(
         self, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
     ):
-        return ensure_chunk_size(total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs)
+        return ensure_recording_chunk_size(
+            self.recording, total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs
+        )
 
 
 class WorkerFuncWrapper:

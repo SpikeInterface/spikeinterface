@@ -472,12 +472,12 @@ def create_sorting_analyzer_with_existing_templates(
 
 
 def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
-    from spikeinterface.core.job_tools import ensure_chunk_size
+    from spikeinterface.core.job_tools import ensure_recording_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    chunk_size = ensure_recording_chunk_size(recording, **job_kwargs)
     recording_slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
