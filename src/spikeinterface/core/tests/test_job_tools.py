@@ -12,7 +12,7 @@ from spikeinterface.core.job_tools import (
     ChunkExecutor,
     fix_job_kwargs,
     split_job_kwargs,
-    divide_recording_into_chunks,
+    divide_extractor_into_chunks,
 )
 
 
@@ -71,7 +71,7 @@ def test_ensure_chunk_size():
 
     # Test edge case to define single chunk for n_jobs=1
     chunk_size = ensure_chunk_size(recording, n_jobs=1, chunk_size=None)
-    chunks = divide_recording_into_chunks(recording, chunk_size)
+    chunks = divide_extractor_into_chunks(recording, chunk_size)
     assert len(chunks) == recording.get_num_segments()
     for chunk in chunks:
         segment_index, start_frame, end_frame = chunk
@@ -153,7 +153,7 @@ def test_ChunkExecutor():
         job_name="job_name",
     )
     processor.run()
-    num_chunks = len(divide_recording_into_chunks(recording, processor.chunk_size))
+    num_chunks = len(divide_extractor_into_chunks(recording, processor.chunk_size))
 
     assert gathering_func2.pos == num_chunks
 

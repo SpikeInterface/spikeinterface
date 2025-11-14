@@ -217,7 +217,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def divide_recording_into_chunks(recording, chunk_size):
+def divide_extractor_into_chunks(recording, chunk_size):
     slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
@@ -481,7 +481,7 @@ class ChunkExecutor:
 
         if slices is None:
             # TODO: rename
-            slices = divide_recording_into_chunks(self.extractor, self.chunk_size)
+            slices = divide_extractor_into_chunks(self.extractor, self.chunk_size)
 
         if self.handle_returns:
             returns = []

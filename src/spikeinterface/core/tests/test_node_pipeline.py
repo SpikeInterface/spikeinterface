@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
-from spikeinterface.core.job_tools import divide_recording_into_chunks
+from spikeinterface.core.job_tools import divide_extractor_into_chunks
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core.node_pipeline import (
@@ -220,7 +220,7 @@ def test_skip_after_n_peaks_and_slices():
     assert some_amplitudes.size < spikes.size
 
     # slices : 1 every 4
-    slices = divide_recording_into_chunks(recording, 10_000)
+    slices = divide_extractor_into_chunks(recording, 10_000)
     slices = slices[::4]
     some_amplitudes = run_node_pipeline(recording, nodes, job_kwargs, gather_mode="memory", slices=slices)
     tolerance = 1.2
