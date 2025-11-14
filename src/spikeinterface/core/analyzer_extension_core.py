@@ -457,7 +457,7 @@ class ComputeTemplates(AnalyzerExtension):
             else:
                 templates = output
                 data = dict(average=templates)
-            
+
             if self.sparsity is not None:
                 # make average and std dense again
                 for k, arr in data.items():
