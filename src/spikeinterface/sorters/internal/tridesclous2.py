@@ -47,7 +47,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "svd": {"n_components": 10},
+        "svd": {"n_components": 5},
         "clustering": {
             "recursive_depth": 3,
         },

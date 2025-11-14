@@ -460,7 +460,7 @@ def clean_cache_preprocessing(cache_info):
     if cache_info is None or "mode" not in cache_info:
         return
     if cache_info["mode"] in ("folder", "zarr"):
-        shutil.rmtree(cache_info["folder"])
+        shutil.rmtree(cache_info["folder"], ignore_errors=True)
 
 
 def remove_empty_templates(templates):
