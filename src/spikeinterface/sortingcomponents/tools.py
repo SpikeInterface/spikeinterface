@@ -455,7 +455,11 @@ def create_sorting_analyzer_with_existing_templates(
     sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
+    sa.extensions["templates"].params = {
+        "ms_before": templates.ms_before,
+        "ms_after": templates.ms_after,
+        "operators": ["average", "std"],
+    }
     sa.extensions["templates"].data["average"] = templates_array
     sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
     sa.extensions["templates"].run_info["run_completed"] = True
