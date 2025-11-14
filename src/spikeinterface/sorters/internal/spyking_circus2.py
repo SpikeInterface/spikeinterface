@@ -374,6 +374,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 # this release the peak_svd memmap file
                 templates = dense_templates.to_sparse(new_sparse_mask)
 
+            # To be sure that templates have appropriate ms_before and ms_after, up to rounding
+            templates.ms_before = ms_before
+            templates.ms_after = ms_after
+
             del more_outs
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
