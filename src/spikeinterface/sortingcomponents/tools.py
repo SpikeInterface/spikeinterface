@@ -20,17 +20,22 @@ from spikeinterface.core.template_tools import get_template_extremum_channel_pea
 from spikeinterface.core.recording_tools import get_noise_levels
 
 
-def make_multi_method_doc(methods, ident="    "):
+def make_multi_method_doc(methods, indent="    "):
     doc = ""
 
     doc += "method : " + ", ".join(f"'{method.name}'" for method in methods) + "\n"
-    doc += ident + "    Method to use.\n"
+    doc += indent + "Method to use.\n"
 
     for method in methods:
         doc += "\n"
-        doc += ident + ident + f"arguments for method='{method.name}'"
+        doc += indent + indent + f"* arguments for method='{method.name}'\n"
         for line in method.params_doc.splitlines():
-            doc += ident + ident + line + "\n"
+            # add '* ' before the start of the text of each line
+            if len(line.strip()) == 0:
+                continue
+            line = line.lstrip()
+            line = "* " + line
+            doc += indent + indent + indent + line + "\n"
 
     return doc
 

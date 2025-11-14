@@ -226,19 +226,31 @@ spikeinterface.postprocessing
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
-    .. autofunction:: get_template_metric_names
     .. autofunction:: align_sorting
 
 
-spikeinterface.qualitymetrics
------------------------------
+spikeinterface.metrics
+----------------------
 
-.. automodule:: spikeinterface.qualitymetrics
+.. automodule:: spikeinterface.metrics.quality
 
     .. autofunction:: compute_quality_metrics
     .. autofunction:: get_quality_metric_list
     .. autofunction:: get_quality_pca_metric_list
-    .. autofunction:: get_default_qm_params
+    .. autofunction:: get_default_quality_metrics_params
+
+.. automodule:: spikeinterface.metrics.template
+
+    .. autofunction:: compute_template_metrics
+    .. autofunction:: get_template_metric_list
+    .. autofunction:: get_default_template_metrics_params
+    .. autofunction:: get_single_channel_template_metric_names
+    .. autofunction:: get_multi_channel_template_metric_names
+
+.. automodule:: spikeinterface.metrics.spiketrain
+
+    .. autofunction:: get_spiketrain_metric_list
+    .. autofunction:: get_default_spiketrain_metrics_params
 
 
 spikeinterface.sorters
@@ -419,7 +431,7 @@ Drift
 ~~~~~
 
 .. automodule:: spikeinterface.generation
-    :no-index:
+    :noindex:
 
     .. autofunction:: generate_drifting_recording
     .. autofunction:: generate_displacement_vector
@@ -434,7 +446,7 @@ Hybrid
 ~~~~~~
 
 .. automodule:: spikeinterface.generation
-    :no-index:
+    :noindex:
 
     .. autofunction:: generate_hybrid_recording
     .. autofunction:: estimate_templates_from_recording
@@ -451,7 +463,6 @@ Noise
 ~~~~~
 
 .. automodule:: spikeinterface.generation
-    :no-index:
 
     .. autofunction:: generate_noise
 
@@ -508,9 +519,6 @@ spikeinterface.benchmark
 .. automodule:: spikeinterface.benchmark.benchmark_peak_localization
 
     .. autoclass:: PeakLocalizationStudy
-
-.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
-
     .. autoclass:: UnitLocalizationStudy
 
 .. automodule:: spikeinterface.benchmark.benchmark_motion_estimation
