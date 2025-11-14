@@ -8,8 +8,8 @@ from spikeinterface.core import generate_recording, set_global_job_kwargs, get_g
 from spikeinterface.core.job_tools import (
     divide_segment_into_chunks,
     ensure_n_jobs,
-    ensure_recording_chunk_size,
-    ChunkRecordingExecutor,
+    ensure_chunk_size,
+    ChunkExecutor,
     fix_job_kwargs,
     split_job_kwargs,
     divide_recording_into_chunks,
@@ -43,36 +43,34 @@ def test_ensure_n_jobs():
     assert n_jobs > 1
 
 
-def test_ensure_recording_chunk_size():
+def test_ensure_chunk_size():
     recording = generate_recording(num_channels=2, durations=[5.0, 2.5])  # This is the default value for two semgents
     dtype = recording.get_dtype()
     assert dtype == "float32"
 
-    chunk_size = ensure_recording_chunk_size(
-        recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2
-    )
+    chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
     assert chunk_size == 32000000
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_memory="256M")
+    chunk_size = ensure_chunk_size(recording, chunk_memory="256M")
     assert chunk_size == 32000000
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_memory="1k")
+    chunk_size = ensure_chunk_size(recording, chunk_memory="1k")
     assert chunk_size == 125
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_memory="1G")
+    chunk_size = ensure_chunk_size(recording, chunk_memory="1G")
     assert chunk_size == 125000000
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_duration=1.5)
+    chunk_size = ensure_chunk_size(recording, chunk_duration=1.5)
     assert chunk_size == 45000
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_duration="1.5s")
+    chunk_size = ensure_chunk_size(recording, chunk_duration="1.5s")
     assert chunk_size == 45000
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_duration="500ms")
+    chunk_size = ensure_chunk_size(recording, chunk_duration="500ms")
     assert chunk_size == 15000
 
     # Test edge case to define single chunk for n_jobs=1
-    chunk_size = ensure_recording_chunk_size(recording, n_jobs=1, chunk_size=None)
+    chunk_size = ensure_chunk_size(recording, n_jobs=1, chunk_size=None)
     chunks = divide_recording_into_chunks(recording, chunk_size)
     assert len(chunks) == recording.get_num_segments()
     for chunk in chunks:
@@ -98,13 +96,13 @@ def init_func(arg1, arg2, arg3):
     return worker_dict
 
 
-def test_ChunkRecordingExecutor():
+def test_ChunkExecutor():
     recording = generate_recording(num_channels=2)
 
     init_args = "a", 120, "yep"
 
     # no chunk
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording, func, init_func, init_args, verbose=True, progress_bar=False, n_jobs=1, chunk_size=None
     )
     processor.run()
@@ -115,7 +113,7 @@ def test_ChunkRecordingExecutor():
         pass
 
     # chunk + loop + gather_func
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -141,7 +139,7 @@ def test_ChunkRecordingExecutor():
     gathering_func2 = GatherClass()
 
     # process + gather_func
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -160,7 +158,7 @@ def test_ChunkRecordingExecutor():
     assert gathering_func2.pos == num_chunks
 
     # process spawn
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -176,7 +174,7 @@ def test_ChunkRecordingExecutor():
     processor.run()
 
     # thread
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -258,7 +256,7 @@ def test_worker_index():
     for i in range(2):
         # making this 2 times ensure to test that global variables are correctly reset
         for pool_engine in ("process", "thread"):
-            processor = ChunkRecordingExecutor(
+            processor = ChunkExecutor(
                 recording,
                 func2,
                 init_func2,
@@ -321,8 +319,8 @@ def test_get_best_job_kwargs():
 if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
-    # test_ensure_recording_chunk_size()
-    # test_ChunkRecordingExecutor()
+    # test_ensure_chunk_size()
+    # test_ChunkExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
     # test_worker_index()

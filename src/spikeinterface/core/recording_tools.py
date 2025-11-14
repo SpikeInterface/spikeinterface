@@ -12,11 +12,11 @@ import numpy as np
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (
-    ensure_recording_chunk_size,
+    ensure_chunk_size,
     ensure_n_jobs,
     divide_segment_into_chunks,
     fix_job_kwargs,
-    ChunkRecordingExecutor,
+    ChunkExecutor,
     _shared_job_kwargs_doc,
     chunk_duration_to_chunk_size,
     split_job_kwargs,
@@ -53,7 +53,7 @@ def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
     return samples
 
 
-# used by write_binary_recording + ChunkRecordingExecutor
+# used by write_binary_recording + ChunkExecutor
 def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
     # create a local dict per worker
     worker_ctx = {}
@@ -97,7 +97,7 @@ def write_binary_recording(
         Offset in bytes for the binary file (e.g. to write a header). This is useful in case you want to append data
         to an existing file where you wrote a header or other data before.
     verbose : bool
-        This is the verbosity of the ChunkRecordingExecutor
+        This is the verbosity of the ChunkExecutor
     {}
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -134,13 +134,13 @@ def write_binary_recording(
     func = _write_binary_chunk
     init_func = _init_binary_worker
     init_args = (recording, file_path_dict, dtype, byte_offset)
-    executor = ChunkRecordingExecutor(
+    executor = ChunkExecutor(
         recording, func, init_func, init_args, job_name="write_binary_recording", verbose=verbose, **job_kwargs
     )
     executor.run()
 
 
-# used by write_binary_recording + ChunkRecordingExecutor
+# used by write_binary_recording + ChunkExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     recording = worker_ctx["recording"]
@@ -183,7 +183,7 @@ def write_binary_recording_file_handle(
         dtype = recording.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_recording_chunk_size(recording, **job_kwargs)
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
     if chunk_size is not None and time_axis == 1:
         print("Chunking disabled due to 'time_axis' == 1")
@@ -314,7 +314,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, buffer_type="au
     else:
         init_args = (recording, arrays, None, None, dtype)
 
-    executor = ChunkRecordingExecutor(
+    executor = ChunkExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
     )
     executor.run()
@@ -410,7 +410,7 @@ def write_to_h5_dataset_format(
 
     dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
 
-    chunk_size = ensure_recording_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
+    chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
         # Handle deprecated return_scaled parameter
@@ -465,7 +465,7 @@ def write_to_h5_dataset_format(
     return save_path
 
 
-def get_random_recording_slices(
+def get_random_slices(
     recording,
     method="full_random",
     num_chunks_per_segment=20,
@@ -517,7 +517,7 @@ def get_random_recording_slices(
             if chunk_duration is not None:
                 chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
             else:
-                raise ValueError("get_random_recording_slices need chunk_size or chunk_duration")
+                raise ValueError("get_random_slices need chunk_size or chunk_duration")
 
         # check chunk size
         num_segments = recording.get_num_segments()
@@ -531,7 +531,7 @@ def get_random_recording_slices(
                     f"Using {chunk_size}."
                 )
         rng = np.random.default_rng(seed)
-        recording_slices = []
+        slices = []
         low = margin_frames
         size = num_chunks_per_segment
         for segment_index in range(num_segments):
@@ -541,13 +541,11 @@ def get_random_recording_slices(
             # chunk, and should be inclusive
             random_starts = rng.integers(low=low, high=high, size=size, endpoint=True)
             random_starts = np.sort(random_starts)
-            recording_slices += [
-                (segment_index, start_frame, (start_frame + chunk_size)) for start_frame in random_starts
-            ]
+            slices += [(segment_index, start_frame, (start_frame + chunk_size)) for start_frame in random_starts]
     else:
-        raise ValueError(f"get_random_recording_slices : wrong method {method}")
+        raise ValueError(f"get_random_slices : wrong method {method}")
 
-    return recording_slices
+    return slices
 
 
 def get_random_data_chunks(
@@ -556,10 +554,10 @@ def get_random_data_chunks(
     """
     Extract random chunks across segments.
 
-    Internally, it uses `get_random_recording_slices()` and retrieves the traces chunk as a list
+    Internally, it uses `get_random_slices()` and retrieves the traces chunk as a list
     or a concatenated unique array.
 
-    Please read `get_random_recording_slices()` for more details on parameters.
+    Please read `get_random_slices()` for more details on parameters.
 
 
     Parameters
@@ -576,7 +574,7 @@ def get_random_data_chunks(
     concatenated : bool, default: True
         If True chunk are concatenated along time axis
     **random_slices_kwargs : dict
-        Options transmited to  get_random_recording_slices(), please read documentation from this
+        Options transmited to  get_random_slices(), please read documentation from this
         function for more details.
 
     Returns
@@ -593,10 +591,10 @@ def get_random_data_chunks(
         )
         return_in_uV = return_scaled
 
-    recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
+    slices = get_random_slices(recording, **random_slices_kwargs)
 
     chunk_list = []
-    for segment_index, start_frame, end_frame in recording_slices:
+    for segment_index, start_frame, end_frame in slices:
         traces_chunk = recording.get_traces(
             start_frame=start_frame,
             end_frame=end_frame,
@@ -725,7 +723,7 @@ def get_noise_levels(
     force_recompute : bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor
     random_slices_kwargs : dict
-        Options transmited to  get_random_recording_slices(), please read documentation from this
+        Options transmited to  get_random_slices(), please read documentation from this
         function for more details.
 
     {}
@@ -760,7 +758,7 @@ def get_noise_levels(
             msg = (
                 "get_noise_levels(recording, num_chunks_per_segment=20) is deprecated\n"
                 "Now, you need to use get_noise_levels(recording, random_slices_kwargs=dict(num_chunks_per_segment=20, chunk_size=1000))\n"
-                "Please read get_random_recording_slices() documentation for more options."
+                "Please read get_random_slices() documentation for more options."
             )
             # if the user use both the old and the new behavior then an error is raised
             assert len(random_slices_kwargs) == 0, msg
@@ -769,7 +767,7 @@ def get_noise_levels(
             if "chunk_size" in job_kwargs:
                 random_slices_kwargs["chunk_size"] = job_kwargs["chunk_size"]
 
-        recording_slices = get_random_recording_slices(recording, **random_slices_kwargs)
+        slices = get_random_slices(recording, **random_slices_kwargs)
 
         noise_levels_chunks = []
 
@@ -779,7 +777,7 @@ def get_noise_levels(
         func = _noise_level_chunk
         init_func = _noise_level_chunk_init
         init_args = (recording, return_in_uV, method)
-        executor = ChunkRecordingExecutor(
+        executor = ChunkExecutor(
             recording,
             func,
             init_func,
@@ -789,7 +787,7 @@ def get_noise_levels(
             gather_func=append_noise_chunk,
             **job_kwargs,
         )
-        executor.run(recording_slices=recording_slices)
+        executor.run(slices=slices)
         noise_levels_chunks = np.stack(noise_levels_chunks)
         noise_levels = np.mean(noise_levels_chunks, axis=0)
 

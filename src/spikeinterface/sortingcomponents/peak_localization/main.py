@@ -99,7 +99,7 @@ def localize_peaks(
         The number of milliseconds to include after the peak of the spike
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
-        like : gather_mode/folder/skip_after_n_peaks/recording_slices
+        like : gather_mode/folder/skip_after_n_peaks/slices
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict | None, default None

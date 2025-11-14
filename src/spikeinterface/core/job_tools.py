@@ -218,12 +218,12 @@ def divide_segment_into_chunks(num_frames, chunk_size):
 
 
 def divide_recording_into_chunks(recording, chunk_size):
-    recording_slices = []
+    slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
-    return recording_slices
+        slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+    return slices
 
 
 def ensure_n_jobs(extractor, n_jobs=1):
@@ -270,11 +270,11 @@ def chunk_duration_to_chunk_size(chunk_duration, recording):
     return chunk_size
 
 
-def ensure_recording_chunk_size(
-    recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
+def ensure_chunk_size(
+    extractor, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
 ):
     """
-    "chunk_size" is the traces.shape[0] for each worker.
+    "chunk_size" is the number of samples for each worker.
 
     Flexible chunk_size setter with 3 ways:
         * "chunk_size" : is the length in sample for each chunk independently of channel count and dtype.
@@ -305,24 +305,20 @@ def ensure_recording_chunk_size(
         assert total_memory is None
         # set by memory per worker size
         chunk_memory = convert_string_to_bytes(chunk_memory)
-        n_bytes = np.dtype(recording.get_dtype()).itemsize
-        num_channels = recording.get_num_channels()
-        chunk_size = int(chunk_memory / (num_channels * n_bytes))
+        chunk_size = int(chunk_memory / extractor.get_sample_size())
     elif total_memory is not None:
         # clip by total memory size
-        n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
+        n_jobs = ensure_n_jobs(extractor, n_jobs=n_jobs)
         total_memory = convert_string_to_bytes(total_memory)
-        n_bytes = np.dtype(recording.get_dtype()).itemsize
-        num_channels = recording.get_num_channels()
-        chunk_size = int(total_memory / (num_channels * n_bytes * n_jobs))
+        chunk_size = int(total_memory / (extractor.get_sample_size() * n_jobs))
     elif chunk_duration is not None:
-        chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
+        chunk_size = chunk_duration_to_chunk_size(chunk_duration, extractor)
     else:
         # Edge case to define single chunk per segment for n_jobs=1.
         # All chunking parameters equal None mean single chunk per segment
         if n_jobs == 1:
-            num_segments = recording.get_num_segments()
-            samples_in_larger_segment = max([recording.get_num_samples(segment) for segment in range(num_segments)])
+            num_segments = extractor.get_num_segments()
+            samples_in_larger_segment = max([extractor.get_num_samples(segment) for segment in range(num_segments)])
             chunk_size = samples_in_larger_segment
         else:
             raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
@@ -330,9 +326,66 @@ def ensure_recording_chunk_size(
     return chunk_size
 
 
-class BaseChunkExecutor:
+class ChunkExecutor:
     """
-    Base class for chunk execution.
+    Core class for parallel processing to run a "function" over chunks on a chunkable extractor.
+
+    It supports running a function:
+        * in loop with chunk processing (low RAM usage)
+        * at once if chunk_size is None (high RAM usage)
+        * in parallel with ProcessPoolExecutor (higher speed)
+
+    The initializer ("init_func") allows to set a global context to avoid heavy serialization
+    (for examples, see implementation in `core.waveform_tools`).
+
+    Parameters
+    ----------
+    extractor : BaseExtractor
+        The extractor to be processed.
+        It needs to implement the `get_sample_size()`, `get_num_samples()` and `get_num_segments()`
+    func : function
+        Function that runs on each chunk
+    init_func : function
+        Initializer function to set the global context (accessible by "func")
+    init_args : tuple
+        Arguments for init_func
+    verbose : bool
+        If True, output is verbose
+    job_name : str, default: ""
+        Job name
+    progress_bar : bool, default: False
+        If True, a progress bar is printed to monitor the progress of the process
+    handle_returns : bool, default: False
+        If True, the function can return values
+    gather_func : None or callable, default: None
+        Optional function that is called in the main thread and retrieves the results of each worker.
+        This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
+    pool_engine : "process" | "thread", default: "thread"
+        If n_jobs>1 then use ProcessPoolExecutor or ThreadPoolExecutor
+    n_jobs : int, default: 1
+        Number of jobs to be used. Use -1 to use as many jobs as number of cores
+    total_memory : str, default: None
+        Total memory (RAM) to use (e.g. "1G", "500M")
+    chunk_memory : str, default: None
+        Memory per chunk (RAM) to use (e.g. "1G", "500M")
+    chunk_size : int or None, default: None
+        Size of each chunk in number of samples. If "total_memory" or "chunk_memory" are used, it is ignored.
+    chunk_duration : str or float or None
+        Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
+    mp_context : "fork" | "spawn" | None, default: None
+        "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
+        "fork" is only safely available on LINUX systems.
+    max_threads_per_worker : int or None, default: None
+        Limit the number of thread per process using threadpoolctl modules.
+        This used only when n_jobs>1
+        If None, no limits.
+    need_worker_index : bool, default False
+        If True then each worker will also have a "worker_index" injected in the local worker dict.
+
+    Returns
+    -------
+    res : list
+        If "handle_returns" is True, the results for each chunk process
     """
 
     def __init__(
@@ -412,12 +465,14 @@ class BaseChunkExecutor:
             )
 
     def get_chunk_memory(self):
-        raise NotImplementedError
+        return self.chunk_size * self.extractor.get_sample_size()
 
     def ensure_chunk_size(
         self, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
     ):
-        raise NotImplementedError
+        return ensure_chunk_size(
+            self.extractor, total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs
+        )
 
     def run(self, slices=None):
         """
@@ -539,127 +594,6 @@ class BaseChunkExecutor:
                 raise ValueError("If n_jobs>1 pool_engine must be 'process' or 'thread'")
 
         return returns
-
-
-class ChunkRecordingExecutor(BaseChunkExecutor):
-    """
-    Core class for parallel processing to run a "function" over chunks on a recording.
-
-    It supports running a function:
-        * in loop with chunk processing (low RAM usage)
-        * at once if chunk_size is None (high RAM usage)
-        * in parallel with ProcessPoolExecutor (higher speed)
-
-    The initializer ("init_func") allows to set a global context to avoid heavy serialization
-    (for examples, see implementation in `core.waveform_tools`).
-
-    Parameters
-    ----------
-    recording : RecordingExtractor
-        The recording to be processed
-    func : function
-        Function that runs on each chunk
-    init_func : function
-        Initializer function to set the global context (accessible by "func")
-    init_args : tuple
-        Arguments for init_func
-    verbose : bool
-        If True, output is verbose
-    job_name : str, default: ""
-        Job name
-    progress_bar : bool, default: False
-        If True, a progress bar is printed to monitor the progress of the process
-    handle_returns : bool, default: False
-        If True, the function can return values
-    gather_func : None or callable, default: None
-        Optional function that is called in the main thread and retrieves the results of each worker.
-        This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
-    pool_engine : "process" | "thread", default: "thread"
-        If n_jobs>1 then use ProcessPoolExecutor or ThreadPoolExecutor
-    n_jobs : int, default: 1
-        Number of jobs to be used. Use -1 to use as many jobs as number of cores
-    total_memory : str, default: None
-        Total memory (RAM) to use (e.g. "1G", "500M")
-    chunk_memory : str, default: None
-        Memory per chunk (RAM) to use (e.g. "1G", "500M")
-    chunk_size : int or None, default: None
-        Size of each chunk in number of samples. If "total_memory" or "chunk_memory" are used, it is ignored.
-    chunk_duration : str or float or None
-        Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
-    mp_context : "fork" | "spawn" | None, default: None
-        "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
-        "fork" is only safely available on LINUX systems.
-    max_threads_per_worker : int or None, default: None
-        Limit the number of thread per process using threadpoolctl modules.
-        This used only when n_jobs>1
-        If None, no limits.
-    need_worker_index : bool, default False
-        If True then each worker will also have a "worker_index" injected in the local worker dict.
-
-    Returns
-    -------
-    res : list
-        If "handle_returns" is True, the results for each chunk process
-    """
-
-    def __init__(
-        self,
-        recording,
-        func,
-        init_func,
-        init_args,
-        verbose=False,
-        progress_bar=False,
-        handle_returns=False,
-        gather_func=None,
-        pool_engine="thread",
-        n_jobs=1,
-        total_memory=None,
-        chunk_size=None,
-        chunk_memory=None,
-        chunk_duration=None,
-        mp_context=None,
-        job_name="",
-        max_threads_per_worker=1,
-        need_worker_index=False,
-    ):
-        self.recording = recording
-        super().__init__(
-            recording,
-            func,
-            init_func,
-            init_args,
-            verbose=verbose,
-            progress_bar=progress_bar,
-            handle_returns=handle_returns,
-            gather_func=gather_func,
-            pool_engine=pool_engine,
-            n_jobs=n_jobs,
-            total_memory=total_memory,
-            chunk_size=chunk_size,
-            chunk_memory=chunk_memory,
-            chunk_duration=chunk_duration,
-            mp_context=mp_context,
-            job_name=job_name,
-            max_threads_per_worker=max_threads_per_worker,
-            need_worker_index=need_worker_index,
-        )
-
-    def run(self, recording_slices=None):
-        """
-        Runs the defined jobs.
-        """
-        return super().run(slices=recording_slices)
-
-    def get_chunk_memory(self):
-        return self.chunk_size * self.recording.get_dtype().itemsize * self.recording.get_num_channels()
-
-    def ensure_chunk_size(
-        self, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
-    ):
-        return ensure_recording_chunk_size(
-            self.recording, total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs
-        )
 
 
 class WorkerFuncWrapper:

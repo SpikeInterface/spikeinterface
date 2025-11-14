@@ -28,7 +28,7 @@ def find_clusters_from_peaks(
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
-        Parameters for ChunkRecordingExecutor
+        Parameters for ChunkExecutor
 
     {method_doc}
 

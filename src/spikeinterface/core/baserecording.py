@@ -184,6 +184,20 @@ class BaseRecording(BaseRecordingSnippets):
         self._recording_segments.append(recording_segment)
         recording_segment.set_parent_extractor(self)
 
+    def get_sample_size(self):
+        """
+        Returns the size of a single sample across all channels in bytes.
+
+        Returns
+        -------
+        int
+            The size of a single sample in bytes
+        """
+        num_channels = self.get_num_channels()
+        dtype_size_bytes = self.get_dtype().itemsize
+        sample_size = num_channels * dtype_size_bytes
+        return sample_size
+
     def get_num_samples(self, segment_index: int | None = None) -> int:
         """
         Returns the number of samples for a segment.

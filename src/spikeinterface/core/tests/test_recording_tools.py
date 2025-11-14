@@ -11,7 +11,7 @@ from spikeinterface.core.generate import NoiseGeneratorRecording
 from spikeinterface.core.recording_tools import (
     write_binary_recording,
     write_memory_recording,
-    get_random_recording_slices,
+    get_random_slices,
     get_random_data_chunks,
     get_chunk_with_margin,
     get_closest_channels,
@@ -168,9 +168,9 @@ def test_write_memory_recording():
         shm.unlink()
 
 
-def test_get_random_recording_slices():
+def test_get_random_slices():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0, 20.0])
-    rec_slices = get_random_recording_slices(
+    rec_slices = get_random_slices(
         rec, method="full_random", num_chunks_per_segment=20, chunk_duration="500ms", margin_frames=0, seed=0
     )
     assert len(rec_slices) == 40
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     #     test_write_binary_recording(tmp_path)
     # test_write_memory_recording()
 
-    test_get_random_recording_slices()
+    test_get_random_slices()
     # test_get_random_data_chunks()
     # test_get_closest_channels()
     # test_get_noise_levels()

@@ -225,7 +225,7 @@ def interpolate_motion_on_traces(
 
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
-        # in ChunkRecordingExecutor)
+        # in ChunkExecutor)
         np.matmul(traces[frames_in_bin], drift_kernel, out=traces_corrected[frames_in_bin])
         current_start_index = next_start_index
 
