@@ -451,40 +451,25 @@ class ComputeTemplates(AnalyzerExtension):
                 **job_kwargs,
             )
 
-            # Output of estimate_templates_with_accumulator is either (templates,) or (templates, stds)
             if return_std:
                 templates, stds = output
-                if self.sparsity is not None:
-                    dense_templates = np.zeros(
-                        (templates.shape[0], templates.shape[1], self.sorting_analyzer.get_num_channels()),
-                        dtype=templates.dtype,
-                    )
-                    dense_stds = np.zeros(
-                        (stds.shape[0], stds.shape[1], self.sorting_analyzer.get_num_channels()),
-                        dtype=stds.dtype,
-                    )
-                    for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
-                        chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
-                        dense_templates[unit_index][:, chan_inds] = templates[unit_index, :, : chan_inds.size]
-                        dense_stds[unit_index][:, chan_inds] = stds[unit_index, :, : chan_inds.size]
-
-                    self.data["average"] = dense_templates
-                    self.data["std"] = dense_stds
-                else:
-                    self.data["average"] = templates
-                    self.data["std"] = stds
+                data = dict(templates=templates, stds=stds)
             else:
-                if self.sparsity is not None:
-                    dense_output = np.zeros(
-                        (output.shape[0], output.shape[1], self.sorting_analyzer.get_num_channels()),
-                        dtype=output.dtype,
+                templates = output
+                data = dict(templates=templates)
+            
+            if self.sparsity is not None:
+                # make average and std dense again
+                for k, arr in data.items():
+                    dense_arr = np.zeros(
+                        (arr.shape[0], arr.shape[1], self.sorting_analyzer.get_num_channels()),
+                        dtype=arr.dtype,
                     )
                     for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
                         chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
-                        dense_output[unit_index][:, chan_inds] = dense_output[unit_index, :, : chan_inds.size]
-                    self.data["average"] = dense_output
-                else:
-                    self.data["average"] = output
+                        dense_arr[unit_index][:, chan_inds] = arr[unit_index, :, : chan_inds.size]
+                    data[k] = dense_arr
+            self.data.update(data)
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
