@@ -88,7 +88,10 @@ important for your research:
 
 Curation Module
 ---------------
-If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
+
+If you use the default "similarity_correlograms" preset in the :code:`compute_merge_unit_groups` method from the curation module, please cite [Llobet]_
+
+If you use the "slay" preset in the :code:`compute_merge_unit_groups` method, please cite [Koukuntla]_
 
 If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 
@@ -139,6 +142,8 @@ References
 .. [Jain] `UnitRefine: A Community Toolbox for Automated Spike Sorting Curation. 2025 <https://www.biorxiv.org/content/10.1101/2025.03.30.645770v1>`_
 
 .. [Jia] `High-density extracellular probes reveal dendritic backpropagation and facilitate neuron classification. 2019 <https://journals.physiology.org/doi/full/10.1152/jn.00680.2018>`_
+
+.. [Koukuntla] `SLAy-ing oversplitting errors in high-density electrophysiology spike sorting. 2025. <https://www.biorxiv.org/content/10.1101/2025.06.20.660590v1>`_
 
 .. [Lee] `YASS: Yet another spike sorter. 2017. <https://www.biorxiv.org/content/10.1101/151928v1>`_
 
