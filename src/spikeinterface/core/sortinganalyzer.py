@@ -1327,7 +1327,8 @@ class SortingAnalyzer:
                 raise ValueError("Merging requires at least two units to merge")
 
         # remove units which do not pass the sparsity threshold
-        if merging_mode == "soft":
+        if self.sparsity is not None and merging_mode == "soft":
+
             putative_merge_unit_groups = copy(merge_unit_groups)
             mergeable = self.are_units_mergeable(
                 putative_merge_unit_groups,
