@@ -1023,7 +1023,7 @@ class SortingAnalyzer:
                 # merge units
                 all_unit_ids = unit_ids
                 sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-                mergeable, masks = self.are_units_mergeable(
+                _, masks = self.are_units_mergeable(
                     merge_unit_groups,
                     sparsity_overlap=sparsity_overlap,
                     merging_mode=merging_mode,
@@ -1033,14 +1033,7 @@ class SortingAnalyzer:
                 for unit_index, unit_id in enumerate(all_unit_ids):
                     if unit_id in merge_new_unit_ids:
                         merge_unit_group = tuple(merge_unit_groups[merge_new_unit_ids.index(unit_id)])
-                        if not mergeable[merge_unit_group]:
-                            raise Exception(
-                                f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                                f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                                "a hard merge."
-                            )
-                        else:
-                            sparsity_mask[unit_index] = masks[merge_unit_group]
+                        sparsity_mask[unit_index] = masks[merge_unit_group]
                     else:
                         # This means that the unit is already in the previous sorting
                         index = self.sorting.id_to_index(unit_id)
@@ -1332,6 +1325,29 @@ class SortingAnalyzer:
         for units in merge_unit_groups:
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
+
+        # remove units which do not pass the sparsity threshold
+        if merging_mode == "soft":
+            putative_merge_unit_groups = copy(merge_unit_groups)
+            mergeable = self.are_units_mergeable(
+                putative_merge_unit_groups,
+                sparsity_overlap=sparsity_overlap,
+                merging_mode=merging_mode,
+                return_masks=False,
+            )
+
+            merge_unit_groups = []
+            unmergeable_unit_groups = []
+            for merge_unit_group, mergeable in zip(putative_merge_unit_groups, mergeable.values()):
+                if mergeable:
+                    merge_unit_groups.append(merge_unit_group)
+                else:
+                    unmergeable_unit_groups.append(merge_unit_group)
+
+            if len(unmergeable_unit_groups) > 0:
+                warnings.warn(
+                    f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. They will not be merged."
+                )
 
         new_unit_ids = generate_unit_ids_for_merge_group(
             self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
