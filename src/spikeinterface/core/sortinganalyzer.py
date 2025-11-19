@@ -1329,19 +1329,18 @@ class SortingAnalyzer:
         # remove units which do not pass the sparsity threshold
         if self.sparsity is not None and merging_mode == "soft":
 
-            putative_merge_unit_groups = copy(merge_unit_groups)
             mergeable = self.are_units_mergeable(
-                putative_merge_unit_groups,
+                merge_unit_groups,
                 sparsity_overlap=sparsity_overlap,
                 merging_mode=merging_mode,
                 return_masks=False,
             )
 
-            merge_unit_groups = []
+            mergeable_unit_groups = []
             unmergeable_unit_groups = []
-            for merge_unit_group, mergeable in zip(putative_merge_unit_groups, mergeable.values()):
+            for merge_unit_group, mergeable in zip(merge_unit_groups, mergeable.values()):
                 if mergeable:
-                    merge_unit_groups.append(merge_unit_group)
+                    mergeable_unit_groups.append(merge_unit_group)
                 else:
                     unmergeable_unit_groups.append(merge_unit_group)
 
@@ -1349,16 +1348,18 @@ class SortingAnalyzer:
                 warnings.warn(
                     f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. They will not be merged."
                 )
+        else:
+            mergeable_unit_groups = merge_unit_groups
 
         new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+            self.unit_ids, mergeable_unit_groups, new_unit_ids, new_id_strategy
         )
-        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, mergeable_unit_groups, new_unit_ids=new_unit_ids)
 
         new_analyzer = self._save_or_select_or_merge_or_split(
             format=format,
             folder=folder,
-            merge_unit_groups=merge_unit_groups,
+            merge_unit_groups=mergeable_unit_groups,
             unit_ids=all_unit_ids,
             censor_ms=censor_ms,
             merging_mode=merging_mode,
