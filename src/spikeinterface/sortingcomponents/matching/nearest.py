@@ -173,7 +173,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
             exclude_sweep_ms=exclude_sweep_ms,
             detect_threshold=detect_threshold,
             noise_levels=noise_levels,
-            radius_um=detection_radius_um,
+            detection_radius_um=detection_radius_um,
             neighborhood_radius_um=neighborhood_radius_um,
             sparsity_radius_um=sparsity_radius_um,
         )
