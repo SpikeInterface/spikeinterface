@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import json
 import numpy as np
 from itertools import chain
@@ -274,7 +275,7 @@ def apply_curation(
     return curated_sorting_or_analyzer
 
 
-def load_curation(curation_path):
+def load_curation(curation_path: str | Path) -> CurationModel:
     """
     Loads a curation from a local json file.
 
@@ -282,6 +283,11 @@ def load_curation(curation_path):
     ----------
     curation_path : str or Path
         The path to the curation json file
+
+    Returns
+    -------
+    curation_model : CurationModel
+        A CurationModel object
     """
     with open(curation_path) as f:
         curation_dict = json.load(f)
