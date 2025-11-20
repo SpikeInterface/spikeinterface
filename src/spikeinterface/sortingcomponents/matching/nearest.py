@@ -113,11 +113,9 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
             XB = waveforms[idx].reshape(len(idx), -1)
-            templates = self.templates_array
-            num_templates = templates.shape[0]
-
-            local_templates = self.neighborhood_mask[main_chan]
-            templates = self.templates_array[local_templates]
+            
+            (unit_inds, ) = np.nonzero(self.neighborhood_mask[main_chan])
+            templates = self.templates_array[unit_inds]
             num_templates = templates.shape[0]
             
             (chan_inds,) = np.nonzero(self.sparsity_mask[main_chan])
@@ -126,7 +124,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
             dist = cdist(XA, XB, "euclidean")
             cluster_index = np.argmin(dist, 0)
-            spikes["cluster_index"][idx] = cluster_index
+            spikes["cluster_index"][idx] = unit_inds[cluster_index]
 
         return spikes
 
