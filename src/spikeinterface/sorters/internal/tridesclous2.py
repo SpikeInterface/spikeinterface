@@ -33,7 +33,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "apply_motion_correction": False,
         "motion_correction": {"preset": "dredge_fast"},
-        "cache_preprocessing_mode" : "auto",
+        "cache_preprocessing_mode": "auto",
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
@@ -58,7 +58,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             "min_snr": 2.5,
             # "peak_shift_ms": 0.2,
-            "radius_um":100.,
+            "radius_um": 100.0,
         },
         "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
@@ -157,7 +157,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
             recording, cache_info = cache_preprocessing(
-                recording, mode=params["cache_preprocessing_mode"], folder=cache_folder, job_kwargs=job_kwargs, 
+                recording,
+                mode=params["cache_preprocessing_mode"],
+                folder=cache_folder,
+                job_kwargs=job_kwargs,
             )
 
             noise_levels = np.ones(num_chans, dtype="float32")
@@ -229,9 +232,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # preestimate the sparsity unsing peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
-        sparsity, unit_locations = compute_sparsity_from_peaks_and_label(kept_peaks, spike_vector["unit_index"],
-                                              sorting_pre_peeler.unit_ids, recording, params["templates"]["radius_um"])
-
+        sparsity, unit_locations = compute_sparsity_from_peaks_and_label(
+            kept_peaks,
+            spike_vector["unit_index"],
+            sorting_pre_peeler.unit_ids,
+            recording,
+            params["templates"]["radius_um"],
+        )
 
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
@@ -267,7 +274,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             probe=recording.get_probe(),
             is_in_uV=False,
         )
-
 
         # sparsity is a mix between radius and
         # sparsity_threshold = params["templates"]["sparsity_threshold"]
@@ -361,7 +367,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             templates.to_zarr(sorter_output_folder / "templates.zarr")
             if analyzer_final is not None:
                 analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
-
 
         # final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
         # final_spikes["sample_index"] = spikes["sample_index"]

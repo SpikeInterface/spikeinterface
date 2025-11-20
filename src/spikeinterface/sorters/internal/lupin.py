@@ -30,21 +30,22 @@ class LupinSorter(ComponentsBasedSorter):
     This sorter is composed by pieces of code and ideas stolen everywhere : yass, tridesclous, spkyking-circus, kilosort.
     It should be the best sorter we can build using spikeinterface.sortingcomponents
     """
+
     sorter_name = "lupin"
 
     _default_params = {
         "apply_preprocessing": True,
         "apply_motion_correction": False,
-        "motion_correction_preset" : "dredge_fast",
+        "motion_correction_preset": "dredge_fast",
         "clustering_ms_before": 0.3,
         "clustering_ms_after": 1.3,
-        "whitening_radius_um": 100.,
-        "detection_radius_um": 50.,
-        "features_radius_um": 75.,
-        "template_radius_um" : 100.,
+        "whitening_radius_um": 100.0,
+        "detection_radius_um": 50.0,
+        "features_radius_um": 75.0,
+        "template_radius_um": 100.0,
         "freq_min": 150.0,
         "freq_max": 7000.0,
-        "cache_preprocessing_mode" : "auto",
+        "cache_preprocessing_mode": "auto",
         "peak_sign": "neg",
         "detect_threshold": 5,
         "n_peaks_per_channel": 5000,
@@ -75,7 +76,7 @@ class LupinSorter(ComponentsBasedSorter):
         "detect_threshold": "Treshold for peak detection",
         "n_peaks_per_channel": "Number of spike per channel for clustering",
         "n_svd_components_per_channel": "Number of SVD components per channel for clustering",
-        "n_pca_features" : "Secondary PCA features reducation before local isosplit",
+        "n_pca_features": "Secondary PCA features reducation before local isosplit",
         "clustering_recursive_depth": "Clustering recussivity",
         "ms_before": "Milliseconds before the spike peak for template matching",
         "ms_after": "Milliseconds after the spike peak for template matching",
@@ -141,19 +142,29 @@ class LupinSorter(ComponentsBasedSorter):
                     if verbose:
                         print("Done correct_motion()")
 
-            recording = bandpass_filter(recording_raw, freq_min=params["freq_min"], freq_max=params["freq_max"],
-                                        ftype="bessel", filter_order=2, margin_ms=20., dtype="float32")
-                                         
+            recording = bandpass_filter(
+                recording_raw,
+                freq_min=params["freq_min"],
+                freq_max=params["freq_max"],
+                ftype="bessel",
+                filter_order=2,
+                margin_ms=20.0,
+                dtype="float32",
+            )
+
             if apply_cmr:
                 recording = common_reference(recording)
 
-            recording = whiten(recording, dtype="float32", mode="local", radius_um=params["whitening_radius_um"],
-                            #    chunk_duration="2s", 
-                            #    apply_mean=True, 
-                            #    regularize=True,
-                            #    regularize_kwargs=dict(method="LedoitWolf"),
-                               )
-
+            recording = whiten(
+                recording,
+                dtype="float32",
+                mode="local",
+                radius_um=params["whitening_radius_um"],
+                #    chunk_duration="2s",
+                #    apply_mean=True,
+                #    regularize=True,
+                #    regularize_kwargs=dict(method="LedoitWolf"),
+            )
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
@@ -172,7 +183,10 @@ class LupinSorter(ComponentsBasedSorter):
             # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
             recording, cache_info = cache_preprocessing(
-                recording, mode=params["cache_preprocessing_mode"], folder=cache_folder, job_kwargs=job_kwargs, 
+                recording,
+                mode=params["cache_preprocessing_mode"],
+                folder=cache_folder,
+                job_kwargs=job_kwargs,
             )
 
             noise_levels = get_noise_levels(recording, return_in_uV=False)
@@ -223,8 +237,6 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
 
-        
-
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
@@ -235,7 +247,6 @@ class LupinSorter(ComponentsBasedSorter):
             extra_outputs=True,
             job_kwargs=job_kwargs,
         )
-        
 
         mask = clustering_label >= 0
         kept_peaks = peaks[mask]
@@ -250,11 +261,11 @@ class LupinSorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
-
         # preestimate the sparsity unsing peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
-        sparsity, unit_locations = compute_sparsity_from_peaks_and_label(kept_peaks, spike_vector["unit_index"],
-                                              sorting_pre_peeler.unit_ids, recording, params["template_radius_um"])
+        sparsity, unit_locations = compute_sparsity_from_peaks_and_label(
+            kept_peaks, spike_vector["unit_index"], sorting_pre_peeler.unit_ids, recording, params["template_radius_um"]
+        )
 
         # Template are sparse from radius using unit_location
         nbefore = int(ms_before * sampling_frequency / 1000.0)
@@ -279,7 +290,7 @@ class LupinSorter(ComponentsBasedSorter):
             probe=recording.get_probe(),
             is_in_uV=False,
         )
-        
+
         # sparsity_threshold = params["sparsity_threshold"]
         # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=params["features_radius_um"])
         # sparsity_snr = compute_sparsity(templates_dense, method="snr", amplitude_mode="peak_to_peak",
@@ -302,7 +313,7 @@ class LupinSorter(ComponentsBasedSorter):
         pipeline_kwargs = dict(gather_mode=gather_mode)
         if gather_mode == "npy":
             pipeline_kwargs["folder"] = sorter_output_folder / "matching"
-        
+
         spikes = find_spikes_from_templates(
             recording,
             templates,
@@ -350,7 +361,6 @@ class LupinSorter(ComponentsBasedSorter):
                 analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
-
 
         del recording
         clean_cache_preprocessing(cache_info)

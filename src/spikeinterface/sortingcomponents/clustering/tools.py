@@ -97,6 +97,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_target
 
     return aligned_features, dont_have_channels
 
+
 def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.
@@ -309,4 +310,3 @@ def get_templates_from_peaks_and_svd(
     )
 
     return dense_templates, final_sparsity_mask
-

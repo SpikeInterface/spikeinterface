@@ -190,7 +190,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         elif recording_w.check_serializability("pickle"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
 
-        recording_w, cache_info = cache_preprocessing(recording_w, job_kwargs=job_kwargs, **params["cache_preprocessing"])
+        recording_w, cache_info = cache_preprocessing(
+            recording_w, job_kwargs=job_kwargs, **params["cache_preprocessing"]
+        )
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_method = params["detection"].get("method", "matched_filtering")
