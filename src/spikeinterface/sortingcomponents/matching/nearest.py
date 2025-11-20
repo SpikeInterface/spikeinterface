@@ -56,12 +56,12 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
         if neighborhood_radius_um is not None:
             from spikeinterface.core.template_tools import get_template_extremum_channel
+
             best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
             best_channels = np.array([best_channels[i] for i in templates.unit_ids])
             channel_locations = recording.get_channel_locations()
             template_distances = np.linalg.norm(
-                channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :],
-                axis=2
+                channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :], axis=2
             )
             self.neighborhood_mask = template_distances <= neighborhood_radius_um
         else:
@@ -84,11 +84,11 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         self.nafter = self.templates.nafter
         self.margin = max(self.nbefore, self.nafter)
         self.lookup_tables = {}
-        self.lookup_tables['templates'] = {}
-        self.lookup_tables['channels'] = {}
+        self.lookup_tables["templates"] = {}
+        self.lookup_tables["channels"] = {}
         for i in range(num_channels):
-            self.lookup_tables['templates'][i] = np.flatnonzero(self.neighborhood_mask[i])
-            self.lookup_tables['channels'][i] = np.flatnonzero(self.sparsity_mask[i])
+            self.lookup_tables["templates"][i] = np.flatnonzero(self.neighborhood_mask[i])
+            self.lookup_tables["channels"][i] = np.flatnonzero(self.sparsity_mask[i])
 
     def get_trace_margin(self):
         return self.margin
@@ -119,12 +119,12 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
             XB = waveforms[idx].reshape(len(idx), -1)
-            
-            unit_inds = self.lookup_tables['templates'][main_chan]
+
+            unit_inds = self.lookup_tables["templates"][main_chan]
             templates = self.templates_array[unit_inds]
             num_templates = templates.shape[0]
-            
-            chan_inds = self.lookup_tables['channels'][main_chan]
+
+            chan_inds = self.lookup_tables["channels"][main_chan]
             XA = templates[:, :, chan_inds].reshape(num_templates, -1)
             XB = waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
 
