@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 from pathlib import Path
-import json
+import warnings
 
 import numpy as np
 
@@ -326,8 +326,6 @@ def kilosort_output_to_analyzer(folder_path, compute_extras=False, unwhiten=True
     ----------
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
-    compute_extras : bool, default: False
-        Compute the extra extensions: unit_locations, correlograms, template_similarity, isi_histograms, template_metrics, quality_metrics.
     unwhiten : bool, default: True
         Unwhiten the templates computed by kilosort.
 
@@ -339,14 +337,19 @@ def kilosort_output_to_analyzer(folder_path, compute_extras=False, unwhiten=True
 
     phy_path = Path(folder_path)
 
+    guessed_kilosort_version = _guess_kilosort_version(phy_path)
+
     sorting = read_phy(phy_path)
     sampling_frequency = sorting.sampling_frequency
+
+    # kilosort occasionally contains a few spikes beyond the recording end point, which can lead
+    # to errors later. To avoid this, we pad the recording with an extra second of blank time.
     duration = sorting._sorting_segments[0]._all_spikes[-1] / sampling_frequency + 1
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
         if len(probegroup.probes) > 0:
-            raise ValueError("Found more than one probe. Multiple probes are not currently supported.")
+            warnings.warn("Found more than one probe. Selecting the first probe in ProbeGroup.")
         probe = probegroup.probes[0]
     elif (phy_path / "channel_positions.npy").is_file():
         probe = Probe(si_units="um")
@@ -372,20 +375,27 @@ def kilosort_output_to_analyzer(folder_path, compute_extras=False, unwhiten=True
     _make_locations(sorting_analyzer, phy_path)
     _make_amplitudes(sorting_analyzer, phy_path)
 
-    if compute_extras:
-        sorting_analyzer.compute(
-            {
-                "unit_locations": {},
-                "correlograms": {},
-                "template_similarity": {},
-                "isi_histograms": {},
-                "template_metrics": {"include_multi_channel_metrics": True},
-                "quality_metrics": {},
-            }
-        )
-
     sorting_analyzer._recording = None
     return sorting_analyzer
+
+
+def _guess_kilosort_version(kilosort_path) -> tuple:
+    """
+    Guesses the kilosort version based on the files which exist in folder `kilosort_path`.
+    If unknown, returns minimum guessed version.
+
+    Returns
+    -------
+    version_number : tuple
+        Version number in the form (major, minor, patch)
+    """
+
+    kilosort_log_file = Path(kilosort_path / "kilosort4.log")
+
+    if kilosort_log_file.is_file():
+        return (4, 0, 33)
+    else:
+        return (2, 0, 0)
 
 
 def _make_amplitudes(sorting_analyzer, kilosort_output_path):
