@@ -222,10 +222,6 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         waveforms = traces[spikes["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
         num_templates = len(self.templates_array)
 
-        temporal_waveforms = to_temporal_representation(waveforms)
-        projected_temporal_waveforms = self.svd_model.transform(temporal_waveforms)
-        projected_waveforms = from_temporal_representation(projected_temporal_waveforms, self.num_channels)
-
         # naively take the closest template
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
@@ -235,8 +231,12 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
             num_templates = templates.shape[0]
 
             chan_inds = self.lookup_tables["channels"][main_chan]
+            temporal_waveforms = to_temporal_representation(waveforms[idx])
+            projected_temporal_waveforms = self.svd_model.transform(temporal_waveforms)
+            projected_waveforms = from_temporal_representation(projected_temporal_waveforms, self.num_channels)
+
             XA = templates[:, :, chan_inds].reshape(num_templates, -1)
-            XB = projected_waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
+            XB = projected_waveforms[:, :, chan_inds].reshape(len(idx), -1)
 
             dist = cdist(XA, XB, "euclidean")
             cluster_index = np.argmin(dist, 0)
