@@ -38,12 +38,10 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         noise_levels=None,
         detection_radius_um=100.0,
         neighborhood_radius_um=100.0,
-        sparsity_radius_um=300.0,
+        sparsity_radius_um=100.0,
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
-
-        self.templates_array = self.templates.get_dense_templates()
 
         self.noise_levels = noise_levels
         self.abs_threholds = self.noise_levels * detect_threshold
@@ -51,12 +49,11 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance <= detection_radius_um
 
-        num_templates = len(self.templates_array)
+        num_templates = len(self.templates.unit_ids)
         num_channels = recording.get_num_channels()
 
         if neighborhood_radius_um is not None:
             from spikeinterface.core.template_tools import get_template_extremum_channel
-
             best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
             best_channels = np.array([best_channels[i] for i in templates.unit_ids])
             channel_locations = recording.get_channel_locations()
@@ -68,17 +65,20 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             self.neighborhood_mask = np.ones((num_channels, num_templates), dtype=bool)
 
         if sparsity_radius_um is not None:
-            if self.templates.are_templates_sparse():
-                self.sparsity_mask = np.zeros((num_channels, num_channels), dtype=bool)
-                for channel_index in np.arange(num_channels):
-                    mask = self.neighborhood_mask[channel_index]
-                    sub_sparsity = self.templates.sparsity.mask[mask]
-                    self.sparsity_mask[channel_index] = np.sum(sub_sparsity, axis=0) > 0
+            if not templates.are_templates_sparse():
+                from spikeinterface.core.sparsity import compute_sparsity
+                sparsity = compute_sparsity(templates, method='radius', radius_um=sparsity_radius_um)
             else:
-                self.sparsity_mask = self.channel_distance <= sparsity_radius_um
+                sparsity = templates.sparsity
+
+            self.sparsity_mask = np.zeros((num_channels, num_channels), dtype=bool)
+            for channel_index in np.arange(num_channels):
+                mask = self.neighborhood_mask[channel_index]
+                self.sparsity_mask[channel_index] = np.sum(sparsity.mask[mask], axis=0) > 0
         else:
             self.sparsity_mask = np.zeros((num_channels, num_channels), dtype=bool)
 
+        self.templates_array = self.templates.get_dense_templates()
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         self.nbefore = self.templates.nbefore
         self.nafter = self.templates.nafter
