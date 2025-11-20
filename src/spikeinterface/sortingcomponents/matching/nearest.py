@@ -78,7 +78,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
                 mask = self.neighborhood_mask[channel_index]
                 self.sparsity_mask[channel_index] = np.sum(sparsity.mask[mask], axis=0) > 0
         else:
-            self.sparsity_mask = np.zeros((num_channels, num_channels), dtype=bool)
+            self.sparsity_mask = np.ones((num_channels, num_channels), dtype=bool)
 
         self.templates_array = self.templates.get_dense_templates()
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
