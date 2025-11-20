@@ -115,8 +115,6 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         spikes["channel_index"] = peak_chan_ind
         spikes["amplitude"] = 1.0
 
-        waveforms = traces[spikes["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
-
         # naively take the closest template
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
@@ -125,9 +123,10 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             templates = self.templates_array[unit_inds]
             num_templates = templates.shape[0]
             if num_templates > 0:
+                waveforms = traces[spikes["sample_index"][idx][:, None] + np.arange(-self.nbefore, self.nafter)]
                 chan_inds = self.lookup_tables["channels"][main_chan]
                 XA = templates[:, :, chan_inds].reshape(num_templates, -1)
-                XB = waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
+                XB = waveforms[:, :, chan_inds].reshape(len(idx), -1)
 
                 dist = cdist(XA, XB, "euclidean")
                 cluster_index = np.argmin(dist, 0)
@@ -221,9 +220,6 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         spikes["channel_index"] = peak_chan_ind
         spikes["amplitude"] = 1.0
 
-        waveforms = traces[spikes["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
-        num_templates = len(self.templates_array)
-
         # naively take the closest template
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
@@ -234,7 +230,8 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
 
             if num_templates > 0:
                 chan_inds = self.lookup_tables["channels"][main_chan]
-                temporal_waveforms = to_temporal_representation(waveforms[idx])
+                waveforms = traces[spikes["sample_index"][idx][:, None] + np.arange(-self.nbefore, self.nafter)]
+                temporal_waveforms = to_temporal_representation(waveforms)
                 projected_temporal_waveforms = self.svd_model.transform(temporal_waveforms)
                 projected_waveforms = from_temporal_representation(projected_temporal_waveforms, self.num_channels)
 
