@@ -124,14 +124,16 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             unit_inds = self.lookup_tables["templates"][main_chan]
             templates = self.templates_array[unit_inds]
             num_templates = templates.shape[0]
+            if num_templates > 0:
+                chan_inds = self.lookup_tables["channels"][main_chan]
+                XA = templates[:, :, chan_inds].reshape(num_templates, -1)
+                XB = waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
 
-            chan_inds = self.lookup_tables["channels"][main_chan]
-            XA = templates[:, :, chan_inds].reshape(num_templates, -1)
-            XB = waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
-
-            dist = cdist(XA, XB, "euclidean")
-            cluster_index = np.argmin(dist, 0)
-            spikes["cluster_index"][idx] = unit_inds[cluster_index]
+                dist = cdist(XA, XB, "euclidean")
+                cluster_index = np.argmin(dist, 0)
+                spikes["cluster_index"][idx] = unit_inds[cluster_index]
+            else:
+                spikes["cluster_index"][idx] = -1  # no template for this channel
 
         return spikes
 
@@ -230,16 +232,19 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
             templates = self.svd_templates[unit_inds]
             num_templates = templates.shape[0]
 
-            chan_inds = self.lookup_tables["channels"][main_chan]
-            temporal_waveforms = to_temporal_representation(waveforms[idx])
-            projected_temporal_waveforms = self.svd_model.transform(temporal_waveforms)
-            projected_waveforms = from_temporal_representation(projected_temporal_waveforms, self.num_channels)
+            if num_templates > 0:
+                chan_inds = self.lookup_tables["channels"][main_chan]
+                temporal_waveforms = to_temporal_representation(waveforms[idx])
+                projected_temporal_waveforms = self.svd_model.transform(temporal_waveforms)
+                projected_waveforms = from_temporal_representation(projected_temporal_waveforms, self.num_channels)
 
-            XA = templates[:, :, chan_inds].reshape(num_templates, -1)
-            XB = projected_waveforms[:, :, chan_inds].reshape(len(idx), -1)
+                XA = templates[:, :, chan_inds].reshape(num_templates, -1)
+                XB = projected_waveforms[:, :, chan_inds].reshape(len(idx), -1)
 
-            dist = cdist(XA, XB, "euclidean")
-            cluster_index = np.argmin(dist, 0)
-            spikes["cluster_index"][idx] = unit_inds[cluster_index]
+                dist = cdist(XA, XB, "euclidean")
+                cluster_index = np.argmin(dist, 0)
+                spikes["cluster_index"][idx] = unit_inds[cluster_index]
+            else:
+                spikes["cluster_index"][idx] = -1  # no template for this channel
 
         return spikes
