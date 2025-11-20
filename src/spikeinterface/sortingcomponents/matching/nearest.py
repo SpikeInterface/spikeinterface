@@ -37,7 +37,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         detect_threshold=5,
         noise_levels=None,
         detection_radius_um=100.0,
-        neighborhood_radius_um=100.0,
+        neighborhood_radius_um=50.0,
         sparsity_radius_um=100.0,
     ):
 
@@ -163,8 +163,8 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         detect_threshold=5,
         noise_levels=None,
         detection_radius_um=100.0,
-        neighborhood_radius_um=100.0,
-        sparsity_radius_um=300.0,
+        neighborhood_radius_um=50.0,
+        sparsity_radius_um=100.0,
     ):
 
         NearestTemplatesPeeler.__init__(
