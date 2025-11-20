@@ -118,8 +118,8 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         # naively take the closest template
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
-                        
-            unit_inds = self.lookup_tables['templates'][main_chan]
+
+            unit_inds = self.lookup_tables["templates"][main_chan]
             templates = self.templates_array[unit_inds]
             num_templates = templates.shape[0]
 
@@ -227,12 +227,12 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         # naively take the closest template
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
-            
-            unit_inds = self.lookup_tables['templates'][main_chan]
+
+            unit_inds = self.lookup_tables["templates"][main_chan]
             templates = self.svd_templates[unit_inds]
             num_templates = templates.shape[0]
-            
-            chan_inds = self.lookup_tables['channels'][main_chan]
+
+            chan_inds = self.lookup_tables["channels"][main_chan]
             XA = templates[:, :, chan_inds].reshape(num_templates, -1)
             XB = projected_waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
 
