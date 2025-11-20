@@ -36,7 +36,9 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         exclude_sweep_ms=0.1,
         detect_threshold=5,
         noise_levels=None,
-        radius_um=100.0,
+        detection_radius_um=100.0,
+        neighborhood_radius_um=100.0,
+        sparsity_radius_um=300.0,
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
@@ -46,8 +48,37 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         self.noise_levels = noise_levels
         self.abs_threholds = self.noise_levels * detect_threshold
         self.peak_sign = peak_sign
-        channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = channel_distance <= radius_um
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance <= detection_radius_um
+
+        num_templates = len(self.templates_array)
+        num_channels = recording.get_num_channels()
+
+        if neighborhood_radius_um is not None:
+            from spikeinterface.core.template_tools import get_template_extremum_channel
+            best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
+            best_channels = np.array([best_channels[i] for i in templates.unit_ids])
+            channel_locations = recording.get_channel_locations()
+            template_distances = np.linalg.norm(
+                channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :],
+                axis=2
+            )
+            self.neighborhood_mask = template_distances <= neighborhood_radius_um
+        else:
+            self.neighborhood_mask = np.ones((num_channels, num_templates), dtype=bool)
+
+        if sparsity_radius_um is not None:
+            if self.templates.are_templates_sparse():
+                self.sparsity_mask = np.zeros((num_channels, num_channels), dtype=bool)
+                for channel_index in np.arange(num_channels):
+                    mask = self.neighborhood_mask[channel_index]
+                    sub_sparsity = self.templates.sparsity.mask[mask]
+                    self.sparsity_mask[channel_index] = np.sum(sub_sparsity, axis=0) > 0
+            else:
+                self.sparsity_mask = self.channel_distance <= sparsity_radius_um
+        else:
+            self.sparsity_mask = np.zeros((num_channels, num_channels), dtype=bool)
+
         self.exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         self.nbefore = self.templates.nbefore
         self.nafter = self.templates.nafter
@@ -77,13 +108,22 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         spikes["amplitude"] = 1.0
 
         waveforms = traces[spikes["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
-        num_templates = len(self.templates_array)
-        XA = self.templates_array.reshape(num_templates, -1)
 
         # naively take the closest template
         for main_chan in np.unique(spikes["channel_index"]):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
             XB = waveforms[idx].reshape(len(idx), -1)
+            templates = self.templates_array
+            num_templates = templates.shape[0]
+
+            local_templates = self.neighborhood_mask[main_chan]
+            templates = self.templates_array[local_templates]
+            num_templates = templates.shape[0]
+            
+            (chan_inds,) = np.nonzero(self.sparsity_mask[main_chan])
+            XA = templates[:, :, chan_inds].reshape(num_templates, -1)
+            XB = waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
+
             dist = cdist(XA, XB, "euclidean")
             cluster_index = np.argmin(dist, 0)
             spikes["cluster_index"][idx] = cluster_index
