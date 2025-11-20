@@ -83,6 +83,12 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         self.nbefore = self.templates.nbefore
         self.nafter = self.templates.nafter
         self.margin = max(self.nbefore, self.nafter)
+        self.lookup_tables = {}
+        self.lookup_tables['templates'] = {}
+        self.lookup_tables['channels'] = {}
+        for i in range(num_channels):
+            self.lookup_tables['templates'][i] = np.flatnonzero(self.neighborhood_mask[i])
+            self.lookup_tables['channels'][i] = np.flatnonzero(self.sparsity_mask[i])
 
     def get_trace_margin(self):
         return self.margin
@@ -114,11 +120,11 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             (idx,) = np.nonzero(spikes["channel_index"] == main_chan)
             XB = waveforms[idx].reshape(len(idx), -1)
             
-            (unit_inds, ) = np.nonzero(self.neighborhood_mask[main_chan])
+            unit_inds = self.lookup_tables['templates'][main_chan]
             templates = self.templates_array[unit_inds]
             num_templates = templates.shape[0]
             
-            (chan_inds,) = np.nonzero(self.sparsity_mask[main_chan])
+            chan_inds = self.lookup_tables['channels'][main_chan]
             XA = templates[:, :, chan_inds].reshape(num_templates, -1)
             XB = waveforms[idx][:, :, chan_inds].reshape(len(idx), -1)
 
