@@ -57,7 +57,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "max_spikes_per_unit": 400,
             "sparsity_threshold": 1.5,
             "min_snr": 2.5,
-            # "peak_shift_ms": 0.2,
             "radius_um": 100.0,
         },
         "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
@@ -85,7 +84,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.10"
+        return "2025.11"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -203,9 +202,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
         #        )
 
-        # whitenning do not improve in tdc2
-        # recording_w = whiten(recording, mode="global")
-
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording,
             peaks,
@@ -254,16 +250,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             sparsity_mask=sparsity.mask,
             **job_kwargs,
         )
-        # templates_dense = Templates(
-        #     templates_array=templates_array,
-        #     sampling_frequency=sampling_frequency,
-        #     nbefore=nbefore,
-        #     channel_ids=recording_for_peeler.channel_ids,
-        #     unit_ids=sorting_pre_peeler.unit_ids,
-        #     sparsity_mask=None,
-        #     probe=recording_for_peeler.get_probe(),
-        #     is_in_uV=False,
-        # )
+
         templates = Templates(
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
@@ -274,29 +261,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             probe=recording.get_probe(),
             is_in_uV=False,
         )
-
-        # sparsity is a mix between radius and
-        # sparsity_threshold = params["templates"]["sparsity_threshold"]
-        # radius_um = params["waveforms"]["radius_um"]
-        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
-        # sparsity_snr = compute_sparsity(
-        #     templates_dense,
-        #     method="snr",
-        #     amplitude_mode="peak_to_peak",
-        #     noise_levels=noise_levels,
-        #     threshold=sparsity_threshold,
-        # )
-        # sparsity.mask = sparsity.mask & sparsity_snr.mask
-        # templates = templates_dense.to_sparse(sparsity)
-
-        # templates = clean_templates(
-        #     templates,
-        #     sparsify_threshold=None,
-        #     noise_levels=noise_levels,
-        #     min_snr=params["templates"]["min_snr"],
-        #     max_jitter_ms=None,
-        #     remove_empty=True,
-        # )
 
         # this spasify more
         templates = clean_templates(
@@ -333,7 +297,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
-        ## DEBUG auto merge
         auto_merge = True
         analyzer_final = None
         if auto_merge:
@@ -367,12 +330,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             templates.to_zarr(sorter_output_folder / "templates.zarr")
             if analyzer_final is not None:
                 analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
-
-        # final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
-        # final_spikes["sample_index"] = spikes["sample_index"]
-        # final_spikes["unit_index"] = spikes["cluster_index"]
-        # final_spikes["segment_index"] = spikes["segment_index"]
-        # sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 

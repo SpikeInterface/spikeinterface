@@ -50,7 +50,7 @@ class LupinSorter(ComponentsBasedSorter):
         "detect_threshold": 5,
         "n_peaks_per_channel": 5000,
         "n_svd_components_per_channel": 5,
-        "n_pca_features": 3,
+        "n_pca_features": 4,
         "clustering_recursive_depth": 3,
         "ms_before": 1.0,
         "ms_after": 2.5,
@@ -160,10 +160,6 @@ class LupinSorter(ComponentsBasedSorter):
                 dtype="float32",
                 mode="local",
                 radius_um=params["whitening_radius_um"],
-                #    chunk_duration="2s",
-                #    apply_mean=True,
-                #    regularize=True,
-                #    regularize_kwargs=dict(method="LedoitWolf"),
             )
 
             if params["apply_motion_correction"]:
@@ -290,13 +286,6 @@ class LupinSorter(ComponentsBasedSorter):
             probe=recording.get_probe(),
             is_in_uV=False,
         )
-
-        # sparsity_threshold = params["sparsity_threshold"]
-        # sparsity = compute_sparsity(templates_dense, method="radius", radius_um=params["features_radius_um"])
-        # sparsity_snr = compute_sparsity(templates_dense, method="snr", amplitude_mode="peak_to_peak",
-        #                                 noise_levels=noise_levels, threshold=sparsity_threshold)
-        # sparsity.mask = sparsity.mask & sparsity_snr.mask
-        # templates = templates_dense.to_sparse(sparsity)
 
         # this spasify more
         templates = clean_templates(
