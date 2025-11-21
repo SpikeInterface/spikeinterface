@@ -305,12 +305,12 @@ def ensure_chunk_size(
         assert total_memory is None
         # set by memory per worker size
         chunk_memory = convert_string_to_bytes(chunk_memory)
-        chunk_size = int(chunk_memory / extractor.get_sample_size())
+        chunk_size = int(chunk_memory / extractor.get_sample_size_in_bytes())
     elif total_memory is not None:
         # clip by total memory size
         n_jobs = ensure_n_jobs(extractor, n_jobs=n_jobs)
         total_memory = convert_string_to_bytes(total_memory)
-        chunk_size = int(total_memory / (extractor.get_sample_size() * n_jobs))
+        chunk_size = int(total_memory / (extractor.get_sample_size_in_bytes() * n_jobs))
     elif chunk_duration is not None:
         chunk_size = chunk_duration_to_chunk_size(chunk_duration, extractor)
     else:
@@ -342,7 +342,7 @@ class ChunkExecutor:
     ----------
     extractor : BaseExtractor
         The extractor to be processed.
-        It needs to implement the `get_sample_size()`, `get_num_samples()` and `get_num_segments()`
+        It needs to implement the `get_sample_size_in_bytes()`, `get_num_samples()` and `get_num_segments()`
     func : function
         Function that runs on each chunk
     init_func : function
@@ -465,7 +465,7 @@ class ChunkExecutor:
             )
 
     def get_chunk_memory(self):
-        return self.chunk_size * self.extractor.get_sample_size()
+        return self.chunk_size * self.extractor.get_sample_size_in_bytes()
 
     def ensure_chunk_size(
         self, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
