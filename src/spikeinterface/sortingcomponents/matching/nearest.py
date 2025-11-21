@@ -69,7 +69,9 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             if not templates.are_templates_sparse():
                 from spikeinterface.core.sparsity import compute_sparsity
 
-                sparsity = compute_sparsity(templates, method="radius", radius_um=sparsity_radius_um, peak_sign=self.peak_sign)
+                sparsity = compute_sparsity(
+                    templates, method="radius", radius_um=sparsity_radius_um, peak_sign=self.peak_sign
+                )
             else:
                 sparsity = templates.sparsity
 
