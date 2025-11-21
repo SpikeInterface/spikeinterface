@@ -308,6 +308,7 @@ def isosplit(
 
         with warnings.catch_warnings():
             # sometimes the kmeans do not found enought cluster which should not be an issue
+            warnings.simplefilter("ignore")
             _, labels = kmeans2(X, n_init, minit="points", seed=seed)
 
         labels = ensure_continuous_labels(labels)
@@ -339,6 +340,21 @@ def isosplit(
         clusters_changed_vec_in_pass = np.zeros(n_cluster_init, dtype="bool")
 
         iteration_number = 0
+
+        # import matplotlib.pyplot as plt
+        # fig, axs = plt.subplots(ncols=2)
+        # # cmap = plt.colormaps['nipy_spectral'].resampled(active_labels.size)
+        # cmap = plt.colormaps['nipy_spectral'].resampled(n_init)
+        # # colors = {l: cmap(i) for i, l in enumerate(active_labels)}
+        # colors = {i: cmap(i) for i in range(n_init)}
+        # ax = axs[0]
+        # ax.scatter(X[:, 0], X[:, 1], c=labels, cmap='nipy_spectral', s=4)
+        # ax.set_title(f'n={X.shape[0]} c={active_labels.size} n_init={n_init} min_cluster_size={min_cluster_size} final_pass={final_pass}')
+        # ax = axs[1]
+        # for i, l in enumerate(active_labels):
+        #     mask = labels == l
+        #     ax.plot(X[mask, :].T, color=colors[l], alpha=0.4)
+        # plt.show()
 
         while True:  # iterations
             iteration_number += 1
@@ -585,8 +601,10 @@ if HAVE_NUMBA:
             (inds2,) = np.nonzero(labels == label2)
 
             if (inds1.size > 0) and (inds2.size > 0):
-                if (inds1.size < min_cluster_size) and (inds2.size < min_cluster_size):
+                # if (inds1.size < min_cluster_size) and (inds2.size < min_cluster_size):
+                if (inds1.size < min_cluster_size) or (inds2.size < min_cluster_size):
                     do_merge = True
+                    # do_merge = False
                 else:
                     X1 = X[inds1, :]
                     X2 = X[inds2, :]
@@ -615,7 +633,8 @@ if HAVE_NUMBA:
                     (modified_inds2,) = np.nonzero(L12[inds1.size :] == 1)
 
                     # protect against pure swaping between label1<>label2
-                    pure_swaping = modified_inds1.size != inds1.size and modified_inds2.size != inds2.size
+                    # pure_swaping = modified_inds1.size == inds1.size and modified_inds2.size == inds2.size
+                    pure_swaping = (modified_inds1.size / inds1.size + modified_inds2.size / inds2.size) >= 1.0
 
                     if modified_inds1.size > 0 and not pure_swaping:
                         something_was_redistributed = True

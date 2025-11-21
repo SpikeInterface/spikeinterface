@@ -188,13 +188,8 @@ class ModelBasedClassification:
                     else:
                         warnings.warn(warning_message)
 
-    def _export_to_phy(self, classified_units):
+    def _export_to_phy(self, classified_df):
         """Export the classified units to Phy as cluster_prediction.tsv file"""
-
-        import pandas as pd
-
-        # Create a new DataFrame with unit_id, prediction, and probability columns from dict {unit_id: (prediction, probability)}
-        classified_df = pd.DataFrame.from_dict(classified_units, orient="index", columns=["prediction", "probability"])
 
         # Export to Phy format
         try:
