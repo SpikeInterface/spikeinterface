@@ -107,16 +107,16 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
 
+        local_mask = ~np.isin(all_new_unit_ids, new_unit_ids)
+        sub_units_ids = all_new_unit_ids[local_mask]
+        sub_units_inds = np.flatnonzero(local_mask)
+        old_units_inds = self.sorting_analyzer.sorting.ids_to_indices(sub_units_ids)
+
         # copy old similarity
-        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
-            if unit_id1 not in new_unit_ids:
-                old_ind1 = self.sorting_analyzer.sorting.id_to_index(unit_id1)
-                for unit_ind2, unit_id2 in enumerate(all_new_unit_ids):
-                    if unit_id2 not in new_unit_ids:
-                        old_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
-                        s = self.data["similarity"][old_ind1, old_ind2]
-                        similarity[unit_ind1, unit_ind2] = s
-                        similarity[unit_ind1, unit_ind2] = s
+        for old_ind1, unit_ind1 in zip(old_units_inds, sub_units_inds):
+            s = self.data["similarity"][old_ind1, old_units_inds]
+            similarity[unit_ind1, sub_units_inds] = s
+            similarity[sub_units_inds, unit_ind1] = s
 
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
@@ -316,9 +316,14 @@ if HAVE_NUMBA:
                         sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
                 elif support == "union":
+                    connected_mask = np.logical_and(sparsity_mask[i, :], other_sparsity_mask)
+                    not_connected_mask = np.sum(connected_mask, axis=1) == 0
                     local_mask = np.logical_or(
                         sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
+                    for local_i in np.flatnonzero(not_connected_mask):
+                        local_mask[local_i] = False
+
                 elif support == "dense":
                     local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
 
@@ -383,7 +388,11 @@ def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsi
     if support == "intersection":
         mask = np.logical_and(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
     elif support == "union":
+        connected_mask = np.logical_and(sparsity[template_index, :], other_sparsity)
+        not_connected_mask = np.sum(connected_mask, axis=1) == 0
         mask = np.logical_or(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
+        for i in np.flatnonzero(not_connected_mask):
+            mask[i] = False
     elif support == "dense":
         mask = np.ones(other_sparsity.shape, dtype=bool)
     return mask

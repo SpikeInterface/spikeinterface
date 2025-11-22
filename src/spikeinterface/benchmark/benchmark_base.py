@@ -431,7 +431,7 @@ class BenchmarkStudy:
             if verbose:
                 print("### Compute result", key, "###")
             benchmark = self.benchmarks[key]
-            assert benchmark is not None
+            assert benchmark is not None, f"Benchmkark for key {key} has not been run yet!"
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
