@@ -71,6 +71,11 @@ def export_to_phy(
     {}
 
     """
+    warnings.warn(
+        "Phy is an unmaintined project and its use is discouraged. "
+        "We recommend using the SpikeInterface GUI instead: https://spikeinterface-gui.readthedocs.io/en/latest/",
+        DeprecationWarning,
+    )
     import pandas as pd
 
     assert isinstance(sorting_analyzer, SortingAnalyzer), "sorting_analyzer must be a SortingAnalyzer object"
@@ -224,10 +229,12 @@ def export_to_phy(
     if compute_pc_features:
         if not sorting_analyzer.has_extension("principal_components"):
             sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
+        if not sorting_analyzer.has_extension("full_pca_projections"):
+            sorting_analyzer.compute("full_pca_projections", **job_kwargs)
 
-        pca_extension = sorting_analyzer.get_extension("principal_components")
-
-        pca_extension.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)
+        full_pca_extension = sorting_analyzer.get_extension("full_pca_projections")
+        full_projections = full_pca_extension.get_data()
+        np.save(str(output_folder / "pc_features.npy"), full_projections)
 
         max_num_channels_pc = max(len(chan_inds) for chan_inds in used_sparsity.unit_id_to_channel_indices.values())
         pc_feature_ind = -np.ones((len(unit_ids), max_num_channels_pc), dtype="int64")

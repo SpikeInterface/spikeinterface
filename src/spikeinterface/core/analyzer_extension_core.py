@@ -746,8 +746,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     **kwargs : dict
         Additional parameters for the `spikeinterface.get_noise_levels()` function
 
@@ -763,9 +761,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, **noise_level_params):
         params = noise_level_params.copy()
@@ -830,6 +825,13 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     def _run(self, verbose=False, **job_kwargs):
         from spikeinterface.core.node_pipeline import run_node_pipeline
 
+        # if self.sorting_analyzer.format == "binary_folder":
+        #     gather_mode = "npy"
+        #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
+        #     gather_kwargs = {"folder": extension_folder}
+        gather_mode = "memory"
+        gather_kwargs = {}
+
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
         data = run_node_pipeline(
@@ -837,7 +839,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             nodes,
             job_kwargs=job_kwargs,
             job_name=self.extension_name,
-            gather_mode="memory",
+            gather_mode=gather_mode,
+            gather_kwargs=gather_kwargs,
             verbose=False,
         )
         if isinstance(data, tuple):

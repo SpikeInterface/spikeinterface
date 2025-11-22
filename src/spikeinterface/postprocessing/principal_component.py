@@ -15,7 +15,7 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 
-from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, BaseSpikeVectorExtension
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -27,8 +27,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     n_components : int, default: 5
         Number of components fo PCA
     mode : "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
@@ -58,8 +56,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     >>> pca_model = ext_pca.get_pca_model()
     >>> # compute projections on new waveforms
     >>> proj_new = ext_pca.project_new(new_waveforms)
-    >>> # run for all spikes in the SortingExtractor
-    >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
 
     extension_name = "principal_components"
@@ -70,9 +66,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,
@@ -354,75 +347,75 @@ class ComputePrincipalComponents(AnalyzerExtension):
     def _get_data(self):
         return self.data["pca_projection"]
 
-    def run_for_all_spikes(self, file_path=None, verbose=False, **job_kwargs):
-        """
-        Project all spikes from the sorting on the PCA model.
-        This is a long computation because waveform need to be extracted from each spikes.
+    # def run_for_all_spikes(self, file_path=None, verbose=False, **job_kwargs):
+    #     """
+    #     Project all spikes from the sorting on the PCA model.
+    #     This is a long computation because waveform need to be extracted from each spikes.
 
-        Used mainly for `export_to_phy()`
+    #     Used mainly for `export_to_phy()`
 
-        PCs are exported to a .npy single file.
+    #     PCs are exported to a .npy single file.
 
-        Parameters
-        ----------
-        file_path : str or Path or None
-            Path to npy file that will store the PCA projections.
-        {}
-        """
+    #     Parameters
+    #     ----------
+    #     file_path : str or Path or None
+    #         Path to npy file that will store the PCA projections.
+    #     {}
+    #     """
 
-        job_kwargs = fix_job_kwargs(job_kwargs)
-        p = self.params
-        sorting_analyzer = self.sorting_analyzer
-        sorting = sorting_analyzer.sorting
-        assert (
-            sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording()
-        ), "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
-        recording = sorting_analyzer.recording
+    #     job_kwargs = fix_job_kwargs(job_kwargs)
+    #     p = self.params
+    #     sorting_analyzer = self.sorting_analyzer
+    #     sorting = sorting_analyzer.sorting
+    #     assert (
+    #         sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording()
+    #     ), "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+    #     recording = sorting_analyzer.recording
 
-        # assert sorting.get_num_segments() == 1
-        assert p["mode"] in ("by_channel_local", "by_channel_global")
+    #     # assert sorting.get_num_segments() == 1
+    #     assert p["mode"] in ("by_channel_local", "by_channel_global")
 
-        assert file_path is not None
-        file_path = Path(file_path)
+    #     assert file_path is not None
+    #     file_path = Path(file_path)
 
-        sparsity = self.sorting_analyzer.sparsity
-        if sparsity is None:
-            num_channels = recording.get_num_channels()
-            sparse_channels_indices = {unit_id: np.arange(num_channels) for unit_id in sorting_analyzer.unit_ids}
-            max_channels_per_template = num_channels
-        else:
-            sparse_channels_indices = sparsity.unit_id_to_channel_indices
-            max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
+    #     sparsity = self.sorting_analyzer.sparsity
+    #     if sparsity is None:
+    #         num_channels = recording.get_num_channels()
+    #         sparse_channels_indices = {unit_id: np.arange(num_channels) for unit_id in sorting_analyzer.unit_ids}
+    #         max_channels_per_template = num_channels
+    #     else:
+    #         sparse_channels_indices = sparsity.unit_id_to_channel_indices
+    #         max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
 
-        unit_channels = [sparse_channels_indices[unit_id] for unit_id in sorting.unit_ids]
+    #     unit_channels = [sparse_channels_indices[unit_id] for unit_id in sorting.unit_ids]
 
-        pca_model = self.get_pca_model()
-        if p["mode"] in ["by_channel_global", "concatenated"]:
-            pca_model = [pca_model] * recording.get_num_channels()
+    #     pca_model = self.get_pca_model()
+    #     if p["mode"] in ["by_channel_global", "concatenated"]:
+    #         pca_model = [pca_model] * recording.get_num_channels()
 
-        num_spikes = sorting.to_spike_vector().size
-        shape = (num_spikes, p["n_components"], max_channels_per_template)
-        all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
-        all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
+    #     num_spikes = sorting.to_spike_vector().size
+    #     shape = (num_spikes, p["n_components"], max_channels_per_template)
+    #     all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
+    #     all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
-        waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
+    #     waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
 
-        # and run
-        func = _all_pc_extractor_chunk
-        init_func = _init_work_all_pc_extractor
-        init_args = (
-            recording,
-            sorting.to_multiprocessing(job_kwargs["n_jobs"]),
-            all_pcs_args,
-            waveforms_ext.nbefore,
-            waveforms_ext.nafter,
-            unit_channels,
-            pca_model,
-        )
-        processor = ChunkRecordingExecutor(
-            recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
-        )
-        processor.run()
+    #     # and run
+    #     func = _all_pc_extractor_chunk
+    #     init_func = _init_work_all_pc_extractor
+    #     init_args = (
+    #         recording,
+    #         sorting.to_multiprocessing(job_kwargs["n_jobs"]),
+    #         all_pcs_args,
+    #         waveforms_ext.nbefore,
+    #         waveforms_ext.nafter,
+    #         unit_channels,
+    #         pca_model,
+    #     )
+    #     processor = ChunkRecordingExecutor(
+    #         recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
+    #     )
+    #     processor.run()
 
     def _fit_by_channel_local(self, n_jobs, progress_bar, max_threads_per_worker, mp_context):
         from sklearn.decomposition import IncrementalPCA
@@ -610,81 +603,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         return self._get_slice_waveforms(unit_id, some_spikes, some_waveforms)
 
 
-def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    recording = worker_ctx["recording"]
-    all_pcs = worker_ctx["all_pcs"]
-    spike_times = worker_ctx["spike_times"]
-    spike_labels = worker_ctx["spike_labels"]
-    nbefore = worker_ctx["nbefore"]
-    nafter = worker_ctx["nafter"]
-    unit_channels = worker_ctx["unit_channels"]
-    pca_model = worker_ctx["pca_model"]
-
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
-    i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
-
-    if i0 != i1:
-        # protect from spikes on border :  spike_time<0 or spike_time>seg_size
-        # usefull only when max_spikes_per_unit is not None
-        # waveform will not be extracted and a zeros will be left in the memmap file
-        while (spike_times[i0] - nbefore) < 0 and (i0 != i1):
-            i0 = i0 + 1
-        while (spike_times[i1 - 1] + nafter) > seg_size and (i0 != i1):
-            i1 = i1 - 1
-
-    if i0 == i1:
-        return
-
-    start = int(spike_times[i0] - nbefore)
-    end = int(spike_times[i1 - 1] + nafter)
-    traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
-
-    for i in range(i0, i1):
-        st = spike_times[i]
-        if st - start - nbefore < 0:
-            continue
-        if st - start + nafter > traces.shape[0]:
-            continue
-
-        wf = traces[st - start - nbefore : st - start + nafter, :]
-
-        unit_index = spike_labels[i]
-        chan_inds = unit_channels[unit_index]
-
-        for c, chan_ind in enumerate(chan_inds):
-            w = wf[:, chan_ind]
-            if w.size > 0:
-                w = w[None, :]
-                try:
-                    all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
-                except:
-                    # this could happen if len(wfs) is less then n_comp for a channel
-                    pass
-
-
-def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["sorting"] = sorting
-
-    spikes = sorting.to_spike_vector(concatenated=False)
-    # This is the first segment only
-    spikes = spikes[0]
-    spike_times = spikes["sample_index"]
-    spike_labels = spikes["unit_index"]
-
-    worker_ctx["all_pcs"] = np.lib.format.open_memmap(**all_pcs_args)
-    worker_ctx["spike_times"] = spike_times
-    worker_ctx["spike_labels"] = spike_labels
-    worker_ctx["nbefore"] = nbefore
-    worker_ctx["nafter"] = nafter
-    worker_ctx["unit_channels"] = unit_channels
-    worker_ctx["pca_model"] = pca_model
-
-    return worker_ctx
-
-
 ComputePrincipalComponents.__doc__.format(_shared_job_kwargs_doc)
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
@@ -700,3 +618,151 @@ def _partial_fit_one_channel(args):
         with threadpool_limits(limits=int(max_threads_per_worker)):
             pca_model.partial_fit(wf_chan)
             return chan_ind, pca_model
+
+
+class ComputeFullPCAProjections(BaseSpikeVectorExtension):
+    """
+    Computes the PCA projections for all spikes.
+
+    Needs "principal_components" to be computed first.
+    """
+
+    extension_name = "full_pca_projections"
+    depend_on = ["waveforms", "principal_components"]
+    nodepipeline_variables = ["pca_projections"]
+
+    def _get_pipeline_nodes(self):
+        from spikeinterface.core.node_pipeline import SpikeRetriever, ExtractDenseWaveforms, ExtractSparseWaveforms
+        from spikeinterface.sortingcomponents.waveforms.temporal_pca import (
+            TemporalPCAProjection,
+            TemporalPCAProjectionByChannel,
+        )
+
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
+
+        # make some fake ectremum channels to use SpikeRetriever (they are not used for PC projection)
+        extremum_channels_indices = {unit_id: 0 for unit_id in sorting.unit_ids}
+        spike_retriever_node = SpikeRetriever(
+            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
+        )
+        pca_extension = self.sorting_analyzer.get_extension("principal_components")
+        mode = pca_extension.params["mode"]
+        wf_ext = self.sorting_analyzer.get_extension("waveforms")
+        ms_before = wf_ext.params["ms_before"]
+        ms_after = wf_ext.params["ms_after"]
+
+        if self.sorting_analyzer.sparsity is None:
+            waveform_mode = ExtractDenseWaveforms(
+                recording,
+                ms_before=ms_before,
+                ms_after=ms_after,
+                parents=[spike_retriever_node],
+                return_output=False,
+            )
+        else:
+            waveform_mode = ExtractSparseWaveforms(
+                recording,
+                ms_before=ms_before,
+                ms_after=ms_after,
+                parents=[spike_retriever_node],
+                return_output=False,
+                sparsity_mask=self.sorting_analyzer.sparsity.mask,
+            )
+        if mode == "by_channel_local":
+            pca_node = TemporalPCAProjectionByChannel(
+                recording,
+                parents=[spike_retriever_node, waveform_mode],
+                pca_models=pca_extension.get_pca_model(),
+                return_output=True,
+            )
+        elif mode == "by_channel_global":
+            pca_node = TemporalPCAProjection(
+                recording,
+                parents=[spike_retriever_node, waveform_mode],
+                pca_model=pca_extension.get_pca_model(),
+                return_output=True,
+            )
+        else:
+            raise NotImplementedError(f"PC mode {mode} not implemented in node pipeline.")
+        nodes = [spike_retriever_node, waveform_mode, pca_node]
+        return nodes
+
+
+register_result_extension(ComputeFullPCAProjections)
+compute_full_pca_projections = ComputeFullPCAProjections.function_factory()
+
+
+# def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
+#     recording = worker_ctx["recording"]
+#     all_pcs = worker_ctx["all_pcs"]
+#     spike_times = worker_ctx["spike_times"]
+#     spike_labels = worker_ctx["spike_labels"]
+#     nbefore = worker_ctx["nbefore"]
+#     nafter = worker_ctx["nafter"]
+#     unit_channels = worker_ctx["unit_channels"]
+#     pca_model = worker_ctx["pca_model"]
+
+#     seg_size = recording.get_num_samples(segment_index=segment_index)
+
+#     i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
+
+#     if i0 != i1:
+#         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
+#         # usefull only when max_spikes_per_unit is not None
+#         # waveform will not be extracted and a zeros will be left in the memmap file
+#         while (spike_times[i0] - nbefore) < 0 and (i0 != i1):
+#             i0 = i0 + 1
+#         while (spike_times[i1 - 1] + nafter) > seg_size and (i0 != i1):
+#             i1 = i1 - 1
+
+#     if i0 == i1:
+#         return
+
+#     start = int(spike_times[i0] - nbefore)
+#     end = int(spike_times[i1 - 1] + nafter)
+#     traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
+
+#     for i in range(i0, i1):
+#         st = spike_times[i]
+#         if st - start - nbefore < 0:
+#             continue
+#         if st - start + nafter > traces.shape[0]:
+#             continue
+
+#         wf = traces[st - start - nbefore : st - start + nafter, :]
+
+#         unit_index = spike_labels[i]
+#         chan_inds = unit_channels[unit_index]
+
+#         for c, chan_ind in enumerate(chan_inds):
+#             w = wf[:, chan_ind]
+#             if w.size > 0:
+#                 w = w[None, :]
+#                 try:
+#                     all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
+#                 except:
+#                     # this could happen if len(wfs) is less then n_comp for a channel
+#                     pass
+#
+#
+# def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
+#     worker_ctx = {}
+#     worker_ctx["recording"] = recording
+#     worker_ctx["sorting"] = sorting
+
+#     spikes = sorting.to_spike_vector(concatenated=False)
+#     # This is the first segment only
+#     spikes = spikes[0]
+#     spike_times = spikes["sample_index"]
+#     spike_labels = spikes["unit_index"]
+
+#     worker_ctx["all_pcs"] = np.lib.format.open_memmap(**all_pcs_args)
+#     worker_ctx["spike_times"] = spike_times
+#     worker_ctx["spike_labels"] = spike_labels
+#     worker_ctx["nbefore"] = nbefore
+#     worker_ctx["nafter"] = nafter
+#     worker_ctx["unit_channels"] = unit_channels
+#     worker_ctx["pca_model"] = pca_model
+
+#     return worker_ctx
