@@ -310,18 +310,17 @@ a ``BaseSorting`` or ``SortingAnalyzer`` object using the :py:func:`~spikeinterf
 
 .. code-block:: python
 
-    from spikeinterface.curation import apply_curation
+    from spikeinterface.curation import load_curation, apply_curation
 
     # load the curation JSON file
-    curation_json = "path/to/curation.json"
-    with open(curation_json, 'r') as f:
-        curation_dict = json.load(f)
+    curation_filepath = "path/to/curation.json"
+    curation = load_curation(curation_filepath)
 
     # apply the curation to the sorting output
-    clean_sorting = apply_curation(sorting, curation_dict=curation_dict)
+    clean_sorting = apply_curation(sorting, curation_dict_or_model=curation)
 
     # apply the curation to the sorting analyzer
-    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict=curation_dict)
+    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict_or_model=curation)
 
 
 Using the ``SpikeInterface GUI``
