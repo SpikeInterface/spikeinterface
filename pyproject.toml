@@ -145,7 +145,7 @@ test_extractors = [
 
 test_preprocessing = [
     "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
-    "torch==2.6.0+cpu",
+    "torch",
 ]
 
 
@@ -177,7 +177,7 @@ test = [
     "sortingview>=0.12.0",
 
     # for motion and sortingcomponents
-    "torch==2.6.0+cpu",
+    "torch",
 
     # curation
     "skops",
