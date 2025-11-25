@@ -300,7 +300,7 @@ class HighpassFilterRecording(FilterRecording):
         self._kwargs.update(filter_kwargs)
 
 
-class NotchFilterRecording(BasePreprocessor):
+class NotchFilterRecording(FilterRecording):
     """
     Parameters
     ----------
@@ -323,19 +323,16 @@ class NotchFilterRecording(BasePreprocessor):
         The notch-filtered recording extractor object
     """
 
-    def __init__(self, recording, freq=3000, q=30, margin_ms="auto", max_margin_s=5, dtype=None):
+    def __init__(self, recording, freq=3000, q=30, margin_ms="auto", max_margin_s=5, dtype=None, **filter_kwargs):
         import scipy.signal
 
         if margin_ms == "auto":
             margin_ms = self.adjust_margin_ms_for_notch(max_margin_s, q, freq)
 
         fn = 0.5 * float(recording.get_sampling_frequency())
-
         coeff = scipy.signal.iirnotch(freq / fn, q)
 
-        if dtype is None:
-            dtype = recording.get_dtype()
-        dtype = np.dtype(dtype)
+        dtype = fix_dtype(recording, dtype)
 
         # if uint --> unsupported
         if dtype.kind == "u":
@@ -344,15 +341,10 @@ class NotchFilterRecording(BasePreprocessor):
                 "to specify a signed type (e.g. 'int16', 'float32')"
             )
 
-        BasePreprocessor.__init__(self, recording, dtype=dtype)
+        FilterRecording.__init__(self, recording, coeff=coeff, margin_ms=margin_ms, dtype=dtype, **filter_kwargs)
         self.annotate(is_filtered=True)
-
-        sf = recording.get_sampling_frequency()
-        margin = int(margin_ms * sf / 1000.0)
-        for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype))
-
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs.update(filter_kwargs)
 
 
 # functions for API
