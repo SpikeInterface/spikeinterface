@@ -79,7 +79,7 @@ analyzer.compute("principal_components", n_components=3, mode="by_channel_global
 metrics_ext = analyzer.compute(
     "quality_metrics",
     metric_names=[
-        "mahalanobis_metrics",
+        "mahalanobis",
         "d_prime",
     ],
 )

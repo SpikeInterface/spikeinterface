@@ -34,13 +34,13 @@ Example code
 
     import spikeinterface.metrics.quality as sqm
 
-    d_prime = sqm.lda_metrics(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
+    d_prime = sqm.d_prime_metric(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
 
 
 Reference
 ---------
 
-.. autofunction:: spikeinterface.metrics.quality.pca_metrics.lda_metrics
+.. autofunction:: spikeinterface.metrics.quality.pca_metrics.d_prime_metric
 
 
 Literature

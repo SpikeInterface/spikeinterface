@@ -45,8 +45,7 @@ If the recording, :ref:`postprocessing_spike_amplitudes` and ``templates`` are a
 
 If :ref:`postprocessing_principal_components` are computed, add:
 
-- :doc:`qualitymetrics/isolation_distance`
-- :doc:`qualitymetrics/l_ratio`
+- :doc:`qualitymetrics/mahalanobis`
 - :doc:`qualitymetrics/d_prime`
 - :doc:`qualitymetrics/silhouette_score`
 - :doc:`qualitymetrics/nearest_neighbor` (note: excluding the ``nn_noise_overlap`` metric)
