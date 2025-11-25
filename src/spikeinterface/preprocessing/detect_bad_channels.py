@@ -74,7 +74,7 @@ neighborhood_r2_radius_um : float, default: 30
     Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
 seed : int or None, default: None
     The random seed to extract chunks
-channel_filter : str or set, default: {"dead", "noise", "out"}
+channel_filter : str or set or None, default: None
     For coherence+psd - filter the ids of the returned channels based on their labels.
 """
 
@@ -173,7 +173,7 @@ def detect_bad_channels(
     neighborhood_r2_threshold: float = 0.9,
     neighborhood_r2_radius_um: float = 30.0,
     seed: int | None = None,
-    channel_filter: str | set = {"noise", "dead", "out"},
+    channel_filter: str | set | None  = None,
 ):
     """
     Perform bad channel detection.
@@ -304,9 +304,10 @@ def detect_bad_channels(
                 "(good channels may be erroneously labeled as dead)."
             )
 
-        assert channel_filter is not None
-
         allowed_filters = {"dead", "noise", "out"}
+
+        if channel_filter is None:
+            channel_filter = allowed_filters
 
         if not isinstance(channel_filter, set):
             if isinstance(channel_filter, (str)):
