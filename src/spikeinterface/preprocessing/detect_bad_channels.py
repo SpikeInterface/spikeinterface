@@ -173,7 +173,7 @@ def detect_bad_channels(
     neighborhood_r2_threshold: float = 0.9,
     neighborhood_r2_radius_um: float = 30.0,
     seed: int | None = None,
-    channel_filter: str | set | None  = None,
+    channel_filter: str | set | None = None,
 ):
     """
     Perform bad channel detection.
