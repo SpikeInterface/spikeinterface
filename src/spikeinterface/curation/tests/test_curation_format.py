@@ -11,6 +11,7 @@ from spikeinterface.curation.curation_format import (
     curation_label_to_vectors,
     curation_label_to_dataframe,
     apply_curation,
+    load_curation,
 )
 
 """
@@ -205,6 +206,21 @@ def test_to_from_json():
     json.loads(json.dumps(curation_ids_str, indent=4))
     json.loads(json.dumps(curation_ids_int_dict, indent=4))
     json.loads(json.dumps(curation_with_splits, indent=4))
+
+
+def test_to_from_json_file(tmp_path):
+
+    for curation_index, curation_dict in enumerate(
+        [curation_ids_int, curation_ids_str, curation_ids_int_dict, curation_with_splits]
+    ):
+
+        temp_filepath = tmp_path / f"data_{curation_index}.json"
+
+        with open(temp_filepath, "w") as f:
+            json.dump(curation_dict, f)
+
+        curation = load_curation(temp_filepath)
+        curation.validate_curation_dict()
 
 
 def test_convert_from_sortingview_curation_format_v0():
