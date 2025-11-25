@@ -341,7 +341,9 @@ class NotchFilterRecording(FilterRecording):
                 "to specify a signed type (e.g. 'int16', 'float32')"
             )
 
-        FilterRecording.__init__(self, recording, coeff=coeff, margin_ms=margin_ms, dtype=dtype, **filter_kwargs)
+        FilterRecording.__init__(
+            self, recording, coeff=coeff, filter_mode="ba", margin_ms=margin_ms, dtype=dtype, **filter_kwargs
+        )
         self.annotate(is_filtered=True)
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
