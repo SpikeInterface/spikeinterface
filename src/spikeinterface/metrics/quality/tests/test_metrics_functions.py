@@ -46,7 +46,7 @@ from spikeinterface.metrics.quality.misc_metrics import (
 from spikeinterface.metrics.quality.pca_metrics import (
     pca_metrics_list,
     mahalanobis_metrics,
-    lda_metrics,
+    d_prime_metric,
     nearest_neighbors_metrics,
     silhouette_score,
     simplified_silhouette_score,
