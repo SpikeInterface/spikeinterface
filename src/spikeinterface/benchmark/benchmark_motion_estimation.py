@@ -89,7 +89,9 @@ class MotionEstimationBenchmark(Benchmark):
         noise_levels = get_noise_levels(self.recording, return_in_uV=False, **job_kwargs)
 
         t0 = time.perf_counter()
-        peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)
+        detect_kwargs = p["detect_kwargs"].copy()
+        detect_kwargs["noise_levels"] = noise_levels
+        peaks = detect_peaks(self.recording, method_kwargs=detect_kwargs, job_kwargs=job_kwargs)
         t1 = time.perf_counter()
         if p["select_kwargs"] is not None:
             selected_peaks = select_peaks(self.peaks, **p["select_kwargs"], **job_kwargs)
@@ -97,7 +99,9 @@ class MotionEstimationBenchmark(Benchmark):
             selected_peaks = peaks
 
         t2 = time.perf_counter()
-        peak_locations = localize_peaks(self.recording, selected_peaks, **p["localize_kwargs"], **job_kwargs)
+        peak_locations = localize_peaks(
+            self.recording, selected_peaks, method_kwargs=p["localize_kwargs"], job_kwargs=job_kwargs
+        )
         t3 = time.perf_counter()
         motion = estimate_motion(self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"])
         t4 = time.perf_counter()
@@ -151,6 +155,15 @@ class MotionEstimationBenchmark(Benchmark):
 
 
 class MotionEstimationStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare motion estimation methods.
+
+    The ground truth displaements of all units must be known and method outputs
+    will be compared to them.
+
+    See also :py:func:`~spikeinterface.generation.generate_drifting_recording`,
+    for generation drifting recording.
+    """
 
     benchmark_class = MotionEstimationBenchmark
 
@@ -240,6 +253,8 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             # ax0.set_ylim()
 
+        return fig
+
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
         import matplotlib.pyplot as plt
 
@@ -305,6 +320,8 @@ class MotionEstimationStudy(BenchmarkStudy):
             if lim is not None:
                 ax.set_ylim(0, lim)
 
+        return fig
+
     def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
         import matplotlib.pyplot as plt
 
@@ -367,6 +384,8 @@ class MotionEstimationStudy(BenchmarkStudy):
         ax2.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 
         despine(ax2)
+
+        return fig
 
         # ax1.sharey(ax0)
         # ax2.sharey(ax0)

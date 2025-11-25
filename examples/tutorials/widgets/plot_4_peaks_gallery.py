@@ -23,21 +23,20 @@ recording, sorting = si.generate_ground_truth_recording()
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
+si.set_global_job_kwargs(chunk_memory="10M", n_jobs=1, progress_bar=True)
 rec_filtered = si.bandpass_filter(recording=recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0)
 print(rec_filtered)
 peaks = detect_peaks(
     recording=rec_filtered,
     method="locally_exclusive",
-    peak_sign="neg",
-    detect_threshold=6,
-    exclude_sweep_ms=0.3,
-    radius_um=100,
-    noise_levels=None,
-    random_chunk_kwargs={},
-    chunk_memory="10M",
-    n_jobs=1,
-    progress_bar=True,
+    method_kwargs=dict(
+        peak_sign="neg",
+        detect_threshold=6,
+        exclude_sweep_ms=0.3,
+        radius_um=100,
+    )
 )
+
 
 ##############################################################################
 # peaks is a numpy 1D array with structured dtype that contains several fields:

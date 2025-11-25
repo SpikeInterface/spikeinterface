@@ -70,7 +70,7 @@ class TestWhiten:
 
         cov_mat = np.array([[1, 0.5, 0], [0.5, 1, -0.25], [0, -0.25, 1]])
 
-        rng = np.random.RandomState(seed)
+        rng = np.random.default_rng(seed)
         data = rng.multivariate_normal(means, cov_mat, num_samples)
 
         # Set the dtype, if `int16`, first scale to +/- 1 then cast to int16 range.

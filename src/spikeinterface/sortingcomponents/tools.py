@@ -10,14 +10,14 @@ except:
     HAVE_PSUTIL = False
 
 from spikeinterface.core.sparsity import ChannelSparsity
-from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
+from spikeinterface.core.recording_tools import get_noise_levels
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -35,12 +35,14 @@ def make_multi_method_doc(methods, ident="    "):
     return doc
 
 
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job_name=None, **job_kwargs):
+def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job_name=None, job_kwargs=None):
     """
     Helper function to extract waveforms at the max channel from a peak list
 
 
     """
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
     n = rec.get_num_channels()
     unit_ids = np.arange(n, dtype="int64")
     sparsity_mask = np.eye(n, dtype="bool")
@@ -74,7 +76,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
 
 
 def get_prototype_and_waveforms_from_peaks(
-    recording, peaks, n_peaks=5000, ms_before=0.5, ms_after=0.5, seed=None, **all_kwargs
+    recording, peaks, n_peaks=5000, ms_before=0.5, ms_after=0.5, seed=None, job_kwargs=None
 ):
     """
     Function to extract a prototype waveform from peaks.
@@ -93,8 +95,8 @@ def get_prototype_and_waveforms_from_peaks(
         Time in milliseconds after the peak to extract the waveform, by default 0.5.
     seed : int or None, optional
         Seed for random number generator, by default None.
-    **all_kwargs : dict
-        Additional keyword arguments for peak detection and job kwargs.
+    job_kwargs : dict
+        job kwargs
 
     Returns
     -------
@@ -107,7 +109,7 @@ def get_prototype_and_waveforms_from_peaks(
     """
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
-    _, job_kwargs = split_job_kwargs(all_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
@@ -116,7 +118,12 @@ def get_prototype_and_waveforms_from_peaks(
         peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed
     )
     waveforms = extract_waveform_at_max_channel(
-        recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+        recording,
+        few_peaks,
+        ms_before=ms_before,
+        ms_after=ms_after,
+        job_kwargs=job_kwargs,
+        job_name="waveform prototype",
     )
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -126,7 +133,7 @@ def get_prototype_and_waveforms_from_peaks(
 
 
 def get_prototype_and_waveforms_from_recording(
-    recording, n_peaks=5000, ms_before=0.5, ms_after=0.5, seed=None, **all_kwargs
+    recording, n_peaks=5000, ms_before=0.5, ms_after=0.5, seed=None, job_kwargs=None, **detection_kwargs
 ):
     """
     Function to extract a prototype waveform from peaks detected on the fly.
@@ -155,33 +162,51 @@ def get_prototype_and_waveforms_from_recording(
     peaks : numpy.array
         The selected peaks used to extract waveforms.
     """
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    from spikeinterface.core.node_pipeline import run_node_pipeline
+    from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import LocallyExclusivePeakDetector
     from spikeinterface.core.node_pipeline import ExtractSparseWaveforms
 
-    detection_kwargs, job_kwargs = split_job_kwargs(all_kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
+    if "noise_levels" not in detection_kwargs:
+        detection_kwargs = detection_kwargs.copy()
+        detection_kwargs["noise_levels"] = get_noise_levels(recording, return_in_uV=False)
+
+    node0 = LocallyExclusivePeakDetector(recording, return_output=True, **detection_kwargs)
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    node = ExtractSparseWaveforms(
+    node1 = ExtractSparseWaveforms(
         recording,
-        parents=None,
+        parents=[node0],
         return_output=True,
         ms_before=ms_before,
         ms_after=ms_after,
         radius_um=0,
     )
 
-    pipeline_nodes = [node]
+    nodes = [node0, node1]
 
-    recording_slices = get_shuffled_recording_slices(recording, seed=seed, **job_kwargs)
-    res = detect_peaks(
+    recording_slices = get_shuffled_recording_slices(recording, job_kwargs=job_kwargs, seed=seed)
+    # res = detect_peaks(
+    #     recording,
+    #     pipeline_nodes=pipeline_nodes,
+    #     skip_after_n_peaks=n_peaks,
+    #     recording_slices=recording_slices,
+    #     method="locally_exclusive",
+    #     method_kwargs=detection_kwargs,
+    #     job_kwargs=job_kwargs,
+    # )
+    res = run_node_pipeline(
         recording,
-        pipeline_nodes=pipeline_nodes,
+        nodes,
+        job_kwargs,
+        job_name="get protoype waveforms",
         skip_after_n_peaks=n_peaks,
         recording_slices=recording_slices,
-        **detection_kwargs,
-        **job_kwargs,
     )
-    rng = np.random.RandomState(seed)
+
+    rng = np.random.default_rng(seed)
     indices = rng.permutation(np.arange(len(res[0])))
 
     few_peaks = res[0][indices[:n_peaks]]
@@ -194,7 +219,7 @@ def get_prototype_and_waveforms_from_recording(
 
 
 def get_prototype_and_waveforms(
-    recording, n_peaks=5000, peaks=None, ms_before=0.5, ms_after=0.5, seed=None, **all_kwargs
+    recording, n_peaks=5000, peaks=None, ms_before=0.5, ms_after=0.5, seed=None, job_kwargs=None, **more_kwargs
 ):
     """
     Function to extract a prototype waveform either from peaks or from a peak detection. Note that in case
@@ -214,8 +239,10 @@ def get_prototype_and_waveforms(
         Time in milliseconds after the peak to extract the waveform, by default 0.5.
     seed : int or None, optional
         Seed for random number generator, by default None.
-    **all_kwargs : dict
-        Additional keyword arguments for peak detection and job kwargs.
+    job_kwargs : dict
+        job kwargs
+    **more_kwargs : dict
+        Additional keyword arguments for peak detection
 
     Returns
     -------
@@ -228,11 +255,11 @@ def get_prototype_and_waveforms(
     """
     if peaks is None:
         return get_prototype_and_waveforms_from_recording(
-            recording, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, **all_kwargs
+            recording, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, job_kwargs=job_kwargs, **more_kwargs
         )
     else:
         return get_prototype_and_waveforms_from_peaks(
-            recording, peaks, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, **all_kwargs
+            recording, peaks, n_peaks, ms_before=ms_before, ms_after=ms_after, seed=seed, job_kwargs=job_kwargs
         )
 
 
@@ -406,19 +433,12 @@ def remove_empty_templates(templates):
     """
     assert templates.sparsity_mask is not None, "Need sparse Templates object"
     not_empty = templates.sparsity_mask.sum(axis=1) > 0
-    return Templates(
-        templates_array=templates.templates_array[not_empty, :, :],
-        sampling_frequency=templates.sampling_frequency,
-        nbefore=templates.nbefore,
-        sparsity_mask=templates.sparsity_mask[not_empty, :],
-        channel_ids=templates.channel_ids,
-        unit_ids=templates.unit_ids[not_empty],
-        probe=templates.probe,
-        is_in_uV=templates.is_in_uV,
-    )
+    return templates.select_units(templates.unit_ids[not_empty])
 
 
-def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
+def create_sorting_analyzer_with_existing_templates(
+    sorting, recording, templates, remove_empty=True, noise_levels=None
+):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
@@ -435,17 +455,31 @@ def create_sorting_analyzer_with_existing_templates(sorting, recording, template
     sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
+    sa.extensions["templates"].params = {
+        "ms_before": templates.ms_before,
+        "ms_after": templates.ms_after,
+        "operators": ["average", "std"],
+    }
     sa.extensions["templates"].data["average"] = templates_array
     sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
     sa.extensions["templates"].run_info["run_completed"] = True
     sa.extensions["templates"].run_info["runtime_s"] = 0
+
+    if noise_levels is not None:
+        sa.extensions["noise_levels"] = ComputeNoiseLevels(sa)
+        sa.extensions["noise_levels"].params = {}
+        sa.extensions["noise_levels"].data["noise_levels"] = noise_levels
+        sa.extensions["noise_levels"].run_info["run_completed"] = True
+        sa.extensions["noise_levels"].run_info["runtime_s"] = 0
+
     return sa
 
 
-def get_shuffled_recording_slices(recording, seed=None, **job_kwargs):
+def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
     recording_slices = []
