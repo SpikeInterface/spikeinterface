@@ -437,14 +437,14 @@ def test_mahalanobis_metrics():
     assert l_ratio1 > l_ratio2
 
 
-def test_lda_metrics():
+def test_d_prime_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
     all_pcs2, all_labels2 = create_ground_truth_pc_distributions(
         [1, -2], [1000, 1000]
     )  # increase distance between clusters
 
-    d_prime1 = lda_metrics(all_pcs1, all_labels1, 0)
-    d_prime2 = lda_metrics(all_pcs2, all_labels2, 0)
+    d_prime1 = d_prime_metric(all_pcs1, all_labels1, 0)
+    d_prime2 = d_prime_metric(all_pcs2, all_labels2, 0)
 
     assert d_prime1 < d_prime2
 
