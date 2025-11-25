@@ -106,6 +106,26 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
             del self.params["metrics_kwargs"]
 
+        # handle metric names change:
+        # num_positive_peaks/num_negative_peaks merged into number_of_peaks
+        if "num_positive_peaks" in self.params["metric_names"]:
+            self.params["metric_names"].remove("num_positive_peaks")
+            if "number_of_peaks" not in self.params["metric_names"]:
+                self.params["metric_names"].append("number_of_peaks")
+        if "num_negative_peaks" in self.params["metric_names"]:
+            self.params["metric_names"].remove("num_negative_peaks")
+            if "number_of_peaks" not in self.params["metric_names"]:
+                self.params["metric_names"].append("number_of_peaks")
+        # velocity_above/velocity_below merged into velocity_fits
+        if "velocity_above" in self.params["metric_names"]:
+            self.params["metric_names"].remove("velocity_above")
+            if "velocity_fits" not in self.params["metric_names"]:
+                self.params["metric_names"].append("velocity_fits")
+        if "velocity_below" in self.params["metric_names"]:
+            self.params["metric_names"].remove("velocity_below")
+            if "velocity_fits" not in self.params["metric_names"]:
+                self.params["metric_names"].append("velocity_fits")
+
     def _set_params(
         self,
         metric_names: list[str] | None = None,

@@ -54,6 +54,15 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if (qm_params := self.params.get("qm_params")) is not None:
             self.params["metric_params"] = qm_params
             del self.params["qm_params"]
+        # handle metric names change: isolation_distance/l_ratio merged into mahalanobis
+        if "isolation_distance" in self.params["metric_names"]:
+            self.params["metric_names"].remove("isolation_distance")
+            if "mahalanobis" not in self.params["metric_names"]:
+                self.params["metric_names"].append("mahalanobis")
+        if "l_ratio" in self.params["metric_names"]:
+            self.params["metric_names"].remove("l_ratio")
+            if "mahalanobis" not in self.params["metric_names"]:
+                self.params["metric_names"].append("mahalanobis")
 
     def _set_params(
         self,

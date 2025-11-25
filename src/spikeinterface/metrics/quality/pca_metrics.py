@@ -43,8 +43,8 @@ def _mahalanobis_metrics_function(sorting_analyzer, unit_ids, tmp_data, **metric
     return mahalanobis_result(isolation_distance=isolation_distance_dict, l_ratio=l_ratio_dict)
 
 
-class MahalanobisMetrics(BaseMetric):
-    metric_name = "mahalanobis_metrics"
+class Mahalanobis(BaseMetric):
+    metric_name = "mahalanobis"
     metric_function = _mahalanobis_metrics_function
     metric_params = {}
     metric_columns = {"isolation_distance": float, "l_ratio": float}
@@ -67,7 +67,7 @@ def _d_prime_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_para
         labels = pca_data_per_unit[unit_id]["labels"]
 
         try:
-            d_prime = lda_metrics(pcs_flat, labels, unit_id)
+            d_prime = d_prime_metric(pcs_flat, labels, unit_id)
         except:
             d_prime = np.nan
 
@@ -76,7 +76,7 @@ def _d_prime_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_para
     return d_prime_dict
 
 
-class DPrimeMetrics(BaseMetric):
+class DPrime(BaseMetric):
     metric_name = "d_prime"
     metric_function = _d_prime_metric_function
     metric_params = {}
@@ -152,7 +152,7 @@ def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, job_
     return nn_result(nn_hit_rate=nn_hit_rate_dict, nn_miss_rate=nn_miss_rate_dict)
 
 
-class NearestNeighborMetrics(BaseMetric):
+class NearestNeighbor(BaseMetric):
     metric_name = "nearest_neighbor"
     metric_function = _nearest_neighbor_metric_function
     metric_params = {"max_spikes": 10000, "n_neighbors": 5}
@@ -287,7 +287,7 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
     return nn_advanced_result(nn_isolation=nn_isolation_dict, nn_noise_overlap=nn_noise_overlap_dict)
 
 
-class NearestNeighborAdvancedMetrics(BaseMetric):
+class NearestNeighborAdvanced(BaseMetric):
     metric_name = "nn_advanced"
     metric_function = _nn_advanced_metric_function
     metric_params = {
@@ -331,7 +331,7 @@ def _silhouette_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_p
     return silhouette_dict
 
 
-class SilhouetteMetrics(BaseMetric):
+class Silhouette(BaseMetric):
     metric_name = "silhouette"
     metric_function = _silhouette_metric_function
     metric_params = {"method": "simplified"}
@@ -341,11 +341,11 @@ class SilhouetteMetrics(BaseMetric):
 
 
 pca_metrics_list = [
-    MahalanobisMetrics,
-    DPrimeMetrics,
-    NearestNeighborMetrics,
-    SilhouetteMetrics,
-    NearestNeighborAdvancedMetrics,
+    Mahalanobis,
+    DPrime,
+    NearestNeighbor,
+    Silhouette,
+    NearestNeighborAdvanced,
 ]
 
 
@@ -409,7 +409,7 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     return isolation_distance, l_ratio
 
 
-def lda_metrics(all_pcs, all_labels, this_unit_id) -> float:
+def d_prime_metric(all_pcs, all_labels, this_unit_id) -> float:
     """
     Calculate d-prime based on Linear Discriminant Analysis.
 

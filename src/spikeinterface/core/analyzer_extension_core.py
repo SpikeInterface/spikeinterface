@@ -1217,7 +1217,6 @@ class BaseMetricExtension(AnalyzerExtension):
         import pandas as pd
 
         available_metric_names = [m.metric_name for m in self.metric_list]
-
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
         old_metrics = self.data["metrics"]
 
