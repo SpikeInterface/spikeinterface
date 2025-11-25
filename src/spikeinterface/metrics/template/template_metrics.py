@@ -190,6 +190,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
+
         channel_locations = sorting_analyzer.get_channel_locations()
 
         templates_single = []
