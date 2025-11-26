@@ -173,7 +173,7 @@ def detect_bad_channels(
     neighborhood_r2_threshold: float = 0.9,
     neighborhood_r2_radius_um: float = 30.0,
     seed: int | None = None,
-    channel_filters: set | None  = None,
+    channel_filters: set | None = None,
 ):
     """
     Perform bad channel detection.
@@ -310,9 +310,7 @@ def detect_bad_channels(
             channel_filters = allowed_filters
 
         if not isinstance(channel_filters, set):
-            raise ValueError(
-                f"channel_filters must be None or a set of the following values : {allowed_filters} "
-            )
+            raise ValueError(f"channel_filters must be None or a set of the following values : {allowed_filters} ")
 
         if not channel_filters.issubset(allowed_filters):
             raise ValueError(
