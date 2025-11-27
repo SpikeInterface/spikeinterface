@@ -6,15 +6,18 @@ from typing import List, Tuple, Optional
 
 
 from .base import BaseTemplateMatching, _base_matching_dtype
-from spikeinterface.core.template import Templates
+import importlib.util
 
-try:
-    import torch
-    import torch.nn.functional as F
-
-    HAVE_TORCH = True
-    from torch.nn.functional import conv1d
-except ImportError:
+torch_spec = importlib.util.find_spec("torch")
+if torch_spec is not None:
+    torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
+    if torch_nn_functional_spec is not None:
+        HAVE_TORCH = True
+        import torch
+        from torch.nn.functional import conv1d
+    else:
+        HAVE_TORCH = False
+else:
     HAVE_TORCH = False
 
 
@@ -275,10 +278,17 @@ class WobbleSparsity:
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = templates.sparsity.mask
-        unit_overlap = np.sum(
-            np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
-        )
-        unit_overlap = unit_overlap > 0
+        num_templates = templates.get_dense_templates().shape[0]
+        unit_overlap = np.zeros((num_templates, num_templates), dtype=bool)
+
+        for i in range(num_templates):
+            unit_overlap[i] = np.sum(np.logical_and(visible_channels[i], visible_channels), axis=1) > 0
+
+        # unit_overlap = np.sum(
+        #    np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
+        # )
+        # unit_overlap = unit_overlap > 0
+
         unit_overlap = np.repeat(unit_overlap, params.jitter_factor, axis=0)
         sparsity = cls(visible_channels=visible_channels, unit_overlap=unit_overlap)
         return sparsity
@@ -356,19 +366,33 @@ class WobbleMatch(BaseTemplateMatching):
     #     "templates": None,
     # }
 
+    name = "wobble"
+    need_noise_levels = False
+
+    params_doc = """
+    parameters : dict
+        Parameters for the WobbleMatch algorithm. See WobbleParameters dataclass for more details.
+    engine : string in ["numpy", "torch", "auto"]. Default "auto"
+            The engine to use for the convolutions
+    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
+            Controls torch device if the torch engine is selected
+    shared_memory : bool, default True
+            If True, the overlaps are stored in shared memory, which is more efficient when
+            using numerous cores
+    """
+
     def __init__(
         self,
         recording,
+        templates,
         return_output=True,
-        parents=None,
-        templates=None,
         parameters={},
         engine="numpy",
         torch_device="cpu",
         shared_memory=True,
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         templates_array = templates.get_dense_templates().astype(np.float32)
 

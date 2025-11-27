@@ -105,7 +105,9 @@ class SimpleSorter(ComponentsBasedSorter):
         # detection
         detection_params = params["detection"].copy()
         detection_params["noise_levels"] = noise_levels
-        peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
+        peaks = detect_peaks(
+            recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+        )
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -119,7 +121,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
         few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]

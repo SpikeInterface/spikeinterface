@@ -76,6 +76,7 @@ class MetricsBaseWidget(BaseWidget):
             unit_colors=unit_colors,
             hide_unit_selector=hide_unit_selector,
             include_metrics_data=include_metrics_data,
+            selected_columns=None,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -86,7 +87,7 @@ class MetricsBaseWidget(BaseWidget):
 
         dp = to_attr(data_plot)
         metrics = dp.metrics
-        num_metrics = len(metrics.columns)
+        num_metrics = len(metrics.columns) if dp.selected_columns is None else len(dp.selected_columns)
 
         if "figsize" not in backend_kwargs:
             backend_kwargs["figsize"] = (2 * num_metrics, 2 * num_metrics)
@@ -102,24 +103,34 @@ class MetricsBaseWidget(BaseWidget):
 
         if dp.unit_ids is None:
             colors = ["gray"] * len(all_unit_ids)
+            alphas = [0.5] * len(all_unit_ids)
         else:
             colors = []
+            alphas = []
             for unit in all_unit_ids:
                 color = "gray" if unit not in dp.unit_ids else dp.unit_colors[unit]
                 colors.append(color)
+                alphas.append(0.5 if unit not in dp.unit_ids else 1.0)
 
         self.patches = []
-        for i, m1 in enumerate(metrics.columns):
-            for j, m2 in enumerate(metrics.columns):
+        if dp.selected_columns is not None:
+            metrics_selected = metrics.loc[:, dp.selected_columns]
+        else:
+            metrics_selected = metrics
+        for i, m1 in enumerate(metrics_selected.columns):
+            for j, m2 in enumerate(metrics_selected.columns):
+                if i > j:
+                    self.axes[i, j].axis("off")
+                    continue
                 if i == j:
                     self.axes[i, j].hist(metrics[m1], color="gray")
-                else:
-                    p = self.axes[i, j].scatter(metrics[m1], metrics[m2], c=colors, s=3, marker="o")
-                    self.patches.append(p)
-                if i == num_metrics - 1:
                     self.axes[i, j].set_xlabel(m2, fontsize=10)
-                if j == 0:
-                    self.axes[i, j].set_ylabel(m1, fontsize=10)
+                else:
+                    p = self.axes[i, j].scatter(
+                        metrics_selected[m2], metrics_selected[m1], c=colors, alpha=alphas, s=5, marker="o"
+                    )
+                    self.patches.append(p)
+
                 self.axes[i, j].set_xticklabels([])
                 self.axes[i, j].set_yticklabels([])
                 self.axes[i, j].spines["top"].set_visible(False)
@@ -131,19 +142,18 @@ class MetricsBaseWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector, MetricsSelector
 
         check_ipywidget_backend()
 
-        self.next_data_plot = data_plot.copy()
+        # Store a copy of the data_plot for updates
+        self.data_plot = data_plot.copy()
 
         cm = 1 / 2.54
-
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
 
-        ratios = [0.15, 0.85]
+        ratios = [0.1, 0.8, 0.1]
 
         with plt.ioff():
             output = widgets.Output()
@@ -151,19 +161,26 @@ class MetricsBaseWidget(BaseWidget):
                 self.figure = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        self.unit_selector = UnitSelector(data_plot["sorting"].unit_ids)
+        self.unit_selector = UnitSelector(self.data_plot["sorting"].unit_ids)
         self.unit_selector.value = []
 
+        # Metrics selector: right sidebar, default to first 2 metrics
+        metric_names = list(self.data_plot["metrics"].columns)
+        self.metrics_selector = MetricsSelector(metric_names)
+
+        # Compose layout: left = units, center = plot, right = metrics
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
             left_sidebar=self.unit_selector,
-            pane_widths=ratios + [0],
+            right_sidebar=self.metrics_selector,
+            pane_widths=ratios,
         )
 
-        # a first update
+        # Initial update
         self._update_ipywidget(None)
 
         self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
+        self.metrics_selector.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
@@ -172,27 +189,57 @@ class MetricsBaseWidget(BaseWidget):
         from matplotlib.lines import Line2D
 
         unit_ids = self.unit_selector.value
+        selected_metrics = self.metrics_selector.value
 
         unit_colors = self.data_plot["unit_colors"]
         # matplotlib next_data_plot dict update at each call
         all_units = list(unit_colors.keys())
         colors = []
         sizes = []
+        alphas = []
         for unit in all_units:
             color = "gray" if unit not in unit_ids else unit_colors[unit]
-            size = 1 if unit not in unit_ids else 5
+            size = 3 if unit not in unit_ids else 20
+            alpha = 0.5 if unit not in unit_ids else 1.0
             colors.append(color)
             sizes.append(size)
+            alphas.append(alpha)
 
-        # here we do a trick: we just update colors
-        if hasattr(self, "patches"):
-            for p in self.patches:
-                p.set_color(colors)
-                p.set_sizes(sizes)
-        else:
+        if self.data_plot["selected_columns"] is None or set(selected_metrics) != set(
+            self.data_plot["selected_columns"]
+        ):
+            self.data_plot["unit_ids"] = unit_ids
+            self.data_plot["selected_columns"] = selected_metrics
+            self.figure.clf()
+            self.patches = []
+            self.lines = []
             backend_kwargs = {}
             backend_kwargs["figure"] = self.figure
             self.plot_matplotlib(self.data_plot, **backend_kwargs)
+        else:
+            # here we do a trick: we just update colors of the scatter for selected units
+            if hasattr(self, "patches"):
+                for p in self.patches:
+                    p.set_color(colors)
+                    p.set_sizes(sizes)
+                    p.set_alpha(alphas)
+
+        # unit lines are always redrawn
+        if hasattr(self, "lines"):
+            # remove old lines
+            for l in self.lines:
+                l.remove()
+        # add lines
+        self.lines = []
+        # add new lines
+        if self.data_plot["selected_columns"] is not None:
+            metrics = self.data_plot["metrics"]
+            metrics_selected = metrics.loc[:, self.data_plot["selected_columns"]]
+            for i, m in enumerate(metrics_selected.columns):
+                if unit_ids is not None:
+                    for unit in unit_ids:
+                        l = self.axes[i, i].axvline(metrics.loc[unit, m], color=unit_colors[unit], ls="--")
+                        self.lines.append(l)
 
         if len(unit_ids) > 0:
             # TODO later make option to control legend or not

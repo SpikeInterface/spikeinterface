@@ -365,16 +365,13 @@ def set_properties_after_merging(
 
     for key in prop_keys:
         parent_values = sorting_pre_merge.get_property(key)
-        if parent_values.dtype.kind not in default_missing_values:
-            # if the property is boolean or integer there is no missing values so we skip
-            # for instance recursive "is_merged" will not be propagated
-            continue
 
         # propagate keep values
         shape = (len(sorting_post_merge.unit_ids),) + parent_values.shape[1:]
         new_values = np.empty(shape=shape, dtype=parent_values.dtype)
         new_values[keep_post_inds] = parent_values[keep_pre_inds]
 
+        skip_property = False
         for new_id, merge_group in zip(new_unit_ids, merge_unit_groups):
             merged_indices = sorting_pre_merge.ids_to_indices(merge_group)
             merge_values = parent_values[merged_indices]
@@ -384,9 +381,15 @@ def set_properties_after_merging(
                 # and new values only if they are all similar
                 new_values[new_index] = merge_values[0]
             else:
-
-                new_values[new_index] = default_missing_values[parent_values.dtype.kind]
-        sorting_post_merge.set_property(key, new_values)
+                if parent_values.dtype.kind not in default_missing_values:
+                    # if the property doesn't have a default missing value and it is not the same
+                    # for all merged units, we skip it
+                    skip_property = True
+                    break
+                else:
+                    new_values[new_index] = default_missing_values[parent_values.dtype.kind]
+        if not skip_property:
+            sorting_post_merge.set_property(key, new_values)
 
     # set is_merged property
     is_merged = np.ones(len(sorting_post_merge.unit_ids), dtype=bool)
