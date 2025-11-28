@@ -16,7 +16,6 @@ import multiprocessing
 import threading
 from threadpoolctl import threadpool_limits
 
-from spikeinterface.core.base import ChunkableMixin
 from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
 
@@ -256,7 +255,7 @@ def ensure_n_jobs(extractor, n_jobs=1):
     return n_jobs
 
 
-def chunk_duration_to_chunk_size(chunk_duration, chunkable: ChunkableMixin):
+def chunk_duration_to_chunk_size(chunk_duration, chunkable: "ChunkableMixin"):
     if isinstance(chunk_duration, float):
         chunk_size = int(chunk_duration * chunkable.get_sampling_frequency())
     elif isinstance(chunk_duration, str):
@@ -273,7 +272,7 @@ def chunk_duration_to_chunk_size(chunk_duration, chunkable: ChunkableMixin):
 
 
 def ensure_chunk_size(
-    chunkable: ChunkableMixin,
+    chunkable: "ChunkableMixin",
     total_memory=None,
     chunk_size=None,
     chunk_memory=None,

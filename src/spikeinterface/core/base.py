@@ -1179,5 +1179,8 @@ class ChunkableMixin:
         """
         return self._preferred_mp_context
 
-    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None) -> np.ndarray:
+    def get_shape(self, segment_index: int | None = None) -> tuple[int, ...]:
+        raise NotImplementedError
+
+    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         raise NotImplementedError

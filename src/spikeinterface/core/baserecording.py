@@ -570,11 +570,14 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
-    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None) -> np.ndarray:
+    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         """
         General retrieval function for chunkable objects
         """
-        return self.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
+        return self.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame, **kwargs)
+
+    def get_shape(self, segment_index: int | None = None) -> tuple[int, ...]:
+        return (self.get_num_samples(segment_index=segment_index), self.get_num_channels())
 
     def _get_t_starts(self):
         # handle t_starts
