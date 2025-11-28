@@ -7,7 +7,7 @@ import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .core_tools import define_function_from_class
-from .recording_tools import write_binary_recording
+from .recording_tools import write_binary
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -133,7 +133,7 @@ class BinaryRecordingExtractor(BaseRecording):
             Type of the saved data
         {}
         """
-        write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+        write_binary(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     def is_binary_compatible(self) -> bool:
         return True

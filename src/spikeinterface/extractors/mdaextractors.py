@@ -12,7 +12,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
@@ -127,7 +127,7 @@ class MdaRecordingExtractor(BaseRecording):
         header = MdaHeader(dt0=dtype, dims0=(num_channels, num_frames))
         header_size = header.header_size
 
-        write_binary_recording(
+        write_binary(
             recording,
             file_paths=save_file_path,
             dtype=dtype,

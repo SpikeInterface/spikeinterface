@@ -100,7 +100,7 @@ from .job_tools import (
     fix_job_kwargs,
 )
 from .recording_tools import (
-    write_binary_recording,
+    write_binary,
     write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,

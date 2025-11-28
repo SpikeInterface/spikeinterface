@@ -4,7 +4,6 @@ from typing import Literal
 import warnings
 from pathlib import Path
 import os
-import mmap
 import tqdm
 
 
@@ -53,22 +52,8 @@ def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
     return samples
 
 
-# used by write_binary_recording + ChunkExecutor
-def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["byte_offset"] = byte_offest
-    worker_ctx["dtype"] = np.dtype(dtype)
-
-    file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
-    worker_ctx["file_dict"] = file_dict
-
-    return worker_ctx
-
-
-def write_binary_recording(
-    recording: "BaseRecording",
+def write_binary(
+    chunkable: "ChunkableMixin",
     file_paths: list[Path | str] | Path | str,
     dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
@@ -77,16 +62,16 @@ def write_binary_recording(
     **job_kwargs,
 ):
     """
-    Save the trace of a recording extractor in several binary .dat format.
+    Save the data of a chunkable object to binary format.
 
     Note :
         time_axis is always 0 (contrary to previous version.
-        to get time_axis=1 (which is a bad idea) use `write_binary_recording_file_handle()`
+        to get time_axis=1 (which is a bad idea) use `write_binary_file_handle()`
 
     Parameters
     ----------
-    recording : RecordingExtractor
-        The recording extractor object to be saved in .dat format
+    chunkable : ChunkableMixin
+        The chunkable object to be saved to binary file
     file_path : str or list[str]
         The path to the file.
     dtype : dtype or None, default: None
@@ -103,23 +88,22 @@ def write_binary_recording(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
-    num_segments = recording.get_num_segments()
+    num_segments = chunkable.get_num_segments()
     if len(file_path_list) != num_segments:
-        raise ValueError("'file_paths' must be a list of the same size as the number of segments in the recording")
+        raise ValueError("'file_paths' must be a list of the same size as the number of segments in the chunkable")
 
     file_path_list = [Path(file_path) for file_path in file_path_list]
     if add_file_extension:
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
-    dtype = dtype if dtype is not None else recording.get_dtype()
+    dtype = dtype if dtype is not None else chunkable.get_dtype()
 
-    dtype_size_bytes = np.dtype(dtype).itemsize
-    num_channels = recording.get_num_channels()
+    sample_size_bytes = chunkable.get_sample_size_in_bytes()
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     for segment_index, file_path in file_path_dict.items():
-        num_frames = recording.get_num_frames(segment_index=segment_index)
-        data_size_bytes = dtype_size_bytes * num_frames * num_channels
+        num_samples = chunkable.get_num_samples(segment_index=segment_index)
+        data_size_bytes = sample_size_bytes * num_samples
         file_size_bytes = data_size_bytes + byte_offset
 
         # Create an empty file with file_size_bytes
@@ -133,28 +117,41 @@ def write_binary_recording(
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (recording, file_path_dict, dtype, byte_offset)
+    init_args = (chunkable, file_path_dict, dtype, byte_offset)
     executor = ChunkExecutor(
-        recording, func, init_func, init_args, job_name="write_binary_recording", verbose=verbose, **job_kwargs
+        chunkable, func, init_func, init_args, job_name="write_binary", verbose=verbose, **job_kwargs
     )
     executor.run()
 
 
-# used by write_binary_recording + ChunkExecutor
+# used by write_binary + ChunkExecutor
+def _init_binary_worker(chunkable, file_path_dict, dtype, byte_offset):
+    # create a local dict per worker
+    worker_ctx = {}
+    worker_ctx["chunkable"] = chunkable
+    worker_ctx["byte_offset"] = byte_offset
+    worker_ctx["dtype"] = np.dtype(dtype)
+
+    file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
+    worker_ctx["file_dict"] = file_dict
+
+    return worker_ctx
+
+
+# used by write_binary + ChunkExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = worker_ctx["recording"]
+    chunkable = worker_ctx["chunkable"]
     dtype = worker_ctx["dtype"]
     byte_offset = worker_ctx["byte_offset"]
     file = worker_ctx["file_dict"][segment_index]
 
-    num_channels = recording.get_num_channels()
-    dtype_size_bytes = np.dtype(dtype).itemsize
+    sample_size_bytes = chunkable.get_sample_size_in_bytes()
 
     # Calculate byte offsets for the start frames relative to the entire recording
-    start_byte = byte_offset + start_frame * num_channels * dtype_size_bytes
+    start_byte = byte_offset + start_frame * sample_size_bytes
 
-    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = chunkable.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype, order="c", copy=False)
 
     file.seek(start_byte)
@@ -163,14 +160,14 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     file.flush()
 
 
-write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
+write_binary.__doc__ = write_binary.__doc__.format(_shared_job_kwargs_doc)
 
 
-def write_binary_recording_file_handle(
+def write_binary_file_handle(
     recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs
 ):
     """
-    Old variant version of write_binary_recording with one file handle.
+    Old variant version of write_binary with one file handle.
     Can be useful in some case ???
     Not used anymore at the moment.
 

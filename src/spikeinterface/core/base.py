@@ -210,13 +210,6 @@ class BaseExtractor:
             else:
                 raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
 
-    def get_preferred_mp_context(self):
-        """
-        Get the preferred context for multiprocessing.
-        If None, the context is set by the multiprocessing package.
-        """
-        return self._preferred_mp_context
-
     def get_annotation(self, key: str, copy: bool = True) -> Any:
         """
         Get a annotation.
@@ -1165,3 +1158,26 @@ class BaseSegment:
 
     def set_parent_extractor(self, parent_extractor: BaseExtractor) -> None:
         self._parent_extractor = weakref.ref(parent_extractor)
+
+
+class ChunkableMixin:
+    _preferred_mp_context = None
+
+    def get_sampling_frequency(self) -> float:
+        raise NotImplementedError
+
+    def get_num_samples(self, segment_index: int | None = None) -> int:
+        raise NotImplementedError
+
+    def get_sample_size_bytes(self) -> int:
+        raise NotImplementedError
+
+    def get_preferred_mp_context(self):
+        """
+        Get the preferred context for multiprocessing.
+        If None, the context is set by the multiprocessing package.
+        """
+        return self._preferred_mp_context
+
+    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None) -> np.ndarray:
+        raise NotImplementedError

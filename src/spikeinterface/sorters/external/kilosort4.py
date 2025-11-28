@@ -6,7 +6,7 @@ import warnings
 from packaging import version
 
 
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
 from spikeinterface.sorters.basesorter import get_job_kwargs
@@ -144,7 +144,7 @@ class Kilosort4Sorter(BaseSorter):
             if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
                 # local copy needed
                 binary_file_path = sorter_output_folder / "recording.dat"
-                write_binary_recording(
+                write_binary(
                     recording=recording,
                     file_paths=[binary_file_path],
                     **get_job_kwargs(params, verbose),

@@ -9,7 +9,7 @@ from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 from spikeinterface.core.recording_tools import (
-    write_binary_recording,
+    write_binary,
     write_memory_recording,
     get_random_slices,
     get_random_data_chunks,
@@ -23,8 +23,8 @@ from spikeinterface.core.recording_tools import (
 )
 
 
-def test_write_binary_recording(tmp_path):
-    # Test write_binary_recording() with loop (n_jobs=1)
+def test_write_binary(tmp_path):
+    # Test write_binary() with loop (n_jobs=1)
     # Setup
     sampling_frequency = 30_000
     num_channels = 2
@@ -41,7 +41,7 @@ def test_write_binary_recording(tmp_path):
 
     # Write binary recording
     job_kwargs = dict(n_jobs=1)
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
+    write_binary(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -50,8 +50,8 @@ def test_write_binary_recording(tmp_path):
     assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
 
-def test_write_binary_recording_offset(tmp_path):
-    # Test write_binary_recording() with loop (n_jobs=1)
+def test_write_binary_offset(tmp_path):
+    # Test write_binary() with loop (n_jobs=1)
     # Setup
     sampling_frequency = 30_000
     num_channels = 2
@@ -69,9 +69,7 @@ def test_write_binary_recording_offset(tmp_path):
     # Write binary recording
     job_kwargs = dict(n_jobs=1)
     byte_offset = 125
-    write_binary_recording(
-        recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, verbose=False, **job_kwargs
-    )
+    write_binary(recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -84,8 +82,8 @@ def test_write_binary_recording_offset(tmp_path):
     assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
 
-def test_write_binary_recording_parallel(tmp_path):
-    # Test write_binary_recording() with parallel processing (n_jobs=2)
+def test_write_binary_parallel(tmp_path):
+    # Test write_binary() with parallel processing (n_jobs=2)
 
     # Setup
     sampling_frequency = 30_000
@@ -103,7 +101,7 @@ def test_write_binary_recording_parallel(tmp_path):
 
     # Write binary recording
     job_kwargs = dict(n_jobs=2, chunk_memory="100k", mp_context="spawn")
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
+    write_binary(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -115,8 +113,8 @@ def test_write_binary_recording_parallel(tmp_path):
         assert np.allclose(binary_traces, recording_traces)
 
 
-def test_write_binary_recording_multiple_segment(tmp_path):
-    # Test write_binary_recording() with multiple segments (n_jobs=2)
+def test_write_binary_multiple_segment(tmp_path):
+    # Test write_binary() with multiple segments (n_jobs=2)
     # Setup
     sampling_frequency = 30_000
     num_channels = 10
@@ -133,7 +131,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
     # Write binary recording
     job_kwargs = dict(n_jobs=2, chunk_memory="100k", mp_context="spawn")
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
+    write_binary(recording, file_paths=file_paths, dtype=dtype, verbose=False, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -363,7 +361,7 @@ if __name__ == "__main__":
 
     # with tempfile.TemporaryDirectory() as tmpdirname:
     #     tmp_path = Path(tmpdirname)
-    #     test_write_binary_recording(tmp_path)
+    #     test_write_binary(tmp_path)
     # test_write_memory_recording()
 
     test_get_random_slices()
