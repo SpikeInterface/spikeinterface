@@ -537,7 +537,7 @@ def extract_waveforms_to_single_buffer(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if num_spikes > 0:
+    if num_spikes > 0 and num_chans > 0:
         # and run
         func = _worker_distribute_single_buffer
         init_func = _init_worker_distribute_single_buffer
@@ -564,11 +564,13 @@ def extract_waveforms_to_single_buffer(
         return all_waveforms
     elif mode == "shared_memory":
         if copy:
+            wf_out = all_waveforms.copy()
             if shm is not None:
                 # release all sharedmem buffer
                 # empty array have None
+                shm.close()
                 shm.unlink()
-            return all_waveforms.copy()
+            return wf_out
         else:
             return all_waveforms, wf_array_info
 

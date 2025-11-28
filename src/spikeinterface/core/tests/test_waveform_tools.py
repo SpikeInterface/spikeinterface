@@ -267,7 +267,7 @@ def test_estimate_templates():
 
 
 if __name__ == "__main__":
-    # cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "core"
-    # test_waveform_tools(cache_folder)
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "core"
+    test_waveform_tools(cache_folder)
     # test_estimate_templates_with_accumulator()
-    test_estimate_templates()
+    # test_estimate_templates()
