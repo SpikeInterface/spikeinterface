@@ -64,7 +64,7 @@ class TestTimeHandling:
             times_recording.set_times(times=time_vector, segment_index=segment_index)
 
             assert np.array_equal(
-                times_recording._recording_segments[segment_index].time_vector,
+                times_recording.segments[segment_index].time_vector,
                 time_vector,
             ), "time_vector was not properly set during test setup"
 
@@ -84,7 +84,7 @@ class TestTimeHandling:
             t_start = (segment_index + 1) * 100
 
             all_t_starts.append(t_start + t_start_recording.get_times(segment_index))
-            t_start_recording._recording_segments[segment_index].t_start = t_start
+            t_start_recording.segments[segment_index].t_start = t_start
 
         return (raw_recording, t_start_recording, all_t_starts)
 
@@ -442,6 +442,6 @@ def test_shift_times_with_None_as_t_start():
     """Ensures we can shift times even when t_stat is None which is interpeted as zero"""
     recording = generate_recording(num_channels=4, durations=[10])
 
-    assert recording._recording_segments[0].t_start is None
+    assert recording.segments[0].t_start is None
     recording.shift_times(shift=1.0)  # Shift by one seconds should not generate an error
     assert recording.get_start_time() == 1.0

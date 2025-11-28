@@ -43,8 +43,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
 
-        self._recording_segments: list[BaseRecordingSegment] = []
-
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
@@ -160,29 +158,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         html_repr = html_header + html_segments + html_channel_ids + html_extra
         return html_repr
 
-    def get_num_segments(self) -> int:
-        """
-        Returns the number of segments.
-
-        Returns
-        -------
-        int
-            Number of segments in the recording
-        """
-        return len(self._recording_segments)
-
-    def add_recording_segment(self, recording_segment):
-        """Adds a recording segment.
-
-        Parameters
-        ----------
-        recording_segment : BaseRecordingSegment
-            The recording segment to add
-        """
-        # todo: check channel count and sampling frequency
-        self._recording_segments.append(recording_segment)
-        recording_segment.set_parent_extractor(self)
-
     def get_sample_size_in_bytes(self):
         """
         Returns the size of a single sample across all channels in bytes.
@@ -214,7 +189,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             The number of samples
         """
         segment_index = self._check_segment_index(segment_index)
-        return int(self._recording_segments[segment_index].get_num_samples())
+        return int(self.segments[segment_index].get_num_samples())
 
     get_num_frames = get_num_samples
 
@@ -346,7 +321,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         """
         segment_index = self._check_segment_index(segment_index)
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         start_frame = int(start_frame) if start_frame is not None else 0
         num_samples = rs.get_num_samples()
         end_frame = int(min(end_frame, num_samples)) if end_frame is not None else num_samples
@@ -404,7 +379,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         """
 
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         time_kwargs = rs.get_times_kwargs()
 
         return time_kwargs
@@ -428,7 +403,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             The 1d times array
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         times = rs.get_times()
         return times
 
@@ -446,7 +421,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             The start time in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         return rs.get_start_time()
 
     def get_end_time(self, segment_index=None) -> float:
@@ -463,7 +438,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             The stop time in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         return rs.get_end_time()
 
     def has_time_vector(self, segment_index: Optional[int] = None):
@@ -480,7 +455,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             True if the recording has time vectors, False otherwise
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         d = rs.get_times_kwargs()
         return d["time_vector"] is not None
 
@@ -497,7 +472,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             If True, a warning is printed
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
 
         assert times.ndim == 1, "Time must have ndim=1"
         assert rs.get_num_samples() == times.shape[0], "times have wrong shape"
@@ -520,7 +495,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         segment's sampling frequency is set to the recording's sampling frequency.
         """
         for segment_index in range(self.get_num_segments()):
-            rs = self._recording_segments[segment_index]
+            rs = self.segments[segment_index]
             if self.has_time_vector(segment_index):
                 rs.time_vector = None
             rs.t_start = None
@@ -548,7 +523,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             segments_to_shift = (segment_index,)
 
         for segment_index in segments_to_shift:
-            rs = self._recording_segments[segment_index]
+            rs = self.segments[segment_index]
 
             if self.has_time_vector(segment_index=segment_index):
                 rs.time_vector += shift
@@ -561,12 +536,12 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         Transform sample index into time in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         return rs.sample_index_to_time(sample_ind)
 
     def time_to_sample_index(self, time_s, segment_index=None):
         segment_index = self._check_segment_index(segment_index)
-        rs = self._recording_segments[segment_index]
+        rs = self.segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
@@ -582,7 +557,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         # handle t_starts
         t_starts = []
         has_time_vectors = []
-        for rs in self._recording_segments:
+        for rs in self.segments:
             d = rs.get_times_kwargs()
             t_starts.append(d["t_start"])
 
@@ -592,7 +567,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
     def _get_time_vectors(self):
         time_vectors = []
-        for rs in self._recording_segments:
+        for rs in self.segments:
             d = rs.get_times_kwargs()
             time_vectors.append(d["time_vector"])
         if all(time_vector is None for time_vector in time_vectors):
@@ -682,7 +657,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             self.set_probegroup(probegroup, in_place=True)
 
         # load time vector if any
-        for segment_index, rs in enumerate(self._recording_segments):
+        for segment_index, rs in enumerate(self.segments):
             time_file = folder / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
                 time_vector = np.load(time_file)
@@ -695,7 +670,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             write_probeinterface(folder / "probe.json", probegroup)
 
         # save time vector if any
-        for segment_index, rs in enumerate(self._recording_segments):
+        for segment_index, rs in enumerate(self.segments):
             d = rs.get_times_kwargs()
             time_vector = d["time_vector"]
             if time_vector is not None:

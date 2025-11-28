@@ -92,7 +92,7 @@ class BinaryRecordingExtractor(BaseRecording):
             rec_segment = BinaryRecordingSegment(
                 file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         if is_filtered is not None:
             self.annotate(is_filtered=is_filtered)
@@ -155,8 +155,8 @@ class BinaryRecordingExtractor(BaseRecording):
         Closes any open file handles in the recording segments.
         """
         # Close all recording segments
-        if hasattr(self, "_recording_segments"):
-            for segment in self._recording_segments:
+        if hasattr(self, "segments"):
+            for segment in self.segments:
                 # This will trigger the __del__ method of the BinaryRecordingSegment
                 # which will close the file handle
                 del segment

@@ -567,7 +567,7 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
             electrical_series_data=segment_data,
             times_kwargs=times_kwargs,
         )
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         # fetch and add main recording properties
         if use_pynwb:
@@ -1072,7 +1072,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
             sampling_frequency=self.sampling_frequency,
             t_start=self.t_start,
         )
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         # fetch and add sorting properties
         if load_unit_properties:
@@ -1504,7 +1504,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             timeseries_data=segment_data,
             times_kwargs=times_kwargs,
         )
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(

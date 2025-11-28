@@ -73,7 +73,7 @@ class NumpyRecording(BaseRecording):
             else:
                 t_start = t_starts[i]
             rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs = {
             "traces_list": traces_list,
@@ -187,7 +187,7 @@ class SharedMemoryRecording(BaseRecording):
                 t_start = t_starts[i]
             rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
 
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs = {
             "shm_names": shm_names,
@@ -201,7 +201,7 @@ class SharedMemoryRecording(BaseRecording):
         }
 
     def __del__(self):
-        self._recording_segments = []
+        self.segments = []
         for shm in self.shms:
             shm.close()
             if self.main_shm_owner:
@@ -267,7 +267,7 @@ class NumpySorting(BaseSorting):
             nseg = spikes[-1]["segment_index"] + 1
 
         for segment_index in range(nseg):
-            self.add_sorting_segment(SpikeVectorSortingSegment(spikes, segment_index, unit_ids))
+            self.add_segment(SpikeVectorSortingSegment(spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = spikes
@@ -519,7 +519,7 @@ class SharedMemorySorting(BaseSorting):
 
         nseg = self.shm_spikes[-1]["segment_index"] + 1
         for segment_index in range(nseg):
-            self.add_sorting_segment(SpikeVectorSortingSegment(self.shm_spikes, segment_index, unit_ids))
+            self.add_segment(SpikeVectorSortingSegment(self.shm_spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.shm_spikes

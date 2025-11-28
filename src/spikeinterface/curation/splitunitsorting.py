@@ -81,9 +81,9 @@ class SplitUnitSorting(BaseSorting):
             np.isin(unchanged_units, self.unit_ids)
         ), "new_unit_ids should have a compatible format with the parent ids"
 
-        for si, parent_segment in enumerate(self._parent_sorting._sorting_segments):
+        for si, parent_segment in enumerate(self._parent_sorting.segments):
             sub_segment = SplitSortingUnitSegment(parent_segment, split_unit_id, indices_zero_based[si], new_unit_ids)
-            self.add_sorting_segment(sub_segment)
+            self.add_segment(sub_segment)
 
         # copy properties
         ann_keys = sorting._annotations.keys()

@@ -121,7 +121,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
 
         dtype = fix_dtype(recording, dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = HighPassSpatialFilterSegment(
                 parent_segment,
                 n_channel_pad,
@@ -134,7 +134,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 order_r,
                 dtype=dtype,
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs = dict(
             recording=recording,

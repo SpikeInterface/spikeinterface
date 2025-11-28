@@ -77,7 +77,7 @@ class SpykingCircusSortingExtractor(BaseSorting):
                 unit_ids.append(int(temp.split("_")[-1]))
 
         BaseSorting.__init__(self, sample_rate, unit_ids)
-        self.add_sorting_segment(SpykingcircustSortingSegment(unit_ids, spiketrains))
+        self.add_segment(SpykingcircustSortingSegment(unit_ids, spiketrains))
 
         self._kwargs = {"folder_path": str(Path(folder_path).absolute())}
         self.extra_requirements.append("h5py")

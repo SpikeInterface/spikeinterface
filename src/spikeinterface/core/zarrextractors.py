@@ -164,7 +164,7 @@ class ZarrRecordingExtractor(BaseRecording):
                 time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
             if load_compression_ratio:
                 nbytes_segment = self._root[trace_name].nbytes
@@ -297,7 +297,7 @@ class ZarrSortingExtractor(BaseSorting):
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
-            self.add_sorting_segment(soring_segment)
+            self.add_segment(soring_segment)
 
         # load properties
         if "properties" in self._root:
@@ -499,7 +499,7 @@ def add_recording_to_zarr_group(
 
     # save time vector if any
     t_starts = np.zeros(recording.get_num_segments(), dtype="float64") * np.nan
-    for segment_index, rs in enumerate(recording._recording_segments):
+    for segment_index, rs in enumerate(recording.segments):
         d = rs.get_times_kwargs()
         time_vector = d["time_vector"]
 

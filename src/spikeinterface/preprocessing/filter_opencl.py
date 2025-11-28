@@ -74,8 +74,8 @@ class FilterOpenCLRecording(BasePreprocessor):
         dtype = "float32"
         executor = OpenCLFilterExecutor(coefficients, num_channels, dtype, margin)
 
-        for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterOpenCLRecordingSegment(parent_segment, executor, margin))
+        for parent_segment in recording.segments:
+            self.add_segment(FilterOpenCLRecordingSegment(parent_segment, executor, margin))
 
         self._kwargs = dict(
             recording=recording,

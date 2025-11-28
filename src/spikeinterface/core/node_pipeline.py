@@ -650,7 +650,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     nodes = worker_ctx["nodes"]
     skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
-    recording_segment = recording._recording_segments[segment_index]
+    recording_segment = recording.segments[segment_index]
     retrievers = find_parents_of_type(nodes, (SpikeRetriever, PeakRetriever))
     # get peak slices once for all retrievers
     peak_slice_by_retriever = {}

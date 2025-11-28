@@ -179,7 +179,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, unit_ids=spike_clusters.keys(), sampling_frequency=sampling_frequency)
 
         sorting_segment = SHYBRIDSortingSegment(spike_clusters)
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),

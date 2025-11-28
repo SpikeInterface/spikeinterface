@@ -424,7 +424,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
             )
 
-        for segment_index, parent_segment in enumerate(recording._recording_segments):
+        for segment_index, parent_segment in enumerate(recording.segments):
             # finish the per-segment part of the time bin logic
             if interpolation_time_bin_centers_s is None:
                 # in this case, interpolation_time_bin_size_s is set.
@@ -452,7 +452,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 segment_interpolation_time_bin_edges_s,
                 dtype=dtype_,
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         # this object is currently not JSON-serializable because the Motion obejct cannot be reloaded properly
         # see issue #3313

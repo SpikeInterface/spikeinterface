@@ -88,7 +88,7 @@ def test_get_noise_levels_output():
 
 def test_get_chunk_with_margin():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0])
-    rec_seg = rec._recording_segments[0]
+    rec_seg = rec.segments[0]
     length = rec_seg.get_num_samples()
 
     #  rec_segment, start_frame, end_frame, channel_indices, sample_margin

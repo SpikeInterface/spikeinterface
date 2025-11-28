@@ -222,7 +222,7 @@ class AgreementSortingExtractor(BaseSorting):
 
         for segment_index in range(multisortingcomparison._num_segments):
             sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
-            self.add_sorting_segment(sorting_segment)
+            self.add_segment(sorting_segment)
 
         self._kwargs = dict(
             sampling_frequency=sampling_frequency,

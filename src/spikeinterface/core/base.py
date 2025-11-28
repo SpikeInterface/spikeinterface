@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
 from typing import Any, Iterable, List, Optional, Sequence, Union
@@ -61,6 +62,9 @@ class BaseExtractor:
                 self._main_ids.dtype.kind in "uiSU"
             ), f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
 
+        # segments
+        self._segments: List[BaseSegment] = []
+
         # dict at object level
         self._annotations = {}
 
@@ -116,9 +120,16 @@ class BaseExtractor:
             # we remove the annotation if it exists
             _ = self._annotations.pop("name", None)
 
+    @property
+    def segments(self) -> list:
+        return self._segments
+
+    def add_segment(self, segment: BaseSegment) -> None:
+        self._segments.append(segment)
+        segment.set_parent_extractor(self)
+
     def get_num_segments(self) -> int:
-        # This is implemented in BaseRecording or BaseSorting
-        raise NotImplementedError
+        return len(self._segments)
 
     def get_parent(self) -> Optional[BaseExtractor]:
         """Returns parent object if it exists, otherwise None"""
@@ -1160,16 +1171,35 @@ class BaseSegment:
         self._parent_extractor = weakref.ref(parent_extractor)
 
 
-class ChunkableMixin:
+class ChunkableMixin(ABC):
+    """
+    Abstract mixin class for chunkable objects.
+    Provides methods to handle chunked data access, that can be used for parallelization.
+
+    The Mixin is abstract since all methods need to be implemented in the child class in order
+    for it to function properly.
+    """
+
     _preferred_mp_context = None
 
+    @abstractmethod
     def get_sampling_frequency(self) -> float:
         raise NotImplementedError
 
+    @abstractmethod
     def get_num_samples(self, segment_index: int | None = None) -> int:
         raise NotImplementedError
 
-    def get_sample_size_bytes(self) -> int:
+    @abstractmethod
+    def get_sample_size_in_bytes(self) -> int:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_shape(self, segment_index: int | None = None) -> tuple[int, ...]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
     def get_preferred_mp_context(self):
@@ -1178,9 +1208,3 @@ class ChunkableMixin:
         If None, the context is set by the multiprocessing package.
         """
         return self._preferred_mp_context
-
-    def get_shape(self, segment_index: int | None = None) -> tuple[int, ...]:
-        raise NotImplementedError
-
-    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
-        raise NotImplementedError
