@@ -145,7 +145,7 @@ class Kilosort4Sorter(BaseSorter):
                 # local copy needed
                 binary_file_path = sorter_output_folder / "recording.dat"
                 write_binary(
-                    recording=recording,
+                    recording,
                     file_paths=[binary_file_path],
                     **get_job_kwargs(params, verbose),
                 )
