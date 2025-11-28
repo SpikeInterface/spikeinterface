@@ -63,9 +63,9 @@ class PhaseShiftRecording(BasePreprocessor):
             tmp_dtype = None
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         # for dumpability
         if inter_sample_shift is not None:

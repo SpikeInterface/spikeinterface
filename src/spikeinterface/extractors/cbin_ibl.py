@@ -101,7 +101,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=cbuffer.dtype
         )
         recording_segment = CBinIblRecordingSegment(cbuffer, sampling_frequency, load_sync_channel)
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         self.extra_requirements.append("mtscomp")
 

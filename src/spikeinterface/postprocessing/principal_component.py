@@ -13,7 +13,7 @@ import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
+from spikeinterface.core.job_tools import ChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 
 from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
 
@@ -419,7 +419,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             unit_channels,
             pca_model,
         )
-        processor = ChunkRecordingExecutor(
+        processor = ChunkExecutor(
             recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
         )
         processor.run()

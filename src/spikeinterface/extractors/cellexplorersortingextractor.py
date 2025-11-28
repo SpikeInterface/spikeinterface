@@ -102,7 +102,7 @@ class CellExplorerSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
         sorting_segment = CellExplorerSortingSegment(spiketrains_dict, unit_ids)
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         self.extra_requirements.append(["pymatreader"])
 

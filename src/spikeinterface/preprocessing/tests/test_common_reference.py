@@ -83,7 +83,7 @@ def test_common_reference_channel_slicing(recording):
     start_frame = 0
     end_frame = 10
 
-    recording_segment_cmr = recording_cmr._recording_segments[0]
+    recording_segment_cmr = recording_cmr.segments[0]
     traces_cmr_all = recording_segment_cmr.get_traces(
         start_frame=start_frame, end_frame=end_frame, channel_indices=all_indices
     )
@@ -93,7 +93,7 @@ def test_common_reference_channel_slicing(recording):
 
     assert np.all(traces_cmr_all[:, indices] == traces_cmr_sub)
 
-    recording_segment_car = recording_car._recording_segments[0]
+    recording_segment_car = recording_car.segments[0]
     traces_car_all = recording_segment_car.get_traces(
         start_frame=start_frame, end_frame=end_frame, channel_indices=all_indices
     )
@@ -103,7 +103,7 @@ def test_common_reference_channel_slicing(recording):
 
     assert np.all(traces_car_all[:, indices] == traces_car_sub)
 
-    recording_segment_local = recording_local_car._recording_segments[0]
+    recording_segment_local = recording_local_car.segments[0]
     traces_local_all = recording_segment_local.get_traces(
         start_frame=start_frame, end_frame=end_frame, channel_indices=all_indices
     )
