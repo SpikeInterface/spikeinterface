@@ -98,58 +98,6 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_target
     return aligned_features, dont_have_channels
 
 
-# def compute_template_from_sparse(
-#     peaks, labels, labels_set, sparse_waveforms, sparse_target_mask, total_channels, peak_shifts=None
-# ):
-#     """
-#     Compute template average from single sparse waveforms buffer.
-
-#     Parameters
-#     ----------
-#     peaks
-
-#     labels
-
-#     labels_set
-
-#     sparse_waveforms  (or features)
-
-#     sparse_target_mask
-
-#     total_channels
-
-#     peak_shifts
-
-#     Returns
-#     -------
-#     templates: numpy.array
-#         Templates shape : (len(labels_set), num_samples, total_channels)
-#     """
-
-#     # NOTE SAM I think this is wrong, we should remove
-
-#     n = len(labels_set)
-
-#     templates = np.zeros((n, sparse_waveforms.shape[1], total_channels), dtype=sparse_waveforms.dtype)
-
-#     for i, label in enumerate(labels_set):
-#         peak_indices = np.flatnonzero(labels == label)
-
-#         local_chans = np.unique(peaks["channel_index"][peak_indices])
-#         target_channels = np.flatnonzero(np.all(sparse_target_mask[local_chans, :], axis=0))
-
-#         aligned_wfs, dont_have_channels = aggregate_sparse_features(
-#             peaks, peak_indices, sparse_waveforms, sparse_target_mask, target_channels
-#         )
-
-#         if peak_shifts is not None:
-#             apply_waveforms_shift(aligned_wfs, peak_shifts[peak_indices], inplace=True)
-
-#         templates[i, :, :][:, target_channels] = np.mean(aligned_wfs[~dont_have_channels], axis=0)
-
-#     return templates
-
-
 def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.

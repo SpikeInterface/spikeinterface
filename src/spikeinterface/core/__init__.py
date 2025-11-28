@@ -111,6 +111,7 @@ from .recording_tools import (
 )
 from .sorting_tools import (
     spike_vector_to_spike_trains,
+    spike_vector_to_indices,
     random_spikes_selection,
     apply_merges_to_sorting,
     apply_splits_to_sorting,

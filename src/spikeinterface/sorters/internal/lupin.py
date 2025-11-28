@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import shutil
-import importlib
-
 from .si_based import ComponentsBasedSorter
 
 from copy import deepcopy
@@ -26,58 +23,70 @@ from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_ca
 import numpy as np
 
 
-class Tridesclous2Sorter(ComponentsBasedSorter):
-    sorter_name = "tridesclous2"
+class LupinSorter(ComponentsBasedSorter):
+    """
+    Gentleman thief spike sorter.
+
+    This sorter is composed by pieces of code and ideas stolen everywhere : yass, tridesclous, spkyking-circus, kilosort.
+    It should be the best sorter we can build using spikeinterface.sortingcomponents
+    """
+
+    sorter_name = "lupin"
 
     _default_params = {
         "apply_preprocessing": True,
         "apply_motion_correction": False,
-        "motion_correction": {"preset": "dredge_fast"},
+        "motion_correction_preset": "dredge_fast",
+        "clustering_ms_before": 0.3,
+        "clustering_ms_after": 1.3,
+        "whitening_radius_um": 100.0,
+        "detection_radius_um": 50.0,
+        "features_radius_um": 75.0,
+        "template_radius_um": 100.0,
+        "freq_min": 150.0,
+        "freq_max": 7000.0,
         "cache_preprocessing_mode": "auto",
-        "waveforms": {
-            "ms_before": 0.5,
-            "ms_after": 1.5,
-            "radius_um": 120.0,
-        },
-        "filtering": {
-            "freq_min": 150.0,
-            "freq_max": 6000.0,
-            "ftype": "bessel",
-            "filter_order": 2,
-        },
-        "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
-        "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "svd": {"n_components": 5},
-        "clustering": {
-            "recursive_depth": 3,
-        },
-        "templates": {
-            "ms_before": 2.0,
-            "ms_after": 3.0,
-            "max_spikes_per_unit": 400,
-            "sparsity_threshold": 1.5,
-            "min_snr": 2.5,
-            "radius_um": 100.0,
-        },
-        "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
+        "peak_sign": "neg",
+        "detect_threshold": 5,
+        "n_peaks_per_channel": 5000,
+        "n_svd_components_per_channel": 5,
+        "n_pca_features": 4,
+        "clustering_recursive_depth": 3,
+        "ms_before": 1.0,
+        "ms_after": 2.5,
+        "sparsity_threshold": 1.5,
+        "template_min_snr": 2.5,
+        "gather_mode": "memory",
         "job_kwargs": {},
+        "seed": None,
         "save_array": True,
         "debug": False,
     }
 
     _params_description = {
         "apply_preprocessing": "Apply internal preprocessing or not",
-        "cache_preprocessing": "A dict contaning how to cache the preprocessed recording. mode='memory' | 'folder | 'zarr' ",
-        "waveforms": "A dictonary containing waveforms params: ms_before, ms_after, radius_um",
-        "filtering": "A dictonary containing filtering params: freq_min, freq_max",
-        "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um",
-        "selection": "A dictonary containing selection params: n_peaks_per_channel, min_n_peaks",
-        "svd": "A dictonary containing svd params: n_components",
-        "clustering": "A dictonary containing clustering params: split_radius_um, merge_radius_um",
-        "templates": "A dictonary containing waveforms params for peeler: ms_before, ms_after",
-        "matching": "A dictonary containing matching params for matching: peak_shift_ms, radius_um",
-        "job_kwargs": "A dictionary containing job kwargs",
-        "save_array": "Save or not intermediate arrays",
+        "apply_motion_correction": "Apply motion correction or not",
+        "motion_correction_preset": "Motion correction preset",
+        "clustering_ms_before": "Milliseconds before the spike peak for clustering",
+        "clustering_ms_after": "Milliseconds after the spike peak  for clustering",
+        "radius_um": "Radius for sparsity",
+        "freq_min": "Low frequency",
+        "freq_max": "High frequency",
+        "peak_sign": "Sign of peaks neg/pos/both",
+        "detect_threshold": "Treshold for peak detection",
+        "n_peaks_per_channel": "Number of spike per channel for clustering",
+        "n_svd_components_per_channel": "Number of SVD components per channel for clustering",
+        "n_pca_features": "Secondary PCA features reducation before local isosplit",
+        "clustering_recursive_depth": "Clustering recussivity",
+        "ms_before": "Milliseconds before the spike peak for template matching",
+        "ms_after": "Milliseconds after the spike peak for template matching",
+        "sparsity_threshold": "Threshold to sparsify templates before template matching",
+        "template_min_snr": "Threshold to remove templates before template matching",
+        "gather_mode": "How to accumalte spike in matching : memory/npy",
+        "job_kwargs": "The famous and fabulous job_kwargs",
+        "seed": "Seed for random number",
+        "save_array": "Save or not intermediate arrays in the folder",
+        "debug": "Save debug files",
     }
 
     handle_multi_segment = True
@@ -89,6 +98,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
+        from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_recording
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
@@ -101,6 +111,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs["progress_bar"] = verbose
+
+        seed = params["seed"]
 
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
@@ -125,15 +137,30 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                         rec_for_motion,
                         folder=sorter_output_folder / "motion",
                         output_motion_info=True,
-                        **params["motion_correction"],
+                        preset=params["motion_correction_preset"],
                     )
                     if verbose:
                         print("Done correct_motion()")
 
-            recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20.0, dtype="float32")
+            recording = bandpass_filter(
+                recording_raw,
+                freq_min=params["freq_min"],
+                freq_max=params["freq_max"],
+                ftype="bessel",
+                filter_order=2,
+                margin_ms=20.0,
+                dtype="float32",
+            )
 
             if apply_cmr:
                 recording = common_reference(recording)
+
+            recording = whiten(
+                recording,
+                dtype="float32",
+                mode="local",
+                radius_um=params["whitening_radius_um"],
+            )
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
@@ -149,10 +176,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                     **interpolate_motion_kwargs,
                 )
 
-            recording = zscore(recording, dtype="float32")
-            # whitening is really bad when dirft correction is applied and this changd nothing when no dirft
-            # recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
-
             # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
             recording, cache_info = cache_preprocessing(
@@ -162,46 +185,56 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 job_kwargs=job_kwargs,
             )
 
-            noise_levels = np.ones(num_chans, dtype="float32")
+            noise_levels = get_noise_levels(recording, return_in_uV=False)
         else:
             recording = recording_raw
             noise_levels = get_noise_levels(recording, return_in_uV=False)
             cache_info = None
 
         # detection
-        detection_params = params["detection"].copy()
-        detection_params["noise_levels"] = noise_levels
+        ms_before = params["ms_before"]
+        ms_after = params["ms_after"]
+        prototype, few_waveforms, few_peaks = get_prototype_and_waveforms_from_recording(
+            recording,
+            n_peaks=10_000,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            seed=seed,
+            noise_levels=noise_levels,
+            job_kwargs=job_kwargs,
+        )
+        detection_params = dict(
+            peak_sign=params["peak_sign"],
+            detect_threshold=params["detect_threshold"],
+            exclude_sweep_ms=1.5,
+            radius_um=params["detection_radius_um"],
+            prototype=prototype,
+            ms_before=ms_before,
+        )
         all_peaks = detect_peaks(
-            recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+            recording, method="matched_filtering", method_kwargs=detection_params, job_kwargs=job_kwargs
         )
 
         if verbose:
             print(f"detect_peaks(): {len(all_peaks)} peaks found")
 
         # selection
-        selection_params = params["selection"].copy()
-        n_peaks = params["selection"]["n_peaks_per_channel"] * num_chans
-        n_peaks = max(selection_params["min_n_peaks"], n_peaks)
+        n_peaks = max(params["n_peaks_per_channel"] * num_chans, 20_000)
         peaks = select_peaks(all_peaks, method="uniform", n_peaks=n_peaks)
-
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
-        # routing clustering params into the big IterativeISOSPLITClustering params tree
+        # Clustering
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
-        clustering_kwargs["peaks_svd"].update(params["waveforms"])
-        clustering_kwargs["peaks_svd"].update(params["svd"])
-        clustering_kwargs["split"].update(params["clustering"])
+        clustering_kwargs["peaks_svd"]["ms_before"] = params["clustering_ms_before"]
+        clustering_kwargs["peaks_svd"]["ms_after"] = params["clustering_ms_after"]
+        clustering_kwargs["peaks_svd"]["radius_um"] = params["features_radius_um"]
+        clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components_per_channel"]
+        clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
+        clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
+
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
-
-        # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
-        #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
-        #    if not have_sisosplit6:
-        #        raise ValueError(
-        #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
-        #        )
-
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording,
             peaks,
@@ -224,24 +257,17 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
-        recording_for_peeler = recording
-
         # preestimate the sparsity unsing peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
         sparsity, unit_locations = compute_sparsity_from_peaks_and_label(
-            kept_peaks,
-            spike_vector["unit_index"],
-            sorting_pre_peeler.unit_ids,
-            recording,
-            params["templates"]["radius_um"],
+            kept_peaks, spike_vector["unit_index"], sorting_pre_peeler.unit_ids, recording, params["template_radius_um"]
         )
 
-        # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
-        nbefore = int(params["templates"]["ms_before"] * sampling_frequency / 1000.0)
-        nafter = int(params["templates"]["ms_after"] * sampling_frequency / 1000.0)
-
+        # Template are sparse from radius using unit_location
+        nbefore = int(ms_before * sampling_frequency / 1000.0)
+        nafter = int(ms_after * sampling_frequency / 1000.0)
         templates_array = estimate_templates_with_accumulator(
-            recording_for_peeler,
+            recording,
             sorting_pre_peeler.to_spike_vector(),
             sorting_pre_peeler.unit_ids,
             nbefore,
@@ -250,7 +276,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             sparsity_mask=sparsity.mask,
             **job_kwargs,
         )
-
         templates = Templates(
             templates_array=templates_array,
             sampling_frequency=sampling_frequency,
@@ -265,28 +290,24 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # this spasify more
         templates = clean_templates(
             templates,
-            sparsify_threshold=params["templates"]["sparsity_threshold"],
+            sparsify_threshold=params["sparsity_threshold"],
             noise_levels=noise_levels,
-            min_snr=params["templates"]["min_snr"],
+            min_snr=params["template_min_snr"],
             max_jitter_ms=None,
             remove_empty=True,
         )
 
-        ## peeler
-        matching_method = params["matching"].pop("method")
-        gather_mode = params["matching"].pop("gather_mode", "memory")
-        matching_params = params["matching"].get("matching_kwargs", {}).copy()
-        if matching_method in ("tdc-peeler",):
-            matching_params["noise_levels"] = noise_levels
-
+        # Template matching
+        gather_mode = params["gather_mode"]
         pipeline_kwargs = dict(gather_mode=gather_mode)
         if gather_mode == "npy":
             pipeline_kwargs["folder"] = sorter_output_folder / "matching"
+
         spikes = find_spikes_from_templates(
-            recording_for_peeler,
+            recording,
             templates,
-            method=matching_method,
-            method_kwargs=matching_params,
+            method="wobble",
+            method_kwargs={},
             pipeline_kwargs=pipeline_kwargs,
             job_kwargs=job_kwargs,
         )
@@ -300,13 +321,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         auto_merge = True
         analyzer_final = None
         if auto_merge:
+            # TODO expose some of theses parameters
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
 
-            # max_distance_um = merging_params.get("max_distance_um", 50)
-            # merging_params["max_distance_um"] = max(max_distance_um, 2 * max_motion)
-
             analyzer_final = final_cleaning_circus(
-                recording_for_peeler,
+                recording,
                 sorting,
                 templates,
                 similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
@@ -321,7 +340,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         if params["save_array"]:
             sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")
-
             np.save(sorter_output_folder / "noise_levels.npy", noise_levels)
             np.save(sorter_output_folder / "all_peaks.npy", all_peaks)
             np.save(sorter_output_folder / "peaks.npy", peaks)
@@ -333,7 +351,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
-        del recording, recording_for_peeler
+        del recording
         clean_cache_preprocessing(cache_info)
 
         return sorting

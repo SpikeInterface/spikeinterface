@@ -283,7 +283,6 @@ class LocalFeatureClustering:
 
                     tsvd = TruncatedSVD(n_pca_features, random_state=seed)
                     final_features = tsvd.fit_transform(flatten_features)
-
             else:
                 final_features = flatten_features
                 tsvd = None
