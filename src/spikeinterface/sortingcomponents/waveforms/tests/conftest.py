@@ -21,11 +21,11 @@ def generated_recording():
         num_units=10,
         seed=2205,
     )
-    return recording
+    return recording, sorting
 
 
 @pytest.fixture(scope="module")
 def detected_peaks(generated_recording, chunk_executor_kwargs):
-    recording = generated_recording
+    recording, _ = generated_recording
     peaks = detect_peaks(recording=recording, job_kwargs=chunk_executor_kwargs)
     return peaks

@@ -24,8 +24,6 @@ class ComputeUnitLocations(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     method : "monopolar_triangulation" |  "center_of_mass" | "grid_convolution", default: "monopolar_triangulation"
         The method to use for localization
     **method_kwargs : dict, default: {}
@@ -43,9 +41,6 @@ class ComputeUnitLocations(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
     need_backward_compatibility_on_load = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _handle_backward_compatibility_on_load(self):
         if "method_kwargs" in self.params:

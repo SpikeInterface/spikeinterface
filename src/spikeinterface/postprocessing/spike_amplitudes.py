@@ -2,18 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.job_tools import fix_job_kwargs
-
+from spikeinterface.core.sortinganalyzer import register_result_extension
+from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
-
-from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
-from spikeinterface.core.sorting_tools import spike_vector_to_indices
+from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, find_parent_of_type
 
 
-class ComputeSpikeAmplitudes(AnalyzerExtension):
+class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
     """
-    AnalyzerExtension
     Computes the spike amplitudes.
 
     Needs "templates" to be computed first.
@@ -21,63 +17,18 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute extremum channel used to retrieve spike amplitudes.
-
-    Returns
-    -------
-    spike_amplitudes: np.array
-        All amplitudes for all spikes and all units are concatenated (along time, like in spike vector)
-
     """
 
     extension_name = "spike_amplitudes"
     depend_on = ["templates"]
-    need_recording = True
-    use_nodepipeline = True
     nodepipeline_variables = ["amplitudes"]
-    need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
-
-        self._all_spikes = None
 
     def _set_params(self, peak_sign="neg"):
-        params = dict(peak_sign=peak_sign)
-        return params
-
-    def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
-
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
-
-        new_data = dict()
-        new_data["amplitudes"] = self.data["amplitudes"][keep_spike_mask]
-
-        return new_data
-
-    def _merge_extension_data(
-        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
-    ):
-        new_data = dict()
-
-        if keep_mask is None:
-            new_data["amplitudes"] = self.data["amplitudes"].copy()
-        else:
-            new_data["amplitudes"] = self.data["amplitudes"][keep_mask]
-
-        return new_data
-
-    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        # splitting only changes random spikes assignments
-        return self.data.copy()
+        return super()._set_params(peak_sign=peak_sign)
 
     def _get_pipeline_nodes(self):
-
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
@@ -102,50 +53,8 @@ class ComputeSpikeAmplitudes(AnalyzerExtension):
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
 
-    def _run(self, verbose=False, **job_kwargs):
-        job_kwargs = fix_job_kwargs(job_kwargs)
-        nodes = self.get_pipeline_nodes()
-        amps = run_node_pipeline(
-            self.sorting_analyzer.recording,
-            nodes,
-            job_kwargs=job_kwargs,
-            job_name="spike_amplitudes",
-            gather_mode="memory",
-            verbose=False,
-        )
-        self.data["amplitudes"] = amps
-
-    def _get_data(self, outputs="numpy", concatenated=False):
-        all_amplitudes = self.data["amplitudes"]
-        if outputs == "numpy":
-            return all_amplitudes
-        elif outputs == "by_unit":
-            unit_ids = self.sorting_analyzer.unit_ids
-            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
-            amplitudes_by_units = {}
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
-                amplitudes_by_units[segment_index] = {}
-                for unit_id in unit_ids:
-                    inds = spike_indices[segment_index][unit_id]
-                    amplitudes_by_units[segment_index][unit_id] = all_amplitudes[inds]
-
-            if concatenated:
-                amplitudes_by_units_concatenated = {
-                    unit_id: np.concatenate(
-                        [amps_in_segment[unit_id] for amps_in_segment in amplitudes_by_units.values()]
-                    )
-                    for unit_id in unit_ids
-                }
-                return amplitudes_by_units_concatenated
-
-            return amplitudes_by_units
-        else:
-            raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
-
 
 register_result_extension(ComputeSpikeAmplitudes)
-
 compute_spike_amplitudes = ComputeSpikeAmplitudes.function_factory()
 
 

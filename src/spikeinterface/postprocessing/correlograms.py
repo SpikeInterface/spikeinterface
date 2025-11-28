@@ -36,8 +36,6 @@ class ComputeCorrelograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer_or_sorting : SortingAnalyzer | Sorting
-        A SortingAnalyzer or Sorting object
     window_ms : float, default: 50.0
         The window around the spike to compute the correlation in ms. For example,
          if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
@@ -89,9 +87,6 @@ class ComputeCorrelograms(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -668,9 +663,6 @@ class ComputeACG3D(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,

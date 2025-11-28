@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from spikeinterface.postprocessing import ComputePrincipalComponents
+from spikeinterface.postprocessing import ComputePrincipalComponents, ComputeFullPCAProjections
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 
@@ -136,35 +136,6 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
             proj_one_unit = ext.get_projections_one_unit(unit_id, sparse=False)
             np.testing.assert_array_almost_equal(some_projections[spike_mask], proj_one_unit[:, :, channel_indices])
 
-    @pytest.mark.parametrize("sparse", [True, False])
-    def test_compute_for_all_spikes(self, sparse):
-        """
-        Compute the principal component scores, checking the shape
-        matches the number of spikes as expected. This is re-run
-        with n_jobs=2 and output projection score matrices
-        checked against n_jobs=1.
-        """
-        sorting_analyzer = self._prepare_sorting_analyzer(
-            format="memory", sparse=sparse, extension_class=ComputePrincipalComponents
-        )
-
-        num_spikes = sorting_analyzer.sorting.to_spike_vector().size
-
-        n_components = 3
-        sorting_analyzer.compute("principal_components", mode="by_channel_local", n_components=n_components)
-        ext = sorting_analyzer.get_extension("principal_components")
-
-        pc_file1 = self.cache_folder / "all_pc1.npy"
-        ext.run_for_all_spikes(pc_file1, chunk_size=10000, n_jobs=1)
-        all_pc1 = np.load(pc_file1)
-        assert all_pc1.shape[0] == num_spikes
-
-        pc_file2 = self.cache_folder / "all_pc2.npy"
-        ext.run_for_all_spikes(pc_file2, chunk_size=10000, n_jobs=2)
-        all_pc2 = np.load(pc_file2)
-
-        np.testing.assert_almost_equal(all_pc1, all_pc2, decimal=3)
-
     def test_project_new(self):
         """
         `project_new` projects new (unseen) waveforms onto the PCA components.
@@ -194,6 +165,11 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         assert new_proj.shape[0] == num_spike
         assert new_proj.shape[1] == n_components
         assert new_proj.shape[2] == ext_pca.data["pca_projection"].shape[2]
+
+
+class TestFullPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
+    def test_extension(self):
+        self.run_extension_tests(ComputeFullPCAProjections, params={})
 
 
 if __name__ == "__main__":

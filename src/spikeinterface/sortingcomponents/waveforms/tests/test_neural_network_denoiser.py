@@ -3,7 +3,7 @@ from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import S
 
 
 def test_single_channel_toy_denoiser_in_peak_pipeline(generated_recording, detected_peaks, chunk_executor_kwargs):
-    recording = generated_recording
+    recording, _ = generated_recording
     peaks = detected_peaks
 
     ms_before = 2.0
