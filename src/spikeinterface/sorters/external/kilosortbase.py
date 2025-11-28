@@ -11,7 +11,7 @@ import numpy as np
 from spikeinterface.sorters.utils import ShellScript, get_matlab_shell_name, get_bash_path
 from spikeinterface.sorters.basesorter import get_job_kwargs
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
 
@@ -152,7 +152,7 @@ class KilosortBase:
                 )
             else:
                 padded_recording = recording
-            write_binary_recording(
+            write_binary(
                 recording=padded_recording,
                 file_paths=[binary_file_path],
                 dtype="int16",

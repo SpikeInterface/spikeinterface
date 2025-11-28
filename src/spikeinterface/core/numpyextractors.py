@@ -14,7 +14,7 @@ from spikeinterface.core import (
 )
 from .basesorting import minimum_spike_dtype
 from .core_tools import make_shared_array
-from .recording_tools import write_memory_recording
+from .chunkable_tools import write_memory
 from multiprocessing.shared_memory import SharedMemory
 
 
@@ -83,7 +83,7 @@ class NumpyRecording(BaseRecording):
 
     @staticmethod
     def from_recording(source_recording, **job_kwargs):
-        traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
+        traces_list, shms = write_memory(source_recording, dtype=None, **job_kwargs)
 
         t_starts = source_recording._get_t_starts()
 
@@ -209,7 +209,7 @@ class SharedMemoryRecording(BaseRecording):
 
     @staticmethod
     def from_recording(source_recording, **job_kwargs):
-        traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
+        traces_list, shms = write_memory(source_recording, buffer_type="sharedmem", **job_kwargs)
 
         t_starts = source_recording._get_t_starts()
 

@@ -7,14 +7,13 @@ from typing import Optional
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
-from .base import BaseSegment
+from .base import BaseSegment, ChunkableMixin
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
-from .recording_tools import write_binary_recording
 
 
-class BaseRecording(BaseRecordingSnippets):
+class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
     """
     Abstract class representing several a multichannel timeseries (or block of raw ephys traces).
     Internally handle list of RecordingSegment
@@ -570,6 +569,15 @@ class BaseRecording(BaseRecordingSnippets):
         rs = self._recording_segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
+    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
+        """
+        General retrieval function for chunkable objects
+        """
+        return self.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame, **kwargs)
+
+    def get_shape(self, segment_index: int | None = None) -> tuple[int, ...]:
+        return (self.get_num_samples(segment_index=segment_index), self.get_num_channels())
+
     def _get_t_starts(self):
         # handle t_starts
         t_starts = []
@@ -595,12 +603,14 @@ class BaseRecording(BaseRecordingSnippets):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
+            from .chunkable_tools import write_binary
+
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
             t_starts = self._get_t_starts()
 
-            write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
+            write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
