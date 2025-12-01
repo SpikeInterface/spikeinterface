@@ -237,7 +237,7 @@ class Kilosort4Sorter(BaseSorter):
                 warning_msg = (
                     "Recording is not binary compatible with Kilosort4. This might slow down the sorting process."
                 )
-                warning.warn(warning_msg)
+                warnings.warn(warning_msg)
                 logger.warning(warning_msg)
                 filename = ""
                 file_object = RecordingExtractorAsArray(recording_extractor=recording)
