@@ -72,8 +72,10 @@ neighborhood_r2_threshold : float, default: 0.95
     R^2 threshold for the neighborhood_r2 method.
 neighborhood_r2_radius_um : float, default: 30
     Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
-seed : int or None, default: None
+seed : int | None, default: None
     The random seed to extract chunks
+channel_filters : set | None, default: None
+    For coherence+psd - only return `bad_channel_ids` whose labels are in the set `channel_filter`.
 """
 
 
@@ -171,6 +173,7 @@ def detect_bad_channels(
     neighborhood_r2_threshold: float = 0.9,
     neighborhood_r2_radius_um: float = 30.0,
     seed: int | None = None,
+    channel_filters: set | None = None,
 ):
     """
     Perform bad channel detection.
@@ -300,6 +303,22 @@ def detect_bad_channels(
                 "number of dead / noisy channels, bad channel detection may fail "
                 "(good channels may be erroneously labeled as dead)."
             )
+
+        allowed_filters = {"dead", "noise", "out"}
+
+        if channel_filters is None:
+            channel_filters = allowed_filters
+
+        if not isinstance(channel_filters, set):
+            raise ValueError(f"channel_filters must be None or a set of the following values : {allowed_filters} ")
+
+        if not channel_filters.issubset(allowed_filters):
+            raise ValueError(
+                f"{channel_filter.difference(allowed_filters)} is not a valid argument of channel_filters. Please use one of the following instead {allowed_filters}."
+            )
+
+        filtered_bad_channel_mask = np.isin(channel_labels, list(channel_filters))
+        bad_channel_ids = recording.channel_ids[filtered_bad_channel_mask]
 
     elif method == "neighborhood_r2":
         # make neighboring channels structure. this should probably be a function in core.

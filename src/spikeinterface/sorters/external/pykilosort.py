@@ -142,7 +142,7 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
-        if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
+        if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
             # local copy needed
             write_binary_recording(
                 recording,
