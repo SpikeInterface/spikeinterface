@@ -1295,7 +1295,7 @@ class SortingAnalyzer:
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
             achieved for a pair of units, soft merging will not be applied to them.
-        error_if_overlap_fails : bool, default False
+        error_if_overlap_fails : bool, default: False
             If True and `sparsity_overlap` fails for any unit, this will raise an error.
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
