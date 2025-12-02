@@ -409,8 +409,9 @@ class BaseExtractor:
 
         other.extra_requirements.extend(self.extra_requirements)
 
-        if self._preferred_mp_context is not None:
-            other._preferred_mp_context = self._preferred_mp_context
+        # call all extra copy metadata if it exists (e.g., with chunkable mixin)
+        if hasattr(self, "_extra_copy_metadata"):
+            self._extra_copy_metadata(other, only_main=only_main, ids=ids, skip_properties=skip_properties)
 
     def to_dict(
         self,
@@ -1202,9 +1203,22 @@ class ChunkableMixin(ABC):
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
+    def _extra_copy_metadata(self, other: "ChunkableMixin", **kwargs) -> None:
+        """
+        Copy metadata from another ChunkableMixin object.
+
+        Parameters
+        ----------
+        other : ChunkableMixin
+            The object from which to copy metadata.
+        """
+        # inherit preferred mp context if any
+        if self.__class__._preferred_mp_context is not None:
+            other.__class__._preferred_mp_context = self.__class__._preferred_mp_context
+
     def get_preferred_mp_context(self):
         """
         Get the preferred context for multiprocessing.
         If None, the context is set by the multiprocessing package.
         """
-        return self._preferred_mp_context
+        return self.__class__._preferred_mp_context

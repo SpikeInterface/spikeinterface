@@ -164,7 +164,6 @@ def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture, crea
         pre_post_omission=1,
         use_gpu=False,
     )
-    print(recording_di)
     recording_di_slice = recording_di.frame_slice(start_frame=0, end_frame=int(0.5 * recording.sampling_frequency))
 
     recording_di_slice.save(folder=Path(cache_folder) / "di_slice", n_jobs=2, chunk_duration="50ms")
