@@ -11,7 +11,7 @@ from spikeinterface.sorters.utils import ShellScript
 
 from probeinterface import write_prb
 
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary
 from spikeinterface.extractors.extractor_classes import KlustaSortingExtractor
 
 
@@ -103,7 +103,7 @@ class KlustaSorter(BaseSorter):
             # save binary file (chunk by chunk) into a new file
             raw_filename = sorter_output_folder / "recording.dat"
             dtype = "int16"
-            write_binary_recording(recording, file_paths=[raw_filename], dtype=dtype, **get_job_kwargs(params, verbose))
+            write_binary(recording, file_paths=[raw_filename], dtype=dtype, **get_job_kwargs(params, verbose))
 
         if p["detect_sign"] < 0:
             detect_sign = "negative"

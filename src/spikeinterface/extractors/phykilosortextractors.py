@@ -212,7 +212,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
-        self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
+        self.add_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
 class PhySortingSegment(BaseSortingSegment):

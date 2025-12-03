@@ -190,7 +190,7 @@ class OldToNewRecording(BaseRecording):
 
         # add old recording as a recording segment
         recording_segment = OldToNewRecordingSegment(oldapi_recording_extractor)
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
         self.set_channel_locations(oldapi_recording_extractor.get_channel_locations())
 
         # add old properties
@@ -267,7 +267,7 @@ class OldToNewSorting(BaseSorting):
         )
 
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         self._serializability["memory"] = False
         self._serializability["json"] = False

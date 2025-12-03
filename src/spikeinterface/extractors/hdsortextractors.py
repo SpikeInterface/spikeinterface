@@ -91,7 +91,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.add_sorting_segment(HDSortSortingSegment(unit_ids, spiketrains))
+        self.add_segment(HDSortSortingSegment(unit_ids, spiketrains))
 
         # property
         templates = []

@@ -263,7 +263,7 @@ class IblRecordingExtractor(BaseRecording):
 
         # init recording segment
         recording_segment = IblRecordingSegment(file_streamer=self._file_streamer, load_sync_channel=load_sync_channel)
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         self._kwargs = {
             "eid": eid,
@@ -352,7 +352,7 @@ class IblSortingExtractor(BaseSorting):
         unit_ids = clusters["cluster_id"][good_cluster_slice]
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sr.fs)
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"])
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         if load_unit_properties:
             for key, val in clusters.items():

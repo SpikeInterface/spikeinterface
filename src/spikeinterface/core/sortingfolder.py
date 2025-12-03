@@ -40,7 +40,7 @@ class NumpyFolderSorting(BaseSorting):
         self.spikes = np.load(folder_path / "spikes.npy")
 
         for segment_index in range(num_segments):
-            self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
+            self.add_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes

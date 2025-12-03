@@ -8,7 +8,7 @@ import shutil
 import warnings
 
 from spikeinterface.core import (
-    write_binary_recording,
+    write_binary,
     BinaryRecordingExtractor,
     BinaryFolderRecording,
     ChannelSparsity,
@@ -135,7 +135,7 @@ def export_to_phy(
     if sorting_analyzer.has_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
-            write_binary_recording(sorting_analyzer.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
+            write_binary(sorting_analyzer.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
         elif isinstance(sorting_analyzer.recording, BinaryRecordingExtractor):
             if isinstance(sorting_analyzer.recording, BinaryFolderRecording):
                 bin_kwargs = sorting_analyzer.recording._bin_kwargs
