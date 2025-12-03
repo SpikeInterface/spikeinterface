@@ -1023,7 +1023,7 @@ class SortingAnalyzer:
                 # merge units
                 all_unit_ids = unit_ids
                 sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-                mergeable, masks = self.are_units_mergeable(
+                _, masks = self.are_units_mergeable(
                     merge_unit_groups,
                     sparsity_overlap=sparsity_overlap,
                     merging_mode=merging_mode,
@@ -1033,14 +1033,7 @@ class SortingAnalyzer:
                 for unit_index, unit_id in enumerate(all_unit_ids):
                     if unit_id in merge_new_unit_ids:
                         merge_unit_group = tuple(merge_unit_groups[merge_new_unit_ids.index(unit_id)])
-                        if not mergeable[merge_unit_group]:
-                            raise Exception(
-                                f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                                f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                                "a hard merge."
-                            )
-                        else:
-                            sparsity_mask[unit_index] = masks[merge_unit_group]
+                        sparsity_mask[unit_index] = masks[merge_unit_group]
                     else:
                         # This means that the unit is already in the previous sorting
                         index = self.sorting.id_to_index(unit_id)
@@ -1271,6 +1264,7 @@ class SortingAnalyzer:
         censor_ms: float | None = None,
         merging_mode: str = "soft",
         sparsity_overlap: float = 0.75,
+        raise_error_if_overlap_fails: bool = True,
         new_id_strategy: str = "append",
         return_new_unit_ids: bool = False,
         format: str = "memory",
@@ -1300,7 +1294,10 @@ class SortingAnalyzer:
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible and an error will be raised
+            achieved for a pair of units, soft merging will not be applied to them.
+        raise_error_if_overlap_fails : bool, default: True
+            If True and `sparsity_overlap` fails for any unit merges, this will raise an error. If False, units which fail the
+            `sparsity_overlap` threshold will be skipped in the merge.
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
@@ -1333,15 +1330,43 @@ class SortingAnalyzer:
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
+        # remove units which do not pass the sparsity threshold
+        if self.sparsity is not None and merging_mode == "soft":
+
+            mergeable = self.are_units_mergeable(
+                merge_unit_groups,
+                sparsity_overlap=sparsity_overlap,
+                merging_mode=merging_mode,
+                return_masks=False,
+            )
+
+            mergeable_unit_groups = []
+            unmergeable_unit_groups = []
+            for merge_unit_group, mergeable in zip(merge_unit_groups, mergeable.values()):
+                if mergeable:
+                    mergeable_unit_groups.append(merge_unit_group)
+                else:
+                    unmergeable_unit_groups.append(merge_unit_group)
+
+            if len(unmergeable_unit_groups) > 0:
+                if raise_error_if_overlap_fails:
+                    error_message = f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. Either lower your `sparsity_overlap` or use the flag `raise_error_if_overlap_fails = False` to skip these units in your merge."
+                    raise Exception(error_message)
+                else:
+                    warning_message = f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. They will not be merged."
+                    warnings.warn(warning_message)
+        else:
+            mergeable_unit_groups = merge_unit_groups
+
         new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+            self.unit_ids, mergeable_unit_groups, new_unit_ids, new_id_strategy
         )
-        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, mergeable_unit_groups, new_unit_ids=new_unit_ids)
 
         new_analyzer = self._save_or_select_or_merge_or_split(
             format=format,
             folder=folder,
-            merge_unit_groups=merge_unit_groups,
+            merge_unit_groups=mergeable_unit_groups,
             unit_ids=all_unit_ids,
             censor_ms=censor_ms,
             merging_mode=merging_mode,
