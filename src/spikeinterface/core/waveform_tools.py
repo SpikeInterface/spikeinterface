@@ -505,7 +505,11 @@ def extract_waveforms_to_single_buffer(
 
     n_samples = nbefore + nafter
 
-    dtype = np.dtype(dtype)
+    if dtype is None:
+        dtype = recording.get_dtype()
+    else:
+        dtype = np.dtype(dtype)
+
     if mode == "shared_memory":
         assert file_path is None
     else:
@@ -565,6 +569,7 @@ def extract_waveforms_to_single_buffer(
     elif mode == "shared_memory":
         if copy:
             wf_out = all_waveforms.copy()
+            del all_waveforms
             if shm is not None:
                 # release all sharedmem buffer
                 # empty array have None
@@ -815,6 +820,7 @@ def estimate_templates(
             nafter,
             mode="shared_memory",
             return_in_uV=return_in_uV,
+            dtype="float32",
             sparsity_mask=sparsity_mask,
             copy=False,
             **job_kwargs,
@@ -826,6 +832,8 @@ def estimate_templates(
             wfs = all_waveforms[spikes["unit_index"] == unit_index]
             templates_array[unit_index, :, :] = np.median(wfs, axis=0)
         # release shared memory after the median
+        del all_waveforms
+        wf_array_info["shm"].close()
         wf_array_info["shm"].unlink()
 
     else:
