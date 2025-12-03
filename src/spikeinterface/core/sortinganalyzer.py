@@ -1264,7 +1264,7 @@ class SortingAnalyzer:
         censor_ms: float | None = None,
         merging_mode: str = "soft",
         sparsity_overlap: float = 0.75,
-        error_if_overlap_fails=False,
+        error_if_overlap_fails: bool = False,
         new_id_strategy: str = "append",
         return_new_unit_ids: bool = False,
         format: str = "memory",
