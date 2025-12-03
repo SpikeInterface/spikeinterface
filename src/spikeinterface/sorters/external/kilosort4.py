@@ -234,6 +234,11 @@ class Kilosort4Sorter(BaseSorter):
             else:
                 # the recording is not binary compatible and no binary copy has been written.
                 # in this case, we use the RecordingExtractorAsArray object
+                warning_msg = (
+                    "Recording is not binary compatible with Kilosort4. This might slow down the sorting process."
+                )
+                warnings.warn(warning_msg)
+                logger.warning(warning_msg)
                 filename = ""
                 file_object = RecordingExtractorAsArray(recording_extractor=recording)
         elif params["use_binary_file"]:
