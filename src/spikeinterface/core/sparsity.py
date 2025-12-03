@@ -247,6 +247,18 @@ class ChannelSparsity:
 
         return sparse_templates
 
+    def densify_templates(self, templates_array: np.ndarray) -> np.ndarray:
+        assert templates_array.shape[0] == self.num_units
+
+        densified_shape = (self.num_units, templates_array.shape[1], self.num_channels)
+        dense_templates = np.zeros(shape=densified_shape, dtype=templates_array.dtype)
+        for unit_index, unit_id in enumerate(self.unit_ids):
+            sparse_template = templates_array[unit_index, ...]
+            dense_template = self.densify_waveforms(waveforms=sparse_template[np.newaxis, :, :], unit_id=unit_id)
+            dense_templates[unit_index, :, :] = dense_template
+
+        return dense_templates
+
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):
         """

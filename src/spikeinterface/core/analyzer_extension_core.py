@@ -461,13 +461,7 @@ class ComputeTemplates(AnalyzerExtension):
             if self.sparsity is not None:
                 # make average and std dense again
                 for k, arr in data.items():
-                    dense_arr = np.zeros(
-                        (arr.shape[0], arr.shape[1], self.sorting_analyzer.get_num_channels()),
-                        dtype=arr.dtype,
-                    )
-                    for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
-                        chan_inds = self.sparsity.unit_id_to_channel_indices[unit_id]
-                        dense_arr[unit_index][:, chan_inds] = arr[unit_index, :, : chan_inds.size]
+                    dense_arr = self.sparsity.densify_templates(arr)
                     data[k] = dense_arr
             self.data.update(data)
 
