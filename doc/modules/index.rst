@@ -14,7 +14,7 @@ Modules documentation
     exporters
     widgets
     curation
-    sortingcomponents
     motion_correction
     generation
+    sortingcomponents
     benchmark

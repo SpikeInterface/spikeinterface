@@ -41,15 +41,15 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         "filtering": {
             "freq_min": 150.0,
-            "freq_max": 5000.0,
+            "freq_max": 6000.0,
             "ftype": "bessel",
             "filter_order": 2,
         },
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "svd": {"n_components": 4},
+        "svd": {"n_components": 10},
         "clustering": {
-            "recursive_depth": 5,
+            "recursive_depth": 3,
         },
         "templates": {
             "ms_before": 2.0,
@@ -84,7 +84,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.09"
+        return "2025.10"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -107,13 +107,18 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         num_chans = recording_raw.get_num_channels()
         sampling_frequency = recording_raw.get_sampling_frequency()
 
+        apply_cmr = num_chans >= 32
+
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
                 rec_for_motion = recording_raw
                 if params["apply_preprocessing"]:
-                    rec_for_motion = bandpass_filter(rec_for_motion, freq_min=300.0, freq_max=6000.0, dtype="float32")
-                    rec_for_motion = common_reference(rec_for_motion)
+                    rec_for_motion = bandpass_filter(
+                        rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
+                    )
+                    if apply_cmr:
+                        rec_for_motion = common_reference(rec_for_motion)
                     if verbose:
                         print("Start correct_motion()")
                     _, motion_info = correct_motion(
@@ -125,8 +130,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                     if verbose:
                         print("Done correct_motion()")
 
-            recording = bandpass_filter(recording_raw, **params["filtering"], dtype="float32")
-            recording = common_reference(recording)
+            recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20.0, dtype="float32")
+            if apply_cmr:
+                recording = common_reference(recording)
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
@@ -191,6 +197,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
         #        )
 
+        # whitenning do not improve in tdc2
+        # recording_w = whiten(recording, mode="global")
+
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             recording,
             peaks,
@@ -200,9 +209,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             job_kwargs=job_kwargs,
         )
 
-        # peak_shifts = extra_out["peak_shifts"]
-        # new_peaks = peaks.copy()
-        # new_peaks["sample_index"] -= peak_shifts
         new_peaks = peaks
 
         mask = clustering_label >= 0
@@ -246,16 +252,23 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             is_in_uV=False,
         )
 
+        # sparsity is a mix between radius and
         sparsity_threshold = params["templates"]["sparsity_threshold"]
-        sparsity = compute_sparsity(
-            templates_dense, method="snr", noise_levels=noise_levels, threshold=sparsity_threshold
+        radius_um = params["waveforms"]["radius_um"]
+        sparsity = compute_sparsity(templates_dense, method="radius", radius_um=radius_um)
+        sparsity_snr = compute_sparsity(
+            templates_dense,
+            method="snr",
+            amplitude_mode="peak_to_peak",
+            noise_levels=noise_levels,
+            threshold=sparsity_threshold,
         )
+        sparsity.mask = sparsity.mask & sparsity_snr.mask
         templates = templates_dense.to_sparse(sparsity)
-        # templates = remove_empty_templates(templates)
 
         templates = clean_templates(
-            templates_dense,
-            sparsify_threshold=params["templates"]["sparsity_threshold"],
+            templates,
+            sparsify_threshold=None,
             noise_levels=noise_levels,
             min_snr=params["templates"]["min_snr"],
             max_jitter_ms=None,

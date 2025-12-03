@@ -1,13 +1,13 @@
 [project]
 name = "spikeinterface"
-version = "0.103.1"
+version = "0.103.2"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -25,8 +25,8 @@ dependencies = [
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
-    "neo>=0.14.1",
-    "probeinterface>=0.3.0",
+    "neo>=0.14.3",
+    "probeinterface>=0.3.1",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
@@ -127,8 +127,8 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs,
     "pytest-mock"
@@ -139,8 +139,8 @@ test_extractors = [
     "pooch>=1.8.2",
     "datalad>=1.0.2",
     # Commenting out for release
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_preprocessing = [
@@ -185,8 +185,8 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs
     "pytest-mock",
@@ -213,8 +213,8 @@ docs = [
     "huggingface_hub", # For automated curation
 
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 ]
 
 dev = [
