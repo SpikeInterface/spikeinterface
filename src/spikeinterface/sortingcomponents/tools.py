@@ -381,7 +381,6 @@ def cache_preprocessing(
     mode="memory",
     memory_limit=0.5,
     total_memory=None,
-    delete_cache=True,
     job_kwargs=None,
     folder=None,
 ):
@@ -399,8 +398,6 @@ def cache_preprocessing(
         The memory limit in fraction of available memory
     total_memory: str, Default None
         The total memory to use for the job in bytes
-    delete_cache: bool
-        If True, delete the cache after the job
 
     Returns
     -------
