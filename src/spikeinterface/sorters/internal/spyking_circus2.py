@@ -43,7 +43,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
-        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5},
         "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
         "job_kwargs": {},
@@ -70,7 +70,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": "Boolean to specify whether circus 2 should apply motion correction to the recording or not",
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
-                         memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
+                         memory_limit will control how much RAM can be used.",
         "chunk_preprocessing": "How much RAM (approximately) should be devoted to load all data chunks (given n_jobs).\
                 memory_limit will control how much RAM can be used as a fraction of available memory. Otherwise, use total_memory to fix a hard limit, with\
                 a string syntax  (e.g. '1G', '500M')",
