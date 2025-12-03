@@ -565,6 +565,7 @@ def extract_waveforms_to_single_buffer(
     elif mode == "shared_memory":
         if copy:
             wf_out = all_waveforms.copy()
+            del all_waveforms
             if shm is not None:
                 # release all sharedmem buffer
                 # empty array have None
