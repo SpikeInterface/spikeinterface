@@ -44,7 +44,6 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
         raise ValueError("Input should be Templates or SortingAnalyzer")
-
     return templates_array
 
 
