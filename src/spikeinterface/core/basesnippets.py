@@ -79,14 +79,6 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_num_segments(self):
         return len(self._snippets_segments)
 
-    def has_scaled_snippets(self):
-        warn(
-            "`has_scaled_snippets` is deprecated and will be removed in version 0.103.0. Please use `has_scaleable_traces()` instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaleable_traces()
-
     def get_frames(self, indices=None, segment_index: Union[int, None] = None):
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
@@ -97,17 +89,51 @@ class BaseSnippets(BaseRecordingSnippets):
         indices=None,
         segment_index: Union[int, None] = None,
         channel_ids: Union[list, None] = None,
-        return_scaled=False,
+        return_scaled: bool | None = None,
+        return_in_uV: bool = False,
     ):
+        """
+        Return the snippets, optionally for a subset of samples and/or channels
+
+        Parameters
+        ----------
+        indices : list[int], default: None
+            Indices of the snippets to return. If None, all snippets are returned.
+        segment_index : Union[int, None], default: None
+            The segment index to get snippets from. If snippets is multi-segment, it is required.
+        channel_ids : Union[list, None], default: None
+            The channel ids. If None, all channels are used.
+        return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
+            snippets are scaled to uV
+        return_in_uV : bool, default: False
+            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
+            snippets are scaled to uV
+
+        Returns
+        -------
+        np.array
+            The snippets (num_snippets, num_samples, num_channels)
+        """
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
         wfs = spts.get_snippets(indices, channel_indices=channel_indices)
 
-        if return_scaled:
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warn(
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
+        if return_in_uV:
             if not self.has_scaleable_traces():
                 raise ValueError(
-                    "These snippets do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
+                    "These snippets do not support return_in_uV=True (need gain_to_uV and offset_" "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
@@ -123,13 +149,49 @@ class BaseSnippets(BaseRecordingSnippets):
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,
         channel_ids: Union[list, None] = None,
-        return_scaled=False,
+        return_scaled: bool | None = None,
+        return_in_uV: bool = False,
     ):
+        """
+        Return the snippets from frames, optionally for a subset of samples and/or channels
+
+        Parameters
+        ----------
+        segment_index : Union[int, None], default: None
+            The segment index to get snippets from. If snippets is multi-segment, it is required.
+        start_frame : Union[int, None], default: None
+            The start frame. If None, 0 is used.
+        end_frame : Union[int, None], default: None
+            The end frame. If None, the number of samples in the segment is used.
+        channel_ids : Union[list, None], default: None
+            The channel ids. If None, all channels are used.
+        return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
+            snippets are scaled to uV
+        return_in_uV : bool, default: False
+            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
+            snippets are scaled to uV
+
+        Returns
+        -------
+        np.array
+            The snippets (num_snippets, num_samples, num_channels)
+        """
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         indices = spts.frames_to_indices(start_frame, end_frame)
 
-        return self.get_snippets(indices, channel_ids=channel_ids, return_scaled=return_scaled)
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warn(
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
+        return self.get_snippets(indices, channel_ids=channel_ids, return_in_uV=return_in_uV)
 
     def _save(self, format="binary", **save_kwargs):
         raise NotImplementedError

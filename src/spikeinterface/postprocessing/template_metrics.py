@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 import warnings
+from itertools import chain
 from copy import deepcopy
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -116,8 +117,6 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         **other_kwargs,
     ):
 
-        import pandas as pd
-
         # TODO alessio can you check this : this used to be in the function but now we have ComputeTemplateMetrics.function_factory()
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
@@ -195,6 +194,26 @@ class ComputeTemplateMetrics(AnalyzerExtension):
         new_data = dict(metrics=metrics)
         return new_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        import pandas as pd
+
+        metric_names = self.params["metric_names"]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+            new_sorting_analyzer, new_unit_ids_f, verbose, metric_names, **job_kwargs
+        )
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
     def _compute_metrics(self, sorting_analyzer, unit_ids=None, verbose=False, metric_names=None, **job_kwargs):
         """
         Compute template metrics.
@@ -228,7 +247,7 @@ class ComputeTemplateMetrics(AnalyzerExtension):
             )
             template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
 
-        all_templates = get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
@@ -542,7 +561,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     recover. The repolarization slope is defined as the dV/dT of the action potential
     between trough and baseline. The returned slope is in units of (unit of template)
     per second. By default traces are scaled to units of uV, controlled
-    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    by `sorting_analyzer.return_in_uV`. In this case this function returns the slope
     in uV/s.
 
     Parameters
@@ -589,7 +608,7 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     slope of the action potential after the peak, returning to the baseline
     in dV/dT. The returned slope is in units of (unit of template)
     per second. By default traces are scaled to units of uV, controlled
-    by `sorting_analyzer.return_scaled`. In this case this function returns the slope
+    by `sorting_analyzer.return_in_uV`. In this case this function returns the slope
     in uV/s. The slope is computed within a user-defined window after the peak.
 
     Parameters

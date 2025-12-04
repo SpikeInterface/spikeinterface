@@ -99,7 +99,9 @@ def test_model_based_classification_get_metrics_for_classification(
 def test_model_based_classification_export_to_phy(sorting_analyzer_for_curation, model):
     # Test the _export_to_phy() method of ModelBasedClassification
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, model[0])
-    classified_units = {0: (1, 0.5), 1: (0, 0.5), 2: (1, 0.5), 3: (0, 0.5), 4: (1, 0.5)}
+    import pandas as pd
+
+    classified_units = pd.DataFrame.from_dict({0: (1, 0.5), 1: (0, 0.5), 2: (1, 0.5), 3: (0, 0.5), 4: (1, 0.5)})
     # Function should fail here
     with pytest.raises(ValueError):
         model_based_classification._export_to_phy(classified_units)

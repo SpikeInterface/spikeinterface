@@ -49,8 +49,8 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
-author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+copyright = '2022-2025, SpikeInterface Team'
+author = 'SpikeInterface Team'
 
 
 # -- General configuration ---------------------------------------------------
@@ -63,6 +63,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinxcontrib.autodoc_pydantic',
     'sphinx.ext.autosectionlabel',
     'sphinx_design',
     'sphinxcontrib.jquery',
@@ -76,6 +77,8 @@ autosectionlabel_prefix_document = True
 
 numpydoc_show_class_members = False
 
+autodoc_pydantic_model_show_json = True
+autodoc_pydantic_model_show_config_summary = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -129,6 +132,7 @@ sphinx_gallery_conf = {
                                        '../examples/tutorials/qualitymetrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
+                                       '../examples/tutorials/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_*',

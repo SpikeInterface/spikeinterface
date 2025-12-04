@@ -98,14 +98,16 @@ class SimpleSorter(ComponentsBasedSorter):
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
             recording = recording_raw
-            noise_levels = get_noise_levels(recording, return_scaled=False)
+            noise_levels = get_noise_levels(recording, return_in_uV=False)
 
         # recording = cache_preprocessing(recording, **job_kwargs, **params["cache_preprocessing"])
 
         # detection
         detection_params = params["detection"].copy()
         detection_params["noise_levels"] = noise_levels
-        peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
+        peaks = detect_peaks(
+            recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+        )
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -119,7 +121,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
         few_peaks = select_peaks(peaks, recording=recording, method="uniform", n_peaks=5000, margin=(nbefore, nafter))
         few_wfs = extract_waveform_at_max_channel(
-            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, **job_kwargs
+            recording, few_peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
         )
 
         wfs = few_wfs[:, :, 0]
@@ -185,6 +187,11 @@ class SimpleSorter(ComponentsBasedSorter):
 
             out = hdbscan.hdbscan(features_flat, **clust_params)
             peak_labels = out[0]
+        elif clust_method == "hdbscan-gpu":
+            from cuml.cluster import HDBSCAN as hdbscan
+
+            model = hdbscan(**clust_params).fit(features_flat)
+            peak_labels = model.labels_.copy()
         elif clust_method in ("kmeans"):
             from sklearn.cluster import MiniBatchKMeans
 

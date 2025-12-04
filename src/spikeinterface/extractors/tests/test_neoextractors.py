@@ -3,12 +3,49 @@ import platform
 import subprocess
 import os
 from packaging import version
+import importlib.util
 
 import pytest
 
-from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface import get_global_dataset_folder
-from spikeinterface.extractors import *
+from spikeinterface.extractors.extractor_classes import (
+    MEArecRecordingExtractor,
+    MEArecSortingExtractor,
+    SpikeGLXRecordingExtractor,
+    OpenEphysBinaryRecordingExtractor,
+    OpenEphysBinaryEventExtractor,
+    OpenEphysLegacyRecordingExtractor,
+    IntanRecordingExtractor,
+    NeuroScopeRecordingExtractor,
+    NeuroExplorerRecordingExtractor,
+    NeuroScopeSortingExtractor,
+    NeuroNexusRecordingExtractor,
+    PlexonRecordingExtractor,
+    PlexonSortingExtractor,
+    NeuralynxRecordingExtractor,
+    AlphaOmegaEventExtractor,
+    SpikeGadgetsRecordingExtractor,
+    Plexon2SortingExtractor,
+    NeuralynxSortingExtractor,
+    BlackrockRecordingExtractor,
+    BlackrockSortingExtractor,
+    MCSRawRecordingExtractor,
+    TdtRecordingExtractor,
+    BiocamRecordingExtractor,
+    AxonaRecordingExtractor,
+    Plexon2EventExtractor,
+    MaxwellRecordingExtractor,
+    CedRecordingExtractor,
+    AlphaOmegaRecordingExtractor,
+    Spike2RecordingExtractor,
+    EDFRecordingExtractor,
+    Plexon2RecordingExtractor,
+    AxonRecordingExtractor,
+)
+
+from spikeinterface.extractors.neoextractors.intan import IntanSplitFilesRecordingExtractor
+
+from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import (
     RecordingCommonTestSuite,
@@ -40,11 +77,10 @@ def has_plexon2_dependencies():
             return False
 
         # Check for 'zugbruecke' using pip
-        try:
-            import zugbruecke
-
+        zugbruecke_spec = importlib.util.find_spec("zugbruecke")
+        if zugbruecke_spec is not None:
             return True
-        except ImportError:
+        else:
             return False
     else:
         raise ValueError(f"Unsupported OS: {os_type}")
@@ -68,9 +104,10 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["spikeglx"]
     entities = [
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap"}),
-        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap", "load_sync_channel": True}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.lf"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "nidq"}),
+        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap-SYNC"}),
+        ("spikeglx/onebox/run_with_only_adc/myRun_g0", {"stream_id": "obx0"}),
     ]
 
 
@@ -149,6 +186,15 @@ class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.T
     ]
 
 
+class IntanSplitFilesRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanSplitFilesRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/test_tetrode_240502_162925", {"mode": "concatenate"}),
+        ("intan/test_tetrode_240502_162925", {"mode": "append"}),
+    ]
+
+
 class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeRecordingExtractor
     downloads = ["neuroscope"]
@@ -185,7 +231,7 @@ class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroNexusRecordingExtractor
     downloads = ["neuronexus"]
     entities = [
-        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "ai-pri"}),
     ]
 
 
@@ -259,6 +305,12 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = TdtRecordingExtractor
     downloads = ["tdt"]
     entities = [("tdt/aep_05", {"stream_id": "1"})]
+
+
+class AxonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonRecordingExtractor
+    downloads = ["axon"]
+    entities = ["axon/extracellular_data/four_electrodes/24606005_SampleData.abf"]
 
 
 class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):

@@ -143,8 +143,8 @@ rec
 #
 
 # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
-noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
-noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
+noise_levels_microV = si.get_noise_levels(rec, return_in_uV=True)
+noise_levels_int16 = si.get_noise_levels(rec, return_in_uV=False)
 
 
 fig, ax = plt.subplots()
@@ -169,14 +169,18 @@ ax.set_xlabel('noise  [microV]')
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
-                     detect_threshold=5, radius_um=50., **job_kwargs)
+peaks = detect_peaks(rec,
+                    method='locally_exclusive',
+                    method_kwargs=dict(
+                         noise_levels=noise_levels_int16,
+                     detect_threshold=5, radius_um=50.),
+                     job_kwargs=job_kwargs)
 peaks
 
 # +
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
+peak_locations = localize_peaks(rec, peaks, method='center_of_mass', method_kwargs=dict(radius_um=50.), job_kwargs=job_kwargs)
 # -
 
 # ### Check for drifts

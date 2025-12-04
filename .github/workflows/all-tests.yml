@@ -11,6 +11,7 @@ on:
 
 env:
   KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.13"]  # Lower and higher versions we support
+        python-version: ["3.10", "3.13"]  # Lower and higher versions we support
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +32,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Free space
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium
+          df -h
 
       - name: Get changed files
         id: changed-files
@@ -107,14 +119,7 @@ jobs:
         run: |
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
-            wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
-            mkdir /home/runner/work/installation
-            mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/
-            workdir=$(pwd)
-            cd /home/runner/work/installation
-            tar xvzf git-annex-standalone-amd64.tar.gz
-            echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-            cd $workdir
+            datalad-installer --sudo ok git-annex --method datalad/packages
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
