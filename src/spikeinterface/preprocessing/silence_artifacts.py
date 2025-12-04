@@ -158,9 +158,9 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         **random_slices_kwargs,
     ):
 
-        self.enveloppe = RectifyRecording(recording)
-        self.enveloppe = GaussianFilterRecording(self.enveloppe, freq_min=None, freq_max=freq_max)
-        self.enveloppe = CommonReferenceRecording(self.enveloppe)
+        self.envelope = RectifyRecording(recording)
+        self.envelope = GaussianFilterRecording(self.enveloppe, freq_min=None, freq_max=freq_max)
+        self.envelope = CommonReferenceRecording(self.enveloppe)
 
         if list_periods is None:
             list_periods = detect_onsets(
