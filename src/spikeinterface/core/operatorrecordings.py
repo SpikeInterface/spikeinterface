@@ -15,6 +15,7 @@ class BaseOperatorRecording(BaseRecording):
         assert do_recording_attributes_match(
             recording1, rec_attrs2
         ), "Both recordings must have the same sampling frequency and channel ids"
+        assert self.check_times_kwargs(recording1, recording2), "Both recordings must have the same time parameters"
 
         channel_ids = recording1.channel_ids
         sampling_frequency = recording1.sampling_frequency
@@ -27,6 +28,25 @@ class BaseOperatorRecording(BaseRecording):
             self.add_recording_segment(add_segment)
 
         self._kwargs = dict(recording1=recording1, recording2=recording2, operator=operator)
+
+    def check_times_kwargs(self, recording1, recording2) -> bool:
+        import numpy as np
+
+        for segment_index in range(recording1.get_num_segments()):
+            time_kwargs1 = recording1._recording_segments[segment_index].get_times_kwargs()
+            time_kwargs2 = recording2._recording_segments[segment_index].get_times_kwargs()
+            for key in time_kwargs1.keys():
+                val1 = time_kwargs1[key]
+                val2 = time_kwargs2[key]
+                if (val1 is None and val2 is not None) or (val1 is not None and val2 is None):
+                    return False
+                if isinstance(val1, np.ndarray) and isinstance(val2, np.ndarray):
+                    if not np.array_equal(val1, val2):
+                        return False
+                else:
+                    if val1 != val2:
+                        return False
+        return True
 
 
 class OperatorRecordingSegment(BaseRecordingSegment):

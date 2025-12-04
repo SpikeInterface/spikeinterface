@@ -31,3 +31,20 @@ def test_operator_combo(recording):
         traces_orig = recording.get_traces(segment_index=seg_index)
         traces_combo = rec_combo.get_traces(segment_index=seg_index)
         np.testing.assert_array_equal(traces_combo, traces_orig)
+
+
+def test_errors(recording):
+    recording2 = si.generate_recording(durations=[10, 20], num_channels=4, sampling_frequency=10000)
+    with pytest.raises(AssertionError):
+        _ = recording + recording2
+    with pytest.raises(AssertionError):
+        _ = recording - recording2
+
+    recording_times = recording.clone()
+    for segment_index in range(recording_times.get_num_segments()):
+        recording_times.set_times(
+            recording_times.get_times(segment_index=segment_index) + (segment_index + 1) * 5,
+            segment_index=segment_index,
+        )
+    with pytest.raises(AssertionError):
+        _ = recording + recording_times
