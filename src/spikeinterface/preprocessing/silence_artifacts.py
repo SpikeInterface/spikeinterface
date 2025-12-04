@@ -24,12 +24,13 @@ class DetectThresholdCrossing(PeakDetector):
         detect_threshold=5,
         noise_levels=None,
         seed=None,
-        random_slices_kwargs={},
+        noise_levels_kwargs=dict(),
     ):
         PeakDetector.__init__(self, recording, return_output=True)
         if noise_levels is None:
-            random_slices_kwargs.update({"seed": seed})
-            noise_levels = get_noise_levels(recording, return_scaled=False, random_slices_kwargs=random_slices_kwargs)
+            noise_levels_kwargs["return_in_uV"] = False
+            noise_levels_kwargs["seed"] = seed
+            noise_levels = get_noise_levels(recording, **noise_levels_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
         self._dtype = np.dtype(base_peak_dtype + [("onset", "bool")])
 
@@ -56,10 +57,10 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
         run_node_pipeline,
     )
 
-    random_chunk_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+    noise_levels_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    node0 = DetectThresholdCrossing(recording, detect_threshold, **random_chunk_kwargs)
+    node0 = DetectThresholdCrossing(recording, detect_threshold, **noise_levels_kwargs)
 
     peaks = run_node_pipeline(
         recording,
@@ -136,7 +137,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    **random_slices_kwargs : Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
+    **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     Returns
     -------
@@ -155,7 +156,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         noise_levels=None,
         seed=None,
         list_periods=None,
-        **random_slices_kwargs,
+        **noise_levels_kwargs,
     ):
 
         self.envelope = RectifyRecording(recording)
@@ -168,7 +169,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                 detect_threshold=detect_threshold,
                 min_duration_ms=min_duration_ms,
                 seed=seed,
-                **random_slices_kwargs,
+                **noise_levels_kwargs,
             )
 
             if verbose:
@@ -177,11 +178,11 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                     percentage = 100 * total_time / recording.get_num_samples(i)
                     print(f"{percentage}% of segment {i} has been flagged as artifactual")
 
-        if "envelope" in random_slices_kwargs:
-            random_slices_kwargs.pop("envelope")
+        if "envelope" in noise_levels_kwargs:
+            noise_levels_kwargs.pop("envelope")
 
         SilencedPeriodsRecording.__init__(
-            self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **random_slices_kwargs
+            self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
         )
 
         self._kwargs.update(
