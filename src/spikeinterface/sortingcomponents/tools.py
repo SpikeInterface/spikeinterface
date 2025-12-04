@@ -17,9 +17,9 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
-from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
+from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift, get_template_extremum_channel
 from spikeinterface.core.recording_tools import get_noise_levels
-from spikeinterface.core.sorting_tools import spike_vector_to_indices, get_numba_vector_to_list_of_spiketrain
+from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -533,11 +533,28 @@ def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
 
 
 def clean_templates(
-    templates, sparsify_threshold=0.25, noise_levels=None, min_snr=None, max_jitter_ms=None, remove_empty=True
+    templates, 
+    sparsify_threshold=0.25, 
+    noise_levels=None, 
+    min_snr=None, 
+    max_jitter_ms=None, 
+    remove_empty=True,
+    sd_ratio_threshold=2.0,
+    sd_ratios=None,
 ):
     """
     Clean a Templates object by removing empty units and applying sparsity if provided.
     """
+    ## First if sd_ratios are provided, we remove the templates that have a high sd_ratio
+    if sd_ratios is not None:
+        assert noise_levels is not None, "noise_levels must be provided if sd_ratios is given"
+        to_select = []
+        best_channels = get_template_extremum_channel(templates, outputs="index")
+        for count, unit_id in enumerate(templates.unit_ids):
+            ratio = sd_ratios[count]/noise_levels[best_channels[unit_id]]
+            if ratio <= sd_ratio_threshold:
+                to_select += [unit_id]
+        templates = templates.select_units(to_select)
 
     ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
     if sparsify_threshold is not None:

@@ -236,6 +236,7 @@ def get_templates_from_peaks_and_svd(
     svd_features,
     sparsity_mask,
     operator="average",
+    sd_ratios=False,
 ):
     """
     Get templates from recording using the SVD components
@@ -267,6 +268,8 @@ def get_templates_from_peaks_and_svd(
         The estimated templates object as a dense template (but internanally contain sparse channels).
     final_sparsity_mask: np.array
         The final sparsity mask. Note that the template object is dense but with zeros.
+    sd_ratios: np.array
+        The standard deviation ratio of the templates at time 0
     """
 
     assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
@@ -282,6 +285,9 @@ def get_templates_from_peaks_and_svd(
     num_channels = recording.get_num_channels()
 
     templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
+    if sd_ratios:
+        ratios = np.zeros(len(labels), dtype=np.float32)
+        
     final_sparsity_mask = np.zeros((len(labels), num_channels), dtype="bool")
     for unit_ind, label in enumerate(labels):
         mask = valid_labels == label
@@ -298,6 +304,14 @@ def get_templates_from_peaks_and_svd(
                 data = np.median(local_svd[sub_mask, :, count], 0)
             templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
 
+        if sd_ratios:
+            count = np.where(best_channel == np.flatnonzero(sparsity_mask[best_channel]))[0][0]
+            data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
+            if len(data) == 1:
+                ratios[unit_ind] = 0.0
+            else:
+                ratios[unit_ind] = np.std(data[:, nbefore])
+
     dense_templates = Templates(
         templates_array=templates_array,
         sampling_frequency=fs,
@@ -309,4 +323,7 @@ def get_templates_from_peaks_and_svd(
         is_in_uV=False,
     )
 
-    return dense_templates, final_sparsity_mask
+    if sd_ratios:
+        return dense_templates, final_sparsity_mask, ratios
+    else:
+        return dense_templates, final_sparsity_mask
