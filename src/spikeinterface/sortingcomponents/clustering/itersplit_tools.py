@@ -277,15 +277,18 @@ class LocalFeatureClustering:
                     from sklearn.decomposition import PCA
 
                     tsvd = PCA(n_pca_features, whiten=True)
+                    final_features = tsvd.fit_transform(flatten_features)
                 elif projection_mode == "tsvd":
                     from sklearn.decomposition import TruncatedSVD
 
                     tsvd = TruncatedSVD(n_pca_features, random_state=seed)
-
-                final_features = tsvd.fit_transform(flatten_features)
+                    final_features = tsvd.fit_transform(flatten_features)
             else:
                 final_features = flatten_features
                 tsvd = None
+        elif n_pca_features is None:
+            final_features = flatten_features
+            tsvd = None
 
         if clusterer_method == "hdbscan":
             from hdbscan import HDBSCAN
@@ -301,13 +304,26 @@ class LocalFeatureClustering:
         elif clusterer_method == "isosplit":
             from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
 
-            possible_labels = isosplit(final_features, **clustering_kwargs)
+            min_cluster_size = clustering_kwargs["min_cluster_size"]
 
-            # min_cluster_size = clusterer_kwargs.get("min_cluster_size", 25)
-            # for i in np.unique(possible_labels):
-            #     mask = possible_labels == i
-            #     if np.sum(mask) < min_cluster_size:
-            #         possible_labels[mask] = -1
+            # here the trick is that we do not except more than 4 to 5 clusters per iteration, so n_init=15 is a good choice
+            num_samples = final_features.shape[0]
+            n_init = 15
+            if n_init > (num_samples // min_cluster_size):
+                # avoid warning in isosplit when sample_size is too small
+                factor = min_cluster_size * 2
+                n_init = max(2, num_samples // factor)
+
+            clustering_kwargs_ = clustering_kwargs.copy()
+            clustering_kwargs_["n_init"] = n_init
+
+            possible_labels = isosplit(final_features, **clustering_kwargs_)
+
+            for i in np.unique(possible_labels):
+                mask = possible_labels == i
+                if np.sum(mask) < min_cluster_size:
+                    possible_labels[mask] = -1
+
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         elif clusterer_method == "isosplit6":
             # this use the official C++ isosplit6 from Jeremy Magland

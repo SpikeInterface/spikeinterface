@@ -227,16 +227,36 @@ def test_estimate_templates():
 
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
+    # mask with differents sparsity
+    sparsity_mask = np.ones((sorting.unit_ids.size, recording.channel_ids.size), dtype=bool)
+    sparsity_mask[:4, : recording.channel_ids.size // 2 - 1] = False
+    sparsity_mask[4:, recording.channel_ids.size // 2 :] = False
+
     for operator in ("average", "median"):
-        templates = estimate_templates(
+        templates_array = estimate_templates(
             recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator, return_in_uV=True, **job_kwargs
         )
         # print(templates.shape)
-        assert templates.shape[0] == sorting.unit_ids.size
-        assert templates.shape[1] == nbefore + nafter
-        assert templates.shape[2] == recording.get_num_channels()
+        assert templates_array.shape[0] == sorting.unit_ids.size
+        assert templates_array.shape[1] == nbefore + nafter
+        assert templates_array.shape[2] == recording.get_num_channels()
 
-        assert np.any(templates != 0)
+        assert np.any(templates_array != 0)
+
+        sparse_templates_array = estimate_templates(
+            recording,
+            spikes,
+            sorting.unit_ids,
+            nbefore,
+            nafter,
+            operator=operator,
+            return_in_uV=True,
+            sparsity_mask=sparsity_mask,
+            **job_kwargs,
+        )
+        n_chan = np.max(np.sum(sparsity_mask, axis=1))
+        assert n_chan == sparse_templates_array.shape[2]
+        assert np.any(sparse_templates_array == 0)
 
     #     import matplotlib.pyplot as plt
     #     fig, ax = plt.subplots()
@@ -249,5 +269,5 @@ def test_estimate_templates():
 if __name__ == "__main__":
     cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "core"
     test_waveform_tools(cache_folder)
-    test_estimate_templates_with_accumulator()
-    test_estimate_templates()
+    # test_estimate_templates_with_accumulator()
+    # test_estimate_templates()

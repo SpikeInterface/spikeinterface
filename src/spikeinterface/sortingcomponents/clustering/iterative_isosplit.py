@@ -3,7 +3,7 @@ import importlib
 import numpy as np
 
 from spikeinterface.core import get_channel_distances, Templates, ChannelSparsity
-from spikeinterface.sortingcomponents.clustering.splitting_tools import split_clusters
+from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 
 # from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
 from spikeinterface.sortingcomponents.clustering.merging_tools import (
@@ -33,20 +33,30 @@ class IterativeISOSPLITClustering:
         "motion": None,
         "seed": None,
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 120.0, "motion": None},
+        "pre_label": {
+            "mode": "channel",
+            # "mode": "vertical_bin",
+        },
         "split": {
-            "split_radius_um": 40.0,
+            # "split_radius_um": 40.0,
+            "split_radius_um": 60.0,
             "recursive": True,
-            "recursive_depth": 5,
+            "recursive_depth": 3,
             "method_kwargs": {
                 "clusterer": {
                     "method": "isosplit",
-                    "n_init": 50,
+                    # "method": "isosplit6",
+                    # "n_init": 50,
                     "min_cluster_size": 10,
                     "max_iterations_per_pass": 500,
                     "isocut_threshold": 2.0,
+                    # "isocut_threshold": 2.2,
                 },
                 "min_size_split": 25,
-                "n_pca_features": 3,
+                "n_pca_features": 6,
+                # "n_pca_features": 10,
+                "projection_mode": "tsvd",
+                # "projection_mode": "pca",
             },
         },
         "merge_from_templates": {
@@ -55,6 +65,7 @@ class IterativeISOSPLITClustering:
             "similarity_thresh": 0.8,
         },
         "merge_from_features": None,
+        # "merge_from_features": {"merge_radius_um": 60.0},
         "clean": {
             "minimum_cluster_size": 10,
         },
@@ -119,7 +130,31 @@ class IterativeISOSPLITClustering:
         split_params["method_kwargs"]["waveforms_sparse_mask"] = sparse_mask
         split_params["method_kwargs"]["feature_name"] = "peaks_svd"
 
-        original_labels = peaks["channel_index"]
+        if params["pre_label"]["mode"] == "channel":
+            original_labels = peaks["channel_index"]
+        elif params["pre_label"]["mode"] == "vertical_bin":
+            # 2 params
+            direction = "y"
+            bin_um = 40.0
+
+            channel_locations = recording.get_channel_locations()
+            dim = "xyz".index(direction)
+            channel_depth = channel_locations[:, dim]
+
+            # bins
+            min_ = np.min(channel_depth)
+            max_ = np.max(channel_depth)
+            num_windows = int((max_ - min_) // bin_um)
+            num_windows = max(num_windows, 1)
+            border = ((max_ - min_) % bin_um) / 2
+            vertical_bins = np.zeros(num_windows + 3)
+            vertical_bins[1:-1] = np.arange(num_windows + 1) * bin_um + min_ + border
+            vertical_bins[0] = -np.inf
+            vertical_bins[-1] = np.inf
+            # peak depth
+            peak_depths = channel_depth[peaks["channel_index"]]
+            # label by bin
+            original_labels = np.digitize(peak_depths, vertical_bins)
 
         # clusterer = params["split"]["clusterer"]
         # clusterer_kwargs = params["split"]["clusterer_kwargs"]
@@ -132,7 +167,7 @@ class IterativeISOSPLITClustering:
         split_params["returns_split_count"] = True
 
         if params["seed"] is not None:
-            split_params["method_kwargs"]["clusterer"] = params["seed"]
+            split_params["method_kwargs"]["clusterer"]["seed"] = params["seed"]
 
         post_split_label, split_count = split_clusters(
             original_labels,
@@ -142,6 +177,7 @@ class IterativeISOSPLITClustering:
             method="local_feature_clustering",
             debug_folder=debug_folder,
             job_kwargs=job_kwargs,
+            # job_kwargs=dict(n_jobs=1),
             **split_params,
             # method_kwargs=dict(
             #     clusterer=clusterer,
@@ -173,9 +209,9 @@ class IterativeISOSPLITClustering:
         unit_ids = dense_templates.unit_ids
         templates_array = dense_templates.templates_array
 
-        if params["merge_from_features"]:
+        if params["merge_from_features"] is not None:
 
-            merge_from_features_kwargs = params["merge_features_kwargs"].copy()
+            merge_from_features_kwargs = params["merge_from_features"].copy()
             merge_radius_um = merge_from_features_kwargs.pop("merge_radius_um")
 
             post_merge_label1, templates_array, template_sparse_mask, unit_ids = merge_peak_labels_from_features(

@@ -1138,3 +1138,12 @@ And push the results to sortingview webased viewer
 .. code:: python
 
    si.plot_sorting_summary(analyzer_clean, backend='sortingview')
+
+
+
+Additional resources
+--------------------
+
+For additional resources about Neuropixels, you can take a look to the `awesome_neuropixel`_ github repo.
+
+.. _awesome_neuropixel: https://github.com/Julie-Fabre/awesome_neuropixels
