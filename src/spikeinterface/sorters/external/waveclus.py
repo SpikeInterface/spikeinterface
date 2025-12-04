@@ -6,23 +6,24 @@ from typing import Union
 import shutil
 import sys
 import json
+import importlib.util
 
 
-from ..basesorter import BaseSorter
-from ..utils import ShellScript
+from spikeinterface.sorters.basesorter import BaseSorter
+from spikeinterface.sorters.utils import ShellScript
 
 from spikeinterface.core import write_to_h5_dataset_format
-from spikeinterface.extractors import WaveClusSortingExtractor
+from spikeinterface.extractors.extractor_classes import WaveClusSortingExtractor
 from spikeinterface.core.channelslice import ChannelSliceRecording
-from spikeinterface.preprocessing import ScaleRecording
 
 PathType = Union[str, Path]
 
-try:
+h5py_spec = importlib.util.find_spec("h5py")
+if h5py_spec is not None:
     import h5py
 
     HAVE_H5PY = True
-except ImportError:
+else:
     HAVE_H5PY = False
 
 
@@ -169,7 +170,7 @@ class WaveClusSorter(BaseSorter):
                     time_axis=0,
                     single_axis=True,
                     chunk_memory=params["chunk_memory"],
-                    return_scaled=rec_sliced.has_scaleable_traces(),
+                    return_in_uV=rec_sliced.has_scaleable_traces(),
                 )
 
         if verbose:

@@ -15,7 +15,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     Parameters
     ----------
     folder_path : str or Path
-        Path to the output Phy folder (containing the params.py)
+        Path to the output Phy/Kilosort folder (containing the params.py)
     exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
@@ -24,6 +24,24 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         If True, empty units are removed from the sorting extractor.
     load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
+
+    Notes
+    -----
+    This extractor loads cluster properties from CSV/TSV files to enrich the sorting
+    extractor with unit metadata such as quality labels, groups, and Kilosort metrics.
+
+    Cluster information is loaded in the following priority order:
+    1. From a dedicated cluster_info.csv/.tsv file if present
+    2. From all .csv/.tsv files in the folder that contain a 'cluster_id' column
+       Typical files include cluster_group.tsv, cluster_info.tsv, cluster_KSLabel.tsv
+       Files without cluster_id column are automatically skipped
+    3. If no files are found, minimal cluster info is generated with 'unsorted' labels
+
+    The cluster_id column is used as the merge key to combine properties from multiple files.
+    All loaded properties are added to the sorting extractor as unit properties, with some
+    renamed for SpikeInterface conventions: 'group' becomes 'quality', 'cluster_id'
+    becomes 'original_cluster_id'. These properties can be accessed via ``sorting.get_property()``
+    function.
     """
 
     installation_mesg = (
@@ -56,7 +74,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         spike_clusters = np.atleast_1d(spike_clusters.squeeze())
 
         clust_id = np.unique(spike_clusters)
-        unique_unit_ids = list(clust_id)
+        unique_unit_ids = [int(c) for c in clust_id]
         params = read_python(str(phy_folder / "params.py"))
         sampling_frequency = params["sample_rate"]
 
@@ -84,6 +102,15 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 else:
                     delimiter = ","
                 new_property = pd.read_csv(file, delimiter=delimiter)
+
+                # Only merge files that contain a cluster_id column
+                # This prevents KeyError when extraneous files don't have cluster_id
+                # Typical aggregated files include cluster_group.tsv, cluster_info.tsv, cluster_KSLabel.tsv
+                # See Phy docs: https://phy.readthedocs.io/en/latest/sorting_user_guide/
+                # See: https://github.com/SpikeInterface/spikeinterface/issues/4124
+                if "cluster_id" not in new_property.columns:
+                    continue
+
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
@@ -248,7 +275,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     Parameters
     ----------
     folder_path : str or Path
-        Path to the output Phy folder (containing the params.py).
+        Path to the output Kilosort folder (containing the params.py).
     keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.

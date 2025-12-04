@@ -43,11 +43,27 @@ from spikeinterface.qualitymetrics import (
     compute_quality_metrics,
 )
 
+from spikeinterface.qualitymetrics.misc_metrics import _noise_cutoff
 
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+
+def test_noise_cutoff():
+    """
+    Generate two artifical gaussian, one truncated and one not. Check the metrics are higher for the truncated one.
+    """
+    np.random.seed(1)
+    amps = np.random.normal(0, 1, 1000)
+    amps_trunc = amps[amps > -1]
+
+    cutoff1, ratio1 = _noise_cutoff(amps=amps)
+    cutoff2, ratio2 = _noise_cutoff(amps=amps_trunc)
+
+    assert cutoff1 <= cutoff2
+    assert ratio1 <= ratio2
 
 
 def test_compute_new_quality_metrics(small_sorting_analyzer):
@@ -104,23 +120,10 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     assert np.all(old_snr_data != new_snr_data)
     assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
 
-    # check that all quality metrics are deleted when parents are recomputed, even after
-    # recomputation
-    extensions_to_compute = {
-        "templates": {"operators": ["average", "median"]},
-        "spike_amplitudes": {},
-        "spike_locations": {},
-        "principal_components": {},
-    }
-
-    small_sorting_analyzer.compute(extensions_to_compute)
-
-    assert small_sorting_analyzer.get_extension("quality_metrics") is None
-
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
     """
-    Computes sepecified quality metrics and checks order is propogated.
+    Computes sepecified quality metrics and checks order is propagated.
     """
     specified_metric_names = ["firing_range", "snr", "amplitude_cutoff"]
     small_sorting_analyzer.compute("quality_metrics", metric_names=specified_metric_names)
@@ -316,7 +319,7 @@ def _sorting_violation():
     spike_labels = spike_labels[mask]
 
     unit_ids = ["a", "b", "c"]
-    sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
+    sorting = NumpySorting.from_samples_and_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
 
     return sorting
 

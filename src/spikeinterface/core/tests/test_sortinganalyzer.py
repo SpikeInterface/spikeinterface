@@ -56,15 +56,21 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="memory", sparse=False, return_scaled=True, sparsity=None
+        sorting, recording, format="memory", sparse=False, return_in_uV=True, sparsity=None
     )
-    assert sorting_analyzer.return_scaled
+    assert sorting_analyzer.return_in_uV
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="memory", sparse=False, return_scaled=False, sparsity=None
+        sorting, recording, format="memory", sparse=False, return_in_uV=False, sparsity=None
     )
-    assert not sorting_analyzer.return_scaled
+    assert not sorting_analyzer.return_in_uV
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
@@ -98,10 +104,19 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
         folder=folder,
         sparse=False,
         sparsity=None,
-        return_scaled=False,
+        return_in_uV=False,
     )
-    assert not sorting_analyzer.return_scaled
+    assert not sorting_analyzer.return_in_uV
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
+    assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
@@ -143,7 +158,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         folder=folder,
         sparse=False,
         sparsity=None,
-        return_scaled=False,
+        return_in_uV=False,
         overwrite=True,
         backend_options={"saving_options": {"compressor": None}},
     )
@@ -175,6 +190,59 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
         == LZMA.codec_id
     )
+
+    # test set_sorting_property
+    sorting_analyzer.set_sorting_property(key="quality", values=["good"] * len(sorting_analyzer.unit_ids))
+    sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
+    assert "quality" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
+    assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
+    assert "number" in sorting_analyzer.sorting.get_property_keys()
+
+
+def test_create_by_dict():
+    """
+    Generates a recording and sorting which are split into dicts and fed to create_sorting_analyzer.
+    Interally, this aggregates the dicts of recordings and sortings. This test checks that the
+    unit structure is maintained from the dicts to the analyzer. Then checks that the function
+    fails if the dict keys are different for the recordings and the sortings.
+    """
+
+    rec, sort = generate_ground_truth_recording(num_channels=6)
+
+    rec.set_property(key="group", values=[1, 2, 1, 1, 2, 2])
+    sort.set_property(key="group", values=[2, 2, 2, 1, 2, 2, 2, 1, 2, 1])
+
+    unit_ids = sort.unit_ids
+    split_sort = sort.split_by("group")
+    split_rec = rec.split_by("group")
+    analyzer = create_sorting_analyzer(split_sort, split_rec)
+    analyzer_unit_ids = analyzer.unit_ids
+
+    assert set(analyzer.unit_ids) == set(sort.unit_ids)
+    assert np.all(analyzer_unit_ids[analyzer.get_sorting_property("group") == 1] == split_sort[1].unit_ids)
+    assert np.all(analyzer_unit_ids[analyzer.get_sorting_property("group") == 2] == split_sort[2].unit_ids)
+
+    assert np.all(sort.get_unit_spike_train(unit_id="5") == analyzer.sorting.get_unit_spike_train(unit_id="5"))
+
+    # make a dict of sortings with keys which don't match the recordings keys
+    split_sort_bad_keys = {
+        bad_key: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == key])
+        for bad_key, key in zip([3, 4], [1, 2])
+    }
+
+    with pytest.raises(ValueError):
+        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"))
+
+    # make a dict of sortings, in a different order than the recording. This should
+    # still work
+    split_sort_different_order = {
+        2: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 2]),
+        1: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 1]),
+    }
+    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"))
+    assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
 
 def test_load_without_runtime_info(tmp_path, dataset):
@@ -226,7 +294,7 @@ def test_SortingAnalyzer_tmp_recording(dataset):
     assert not sorting_analyzer_saved.has_temporary_recording()
     assert isinstance(sorting_analyzer_saved.recording, type(recording))
 
-    recording_sliced = recording.channel_slice(recording.channel_ids[:-1])
+    recording_sliced = recording.select_channels(recording.channel_ids[:-1])
 
     # wrong channels
     with pytest.raises(ValueError):
@@ -261,9 +329,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert "channel_ids" in sorting_analyzer.rec_attributes
     assert "sampling_frequency" in sorting_analyzer.rec_attributes
     assert "num_samples" in sorting_analyzer.rec_attributes
-
-    probe = sorting_analyzer.get_probe()
-    sparsity = sorting_analyzer.sparsity
 
     # compute
     sorting_analyzer.compute("dummy", param1=5.5)
@@ -308,7 +373,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert data["result_two"].size == original_sorting.to_spike_vector().size
         assert np.array_equal(data["result_two"], sorting_analyzer.get_extension("dummy").data["result_two"])
 
-        assert sorting_analyzer2.return_scaled == sorting_analyzer.return_scaled
+        assert sorting_analyzer2.return_in_uV == sorting_analyzer.return_in_uV
 
         assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
@@ -357,6 +422,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         # unit 0, 2, ... should be removed
         assert np.all(~np.isin(data["result_two"], [0, 2]))
 
+        # test merges
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_merge_soft_with_{format}.zarr"
@@ -366,7 +432,14 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer4 = sorting_analyzer.merge_units(merge_unit_groups=[[0, 1]], format=format, folder=folder)
+        sorting_analyzer4, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups=[[0, 1]], format=format, folder=folder, return_new_unit_ids=True
+        )
+        assert 0 not in sorting_analyzer4.unit_ids
+        assert 1 not in sorting_analyzer4.unit_ids
+        assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+        is_merged_values = sorting_analyzer4.sorting.get_property("is_merged")
+        assert is_merged_values[sorting_analyzer4.sorting.ids_to_indices(new_unit_ids)][0]
 
         if format != "memory":
             if format == "zarr":
@@ -377,9 +450,50 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
                 shutil.rmtree(folder)
         else:
             folder = None
-        sorting_analyzer5 = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], new_unit_ids=[50], format=format, folder=folder, merging_mode="hard"
+        sorting_analyzer5, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups=[[0, 1]],
+            new_unit_ids=[50],
+            format=format,
+            folder=folder,
+            merging_mode="hard",
+            return_new_unit_ids=True,
         )
+        assert 0 not in sorting_analyzer5.unit_ids
+        assert 1 not in sorting_analyzer5.unit_ids
+        assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
+        assert 50 in sorting_analyzer5.unit_ids
+        is_merged_values = sorting_analyzer5.sorting.get_property("is_merged")
+        assert is_merged_values[sorting_analyzer5.sorting.id_to_index(50)]
+
+        # test splitting
+        if format != "memory":
+            if format == "zarr":
+                folder = cache_folder / f"test_SortingAnalyzer_split_with_{format}.zarr"
+            else:
+                folder = cache_folder / f"test_SortingAnalyzer_split_with_{format}"
+            if folder.exists():
+                shutil.rmtree(folder)
+        else:
+            folder = None
+        split_units = {}
+        num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
+        units_to_split = sorting_analyzer.unit_ids[:2]
+        for unit in units_to_split:
+            for unit in units_to_split:
+                split_units[unit] = [
+                    np.arange(num_spikes[unit] // 2),
+                    np.arange(num_spikes[unit] // 2, num_spikes[unit]),
+                ]
+
+        sorting_analyzer6, split_new_unit_ids = sorting_analyzer.split_units(
+            split_units=split_units, format=format, folder=folder, return_new_unit_ids=True
+        )
+        for unit_to_split in units_to_split:
+            assert unit_to_split not in sorting_analyzer6.unit_ids
+        assert len(sorting_analyzer6.unit_ids) == len(sorting_analyzer.unit_ids) + 2
+        is_split_values = sorting_analyzer6.sorting.get_property("is_split")
+        for new_unit_ids in split_new_unit_ids:
+            assert all(is_split_values[sorting_analyzer6.sorting.ids_to_indices(new_unit_ids)])
 
     # test compute with extension-specific params
     sorting_analyzer.compute(["dummy"], extension_params={"dummy": {"param1": 5.5}})
@@ -463,6 +577,14 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
         return new_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        new_data = dict()
+        new_data["result_one"] = self.data["result_one"]
+        spikes = new_sorting_analyzer.sorting.to_spike_vector()
+        new_data["result_two"] = spikes["unit_index"].copy()
+        new_data["result_three"] = np.zeros((len(new_sorting_analyzer.unit_ids), 2))
+        return new_data
+
     def _get_data(self):
         return self.data["result_one"]
 
@@ -484,6 +606,16 @@ def test_extension():
         register_result_extension(DummyAnalyzerExtension2)
 
 
+def test_excess_spikes(dataset):
+    """
+    If there are spikes that occur after the recording end time,
+    `create_sorting_analyzer` should cut them off and warn the user.
+    """
+    recording, sorting = dataset
+    with pytest.warns(UserWarning):
+        create_sorting_analyzer(sorting=sorting, recording=recording.time_slice(0, 1))
+
+
 def test_extensions_sorting():
 
     # nothing happens if all parents are on the left of the children
@@ -496,14 +628,14 @@ def test_extensions_sorting():
     assert list(sorted_extensions_2.keys()) == list(extensions_in_order.keys())
 
     # doing two movements
-    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}}
-    extensions_qm_correct = {"waveforms": {}, "templates": {}, "quality_metrics": {}}
+    extensions_qm_left = {"template_metrics": {}, "waveforms": {}, "templates": {}}
+    extensions_qm_correct = {"waveforms": {}, "templates": {}, "template_metrics": {}}
     sorted_extensions_3 = _sort_extensions_by_dependency(extensions_qm_left)
     assert list(sorted_extensions_3.keys()) == list(extensions_qm_correct.keys())
 
-    # should move parent (waveforms) left of child (quality_metrics), and move grandparent (random_spikes) left of parent
-    extensions_qm_left = {"quality_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
-    extensions_qm_correct = {"random_spikes": {}, "waveforms": {}, "templates": {}, "quality_metrics": {}}
+    # should move parent (waveforms) left of child (template_metrics), and move grandparent (random_spikes) left of parent
+    extensions_qm_left = {"template_metrics": {}, "waveforms": {}, "templates": {}, "random_spikes": {}}
+    extensions_qm_correct = {"random_spikes": {}, "waveforms": {}, "templates": {}, "template_metrics": {}}
     sorted_extensions_4 = _sort_extensions_by_dependency(extensions_qm_left)
     assert list(sorted_extensions_4.keys()) == list(extensions_qm_correct.keys())
 

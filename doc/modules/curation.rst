@@ -12,7 +12,7 @@ Curation with the ``SortingAnalyzer``
 -------------------------------------
 
 The :py:class:`~spikeinterface.core.SortingAnalyzer`, as seen in previous modules,
-is a powerful tool to posprocess the spike sorting output, as it can compute many
+is a powerful tool to postprocess the spike sorting output, as it can compute many
 extensions and metrics to further characterize the spike sorting results.
 
 To facilitate the spike sorting workflow, the :py:class:`~spikeinterface.core.SortingAnalyzer`
@@ -34,7 +34,7 @@ a subset of units from a spike sorting output and to perform some merges:
     remove_unit_ids = [1, 2]
     sorting_analyzer2 = sorting_analyzer.remove_units(remove_unit_ids=remove_unit_ids)
 
-    # merge some units
+    # merge units 4 and 5, and separately merge units 7, 8 and 12
     merge_unit_groups = [[4, 5], [7, 8, 12]]
     sorting_analyzer3 = sorting_analyzer2.merge_units(
         merge_unit_groups=merge_unit_groups,
@@ -98,7 +98,8 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     clean_sorting = remove_redundant_units(
         sorting,
         duplicate_threshold=0.9,
-        remove_strategy="max_spikes"
+        remove_strategy="max_spikes",
+        align=False,
     )
 
     # remove redundant units from SortingAnalyzer object
@@ -106,23 +107,23 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     clean_sorting = remove_redundant_units(
         sorting_analyzer,
         duplicate_threshold=0.9,
-        remove_strategy="min_shift"
+        remove_strategy="minimum_shift",
     )
     # in order to have a SortingAnalyer with only the non-redundant units one must
     # select the designed units remembering to give format and folder if one wants
     # a persistent SortingAnalyzer.
     clean_sorting_analyzer = sorting_analyzer.select_units(clean_sorting.unit_ids)
 
-We recommend using the ``SortingAnalyzer`` approach, since the ``min_shift`` strategy keeps
+We recommend using the ``SortingAnalyzer`` approach, since the ``minimum_shift`` strategy keeps
 the unit (among the redundant ones), with a better template alignment.
 
 
 Auto-merging units
 ^^^^^^^^^^^^^^^^^^
 
-The :py:func:`~spikeinterface.curation.get_potential_auto_merge` function returns a list of potential merges.
+The :py:func:`~spikeinterface.curation.compute_merge_unit_groups` function returns a list of potential merges.
 The list of potential merges can be then applied to the sorting output.
-:py:func:`~spikeinterface.curation.get_potential_auto_merge` has many internal tricks and steps to identify potential
+:py:func:`~spikeinterface.curation.compute_merge_unit_groups` has many internal tricks and steps to identify potential
 merges. It offers multiple "presets" and the flexibility to apply individual steps, with different parameters.
 **Read the function documentation carefully and do not apply it blindly!**
 
@@ -130,7 +131,7 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
 .. code-block:: python
 
     from spikeinterface import create_sorting_analyzer
-    from spikeinterface.curation import get_potential_auto_merge
+    from spikeinterface.curation import compute_merge_unit_groups
 
     analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
 
@@ -138,14 +139,14 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
     analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
 
     # merges is a list of unit pairs, with unit_ids to be merged.
-    merge_unit_pairs = get_potential_auto_merge(
-        analyzer=analyzer,
+    merge_unit_pairs = compute_merge_unit_groups(
+        sorting_analyzer=analyzer,
         preset="similarity_correlograms",
     )
     # with resolve_graph=True, merges_resolved is a list of merge groups,
     # which can contain more than two units
-    merge_unit_groups = get_potential_auto_merge(
-        analyzer=analyzer,
+    merge_unit_groups = compute_merge_unit_groups(
+        sorting_analyzer=analyzer,
         preset="similarity_correlograms",
         resolve_graph=True
     )
@@ -153,12 +154,50 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
     # here we apply the merges
     analyzer_merged = analyzer.merge_units(merge_unit_groups=merge_unit_groups)
 
+There is also the convenient :py:func:`~spikeinterface.curation.auto_merge_units` function that combines the
+:py:func:`~spikeinterface.curation.compute_merge_unit_groups` and :py:func:`~spikeinterface.core.SortingAnalyzer.merge_units` functions.
+This is a high level function that allows you to apply either one or several presets/lists of steps in one go. For example, let's
+assume you want to apply the "x_contamination" preset, but iteratively and with slightly different parameters: first,
+you want to focus on the templates that are very similar, according to their template similarities, before
+considering those that might be more distant. Such a greedy and iterative scheme has been proved to be less
+prone to wrong merges. To do so, you'll need to do the following:
+
+.. code-block:: python
+
+    from spikeinterface import create_sorting_analyzer
+    from spikeinterface.curation import auto_merge_units
+
+    analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
+
+    # some extensions are required
+    analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
+    analyzer.compute("unit_locations", method="monopolar_triangulation")
+
+    template_diff_thresh = [0.05, 0.15, 0.25]
+    presets = ["x_contaminations"] * len(template_diff_thresh)
+    steps_params = [
+        {"template_similarity": {"template_diff_thresh": i}}
+        for i in template_diff_thresh
+    ]
+
+    analyzer_merged = auto_merge_units(
+        analyzer,
+        presets=presets,
+        steps_params=steps_params,
+        recursive=True,
+        **job_kwargs,
+    )
+
+The extra keyword ``recursive`` specifies that for each presets/sequences of steps, merges are performed
+until no further merges are possible. The ``job_kwargs`` are the parameters for the parallelization.
+**Be careful: the merges can not be reverted, so be sure to not erase your analyzer and instead create a new one**
+
 
 Manual curation
 ---------------
 
 While automatic curation tools can be very useful, manual curation is still widely used to
-clean spike sorting outputs and it is sometoimes necessary to have a human in the loop.
+clean spike sorting outputs and it is sometimes necessary to have a human in the loop.
 
 
 Curation format
@@ -271,18 +310,17 @@ a ``BaseSorting`` or ``SortingAnalyzer`` object using the :py:func:`~spikeinterf
 
 .. code-block:: python
 
-    from spikeinterface.curation import apply_curation
+    from spikeinterface.curation import load_curation, apply_curation
 
     # load the curation JSON file
-    curation_json = "path/to/curation.json"
-    with open(curation_json, 'r') as f:
-        curation_dict = json.load(f)
+    curation_filepath = "path/to/curation.json"
+    curation = load_curation(curation_filepath)
 
     # apply the curation to the sorting output
-    clean_sorting = apply_curation(sorting, curation_dict=curation_dict)
+    clean_sorting = apply_curation(sorting, curation_dict_or_model=curation)
 
     # apply the curation to the sorting analyzer
-    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict=curation_dict)
+    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict_or_model=curation)
 
 
 Using the ``SpikeInterface GUI``

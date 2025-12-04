@@ -21,13 +21,13 @@ def test_benchmark_matching(create_cache_folder):
     cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="100ms")
 
-    recording, gt_sorting, gt_analyzer = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset(job_kwargs)
 
     # templates sparse
     gt_templates = compute_gt_templates(
-        recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs
+        recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_in_uV=False, **job_kwargs
     )
-    noise_levels = get_noise_levels(recording)
+    noise_levels = get_noise_levels(recording, **job_kwargs)
     sparsity = compute_sparsity(gt_templates, noise_levels, method="snr", amplitude_mode="peak_to_peak", threshold=0.25)
     gt_templates = gt_templates.to_sparse(sparsity)
 
@@ -57,7 +57,7 @@ def test_benchmark_matching(create_cache_folder):
 
     # run and result
     study.run(**job_kwargs)
-    study.compute_results()
+    study.compute_results(**job_kwargs)
 
     # load study to check persistency
     study = MatchingStudy(study_folder)

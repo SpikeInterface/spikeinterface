@@ -12,7 +12,7 @@ _base_matching_dtype = [
 
 
 class BaseTemplateMatching(PeakDetector):
-    def __init__(self, recording, templates, return_output=True, parents=None):
+    def __init__(self, recording, templates, return_output=True):
         # TODO make a sharedmem of template here
         # TODO maybe check that channel_id are the same with recording
 
@@ -20,7 +20,7 @@ class BaseTemplateMatching(PeakDetector):
             templates, Templates
         ), f"The templates supplied is of type {type(templates)} and must be a Templates"
         self.templates = templates
-        PeakDetector.__init__(self, recording, return_output=return_output, parents=parents)
+        PeakDetector.__init__(self, recording, return_output=return_output, parents=None)
 
     def get_dtype(self):
         return np.dtype(_base_matching_dtype)
@@ -42,6 +42,14 @@ class BaseTemplateMatching(PeakDetector):
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
         raise NotImplementedError
+
+    def clean(self):
+        """
+        Clean the matching output.
+        This is called at the end of the matching process.
+        """
+        # can be overwritten if needed
+        pass
 
     def get_extra_outputs(self):
         # can be overwritten if need to ouput some variables with a dict

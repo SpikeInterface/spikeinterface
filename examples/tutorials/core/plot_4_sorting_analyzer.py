@@ -27,25 +27,13 @@ Here is the how!
 
 import matplotlib.pyplot as plt
 
-from spikeinterface import download_dataset
-from spikeinterface import create_sorting_analyzer, load_sorting_analyzer
-import spikeinterface.extractors as se
+from spikeinterface import create_sorting_analyzer, load_sorting_analyzer, generate_ground_truth_recording
 
 ##############################################################################
-# First let's use the repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
-# to download a MEArec dataset. It is a simulated dataset that contains "ground truth"
-# sorting information:
+# First let's generate a simulated recording and sorting
 
-repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-remote_path = "mearec/mearec_test_10s.h5"
-local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-
-##############################################################################
-# Let's now instantiate the recording and sorting objects:
-
-recording = se.MEArecRecordingExtractor(local_path)
+recording, sorting = generate_ground_truth_recording()
 print(recording)
-sorting = se.MEArecSortingExtractor(local_path)
 print(sorting)
 
 ###############################################################################
@@ -76,7 +64,7 @@ folder = "analyzer_folder"
 analyzer = create_sorting_analyzer(sorting=sorting,
                                    recording=recording,
                                    format="binary_folder",
-                                   return_scaled=True, # this is the default to attempt to return scaled
+                                   return_in_uV=True, # this is the default to attempt to return scaled
                                    folder=folder
                                    )
 print(analyzer)

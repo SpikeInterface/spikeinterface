@@ -5,8 +5,9 @@ from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
-from probeinterface import Probe
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, Templates
+
+from probeinterface import Probe
 
 
 def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
@@ -166,6 +167,10 @@ class DriftingTemplates(Templates):
             sampling_frequency=templates.sampling_frequency,
             nbefore=templates.nbefore,
             probe=templates.probe,
+            sparsity_mask=templates.sparsity_mask,
+            is_in_uV=templates.is_in_uV,
+            unit_ids=templates.unit_ids,
+            channel_ids=templates.channel_ids,
         )
         return drifting_templates
 

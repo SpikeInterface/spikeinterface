@@ -7,7 +7,6 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
-import spikeinterface.widgets as sw
 import importlib.util
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -25,7 +24,7 @@ if DEBUG:
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    importlib.util.find_spec("neurodsp") is None or importlib.util.find_spec("spikeglx") is None or ON_GITHUB,
     reason="Only local. Requires ibl-neuropixel install",
 )
 @pytest.mark.parametrize("lagc", [False, 1, 300])
@@ -66,7 +65,7 @@ def test_highpass_spatial_filter_real_data(lagc):
 
     if DEBUG:
         fig, axs = plt.subplots(ncols=4)
-        axs[0].imshow(si_recording.get_traces(return_scaled=True))
+        axs[0].imshow(si_recording.get_traces(return_in_uV=True))
         axs[0].set_title("SI Raw")
         axs[1].imshow(ibl_data.T)
         axs[1].set_title("IBL Raw")
@@ -93,7 +92,7 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
     options = dict(lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs)
 
     durations = [2, 2]
-    rng = np.random.RandomState(seed=100)
+    rng = np.random.default_rng(seed=100)
     si_recording = generate_recording(num_channels=num_channels, durations=durations)
 
     _, si_highpass_spatial_filter = run_si_highpass_filter(si_recording, get_traces=False, **options)
@@ -127,11 +126,11 @@ def test_dtype_stability(dtype):
 
     assert highpass_spatial_filter.dtype == dtype
 
-    filtered_data_unscaled = highpass_spatial_filter.get_traces(return_scaled=False)
+    filtered_data_unscaled = highpass_spatial_filter.get_traces(return_in_uV=False)
 
     assert filtered_data_unscaled.dtype == dtype
 
-    filtered_data_scaled = highpass_spatial_filter.get_traces(return_scaled=True)
+    filtered_data_scaled = highpass_spatial_filter.get_traces(return_in_uV=True)
 
     assert filtered_data_scaled.dtype == np.float32
 
@@ -208,7 +207,7 @@ def run_si_highpass_filter(si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, 
     )
 
     if get_traces:
-        si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
+        si_filtered = si_highpass_spatial_filter.get_traces(return_in_uV=True)
     else:
         si_filtered = False
 

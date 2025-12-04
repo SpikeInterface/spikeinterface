@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.extractors import NwbRecordingExtractor, NwbSortingExtractor
+from spikeinterface.extractors.extractor_classes import (
+    NwbRecordingExtractor,
+    NwbSortingExtractor,
+    NwbTimeSeriesExtractor,
+)
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
 from spikeinterface.core.testing import check_recordings_equal
@@ -201,24 +205,6 @@ def test_nwb_extractor_channel_ids_retrieval(generate_nwbfile, use_pynwb):
         expected_channel_ids = sub_electrodes_table["channel_name"].values
         extracted_channel_ids = recording_extractor.channel_ids
         assert np.array_equal(extracted_channel_ids, expected_channel_ids)
-
-
-@pytest.mark.parametrize("use_pynwb", [True, False])
-def test_electrical_series_name_backcompatibility(generate_nwbfile, use_pynwb):
-    """
-    Test that the channel_ids are retrieved from the electrodes table ONLY from the corresponding
-    region of the electrical series
-    """
-    path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
-    electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
-    for electrical_series_name in electrical_series_name_list:
-        with pytest.deprecated_call():
-            recording_extractor = NwbRecordingExtractor(
-                path_to_nwbfile,
-                electrical_series_name=electrical_series_name,
-                use_pynwb=use_pynwb,
-            )
-            assert recording_extractor.electrical_series_path == f"acquisition/{electrical_series_name}"
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
@@ -539,6 +525,107 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_get_unit_spike_train_in_seconds(tmp_path, use_pynwb):
+    """Test that get_unit_spike_train_in_seconds returns accurate timestamps without double conversion."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
+    nwbfile = mock_NWBFile()
+
+    # Add units with known spike times
+    t_start = 5.0
+    sampling_frequency = 1000.0
+    spike_times_unit_a = np.array([5.1, 5.2, 5.3, 6.0, 6.5])  # Absolute times
+    spike_times_unit_b = np.array([5.05, 5.15, 5.25, 5.35, 6.1])  # Absolute times
+
+    nwbfile.add_unit(spike_times=spike_times_unit_a)
+    nwbfile.add_unit(spike_times=spike_times_unit_b)
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=sampling_frequency,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
+
+    # Test full spike trains
+    spike_times_a_direct = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=0)
+    spike_times_a_legacy = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=True)
+
+    spike_times_b_direct = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=1)
+    spike_times_b_legacy = sorting_extractor.get_unit_spike_train(unit_id=1, return_times=True)
+
+    # Both methods should return exact timestamps since return_times now uses get_unit_spike_train_in_seconds
+    np.testing.assert_array_equal(spike_times_a_direct, spike_times_unit_a)
+    np.testing.assert_array_equal(spike_times_b_direct, spike_times_unit_b)
+    np.testing.assert_array_equal(spike_times_a_legacy, spike_times_unit_a)
+    np.testing.assert_array_equal(spike_times_b_legacy, spike_times_unit_b)
+
+    # Test time filtering
+    start_time = 5.2
+    end_time = 6.1
+
+    # Direct method with time filtering
+    spike_times_a_filtered = sorting_extractor.get_unit_spike_train_in_seconds(
+        unit_id=0, start_time=start_time, end_time=end_time
+    )
+    spike_times_b_filtered = sorting_extractor.get_unit_spike_train_in_seconds(
+        unit_id=1, start_time=start_time, end_time=end_time
+    )
+
+    # Expected filtered results
+    expected_a = spike_times_unit_a[(spike_times_unit_a >= start_time) & (spike_times_unit_a < end_time)]
+    expected_b = spike_times_unit_b[(spike_times_unit_b >= start_time) & (spike_times_unit_b < end_time)]
+
+    np.testing.assert_array_equal(spike_times_a_filtered, expected_a)
+    np.testing.assert_array_equal(spike_times_b_filtered, expected_b)
+
+    # Test edge cases
+    # Start time filtering only
+    spike_times_from_start = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=0, start_time=5.25)
+    expected_from_start = spike_times_unit_a[spike_times_unit_a >= 5.25]
+    np.testing.assert_array_equal(spike_times_from_start, expected_from_start)
+
+    # End time filtering only
+    spike_times_to_end = sorting_extractor.get_unit_spike_train_in_seconds(unit_id=0, end_time=6.0)
+    expected_to_end = spike_times_unit_a[spike_times_unit_a < 6.0]
+    np.testing.assert_array_equal(spike_times_to_end, expected_to_end)
+
+    # Test that direct method avoids frame conversion rounding errors
+    # by comparing exact values that would be lost in frame conversion
+    precise_times = np.array([5.1001, 5.1002, 5.1003])
+    nwbfile_precise = mock_NWBFile()
+    nwbfile_precise.add_unit(spike_times=precise_times)
+
+    file_path_precise = tmp_path / "test_precise.nwb"
+    with NWBHDF5IO(path=file_path_precise, mode="w") as io:
+        io.write(nwbfile_precise)
+
+    sorting_precise = NwbSortingExtractor(
+        file_path=file_path_precise,
+        sampling_frequency=sampling_frequency,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
+
+    # Direct method should preserve exact precision
+    direct_precise = sorting_precise.get_unit_spike_train_in_seconds(unit_id=0)
+    np.testing.assert_array_equal(direct_precise, precise_times)
+
+    # Both methods should now preserve exact precision since return_times uses get_unit_spike_train_in_seconds
+    legacy_precise = sorting_precise.get_unit_spike_train(unit_id=0, return_times=True)
+    # Both methods should be exactly equal since return_times now avoids double conversion
+    np.testing.assert_array_equal(direct_precise, precise_times)
+    np.testing.assert_array_equal(legacy_precise, precise_times)
+    # Verify both methods return identical results
+    np.testing.assert_array_equal(direct_precise, legacy_precise)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_multiple_unit_tables(tmp_path, use_pynwb):
     from pynwb.misc import Units
     from pynwb import NWBHDF5IO
@@ -604,6 +691,196 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
     assert np.array_equal(sorting_extractor_processing.unit_ids, ["a1", "b1"])
     assert "a_property" not in sorting_extractor_processing.get_property_keys()
     assert "a_second_property" in sorting_extractor_processing.get_property_keys()
+
+
+def nwbfile_with_timeseries():
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.base import TimeSeries
+
+    nwbfile = mock_NWBFile()
+
+    # Add regular TimeSeries with rate
+    num_frames = 10
+    num_channels = 5
+    rng = np.random.default_rng(0)
+    data = rng.random(size=(num_frames, num_channels))
+    rate = 30_000.0
+    starting_time = 0.0
+
+    timeseries = TimeSeries(name="TimeSeries", data=data, rate=rate, starting_time=starting_time, unit="volts")
+    nwbfile.add_acquisition(timeseries)
+
+    # Add TimeSeries with timestamps
+    timestamps = np.arange(num_frames) / rate
+    timestamps[2] = 0
+    timeseries_with_timestamps = TimeSeries(
+        name="TimeSeriesWithTimestamps", data=data, timestamps=timestamps, unit="volts"
+    )
+    nwbfile.add_acquisition(timeseries_with_timestamps)
+
+    # Add single channel TimeSeries
+    single_channel_data = rng.random(size=(num_frames,))
+    single_channel_series = TimeSeries(name="SingleChannelSeries", data=single_channel_data, rate=rate, unit="volts")
+    nwbfile.add_acquisition(single_channel_series)
+
+    # Add TimeSeries in processing module
+    processing = nwbfile.create_processing_module(name="test_module", description="test module")
+    proc_timeseries = TimeSeries(name="ProcessingTimeSeries", data=data, rate=rate, unit="volts")
+    processing.add(proc_timeseries)
+
+    return nwbfile
+
+
+def _generate_nwbfile_with_time_series(backend, file_path):
+    from pynwb import NWBHDF5IO
+    from hdmf_zarr import NWBZarrIO
+
+    nwbfile = nwbfile_with_timeseries()
+    if backend == "hdf5":
+        io_class = NWBHDF5IO
+    elif backend == "zarr":
+        io_class = NWBZarrIO
+    with io_class(str(file_path), mode="w") as io:
+        io.write(nwbfile)
+    return file_path, nwbfile
+
+
+@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+def generate_nwbfile_with_time_series(request, tmp_path_factory):
+    backend = request.param
+    nwbfile_path = tmp_path_factory.mktemp("nwb_tests_directory") / "test.nwb"
+    nwbfile_path, nwbfile = _generate_nwbfile_with_time_series(backend, nwbfile_path)
+    return nwbfile_path, nwbfile
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_timeseries_basic_functionality(generate_nwbfile_with_time_series, use_pynwb):
+    """Test basic functionality with a regular TimeSeries."""
+    path_to_nwbfile, nwbfile = generate_nwbfile_with_time_series
+
+    recording = NwbTimeSeriesExtractor(path_to_nwbfile, timeseries_path="acquisition/TimeSeries", use_pynwb=use_pynwb)
+
+    timeseries = nwbfile.acquisition["TimeSeries"]
+
+    # Check data matches
+    assert np.array_equal(recording.get_traces(), timeseries.data[:])
+
+    # Check sampling frequency matches
+    assert recording.get_sampling_frequency() == timeseries.rate
+
+    # Check number of channels matches
+    assert recording.get_num_channels() == timeseries.data.shape[1]
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_timeseries_with_timestamps(generate_nwbfile_with_time_series, use_pynwb):
+    """Test functionality with a TimeSeries using timestamps."""
+    path_to_nwbfile, nwbfile = generate_nwbfile_with_time_series
+
+    recording = NwbTimeSeriesExtractor(
+        path_to_nwbfile, timeseries_path="acquisition/TimeSeriesWithTimestamps", use_pynwb=use_pynwb
+    )
+
+    timeseries = nwbfile.acquisition["TimeSeriesWithTimestamps"]
+
+    # Check data matches
+    assert np.array_equal(recording.get_traces(), timeseries.data[:])
+
+    # Check sampling frequency is correctly estimated
+    expected_sampling_frequency = 1.0 / np.median(np.diff(timeseries.timestamps[:1000]))
+    assert np.isclose(recording.get_sampling_frequency(), expected_sampling_frequency)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_time_series_load_time_vector(generate_nwbfile_with_time_series, use_pynwb):
+    """Test loading time vector from TimeSeries with timestamps."""
+    path_to_nwbfile, nwbfile = generate_nwbfile_with_time_series
+
+    recording = NwbTimeSeriesExtractor(
+        path_to_nwbfile,
+        timeseries_path="acquisition/TimeSeriesWithTimestamps",
+        load_time_vector=True,
+        use_pynwb=use_pynwb,
+    )
+
+    timeseries = nwbfile.acquisition["TimeSeriesWithTimestamps"]
+
+    times = recording.get_times()
+
+    np.testing.assert_almost_equal(times, timeseries.timestamps[:])
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_single_channel_timeseries(generate_nwbfile_with_time_series, use_pynwb):
+    """Test functionality with a single channel TimeSeries."""
+    path_to_nwbfile, nwbfile = generate_nwbfile_with_time_series
+
+    recording = NwbTimeSeriesExtractor(
+        path_to_nwbfile, timeseries_path="acquisition/SingleChannelSeries", use_pynwb=use_pynwb
+    )
+
+    timeseries = nwbfile.acquisition["SingleChannelSeries"]
+
+    # Check data matches
+    assert np.array_equal(recording.get_traces().squeeze(), timeseries.data[:])
+
+    # Check it's treated as a single channel
+    assert recording.get_num_channels() == 1
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_processing_module_timeseries(generate_nwbfile_with_time_series, use_pynwb):
+    """Test accessing TimeSeries from a processing module."""
+    path_to_nwbfile, nwbfile = generate_nwbfile_with_time_series
+
+    recording = NwbTimeSeriesExtractor(
+        path_to_nwbfile, timeseries_path="processing/test_module/ProcessingTimeSeries", use_pynwb=use_pynwb
+    )
+
+    timeseries = nwbfile.processing["test_module"]["ProcessingTimeSeries"]
+
+    # Check data matches
+    assert np.array_equal(recording.get_traces(), timeseries.data[:])
+
+
+def test_fetch_available_timeseries_paths(generate_nwbfile_with_time_series):
+    """Test the fetch_available_timeseries_paths static method."""
+    path_to_nwbfile, _ = generate_nwbfile_with_time_series
+
+    available_timeseries = NwbTimeSeriesExtractor.fetch_available_timeseries_paths(file_path=path_to_nwbfile)
+
+    expected_paths = [
+        "acquisition/TimeSeries",
+        "acquisition/TimeSeriesWithTimestamps",
+        "acquisition/SingleChannelSeries",
+        "processing/test_module/ProcessingTimeSeries",
+    ]
+
+    assert sorted(available_timeseries) == sorted(expected_paths)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_error_with_wrong_timeseries_path(generate_nwbfile_with_time_series, use_pynwb):
+    """Test that appropriate error is raised for non-existent TimeSeries."""
+    path_to_nwbfile, _ = generate_nwbfile_with_time_series
+
+    with pytest.raises(ValueError):
+        _ = NwbTimeSeriesExtractor(
+            path_to_nwbfile, timeseries_path="acquisition/NonExistentTimeSeries", use_pynwb=use_pynwb
+        )
+
+
+def test_time_series_recording_equality_with_pynwb_and_backend(generate_nwbfile_with_time_series):
+    """Test that pynwb and backend (h5py/zarr) modes produce identical results."""
+    path_to_nwbfile, _ = generate_nwbfile_with_time_series
+
+    recording_backend = NwbTimeSeriesExtractor(
+        path_to_nwbfile, timeseries_path="acquisition/TimeSeries", use_pynwb=False
+    )
+
+    recording_pynwb = NwbTimeSeriesExtractor(path_to_nwbfile, timeseries_path="acquisition/TimeSeries", use_pynwb=True)
+
+    check_recordings_equal(recording_backend, recording_pynwb)
 
 
 if __name__ == "__main__":

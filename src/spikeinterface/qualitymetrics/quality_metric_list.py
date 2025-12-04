@@ -2,6 +2,17 @@
 
 from __future__ import annotations
 
+# a dict containing the extension dependencies for each metric
+metric_extension_dependencies = {
+    "snr": ["noise_levels", "templates"],
+    "amplitude_cutoff": ["spike_amplitudes|waveforms", "templates"],
+    "amplitude_median": ["spike_amplitudes|waveforms", "templates"],
+    "amplitude_cv": ["spike_amplitudes|amplitude_scalings", "templates"],
+    "drift": ["spike_locations"],
+    "sd_ratio": ["templates", "spike_amplitudes"],
+    "noise_cutoff": ["spike_amplitudes"],
+}
+
 
 from .misc_metrics import (
     compute_num_spikes,
@@ -18,11 +29,11 @@ from .misc_metrics import (
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
     compute_sd_ratio,
+    compute_noise_cutoffs,
 )
 
 from .pca_metrics import (
     compute_pc_metrics,
-    calculate_pc_metrics,  # remove after 0.103.0
     mahalanobis_metrics,
     lda_metrics,
     nearest_neighbors_metrics,
@@ -52,7 +63,9 @@ _misc_metric_name_to_func = {
     "firing_range": compute_firing_ranges,
     "drift": compute_drift_metrics,
     "sd_ratio": compute_sd_ratio,
+    "noise_cutoff": compute_noise_cutoffs,
 }
+
 
 # a dict converting the name of the metric for computation to the output of that computation
 qm_compute_name_to_column_names = {
@@ -82,6 +95,7 @@ qm_compute_name_to_column_names = {
     "nn_noise_overlap": ["nn_noise_overlap"],
     "silhouette": ["silhouette"],
     "silhouette_full": ["silhouette_full"],
+    "noise_cutoff": ["noise_cutoff", "noise_ratio"],
 }
 
 # this dict allows us to ensure the appropriate dtype of metrics rather than allow Pandas to infer them
@@ -117,4 +131,6 @@ column_name_to_column_dtype = {
     "nn_noise_overlap": float,
     "silhouette": float,
     "silhouette_full": float,
+    "noise_cutoff": float,
+    "noise_ratio": float,
 }

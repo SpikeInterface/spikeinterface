@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 
@@ -17,10 +17,10 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
-    def __init__(self, sampling_frequency: float, unit_ids: List):
+    def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = float(sampling_frequency)
-        self._sorting_segments: List[BaseSortingSegment] = []
+        self._sorting_segments: list[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
         self._sorting_info = None
@@ -30,38 +30,33 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_trains = {}
 
     def __repr__(self):
+        return self._repr_header()
+
+    def _repr_header(self, display_name=True):
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
         sf_khz = self.get_sampling_frequency() / 1000.0
-        txt = f"{self.name}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
+        if display_name and self.name != self.__class__.__name__:
+            name = f"{self.name} ({self.__class__.__name__})"
+        else:
+            name = self.__class__.__name__
+        txt = f"{name}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
         if "file_path" in self._kwargs:
             txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
-    def _repr_html_(self):
+    def _repr_html_(self, display_name=True):
         common_style = "margin-left: 10px;"
         border_style = "border:1px solid #ddd; padding:10px;"
 
-        html_header = f"<div style='{border_style}'><strong>{self.__repr__()}</strong></div>"
+        html_header = f"<div style='{border_style}'><strong>{self._repr_header(display_name)}</strong></div>"
 
         html_unit_ids = f"<details style='{common_style}'>  <summary><strong>Unit IDs</strong></summary><ul>"
         html_unit_ids += f"{self.unit_ids} </details>"
 
-        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
-        for key, value in self._annotations.items():
-            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
-        html_annotations += f"</details>"
+        html_extra = self._get_common_repr_html(common_style)
 
-        html_unit_properties = (
-            f"<details style='{common_style}'><summary><strong>Unit Properties</strong></summary><ul>"
-        )
-        for key, value in self._properties.items():
-            # Add a further indent for each property
-            value_formatted = np.asarray(value)
-            html_unit_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
-        html_unit_properties += "</ul></details>"
-
-        html_repr = html_header + html_unit_ids + html_annotations + html_unit_properties
+        html_repr = html_header + html_unit_ids + html_extra
         return html_repr
 
     @property
@@ -136,12 +131,52 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train(
         self,
         unit_id: str | int,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        segment_index: Optional[int] = None,
+        start_frame: Optional[int] = None,
+        end_frame: Optional[int] = None,
         return_times: bool = False,
         use_cache: bool = True,
-    ):
+    ) -> np.ndarray:
+        """
+        Get spike train for a unit.
+
+        Parameters
+        ----------
+        unit_id : str or int
+            The unit id to retrieve spike train for
+        segment_index : int or None, default: None
+            The segment index to retrieve spike train from.
+            For multi-segment objects, it is required
+        start_frame : int or None, default: None
+            The start frame for spike train extraction
+        end_frame : int or None, default: None
+            The end frame for spike train extraction
+        return_times : bool, default: False
+            If True, returns spike times in seconds instead of frames
+        use_cache : bool, default: True
+            If True, uses cached spike trains when available
+
+        Returns
+        -------
+        spike_train : np.ndarray
+            Spike frames (or times if return_times=True)
+        """
+
+        if return_times:
+            start_time = (
+                self.sample_index_to_time(start_frame, segment_index=segment_index) if start_frame is not None else None
+            )
+            end_time = (
+                self.sample_index_to_time(end_frame, segment_index=segment_index) if end_frame is not None else None
+            )
+
+            return self.get_unit_spike_train_in_seconds(
+                unit_id=unit_id,
+                segment_index=segment_index,
+                start_time=start_time,
+                end_time=end_time,
+            )
+
         segment_index = self._check_segment_index(segment_index)
         if use_cache:
             if segment_index not in self._cached_spike_trains:
@@ -166,20 +201,101 @@ class BaseSorting(BaseExtractor):
                 unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
             ).astype("int64")
 
-        if return_times:
-            if self.has_recording():
-                times = self.get_times(segment_index=segment_index)
-                return times[spike_frames]
-            else:
-                segment = self._sorting_segments[segment_index]
-                t_start = segment._t_start if segment._t_start is not None else 0
-                spike_times = spike_frames / self.get_sampling_frequency()
-                return t_start + spike_times
-        else:
-            return spike_frames
+        return spike_frames
 
-    def register_recording(self, recording, check_spike_frames=True):
-        """Register a recording to the sorting.
+    def get_unit_spike_train_in_seconds(
+        self,
+        unit_id: str | int,
+        segment_index: Optional[int] = None,
+        start_time: Optional[float] = None,
+        end_time: Optional[float] = None,
+    ) -> np.ndarray:
+        """
+        Get spike train for a unit in seconds.
+
+        This method uses a three-tier approach to get spike times:
+        1. If the sorting has a recording, use the recording's time conversion
+        2. If the segment implements get_unit_spike_train_in_seconds(), use that directly These are the native timestamps of the format
+        3. Fall back to standard frame-to-time conversion
+
+        This approach avoids double conversion for extractors that already store
+        spike times in seconds (e.g., NWB format) and ensures consistent timing
+        when a recording is associated with the sorting.
+
+        Parameters
+        ----------
+        unit_id : str or int
+            The unit id to retrieve spike train for
+        segment_index : int or None, default: None
+            The segment index to retrieve spike train from.
+            For multi-segment objects, it is required
+        start_time : float or None, default: None
+            The start time in seconds for spike train extraction
+        end_time : float or None, default: None
+            The end time in seconds for spike train extraction
+
+        Returns
+        -------
+        spike_times : np.ndarray
+            Spike times in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        segment = self._sorting_segments[segment_index]
+
+        # If sorting has a registered recording, get the frames and get the times from the recording
+        # Note that this take into account the segment start time of the recording
+        if self.has_recording():
+
+            # Get all the spike times and then slice them
+            start_frame = None
+            end_frame = None
+            spike_frames = self.get_unit_spike_train(
+                unit_id=unit_id,
+                segment_index=segment_index,
+                start_frame=start_frame,
+                end_frame=end_frame,
+                return_times=False,
+                use_cache=True,
+            )
+
+            spike_times = self.sample_index_to_time(spike_frames, segment_index=segment_index)
+
+            # Filter to return only the spikes within the specified time range
+            if start_time is not None:
+                spike_times = spike_times[spike_times >= start_time]
+            if end_time is not None:
+                spike_times = spike_times[spike_times <= end_time]
+
+            return spike_times
+
+        # Use the native spiking times if available
+        # Some instances might implement a method themselves to access spike times directly without having to convert
+        # (e.g. NWB extractors)
+        if hasattr(segment, "get_unit_spike_train_in_seconds"):
+            return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
+
+        # If no recording attached and all back to frame-based conversion
+        # Get spike train in frames and convert to times using traditional method
+        start_frame = self.time_to_sample_index(start_time, segment_index=segment_index) if start_time else None
+        end_frame = self.time_to_sample_index(end_time, segment_index=segment_index) if end_time else None
+
+        spike_frames = self.get_unit_spike_train(
+            unit_id=unit_id,
+            segment_index=segment_index,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            return_times=False,
+            use_cache=True,
+        )
+
+        t_start = segment._t_start if segment._t_start is not None else 0
+        spike_times = spike_frames / self.get_sampling_frequency()
+        return t_start + spike_times
+
+    def register_recording(self, recording, check_spike_frames: bool = True):
+        """
+        Register a recording to the sorting. If the sorting and recording both contain
+        time information, the recording's time information will be used.
 
         Parameters
         ----------
@@ -215,10 +331,10 @@ class BaseSorting(BaseExtractor):
         sorting_info = dict(recording=recording_dict, params=params_dict, log=log_dict)
         self.annotate(__sorting_info__=sorting_info)
 
-    def has_recording(self):
+    def has_recording(self) -> bool:
         return self._recording is not None
 
-    def has_time_vector(self, segment_index=None) -> bool:
+    def has_time_vector(self, segment_index: Optional[int] = None) -> bool:
         """
         Check if the segment of the registered recording has a time vector.
         """
@@ -304,14 +420,6 @@ class BaseSorting(BaseExtractor):
         values = self.get_property(key)
         v = values[self.id_to_index(unit_id)]
         return v
-
-    def get_total_num_spikes(self):
-        warnings.warn(
-            "Sorting.get_total_num_spikes() is deprecated and will be removed in spikeinterface 0.102, use sorting.count_num_spikes_per_unit()",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.count_num_spikes_per_unit(outputs="dict")
 
     def count_num_spikes_per_unit(self, outputs="dict"):
         """
@@ -454,12 +562,34 @@ class BaseSorting(BaseExtractor):
         non_empty_units = self.get_non_empty_unit_ids()
         return self.select_units(non_empty_units)
 
-    def get_non_empty_unit_ids(self):
+    def get_non_empty_unit_ids(self) -> np.ndarray:
+        """
+        Return the unit IDs that have at least one spike across all segments.
+
+        This method computes the number of spikes for each unit using
+        `count_num_spikes_per_unit` and filters out units with zero spikes.
+
+        Returns
+        -------
+        np.ndarray
+            Array of unit IDs (same dtype as self.unit_ids) for which at least one spike exists.
+        """
         num_spikes_per_unit = self.count_num_spikes_per_unit()
 
         return np.array([unit_id for unit_id in self.unit_ids if num_spikes_per_unit[unit_id] != 0])
 
-    def get_empty_unit_ids(self):
+    def get_empty_unit_ids(self) -> np.ndarray:
+        """
+        Return the unit IDs that have zero spikes across all segments.
+
+        This method returns the complement of `get_non_empty_unit_ids` with respect
+        to all unit IDs in the sorting.
+
+        Returns
+        -------
+        np.ndarray
+            Array of unit IDs (same dtype as self.unit_ids) for which no spikes exist.
+        """
         unit_ids = self.unit_ids
         empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_unit_ids())]
         return empty_units
@@ -472,43 +602,97 @@ class BaseSorting(BaseExtractor):
         )
         return sub_sorting
 
-    def get_all_spike_trains(self, outputs="unit_id"):
+    def time_slice(self, start_time: float | None, end_time: float | None) -> BaseSorting:
         """
-        Return all spike trains concatenated.
-        This is deprecated and will be removed in spikeinterface 0.102 use sorting.to_spike_vector() instead
+        Returns a new sorting object, restricted to the time interval [start_time, end_time].
+
+        Parameters
+        ----------
+        start_time : float | None, default: None
+            The start time in seconds. If not provided it is set to 0.
+        end_time : float | None, default: None
+            The end time in seconds. If not provided it is set to the total duration.
+
+        Returns
+        -------
+        BaseSorting
+            A new sorting object with only samples between start_time and end_time
         """
 
-        warnings.warn(
-            "Sorting.get_all_spike_trains() will be deprecated. Sorting.to_spike_vector() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        assert self.get_num_segments() == 1, "Time slicing is only supported for single segment sortings."
 
-        assert outputs in ("unit_id", "unit_index")
-        spikes = []
-        for segment_index in range(self.get_num_segments()):
-            spike_times = []
-            spike_labels = []
-            for i, unit_id in enumerate(self.unit_ids):
-                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                spike_times.append(st)
-                if outputs == "unit_id":
-                    spike_labels.append(np.array([unit_id] * st.size))
-                elif outputs == "unit_index":
-                    spike_labels.append(np.zeros(st.size, dtype="int64") + i)
+        start_frame = self.time_to_sample_index(start_time, segment_index=0) if start_time else None
+        end_frame = self.time_to_sample_index(end_time, segment_index=0) if end_time else None
 
-            if len(spike_times) > 0:
-                spike_times = np.concatenate(spike_times)
-                spike_labels = np.concatenate(spike_labels)
-                order = np.argsort(spike_times)
-                spike_times = spike_times[order]
-                spike_labels = spike_labels[order]
-            else:
-                spike_times = np.array([], dtype=np.int64)
-                spike_labels = np.array([], dtype=np.int64)
+        return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
-            spikes.append((spike_times, spike_labels))
-        return spikes
+    def split_by(self, property="group", outputs="dict"):
+        """
+        Splits object based on a certain property (e.g. "group")
+
+        Parameters
+        ----------
+        property : str, default: "group"
+            The property to use to split the object, default: "group"
+        outputs : "dict" | "list", default: "dict"
+            Whether to return a dict or a list
+
+        Returns
+        -------
+        dict or list
+            A dict or list with grouped objects based on property
+
+        Raises
+        ------
+        ValueError
+            Raised when property is not present
+        """
+        assert outputs in ("list", "dict")
+        values = self.get_property(property)
+        if values is None:
+            raise ValueError(f"property {property} is not set")
+
+        if outputs == "list":
+            sortings = []
+        elif outputs == "dict":
+            sortings = {}
+        for value in np.unique(values).tolist():
+            (inds,) = np.nonzero(values == value)
+            new_unit_ids = self.unit_ids[inds]
+            subsort = self.select_units(new_unit_ids)
+            subsort.set_annotation("split_by_property", value=property)
+            if outputs == "list":
+                sortings.append(subsort)
+            elif outputs == "dict":
+                sortings[value] = subsort
+        return sortings
+
+    def time_to_sample_index(self, time, segment_index=0):
+        """
+        Transform time in seconds into sample index
+        """
+        if self.has_recording():
+            sample_index = self._recording.time_to_sample_index(time, segment_index=segment_index)
+        else:
+            segment = self._sorting_segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            sample_index = round((time - t_start) * self.get_sampling_frequency())
+
+        return sample_index
+
+    def sample_index_to_time(
+        self, sample_index: int | np.ndarray, segment_index: Optional[int] = None
+    ) -> float | np.ndarray:
+        """
+        Transform sample index into time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.sample_index_to_time(sample_index, segment_index=segment_index)
+        else:
+            segment = self._sorting_segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            return (sample_index / self.get_sampling_frequency()) + t_start
 
     def precompute_spike_trains(self, from_spike_vector=None):
         """

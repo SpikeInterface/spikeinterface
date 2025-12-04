@@ -12,33 +12,43 @@ from spikeinterface.core.core_tools import convert_string_to_bytes, convert_byte
 import sys
 from tqdm.auto import tqdm
 
-from concurrent.futures import ProcessPoolExecutor
-import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+import multiprocessing
+import threading
 from threadpoolctl import threadpool_limits
 
 
 _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
-            * chunk_duration or chunk_size or chunk_memory or total_memory
-                - chunk_size : int
-                    Number of samples per chunk
-                - chunk_memory : str
-                    Memory usage for each job (e.g. "100M", "1G", "500MiB", "2GiB")
-                - total_memory : str
-                    Total memory usage (e.g. "500M", "2G")
-                - chunk_duration : str or float or None
-                    Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
-            * n_jobs : int | float
-                Number of jobs to use. With -1 the number of jobs is the same as number of cores.
-                Using a float between 0 and 1 will use that fraction of the total cores.
-            * progress_bar : bool
-                If True, a progress bar is printed
-            * mp_context : "fork" | "spawn" | None, default: None
-                Context for multiprocessing. It can be None, "fork" or "spawn".
-                Note that "fork" is only safely available on LINUX systems
-    """
+    * chunk_duration or chunk_size or chunk_memory or total_memory
+        - chunk_size : int
+            Number of samples per chunk
+        - chunk_memory : str
+            Memory usage for each job (e.g. "100M", "1G", "500MiB", "2GiB")
+        - total_memory : str
+            Total memory usage (e.g. "500M", "2G")
+        - chunk_duration : str or float or None
+            Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
+    * n_jobs : int | float
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
+    * progress_bar : bool
+        If True, a progress bar is printed
+    * mp_context : "fork" | "spawn" | None, default: None
+        Context for multiprocessing. It can be None, "fork" or "spawn".
+        Note that "fork" is only safely available on LINUX systems
+    * pool_engine : "process" | "thread", default: "process"
+        Whether to use a ProcessPoolExecutor or ThreadPoolExecutor for multiprocessing
+    * max_threads_per_worker : int | None, default: 1
+        Sets the limit for the number of thread per process using threadpoolctl module
+        Only applies in an n_jobs>1 context
+        If None, then no limits are applied.
+"""
 
 
 job_keys = (
+    "pool_engine",
     "n_jobs",
     "total_memory",
     "chunk_size",
@@ -46,7 +56,7 @@ job_keys = (
     "chunk_duration",
     "progress_bar",
     "mp_context",
-    "max_threads_per_process",
+    "max_threads_per_worker",
 )
 
 # theses key are the same and should not be in th final dict
@@ -58,10 +68,69 @@ _mutually_exclusive = (
 )
 
 
+def get_best_job_kwargs():
+    """
+    Gives best possible job_kwargs for the platform.
+    Currently this function  is from developer experience, but may be adapted in the future.
+    """
+
+    n_cpu = os.cpu_count()
+
+    if platform.system() == "Linux":
+        pool_engine = "process"
+        mp_context = "fork"
+
+    elif platform.system() == "Darwin":
+        pool_engine = "process"
+        mp_context = "spawn"
+
+    else:  # windows
+        # on windows and macos the fork is forbidden and process+spwan is super slow at startup
+        # so let's go to threads
+        pool_engine = "thread"
+        mp_context = None
+        n_jobs = n_cpu
+        max_threads_per_worker = 1
+
+    if platform.system() in ("Linux", "Darwin"):
+        # here we try to balance between the number of workers (n_jobs) and the number of sub thread
+        # this is totally empirical but this is a good start
+        if n_cpu <= 16:
+            # for small n_cpu let's make many process
+            n_jobs = n_cpu
+            max_threads_per_worker = 1
+        else:
+            # let's have fewer processes with more threads each
+            n_jobs = int(n_cpu / 4)
+            max_threads_per_worker = 8
+
+    return dict(
+        pool_engine=pool_engine,
+        mp_context=mp_context,
+        n_jobs=n_jobs,
+        max_threads_per_worker=max_threads_per_worker,
+    )
+
+
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs, is_set_global_job_kwargs_set
 
     job_kwargs = get_global_job_kwargs()
+
+    if runtime_job_kwargs is None:
+        # in this case this will be the global job_kwargs
+        runtime_job_kwargs = dict()
+
+    # deprecation with backward compatibility
+    # this can be removed in 0.104.0
+    if "max_threads_per_process" in runtime_job_kwargs:
+        runtime_job_kwargs = runtime_job_kwargs.copy()
+        runtime_job_kwargs["max_threads_per_worker"] = runtime_job_kwargs.pop("max_threads_per_process")
+        warnings.warn(
+            "job_kwargs: max_threads_per_process was changed to max_threads_per_worker, max_threads_per_process will be removed in 0.104",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     for k in runtime_job_kwargs:
         assert k in job_keys, (
@@ -99,14 +168,14 @@ def fix_job_kwargs(runtime_job_kwargs):
     n_jobs = max(n_jobs, 1)
     job_kwargs["n_jobs"] = min(n_jobs, os.cpu_count())
 
-    if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
-        warnings.warn(
-            "`n_jobs` is not set so parallel processing is disabled! "
-            "To speed up computations, it is recommended to set n_jobs either "
-            "globally (with the `spikeinterface.set_global_job_kwargs()` function) or "
-            "locally (with the `n_jobs` argument). Use `spikeinterface.set_global_job_kwargs?` "
-            "for more information about job_kwargs."
-        )
+    # if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
+    #     warnings.warn(
+    #         "`n_jobs` is not set so parallel processing is disabled! "
+    #         "To speed up computations, it is recommended to set n_jobs either "
+    #         "globally (with the `spikeinterface.set_global_job_kwargs()` function) or "
+    #         "locally (with the `n_jobs` argument). Use `spikeinterface.set_global_job_kwargs?` "
+    #         "for more information about job_kwargs."
+    #     )
 
     return job_kwargs
 
@@ -287,11 +356,15 @@ class ChunkRecordingExecutor:
         If True, output is verbose
     job_name : str, default: ""
         Job name
+    progress_bar : bool, default: False
+        If True, a progress bar is printed to monitor the progress of the process
     handle_returns : bool, default: False
         If True, the function can return values
     gather_func : None or callable, default: None
         Optional function that is called in the main thread and retrieves the results of each worker.
         This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
+    pool_engine : "process" | "thread", default: "thread"
+        If n_jobs>1 then use ProcessPoolExecutor or ThreadPoolExecutor
     n_jobs : int, default: 1
         Number of jobs to be used. Use -1 to use as many jobs as number of cores
     total_memory : str, default: None
@@ -305,13 +378,12 @@ class ChunkRecordingExecutor:
     mp_context : "fork" | "spawn" | None, default: None
         "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
         "fork" is only safely available on LINUX systems.
-    max_threads_per_process : int or None, default: None
+    max_threads_per_worker : int or None, default: None
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
-    progress_bar : bool, default: False
-        If True, a progress bar is printed to monitor the progress of the process
-
+    need_worker_index : bool, default False
+        If True then each worker will also have a "worker_index" injected in the local worker dict.
 
     Returns
     -------
@@ -329,6 +401,7 @@ class ChunkRecordingExecutor:
         progress_bar=False,
         handle_returns=False,
         gather_func=None,
+        pool_engine="thread",
         n_jobs=1,
         total_memory=None,
         chunk_size=None,
@@ -336,19 +409,21 @@ class ChunkRecordingExecutor:
         chunk_duration=None,
         mp_context=None,
         job_name="",
-        max_threads_per_process=1,
+        max_threads_per_worker=1,
+        need_worker_index=False,
     ):
         self.recording = recording
         self.func = func
         self.init_func = init_func
         self.init_args = init_args
 
-        if mp_context is None:
-            mp_context = recording.get_preferred_mp_context()
-        if mp_context is not None and platform.system() == "Windows":
-            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-        elif mp_context == "fork" and platform.system() == "Darwin":
-            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+        if pool_engine == "process":
+            if mp_context is None:
+                mp_context = recording.get_preferred_mp_context()
+            if mp_context is not None and platform.system() == "Windows":
+                assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+            elif mp_context == "fork" and platform.system() == "Darwin":
+                warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         self.mp_context = mp_context
 
@@ -368,7 +443,11 @@ class ChunkRecordingExecutor:
             n_jobs=self.n_jobs,
         )
         self.job_name = job_name
-        self.max_threads_per_process = max_threads_per_process
+        self.max_threads_per_worker = max_threads_per_worker
+
+        self.pool_engine = pool_engine
+
+        self.need_worker_index = need_worker_index
 
         if verbose:
             chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
@@ -380,6 +459,7 @@ class ChunkRecordingExecutor:
             print(
                 self.job_name,
                 "\n"
+                f"engine={self.pool_engine} - "
                 f"n_jobs={self.n_jobs} - "
                 f"samples_per_chunk={self.chunk_size:,} - "
                 f"chunk_memory={chunk_memory_str} - "
@@ -402,69 +482,197 @@ class ChunkRecordingExecutor:
 
         if self.n_jobs == 1:
             if self.progress_bar:
-                recording_slices = tqdm(recording_slices, ascii=True, desc=self.job_name)
+                recording_slices = tqdm(
+                    recording_slices, desc=f"{self.job_name} (no parallelization)", total=len(recording_slices)
+                )
 
-            worker_ctx = self.init_func(*self.init_args)
+            worker_dict = self.init_func(*self.init_args)
+            if self.need_worker_index:
+                worker_dict["worker_index"] = 0
+
             for segment_index, frame_start, frame_stop in recording_slices:
-                res = self.func(segment_index, frame_start, frame_stop, worker_ctx)
+                res = self.func(segment_index, frame_start, frame_stop, worker_dict)
                 if self.handle_returns:
                     returns.append(res)
                 if self.gather_func is not None:
                     self.gather_func(res)
+
         else:
             n_jobs = min(self.n_jobs, len(recording_slices))
 
-            # parallel
-            with ProcessPoolExecutor(
-                max_workers=n_jobs,
-                initializer=worker_initializer,
-                mp_context=mp.get_context(self.mp_context),
-                initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
-            ) as executor:
-                results = executor.map(function_wrapper, recording_slices)
+            if self.pool_engine == "process":
+
+                if self.need_worker_index:
+                    lock = multiprocessing.Lock()
+                    array_pid = multiprocessing.Array("i", n_jobs)
+                    for i in range(n_jobs):
+                        array_pid[i] = -1
+                else:
+                    lock = None
+                    array_pid = None
+
+                # parallel
+                with ProcessPoolExecutor(
+                    max_workers=n_jobs,
+                    initializer=process_worker_initializer,
+                    mp_context=multiprocessing.get_context(self.mp_context),
+                    initargs=(
+                        self.func,
+                        self.init_func,
+                        self.init_args,
+                        self.max_threads_per_worker,
+                        self.need_worker_index,
+                        lock,
+                        array_pid,
+                    ),
+                ) as executor:
+                    results = executor.map(process_function_wrapper, recording_slices)
+
+                    if self.progress_bar:
+                        results = tqdm(
+                            results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices)
+                        )
+
+                    for res in results:
+                        if self.handle_returns:
+                            returns.append(res)
+                        if self.gather_func is not None:
+                            self.gather_func(res)
+
+            elif self.pool_engine == "thread":
+                # this is need to create a per worker local dict where the initializer will push the func wrapper
+                thread_local_data = threading.local()
+
+                global _thread_started
+                _thread_started = 0
 
                 if self.progress_bar:
-                    results = tqdm(results, desc=self.job_name, total=len(recording_slices))
+                    # here the tqdm threading do not work (maybe collision) so we need to create a pbar
+                    # before thread spawning
+                    pbar = tqdm(desc=f"{self.job_name} (workers: {n_jobs} threads)", total=len(recording_slices))
 
-                for res in results:
-                    if self.handle_returns:
-                        returns.append(res)
-                    if self.gather_func is not None:
-                        self.gather_func(res)
+                if self.need_worker_index:
+                    lock = threading.Lock()
+                else:
+                    lock = None
+
+                with ThreadPoolExecutor(
+                    max_workers=n_jobs,
+                    initializer=thread_worker_initializer,
+                    initargs=(
+                        self.func,
+                        self.init_func,
+                        self.init_args,
+                        self.max_threads_per_worker,
+                        thread_local_data,
+                        self.need_worker_index,
+                        lock,
+                    ),
+                ) as executor:
+
+                    recording_slices2 = [(thread_local_data,) + tuple(args) for args in recording_slices]
+                    results = executor.map(thread_function_wrapper, recording_slices2)
+
+                    for res in results:
+                        if self.progress_bar:
+                            pbar.update(1)
+                        if self.handle_returns:
+                            returns.append(res)
+                        if self.gather_func is not None:
+                            self.gather_func(res)
+                if self.progress_bar:
+                    pbar.close()
+                    del pbar
+
+            else:
+                raise ValueError("If n_jobs>1 pool_engine must be 'process' or 'thread'")
 
         return returns
 
 
+class WorkerFuncWrapper:
+    """
+    small wrapper that handles:
+      * local worker_dict
+      *  max_threads_per_worker
+    """
+
+    def __init__(self, func, worker_dict, max_threads_per_worker):
+        self.func = func
+        self.worker_dict = worker_dict
+        self.max_threads_per_worker = max_threads_per_worker
+
+    def __call__(self, args):
+        segment_index, start_frame, end_frame = args
+        if self.max_threads_per_worker is None:
+            return self.func(segment_index, start_frame, end_frame, self.worker_dict)
+        else:
+            with threadpool_limits(limits=self.max_threads_per_worker):
+                return self.func(segment_index, start_frame, end_frame, self.worker_dict)
+
+
 # see
 # https://stackoverflow.com/questions/10117073/how-to-use-initializer-to-set-up-my-multiprocess-pool
-# the tricks is : theses 2 variables are global per worker
-# so they are not share in the same process
-global _worker_ctx
-global _func
+# the trick is : this variable is global per worker (so not shared in the same process)
+global _process_func_wrapper
 
 
-def worker_initializer(func, init_func, init_args, max_threads_per_process):
-    global _worker_ctx
-    if max_threads_per_process is None:
-        _worker_ctx = init_func(*init_args)
+def process_worker_initializer(func, init_func, init_args, max_threads_per_worker, need_worker_index, lock, array_pid):
+    global _process_func_wrapper
+    if max_threads_per_worker is None:
+        worker_dict = init_func(*init_args)
     else:
-        with threadpool_limits(limits=max_threads_per_process):
-            _worker_ctx = init_func(*init_args)
-    _worker_ctx["max_threads_per_process"] = max_threads_per_process
-    global _func
-    _func = func
+        with threadpool_limits(limits=max_threads_per_worker):
+            worker_dict = init_func(*init_args)
+
+    if need_worker_index:
+        child_process = multiprocessing.current_process()
+        lock.acquire()
+        worker_index = None
+        for i in range(len(array_pid)):
+            if array_pid[i] == -1:
+                worker_index = i
+                array_pid[i] = child_process.ident
+                break
+        worker_dict["worker_index"] = worker_index
+        lock.release()
+
+    _process_func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_worker)
 
 
-def function_wrapper(args):
-    segment_index, start_frame, end_frame = args
-    global _func
-    global _worker_ctx
-    max_threads_per_process = _worker_ctx["max_threads_per_process"]
-    if max_threads_per_process is None:
-        return _func(segment_index, start_frame, end_frame, _worker_ctx)
+def process_function_wrapper(args):
+    global _process_func_wrapper
+    return _process_func_wrapper(args)
+
+
+# use by thread at init
+global _thread_started
+
+
+def thread_worker_initializer(
+    func, init_func, init_args, max_threads_per_worker, thread_local_data, need_worker_index, lock
+):
+    if max_threads_per_worker is None:
+        worker_dict = init_func(*init_args)
     else:
-        with threadpool_limits(limits=max_threads_per_process):
-            return _func(segment_index, start_frame, end_frame, _worker_ctx)
+        with threadpool_limits(limits=max_threads_per_worker):
+            worker_dict = init_func(*init_args)
+
+    if need_worker_index:
+        lock.acquire()
+        global _thread_started
+        worker_index = _thread_started
+        _thread_started += 1
+        worker_dict["worker_index"] = worker_index
+        lock.release()
+
+    thread_local_data.func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_worker)
+
+
+def thread_function_wrapper(args):
+    thread_local_data = args[0]
+    args = args[1:]
+    return thread_local_data.func_wrapper(args)
 
 
 # Here some utils copy/paste from DART (Charlie Windolf)

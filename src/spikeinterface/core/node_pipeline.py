@@ -1,7 +1,4 @@
-"""
-
-
-"""
+""" """
 
 from __future__ import annotations
 from typing import Optional, Type
@@ -32,6 +29,11 @@ spike_peak_dtype = base_peak_dtype + [
 
 
 class PipelineNode:
+
+    # If False (general case) then compute(traces_chunk, *node_input_args)
+    # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+    _compute_has_extended_signature = False
+
     def __init__(
         self,
         recording: BaseRecording,
@@ -191,7 +193,7 @@ class SpikeRetriever(PeakSource):
         self._dtype = spike_peak_dtype
 
         self.include_spikes_in_margin = include_spikes_in_margin
-        if include_spikes_in_margin is not None:
+        if include_spikes_in_margin:
             self._dtype = spike_peak_dtype + [("in_margin", "bool")]
 
         self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
@@ -228,12 +230,6 @@ class SpikeRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        # if self.include_spikes_in_margin:
-        #     i0, i1 = np.searchsorted(
-        #         peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
-        #     )
-        # else:
-        #     i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         i0, i1 = peak_slice
 
         local_peaks = peaks_in_segment[i0:i1]
@@ -380,6 +376,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
+        sparsity_mask: np.ndarray = None,
     ):
         """
         Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
@@ -404,6 +401,11 @@ class ExtractSparseWaveforms(WaveformsNode):
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
+        radius_um : float, default: 100.0
+            The radius to determine the neighborhood of channels to extract waveforms from.
+        sparsity_mask : np.ndarray, default: None
+            Optional mask to specify the sparsity of the waveforms. If provided, it should be a boolean array of shape
+            (num_channels, num_channels) where True indicates that the channel is active in the neighborhood.
         """
         WaveformsNode.__init__(
             self,
@@ -414,10 +416,15 @@ class ExtractSparseWaveforms(WaveformsNode):
             return_output=return_output,
         )
 
-        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
+
+        if sparsity_mask is not None:
+            self.neighbours_mask = sparsity_mask
+            self.radius_um = None
+        else:
+            self.radius_um = radius_um
+            self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
     def get_trace_margin(self):
@@ -435,21 +442,59 @@ class ExtractSparseWaveforms(WaveformsNode):
         return sparse_wfs
 
 
-def find_parent_of_type(list_of_parents, parent_type, unique=True):
+def find_parent_of_type(list_of_parents, parent_type):
+    """
+    Find a single parent of a given type(s) in a list of parents.
+    If multiple parents of the given type are found, the first parent is returned.
+
+    Parameters
+    ----------
+    list_of_parents : list of PipelineNode
+        List of parents to search through.
+    parent_type : type | tuple of types
+        The type of parent to search for.
+
+    Returns
+    -------
+    parent : PipelineNode or None
+        The parent of the given type. Returns None if no parent of the given type is found.
+    """
     if list_of_parents is None:
         return None
+
+    parents = find_parents_of_type(list_of_parents, parent_type)
+
+    if len(parents) > 0:
+        return parents[0]
+    else:
+        return None
+
+
+def find_parents_of_type(list_of_parents, parent_type):
+    """
+    Find all parents of a given type(s) in a list of parents.
+
+    Parameters
+    ----------
+    list_of_parents : list of PipelineNode
+        List of parents to search through.
+    parent_type : type | tuple of types
+        The type(s) of parents to search for.
+
+    Returns
+    -------
+    parents : list of PipelineNode
+        List of parents of the given type(s). Returns an empty list if no parents of the given type(s) are found.
+    """
+    if list_of_parents is None:
+        return []
 
     parents = []
     for parent in list_of_parents:
         if isinstance(parent, parent_type):
             parents.append(parent)
 
-    if unique and len(parents) == 1:
-        return parents[0]
-    elif not unique and len(parents) > 1:
-        return parents[0]
-    else:
-        return None
+    return parents
 
 
 def check_graph(nodes):
@@ -471,7 +516,7 @@ def check_graph(nodes):
             assert parent in nodes, f"Node {node} has parent {parent} that was not passed in nodes"
             assert (
                 nodes.index(parent) < i
-            ), f"Node are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            ), f"Nodes are ordered incorrectly: {node} before {parent} in the pipeline definition."
 
     return nodes
 
@@ -481,7 +526,6 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
@@ -526,14 +570,14 @@ def run_node_pipeline(
         The classical job_kwargs
     job_name : str
         The name of the pipeline used for the progress_bar
-    gather_mode : "memory" | "npz"
-
+    gather_mode : "memory" | "npy"
+        How to gather the output of the nodes.
     gather_kwargs : dict
         OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
     folder : str | Path | None
-        Used for gather_mode="npz"
+        Used for gather_mode="npy"
     names : list of str
         Names of outputs.
     verbose : bool, default False
@@ -607,12 +651,16 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
     recording_segment = recording._recording_segments[segment_index]
-    node0 = nodes[0]
+    retrievers = find_parents_of_type(nodes, (SpikeRetriever, PeakRetriever))
+    # get peak slices once for all retrievers
+    peak_slice_by_retriever = {}
+    for retriever in retrievers:
+        peak_slice = i0, i1 = retriever.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
+        peak_slice_by_retriever[retriever] = peak_slice
 
-    if isinstance(node0, (SpikeRetriever, PeakRetriever)):
-        # in this case PeakSource could have no peaks and so no need to load traces just skip
-        peak_slice = i0, i1 = node0.get_peak_slice(segment_index, start_frame, end_frame, max_margin)
-        load_trace_and_compute = i0 < i1
+    if len(peak_slice_by_retriever) > 0:
+        # in this case the retrievers could have no peaks, so we test if any spikes are in the chunk
+        load_trace_and_compute = any(i0 < i1 for i0, i1 in peak_slice_by_retriever.values())
     else:
         # PeakDetector always need traces
         load_trace_and_compute = True
@@ -646,11 +694,18 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
                 # set sample index to local
                 node_output[0]["sample_index"] += extra_margin
-            elif isinstance(node, PeakSource):
+            elif isinstance(node, (PeakRetriever, SpikeRetriever)):
+                peak_slice = peak_slice_by_retriever[node]
                 node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, peak_slice)
             else:
                 # TODO later when in master: change the signature of all nodes (or maybe not!)
-                node_output = node.compute(traces_chunk, *node_input_args)
+                if not node._compute_has_extended_signature:
+                    node_output = node.compute(traces_chunk, *node_input_args)
+                else:
+                    node_output = node.compute(
+                        traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args
+                    )
+
             pipeline_outputs[node] = node_output
 
             if skip_after_n_peaks_per_worker is not None and isinstance(node, PeakSource):

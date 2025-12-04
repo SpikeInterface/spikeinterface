@@ -1,8 +1,10 @@
 from __future__ import annotations
 from collections import defaultdict
 
+import warnings
 import numpy as np
 
+from spikeinterface.core.template_tools import get_template_extremum_channel
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
@@ -26,18 +28,21 @@ class UnitSummaryWidget(BaseWidget):
         The SortingAnalyzer object
     unit_id : int or str
         The unit id to plot the summary of
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values,
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply.
         If SortingAnalyzer is already sparse, the argument is ignored
     subwidget_kwargs : dict or None, default: None
         Parameters for the subwidgets in a nested dictionary
-            unit_locations : UnitLocationsWidget (see UnitLocationsWidget for details)
-            unit_waveforms : UnitWaveformsWidget (see UnitWaveformsWidget for details)
-            unit_waveform_density_map : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
-            autocorrelograms : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
-            amplitudes : AmplitudesWidget (see AmplitudesWidget for details)
+
+            * unit_locations : UnitLocationsWidget (see UnitLocationsWidget for details)
+            * unit_waveforms : UnitWaveformsWidget (see UnitWaveformsWidget for details)
+            * unit_waveform_density_map : UnitWaveformDensityMapWidget (see UnitWaveformDensityMapWidget for details)
+            * autocorrelograms : AutoCorrelogramsWidget (see AutoCorrelogramsWidget for details)
+            * amplitudes : AmplitudesWidget (see AmplitudesWidget for details)
+
         Please note that the unit_colors should not be set in subwidget_kwargs, but directly as a parameter of plot_unit_summary.
     """
 
@@ -131,8 +136,13 @@ class UnitSummaryWidget(BaseWidget):
         col_counter += 1
 
         unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
+        extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index")
         unit_location = unit_locations[unit_id]
         x, y = unit_location[0], unit_location[1]
+        if np.isnan(x) or np.isnan(y):
+            warnings.warn(f"Unit {unit_id} location contains NaN values. Replacing NaN extremum channel location.")
+            x, y = sorting_analyzer.get_channel_locations()[extremum_channel_indices[unit_id]]
+
         ax_unit_locations.set_xlim(x - 80, x + 80)
         ax_unit_locations.set_ylim(y - 250, y + 250)
         ax_unit_locations.set_xticks([])

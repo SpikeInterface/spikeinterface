@@ -53,12 +53,12 @@ def test_hybrid_units_recording(setup_module):
 
     # Check dumpability
     saved_loaded = load(hybrid_units_recording.to_dict())
-    check_recordings_equal(hybrid_units_recording, saved_loaded, return_scaled=False)
+    check_recordings_equal(hybrid_units_recording, saved_loaded, return_in_uV=False)
 
     saved_1job = hybrid_units_recording.save(folder=cache_folder / "units_1job")
     saved_2job = hybrid_units_recording.save(folder=cache_folder / "units_2job", n_jobs=2, chunk_duration="1s")
-    check_recordings_equal(hybrid_units_recording, saved_1job, return_scaled=False)
-    check_recordings_equal(hybrid_units_recording, saved_2job, return_scaled=False)
+    check_recordings_equal(hybrid_units_recording, saved_1job, return_in_uV=False)
+    check_recordings_equal(hybrid_units_recording, saved_2job, return_in_uV=False)
 
 
 def test_hybrid_spikes_recording(setup_module):
@@ -82,12 +82,12 @@ def test_hybrid_spikes_recording(setup_module):
 
     # Check dumpability
     saved_loaded = load(hybrid_spikes_recording.to_dict())
-    check_recordings_equal(hybrid_spikes_recording, saved_loaded, return_scaled=False)
+    check_recordings_equal(hybrid_spikes_recording, saved_loaded, return_in_uV=False)
 
     saved_1job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_1job")
     saved_2job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_2job", n_jobs=2, chunk_duration="1s")
-    check_recordings_equal(hybrid_spikes_recording, saved_1job, return_scaled=False)
-    check_recordings_equal(hybrid_spikes_recording, saved_2job, return_scaled=False)
+    check_recordings_equal(hybrid_spikes_recording, saved_1job, return_in_uV=False)
+    check_recordings_equal(hybrid_spikes_recording, saved_2job, return_in_uV=False)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,6 @@ import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    is_path_remote,
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
@@ -47,8 +46,8 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
-    installation_mesg = ""
-    installed = True
+    # kwargs which can be precomputed before being used by the extractor
+    _precomputable_kwarg_names = []
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -78,6 +77,31 @@ class BaseExtractor:
 
         # preferred context for multiprocessing
         self._preferred_mp_context = None
+
+    def _repr_html_(self, display_name=True):
+        pass
+
+    def _get_common_repr_html(self, common_style):
+        html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
+        for key, value in self._annotations.items():
+            html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
+        html_annotations += f"</details>"
+
+        html_properties = f"<details style='{common_style}'><summary><strong>Properties</strong></summary><ul>"
+        for key, value in self._properties.items():
+            # Add a further indent for each property
+            value_formatted = np.asarray(value)
+            html_properties += f"<details><summary><strong>{key}</strong></summary>{value_formatted}</details>"
+        html_properties += "</ul></details>"
+
+        if self.get_parent():
+            html_parent = f"<details style='{common_style}'>  <summary><strong>Parent</strong></summary><ul>"
+            display_name = self.name != self.get_parent().name
+            html_parent += self.get_parent()._repr_html_(display_name=display_name)
+            html_parent += "</ul></details>"
+        else:
+            html_parent = ""
+        return html_annotations + html_properties + html_parent
 
     @property
     def name(self):
@@ -145,7 +169,7 @@ class BaseExtractor:
             non_existent_ids = [id for id in ids if id not in self._main_ids]
             if non_existent_ids:
                 error_msg = (
-                    f"IDs {non_existent_ids} are not channel ids of the extractor. \n"
+                    f"IDs {non_existent_ids} are not ids of the extractor. \n"
                     f"Available ids are {self._main_ids} with dtype {self._main_ids.dtype}"
                 )
                 raise ValueError(error_msg)
@@ -231,10 +255,10 @@ class BaseExtractor:
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
             if None which is the default all the ids are set or changed
-        missing_value : object, default: None
+        missing_value : Any, default: None
             In case the property is set on a subset of values ("ids" not None),
-            it specifies the how the missing values should be filled.
-            The missing_value has to be specified for types int and unsigned int.
+            This argument specifies how to fill missing values.
+            The `missing_value` is required for types int and unsigned int.
         """
 
         if values is None:
@@ -259,7 +283,7 @@ class BaseExtractor:
                 non_unique_ids = [id for id in ids if np.count_nonzero(ids == id) > 1]
                 raise ValueError(f"IDs are not unique: {non_unique_ids}")
 
-            # Not clear where this branch is used, perhaps on aggregation of extractors?
+            # Sam: this is used because you could set all ids (like the None) but with the vector.
             if ids.size < size:
                 if key not in self._properties:
 
@@ -281,7 +305,16 @@ class BaseExtractor:
 
                     # create the property with nan or empty
                     shape = (size,) + values.shape[1:]
-                    empty_values = np.zeros(shape, dtype=dtype)
+
+                    # For string (unicode) types, make sure dtype can fit the missing value
+                    if dtype_kind == "U" and missing_value is not None:
+                        max_val_len = np.max(np.char.str_len(values)) if values.size > 0 else 0
+                        missing_val_len = len(missing_value)
+                        max_len = max(max_val_len, missing_val_len)
+                        empty_values = np.full(shape, missing_value, dtype=f"<U{max_len}")
+                    else:
+                        empty_values = np.zeros(shape, dtype=dtype)
+
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
                     if ids.size == 0:
@@ -293,6 +326,11 @@ class BaseExtractor:
                     ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
 
                 indices = self.ids_to_indices(ids)
+                if dtype_kind == "U":
+                    # re-adjust the size of the property
+                    existing_unicode_size = max(len(s) for s in self._properties[key])
+                    new_unicode_size = max(max(len(s) for s in values), existing_unicode_size)
+                    self._properties[key] = self._properties[key].astype(f"<U{new_unicode_size}")
                 self._properties[key][indices] = values
             else:
                 indices = self.ids_to_indices(ids)
@@ -661,7 +699,7 @@ class BaseExtractor:
         if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, folder_metadata=folder_metadata)
+            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -841,7 +879,7 @@ class BaseExtractor:
         self,
         name: str | None = None,
         folder: str | Path | None = None,
-        overwrite: str = False,
+        overwrite: bool = False,
         verbose: bool = True,
         **save_kwargs,
     ):

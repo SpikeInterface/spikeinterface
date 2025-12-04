@@ -546,7 +546,7 @@ def test_inject_templates():
 
         # Check dumpability
         saved_loaded = load(rec.to_dict())
-        check_recordings_equal(rec, saved_loaded, return_scaled=False)
+        check_recordings_equal(rec, saved_loaded, return_in_uV=False)
 
 
 def test_transformsorting():
@@ -613,7 +613,7 @@ def test_generate_ground_truth_recording():
 
 def test_generate_sorting_to_inject():
     durations = [10.0, 20.0]
-    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0, seed=2205)
     injected_sorting = generate_sorting_to_inject(
         sorting, [int(duration * sorting.sampling_frequency) for duration in durations], seed=2308
     )
@@ -654,7 +654,8 @@ if __name__ == "__main__":
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_transformsorting()
-    test_generate_templates()
+    test_generate_unit_locations()
+    # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
     # test_generate_sorting_with_spikes_on_borders()
