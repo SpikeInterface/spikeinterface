@@ -159,12 +159,12 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
     ):
 
         self.envelope = RectifyRecording(recording)
-        self.envelope = GaussianFilterRecording(self.enveloppe, freq_min=None, freq_max=freq_max)
-        self.envelope = CommonReferenceRecording(self.enveloppe)
+        self.envelope = GaussianFilterRecording(self.envelope, freq_min=None, freq_max=freq_max)
+        self.envelope = CommonReferenceRecording(self.envelope)
 
         if list_periods is None:
             list_periods = detect_onsets(
-                self.enveloppe,
+                self.envelope,
                 detect_threshold=detect_threshold,
                 min_duration_ms=min_duration_ms,
                 seed=seed,
@@ -177,8 +177,8 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                     percentage = 100 * total_time / recording.get_num_samples(i)
                     print(f"{percentage}% of segment {i} has been flagged as artifactual")
 
-        if "enveloppe" in random_slices_kwargs:
-            random_slices_kwargs.pop("enveloppe")
+        if "envelope" in random_slices_kwargs:
+            random_slices_kwargs.pop("envelope")
 
         SilencedPeriodsRecording.__init__(
             self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **random_slices_kwargs
@@ -190,7 +190,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                 "freq_max": freq_max,
                 "verbose": verbose,
                 "min_duration_ms": min_duration_ms,
-                "enveloppe": self.enveloppe,
+                "envelope": self.envelope,
             }
         )
 
