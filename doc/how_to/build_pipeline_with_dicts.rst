@@ -42,7 +42,7 @@ an example:
 
     # Usually, you would read in your raw recording
     rec, _ = si.generate_ground_truth_recording(num_channels=4, durations=[60], seed=0)
-    preprocessed_rec = si.apply_pipeline(rec, my_protocol['preprocessing'])
+    preprocessed_rec = si.apply_preprocessing_pipeline(rec, my_protocol['preprocessing'])
     sorting = si.run_sorter(recording=preprocessed_rec, **my_protocol['sorting'])
     analyzer = si.create_sorting_analyzer(recording=preprocessed_rec, sorting=sorting)
     analyzer.compute(my_protocol['postprocessing'])

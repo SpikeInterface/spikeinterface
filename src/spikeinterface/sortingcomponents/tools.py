@@ -10,13 +10,12 @@ except:
     HAVE_PSUTIL = False
 
 from spikeinterface.core.sparsity import ChannelSparsity
-from spikeinterface.core.template import Templates
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
 
@@ -66,6 +65,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
         nafter,
         mode="shared_memory",
         return_in_uV=False,
+        dtype="float32",
         sparsity_mask=sparsity_mask,
         copy=True,
         verbose=False,
@@ -437,7 +437,9 @@ def remove_empty_templates(templates):
     return templates.select_units(templates.unit_ids[not_empty])
 
 
-def create_sorting_analyzer_with_existing_templates(sorting, recording, templates, remove_empty=True):
+def create_sorting_analyzer_with_existing_templates(
+    sorting, recording, templates, remove_empty=True, noise_levels=None
+):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
@@ -454,11 +456,23 @@ def create_sorting_analyzer_with_existing_templates(sorting, recording, template
     sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
-    sa.extensions["templates"].params = {"ms_before": templates.ms_before, "ms_after": templates.ms_after}
+    sa.extensions["templates"].params = {
+        "ms_before": templates.ms_before,
+        "ms_after": templates.ms_after,
+        "operators": ["average", "std"],
+    }
     sa.extensions["templates"].data["average"] = templates_array
     sa.extensions["templates"].data["std"] = np.zeros(templates_array.shape, dtype=np.float32)
     sa.extensions["templates"].run_info["run_completed"] = True
     sa.extensions["templates"].run_info["runtime_s"] = 0
+
+    if noise_levels is not None:
+        sa.extensions["noise_levels"] = ComputeNoiseLevels(sa)
+        sa.extensions["noise_levels"].params = {}
+        sa.extensions["noise_levels"].data["noise_levels"] = noise_levels
+        sa.extensions["noise_levels"].run_info["run_completed"] = True
+        sa.extensions["noise_levels"].run_info["runtime_s"] = 0
+
     return sa
 
 

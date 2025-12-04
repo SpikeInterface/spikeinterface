@@ -94,7 +94,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity = compute_similarity_with_templates_array(
+        new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -110,16 +110,16 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
 
+        local_mask = ~np.isin(all_new_unit_ids, new_unit_ids)
+        sub_units_ids = all_new_unit_ids[local_mask]
+        sub_units_inds = np.flatnonzero(local_mask)
+        old_units_inds = self.sorting_analyzer.sorting.ids_to_indices(sub_units_ids)
+
         # copy old similarity
-        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
-            if unit_id1 not in new_unit_ids:
-                old_ind1 = self.sorting_analyzer.sorting.id_to_index(unit_id1)
-                for unit_ind2, unit_id2 in enumerate(all_new_unit_ids):
-                    if unit_id2 not in new_unit_ids:
-                        old_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
-                        s = self.data["similarity"][old_ind1, old_ind2]
-                        similarity[unit_ind1, unit_ind2] = s
-                        similarity[unit_ind1, unit_ind2] = s
+        for old_ind1, unit_ind1 in zip(old_units_inds, sub_units_inds):
+            s = self.data["similarity"][old_ind1, old_units_inds]
+            similarity[unit_ind1, sub_units_inds] = s
+            similarity[sub_units_inds, unit_ind1] = s
 
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
@@ -146,7 +146,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids_f, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity = compute_similarity_with_templates_array(
+        new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -188,7 +188,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
         sparsity = self.sorting_analyzer.sparsity
-        similarity = compute_similarity_with_templates_array(
+        similarity, _ = compute_similarity_with_templates_array(
             templates_array,
             templates_array,
             method=self.params["method"],
@@ -319,9 +319,14 @@ if HAVE_NUMBA:
                         sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
                 elif support == "union":
+                    connected_mask = np.logical_and(sparsity_mask[i, :], other_sparsity_mask)
+                    not_connected_mask = np.sum(connected_mask, axis=1) == 0
                     local_mask = np.logical_or(
                         sparsity_mask[i, :], other_sparsity_mask
                     )  # shape (other_num_templates, num_channels)
+                    for local_i in np.flatnonzero(not_connected_mask):
+                        local_mask[local_i] = False
+
                 elif support == "dense":
                     local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
 
@@ -386,14 +391,24 @@ def get_overlapping_mask_for_one_template(template_index, sparsity, other_sparsi
     if support == "intersection":
         mask = np.logical_and(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
     elif support == "union":
+        connected_mask = np.logical_and(sparsity[template_index, :], other_sparsity)
+        not_connected_mask = np.sum(connected_mask, axis=1) == 0
         mask = np.logical_or(sparsity[template_index, :], other_sparsity)  # shape (other_num_templates, num_channels)
+        for i in np.flatnonzero(not_connected_mask):
+            mask[i] = False
     elif support == "dense":
         mask = np.ones(other_sparsity.shape, dtype=bool)
     return mask
 
 
 def compute_similarity_with_templates_array(
-    templates_array, other_templates_array, method, support="union", num_shifts=0, sparsity=None, other_sparsity=None
+    templates_array,
+    other_templates_array,
+    method,
+    support="union",
+    num_shifts=0,
+    sparsity=None,
+    other_sparsity=None,
 ):
 
     if method == "cosine_similarity":
@@ -432,10 +447,11 @@ def compute_similarity_with_templates_array(
         templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support
     )
 
+    lags = np.argmin(distances, axis=0) - num_shifts
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
 
-    return similarity
+    return similarity, lags
 
 
 def compute_template_similarity_by_pair(
@@ -445,7 +461,7 @@ def compute_template_similarity_by_pair(
     templates_array_2 = get_dense_templates_array(sorting_analyzer_2, return_in_uV=True)
     sparsity_1 = sorting_analyzer_1.sparsity
     sparsity_2 = sorting_analyzer_2.sparsity
-    similarity = compute_similarity_with_templates_array(
+    similarity, _ = compute_similarity_with_templates_array(
         templates_array_1,
         templates_array_2,
         method=method,
