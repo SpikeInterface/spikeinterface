@@ -46,7 +46,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
         unit_locs = self._rf["centres"][()]
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids, self.unit_locations))
+        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
 
         self.set_property("hs_location", unit_locs)
 
@@ -60,13 +60,12 @@ HS2SortingExtractor = HerdingspikesSortingExtractor
 
 
 class HerdingspikesSortingSegment(BaseSortingSegment):
-    def __init__(self, unit_ids, spike_times, spike_ids, unit_locs):
+    def __init__(self, unit_ids, spike_times, spike_ids):
         BaseSortingSegment.__init__(self)
         # spike_times is a dict
         self._unit_ids = list(unit_ids)
         self._spike_times = spike_times
         self._spike_ids = spike_ids
-        self._unit_locs = unit_locs
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         mask = self._spike_ids == unit_id
