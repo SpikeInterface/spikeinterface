@@ -15,7 +15,9 @@ class BaseOperatorRecording(BaseRecording):
         assert do_recording_attributes_match(
             recording1, rec_attrs2
         ), "Both recordings must have the same sampling frequency and channel ids"
-        assert self.check_times_kwargs(recording1, recording2), "Both recordings must have the same time parameters"
+        assert self.are_times_kwargs_compatible(
+            recording1, recording2
+        ), "Both recordings must have the same time parameters"
 
         channel_ids = recording1.channel_ids
         sampling_frequency = recording1.sampling_frequency
@@ -29,7 +31,7 @@ class BaseOperatorRecording(BaseRecording):
 
         self._kwargs = dict(recording1=recording1, recording2=recording2, operator=operator)
 
-    def check_times_kwargs(self, recording1, recording2) -> bool:
+    def are_times_kwargs_compatible(self, recording1, recording2) -> bool:
         import numpy as np
 
         for segment_index in range(recording1.get_num_segments()):
