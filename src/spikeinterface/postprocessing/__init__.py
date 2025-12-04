@@ -14,6 +14,8 @@ from .template_similarity import (
 from .principal_component import (
     ComputePrincipalComponents,
     compute_principal_components,
+    ComputeFullPCAProjections,
+    compute_full_pca_projections,
 )
 
 from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes

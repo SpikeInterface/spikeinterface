@@ -17,8 +17,6 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     peak_sign : "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute extremum channel used to retrieve spike amplitudes.
     """

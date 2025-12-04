@@ -2785,6 +2785,7 @@ _builtin_extensions = {
     "correlograms": "spikeinterface.postprocessing",
     "isi_histograms": "spikeinterface.postprocessing",
     "principal_components": "spikeinterface.postprocessing",
+    "full_pca_projections": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",
     "spike_locations": "spikeinterface.postprocessing",
     "template_metrics": "spikeinterface.postprocessing",
