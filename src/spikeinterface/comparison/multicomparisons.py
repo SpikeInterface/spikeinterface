@@ -190,63 +190,6 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         )
         return sorting
 
-    def save_to_folder(self, save_folder):
-        warnings.warn(
-            "save_to_folder() is deprecated. "
-            "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        for sorting in self.object_list:
-            assert sorting.check_serializability(
-                "json"
-            ), "MultiSortingComparison.save_to_folder() needs json serializable sortings"
-
-        save_folder = Path(save_folder)
-        save_folder.mkdir(parents=True, exist_ok=True)
-        filename = str(save_folder / "multicomparison.gpickle")
-        with open(filename, "wb") as f:
-            pickle.dump(self.graph, f, pickle.HIGHEST_PROTOCOL)
-        kwargs = {
-            "delta_time": float(self.delta_time),
-            "match_score": float(self.match_score),
-            "chance_score": float(self.chance_score),
-        }
-        with (save_folder / "kwargs.json").open("w") as f:
-            json.dump(kwargs, f)
-        sortings = {}
-        for name, sorting in zip(self.name_list, self.object_list):
-            sortings[name] = sorting.to_dict(recursive=True, relative_to=save_folder)
-        with (save_folder / "sortings.json").open("w") as f:
-            json.dump(sortings, f)
-
-    @staticmethod
-    def load_from_folder(folder_path):
-        warnings.warn(
-            "load_from_folder() is deprecated. "
-            "You should save and load the multi sorting comparison object using pickle."
-            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb'))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        folder_path = Path(folder_path)
-        with (folder_path / "kwargs.json").open() as f:
-            kwargs = json.load(f)
-        with (folder_path / "sortings.json").open() as f:
-            dict_sortings = json.load(f)
-        name_list = list(dict_sortings.keys())
-        sorting_list = [load(v, base_folder=folder_path) for v in dict_sortings.values()]
-        mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
-        filename = str(folder_path / "multicomparison.gpickle")
-        with open(filename, "rb") as f:
-            mcmp.graph = pickle.load(f)
-        # do step 3 and 4
-        mcmp._clean_graph()
-        mcmp._do_agreement()
-        mcmp._populate_spiketrains()
-        return mcmp
-
 
 class AgreementSortingExtractor(BaseSorting):
     def __init__(

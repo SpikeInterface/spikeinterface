@@ -526,7 +526,6 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
@@ -571,14 +570,14 @@ def run_node_pipeline(
         The classical job_kwargs
     job_name : str
         The name of the pipeline used for the progress_bar
-    gather_mode : "memory" | "npz"
-
+    gather_mode : "memory" | "npy"
+        How to gather the output of the nodes.
     gather_kwargs : dict
         OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
     folder : str | Path | None
-        Used for gather_mode="npz"
+        Used for gather_mode="npy"
     names : list of str
         Names of outputs.
     verbose : bool, default False

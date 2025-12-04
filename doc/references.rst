@@ -20,14 +20,17 @@ If you use one of the following preprocessing methods, please cite the appropria
 - :code:`common_reference` [Rolston]_
 
 Motion Correction
-^^^^^^^^^^^^^^^^^
-If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia]_
+-----------------
+If you use the :code:`correct_motion` method in the preprocessing module, please cite [Garcia2024]_
 as well as the references that correspond to the :code:`preset` you used:
 
-- :code:`nonrigid_accurate` [Windolf]_ [Varol]_
-- :code:`nonrigid_fast_and_accurate` [Windolf]_ [Varol]_ [Pachitariu]_
+- :code:`nonrigid_accurate` [Windolf_a]_ [Varol]_
+- :code:`nonrigid_fast_and_accurate` [Windolf_a]_ [Varol]_ [Pachitariu]_
 - :code:`rigid_fast` *no additional citation needed*
 - :code:`kilosort_like` [Pachitariu]_
+- :code:`dredge_ap` [Windolf_b]_
+- :code:`dredge_lfp` [Windolf_b]_
+- :code:`medicine` [Watters]_
 
 Sorters Module
 --------------
@@ -40,9 +43,22 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
+- :code:`rtsort` [van_der_Molen]_
 - :code:`spykingcircus` [Yger]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
+
+Postprocessing Module
+---------------------
+
+If you use the :code:`postprocessing module`, i.e. you use the :code:`analyzer.compute()` include the citations for the following
+methods:
+
+ - :code:`acgs_3d` [Beau]_
+ - :code:`unit_locations` or :code:`spike_locations` with :code:`monopolar_triangulation` based on work from [Boussard]_
+ - :code:`unit_locations` or :code:`spike_locations` with :code:`grid_convolution` based on work from [Pachitariu]_
+ - :code:`template_metrics` [Jia]_
+
 
 Qualitymetrics Module
 ---------------------
@@ -69,12 +85,26 @@ important for your research:
 - :code:`nearest_neighbor` or :code:`nn_isolation` or :code:`nn_noise_overlap` [Chung]_ [Siegle]_
 - :code:`silhouette`  [Rousseeuw]_ [Hruschka]_
 
+
 Curation Module
 ---------------
 If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
 
+If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
+
+Benchmark
+---------
+
+For addicts to benchmarking numerical methods in the context of spike sorting, if you use the benchmark
+module please cite [Garcia2022]_, [Garcia2024]_ or [Scopin2024]_.
+
+
 References
 ----------
+
+.. [Beau] `A deep learning strategy to identify cell types across species from high-density extracellular recordings. 2025. <https://doi.org/10.1016/j.cell.2025.01.041>`_
+
+.. [Boussard] `Three-dimensional spike localization and imporved motion correction for Neuropixels recordings. 2021 <https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1>`_
 
 .. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 
@@ -86,7 +116,9 @@ References
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
-.. [Garcia] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
+.. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
+
+.. [Garcia2022] `How Do Spike Collisions Affect Spike Sorting Performance? <https://doi.org/10.1523/ENEURO.0105-22.2022>`_
 
 .. [Grün] `Impact of higher-order correlations on coincidence distributions of massively parallel data. 2007. <https://www.researchgate.net/publication/225145104_Impact_of_Higher-Order_Correlations_on_Coincidence_Distributions_of_Massively_Parallel_Data>`_
 
@@ -100,7 +132,13 @@ References
 
 .. [IBL] `Spike sorting pipeline for the International Brain Laboratory. 2022. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522/3>`_
 
-.. [Jackson] Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005.
+.. [IBL2024] `Spike sorting pipeline for the International Brain Laboratory - Version 2. 2024. <https://figshare.com/articles/online_resource/Spike_sorting_pipeline_for_the_International_Brain_Laboratory/19705522?file=49783080>`_
+
+.. [Jackson] `Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Society of Neuroscience Abstract. 2005. <https://www.sciencedirect.com/science/article/abs/pii/S0306452204008425>`_
+
+.. [Jain] `UnitRefine: A Community Toolbox for Automated Spike Sorting Curation. 2025 <https://www.biorxiv.org/content/10.1101/2025.03.30.645770v1>`_
+
+.. [Jia] `High-density extracellular probes reveal dendritic backpropagation and facilitate neuron classification. 2019 <https://journals.physiology.org/doi/full/10.1152/jn.00680.2018>`_
 
 .. [Lee] `YASS: Yet another spike sorter. 2017. <https://www.biorxiv.org/content/10.1101/151928v1>`_
 
@@ -111,6 +149,8 @@ References
 .. [Muthmann] `Spike Detection for Large Neural Populations Using High Density Multielectrode Arrays. 2015. <https://pubmed.ncbi.nlm.nih.gov/26733859/>`_
 
 .. [Niediek] `Reliable Analysis of Single-Unit Recordings from the Human Brain under Noisy Conditions: Tracking Neurons over Hours. 2016. <https://pubmed.ncbi.nlm.nih.gov/27930664/>`_
+
+.. [npyx] `NeuroPyxels: loading, processing and plotting Neuropixels data in python. 2021. <https://doi.org/10.5281/zenodo.5509776>`_
 
 .. [Pachitariu] `Spike sorting with Kilosort4. 2024. <https://pubmed.ncbi.nlm.nih.gov/38589517/>`_
 
@@ -126,8 +166,14 @@ References
 
 .. [UMS] `UltraMegaSort2000 - Spike sorting and quality metrics for extracellular spike data. 2011. <https://github.com/danamics/UMS2K>`_
 
+.. [van_der_Molen] `RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies. 2024. <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438>`_
+
 .. [Varol] `Decentralized Motion Inference and Registration of Neuropixel Data. 2021. <https://ieeexplore.ieee.org/document/9414145>`_
 
-.. [Windolf] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
+.. [Windolf_a] `Robust Online Multiband Drift Estimation in Electrophysiology Data. 2022. <https://www.biorxiv.org/content/10.1101/2022.12.04.519043v2>`_
+
+.. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
 .. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
+
+.. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_

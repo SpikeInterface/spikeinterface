@@ -370,8 +370,8 @@ Noise levels can be estimated on the scaled traces or on the raw
 .. code:: ipython3
 
     # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
-    noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
-    noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
+    noise_levels_microV = si.get_noise_levels(rec, return_in_uV=True)
+    noise_levels_int16 = si.get_noise_levels(rec, return_in_uV=False)
 
 .. code:: ipython3
 
@@ -442,7 +442,7 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-    peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
+    peak_locations = localize_peaks(rec, peaks, method='center_of_mass', method_kwargs=dict(radius_um=50.), **job_kwargs)
 
 
 
@@ -567,7 +567,7 @@ In this example:
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
 
-    sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
+    sorting = si.run_sorter('kilosort2_5', rec, folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
 .. code:: ipython3
@@ -1138,3 +1138,12 @@ And push the results to sortingview webased viewer
 .. code:: python
 
    si.plot_sorting_summary(analyzer_clean, backend='sortingview')
+
+
+
+Additional resources
+--------------------
+
+For additional resources about Neuropixels, you can take a look to the `awesome_neuropixel`_ github repo.
+
+.. _awesome_neuropixel: https://github.com/Julie-Fabre/awesome_neuropixels

@@ -411,9 +411,10 @@ class TestTimeHandling:
             spike_indexes = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
             rec_times = times_recording.get_times(segment_index=segment_index)
 
+            times_in_recording = rec_times[spike_indexes]
             assert np.array_equal(
                 spike_times,
-                rec_times[spike_indexes],
+                times_in_recording,
             )
 
     def _get_sorting_with_recording_attached(self, recording_for_durations, recording_to_attach):
@@ -435,3 +436,12 @@ class TestTimeHandling:
         assert sorting.has_recording()
 
         return sorting
+
+
+def test_shift_times_with_None_as_t_start():
+    """Ensures we can shift times even when t_stat is None which is interpeted as zero"""
+    recording = generate_recording(num_channels=4, durations=[10])
+
+    assert recording._recording_segments[0].t_start is None
+    recording.shift_times(shift=1.0)  # Shift by one seconds should not generate an error
+    assert recording.get_start_time() == 1.0

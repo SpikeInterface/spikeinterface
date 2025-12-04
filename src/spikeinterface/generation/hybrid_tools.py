@@ -77,7 +77,7 @@ def estimate_templates_from_recording(
     nafter = int(ms_after * sampling_frequency / 1000.0)
 
     job_kwargs = job_kwargs or {}
-    templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, **job_kwargs)
+    templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs)
 
     sparsity_mask = None
     channel_ids = recording.channel_ids
@@ -399,8 +399,10 @@ def generate_hybrid_recording(
     probe = recording.get_probe()
     num_segments = recording.get_num_segments()
     dtype = recording.dtype
-    durations = np.array([recording.get_duration(segment_index) for segment_index in range(num_segments)])
     num_samples = np.array([recording.get_num_samples(segment_index) for segment_index in range(num_segments)])
+    # since the recording can have timestamps with some small gaps, we use the number of samples to compute
+    # the duration used for the sorting generation
+    durations = num_samples / sampling_frequency
     channel_locations = probe.contact_positions
 
     assert (

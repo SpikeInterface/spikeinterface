@@ -26,10 +26,12 @@ class SorterBenchmark(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self, exhaustive_gt=True):
+    def compute_result(self, match_score=0.5, exhaustive_gt=True):
         # run becnhmark result
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt)
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
         self.result["gt_comparison"] = comp
 
     _run_key_saved = [
@@ -42,8 +44,14 @@ class SorterBenchmark(Benchmark):
 
 class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
     """
-    This class is used to tests several sorter in several situtation.
-    This replace the previous GroundTruthStudy with more flexibility.
+    Benchmark study to compare Spike Sorters in various situtation.
+
+    This is the most most top level benchmark to compare sorter between then
+    but also to compare one sorter in challenging situation (drift, noise, ...).
+    This can also be used to compare sorters with differents paramerters.
+
+    The ground truth sorting must be given and sorting output from sorter will be
+    compared to then.
     """
 
     benchmark_class = SorterBenchmark
@@ -80,6 +88,11 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
 
     def plot_performances_ordered(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_ordered

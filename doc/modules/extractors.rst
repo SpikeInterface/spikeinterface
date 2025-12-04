@@ -28,13 +28,13 @@ Every format can be read with a simple function:
 
 .. code-block:: python
 
-    recording_oe = read_openephys(folder_path="open-ephys-folder")
+    recording_oe = se.read_openephys(folder_path="open-ephys-folder")
 
-    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
+    recording_spikeglx = se.read_spikeglx(folder_path="spikeglx-folder")
 
-    recording_blackrock = read_blackrock(folder_path="blackrock-folder")
+    recording_blackrock = se.read_blackrock(folder_path="blackrock-folder")
 
-    recording_mearec = read_mearec(file_path="mearec_file.h5")
+    recording_mearec = se.read_mearec(file_path="mearec_file.h5")
 
 
 Importantly, some formats directly handle the probe information:
@@ -80,10 +80,10 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
 .. code-block:: python
 
     # opening a 40GB SpikeGLX dataset is fast
-    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
+    recording_spikeglx = se.read_spikeglx(folder_path="spikeglx-folder")
 
     # this really does load the full 40GB into memory : not recommended!!!!!
-    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
+    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_in_uV=False)
 
 
 
@@ -110,7 +110,7 @@ You can install all extractors' dependencies with:
 
 .. code-block:: python
 
-    pip install spikeinterface[extractor]
+    pip install spikeinterface[extractors]
 
 
 Raw Data Formats
@@ -119,6 +119,7 @@ Raw Data Formats
 For raw recording formats, we currently support:
 
 * **AlphaOmega** :py:func:`~spikeinterface.extractors.read_alphaomega()`
+* **Axon** :py:func:`~spikeinterface.extractors.read_axon()`
 * **Axona** :py:func:`~spikeinterface.extractors.read_axona()`
 * **BlackRock** :py:func:`~spikeinterface.extractors.read_blackrock()`
 * **Binary** :py:func:`~spikeinterface.core.read_binary()`
@@ -127,6 +128,7 @@ For raw recording formats, we currently support:
 * **EDF** :py:func:`~spikeinterface.extractors.read_edf()`
 * **IBL streaming** :py:func:`~spikeinterface.extractors.read_ibl_recording()`
 * **Intan** :py:func:`~spikeinterface.extractors.read_intan()`
+* **Intan split files** :py:func:`~spikeinterface.extractors.read_split_intan_files()`
 * **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()`
 * **MCS H5** :py:func:`~spikeinterface.extractors.read_mcsh5()`
 * **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`
@@ -134,6 +136,7 @@ For raw recording formats, we currently support:
 * **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_recording()`
 * **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
 * **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_recording()`
+* **NeuroNexus** :py:func:`~spikeinterface.coextractorsre.read_neuronexus()`
 * **Neuroscope** :py:func:`~spikeinterface.coextractorsre.read_neuroscope_recording()`
 * **Neuroexplorer** :py:func:`~spikeinterface.extractors.read_neuroexplorer()`
 * **NIX** :py:func:`~spikeinterface.extractors.read_nix()`
@@ -142,10 +145,12 @@ For raw recording formats, we currently support:
 * **Plexon** :py:func:`~spikeinterface.extractors.read_plexon()`
 * **Plexon 2** :py:func:`~spikeinterface.extractors.read_plexon2()`
 * **Shybrid** :py:func:`~spikeinterface.extractors.read_shybrid_recording()`
+* **SpikeGadgets** :py:func:`~spikeinterface.extractors.read_spikegadgets()`
 * **SpikeGLX** :py:func:`~spikeinterface.extractors.read_spikeglx()`
 * **SpikeGLX IBL compressed** :py:func:`~spikeinterface.extractors.read_cbin_ibl()`
 * **SpikeGLX IBL stream** :py:func:`~spikeinterface.extractors.read_streaming_ibl()`
 * **Spike 2** :py:func:`~spikeinterface.extractors.read_spike2()`
+* **Whitematter** :py:func:`~spikeinterface.extractors.read_whitematter()`
 * **TDT** :py:func:`~spikeinterface.extractors.read_tdt()`
 * **Zarr** :py:func:`~spikeinterface.core.read_zarr()`
 
@@ -155,11 +160,13 @@ Sorted Data Formats
 
 For sorted data formats, we currently support:
 
+* **ALF** :py:func:`~spikeinterface.extractors.read_alf_sorting()`
 * **BlackRock** :py:func:`~spikeinterface.extractors.read_blackrock_sorting()`
 * **Combinato** :py:func:`~spikeinterface.extractors.read_combinato()`
 * **Cell explorer** :py:func:`~spikeinterface.extractors.read_cellexplorer()`
 * **HerdingSpikes2** :py:func:`~spikeinterface.extractors.read_herdingspikes()`
 * **HDsort** :py:func:`~spikeinterface.extractors.read_hdsort()`
+* **IBL sorter** :py:func:`~spikeinterface.extractors.read_ibl_sorting()`
 * **Kilosort1/2/2.5/3** :py:func:`~spikeinterface.extractors.read_kilosort()`
 * **Klusta** :py:func:`~spikeinterface.extractors.read_klusta()`
 * **MClust** :py:func:`~spikeinterface.extractors.read_mclust()`
@@ -176,6 +183,7 @@ For sorted data formats, we currently support:
 * **Trideclous** :py:func:`~spikeinterface.extractors.read_tridesclous()`
 * **Wave Clus** :py:func:`~spikeinterface.extractors.read_waveclus()`
 * **YASS** :py:func:`~spikeinterface.extractors.read_yass()`
+* **Zarr** :py:func:`~spikeinterface.extractors.read_zarr()`
 
 
 Dealing with Non-Supported File Formats
@@ -183,4 +191,4 @@ Dealing with Non-Supported File Formats
 
 With recording and sorting objects, we hope that any user can access SpikeInterface regardless of the nature of their
 underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as an
-actual extractor, please open an issue.
+actual extractor, please `open an issue <https://github.com/SpikeInterface/spikeinterface/issues>`_.

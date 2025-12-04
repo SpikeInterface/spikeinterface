@@ -1,5 +1,5 @@
-How to use a trained model to predict the curation labels
-=========================================================
+Use a trained model to predict the curation labels
+==================================================
 
 For a more detailed guide to using trained models, `read our tutorial here
 <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_1_automated_curation.html>`_).

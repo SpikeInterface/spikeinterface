@@ -4,7 +4,7 @@ from pathlib import Path
 
 from spikeinterface.core.core_tools import define_function_from_class
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class NeuroNexusRecordingExtractor(NeoBaseRecordingExtractor):

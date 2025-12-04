@@ -301,12 +301,12 @@ def test_get_best_job_kwargs():
 #         num_units=50,
 #         duration=120.0,
 #         sampling_frequency=30000.0,
-#         probe_name="Neuropixel-128",
+#         probe_name="Neuropixels-128",
 
 #     )
 #     # print(rec)
 
-#     noise_levels = get_noise_levels(rec, return_scaled=False)
+#     noise_levels = get_noise_levels(rec, return_in_uV=False)
 #     for job_kwargs in all_job_kwargs:
 #         print()
 #         print(job_kwargs)

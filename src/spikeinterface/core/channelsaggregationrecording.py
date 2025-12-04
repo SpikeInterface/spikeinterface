@@ -37,10 +37,8 @@ class ChannelsAggregationRecording(BaseRecording):
 
         self._recordings = recording_list
 
-        splitting_known = self._is_splitting_known()
-        if not splitting_known:
-            for group_id, recording in zip(recording_ids, recording_list):
-                recording.set_property("group", [group_id] * recording.get_num_channels())
+        for group_id, recording in zip(recording_ids, recording_list):
+            recording.set_property("aggregation_key", [group_id] * recording.get_num_channels())
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()
@@ -105,6 +103,20 @@ class ChannelsAggregationRecording(BaseRecording):
                 "Locations are not unique! " "Cannot aggregate recordings!"
             )
 
+        planar_contour_keys = [
+            key for recording in recording_list for key in recording.get_annotation_keys() if "planar_contour" in key
+        ]
+        if len(planar_contour_keys) > 0:
+            if all(
+                k == planar_contour_keys[0] for k in planar_contour_keys
+            ):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
+                planar_contour_key = planar_contour_keys[0]
+                collect_planar_contours = []
+                for rec in recording_list:
+                    collect_planar_contours.append(rec.get_annotation(planar_contour_key))
+                if all(np.array_equal(arr, collect_planar_contours[0]) for arr in collect_planar_contours):
+                    self.set_annotation(planar_contour_key, collect_planar_contours[0])
+
         # finally add segments, we need a channel mapping
         ch_id = 0
         channel_map = {}
@@ -125,25 +137,6 @@ class ChannelsAggregationRecording(BaseRecording):
     @property
     def recordings(self):
         return self._recordings
-
-    def _is_splitting_known(self):
-
-        # If we have the `split_by_property` annotation, we know how the recording was split
-        if self._recordings[0].get_annotation("split_by_property") is not None:
-            return True
-
-        # Check if all 'group' properties are equal to 0
-        recording_groups = []
-        for recording in self._recordings:
-            if (group_labels := recording.get_property("group")) is not None:
-                recording_groups.extend(group_labels)
-            else:
-                recording_groups.extend([0])
-        # If so, we don't know the splitting
-        if np.all(np.unique(recording_groups) == np.array([0])):
-            return False
-        else:
-            return True
 
     def _perform_consistency_checks(self):
 

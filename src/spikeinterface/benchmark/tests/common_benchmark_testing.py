@@ -51,7 +51,7 @@ def make_dataset(job_kwargs={}):
     return recording, gt_sorting, gt_analyzer
 
 
-def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_scaled=False, **job_kwargs):
+def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_in_uV=False, **job_kwargs):
     spikes = gt_sorting.to_spike_vector()  # [spike_indices]
     fs = recording.sampling_frequency
     nbefore = int(ms_before * fs / 1000)
@@ -62,7 +62,7 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
         gt_sorting.unit_ids,
         nbefore,
         nafter,
-        return_scaled=return_scaled,
+        return_in_uV=return_in_uV,
         **job_kwargs,
     )
 
@@ -74,7 +74,7 @@ def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, ret
         channel_ids=recording.channel_ids,
         unit_ids=gt_sorting.unit_ids,
         probe=recording.get_probe(),
-        is_scaled=return_scaled,
+        is_in_uV=return_in_uV,
     )
     return gt_templates
 

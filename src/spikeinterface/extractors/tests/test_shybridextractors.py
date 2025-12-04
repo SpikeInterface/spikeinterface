@@ -2,7 +2,7 @@ import pytest
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
-from spikeinterface.extractors import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
+from spikeinterface.extractors.extractor_classes import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
 
 
 @pytest.mark.skipif(True, reason="SHYBRID only tested locally")
@@ -23,7 +23,7 @@ def test_shybrid_extractors(create_cache_folder):
     rec_shybrid = SHYBRIDRecordingExtractor(cache_folder / "shybridtest" / "recording.yml")
     probe = rec_shybrid.get_probe()
 
-    check_recordings_equal(rec, rec_shybrid, return_scaled=False)
+    check_recordings_equal(rec, rec_shybrid, return_in_uV=False)
 
 
 if __name__ == "__main__":

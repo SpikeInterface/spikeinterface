@@ -29,7 +29,7 @@ def test_silence(create_cache_folder):
 
     rec1 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="noise", seed=2308)
     rec1 = rec1.save(folder=cache_folder / "rec_w_noise", verbose=False, overwrite=True)
-    noise_levels = get_noise_levels(rec, return_scaled=False)
+    noise_levels = get_noise_levels(rec, return_in_uV=False)
     traces_in0 = rec1.get_traces(segment_index=0, start_frame=0, end_frame=1000)
     traces_in1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     assert np.abs((np.std(traces_in0, axis=0) - noise_levels) < 0.1).sum()

@@ -9,7 +9,7 @@ import json
 from spikeinterface.sorters.utils import ShellScript
 from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.sorters.basesorter import BaseSorter
-from spikeinterface.extractors import CombinatoSortingExtractor
+from spikeinterface.extractors.extractor_classes import CombinatoSortingExtractor
 
 
 PathType = Union[str, Path]
@@ -143,7 +143,7 @@ class CombinatoSorter(BaseSorter):
                 time_axis=0,
                 single_axis=True,
                 chunk_memory=params["chunk_memory"],
-                return_scaled=True,
+                return_in_uV=True,
             )
 
     @classmethod

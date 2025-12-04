@@ -21,13 +21,14 @@ class MatchingBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.method = params["method"]
-        self.templates = params["method_kwargs"]["templates"]
+        # self.templates = params["method_kwargs"]["templates"]
+        self.templates = params["templates"]
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
     def run(self, **job_kwargs):
         spikes = find_spikes_from_templates(
-            self.recording, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
+            self.recording, self.templates, method=self.method, method_kwargs=self.method_kwargs, job_kwargs=job_kwargs
         )
         unit_ids = self.templates.unit_ids
         sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
@@ -38,9 +39,11 @@ class MatchingBenchmark(Benchmark):
         self.result = {"sorting": sorting, "spikes": spikes}
         self.result["templates"] = self.templates
 
-    def compute_result(self, with_collision=False, **result_params):
+    def compute_result(self, with_collision=False, match_score=0.5, exhaustive_gt=True):
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
         self.result["gt_comparison"] = comp
         if with_collision:
             self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
@@ -54,6 +57,16 @@ class MatchingBenchmark(Benchmark):
 
 
 class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare template matchong methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    Templates must be also given. Note that the full template can be given but also
+    only a partial catalogue can be given to challenge the template matching
+    methods when catalogue is not entirely known.
+    """
 
     benchmark_class = MatchingBenchmark
 
@@ -89,23 +102,34 @@ class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         return plot_performances_ordered(self, *args, **kwargs)
 
-    def plot_collisions(self, case_keys=None, figsize=None):
+    def plot_collisions(self, case_keys=None, metric="l2", mode="lines", show_legend=True, axs=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        if axs is None:
+            fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+            axs = axs[0, :]
+        else:
+            fig = axs[0].figure
 
         for count, key in enumerate(case_keys):
-            templates_array = self.get_result(key)["templates"].templates_array
+            label = self.cases[key]["label"]
+            templates_array = self.get_sorting_analyzer(key).get_extension("templates").get_templates(outputs="numpy")
+            ax = axs[count]
             plot_comparison_collision_by_similarity(
                 self.get_result(key)["gt_collision"],
                 templates_array,
-                ax=axs[0, count],
-                show_legend=True,
-                mode="lines",
-                good_only=False,
+                metric=metric,
+                ax=ax,
+                show_legend=show_legend,
+                mode=mode,
+                # good_only=False,
+                # good_only=False,
+                good_only=True,
             )
+
+            ax.set_title(label)
 
         return fig
 

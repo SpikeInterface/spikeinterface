@@ -3,6 +3,8 @@ from __future__ import annotations
 from warnings import warn
 import numpy as np
 
+from spikeinterface.core import BaseSorting
+
 
 def get_some_colors(
     keys,
@@ -100,7 +102,7 @@ def get_some_colors(
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1.0,) for x in range(N)]
 
     if shuffle:
-        rng = np.random.RandomState(seed=seed)
+        rng = np.random.default_rng(seed=seed)
         inds = np.arange(N)
         rng.shuffle(inds)
         colors = [colors[i] for i in inds]
@@ -291,6 +293,9 @@ def make_units_table_from_sorting(sorting, units_table=None):
 def make_units_table_from_analyzer(
     analyzer,
     extra_properties=None,
+    with_unit_locations=True,
+    with_quality_metrics=True,
+    with_template_metrics=True,
 ):
     """
     Make a DataFrame by aggregating :
@@ -318,16 +323,16 @@ def make_units_table_from_analyzer(
 
     all_df = []
 
-    if analyzer.get_extension("unit_locations") is not None:
+    if with_unit_locations and analyzer.get_extension("unit_locations") is not None:
         locs = analyzer.get_extension("unit_locations").get_data()
         df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
         all_df.append(df)
 
-    if analyzer.get_extension("quality_metrics") is not None:
+    if with_quality_metrics and analyzer.get_extension("quality_metrics") is not None:
         df = analyzer.get_extension("quality_metrics").get_data()
         all_df.append(df)
 
-    if analyzer.get_extension("template_metrics") is not None:
+    if with_template_metrics and analyzer.get_extension("template_metrics") is not None:
         df = analyzer.get_extension("template_metrics").get_data()
         all_df.append(df)
 
@@ -349,3 +354,73 @@ def make_units_table_from_analyzer(
                 )
 
     return units_table
+
+
+def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSorting):
+    """
+    Validate a list of segment indices for a sorting object.
+
+    Parameters
+    ----------
+    segment_indices : list of int
+        The segment index or indices to validate.
+    sorting : BaseSorting
+        The sorting object to validate against.
+
+    Returns
+    -------
+    list of int
+        A list of valid segment indices.
+
+    Raises
+    ------
+    ValueError
+        If the segment indices are not valid.
+    """
+    num_segments = sorting.get_num_segments()
+
+    # Handle segment_indices input
+    if segment_indices is None:
+        if num_segments > 1:
+            warn("Segment indices not specified. Using first available segment only.")
+        return [0]
+
+    # Convert segment_index to list for consistent processing
+    if not isinstance(segment_indices, list):
+        raise ValueError(
+            "segment_indices must be a list of ints - available segments are: " + list(range(num_segments))
+        )
+
+    # Validate segment indices
+    for idx in segment_indices:
+        if not isinstance(idx, int):
+            raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
+        if idx < 0 or idx >= num_segments:
+            raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
+
+    return segment_indices
+
+
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> list[float]:
+    """
+    Calculate the duration of each segment in a sorting object.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object containing spike data
+
+    Returns
+    -------
+    list[float]
+        List of segment durations in seconds
+    """
+    spikes = sorting.to_spike_vector()
+
+    segment_boundaries = [
+        np.searchsorted(spikes["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
+    ]
+
+    durations = [(spikes["sample_index"][end - 1] + 1) / sorting.sampling_frequency for (_, end) in segment_boundaries]
+
+    return durations

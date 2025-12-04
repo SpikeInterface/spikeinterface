@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.qualitymetrics import compute_pc_metrics, get_quality_pca_metric_list
 
 
-def test_calculate_pc_metrics(small_sorting_analyzer):
+def test_compute_pc_metrics(small_sorting_analyzer):
     import pandas as pd
 
     sorting_analyzer = small_sorting_analyzer

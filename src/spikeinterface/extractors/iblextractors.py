@@ -4,6 +4,7 @@ from io import StringIO
 from typing import List, Optional, Union
 from contextlib import redirect_stderr
 from pathlib import Path
+import importlib.util
 
 import numpy as np
 import probeinterface
@@ -11,6 +12,16 @@ import probeinterface
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.alfsortingextractor import ALFSortingSegment
+
+
+if importlib.util.find_spec("one") is not None and importlib.util.find_spec("one.api") is not None:
+    HAVE_ONE = True
+else:
+    HAVE_ONE = False
+if importlib.util.find_spec("brainbox") is not None and importlib.util.find_spec("brainbox.io.one") is not None:
+    HAVE_BRAINBOX = True
+else:
+    HAVE_BRAINBOX = False
 
 
 class IblRecordingExtractor(BaseRecording):
@@ -69,10 +80,9 @@ class IblRecordingExtractor(BaseRecording):
 
     @staticmethod
     def _get_default_one(cache_folder: Optional[Union[Path, str]] = None):
-        try:
+        if HAVE_ONE and HAVE_BRAINBOX:
             from one.api import ONE
-            from brainbox.io.one import EphysSessionLoader
-        except ImportError:
+        else:
             raise ImportError(IblRecordingExtractor.installation_mesg)
         one = ONE(
             base_url="https://openalyx.internationalbrainlab.org",
@@ -113,10 +123,9 @@ class IblRecordingExtractor(BaseRecording):
         stream_names : list of str
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
-        try:
-            from one.api import ONE
+        if HAVE_ONE and HAVE_BRAINBOX:
             from brainbox.io.one import EphysSessionLoader
-        except ImportError:
+        else:
             raise ImportError(IblRecordingExtractor.installation_mesg)
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
@@ -144,9 +153,9 @@ class IblRecordingExtractor(BaseRecording):
         one: "one.api.OneAlyx" = None,
         stream_type: str | None = None,
     ):
-        try:
+        if HAVE_BRAINBOX:
             from brainbox.io.one import SpikeSortingLoader
-        except ImportError:
+        else:
             raise ImportError(self.installation_mesg)
 
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
@@ -264,6 +273,7 @@ class IblRecordingExtractor(BaseRecording):
             "cache_folder": cache_folder,
             "remove_cached": remove_cached,
             "stream": stream,
+            "stream_type": stream_type,
         }
 
 
@@ -319,7 +329,7 @@ class IblSortingExtractor(BaseSorting):
     def __init__(
         self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None, **kwargs
     ):
-        try:
+        if HAVE_ONE and HAVE_BRAINBOX:
             from one.api import ONE
             from brainbox.io.one import SpikeSortingLoader
 
@@ -327,7 +337,7 @@ class IblSortingExtractor(BaseSorting):
                 one = ONE(**one)
             elif one is None:
                 one = IblRecordingExtractor._get_default_one()
-        except ImportError:
+        else:
             raise ImportError(self.installation_mesg)
         self.ssl = SpikeSortingLoader(one=one, pid=pid)
         sr = self.ssl.raw_electrophysiology(band="ap", stream=True)
@@ -358,5 +368,5 @@ class IblSortingExtractor(BaseSorting):
         self._kwargs = dict(pid=pid, good_clusters_only=good_clusters_only, load_unit_properties=load_unit_properties)
 
 
-read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_streaming_recording")
+read_ibl_recording = define_function_from_class(source_class=IblRecordingExtractor, name="read_ibl_recording")
 read_ibl_sorting = define_function_from_class(source_class=IblSortingExtractor, name="read_ibl_sorting")
