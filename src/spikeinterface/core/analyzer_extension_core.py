@@ -826,10 +826,12 @@ class BaseMetric:
     metric_name = None  # to be defined in subclass
     metric_params = {}  # to be defined in subclass
     metric_columns = {}  # column names and their dtypes of the dataframe
-    needs_recording = False  # to be defined in subclass
-    needs_tmp_data = False  # to be defined in subclass
+    needs_recording = False  # whether the metric needs recording
+    needs_tmp_data = (
+        False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
+    )
     needs_job_kwargs = False
-    depend_on = []  # to be defined in subclass
+    depend_on = []  # extensions the metric depends on
 
     # the metric function must have the signature:
     # def metric_function(sorting_analyzer, unit_ids, **metric_params)
@@ -1025,7 +1027,6 @@ class BaseMetricExtension(AnalyzerExtension):
                 default_metric_params[metric].update(params)
             metric_params = default_metric_params
 
-        # TODO: check behavior here!!!
         if metrics_to_compute is None:
             metrics_to_compute = metric_names
         extension = self.sorting_analyzer.get_extension(self.extension_name)
@@ -1046,8 +1047,13 @@ class BaseMetricExtension(AnalyzerExtension):
         return params
 
     def _prepare_data(self, sorting_analyzer, unit_ids=None):
-        """Optional function to prepare shared data for metric computation."""
-        # useful function to compute data that is shared across metrics (e.g., PCA)
+        """
+        Optional function to prepare shared data for metric computation.
+
+        This function should return a dictionary containing any data that is shared across multiple metrics.
+        The returned dictionary will be passed to each metric's compute function as `tmp_data` (if the metric
+        requires it with the class attribute `needs_tmp_data=True`).
+        """
         return {}
 
     def _compute_metrics(
