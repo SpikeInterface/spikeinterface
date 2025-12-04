@@ -287,7 +287,7 @@ def get_templates_from_peaks_and_svd(
     templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
     if sd_ratios:
         ratios = np.zeros(len(labels), dtype=np.float32)
-        
+
     final_sparsity_mask = np.zeros((len(labels), num_channels), dtype="bool")
     for unit_ind, label in enumerate(labels):
         mask = valid_labels == label

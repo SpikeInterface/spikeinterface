@@ -533,11 +533,11 @@ def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
 
 
 def clean_templates(
-    templates, 
-    sparsify_threshold=0.25, 
-    noise_levels=None, 
-    min_snr=None, 
-    max_jitter_ms=None, 
+    templates,
+    sparsify_threshold=0.25,
+    noise_levels=None,
+    min_snr=None,
+    max_jitter_ms=None,
     remove_empty=True,
     sd_ratio_threshold=2.0,
     sd_ratios=None,
@@ -551,7 +551,7 @@ def clean_templates(
         to_select = []
         best_channels = get_template_extremum_channel(templates, outputs="index")
         for count, unit_id in enumerate(templates.unit_ids):
-            ratio = sd_ratios[count]/noise_levels[best_channels[unit_id]]
+            ratio = sd_ratios[count] / noise_levels[best_channels[unit_id]]
             if ratio <= sd_ratio_threshold:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
