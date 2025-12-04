@@ -315,7 +315,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ]:
                 clustering_params.update(verbose=verbose)
                 clustering_params.update(seed=seed)
-                clustering_params.update(peak_svd=params["general"])
+                clustering_params.update(peaks_svd=params["general"])
                 if debug:
                     clustering_params["debug_folder"] = sorter_output_folder / "clustering"
 

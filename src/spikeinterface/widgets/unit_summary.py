@@ -1,8 +1,10 @@
 from __future__ import annotations
 from collections import defaultdict
 
+import warnings
 import numpy as np
 
+from spikeinterface.core.template_tools import get_template_extremum_channel
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
@@ -134,8 +136,13 @@ class UnitSummaryWidget(BaseWidget):
         col_counter += 1
 
         unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
+        extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index")
         unit_location = unit_locations[unit_id]
         x, y = unit_location[0], unit_location[1]
+        if np.isnan(x) or np.isnan(y):
+            warnings.warn(f"Unit {unit_id} location contains NaN values. Replacing NaN extremum channel location.")
+            x, y = sorting_analyzer.get_channel_locations()[extremum_channel_indices[unit_id]]
+
         ax_unit_locations.set_xlim(x - 80, x + 80)
         ax_unit_locations.set_ylim(y - 250, y + 250)
         ax_unit_locations.set_xticks([])
