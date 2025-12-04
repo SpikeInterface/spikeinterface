@@ -11,7 +11,7 @@ from spikeinterface.core.node_pipeline import (
 
 
 def test_savgol_denoising(generated_recording, detected_peaks, chunk_executor_kwargs):
-    recording, _ = generated_recording
+    recording = generated_recording
     peaks = detected_peaks
 
     # Parameters

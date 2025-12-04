@@ -7,7 +7,7 @@ from typing import List
 
 import numpy as np
 
-from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, SpikeRetriever, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.core import BaseRecording
@@ -96,11 +96,11 @@ class TemporalPCBaseNode(WaveformsNode):
         model_folder_path: str,
         detect_peaks_params: dict,
         peak_selection_params: dict,
-        mode: str = "by_channel_global",
         job_kwargs: dict = None,
         ms_before: float = 1.0,
         ms_after: float = 1.0,
         whiten: bool = True,
+        radius_um: float = None,
     ) -> "IncrementalPCA":
         """
         Train a pca model using the data in the recording object and the parameters provided.
@@ -149,7 +149,10 @@ class TemporalPCBaseNode(WaveformsNode):
         sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True)
         sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("waveforms", ms_before=ms_before, ms_after=ms_after)
-        sorting_analyzer.compute("principal_components", n_components=n_components, mode=mode, whiten=whiten)
+        sorting_analyzer.compute(
+            "principal_components", n_components=n_components, mode="by_channel_global", whiten=whiten
+        )
+        pca_model = sorting_analyzer.get_extension("principal_components").get_pca_model()
 
         params = {
             "ms_before": ms_before,
@@ -158,22 +161,15 @@ class TemporalPCBaseNode(WaveformsNode):
         }
 
         # Load the model and the time interval dict from the model_folder
-        pca_model = sorting_analyzer.get_extension("principal_components").get_pca_model()
         if model_folder_path is not None and Path(model_folder_path).is_dir():
-            if mode == "by_channel_global":
-                model_path = Path(model_folder_path) / "pca_model.pkl"
-                with open(model_path, "wb") as f:
-                    pickle.dump(pca_model, f)
-            elif mode == "by_channel_local":
-                for pc_model, channel_id in zip(pca_model, sorting_analyzer.channel_ids):
-                    model_path = Path(model_folder_path) / f"pca_model_{channel_id}.pkl"
-                    with open(model_path, "wb") as f:
-                        pickle.dump(pc_model, f)
+            model_path = Path(model_folder_path) / "pca_model.pkl"
+            with open(model_path, "wb") as f:
+                pickle.dump(pca_model, f)
             params_path = Path(model_folder_path) / "params.json"
             with open(params_path, "w") as f:
                 json.dump(params, f)
 
-        return model_folder_path, pca_model
+        return model_folder_path
 
 
 TemporalPCBaseNode.fit.__doc__ = TemporalPCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc)
@@ -249,91 +245,6 @@ class TemporalPCAProjection(TemporalPCBaseNode):
             projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
         else:
             projected_waveforms = np.zeros((0, self.n_components, num_channels), dtype=self.dtype)
-        return projected_waveforms.astype(self.dtype, copy=False)
-
-
-class TemporalPCAProjectionByChannel(TemporalPCBaseNode):
-    """
-    A step that performs a PCA projection on the waveforms extracted by a waveforms parent node.
-
-    This class needs a model_folder_path with a trained model. A model can be trained with the
-    static method TemporalPCAProjection.fit().
-
-
-    Parameters
-    ----------
-    recording : BaseRecording
-        The recording object
-    parents: list
-        The parent nodes of this node. This should contain a mechanism to extract waveforms
-    pca_models: list[sklearn model | None]
-        The already fitted sklearn model for each channel. If a channel has no visible waveforms, its element should
-        be set to None
-    return_output: bool, default: True
-        use false to suppress the output of this node in the pipeline
-    """
-
-    def __init__(
-        self,
-        recording: BaseRecording,
-        parents: List[PipelineNode],
-        pca_models,
-        dtype="float32",
-        return_output=True,
-    ):
-        TemporalPCBaseNode.__init__(
-            self,
-            recording=recording,
-            parents=parents,
-            return_output=return_output,
-            pca_model=pca_models,
-        )
-        # get sparsity from parent
-        waveform_parent = find_parent_of_type(parents, WaveformsNode)
-        assert waveform_parent is not None, "Temporal PCA by channel requires a Waveform Node"
-        self.neighbours_mask = waveform_parent.neighbours_mask
-        if self.neighbours_mask is not None:
-            spike_retriever = find_parent_of_type(parents, SpikeRetriever)
-            assert spike_retriever is not None, "Temporal PCA by channel with sparsity requires a SpikeRetriever Node"
-        self.n_components = self.pca_model[0].n_components
-        self.dtype = np.dtype(dtype)
-
-    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
-        """
-        Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
-
-        Parameters
-        ----------
-        traces : np.ndarray
-            The traces of the recording.
-        peaks : np.ndarray
-            The peaks resulting from a peak_detection step.
-        waveforms : np.ndarray
-            Waveforms extracted from the recording using a WavefomExtractor node.
-
-        Returns
-        -------
-        np.ndarray
-            The projected waveforms.
-
-        """
-        num_channels = waveforms.shape[2]
-        num_waveforms = waveforms.shape[0]
-        projected_waveforms = np.zeros((num_waveforms, self.n_components, num_channels), dtype=self.dtype)
-        if num_waveforms > 0:
-            if self.neighbours_mask is None:
-                for channel_index in range(num_channels):
-                    pca_model = self.pca_model[channel_index]
-                    projected_waveforms[:, :, channel_index] = pca_model.transform(waveforms[:, :, channel_index])
-            else:
-                for unit_index in np.unique(peaks["unit_index"]):
-                    spike_mask = peaks["unit_index"] == unit_index
-                    channel_mask = self.neighbours_mask[unit_index]
-                    (channel_indices,) = np.nonzero(channel_mask)
-                    for i, channel_index in enumerate(channel_indices):
-                        pca_model = self.pca_model[channel_index]
-                        if pca_model is not None:
-                            projected_waveforms[spike_mask, :, i] = pca_model.transform(waveforms[spike_mask, :, i])
         return projected_waveforms.astype(self.dtype, copy=False)
 
 
