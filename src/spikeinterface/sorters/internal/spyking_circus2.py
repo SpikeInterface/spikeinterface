@@ -480,6 +480,7 @@ def final_cleaning_circus(
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
     noise_levels=None,
+    sd_ratio_threshold=2.0,
     job_kwargs=dict(),
 ):
 
@@ -509,4 +510,13 @@ def final_cleaning_circus(
         **job_kwargs,
     )
 
+    if sd_ratio_threshold is not None:
+        from spikeinterface.qualitymetrics.misc_metrics import compute_sd_ratio
+        final_sa.compute('spike_amplitudes', **job_kwargs)
+        sd_ratios = compute_sd_ratio(final_sa)
+        to_keep = []
+        for id, value in sd_ratios.items():
+            if value < sd_ratio_threshold:
+                to_keep += [id]
+        final_sa = final_sa.select_units(to_keep)
     return final_sa
