@@ -512,7 +512,8 @@ def final_cleaning_circus(
 
     if sd_ratio_threshold is not None:
         from spikeinterface.qualitymetrics.misc_metrics import compute_sd_ratio
-        final_sa.compute('spike_amplitudes', **job_kwargs)
+
+        final_sa.compute("spike_amplitudes", **job_kwargs)
         sd_ratios = compute_sd_ratio(final_sa)
         to_keep = []
         for id, value in sd_ratios.items():
