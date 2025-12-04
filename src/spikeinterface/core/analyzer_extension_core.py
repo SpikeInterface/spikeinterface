@@ -833,6 +833,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     def _run(self, verbose=False, **job_kwargs):
         from spikeinterface.core.node_pipeline import run_node_pipeline
 
+        # TODO: should we save directly to npy in binary_folder format / or to zarr?
         # if self.sorting_analyzer.format == "binary_folder":
         #     gather_mode = "npy"
         #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
@@ -863,7 +864,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for d, name in zip(data, data_names):
             self.data[name] = d
 
-    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None):
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, copy=True):
         """
         Return extension data. If the extension computes more than one `nodepipeline_variables`,
         the `return_data_name` is used to specify which one to return.
@@ -877,6 +878,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         return_data_name : str | None, default: None
             The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
             the first one is returned.
+        copy : bool, default: True
+            Whether to return a copy of the data (only for outputs="numpy")
 
         Returns
         -------
@@ -897,7 +900,10 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
         all_data = self.data[return_data_name]
         if outputs == "numpy":
-            return all_data
+            if copy:
+                return all_data.copy()  # return a copy to avoid modification
+            else:
+                return all_data
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
