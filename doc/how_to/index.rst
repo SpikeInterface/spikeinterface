@@ -10,6 +10,7 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     customize_a_plot
     combine_recordings
     process_by_channel_group
+    extract_lfps
     build_pipeline_with_dicts
     physical_units
     unsigned_to_signed

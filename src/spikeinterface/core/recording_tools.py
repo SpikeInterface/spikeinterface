@@ -214,13 +214,7 @@ def write_binary_recording_file_handle(
 def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
     # create a local dict per worker
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load
-
-        worker_ctx["recording"] = load(recording)
-    else:
-        worker_ctx["recording"] = recording
-
+    worker_ctx["recording"] = recording
     worker_ctx["dtype"] = np.dtype(dtype)
 
     if arrays is None:
