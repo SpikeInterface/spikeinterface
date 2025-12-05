@@ -267,7 +267,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         if pad is None:
             mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
         else:
-            mask = (self.triggers >= start_frame - pad[1]) & (self.triggers < end_frame)
+            mask = (self.triggers >= start_frame - pad[1]) & (self.triggers < end_frame + pad[0])
         triggers = self.triggers[mask] - start_frame
         labels = self.labels[mask]
 
