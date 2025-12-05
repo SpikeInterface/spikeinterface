@@ -39,7 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
-        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsify_threshold": None},
+        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -118,8 +118,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 0.5)
         ms_after = params["general"].get("ms_after", 1.5)
         radius_um = params["general"].get("radius_um", 100.0)
-        detect_threshold = params["detection"]["method_kwargs"].get("detect_threshold", 5)
-        peak_sign = params["detection"].get("peak_sign", "neg")
         deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
         seed = params["seed"]
@@ -383,8 +381,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             del more_outs
             
-            if verbose:
-                print("We have %d clusters" % len(templates.unit_ids))
+            #if verbose:
+            #    print("We have %d clusters" % len(templates.unit_ids))
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
