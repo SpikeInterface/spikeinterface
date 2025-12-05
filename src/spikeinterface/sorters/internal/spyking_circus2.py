@@ -328,6 +328,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 method=clustering_method,
                 method_kwargs=clustering_params,
                 extra_outputs=True,
+                verbose=verbose,
                 job_kwargs=job_kwargs,
             )
 
@@ -381,10 +382,13 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 templates = dense_templates.to_sparse(new_sparse_mask)
 
             del more_outs
+            
+            if verbose:
+                print("We have %d clusters" % len(templates.unit_ids))
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
-            cleaning_kwargs["sd_ratios"] = sd_ratios
+            #cleaning_kwargs["sd_ratios"] = sd_ratios
             cleaning_kwargs["remove_empty"] = True
             templates = clean_templates(templates, **cleaning_kwargs)
 
@@ -482,7 +486,7 @@ def final_cleaning_circus(
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
     noise_levels=None,
-    sd_ratio_threshold=2.0,
+    sd_ratio_threshold=3.0,
     job_kwargs=dict(),
 ):
 
@@ -517,9 +521,12 @@ def final_cleaning_circus(
 
         final_sa.compute("spike_amplitudes", **job_kwargs)
         sd_ratios = compute_sd_ratio(final_sa)
+        ratios = np.array(list(sd_ratios.values()))
+        center = np.median(ratios)
+        mad = np.median(np.abs(ratios - center))
         to_keep = []
         for id, value in sd_ratios.items():
-            if value < sd_ratio_threshold:
+            if value <= center + mad*sd_ratio_threshold:
                 to_keep += [id]
         final_sa = final_sa.select_units(to_keep)
     return final_sa

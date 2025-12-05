@@ -303,14 +303,13 @@ def get_templates_from_peaks_and_svd(
             elif operator == "median":
                 data = np.median(local_svd[sub_mask, :, count], 0)
             templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
-
-        if sd_ratios:
-            count = np.where(best_channel == np.flatnonzero(sparsity_mask[best_channel]))[0][0]
-            data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
-            if len(data) == 1:
-                ratios[unit_ind] = 0.0
-            else:
-                ratios[unit_ind] = np.std(data[:, nbefore])
+            
+            if i == best_channel and sd_ratios:
+                data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
+                if len(data) == 1:
+                    ratios[unit_ind] = 0.0
+                else:
+                    ratios[unit_ind] = np.std(data[:, nbefore])
 
     dense_templates = Templates(
         templates_array=templates_array,

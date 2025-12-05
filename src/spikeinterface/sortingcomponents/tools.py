@@ -533,13 +533,13 @@ def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
 
 
 def clean_templates(
-    templates,
-    sparsify_threshold=0.25,
-    noise_levels=None,
-    min_snr=None,
-    max_jitter_ms=None,
+    templates, 
+    sparsify_threshold=0.25, 
+    noise_levels=None, 
+    min_snr=None, 
+    max_jitter_ms=None, 
     remove_empty=True,
-    sd_ratio_threshold=2.0,
+    sd_ratio_threshold=3.0,
     sd_ratios=None,
 ):
     """
@@ -550,9 +550,15 @@ def clean_templates(
         assert noise_levels is not None, "noise_levels must be provided if sd_ratios is given"
         to_select = []
         best_channels = get_template_extremum_channel(templates, outputs="index")
+        all_ratios = []
         for count, unit_id in enumerate(templates.unit_ids):
-            ratio = sd_ratios[count] / noise_levels[best_channels[unit_id]]
-            if ratio <= sd_ratio_threshold:
+            ratio = sd_ratios[count]/noise_levels[best_channels[unit_id]]
+            all_ratios.append(ratio)
+        centered_ratios = np.array(all_ratios) - 1.0
+        mad = np.median(np.abs(centered_ratios - np.median(centered_ratios)))
+
+        for count, unit_id in enumerate(templates.unit_ids):
+            if all_ratios[count] <= 1 + sd_ratio_threshold * mad:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
 
