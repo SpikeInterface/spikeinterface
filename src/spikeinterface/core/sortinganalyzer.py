@@ -2000,6 +2000,30 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
         return get_default_analyzer_extension_params(extension_name)
 
+    def get_metrics_extension_data(self):
+        """
+        Get all metrics data into a single dataframe.
+
+        Returns
+        -------
+        metrics_df : pandas.DataFrame
+            A concatenated dataframe with all available metrics.
+        """
+        import pandas as pd
+        from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
+
+        all_metrics_data = []
+        for extension_name, ext in self.extensions.items():
+            if isinstance(ext, BaseMetricExtension):
+                metric_data = ext.get_data()
+                all_metrics_data.append(metric_data)
+
+        if len(all_metrics_data) > 0:
+            metrics_df = pd.concat(all_metrics_data, axis=1)
+        else:
+            metrics_df = pd.DataFrame(index=self.unit_ids)
+        return metrics_df
+
 
 def _sort_extensions_by_dependency(extensions):
     """
@@ -2450,8 +2474,7 @@ class AnalyzerExtension:
                         ext_data = pickle.load(f)
                 else:
                     continue
-                self.data[ext_data_name] = ext_data
-
+                self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
@@ -2472,7 +2495,7 @@ class AnalyzerExtension:
                 else:
                     # this load in memmory
                     ext_data = np.array(ext_data_)
-                self.data[ext_data_name] = ext_data
+                self.set_data(ext_data_name, ext_data)
 
         if len(self.data) == 0:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
@@ -2770,6 +2793,9 @@ class AnalyzerExtension:
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
+    def set_data(self, ext_data_name, ext_data):
+        self.data[ext_data_name] = ext_data
+
 
 # this is a hardcoded list to to improve error message and auto_import mechanism
 # this is important because extension are registered when the submodule is imported
@@ -2787,9 +2813,10 @@ _builtin_extensions = {
     "principal_components": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",
     "spike_locations": "spikeinterface.postprocessing",
-    "template_metrics": "spikeinterface.postprocessing",
     "template_similarity": "spikeinterface.postprocessing",
     "unit_locations": "spikeinterface.postprocessing",
-    # from quality metrics
-    "quality_metrics": "spikeinterface.qualitymetrics",
+    # from metrics
+    "quality_metrics": "spikeinterface.metrics",
+    "template_metrics": "spikeinterface.metrics",
+    "spiketrain_metrics": "spikeinterface.metrics",
 }
