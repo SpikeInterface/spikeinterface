@@ -1,4 +1,5 @@
 from __future__ import annotations
+import warnings
 
 import numpy as np
 
@@ -6,6 +7,10 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from spikeinterface.core import get_chunk_with_margin
+
+
+HIGHPASS_ERROR_THRESHOLD_HZ = 100
+MARGIN_TO_CHUNK_PERCENT_WARNING = 0.2  # 20%
 
 
 _common_filter_docs = """**filter_kwargs : dict
@@ -79,7 +84,6 @@ class FilterRecording(BasePreprocessor):
         ftype="butter",
         filter_mode="sos",
         margin_ms=5,
-        max_margin_s=5,
         add_reflect_padding=False,
         coeff=None,
         dtype=None,
@@ -112,6 +116,7 @@ class FilterRecording(BasePreprocessor):
             self.set_channel_offsets(0)
 
         margin = int(margin_ms * fs / 1000.0)
+        self.margin_samples = margin
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(
                 FilterRecordingSegment(
@@ -139,22 +144,6 @@ class FilterRecording(BasePreprocessor):
             direction=direction,
         )
 
-    def adjust_margin_ms_for_highpass(self, freq_min, max_margin_s):
-        # compute margin as 3 times the period of the highpass cutoff
-        margin_ms = 3 * (1000.0 / freq_min)
-        # limit max margin
-        max_margin_ms = max_margin_s * 1000.0
-        if margin_ms > max_margin_ms:
-            margin_ms = max_margin_ms
-        return margin_ms
-
-    def adjust_margin_ms_for_notch(self, max_margin_s, q, f0):
-        margin_ms = (3 / np.pi) * (q / f0) * 1000.0
-        max_margin_ms = max_margin_s * 1000.0
-        if margin_ms < max_margin_ms:
-            margin_ms = max_margin_ms
-        return margin_ms
-
 
 class FilterRecordingSegment(BasePreprocessorSegment):
     def __init__(
@@ -176,6 +165,12 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         self.dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
+        if self.margin > MARGIN_TO_CHUNK_PERCENT_WARNING * (end_frame - start_frame):
+            warnings.warn(
+                f"The margin size ({self.margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
+                f"of the chunk size {(end_frame - start_frame)} samples. This may lead to performance bottlenecks when "
+                f"chunking. Consider increasing the chunk size to minimize margin overhead."
+            )
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -241,6 +236,8 @@ class BandpassFilterRecording(FilterRecording):
         Maximum margin in seconds when margin_ms is set to "auto".
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
+    ignore_low_freq_error : bool, default: False
+        If True, does not raise an error if freq_min is too low for the sampling frequency.
     {}
 
     Returns
@@ -250,10 +247,18 @@ class BandpassFilterRecording(FilterRecording):
     """
 
     def __init__(
-        self, recording, freq_min=300.0, freq_max=6000.0, margin_ms="auto", max_margin_s=5, dtype=None, **filter_kwargs
+        self,
+        recording,
+        freq_min=300.0,
+        freq_max=6000.0,
+        margin_ms="auto",
+        dtype=None,
+        ignore_low_freq_error=False,
+        **filter_kwargs,
     ):
         if margin_ms == "auto":
-            margin_ms = self.adjust_margin_ms_for_highpass(freq_min, max_margin_s)
+            margin_ms = adjust_margin_ms_for_highpass(freq_min)
+        highpass_check(freq_min, margin_ms, ignore_low_freq_error=ignore_low_freq_error)
         FilterRecording.__init__(
             self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
         )
@@ -277,10 +282,10 @@ class HighpassFilterRecording(FilterRecording):
     margin_ms : float | str, default: "auto"
         Margin in ms on border to avoid border effect.
         If "auto", margin is computed as 3 times the filter highpass cutoff period.
-    max_margin_s : float, default: 5
-        Maximum margin in seconds when margin_ms is set to "auto".
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
+    ignore_low_freq_error : bool, default: False
+        If True, does not raise an error if freq_min is too low for the sampling frequency.
     {}
 
     Returns
@@ -289,9 +294,12 @@ class HighpassFilterRecording(FilterRecording):
         The highpass-filtered recording extractor object
     """
 
-    def __init__(self, recording, freq_min=300.0, margin_ms="auto", max_margin_s=5, dtype=None, **filter_kwargs):
+    def __init__(
+        self, recording, freq_min=300.0, margin_ms="auto", dtype=None, ignore_low_freq_error=False, **filter_kwargs
+    ):
         if margin_ms == "auto":
-            margin_ms = self.adjust_margin_ms_for_highpass(freq_min, max_margin_s)
+            margin_ms = adjust_margin_ms_for_highpass(freq_min)
+        highpass_check(freq_min, margin_ms, ignore_low_freq_error=ignore_low_freq_error)
         FilterRecording.__init__(
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
         )
@@ -424,6 +432,38 @@ def causal_filter(
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
+
+
+def adjust_margin_ms_for_highpass(freq_min, multiplier=5):
+    margin_ms = multiplier * (1000.0 / freq_min)
+    return margin_ms
+
+
+def adjust_margin_ms_for_notch(q, f0, multiplier=5):
+    margin_ms = (multiplier / np.pi) * (q / f0) * 1000.0
+    return margin_ms
+
+
+def highpass_check(freq_min, margin_ms, ignore_low_freq_error=False):
+    if freq_min < HIGHPASS_ERROR_THRESHOLD_HZ:
+        if not ignore_low_freq_error:
+            raise ValueError(
+                f"The freq_min ({freq_min} Hz) is too low and may cause artifacts during chunk processing. "
+                f"You can set 'ignore_low_freq_error=True' to bypass this error, but make sure you understand the implications. "
+                f"It is recommended to use large chunks when processing/saving your filtered recording to minimize IO overhead."
+                f"Refer to this documentation on LFP filtering and chunking artifacts for more details: "
+                f"https://spikeinterface.readthedocs.io/en/latest/how-to/extract_lfps.html. "
+            )
+    if margin_ms == "auto":
+        margin_ms = adjust_margin_ms_for_highpass(freq_min)
+    else:
+        auto_margin_ms = adjust_margin_ms_for_highpass(freq_min)
+        if margin_ms < auto_margin_ms:
+            warnings.warn(
+                f"The provided margin_ms ({margin_ms} ms) is smaller than the recommended margin for the given freq_min ({freq_min} Hz). "
+                f"This may lead to artifacts at the edges of chunks during processing. "
+                f"Consider increasing the margin_ms to at least {auto_margin_ms} ms."
+            )
 
 
 def fix_dtype(recording, dtype):
