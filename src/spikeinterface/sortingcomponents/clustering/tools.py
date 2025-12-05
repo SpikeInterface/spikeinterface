@@ -263,7 +263,7 @@ def get_templates_from_peaks_and_svd(
         The operator to use for template estimation. Can be 'average' or 'median'.
     return_std_at_peaks : bool
         Whether to return the standard deviation ratio at the peak channels.
-        
+
     Returns
     -------
     dense_templates : Templates
