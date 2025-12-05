@@ -39,7 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
-        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsify_threshold": None},
+        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsify_threshold": 1},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -118,8 +118,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ms_before = params["general"].get("ms_before", 0.5)
         ms_after = params["general"].get("ms_after", 1.5)
         radius_um = params["general"].get("radius_um", 100.0)
-        detect_threshold = params["detection"]["method_kwargs"].get("detect_threshold", 5)
-        peak_sign = params["detection"].get("peak_sign", "neg")
         deterministic = params["deterministic_peaks_detection"]
         debug = params["debug"]
         seed = params["seed"]
@@ -328,6 +326,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 method=clustering_method,
                 method_kwargs=clustering_params,
                 extra_outputs=True,
+                verbose=verbose,
                 job_kwargs=job_kwargs,
             )
 
@@ -365,7 +364,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                dense_templates, new_sparse_mask = get_templates_from_peaks_and_svd(
+                dense_templates, new_sparse_mask, std_at_peaks = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
@@ -375,14 +374,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     more_outs["peaks_svd"],
                     more_outs["peak_svd_sparse_mask"],
                     operator="median",
+                    return_std_at_peaks=True,
                 )
                 # this release the peak_svd memmap file
                 templates = dense_templates.to_sparse(new_sparse_mask)
 
             del more_outs
 
+            # if verbose:
+            #    print("We have %d clusters" % len(templates.unit_ids))
+
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
+            # cleaning_kwargs["std_at_peaks"] = std_at_peaks
             cleaning_kwargs["remove_empty"] = True
             templates = clean_templates(templates, **cleaning_kwargs)
 
@@ -480,6 +484,7 @@ def final_cleaning_circus(
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
     noise_levels=None,
+    sd_ratio_threshold=None,
     job_kwargs=dict(),
 ):
 
@@ -509,4 +514,14 @@ def final_cleaning_circus(
         **job_kwargs,
     )
 
+    if sd_ratio_threshold is not None:
+        from spikeinterface.qualitymetrics.misc_metrics import compute_sd_ratio
+
+        final_sa.compute("spike_amplitudes", **job_kwargs)
+        sd_ratios = compute_sd_ratio(final_sa)
+        to_keep = []
+        for id, value in sd_ratios.items():
+            if value <= sd_ratio_threshold:
+                to_keep += [id]
+        final_sa = final_sa.select_units(to_keep)
     return final_sa
