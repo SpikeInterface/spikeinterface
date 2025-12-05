@@ -335,7 +335,7 @@ class NotchFilterRecording(FilterRecording):
         import scipy.signal
 
         if margin_ms == "auto":
-            margin_ms = self.adjust_margin_ms_for_notch(max_margin_s, q, freq)
+            margin_ms = adjust_margin_ms_for_notch(q, freq)
 
         fn = 0.5 * float(recording.get_sampling_frequency())
         coeff = scipy.signal.iirnotch(freq / fn, q)
