@@ -39,7 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
-        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsity_threshold": 1},
+        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.1, "sparsify_threshold": 1},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -364,7 +364,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                dense_templates, new_sparse_mask, sd_ratios = get_templates_from_peaks_and_svd(
+                dense_templates, new_sparse_mask, std_at_peaks = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
@@ -374,7 +374,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     more_outs["peaks_svd"],
                     more_outs["peak_svd_sparse_mask"],
                     operator="median",
-                    sd_ratios=True,
+                    return_std_at_peaks=True,
                 )
                 # this release the peak_svd memmap file
                 templates = dense_templates.to_sparse(new_sparse_mask)
@@ -386,7 +386,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
-            # cleaning_kwargs["sd_ratios"] = sd_ratios
+            # cleaning_kwargs["std_at_peaks"] = std_at_peaks
             cleaning_kwargs["remove_empty"] = True
             templates = clean_templates(templates, **cleaning_kwargs)
 
@@ -519,12 +519,9 @@ def final_cleaning_circus(
 
         final_sa.compute("spike_amplitudes", **job_kwargs)
         sd_ratios = compute_sd_ratio(final_sa)
-        ratios = np.array(list(sd_ratios.values()))
-        center = np.median(ratios)
-        mad = np.median(np.abs(ratios - center))
         to_keep = []
         for id, value in sd_ratios.items():
-            if value <= center + mad * sd_ratio_threshold:
+            if value <= sd_ratio_threshold:
                 to_keep += [id]
         final_sa = final_sa.select_units(to_keep)
     return final_sa
