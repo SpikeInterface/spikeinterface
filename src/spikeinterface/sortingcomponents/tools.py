@@ -539,7 +539,7 @@ def clean_templates(
     min_snr=None,
     max_jitter_ms=None,
     remove_empty=True,
-    sd_ratio_threshold=5.0,
+    sd_ratio_threshold=3.0,
     stds_at_peak=None,
 ):
     """

@@ -364,7 +364,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                dense_templates, new_sparse_mask, std_at_peaks = get_templates_from_peaks_and_svd(
+                dense_templates, new_sparse_mask, stds_at_peak = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
@@ -381,12 +381,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             del more_outs
 
-            # if verbose:
-            #    print("We have %d clusters" % len(templates.unit_ids))
-
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
-            # cleaning_kwargs["std_at_peaks"] = std_at_peaks
+            #cleaning_kwargs["stds_at_peak"] = stds_at_peak
             cleaning_kwargs["remove_empty"] = True
             templates = clean_templates(templates, **cleaning_kwargs)
 
