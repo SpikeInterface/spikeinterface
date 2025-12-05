@@ -380,8 +380,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 templates = dense_templates.to_sparse(new_sparse_mask)
 
             del more_outs
-            
-            #if verbose:
+
+            # if verbose:
             #    print("We have %d clusters" % len(templates.unit_ids))
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
