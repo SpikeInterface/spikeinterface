@@ -386,7 +386,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
-            #cleaning_kwargs["sd_ratios"] = sd_ratios
+            # cleaning_kwargs["sd_ratios"] = sd_ratios
             cleaning_kwargs["remove_empty"] = True
             templates = clean_templates(templates, **cleaning_kwargs)
 
@@ -524,7 +524,7 @@ def final_cleaning_circus(
         mad = np.median(np.abs(ratios - center))
         to_keep = []
         for id, value in sd_ratios.items():
-            if value <= center + mad*sd_ratio_threshold:
+            if value <= center + mad * sd_ratio_threshold:
                 to_keep += [id]
         final_sa = final_sa.select_units(to_keep)
     return final_sa

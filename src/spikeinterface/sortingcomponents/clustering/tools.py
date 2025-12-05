@@ -303,7 +303,7 @@ def get_templates_from_peaks_and_svd(
             elif operator == "median":
                 data = np.median(local_svd[sub_mask, :, count], 0)
             templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
-            
+
             if i == best_channel and sd_ratios:
                 data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
                 if len(data) == 1:
