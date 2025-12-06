@@ -106,7 +106,7 @@ class ChannelSliceSnippets(BaseSnippets):
     """
     Class to slice a Snippets object based on channel_ids.
 
-    Do not use this class directly but use `snippets.channel_slice(...)`
+    Do not use this class directly but use `snippets.select_channels(...)`
 
     """
 

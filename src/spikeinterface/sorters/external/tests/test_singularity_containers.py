@@ -108,7 +108,7 @@ def test_combinato(run_kwargs, create_cache_folder):
     clean_singularity_cache()
     rec = run_kwargs["recording"]
     channels = rec.get_channel_ids()[0:1]
-    rec_one_channel = rec.channel_slice(channels)
+    rec_one_channel = rec.select_channels(channels)
     run_kwargs["recording"] = rec_one_channel
     sorting = ss.run_sorter(sorter_name="combinato", folder=cache_folder / "combinato", **run_kwargs)
     print(sorting)
