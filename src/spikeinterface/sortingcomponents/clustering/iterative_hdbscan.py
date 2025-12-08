@@ -10,6 +10,7 @@ from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_sv
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+from spikeinterface.sortingcomponents.tools import clean_templates
 
 
 class IterativeHDBSCANClustering:
@@ -42,6 +43,9 @@ class IterativeHDBSCANClustering:
                 },
                 "n_pca_features": 3,
             },
+        },
+        "pre_clean_templates": {
+            "max_jitter_ms": 0.2,
         },
         "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
         "merge_from_features": None,
@@ -127,6 +131,26 @@ class IterativeHDBSCANClustering:
             sparse_mask,
             operator="median",
         )
+
+        ## Pre clean using templates (jitter)
+        cleaned_templates = clean_templates(
+            templates,
+            # sparsify_threshold=0.25,
+            sparsify_threshold=None,
+            # noise_levels=None,
+            # min_snr=None,
+            max_jitter_ms=params["pre_clean_templates"]["max_jitter_ms"],
+            # remove_empty=True,
+            remove_empty=False,
+            # sd_ratio_threshold=5.0,
+            # stds_at_peak=None,
+        )
+        mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
+        to_remove_ids = templates.unit_ids[~mask_keep_ids]
+        to_remove_label_mask = np.isin(peak_labels, to_remove_ids)
+        peak_labels[to_remove_label_mask] = -1
+        templates = cleaned_templates
+        new_sparse_mask = new_sparse_mask[mask_keep_ids, :]
 
         labels = templates.unit_ids
 

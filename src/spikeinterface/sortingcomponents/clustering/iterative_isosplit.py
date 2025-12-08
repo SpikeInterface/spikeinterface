@@ -11,6 +11,7 @@ from spikeinterface.sortingcomponents.clustering.merging_tools import (
     merge_peak_labels_from_features,
 )
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+from spikeinterface.sortingcomponents.tools import clean_templates
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 
 
@@ -58,6 +59,9 @@ class IterativeISOSPLITClustering:
                 "projection_mode": "tsvd",
                 # "projection_mode": "pca",
             },
+        },
+        "pre_clean_templates": {
+            "max_jitter_ms": 0.2,
         },
         "merge_from_templates": {
             "similarity_metric": "l1",
@@ -205,6 +209,26 @@ class IterativeISOSPLITClustering:
             sparse_mask,
             operator="average",
         )
+
+        ## Pre clean using templates (jitter)
+        cleaned_templates = clean_templates(
+            dense_templates,
+            # sparsify_threshold=0.25,
+            sparsify_threshold=None,
+            # noise_levels=None,
+            # min_snr=None,
+            max_jitter_ms=params["pre_clean_templates"]["max_jitter_ms"],
+            # remove_empty=True,
+            remove_empty=False,
+            # sd_ratio_threshold=5.0,
+            # stds_at_peak=None,
+        )
+        mask_keep_ids = np.isin(dense_templates.unit_ids, cleaned_templates.unit_ids)
+        to_remove_ids = dense_templates.unit_ids[~mask_keep_ids]
+        to_remove_label_mask = np.isin(post_split_label, to_remove_ids)
+        post_split_label[to_remove_label_mask] = -1
+        dense_templates = cleaned_templates
+        template_sparse_mask = template_sparse_mask[mask_keep_ids, :]
 
         unit_ids = dense_templates.unit_ids
         templates_array = dense_templates.templates_array
