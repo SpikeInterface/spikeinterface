@@ -31,8 +31,6 @@ class ComputeQualityMetrics(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
     metric_names : list or None
         List of quality metrics to compute.
     metric_params : dict of dicts or None
