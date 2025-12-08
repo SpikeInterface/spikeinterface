@@ -56,6 +56,7 @@ class LupinSorter(ComponentsBasedSorter):
         "ms_after": 2.5,
         "sparsity_threshold": 1.5,
         "template_min_snr": 2.5,
+        "template_max_jitter_ms": 0.2,
         "gather_mode": "memory",
         "job_kwargs": {},
         "seed": None,
@@ -293,7 +294,7 @@ class LupinSorter(ComponentsBasedSorter):
             sparsify_threshold=params["sparsity_threshold"],
             noise_levels=noise_levels,
             min_snr=params["template_min_snr"],
-            max_jitter_ms=None,
+            max_jitter_ms=params["template_max_jitter_ms"],
             remove_empty=True,
         )
 
