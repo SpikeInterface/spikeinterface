@@ -11,12 +11,14 @@ It also implements:
 
 import warnings
 import numpy as np
+from collections import namedtuple
 
-from .sortinganalyzer import AnalyzerExtension, register_result_extension
+from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
+from .job_tools import fix_job_kwargs, split_job_kwargs
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -752,8 +754,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     **kwargs : dict
         Additional parameters for the `spikeinterface.get_noise_levels()` function
 
@@ -769,9 +769,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, **noise_level_params):
         params = noise_level_params.copy()
@@ -814,3 +811,147 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
 register_result_extension(ComputeNoiseLevels)
 compute_noise_levels = ComputeNoiseLevels.function_factory()
+
+
+class BaseSpikeVectorExtension(AnalyzerExtension):
+    """
+    Base class for spikevector-based extension, where the data is a numpy array with the same
+    length as the spike vector.
+    """
+
+    extension_name = None  # to be defined in subclass
+    need_recording = True
+    use_nodepipeline = True
+    need_job_kwargs = True
+    need_backward_compatibility_on_load = False
+    nodepipeline_variables = []  # to be defined in subclass
+
+    def _set_params(self, **kwargs):
+        params = kwargs.copy()
+        return params
+
+    def _run(self, verbose=False, **job_kwargs):
+        from spikeinterface.core.node_pipeline import run_node_pipeline
+
+        # TODO: should we save directly to npy in binary_folder format / or to zarr?
+        # if self.sorting_analyzer.format == "binary_folder":
+        #     gather_mode = "npy"
+        #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
+        #     gather_kwargs = {"folder": extension_folder}
+        gather_mode = "memory"
+        gather_kwargs = {}
+
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        nodes = self.get_pipeline_nodes()
+        data = run_node_pipeline(
+            self.sorting_analyzer.recording,
+            nodes,
+            job_kwargs=job_kwargs,
+            job_name=self.extension_name,
+            gather_mode=gather_mode,
+            gather_kwargs=gather_kwargs,
+            verbose=False,
+        )
+        if isinstance(data, tuple):
+            # this logic enables extensions to optionally compute additional data based on params
+            assert len(data) <= len(self.nodepipeline_variables), "Pipeline produced more outputs than expected"
+        else:
+            data = (data,)
+        if len(self.nodepipeline_variables) > len(data):
+            data_names = self.nodepipeline_variables[: len(data)]
+        else:
+            data_names = self.nodepipeline_variables
+        for d, name in zip(data, data_names):
+            self.data[name] = d
+
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, copy=True):
+        """
+        Return extension data. If the extension computes more than one `nodepipeline_variables`,
+        the `return_data_name` is used to specify which one to return.
+
+        Parameters
+        ----------
+        outputs : "numpy" | "by_unit", default: "numpy"
+            How to return the data, by default "numpy"
+        concatenated : bool, default: False
+            Whether to concatenate the data across segments.
+        return_data_name : str | None, default: None
+            The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
+            the first one is returned.
+        copy : bool, default: True
+            Whether to return a copy of the data (only for outputs="numpy")
+
+        Returns
+        -------
+        numpy.ndarray | dict
+            The
+        """
+        from spikeinterface.core.sorting_tools import spike_vector_to_indices
+
+        if len(self.nodepipeline_variables) == 1:
+            return_data_name = self.nodepipeline_variables[0]
+        else:
+            if return_data_name is None:
+                return_data_name = self.nodepipeline_variables[0]
+            else:
+                assert (
+                    return_data_name in self.nodepipeline_variables
+                ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
+
+        all_data = self.data[return_data_name]
+        if outputs == "numpy":
+            if copy:
+                return all_data.copy()  # return a copy to avoid modification
+            else:
+                return all_data
+        elif outputs == "by_unit":
+            unit_ids = self.sorting_analyzer.unit_ids
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            data_by_units = {}
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                data_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    data_by_units[segment_index][unit_id] = all_data[inds]
+
+            if concatenated:
+                data_by_units_concatenated = {
+                    unit_id: np.concatenate([data_in_segment[unit_id] for data_in_segment in data_by_units.values()])
+                    for unit_id in unit_ids
+                }
+                return data_by_units_concatenated
+
+            return data_by_units
+        else:
+            raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
+
+    def _select_extension_data(self, unit_ids):
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                new_data[data_name] = self.data[data_name][keep_spike_mask]
+
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                if keep_mask is None:
+                    new_data[data_name] = self.data[data_name].copy()
+                else:
+                    new_data[data_name] = self.data[data_name][keep_mask]
+
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        return self.data.copy()

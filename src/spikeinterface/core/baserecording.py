@@ -161,6 +161,16 @@ class BaseRecording(BaseRecordingSnippets):
         html_repr = html_header + html_segments + html_channel_ids + html_extra
         return html_repr
 
+    def __add__(self, other):
+        from .operatorrecordings import AddRecordings
+
+        return AddRecordings(self, other)
+
+    def __sub__(self, other):
+        from .operatorrecordings import SubtractRecordings
+
+        return SubtractRecordings(self, other)
+
     def get_num_segments(self) -> int:
         """
         Returns the number of segments.

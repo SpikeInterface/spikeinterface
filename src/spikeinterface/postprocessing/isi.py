@@ -19,8 +19,6 @@ class ComputeISIHistograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     window_ms : float, default: 50
         The window in ms
     bin_ms : float, default: 1
@@ -41,9 +39,6 @@ class ComputeISIHistograms(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
