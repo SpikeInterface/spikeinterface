@@ -58,6 +58,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "sparsity_threshold": 1.5,
             "min_snr": 2.5,
             "radius_um": 100.0,
+            "max_jitter_ms": 0.2,
         },
         "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
@@ -267,7 +268,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             sparsify_threshold=params["templates"]["sparsity_threshold"],
             noise_levels=noise_levels,
             min_snr=params["templates"]["min_snr"],
-            max_jitter_ms=None,
+            max_jitter_ms=params["templates"]["max_jitter_ms"],
             remove_empty=True,
         )
 
