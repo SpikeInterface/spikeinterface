@@ -12,6 +12,7 @@ from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_cl
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 from spikeinterface.sortingcomponents.tools import clean_templates
 
+
 class IterativeHDBSCANClustering:
     """
     Iterative HDBSCAN is based on several local clustering achieved with a
@@ -43,8 +44,8 @@ class IterativeHDBSCANClustering:
                 "n_pca_features": 3,
             },
         },
-        "pre_clean_templates":{
-            "max_jitter_ms" : 0.2,
+        "pre_clean_templates": {
+            "max_jitter_ms": 0.2,
         },
         "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
         "merge_from_features": None,
@@ -150,7 +151,6 @@ class IterativeHDBSCANClustering:
         peak_labels[to_remove_label_mask] = -1
         templates = cleaned_templates
         new_sparse_mask = new_sparse_mask[mask_keep_ids, :]
-
 
         labels = templates.unit_ids
 

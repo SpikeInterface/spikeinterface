@@ -60,8 +60,8 @@ class IterativeISOSPLITClustering:
                 # "projection_mode": "pca",
             },
         },
-        "pre_clean_templates":{
-            "max_jitter_ms" : 0.2,
+        "pre_clean_templates": {
+            "max_jitter_ms": 0.2,
         },
         "merge_from_templates": {
             "similarity_metric": "l1",
@@ -229,7 +229,6 @@ class IterativeISOSPLITClustering:
         post_split_label[to_remove_label_mask] = -1
         dense_templates = cleaned_templates
         template_sparse_mask = template_sparse_mask[mask_keep_ids, :]
-
 
         unit_ids = dense_templates.unit_ids
         templates_array = dense_templates.templates_array
