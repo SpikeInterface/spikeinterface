@@ -3,10 +3,29 @@ Extract LFPs
 ============
 
 Understanding filtering artifacts and chunking when extracting LFPs
+-------------------------------------------------------------------
 
 Local Field Potentials (LFPs) are low-frequency signals (<300 Hz) that reflect the summed activity of many neurons.
 Extracting LFPs from high-sampling-rate recordings requires bandpass filtering, but this can introduce artifacts
-when not done carefully, especially when data is processed in chunks (for memory efficiency).
+when not done carefully, especially when data is processed in chunks (which is usually the required because datasets
+cannot be loaded entirely into memory).
+
+Before we get started, let's introduce some important concepts:
+
+Chunk
+~~~~~
+
+A "chunk" is a piece of recording that gets processed in parallel by SpikeInterface.
+The default chunk duration for most operations is 1 second, but we'll see how this is not adequate for LFP
+processing.
+
+
+Margin
+~~~~~~
+
+When we apply a filter on chunked data, we extract additional "margins" of traces at the chunk borders.
+This is done to reduce border artifacts.
+
 
 This tutorial demonstrates:
 
@@ -44,7 +63,7 @@ from spikeinterface.core import generate_ground_truth_recording
 # Generate a ground truth recording with spikes
 # Use a higher sampling rate (30 kHz) to simulate raw neural data
 recording, sorting = generate_ground_truth_recording(
-    durations=[300.0],  # 300 s
+    durations=[60.0],
     sampling_frequency=30000.0,
     num_channels=1,
     num_units=4,
