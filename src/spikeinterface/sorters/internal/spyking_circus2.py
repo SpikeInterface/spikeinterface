@@ -383,7 +383,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
             cleaning_kwargs["noise_levels"] = noise_levels
-            #cleaning_kwargs["stds_at_peak"] = stds_at_peak
+            # cleaning_kwargs["stds_at_peak"] = stds_at_peak
             cleaning_kwargs["remove_empty"] = True
             templates = clean_templates(templates, **cleaning_kwargs)
 
