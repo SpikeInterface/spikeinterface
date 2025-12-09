@@ -320,10 +320,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params.update(verbose=verbose)
                 clustering_params.update(seed=seed)
                 clustering_params.update(peaks_svd=params["general"])
-                if clustering_method == "iterative-hdbscan":
+                if clustering_method in ["iterative-hdbscan", "iterative-isosplit"]:
                     clustering_params.update(clean_templates=cleaning_kwargs)
-                if clustering_method in ("iterative-hdbscan", "iterative-isosplit"):
                     clustering_params["noise_levels"] = noise_levels
+
                 if debug:
                     clustering_params["debug_folder"] = sorter_output_folder / "clustering"
 
@@ -390,7 +390,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
 
-            templates = clean_templates(templates, **cleaning_kwargs)
+            templates = clean_templates(templates, noise_levels=noise_levels, **cleaning_kwargs)
 
             if verbose:
                 print("Kept %d clean clusters" % len(templates.unit_ids))
