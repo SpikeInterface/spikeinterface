@@ -194,6 +194,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["split"].update(params["clustering"])
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
+        clustering_kwargs["noise_levels"] = noise_levels
 
         # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
         #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None

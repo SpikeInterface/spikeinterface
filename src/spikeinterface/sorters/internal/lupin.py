@@ -54,7 +54,7 @@ class LupinSorter(ComponentsBasedSorter):
         "clustering_recursive_depth": 3,
         "ms_before": 1.0,
         "ms_after": 2.5,
-        "sparsity_threshold": 1.5,
+        "template_sparsify_threshold": 1.5,
         "template_min_snr": 2.5,
         "template_max_jitter_ms": 0.2,
         "gather_mode": "memory",
@@ -81,7 +81,7 @@ class LupinSorter(ComponentsBasedSorter):
         "clustering_recursive_depth": "Clustering recussivity",
         "ms_before": "Milliseconds before the spike peak for template matching",
         "ms_after": "Milliseconds after the spike peak for template matching",
-        "sparsity_threshold": "Threshold to sparsify templates before template matching",
+        "template_sparsify_threshold": "Threshold to sparsify templates before template matching",
         "template_min_snr": "Threshold to remove templates before template matching",
         "gather_mode": "How to accumalte spike in matching : memory/npy",
         "job_kwargs": "The famous and fabulous job_kwargs",
@@ -233,6 +233,10 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components_per_channel"]
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
+        clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
+        clustering_kwargs["clean_templates"]["template_min_snr"] = params["template_min_snr"]
+        clustering_kwargs["clean_templates"]["template_max_jitter_ms"] = params["template_max_jitter_ms"]
+        clustering_kwargs["noise_levels"] = noise_levels
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
@@ -291,7 +295,7 @@ class LupinSorter(ComponentsBasedSorter):
         # this spasify more
         templates = clean_templates(
             templates,
-            sparsify_threshold=params["sparsity_threshold"],
+            sparsify_threshold=params["template_sparsify_threshold"],
             noise_levels=noise_levels,
             min_snr=params["template_min_snr"],
             max_jitter_ms=params["template_max_jitter_ms"],

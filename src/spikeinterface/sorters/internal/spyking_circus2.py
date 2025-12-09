@@ -309,7 +309,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 print("Kept %d peaks for clustering" % len(selected_peaks))
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
-            cleaning_kwargs["noise_levels"] = noise_levels
             cleaning_kwargs["remove_empty"] = True
 
             if clustering_method in [
@@ -322,9 +321,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params.update(seed=seed)
                 clustering_params.update(peaks_svd=params["general"])
                 if clustering_method == "iterative-hdbscan":
-                    clustering_params.update(pre_clean_templates=cleaning_kwargs)
+                    clustering_params.update(clean_templates=cleaning_kwargs)
+                if clustering_method in ("iterative-hdbscan", "iterative-isosplit"):
+                    clustering_params["noise_levels"] = noise_levels
                 if debug:
                     clustering_params["debug_folder"] = sorter_output_folder / "clustering"
+                
 
             _, peak_labels, more_outs = find_clusters_from_peaks(
                 recording_w,

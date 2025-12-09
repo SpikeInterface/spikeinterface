@@ -13,6 +13,7 @@ from spikeinterface.sortingcomponents.clustering.merging_tools import (
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 from spikeinterface.sortingcomponents.tools import clean_templates
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
+from spikeinterface.core.recording_tools import get_noise_levels
 
 
 class IterativeISOSPLITClustering:
@@ -33,6 +34,7 @@ class IterativeISOSPLITClustering:
     _default_params = {
         "motion": None,
         "seed": None,
+        "noise_levels": None,
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 120.0, "motion": None},
         "pre_label": {
             "mode": "channel",
@@ -60,8 +62,11 @@ class IterativeISOSPLITClustering:
                 # "projection_mode": "pca",
             },
         },
-        "pre_clean_templates": {
+        "clean_templates": {
             "max_jitter_ms": 0.2,
+            "min_snr" : 2.5,
+            "sparsify_threshold" : 1.0,
+            "remove_empty": True,
         },
         "merge_from_templates": {
             "similarity_metric": "l1",
@@ -101,6 +106,7 @@ class IterativeISOSPLITClustering:
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
         # radius_um = params["waveforms"]["radius_um"]
+        verbose = params["verbose"]
 
         debug_folder = params["debug_folder"]
 
@@ -210,28 +216,57 @@ class IterativeISOSPLITClustering:
             operator="average",
         )
 
-        ## Pre clean using templates (jitter)
-        cleaned_templates = clean_templates(
-            dense_templates,
-            # sparsify_threshold=0.25,
-            sparsify_threshold=None,
-            # noise_levels=None,
-            # min_snr=None,
-            max_jitter_ms=params["pre_clean_templates"]["max_jitter_ms"],
-            # remove_empty=True,
-            remove_empty=False,
-            # sd_ratio_threshold=5.0,
-            # stds_at_peak=None,
-        )
-        mask_keep_ids = np.isin(dense_templates.unit_ids, cleaned_templates.unit_ids)
-        to_remove_ids = dense_templates.unit_ids[~mask_keep_ids]
+
+        ## Pre clean using templates (jitter, sparsify_threshold)
+        templates = dense_templates.to_sparse(template_sparse_mask)
+        cleaning_kwargs = params["clean_templates"].copy()
+        # cleaning_kwargs["verbose"] = verbose
+        cleaning_kwargs["verbose"] = True
+        # cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
+        if params["noise_levels"] is not None:
+            noise_levels = params["noise_levels"]
+        else:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
+        cleaning_kwargs["noise_levels"] = noise_levels
+        cleaned_templates = clean_templates(templates, **cleaning_kwargs)
+        mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
+        to_remove_ids = templates.unit_ids[~mask_keep_ids]
         to_remove_label_mask = np.isin(post_split_label, to_remove_ids)
         post_split_label[to_remove_label_mask] = -1
-        dense_templates = cleaned_templates
-        template_sparse_mask = template_sparse_mask[mask_keep_ids, :]
-
-        unit_ids = dense_templates.unit_ids
+        template_sparse_mask = cleaned_templates.sparsity.mask.copy()
+        dense_templates = cleaned_templates.to_dense()
         templates_array = dense_templates.templates_array
+        unit_ids = dense_templates.unit_ids
+
+
+
+
+
+        # ## Pre clean using templates (jitter)
+        # cleaned_templates = clean_templates(
+        #     dense_templates,
+        #     # sparsify_threshold=0.25,
+        #     sparsify_threshold=None,
+        #     # noise_levels=None,
+        #     # min_snr=None,
+        #     max_jitter_ms=params["clean_templates"]["max_jitter_ms"],
+        #     # remove_empty=True,
+        #     remove_empty=False,
+        #     # sd_ratio_threshold=5.0,
+        #     # stds_at_peak=None,
+        # )
+        # mask_keep_ids = np.isin(dense_templates.unit_ids, cleaned_templates.unit_ids)
+        # to_remove_ids = dense_templates.unit_ids[~mask_keep_ids]
+        # to_remove_label_mask = np.isin(post_split_label, to_remove_ids)
+        # post_split_label[to_remove_label_mask] = -1
+        # dense_templates = cleaned_templates
+        # template_sparse_mask = template_sparse_mask[mask_keep_ids, :]
+
+        # unit_ids = dense_templates.unit_ids
+        # templates_array = dense_templates.templates_array
+
+
+
 
         if params["merge_from_features"] is not None:
 

@@ -32,6 +32,7 @@ class IterativeHDBSCANClustering:
     _default_params = {
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 100.0},
         "seed": None,
+        "noise_levels": None,
         "split": {
             "split_radius_um": 75.0,
             "recursive": True,
@@ -45,8 +46,9 @@ class IterativeHDBSCANClustering:
                 "n_pca_features": 3,
             },
         },
-        "pre_clean_templates": {
-            "sparsify_threshold": 1,
+        "clean_templates": {
+            "sparsify_threshold": 1.,
+            "min_snr" : 2.5,
             "remove_empty": True,
             "max_jitter_ms": 0.2,
         },
@@ -136,16 +138,16 @@ class IterativeHDBSCANClustering:
             return_max_std_per_channel=True,
         )
 
+        ## Pre clean using templates (jitter, sparsify_threshold)
         templates = templates.to_sparse(new_sparse_mask)
-
-        cleaning_kwargs = params.get("pre_clean_templates", {}).copy()
+        cleaning_kwargs = params["clean_templates"].copy()
         cleaning_kwargs["verbose"] = verbose
         cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
-        if "noise_levels" not in cleaning_kwargs:
+        if params["noise_levels"] is not None:
+            noise_levels = params["noise_levels"]
+        else:
             noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
-            cleaning_kwargs["noise_levels"] = noise_levels
-
-        ## Pre clean using templates (jitter)
+        cleaning_kwargs["noise_levels"] = noise_levels
         cleaned_templates = clean_templates(templates, **cleaning_kwargs)
         mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
         to_remove_ids = templates.unit_ids[~mask_keep_ids]
