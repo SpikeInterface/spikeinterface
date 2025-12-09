@@ -138,12 +138,15 @@ except Exception as e:
 ##############################################################################
 # **Why does this fail?**
 #
-# The error occurs because by default in SpikeInterface when highpass filtering below 100 Hz.
+# The error always occurs in SpikeInterface when highpass filtering below 100 Hz, to remind the user that they need to be careful.
 # Filters with very low cutoff frequencies have long impulse responses, which require larger margins to avoid edge artifacts between chunks.
 #
 # The filter length (and required margin) scales inversely with the highpass frequency. A 1 Hz highpass
 # filter requires a margin of several seconds, while a 300 Hz highpass (for spike extraction) only needs
 # a few milliseconds.
+#
+# **This error is to inform the user that extra care should be used when dealing with LFP signals!**
+
 
 ##############################################################################
 # 3. Understanding chunking and margins
@@ -153,11 +156,8 @@ except Exception as e:
 # a "margin" (extra samples at the edges) to avoid edge artifacts when filtering. Let's demonstrate
 # this by saving the filtered data with different chunking strategies.
 #
-# **This error is to inform the user that extra care should be used when dealing with LFP signals!**
-#
-# We can ignore this error, but let's make sure we understand what it's happening.
+# We can explicitly ignore the previous error, but let's make sure we understand what is happening.
 
-# We can ignore this error, but let's see what is happening
 recording_filt = spre.bandpass_filter(
     recording_with_lfp, freq_min=1.0, freq_max=300.0, ignore_low_freq_error=True
 )
@@ -172,6 +172,7 @@ print(f"Margin: {margin_in_s} s")
 
 ##############################################################################
 # This effectively means that if we plot 1-s snippet of traces, a total of 11 s will actually be read and filtered.
+# Hence the computational "overhead" is very large.
 # Note that the margin can be overridden with the `margin_ms` argument, but we do not recommend changing it.
 
 _ = sw.plot_traces(recording_filt, time_range=[20, 21])
