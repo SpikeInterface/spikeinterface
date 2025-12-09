@@ -389,7 +389,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             del more_outs
 
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
-
+            cleaning_kwargs["verbose"] = verbose
             templates = clean_templates(templates, noise_levels=noise_levels, **cleaning_kwargs)
 
             if verbose:

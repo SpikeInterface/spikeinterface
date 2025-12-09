@@ -541,7 +541,7 @@ def clean_templates(
     remove_empty=True,
     mean_sd_ratio_threshold=3.0,
     max_std_per_channel=None,
-    verbose=True,
+    verbose=False,
 ):
     """
     Clean a Templates object by removing empty units and applying sparsity if provided.
