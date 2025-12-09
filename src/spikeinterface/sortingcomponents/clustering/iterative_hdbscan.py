@@ -139,16 +139,17 @@ class IterativeHDBSCANClustering:
         templates = templates.to_sparse(new_sparse_mask)
 
         cleaning_kwargs = params.get("pre_clean_templates", {}).copy()
+        cleaning_kwargs["verbose"] = verbose
+        cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
         if "noise_levels" not in cleaning_kwargs:
             noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
             cleaning_kwargs["noise_levels"] = noise_levels
-            cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
+        
 
         ## Pre clean using templates (jitter)
         cleaned_templates = clean_templates(
             templates,
-            **cleaning_kwargs,
-            verbose=True
+            **cleaning_kwargs
         )
         mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
         to_remove_ids = templates.unit_ids[~mask_keep_ids]

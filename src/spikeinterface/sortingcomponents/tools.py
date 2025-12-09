@@ -607,12 +607,10 @@ def clean_templates(
         assert noise_levels is not None, "noise_levels must be provided if max_std_per_channel is given"
         to_select = []
         n_before = len(templates.unit_ids)
-        all_ratios = []
         for count, unit_id in enumerate(templates.unit_ids):
             old_index = np.where(unit_id == initial_ids)[0][0]
             mask = templates.sparsity.mask[count, :]
             sd_ratio = np.mean(max_std_per_channel[old_index][mask] / noise_levels[mask])
-            all_ratios += [sd_ratio]
             if sd_ratio <= mean_sd_ratio_threshold:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
