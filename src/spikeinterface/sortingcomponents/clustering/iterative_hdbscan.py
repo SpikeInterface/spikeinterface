@@ -145,11 +145,7 @@ class IterativeHDBSCANClustering:
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
 
         ## Pre clean using templates (jitter)
-        cleaned_templates = clean_templates(
-            templates,
-            **cleaning_kwargs,
-            verbose=True
-        )
+        cleaned_templates = clean_templates(templates, **cleaning_kwargs, verbose=True)
         mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
         to_remove_ids = templates.unit_ids[~mask_keep_ids]
         to_remove_label_mask = np.isin(peak_labels, to_remove_ids)
