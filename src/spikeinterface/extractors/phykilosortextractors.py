@@ -319,8 +319,9 @@ read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor
 
 def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
     """
-    Load kilosort output into a SortingAnalyzer.
-    Output from kilosort version 4.1 and above are supported.
+    Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
+    above are supported. The function may work on older versions of Kilosort output,
+    but these are not carefully tested. Please check your output carefully.
 
     Parameters
     ----------
@@ -337,12 +338,10 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
 
     phy_path = Path(folder_path)
 
-    guessed_kilosort_version = _guess_kilosort_version(phy_path)
-
     sorting = read_phy(phy_path)
     sampling_frequency = sorting.sampling_frequency
 
-    # kilosort occasionally contains a few spikes beyond the recording end point, which can lead
+    # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
     # to errors later. To avoid this, we pad the recording with an extra second of blank time.
     duration = sorting._sorting_segments[0]._all_spikes[-1] / sampling_frequency + 1
 
@@ -382,25 +381,6 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
     return sorting_analyzer
 
 
-def _guess_kilosort_version(kilosort_path) -> tuple:
-    """
-    Guesses the kilosort version based on the files which exist in folder `kilosort_path`.
-    If unknown, returns minimum guessed version.
-
-    Returns
-    -------
-    version_number : tuple
-        Version number in the form (major, minor, patch)
-    """
-
-    kilosort_log_file = Path(kilosort_path / "kilosort4.log")
-
-    if kilosort_log_file.is_file():
-        return (4, 0, 33)
-    else:
-        return (2, 0, 0)
-
-
 def _make_locations(sorting_analyzer, kilosort_output_path):
     """Constructs a `spike_locations` extension from the amplitudes numpy array
     in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
@@ -411,6 +391,15 @@ def _make_locations(sorting_analyzer, kilosort_output_path):
     if spike_locations_path.is_file():
         locs_np = np.load(spike_locations_path)
     else:
+        return
+
+    # Check that the spike locations vector is the same size as the spike vector
+    num_spikes = len(sorting_analyzer.sorting.to_spike_vector())
+    num_spike_locs = len(locs_np)
+    if num_spikes != num_spike_locs:
+        warnings.warn(
+            "The number of spikes does not match the number of spike locations in `spike_positions.npy`. Skipping spike locations."
+        )
         return
 
     num_dims = len(locs_np[0])
