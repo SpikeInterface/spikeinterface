@@ -699,15 +699,14 @@ make a copy of the analyzer and all computed extensions.
 Quality metrics
 ---------------
 
-We have a single function ``compute_quality_metrics(SortingAnalyzer)``
-that returns a ``pandas.Dataframe`` with the desired metrics.
+The ``analyzer.compute("quality_metrics").get_data()`` returns a ``pandas.Dataframe`` with the desired metrics.
 
 Note that this function is also an extension and so can be saved. And so
-this is equivalent to do :
+this is equivalent to do:
 ``metrics = analyzer.compute("quality_metrics").get_data()``
 
 Please visit the `metrics
-documentation <https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html>`__
+documentation <https://spikeinterface.readthedocs.io/en/latest/modules/metrics/quality.html>`__
 for more information and a list of all supported metrics.
 
 Some metrics are based on PCA (like
@@ -721,18 +720,10 @@ PCA for their computation. This can be achieved with:
     metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
 
 
-    # metrics = analyzer.compute("quality_metrics").get_data()
-    # equivalent to
-    metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
+    metrics_ext = analyzer.compute("quality_metrics", metric_names=metric_names)
+    metrics = metrics_ext.get_data()
 
     metrics
-
-
-.. parsed-literal::
-
-    /home/samuel.garcia/Documents/SpikeInterface/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:846: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
-      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
-
 
 
 

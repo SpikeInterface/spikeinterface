@@ -20,7 +20,7 @@ extractors_changed = False
 plexon2_changed = False
 preprocessing_changed = False
 postprocessing_changed = False
-qualitymetrics_changed = False
+metrics_changed = False
 sorters_changed = False
 sorters_external_changed = False
 sorters_internal_changed = False
@@ -58,8 +58,8 @@ for changed_file in changed_files_in_the_pull_request_paths:
         preprocessing_changed = True
     elif "postprocessing" in changed_file.parts:
         postprocessing_changed = True
-    elif "qualitymetrics" in changed_file.parts:
-        qualitymetrics_changed = True
+    elif "metrics" in changed_file.parts:
+        metrics_changed = True
     elif "comparison" in changed_file.parts:
         comparison_changed = True
     elif "curation" in changed_file.parts:
@@ -89,12 +89,12 @@ run_generation_tests = run_everything or generation_changed
 run_extractor_tests = run_everything or extractors_changed or plexon2_changed
 run_preprocessing_tests = run_everything or preprocessing_changed
 run_postprocessing_tests = run_everything or postprocessing_changed
-run_qualitymetrics_tests = run_everything or qualitymetrics_changed
+run_metrics_tests = run_everything or metrics_changed
 run_curation_tests = run_everything or curation_changed
 run_sortingcomponents_tests = run_everything or sortingcomponents_changed
 
 run_comparison_test = run_everything or run_generation_tests or comparison_changed
-run_widgets_test = run_everything or run_qualitymetrics_tests or run_preprocessing_tests or widgets_changed
+run_widgets_test = run_everything or run_metrics_tests or run_preprocessing_tests or widgets_changed
 run_exporters_test = run_everything or run_widgets_test or exporters_changed
 
 run_sorters_test = run_everything or sorters_changed
@@ -109,7 +109,7 @@ environment_varaiables_to_add = {
     "RUN_EXTRACTORS_TESTS": run_extractor_tests,
     "RUN_PREPROCESSING_TESTS": run_preprocessing_tests,
     "RUN_POSTPROCESSING_TESTS": run_postprocessing_tests,
-    "RUN_QUALITYMETRICS_TESTS": run_qualitymetrics_tests,
+    "RUN_METRICS_TESTS": run_metrics_tests,
     "RUN_CURATION_TESTS": run_curation_tests,
     "RUN_SORTINGCOMPONENTS_TESTS": run_sortingcomponents_tests,
     "RUN_GENERATION_TESTS": run_generation_tests,
