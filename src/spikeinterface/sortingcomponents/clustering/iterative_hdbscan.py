@@ -144,12 +144,9 @@ class IterativeHDBSCANClustering:
         if "noise_levels" not in cleaning_kwargs:
             noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
             cleaning_kwargs["noise_levels"] = noise_levels
-        
+
         ## Pre clean using templates (jitter)
-        cleaned_templates = clean_templates(
-            templates,
-            **cleaning_kwargs
-        )
+        cleaned_templates = clean_templates(templates, **cleaning_kwargs)
         mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
         to_remove_ids = templates.unit_ids[~mask_keep_ids]
         to_remove_label_mask = np.isin(peak_labels, to_remove_ids)
