@@ -539,25 +539,16 @@ def clean_templates(
     min_snr=None,
     max_jitter_ms=None,
     remove_empty=True,
-    sd_ratio_threshold=3.0,
-    stds_at_peak=None,
+    mean_sd_ratio_threshold=3.0,
+    max_std_per_channel=None,
 ):
     """
     Clean a Templates object by removing empty units and applying sparsity if provided.
     """
-    ## First if stds_at_peak are provided, we remove the templates that have a high sd_ratio
-    if stds_at_peak is not None:
-        assert noise_levels is not None, "noise_levels must be provided if sd_ratios is given"
-        to_select = []
-        best_channels = get_template_extremum_channel(templates, outputs="index")
-        for count, unit_id in enumerate(templates.unit_ids):
-            sd_ratio = stds_at_peak[count] / noise_levels[best_channels[unit_id]]
-            if sd_ratio <= sd_ratio_threshold:
-                to_select += [unit_id]
-        templates = templates.select_units(to_select)
 
     ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
     if sparsify_threshold is not None:
+        assert noise_levels is not None, "noise_levels must be provided if sparsify_threshold is set"
         if templates.are_templates_sparse():
             templates = templates.to_dense()
         sparsity = compute_sparsity(
@@ -595,6 +586,17 @@ def clean_templates(
             threshold=min_snr,
         )
         to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
+        templates = templates.select_units(to_select)
+
+    ## Lastly, if stds_at_peak are provided, we remove the templates that have a too high sd_ratio
+    if max_std_per_channel is not None:
+        assert noise_levels is not None, "noise_levels must be provided if max_std_per_channel is given"
+        to_select = []
+        for count, unit_id in enumerate(templates.unit_ids):
+            mask = templates.sparsity.mask[count, :]
+            sd_ratio = np.mean(max_std_per_channel[count][mask] / noise_levels[mask])
+            if sd_ratio <= mean_sd_ratio_threshold:
+                to_select += [unit_id]
         templates = templates.select_units(to_select)
 
     return templates

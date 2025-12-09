@@ -236,7 +236,7 @@ def get_templates_from_peaks_and_svd(
     svd_features,
     sparsity_mask,
     operator="average",
-    return_std_at_peaks=False,
+    return_max_std_per_channel=False,
 ):
     """
     Get templates from recording using the SVD components
@@ -261,8 +261,8 @@ def get_templates_from_peaks_and_svd(
         The sparsity mask array.
     operator : str
         The operator to use for template estimation. Can be 'average' or 'median'.
-    return_std_at_peaks : bool
-        Whether to return the standard deviation ratio at the peak channels.
+    return_max_std_per_channel : bool
+        Whether to return the max standard deviation at the channels.
 
     Returns
     -------
@@ -270,8 +270,8 @@ def get_templates_from_peaks_and_svd(
         The estimated templates object as a dense template (but internanally contain sparse channels).
     final_sparsity_mask: np.array
         The final sparsity mask. Note that the template object is dense but with zeros.
-    std_at_peaks: np.array
-        The standard deviation ratio of the templates at time 0
+    max_std_per_channel: np.array
+        The maximal standard deviation of the templates per channel (only if return_max_std_per_channel is True).
     """
 
     assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
@@ -287,8 +287,8 @@ def get_templates_from_peaks_and_svd(
     num_channels = recording.get_num_channels()
 
     templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
-    if return_std_at_peaks:
-        std_at_peaks = np.zeros(len(labels), dtype=np.float32)
+    if return_max_std_per_channel:
+        max_std_per_channel = np.zeros((len(labels), num_channels), dtype=np.float32)
 
     final_sparsity_mask = np.zeros((len(labels), num_channels), dtype="bool")
     for unit_ind, label in enumerate(labels):
@@ -306,12 +306,10 @@ def get_templates_from_peaks_and_svd(
                 data = np.median(local_svd[sub_mask, :, count], 0)
             templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
 
-            if i == best_channel and return_std_at_peaks:
+            if return_max_std_per_channel:
                 data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
-                if len(data) == 1:
-                    std_at_peaks[unit_ind] = 0.0
-                else:
-                    std_at_peaks[unit_ind] = np.std(data[:, nbefore])
+                if len(data) > 1:
+                    max_std_per_channel[unit_ind, i] = np.std(data, 0).max()
 
     dense_templates = Templates(
         templates_array=templates_array,
@@ -324,7 +322,7 @@ def get_templates_from_peaks_and_svd(
         is_in_uV=False,
     )
 
-    if return_std_at_peaks:
-        return dense_templates, final_sparsity_mask, std_at_peaks
+    if return_max_std_per_channel:
+        return dense_templates, final_sparsity_mask, max_std_per_channel
     else:
         return dense_templates, final_sparsity_mask

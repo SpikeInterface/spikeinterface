@@ -11,7 +11,7 @@ from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak
 from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 from spikeinterface.sortingcomponents.tools import clean_templates
-
+from spikeinterface.core.recording_tools import get_noise_levels
 
 class IterativeHDBSCANClustering:
     """
@@ -45,6 +45,8 @@ class IterativeHDBSCANClustering:
             },
         },
         "pre_clean_templates": {
+            "sparsify_threshold": 1,
+            "remove_empty" : True,
             "max_jitter_ms": 0.2,
         },
         "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
@@ -73,6 +75,7 @@ class IterativeHDBSCANClustering:
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
+        print(params)
         split_radius_um = params["split"].pop("split_radius_um", 75)
         peaks_svd = params["peaks_svd"]
         ms_before = peaks_svd["ms_before"]
@@ -120,7 +123,7 @@ class IterativeHDBSCANClustering:
             **split,
         )
 
-        templates, new_sparse_mask = get_templates_from_peaks_and_svd(
+        templates, new_sparse_mask, max_std_per_channel = get_templates_from_peaks_and_svd(
             recording,
             peaks,
             peak_labels,
@@ -130,28 +133,29 @@ class IterativeHDBSCANClustering:
             peaks_svd,
             sparse_mask,
             operator="median",
+            return_max_std_per_channel=True
         )
+
+        templates = templates.to_sparse(new_sparse_mask)
+
+        cleaning_kwargs = params.get("pre_clean_templates", {}).copy()
+        if "noise_levels" not in cleaning_kwargs:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
+            cleaning_kwargs["noise_levels"] = noise_levels
+            cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
 
         ## Pre clean using templates (jitter)
         cleaned_templates = clean_templates(
             templates,
-            # sparsify_threshold=0.25,
-            sparsify_threshold=None,
-            # noise_levels=None,
-            # min_snr=None,
-            max_jitter_ms=params["pre_clean_templates"]["max_jitter_ms"],
-            # remove_empty=True,
-            remove_empty=False,
-            # sd_ratio_threshold=5.0,
-            # stds_at_peak=None,
+            **cleaning_kwargs,
         )
         mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
         to_remove_ids = templates.unit_ids[~mask_keep_ids]
         to_remove_label_mask = np.isin(peak_labels, to_remove_ids)
         peak_labels[to_remove_label_mask] = -1
         templates = cleaned_templates
-        new_sparse_mask = new_sparse_mask[mask_keep_ids, :]
-
+        new_sparse_mask = templates.sparsity.mask.copy()
+        templates = templates.to_dense()
         labels = templates.unit_ids
 
         if verbose:

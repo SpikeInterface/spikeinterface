@@ -39,7 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
-        "cleaning": {"min_snr": 5, "max_jitter_ms": 0.2, "sparsify_threshold": 1},
+        "cleaning": {"min_snr": 2.5, "max_jitter_ms": 0.2, "sparsify_threshold": 1, "mean_sd_ratio_threshold" : 3},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -308,6 +308,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if verbose:
                 print("Kept %d peaks for clustering" % len(selected_peaks))
 
+            cleaning_kwargs = params.get("cleaning", {}).copy()
+            cleaning_kwargs["noise_levels"] = noise_levels
+            cleaning_kwargs["remove_empty"] = True
+
             if clustering_method in [
                 "iterative-hdbscan",
                 "iterative-isosplit",
@@ -317,6 +321,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 clustering_params.update(verbose=verbose)
                 clustering_params.update(seed=seed)
                 clustering_params.update(peaks_svd=params["general"])
+                if clustering_method == "iterative-hdbscan":
+                    clustering_params.update(pre_clean_templates=cleaning_kwargs)
                 if debug:
                     clustering_params["debug_folder"] = sorter_output_folder / "clustering"
 
@@ -364,7 +370,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             else:
                 from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
 
-                dense_templates, new_sparse_mask, stds_at_peak = get_templates_from_peaks_and_svd(
+                dense_templates, new_sparse_mask, max_std_per_channel = get_templates_from_peaks_and_svd(
                     recording_w,
                     selected_peaks,
                     peak_labels,
@@ -374,17 +380,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     more_outs["peaks_svd"],
                     more_outs["peak_svd_sparse_mask"],
                     operator="median",
-                    return_std_at_peaks=True,
+                    return_max_std_per_channel=True,
                 )
                 # this release the peak_svd memmap file
                 templates = dense_templates.to_sparse(new_sparse_mask)
 
             del more_outs
 
-            cleaning_kwargs = params.get("cleaning", {}).copy()
-            cleaning_kwargs["noise_levels"] = noise_levels
-            #cleaning_kwargs["stds_at_peak"] = stds_at_peak
-            cleaning_kwargs["remove_empty"] = True
+            cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
+            
             templates = clean_templates(templates, **cleaning_kwargs)
 
             if verbose:
@@ -481,7 +485,6 @@ def final_cleaning_circus(
     template_diff_thresh=np.arange(0.05, 0.5, 0.05),
     debug_folder=None,
     noise_levels=None,
-    sd_ratio_threshold=None,
     job_kwargs=dict(),
 ):
 
@@ -510,15 +513,4 @@ def final_cleaning_circus(
         sparsity_overlap=sparsity_overlap,
         **job_kwargs,
     )
-
-    if sd_ratio_threshold is not None:
-        from spikeinterface.qualitymetrics.misc_metrics import compute_sd_ratio
-
-        final_sa.compute("spike_amplitudes", **job_kwargs)
-        sd_ratios = compute_sd_ratio(final_sa)
-        to_keep = []
-        for id, value in sd_ratios.items():
-            if value <= sd_ratio_threshold:
-                to_keep += [id]
-        final_sa = final_sa.select_units(to_keep)
     return final_sa
