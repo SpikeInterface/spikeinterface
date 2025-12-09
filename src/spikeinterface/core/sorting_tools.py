@@ -185,8 +185,13 @@ def random_spikes_selection(
     random_spikes_indices: np.array
         Selected spike indices coresponding to the sorting spike vector.
     """
+    rng_methods = ("uniform", "percentage")
 
-    if method == "uniform":
+    if method == "all":
+        spikes = sorting.to_spike_vector()
+        random_spikes_indices = np.arange(spikes.size)
+
+    elif method in rng_methods:
         rng = np.random.default_rng(seed=seed)
 
         spikes = sorting.to_spike_vector(concatenated=False)
@@ -211,17 +216,20 @@ def random_spikes_selection(
                 inds_in_seg_abs = inds_in_seg + cum_sizes[segment_index]
                 all_unit_indices.append(inds_in_seg_abs)
             all_unit_indices = np.concatenate(all_unit_indices)
+
+            if method == "uniform":
+                rng_size = min(max_spikes_per_unit, all_unit_indices.size)
+            elif method == "percentage":
+                rng_size = min(max_spikes_per_unit, all_unit_indices.size * percentage)
+
             selected_unit_indices = rng.choice(
-                all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size), replace=False, shuffle=False
+                all_unit_indices, size=rng_size, replace=False, shuffle=False
             )
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
         random_spikes_indices = np.sort(random_spikes_indices)
 
-    elif method == "all":
-        spikes = sorting.to_spike_vector()
-        random_spikes_indices = np.arange(spikes.size)
     else:
         raise ValueError(f"random_spikes_selection(): method must be 'all' or 'uniform'")
 
