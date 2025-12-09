@@ -541,10 +541,13 @@ def clean_templates(
     remove_empty=True,
     mean_sd_ratio_threshold=3.0,
     max_std_per_channel=None,
+    verbose=True
 ):
     """
     Clean a Templates object by removing empty units and applying sparsity if provided.
     """
+    
+    initial_ids = templates.unit_ids.copy()
 
     ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
     if sparsify_threshold is not None:
@@ -562,22 +565,30 @@ def clean_templates(
 
     ## We removed non empty templates
     if remove_empty:
+        n_before = len(templates.unit_ids)
         templates = remove_empty_templates(templates)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} empty templates")
 
     ## We keep only units with a max jitter
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
-
+        n_before = len(templates.unit_ids)
         shifts = get_template_extremum_channel_peak_shift(templates)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} unaligned templates")
 
     ## We remove units with a low SNR
     if min_snr is not None:
         assert noise_levels is not None, "noise_levels must be provided if min_snr is set"
+        n_before = len(templates.unit_ids)
         sparsity = compute_sparsity(
             templates.to_dense(),
             method="snr",
@@ -587,17 +598,27 @@ def clean_templates(
         )
         to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
         templates = templates.select_units(to_select)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} templates with too low SNR")
 
     ## Lastly, if stds_at_peak are provided, we remove the templates that have a too high sd_ratio
     if max_std_per_channel is not None:
         assert noise_levels is not None, "noise_levels must be provided if max_std_per_channel is given"
         to_select = []
+        n_before = len(templates.unit_ids)
+        all_ratios = []
         for count, unit_id in enumerate(templates.unit_ids):
+            old_index = np.where(unit_id == initial_ids)[0][0]
             mask = templates.sparsity.mask[count, :]
-            sd_ratio = np.mean(max_std_per_channel[count][mask] / noise_levels[mask])
+            sd_ratio = np.mean(max_std_per_channel[old_index][mask] / noise_levels[mask])
+            all_ratios += [sd_ratio]
             if sd_ratio <= mean_sd_ratio_threshold:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} templates with too high mean sd / noise ratio")
 
     return templates
 

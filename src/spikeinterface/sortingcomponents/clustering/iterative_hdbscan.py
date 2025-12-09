@@ -75,7 +75,6 @@ class IterativeHDBSCANClustering:
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
 
-        print(params)
         split_radius_um = params["split"].pop("split_radius_um", 75)
         peaks_svd = params["peaks_svd"]
         ms_before = peaks_svd["ms_before"]
@@ -148,6 +147,7 @@ class IterativeHDBSCANClustering:
         cleaned_templates = clean_templates(
             templates,
             **cleaning_kwargs,
+            verbose=True
         )
         mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
         to_remove_ids = templates.unit_ids[~mask_keep_ids]
