@@ -145,7 +145,6 @@ class IterativeHDBSCANClustering:
             noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
             cleaning_kwargs["noise_levels"] = noise_levels
         
-
         ## Pre clean using templates (jitter)
         cleaned_templates = clean_templates(
             templates,
