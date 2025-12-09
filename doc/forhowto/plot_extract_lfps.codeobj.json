@@ -1,0 +1,2637 @@
+{
+ "_": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.legend",
+   "module_short": "matplotlib.legend",
+   "name": "Legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Legend"
+  }
+ ],
+ "amp_alpha": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "amp_beta": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "amp_theta": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "ax": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes"
+  }
+ ],
+ "ax.axvline": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.axvline"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.axvline"
+  }
+ ],
+ "ax.legend": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.legend"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.legend"
+  }
+ ],
+ "ax.plot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.plot"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.plot"
+  }
+ ],
+ "ax.set_xlabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.set_xlabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.set_xlabel"
+  }
+ ],
+ "ax.set_ylabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "Axes.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Axes.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes._base",
+   "module_short": "matplotlib.axes._base",
+   "name": "_AxesBase.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.axes",
+   "module_short": "matplotlib.axes",
+   "name": "_AxesBase.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "_AxesBase.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.artist",
+   "module_short": "matplotlib.artist",
+   "name": "Artist.set_ylabel"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Artist.set_ylabel"
+  }
+ ],
+ "axs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "ch": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "chunk": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "chunk_duration": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "chunk_durations": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "list"
+  }
+ ],
+ "data": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "df": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pandas.core.frame",
+   "module_short": "pandas.core.frame",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "DataFrame"
+  }
+ ],
+ "diff": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.operatorrecordings",
+   "module_short": "spikeinterface.core.operatorrecordings",
+   "name": "SubtractRecordings"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "SubtractRecordings"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SubtractRecordings"
+  }
+ ],
+ "diff.get_traces": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.operatorrecordings",
+   "module_short": "spikeinterface.core.operatorrecordings",
+   "name": "SubtractRecordings.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "SubtractRecordings.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SubtractRecordings.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.operatorrecordings",
+   "module_short": "spikeinterface.core.operatorrecordings",
+   "name": "BaseOperatorRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseOperatorRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseOperatorRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface.core.baserecordingsnippets",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_traces"
+  }
+ ],
+ "end_frame": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "end_time": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "error": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "float32"
+  }
+ ],
+ "fig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.figure",
+   "module_short": "matplotlib.figure",
+   "name": "Figure"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib",
+   "module_short": "matplotlib",
+   "name": "Figure"
+  }
+ ],
+ "freq_alpha": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "freq_beta": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "freq_theta": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "generate_ground_truth_recording": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "generate_ground_truth_recording"
+  }
+ ],
+ "lfp_signals": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "margin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "margin_in_s": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "margin_ms": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "margins_ms": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "list"
+  }
+ ],
+ "np.abs": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ufunc"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "abs"
+  }
+ ],
+ "np.pi": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "pi"
+  }
+ ],
+ "np.random.default_rng": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "_cython_3_1_4",
+   "module_short": "_cython_3_1_4",
+   "name": "cython_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.random",
+   "module_short": "numpy.random",
+   "name": "default_rng"
+  }
+ ],
+ "np.sin": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ufunc"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "sin"
+  }
+ ],
+ "np.sum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "_ArrayFunctionDispatcher"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "sum"
+  }
+ ],
+ "np.zeros": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "zeros"
+  }
+ ],
+ "num_channels": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "pd.DataFrame": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core.frame",
+   "module_short": "pandas.core.frame",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "DataFrame"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core.generic",
+   "module_short": "pandas.core.generic",
+   "name": "NDFrame"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "NDFrame"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "NDFrame"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core.arraylike",
+   "module_short": "pandas.core.arraylike",
+   "name": "OpsMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "OpsMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "OpsMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core.base",
+   "module_short": "pandas.core.base",
+   "name": "PandasObject"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "PandasObject"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "PandasObject"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core.indexing",
+   "module_short": "pandas.core.indexing",
+   "name": "IndexingMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "IndexingMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "IndexingMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core.accessor",
+   "module_short": "pandas.core.accessor",
+   "name": "DirNamesMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas.core",
+   "module_short": "pandas.core",
+   "name": "DirNamesMixin"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "DirNamesMixin"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "pandas",
+   "module_short": "pandas",
+   "name": "DataFrame"
+  }
+ ],
+ "phase_alpha": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "phase_beta": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "phase_theta": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "recording": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.generate",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording"
+  }
+ ],
+ "recording.channel_ids": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.generate",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.channel_ids"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.channel_ids"
+  }
+ ],
+ "recording.get_num_channels": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.generate",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_num_channels"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_num_channels"
+  }
+ ],
+ "recording.get_num_samples": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.generate",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface.core.baserecordingsnippets",
+   "name": "BaseRecordingSnippets.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseRecordingSnippets.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_num_samples"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_num_samples"
+  }
+ ],
+ "recording.get_times": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.generate",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface.core.baserecordingsnippets",
+   "name": "BaseRecordingSnippets.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseRecordingSnippets.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_times"
+  }
+ ],
+ "recording.sampling_frequency": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.generate",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "InjectTemplatesRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.sampling_frequency"
+  }
+ ],
+ "recording_chunk": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording"
+  }
+ ],
+ "recording_chunk.get_traces": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface.core.baserecordingsnippets",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_traces"
+  }
+ ],
+ "recording_chunk.save": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.save"
+  }
+ ],
+ "recording_dict": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "recording_filt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing.filter",
+   "module_short": "spikeinterface.preprocessing.filter",
+   "name": "BandpassFilterRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing",
+   "module_short": "spikeinterface.preprocessing",
+   "name": "BandpassFilterRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BandpassFilterRecording"
+  }
+ ],
+ "recording_filt.margin_samples": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "recording_filt.save": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing.filter",
+   "module_short": "spikeinterface.preprocessing.filter",
+   "name": "BandpassFilterRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing",
+   "module_short": "spikeinterface.preprocessing",
+   "name": "BandpassFilterRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BandpassFilterRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing.filter",
+   "module_short": "spikeinterface.preprocessing.filter",
+   "name": "FilterRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing",
+   "module_short": "spikeinterface.preprocessing",
+   "name": "FilterRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "FilterRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing.basepreprocessor",
+   "module_short": "spikeinterface.preprocessing.basepreprocessor",
+   "name": "BasePreprocessor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing",
+   "module_short": "spikeinterface.preprocessing",
+   "name": "BasePreprocessor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BasePreprocessor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.save"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.save"
+  }
+ ],
+ "recording_key": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "tuple"
+  }
+ ],
+ "recording_lfp": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  }
+ ],
+ "recording_lfp.sampling_frequency": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.sampling_frequency"
+  }
+ ],
+ "recording_optimal": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording"
+  }
+ ],
+ "recording_optimal.get_times": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface.core.baserecordingsnippets",
+   "name": "BaseRecordingSnippets.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseRecordingSnippets.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_times"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_times"
+  }
+ ],
+ "recording_optimal.get_traces": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface.core.baserecordingsnippets",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.get_traces"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.get_traces"
+  }
+ ],
+ "recording_optimal.sampling_frequency": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "SharedMemoryRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor.sampling_frequency"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor.sampling_frequency"
+  }
+ ],
+ "recording_with_lfp": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.operatorrecordings",
+   "module_short": "spikeinterface.core.operatorrecordings",
+   "name": "AddRecordings"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "AddRecordings"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "AddRecordings"
+  }
+ ],
+ "recordings_chunked": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "recordings_chunked.items": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "builtin_function_or_method"
+  }
+ ],
+ "result_dict": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "dict"
+  }
+ ],
+ "rng": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.random._generator",
+   "module_short": "numpy.random",
+   "name": "Generator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.random",
+   "module_short": "numpy.random",
+   "name": "Generator"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "Generator"
+  }
+ ],
+ "rng.random": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.random._generator",
+   "module_short": "numpy.random",
+   "name": "Generator.random"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy.random",
+   "module_short": "numpy.random",
+   "name": "Generator.random"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "Generator.random"
+  }
+ ],
+ "si.NumpyRecording": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecording",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecording"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core.baserecordingsnippets",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseRecordingSnippets"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core.base",
+   "module_short": "spikeinterface.core.base",
+   "name": "BaseExtractor"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface.core",
+   "name": "BaseExtractor"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseExtractor"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "NumpyRecording"
+  }
+ ],
+ "sns.barplot": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "seaborn",
+   "module_short": "seaborn",
+   "name": "barplot"
+  }
+ ],
+ "sns.despine": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "seaborn",
+   "module_short": "seaborn",
+   "name": "despine"
+  }
+ ],
+ "sorting": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core.numpyextractors",
+   "module_short": "spikeinterface",
+   "name": "NumpySorting"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.core",
+   "module_short": "spikeinterface",
+   "name": "NumpySorting"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "NumpySorting"
+  }
+ ],
+ "spre.bandpass_filter": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "function"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.preprocessing",
+   "module_short": "spikeinterface.preprocessing",
+   "name": "bandpass_filter"
+  }
+ ],
+ "start_frame": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "start_time": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "int"
+  }
+ ],
+ "sw.plot_traces": [
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.widgets.traces",
+   "module_short": "spikeinterface.widgets",
+   "name": "TracesWidget"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.widgets",
+   "module_short": "spikeinterface.widgets",
+   "name": "TracesWidget"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "TracesWidget"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.widgets.base",
+   "module_short": "spikeinterface.widgets.base",
+   "name": "BaseWidget"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface.widgets",
+   "module_short": "spikeinterface.widgets",
+   "name": "BaseWidget"
+  },
+  {
+   "is_class": true,
+   "is_explicit": false,
+   "module": "spikeinterface",
+   "module_short": "spikeinterface",
+   "name": "BaseWidget"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "spikeinterface.widgets",
+   "module_short": "spikeinterface.widgets",
+   "name": "plot_traces"
+  }
+ ],
+ "t_start": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "t_stop": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  }
+ ],
+ "time": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "time"
+  }
+ ],
+ "time.perf_counter": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "float"
+  },
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "time",
+   "module_short": "time",
+   "name": "perf_counter"
+  }
+ ],
+ "time_vector": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "timestamps": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "trace_plotted": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "bool"
+  }
+ ],
+ "traces_chunk": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "traces_diff": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "traces_opt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ],
+ "traces_optimal": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "ndarray"
+  }
+ ]
+}

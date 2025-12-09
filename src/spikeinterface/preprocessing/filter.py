@@ -232,8 +232,6 @@ class BandpassFilterRecording(FilterRecording):
     margin_ms : float | str, default: "auto"
         Margin in ms on border to avoid border effect.
         If "auto", margin is computed as 3 times the filter highpass cutoff period.
-    max_margin_s : float, default: 5
-        Maximum margin in seconds when margin_ms is set to "auto".
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     ignore_low_freq_error : bool, default: False
@@ -322,8 +320,6 @@ class NotchFilterRecording(FilterRecording):
         dtype of recording. If None, will take from `recording`
     margin_ms : float | str, default: "auto"
         Margin in ms on border to avoid border effect
-    max_margin_s : float, default: 5
-        Maximum margin in seconds when margin_ms is set to "auto".
 
     Returns
     -------
@@ -331,7 +327,7 @@ class NotchFilterRecording(FilterRecording):
         The notch-filtered recording extractor object
     """
 
-    def __init__(self, recording, freq=3000, q=30, margin_ms="auto", max_margin_s=5, dtype=None, **filter_kwargs):
+    def __init__(self, recording, freq=3000, q=30, margin_ms="auto", dtype=None, **filter_kwargs):
         import scipy.signal
 
         if margin_ms == "auto":
