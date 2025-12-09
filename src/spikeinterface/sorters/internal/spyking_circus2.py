@@ -326,7 +326,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     clustering_params["noise_levels"] = noise_levels
                 if debug:
                     clustering_params["debug_folder"] = sorter_output_folder / "clustering"
-                
 
             _, peak_labels, more_outs = find_clusters_from_peaks(
                 recording_w,

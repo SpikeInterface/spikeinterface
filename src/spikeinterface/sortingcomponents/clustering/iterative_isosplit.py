@@ -64,8 +64,8 @@ class IterativeISOSPLITClustering:
         },
         "clean_templates": {
             "max_jitter_ms": 0.2,
-            "min_snr" : 2.5,
-            "sparsify_threshold" : 1.0,
+            "min_snr": 2.5,
+            "sparsify_threshold": 1.0,
             "remove_empty": True,
         },
         "merge_from_templates": {
@@ -216,7 +216,6 @@ class IterativeISOSPLITClustering:
             operator="average",
         )
 
-
         ## Pre clean using templates (jitter, sparsify_threshold)
         templates = dense_templates.to_sparse(template_sparse_mask)
         cleaning_kwargs = params["clean_templates"].copy()
@@ -237,10 +236,6 @@ class IterativeISOSPLITClustering:
         dense_templates = cleaned_templates.to_dense()
         templates_array = dense_templates.templates_array
         unit_ids = dense_templates.unit_ids
-
-
-
-
 
         # ## Pre clean using templates (jitter)
         # cleaned_templates = clean_templates(
@@ -264,9 +259,6 @@ class IterativeISOSPLITClustering:
 
         # unit_ids = dense_templates.unit_ids
         # templates_array = dense_templates.templates_array
-
-
-
 
         if params["merge_from_features"] is not None:
 

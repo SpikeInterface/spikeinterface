@@ -47,8 +47,8 @@ class IterativeHDBSCANClustering:
             },
         },
         "clean_templates": {
-            "sparsify_threshold": 1.,
-            "min_snr" : 2.5,
+            "sparsify_threshold": 1.0,
+            "min_snr": 2.5,
             "remove_empty": True,
             "max_jitter_ms": 0.2,
         },
