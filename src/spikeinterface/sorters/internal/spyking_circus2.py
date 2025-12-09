@@ -39,7 +39,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": {"preset": "dredge_fast"},
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
-        "cleaning": {"min_snr": 2.5, "max_jitter_ms": 0.2, "sparsify_threshold": 1, "mean_sd_ratio_threshold" : 3},
+        "cleaning": {"min_snr": 2.5, "max_jitter_ms": 0.2, "sparsify_threshold": 1, "mean_sd_ratio_threshold": 3},
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -388,7 +388,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             del more_outs
 
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
-            
+
             templates = clean_templates(templates, **cleaning_kwargs)
 
             if verbose:

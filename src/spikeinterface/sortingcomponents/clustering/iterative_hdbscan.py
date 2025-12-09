@@ -13,6 +13,7 @@ from spikeinterface.sortingcomponents.clustering.tools import get_templates_from
 from spikeinterface.sortingcomponents.tools import clean_templates
 from spikeinterface.core.recording_tools import get_noise_levels
 
+
 class IterativeHDBSCANClustering:
     """
     Iterative HDBSCAN is based on several local clustering achieved with a
@@ -46,7 +47,7 @@ class IterativeHDBSCANClustering:
         },
         "pre_clean_templates": {
             "sparsify_threshold": 1,
-            "remove_empty" : True,
+            "remove_empty": True,
             "max_jitter_ms": 0.2,
         },
         "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
@@ -133,7 +134,7 @@ class IterativeHDBSCANClustering:
             peaks_svd,
             sparse_mask,
             operator="median",
-            return_max_std_per_channel=True
+            return_max_std_per_channel=True,
         )
 
         templates = templates.to_sparse(new_sparse_mask)
