@@ -201,7 +201,7 @@ chunk_durations = ["1s", "10s", "30s"]
 # Since in this toy case we have a single channel 5-min recording, we can use this as "optimal".
 
 recording_optimal = recording_filt.save(
-    format="memory",
+    folder="./cached/optimal",
     chunk_duration="1000s",
     progress_bar=False
 )
@@ -225,7 +225,7 @@ for margin_ms in margins_ms:
             ignore_low_freq_error=True,
         )
         recording_chunk = recording_chunk.save(
-            format="memory",
+            folder=f"./cached/{margin_ms}_{chunk_duration}",
             chunk_duration=chunk_duration,
             verbose=False,
             progress_bar=False

@@ -38,6 +38,7 @@ folders =  [
     '../examples/tutorials/qualitymetrics/curated_sorting',
     '../examples/tutorials/qualitymetrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
+    '../examples/forhowto/cached'
 
 ]
 
