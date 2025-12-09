@@ -262,7 +262,12 @@ class BandpassFilterRecording(FilterRecording):
         )
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(
-            recording=recording, freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str
+            recording=recording,
+            freq_min=freq_min,
+            freq_max=freq_max,
+            margin_ms=margin_ms,
+            dtype=dtype.str,
+            ignore_low_freq_error=ignore_low_freq_error,
         )
         self._kwargs.update(filter_kwargs)
 
