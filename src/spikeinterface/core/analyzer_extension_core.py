@@ -11,12 +11,14 @@ It also implements:
 
 import warnings
 import numpy as np
+from collections import namedtuple
 
-from .sortinganalyzer import AnalyzerExtension, register_result_extension
+from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
+from .job_tools import fix_job_kwargs, split_job_kwargs
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -752,8 +754,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     **kwargs : dict
         Additional parameters for the `spikeinterface.get_noise_levels()` function
 
@@ -769,9 +769,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, **noise_level_params):
         params = noise_level_params.copy()
@@ -814,3 +811,622 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
 register_result_extension(ComputeNoiseLevels)
 compute_noise_levels = ComputeNoiseLevels.function_factory()
+
+
+class BaseMetric:
+    """
+    Base class for metric-based extension
+    """
+
+    metric_name = None  # to be defined in subclass
+    metric_params = {}  # to be defined in subclass
+    metric_columns = {}  # column names and their dtypes of the dataframe
+    needs_recording = False  # whether the metric needs recording
+    needs_tmp_data = (
+        False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
+    )
+    needs_job_kwargs = False
+    depend_on = []  # extensions the metric depends on
+
+    # the metric function must have the signature:
+    # def metric_function(sorting_analyzer, unit_ids, **metric_params)
+    # or if needs_tmp_data=True
+    # def metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params)
+    # or if needs_job_kwargs=True
+    # def metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwargs, **metric_params)
+    # and must return a dict ({unit_id: values}) or namedtuple with fields matching metric_columns keys
+    metric_function = None  # to be defined in subclass
+
+    @classmethod
+    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs):
+        """Compute the metric.
+
+        Parameters
+        ----------
+        sorting_analyzer :  SortingAnalyzer
+            The input sorting analyzer
+        unit_ids : list
+            List of unit ids to compute the metric for
+        metric_params : dict
+            Parameters to override the default metric parameters
+        tmp_data : dict
+            Temporary data to pass to the metric function
+        job_kwargs : dict
+            Job keyword arguments to control parallelization
+
+        Returns
+        -------
+        results: namedtuple
+            The results of the metric function
+        """
+        args = (sorting_analyzer, unit_ids)
+        if cls.needs_tmp_data:
+            args += (tmp_data,)
+        if cls.needs_job_kwargs:
+            args += (job_kwargs,)
+
+        results = cls.metric_function(*args, **metric_params)
+
+        # if namedtuple, check that columns are correct
+        if isinstance(results, tuple) and hasattr(results, "_fields"):
+            assert set(results._fields) == set(list(cls.metric_columns.keys())), (
+                f"Metric {cls.metric_name} returned columns {results._fields} "
+                f"but expected columns are {cls.metric_columns.keys()}"
+            )
+        return results
+
+
+class BaseMetricExtension(AnalyzerExtension):
+    """
+    AnalyzerExtension that computes a metric and store the results in a dataframe.
+
+    This depends on one or more extensions (see `depend_on` attribute of the `BaseMetric` subclass).
+
+    Returns
+    -------
+    metric_dataframe : pd.DataFrame
+        The computed metric dataframe.
+    """
+
+    extension_name = None  # to be defined in subclass
+    metric_class = None  # to be defined in subclass
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = True
+    need_backward_compatibility_on_load = False
+    metric_list: list[BaseMetric] = None  # list of BaseMetric
+
+    @classmethod
+    def get_default_metric_params(cls):
+        """Get the default metric parameters.
+
+        Returns
+        -------
+        default_metric_params : dict
+            Dictionary of default metric parameters for each metric.
+        """
+        default_metric_params = {m.metric_name: m.metric_params for m in cls.metric_list}
+        return default_metric_params
+
+    @classmethod
+    def get_metric_columns(cls, metric_names=None):
+        """Get the default metric columns.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to get columns for. If None, all metrics are considered.
+
+        Returns
+        -------
+        default_metric_columns : dict
+            Dictionary of default metric columns and their dtypes for each metric.
+        """
+        default_metric_columns = []
+        for m in cls.metric_list:
+            if metric_names is not None and m.metric_name not in metric_names:
+                continue
+            default_metric_columns.extend(m.metric_columns)
+        return default_metric_columns
+
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
+
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
+
+    def _set_params(
+        self,
+        metric_names: list[str] | None = None,
+        metric_params: dict | None = None,
+        delete_existing_metrics: bool = False,
+        metrics_to_compute: list[str] | None = None,
+        **other_params,
+    ):
+        """
+        Sets parameters for metric computation.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to compute. If None, all available metrics are computed.
+        metric_params : dict | None
+            Dictionary of metric parameters to override default parameters for specific metrics.
+            If None, default parameters for all metrics are used.
+        delete_existing_metrics : bool, default: False
+            If True, existing metrics in the extension will be deleted before computing new ones.
+        other_params : dict
+            Additional parameters for metric computation.
+
+        Returns
+        -------
+        params : dict
+            Dictionary of parameters for metric computation.
+
+        Raises
+        ------
+        ValueError
+            If any of the metric names are not in the available metrics.
+        """
+        # check metric names
+        if metric_names is None:
+            metric_names = [m.metric_name for m in self.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in self.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in self.metric_list]}"
+                    )
+        # check dependencies
+        metrics_to_remove = []
+        for metric_name in metric_names:
+            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            depend_on = metric.depend_on
+            for dep in depend_on:
+                if "|" in dep:
+                    # at least one of the dependencies must be present
+                    dep_options = dep.split("|")
+                    if not any([self.sorting_analyzer.has_extension(d) for d in dep_options]):
+                        metrics_to_remove.append(metric_name)
+                else:
+                    if not self.sorting_analyzer.has_extension(dep):
+                        metrics_to_remove.append(metric_name)
+            if metric.needs_recording and not self.sorting_analyzer.has_recording():
+                warnings.warn(
+                    f"Metric {metric_name} requires a recording. "
+                    f"Since the SortingAnalyzer has no recording, the metric will not be computed."
+                )
+                metrics_to_remove.append(metric_name)
+
+        metrics_to_remove = list(set(metrics_to_remove))
+        if len(metrics_to_remove) > 0:
+            warnings.warn(
+                f"The following metrics will not be computed due to missing dependencies: {metrics_to_remove}"
+            )
+
+        for metric_name in metrics_to_remove:
+            metric_names.remove(metric_name)
+
+        default_metric_params = {m.metric_name: m.metric_params for m in self.metric_list}
+        if metric_params is None:
+            metric_params = default_metric_params
+        else:
+            for metric, params in metric_params.items():
+                default_metric_params[metric].update(params)
+            metric_params = default_metric_params
+
+        if metrics_to_compute is None:
+            metrics_to_compute = metric_names
+        extension = self.sorting_analyzer.get_extension(self.extension_name)
+        if delete_existing_metrics is False and extension is not None:
+            existing_metric_names = extension.params["metric_names"]
+            existing_metric_names_propagated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propagated
+
+        params = dict(
+            metric_names=metric_names,
+            metrics_to_compute=metrics_to_compute,
+            delete_existing_metrics=delete_existing_metrics,
+            metric_params=metric_params,
+            **other_params,
+        )
+        return params
+
+    def _prepare_data(self, sorting_analyzer, unit_ids=None):
+        """
+        Optional function to prepare shared data for metric computation.
+
+        This function should return a dictionary containing any data that is shared across multiple metrics.
+        The returned dictionary will be passed to each metric's compute function as `tmp_data` (if the metric
+        requires it with the class attribute `needs_tmp_data=True`).
+        """
+        return {}
+
+    def _compute_metrics(
+        self,
+        sorting_analyzer: SortingAnalyzer,
+        unit_ids: list[int | str] | None = None,
+        metric_names: list[str] | None = None,
+        **job_kwargs,
+    ):
+        """
+        Compute metrics.
+
+        Parameters
+        ----------
+        sorting_analyzer : SortingAnalyzer
+            The SortingAnalyzer object.
+        unit_ids : list[int | str] | None, default: None
+            List of unit ids to compute metrics for. If None, all units are used.
+        metric_names : list[str] | None, default: None
+            List of metric names to compute. If None, all metrics in params["metric_names"]
+            are used.
+
+        Returns
+        -------
+        metrics : pd.DataFrame
+            DataFrame containing the computed metrics for each unit.
+        """
+        import pandas as pd
+
+        if unit_ids is None:
+            unit_ids = sorting_analyzer.unit_ids
+        tmp_data = self._prepare_data(sorting_analyzer=sorting_analyzer, unit_ids=unit_ids)
+        if metric_names is None:
+            metric_names = self.params["metric_names"]
+
+        column_names_dtypes = {}
+        for metric_name in metric_names:
+            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            column_names_dtypes.update(metric.metric_columns)
+
+        metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
+
+        for metric_name in metric_names:
+            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            column_names = list(metric.metric_columns.keys())
+            try:
+                metric_params = self.params["metric_params"].get(metric_name, {})
+                res = metric.compute(
+                    sorting_analyzer,
+                    unit_ids=unit_ids,
+                    metric_params=metric_params,
+                    tmp_data=tmp_data,
+                    job_kwargs=job_kwargs,
+                )
+            except Exception as e:
+                warnings.warn(f"Error computing metric {metric_name}: {e}")
+                if len(column_names) == 1:
+                    res = {unit_id: np.nan for unit_id in unit_ids}
+                else:
+                    res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+
+            # res is a namedtuple with several dictionary entries (one per column)
+            if isinstance(res, dict):
+                column_name = column_names[0]
+                metrics.loc[unit_ids, column_name] = pd.Series(res)
+            else:
+                for i, col in enumerate(res._fields):
+                    metrics.loc[unit_ids, col] = pd.Series(res[i])
+
+        metrics = self._cast_metrics(metrics)
+
+        return metrics
+
+    def _run(self, **job_kwargs):
+
+        metrics_to_compute = self.params["metrics_to_compute"]
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+
+        _, job_kwargs = split_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
+
+        # compute the metrics which have been specified by the user
+        computed_metrics = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute, **job_kwargs
+        )
+
+        existing_metrics = []
+
+        # Check if we need to propagate any old metrics. If so, we'll do that.
+        # Otherwise, we'll avoid attempting to load an empty metrics.
+        if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
+
+            extension = self.sorting_analyzer.get_extension(self.extension_name)
+            if delete_existing_metrics is False and extension is not None and extension.data.get("metrics") is not None:
+                existing_metrics = extension.params["metric_names"]
+
+        existing_metrics = []
+        # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
+        extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
+        if delete_existing_metrics is False and extension is not None and extension.data.get("metrics") is not None:
+            existing_metrics = extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            # some metrics names produce data columns with other names. This deals with that.
+            for column_name in metric.metric_columns:
+                computed_metrics[column_name] = extension.data["metrics"][column_name]
+
+        self.data["metrics"] = computed_metrics
+
+    def _get_data(self):
+        # convert to correct dtype
+        return self.data["metrics"]
+
+    def set_data(self, ext_data_name, data):
+        import pandas as pd
+
+        if ext_data_name != "metrics":
+            return
+        if not isinstance(data, pd.DataFrame):
+            return
+        metrics = self._cast_metrics(data)
+        self.data[ext_data_name] = metrics
+
+    def _select_extension_data(self, unit_ids: list[int | str]):
+        """
+        Select data for a subset of unit ids.
+
+        Parameters
+        ----------
+        unit_ids : list[int | str]
+            List of unit ids to select data for.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the selected metrics DataFrame.
+        """
+        new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
+        return dict(metrics=new_metrics)
+
+    def _merge_extension_data(
+        self,
+        merge_unit_groups: list[list[int | str]],
+        new_unit_ids: list[int | str],
+        new_sorting_analyzer: SortingAnalyzer,
+        keep_mask: np.ndarray | None = None,
+        verbose: bool = False,
+        **job_kwargs,
+    ):
+        """
+        Merge extension data from the old metrics DataFrame into the new one.
+
+        Parameters
+        ----------
+        merge_unit_groups : list[list[int | str]]
+            List of lists of unit ids to merge.
+        new_unit_ids : list[int | str]
+            List of new unit ids after merging.
+        new_sorting_analyzer : SortingAnalyzer
+            The new SortingAnalyzer object after merging.
+        keep_mask : np.ndarray | None, default: None
+            Mask to keep certain spikes (not used here).
+        verbose : bool, default: False
+            Whether to print verbose output.
+        job_kwargs : dict
+            Additional job keyword arguments.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the merged metrics DataFrame.
+        """
+        import pandas as pd
+
+        available_metric_names = [m.metric_name for m in self.metric_list]
+        metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+            sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
+        )
+        metrics = self._cast_metrics(metrics)
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+    def _split_extension_data(
+        self,
+        split_units: dict[int | str, list[list[int]]],
+        new_unit_ids: list[list[int | str]],
+        new_sorting_analyzer: SortingAnalyzer,
+        verbose: bool = False,
+        **job_kwargs,
+    ):
+        """
+        Split extension data from the old metrics DataFrame into the new one.
+
+        Parameters
+        ----------
+        split_units : dict[int | str, list[list[int]]]
+            List of unit ids to split.
+        new_unit_ids : list[list[int | str]]
+            List of lists of new unit ids after splitting.
+        new_sorting_analyzer : SortingAnalyzer
+            The new SortingAnalyzer object after splitting.
+        verbose : bool, default: False
+            Whether to print verbose output.
+        """
+        import pandas as pd
+        from itertools import chain
+
+        available_metric_names = [m.metric_name for m in self.metric_list]
+        metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
+        old_metrics = self.data["metrics"]
+
+        all_unit_ids = new_sorting_analyzer.unit_ids
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
+
+        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
+
+        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
+        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+            sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
+        )
+        metrics = self._cast_metrics(metrics)
+
+        new_data = dict(metrics=metrics)
+        return new_data
+
+
+class BaseSpikeVectorExtension(AnalyzerExtension):
+    """
+    Base class for spikevector-based extension, where the data is a numpy array with the same
+    length as the spike vector.
+    """
+
+    extension_name = None  # to be defined in subclass
+    need_recording = True
+    use_nodepipeline = True
+    need_job_kwargs = True
+    need_backward_compatibility_on_load = False
+    nodepipeline_variables = []  # to be defined in subclass
+
+    def _set_params(self, **kwargs):
+        params = kwargs.copy()
+        return params
+
+    def _run(self, verbose=False, **job_kwargs):
+        from spikeinterface.core.node_pipeline import run_node_pipeline
+
+        # TODO: should we save directly to npy in binary_folder format / or to zarr?
+        # if self.sorting_analyzer.format == "binary_folder":
+        #     gather_mode = "npy"
+        #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
+        #     gather_kwargs = {"folder": extension_folder}
+        gather_mode = "memory"
+        gather_kwargs = {}
+
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        nodes = self.get_pipeline_nodes()
+        data = run_node_pipeline(
+            self.sorting_analyzer.recording,
+            nodes,
+            job_kwargs=job_kwargs,
+            job_name=self.extension_name,
+            gather_mode=gather_mode,
+            gather_kwargs=gather_kwargs,
+            verbose=False,
+        )
+        if isinstance(data, tuple):
+            # this logic enables extensions to optionally compute additional data based on params
+            assert len(data) <= len(self.nodepipeline_variables), "Pipeline produced more outputs than expected"
+        else:
+            data = (data,)
+        if len(self.nodepipeline_variables) > len(data):
+            data_names = self.nodepipeline_variables[: len(data)]
+        else:
+            data_names = self.nodepipeline_variables
+        for d, name in zip(data, data_names):
+            self.data[name] = d
+
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, copy=True):
+        """
+        Return extension data. If the extension computes more than one `nodepipeline_variables`,
+        the `return_data_name` is used to specify which one to return.
+
+        Parameters
+        ----------
+        outputs : "numpy" | "by_unit", default: "numpy"
+            How to return the data, by default "numpy"
+        concatenated : bool, default: False
+            Whether to concatenate the data across segments.
+        return_data_name : str | None, default: None
+            The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
+            the first one is returned.
+        copy : bool, default: True
+            Whether to return a copy of the data (only for outputs="numpy")
+
+        Returns
+        -------
+        numpy.ndarray | dict
+            The
+        """
+        from spikeinterface.core.sorting_tools import spike_vector_to_indices
+
+        if len(self.nodepipeline_variables) == 1:
+            return_data_name = self.nodepipeline_variables[0]
+        else:
+            if return_data_name is None:
+                return_data_name = self.nodepipeline_variables[0]
+            else:
+                assert (
+                    return_data_name in self.nodepipeline_variables
+                ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
+
+        all_data = self.data[return_data_name]
+        if outputs == "numpy":
+            if copy:
+                return all_data.copy()  # return a copy to avoid modification
+            else:
+                return all_data
+        elif outputs == "by_unit":
+            unit_ids = self.sorting_analyzer.unit_ids
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            data_by_units = {}
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                data_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    data_by_units[segment_index][unit_id] = all_data[inds]
+
+            if concatenated:
+                data_by_units_concatenated = {
+                    unit_id: np.concatenate([data_in_segment[unit_id] for data_in_segment in data_by_units.values()])
+                    for unit_id in unit_ids
+                }
+                return data_by_units_concatenated
+
+            return data_by_units
+        else:
+            raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
+
+    def _select_extension_data(self, unit_ids):
+        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                new_data[data_name] = self.data[data_name][keep_spike_mask]
+
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                if keep_mask is None:
+                    new_data[data_name] = self.data[data_name].copy()
+                else:
+                    new_data[data_name] = self.data[data_name][keep_mask]
+
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        return self.data.copy()

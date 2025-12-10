@@ -201,18 +201,6 @@ class BaseSnippets(BaseRecordingSnippets):
 
         return ChannelSliceSnippets(self, channel_ids)
 
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        from .channelslice import ChannelSliceSnippets
-        import warnings
-
-        warnings.warn(
-            "Snippets.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        sub_recording = ChannelSliceSnippets(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
-        return sub_recording
-
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceSnippets
 

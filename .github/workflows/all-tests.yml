@@ -69,7 +69,7 @@ jobs:
           echo "RUN_EXTRACTORS_TESTS=${RUN_EXTRACTORS_TESTS}"
           echo "RUN_PREPROCESSING_TESTS=${RUN_PREPROCESSING_TESTS}"
           echo "RUN_POSTPROCESSING_TESTS=${RUN_POSTPROCESSING_TESTS}"
-          echo "RUN_QUALITYMETRICS_TESTS=${RUN_QUALITYMETRICS_TESTS}"
+          echo "RUN_METRICS_TESTS=${RUN_METRICS_TESTS}"
           echo "RUN_CURATION_TESTS=${RUN_CURATION_TESTS}"
           echo "RUN_SORTINGCOMPONENTS_TESTS=${RUN_SORTINGCOMPONENTS_TESTS}"
           echo "RUN_GENERATION_TESTS=${RUN_GENERATION_TESTS}"
@@ -175,13 +175,13 @@ jobs:
           pip list
           ./.github/run_tests.sh postprocessing --no-virtual-env
 
-      - name: Test quality metrics
+      - name: Test metrics
         shell: bash
-        if: env.RUN_QUALITYMETRICS_TESTS == 'true'
+        if: env.RUN_METRICS_TESTS == 'true'
         run: |
-          pip install -e .[qualitymetrics]
+          pip install -e .[metrics]
           pip list
-          ./.github/run_tests.sh qualitymetrics --no-virtual-env
+          ./.github/run_tests.sh metrics --no-virtual-env
 
       - name: Test comparison
         shell: bash
