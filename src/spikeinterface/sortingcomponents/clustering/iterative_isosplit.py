@@ -10,8 +10,10 @@ from spikeinterface.sortingcomponents.clustering.merging_tools import (
     merge_peak_labels_from_templates,
     merge_peak_labels_from_features,
 )
-from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd, remove_small_cluster
+from spikeinterface.sortingcomponents.tools import clean_templates
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
+from spikeinterface.core.recording_tools import get_noise_levels
 
 
 class IterativeISOSPLITClustering:
@@ -32,6 +34,7 @@ class IterativeISOSPLITClustering:
     _default_params = {
         "motion": None,
         "seed": None,
+        "noise_levels": None,
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 120.0, "motion": None},
         "pre_label": {
             "mode": "channel",
@@ -59,6 +62,12 @@ class IterativeISOSPLITClustering:
                 # "projection_mode": "pca",
             },
         },
+        "clean_templates": {
+            "max_jitter_ms": 0.2,
+            "min_snr": 2.5,
+            "sparsify_threshold": 1.0,
+            "remove_empty": True,
+        },
         "merge_from_templates": {
             "similarity_metric": "l1",
             "num_shifts": 3,
@@ -67,7 +76,8 @@ class IterativeISOSPLITClustering:
         "merge_from_features": None,
         # "merge_from_features": {"merge_radius_um": 60.0},
         "clean": {
-            "minimum_cluster_size": 10,
+            "min_firing_rate": 0.1,
+            "subsampling_factor": None,
         },
         "debug_folder": None,
         "verbose": True,
@@ -97,6 +107,7 @@ class IterativeISOSPLITClustering:
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
         # radius_um = params["waveforms"]["radius_um"]
+        verbose = params["verbose"]
 
         debug_folder = params["debug_folder"]
 
@@ -206,8 +217,49 @@ class IterativeISOSPLITClustering:
             operator="average",
         )
 
-        unit_ids = dense_templates.unit_ids
+        ## Pre clean using templates (jitter, sparsify_threshold)
+        templates = dense_templates.to_sparse(template_sparse_mask)
+        cleaning_kwargs = params["clean_templates"].copy()
+        cleaning_kwargs["verbose"] = verbose
+        # cleaning_kwargs["verbose"] = True
+        # cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
+        if params["noise_levels"] is not None:
+            noise_levels = params["noise_levels"]
+        else:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
+        cleaning_kwargs["noise_levels"] = noise_levels
+        cleaned_templates = clean_templates(templates, **cleaning_kwargs)
+        mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
+        to_remove_ids = templates.unit_ids[~mask_keep_ids]
+        to_remove_label_mask = np.isin(post_split_label, to_remove_ids)
+        post_split_label[to_remove_label_mask] = -1
+        template_sparse_mask = cleaned_templates.sparsity.mask.copy()
+        dense_templates = cleaned_templates.to_dense()
         templates_array = dense_templates.templates_array
+        unit_ids = dense_templates.unit_ids
+
+        # ## Pre clean using templates (jitter)
+        # cleaned_templates = clean_templates(
+        #     dense_templates,
+        #     # sparsify_threshold=0.25,
+        #     sparsify_threshold=None,
+        #     # noise_levels=None,
+        #     # min_snr=None,
+        #     max_jitter_ms=params["clean_templates"]["max_jitter_ms"],
+        #     # remove_empty=True,
+        #     remove_empty=False,
+        #     # sd_ratio_threshold=5.0,
+        #     # stds_at_peak=None,
+        # )
+        # mask_keep_ids = np.isin(dense_templates.unit_ids, cleaned_templates.unit_ids)
+        # to_remove_ids = dense_templates.unit_ids[~mask_keep_ids]
+        # to_remove_label_mask = np.isin(post_split_label, to_remove_ids)
+        # post_split_label[to_remove_label_mask] = -1
+        # dense_templates = cleaned_templates
+        # template_sparse_mask = template_sparse_mask[mask_keep_ids, :]
+
+        # unit_ids = dense_templates.unit_ids
+        # templates_array = dense_templates.templates_array
 
         if params["merge_from_features"] is not None:
 
@@ -258,197 +310,21 @@ class IterativeISOSPLITClustering:
         sparsity = ChannelSparsity(template_sparse_mask, unit_ids, recording.channel_ids)
         templates = dense_templates.to_sparse(sparsity)
 
-        # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
-
-        # new_peaks = peaks.copy()
-        # new_peaks["sample_index"] -= peak_shifts
-
         # clean very small cluster before peeler
-        post_clean_label = post_merge_label2.copy()
-        minimum_cluster_size = params["clean"]["minimum_cluster_size"]
-        labels_set, count = np.unique(post_clean_label, return_counts=True)
-        to_remove = labels_set[count < minimum_cluster_size]
-        mask = np.isin(post_clean_label, to_remove)
-        post_clean_label[mask] = -1
-        final_peak_labels = post_clean_label
-        labels_set = np.unique(final_peak_labels)
-        labels_set = labels_set[labels_set >= 0]
-        templates = templates.select_units(labels_set)
+        if params["clean"]["subsampling_factor"] is not None and params["clean"]["min_firing_rate"] is not None:
+            final_peak_labels, to_keep = remove_small_cluster(
+                recording,
+                peaks,
+                post_merge_label2,
+                min_firing_rate=params["clean"]["min_firing_rate"],
+                subsampling_factor=params["clean"]["subsampling_factor"],
+                verbose=verbose,
+            )
+            templates = templates.select_units(to_keep)
+
         labels_set = templates.unit_ids
 
         more_outs = dict(
             templates=templates,
         )
         return labels_set, final_peak_labels, more_outs
-
-    # _default_params = {
-    #     "clean": {
-    #         "minimum_cluster_size": 10,
-    #     },
-    # }
-
-    # @classmethod
-    # def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-
-    #     split_radius_um = params["split"].pop("split_radius_um", 40)
-    #     peaks_svd = params["peaks_svd"]
-    #     motion = peaks_svd["motion"]
-    #     ms_before = peaks_svd.get("ms_before", 0.5)
-    #     ms_after = peaks_svd.get("ms_after", 1.5)
-    #     verbose = params.get("verbose", True)
-    #     split = params["split"]
-    #     seed = params["seed"]
-    #     job_kwargs = params.get("job_kwargs", dict())
-    #     debug_folder = params.get("debug_folder", None)
-
-    #     if debug_folder is not None:
-    #         debug_folder = Path(debug_folder).absolute()
-    #         debug_folder.mkdir(exist_ok=True)
-    #         peaks_svd.update(folder=debug_folder / "features")
-
-    #     motion_aware = motion is not None
-    #     peaks_svd.update(motion_aware=motion_aware)
-
-    #     if seed is not None:
-    #         peaks_svd.update(seed=seed)
-    #         split["method_kwargs"].update(seed=seed)
-
-    #     outs = extract_peaks_svd(
-    #         recording,
-    #         peaks,
-    #         **peaks_svd,
-    #         **job_kwargs,
-    #     )
-
-    #     if motion_aware:
-    #         # also return peaks with new channel index
-    #         peaks_svd, sparse_mask, svd_model, moved_peaks = outs
-    #         peaks = moved_peaks
-    #     else:
-    #         peaks_svd, sparse_mask, svd_model = outs
-
-    #     if debug_folder is not None:
-    #         np.save(debug_folder / "sparse_mask.npy", sparse_mask)
-    #         np.save(debug_folder / "peaks.npy", peaks)
-
-    #     split["method_kwargs"].update(waveforms_sparse_mask = sparse_mask)
-    #     neighbours_mask = get_channel_distances(recording) <= split_radius_um
-    #     split["method_kwargs"].update(neighbours_mask = neighbours_mask)
-
-    #     if debug_folder is not None:
-    #         split.update(debug_folder = debug_folder / "split")
-
-    #     peak_labels = split_clusters(
-    #         peaks["channel_index"],
-    #         recording,
-    #         {"peaks": peaks, "sparse_tsvd": peaks_svd},
-    #         method="local_feature_clustering",
-    #         **split,
-    #         **job_kwargs,
-    #     )
-
-    #     templates, new_sparse_mask = get_templates_from_peaks_and_svd(
-    #         recording,
-    #         peaks,
-    #         peak_labels,
-    #         ms_before,
-    #         ms_after,
-    #         svd_model,
-    #         peaks_svd,
-    #         sparse_mask,
-    #         operator="average",
-    #     )
-
-    #     labels = templates.unit_ids
-
-    #     if verbose:
-    #         print("Kept %d raw clusters" % len(labels))
-
-    #     if params["merge_from_features"] is not None:
-
-    #         merge_features_kwargs = params["merge_from_features"].copy()
-    #         merge_radius_um = merge_features_kwargs.pop("merge_radius_um")
-
-    #         peak_labels, merge_template_array, new_sparse_mask, new_unit_ids = merge_peak_labels_from_features(
-    #             peaks,
-    #             peak_labels,
-    #             templates.unit_ids,
-    #             templates.templates_array,
-    #             sparse_mask,
-    #             recording,
-    #             {"peaks": peaks, "sparse_tsvd": peaks_svd},
-    #             radius_um=merge_radius_um,
-    #             method="project_distribution",
-    #             method_kwargs=dict(
-    #                 feature_name="sparse_tsvd",
-    #                 waveforms_sparse_mask=sparse_mask,
-    #                 **merge_features_kwargs
-    #             ),
-    #             **job_kwargs,
-    #         )
-
-    #         templates = Templates(
-    #             templates_array=merge_template_array,
-    #             sampling_frequency=recording.sampling_frequency,
-    #             nbefore=templates.nbefore,
-    #             sparsity_mask=None,
-    #             channel_ids=recording.channel_ids,
-    #             unit_ids=new_unit_ids,
-    #             probe=recording.get_probe(),
-    #             is_in_uV=False,
-    #         )
-
-    #     if params["merge_from_templates"] is not None:
-    #         peak_labels, merge_template_array, new_sparse_mask, new_unit_ids = merge_peak_labels_from_templates(
-    #             peaks,
-    #             peak_labels,
-    #             templates.unit_ids,
-    #             templates.templates_array,
-    #             new_sparse_mask,
-    #             **params["merge_from_templates"],
-    #         )
-
-    #         templates = Templates(
-    #             templates_array=merge_template_array,
-    #             sampling_frequency=recording.sampling_frequency,
-    #             nbefore=templates.nbefore,
-    #             sparsity_mask=None,
-    #             channel_ids=recording.channel_ids,
-    #             unit_ids=new_unit_ids,
-    #             probe=recording.get_probe(),
-    #             is_in_uV=False,
-    #         )
-
-    #     labels = templates.unit_ids
-
-    #     if debug_folder is not None:
-    #         templates.to_zarr(folder_path=debug_folder / "dense_templates")
-
-    #     if verbose:
-    #         print("Kept %d non-duplicated clusters" % len(labels))
-
-    #     # sparsity = ChannelSparsity(template_sparse_mask, unit_ids, recording.channel_ids)
-    #     # templates = dense_templates.to_sparse(sparsity)
-
-    #     # # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
-
-    #     # # new_peaks = peaks.copy()
-    #     # # new_peaks["sample_index"] -= peak_shifts
-
-    #     # # clean very small cluster before peeler
-    #     # post_clean_label = post_merge_label2.copy()
-    #     # minimum_cluster_size = params["clean"]["minimum_cluster_size"]
-    #     # labels_set, count = np.unique(post_clean_label, return_counts=True)
-    #     # to_remove = labels_set[count < minimum_cluster_size]
-    #     # mask = np.isin(post_clean_label, to_remove)
-    #     # post_clean_label[mask] = -1
-    #     # final_peak_labels = post_clean_label
-    #     # labels_set = np.unique(final_peak_labels)
-    #     # labels_set = labels_set[labels_set >= 0]
-    #     # templates = templates.select_units(labels_set)
-    #     # labels_set = templates.unit_ids
-
-    #     more_outs = dict(
-    #         templates=templates,
-    #     )
-    #     return labels, peak_labels, more_outs
