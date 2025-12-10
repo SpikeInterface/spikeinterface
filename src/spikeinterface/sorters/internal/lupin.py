@@ -55,8 +55,9 @@ class LupinSorter(ComponentsBasedSorter):
         "ms_before": 1.0,
         "ms_after": 2.5,
         "template_sparsify_threshold": 1.5,
-        "template_min_snr": 2.5,
+        "template_min_snr_ptp": 4.,
         "template_max_jitter_ms": 0.2,
+        "min_firing_rate": 0.1,
         "gather_mode": "memory",
         "job_kwargs": {},
         "seed": None,
@@ -82,7 +83,9 @@ class LupinSorter(ComponentsBasedSorter):
         "ms_before": "Milliseconds before the spike peak for template matching",
         "ms_after": "Milliseconds after the spike peak for template matching",
         "template_sparsify_threshold": "Threshold to sparsify templates before template matching",
-        "template_min_snr": "Threshold to remove templates before template matching",
+        "template_min_snr_ptp": "Threshold to remove templates before template matching",
+        "template_max_jitter_ms": "Threshold on jitters to remove templates before template matching",
+        "min_firing_rate": "To remove small cluster in size before template matching",
         "gather_mode": "How to accumalte spike in matching : memory/npy",
         "job_kwargs": "The famous and fabulous job_kwargs",
         "seed": "Seed for random number",
@@ -234,9 +237,11 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
         clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
-        clustering_kwargs["clean_templates"]["template_min_snr"] = params["template_min_snr"]
-        clustering_kwargs["clean_templates"]["template_max_jitter_ms"] = params["template_max_jitter_ms"]
+        clustering_kwargs["clean_templates"]["min_snr"] = params["template_min_snr_ptp"]
+        clustering_kwargs["clean_templates"]["max_jitter_ms"] = params["template_max_jitter_ms"]
         clustering_kwargs["noise_levels"] = noise_levels
+        clustering_kwargs["clean"]["min_firing_rate"] = params["min_firing_rate"]
+        clustering_kwargs["clean"]["subsampling_factor"] = all_peaks.size / peaks.size
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
@@ -297,7 +302,7 @@ class LupinSorter(ComponentsBasedSorter):
             templates,
             sparsify_threshold=params["template_sparsify_threshold"],
             noise_levels=noise_levels,
-            min_snr=params["template_min_snr"],
+            min_snr=params["template_min_snr_ptp"],
             max_jitter_ms=params["template_max_jitter_ms"],
             remove_empty=True,
         )

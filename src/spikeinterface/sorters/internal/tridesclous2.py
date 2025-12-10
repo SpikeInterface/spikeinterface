@@ -51,12 +51,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "clustering": {
             "recursive_depth": 3,
         },
+        "min_firing_rate": 0.1,
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
             "max_spikes_per_unit": 400,
             "sparsity_threshold": 1.5,
-            "min_snr": 2.5,
+            "min_snr": 3.5,
             "radius_um": 100.0,
             "max_jitter_ms": 0.2,
         },
@@ -195,6 +196,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
         clustering_kwargs["noise_levels"] = noise_levels
+        clustering_kwargs["clean"]["min_firing_rate"] = params["min_firing_rate"]
+        clustering_kwargs["clean"]["subsampling_factor"] = all_peaks.size / peaks.size
+
 
         # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
         #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
@@ -263,7 +267,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             is_in_uV=False,
         )
 
-        # this spasify more
+        # this clean and spasify more
         templates = clean_templates(
             templates,
             sparsify_threshold=params["templates"]["sparsity_threshold"],

@@ -40,6 +40,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
         "cleaning": {"min_snr": 5, "max_jitter_ms": 0.2, "sparsify_threshold": 1, "mean_sd_ratio_threshold": 3},
+        "min_firing_rate" : 0.1,
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -103,6 +104,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
+        from spikeinterface.sortingcomponents.clustering.tools import remove_small_cluster
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.tools import check_probe_for_drift_correction
         from spikeinterface.sortingcomponents.tools import clean_templates
@@ -388,9 +390,19 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             del more_outs
 
+            before_clean_ids = templates.unit_ids.copy()
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
             cleaning_kwargs["verbose"] = verbose
             templates = clean_templates(templates, noise_levels=noise_levels, **cleaning_kwargs)
+            remove_peak_mask = ~np.isin(peak_labels, templates.unit_ids)
+            peak_labels[remove_peak_mask] = -1
+
+            if params["min_firing_rate"] is not None:
+                peak_labels, to_keep = remove_small_cluster(recording_w, selected_peaks, peak_labels,
+                                    min_firing_rate=params["min_firing_rate"],
+                                    subsampling_factor=peaks.size / selected_peaks.size,
+                                    verbose=verbose)
+                templates = templates.select_units(to_keep)
 
             if verbose:
                 print("Kept %d clean clusters" % len(templates.unit_ids))
