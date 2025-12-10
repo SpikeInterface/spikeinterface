@@ -55,7 +55,7 @@ class LupinSorter(ComponentsBasedSorter):
         "ms_before": 1.0,
         "ms_after": 2.5,
         "template_sparsify_threshold": 1.5,
-        "template_min_snr_ptp": 4.,
+        "template_min_snr_ptp": 4.0,
         "template_max_jitter_ms": 0.2,
         "min_firing_rate": 0.1,
         "gather_mode": "memory",

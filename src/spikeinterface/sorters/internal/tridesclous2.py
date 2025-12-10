@@ -199,7 +199,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["clean"]["min_firing_rate"] = params["min_firing_rate"]
         clustering_kwargs["clean"]["subsampling_factor"] = all_peaks.size / peaks.size
 
-
         # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
         #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
         #    if not have_sisosplit6:
