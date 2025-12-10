@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
+from spikeinterface.curation.tests.common import sorting_analyzer_for_curation, make_trained_pipeline
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 from spikeinterface.curation import auto_label_units, load_model
 from spikeinterface.curation.train_manual_curation import _get_computed_metrics
@@ -19,6 +19,7 @@ def model():
     It has been trained locally and, when applied to `sorting_analyzer_for_curation` will label its 5 units with
     the following labels: [1,0,1,0,1]."""
 
+    make_trained_pipeline()
     model = load_model(Path(__file__).parent / "trained_pipeline/", trusted=["numpy.dtype"])
     return model
 
@@ -45,6 +46,7 @@ def test_metric_ordering_independence(sorting_analyzer_for_curation, model):
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
 
+    make_trained_pipeline()
     model_folder = Path(__file__).parent / Path("trained_pipeline")
 
     prediction_prob_dataframe_1 = auto_label_units(
@@ -147,6 +149,7 @@ def test_exception_raised_when_metricparams_not_equal(sorting_analyzer_for_curat
     )
     sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
 
+    make_trained_pipeline()
     model_folder = Path(__file__).parent / Path("trained_pipeline")
 
     model, model_info = load_model(model_folder=model_folder, trusted=["numpy.dtype"])
