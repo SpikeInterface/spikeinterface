@@ -337,7 +337,7 @@ def remove_small_cluster(recording, peaks, peak_labels, min_firing_rate=0.1, sub
         if verbose:
             print("remove_small_cluster(): subsampling_factor is not set, assuming 1")
         subsampling_factor = 1
-    
+
     min_spike_count = int(recording.get_total_duration() * min_firing_rate / subsampling_factor)
 
     peak_labels = peak_labels.copy()
@@ -349,10 +349,10 @@ def remove_small_cluster(recording, peaks, peak_labels, min_firing_rate=0.1, sub
     peak_labels[peak_mask] = -1
 
     to_keep = to_keep[to_keep >= 0]
-    
+
     if verbose:
-        print(f"remove_small_cluster: kept  {to_keep.size} removed {to_remove.size} (min_spike_count {min_spike_count})")
+        print(
+            f"remove_small_cluster: kept  {to_keep.size} removed {to_remove.size} (min_spike_count {min_spike_count})"
+        )
 
-    return peak_labels, to_keep 
-
-
+    return peak_labels, to_keep

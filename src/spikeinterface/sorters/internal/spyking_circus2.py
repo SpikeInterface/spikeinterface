@@ -40,7 +40,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "merging": {"max_distance_um": 50},
         "clustering": {"method": "iterative-hdbscan", "method_kwargs": dict()},
         "cleaning": {"min_snr": 5, "max_jitter_ms": 0.2, "sparsify_threshold": 1, "mean_sd_ratio_threshold": 3},
-        "min_firing_rate" : 0.1,
+        "min_firing_rate": 0.1,
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
@@ -398,10 +398,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             peak_labels[remove_peak_mask] = -1
 
             if params["min_firing_rate"] is not None:
-                peak_labels, to_keep = remove_small_cluster(recording_w, selected_peaks, peak_labels,
-                                    min_firing_rate=params["min_firing_rate"],
-                                    subsampling_factor=peaks.size / selected_peaks.size,
-                                    verbose=verbose)
+                peak_labels, to_keep = remove_small_cluster(
+                    recording_w,
+                    selected_peaks,
+                    peak_labels,
+                    min_firing_rate=params["min_firing_rate"],
+                    subsampling_factor=peaks.size / selected_peaks.size,
+                    verbose=verbose,
+                )
                 templates = templates.select_units(to_keep)
 
             if verbose:

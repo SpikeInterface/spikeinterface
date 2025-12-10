@@ -312,11 +312,14 @@ class IterativeISOSPLITClustering:
 
         # clean very small cluster before peeler
         if params["clean"]["subsampling_factor"] is not None and params["clean"]["min_firing_rate"] is not None:
-            final_peak_labels, to_keep = remove_small_cluster(recording, peaks, post_merge_label2,
-                                min_firing_rate=params["clean"]["min_firing_rate"],
-                                subsampling_factor=params["clean"]["subsampling_factor"],
-                                verbose=verbose,
-                                )
+            final_peak_labels, to_keep = remove_small_cluster(
+                recording,
+                peaks,
+                post_merge_label2,
+                min_firing_rate=params["clean"]["min_firing_rate"],
+                subsampling_factor=params["clean"]["subsampling_factor"],
+                verbose=verbose,
+            )
             templates = templates.select_units(to_keep)
 
         labels_set = templates.unit_ids
@@ -325,4 +328,3 @@ class IterativeISOSPLITClustering:
             templates=templates,
         )
         return labels_set, final_peak_labels, more_outs
-
