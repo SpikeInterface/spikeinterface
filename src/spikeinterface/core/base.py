@@ -879,7 +879,7 @@ class BaseExtractor:
         self,
         name: str | None = None,
         folder: str | Path | None = None,
-        overwrite: str = False,
+        overwrite: bool = False,
         verbose: bool = True,
         **save_kwargs,
     ):
