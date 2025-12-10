@@ -318,6 +318,8 @@ class IterativeISOSPLITClustering:
                                 verbose=verbose,
                                 )
             templates = templates.select_units(to_keep)
+        else:
+            final_peak_labels = post_merge_label2
 
         labels_set = templates.unit_ids
 
