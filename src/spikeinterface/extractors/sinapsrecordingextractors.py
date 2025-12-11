@@ -45,7 +45,7 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         sampling_frequency = meta["samplingFreq"]
 
         if not file_path.suffix == ".bin":
-            # assume binary file has single stream
+            # assume other binary file formats such as .dat have single stream
             stream_name = "raw"
             num_total_channels = num_electrodes
 
