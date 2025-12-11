@@ -188,7 +188,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                         rec_for_motion,
                         folder=sorter_output_folder / "motion",
                         output_motion_info=True,
-                        **params["motion_correction"],
+                        preset=params["motion_correction_preset"],
+                        # **params["motion_correction"],
                     )
                     if verbose:
                         print("Done correct_motion()")
