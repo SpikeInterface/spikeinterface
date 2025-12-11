@@ -75,7 +75,7 @@ class IterativeISOSPLITClustering:
         },
         "merge_from_features": None,
         # "merge_from_features": {"merge_radius_um": 60.0},
-        "clean": {
+        "clean_low_firing": {
             "min_firing_rate": 0.1,
             "subsampling_factor": None,
         },
@@ -311,13 +311,16 @@ class IterativeISOSPLITClustering:
         templates = dense_templates.to_sparse(sparsity)
 
         # clean very small cluster before peeler
-        if params["clean"]["subsampling_factor"] is not None and params["clean"]["min_firing_rate"] is not None:
+        if (
+            params["clean_low_firing"]["subsampling_factor"] is not None
+            and params["clean_low_firing"]["min_firing_rate"] is not None
+        ):
             final_peak_labels, to_keep = remove_small_cluster(
                 recording,
                 peaks,
                 post_merge_label2,
-                min_firing_rate=params["clean"]["min_firing_rate"],
-                subsampling_factor=params["clean"]["subsampling_factor"],
+                min_firing_rate=params["clean_low_firing"]["min_firing_rate"],
+                subsampling_factor=params["clean_low_firing"]["subsampling_factor"],
                 verbose=verbose,
             )
             templates = templates.select_units(to_keep)

@@ -240,8 +240,8 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["clean_templates"]["min_snr"] = params["template_min_snr_ptp"]
         clustering_kwargs["clean_templates"]["max_jitter_ms"] = params["template_max_jitter_ms"]
         clustering_kwargs["noise_levels"] = noise_levels
-        clustering_kwargs["clean"]["min_firing_rate"] = params["min_firing_rate"]
-        clustering_kwargs["clean"]["subsampling_factor"] = all_peaks.size / peaks.size
+        clustering_kwargs["clean_low_firing"]["min_firing_rate"] = params["min_firing_rate"]
+        clustering_kwargs["clean_low_firing"]["subsampling_factor"] = all_peaks.size / peaks.size
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
