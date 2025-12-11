@@ -293,7 +293,7 @@ class LocalFeatureClustering:
         if clusterer_method == "hdbscan":
             from sklearn.cluster import HDBSCAN
 
-            clustering_kwargs.update(core_dist_n_jobs=1)
+            clustering_kwargs.update(n_jobs=1)
             clust = HDBSCAN(**clustering_kwargs)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore")

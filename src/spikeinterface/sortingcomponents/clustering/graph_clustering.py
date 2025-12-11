@@ -40,7 +40,7 @@ class GraphClustering:
         "clusterer": dict(
             method="sknetwork-louvain",
             # min_samples=1,
-            # core_dist_n_jobs=-1,
+            # n_jobs=-1,
             # min_cluster_size=20,
             # cluster_selection_method='leaf',
             # allow_single_cluster=True,

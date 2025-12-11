@@ -30,7 +30,7 @@ class RandomProjectionClustering:
         "clusterer": {
             "min_cluster_size": 10,
             "allow_single_cluster": True,
-            "core_dist_n_jobs": -1,
+            "n_jobs": -1,
             "cluster_selection_method": "eom",
         },
         "waveforms": {"ms_before": 0.5, "ms_after": 1.5},

@@ -14,7 +14,7 @@ class PositionsClustering:
     _default_params = {
         "peak_locations": None,
         "peak_localization_kwargs": {"method": "center_of_mass"},
-        "hdbscan_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "core_dist_n_jobs": -1},
+        "hdbscan_kwargs": {"min_cluster_size": 20, "allow_single_cluster": True, "n_jobs": -1},
     }
 
     name = "hdbscan_positions"
