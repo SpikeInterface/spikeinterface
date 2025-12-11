@@ -165,7 +165,7 @@ class GraphClustering:
             _remove_small_cluster(peak_labels, min_size=1)
 
         elif clustering_method == "hdbscan":
-            from hdbscan import HDBSCAN
+            from sklearn.cluster import HDBSCAN
             import scipy.sparse
 
             n_graph, connected_labels = scipy.sparse.csgraph.connected_components(distances, directed=False)

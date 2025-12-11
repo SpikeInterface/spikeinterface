@@ -291,7 +291,7 @@ class LocalFeatureClustering:
             tsvd = None
 
         if clusterer_method == "hdbscan":
-            from hdbscan import HDBSCAN
+            from sklearn.cluster import HDBSCAN
 
             clustering_kwargs.update(core_dist_n_jobs=1)
             clust = HDBSCAN(**clustering_kwargs)
