@@ -184,6 +184,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
         if clust_method == "hdbscan":
             from sklearn.cluster import HDBSCAN
+
             model = HDBSCAN(**clust_params).fit(features_flat)
             peak_labels = model.labels_.copy()
         elif clust_method == "hdbscan-gpu":

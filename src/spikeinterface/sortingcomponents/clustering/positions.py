@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.cluster import HDBSCAN
 
+
 class PositionsClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()
