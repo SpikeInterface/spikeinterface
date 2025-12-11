@@ -14,7 +14,6 @@ else:
     HAVE_SKLEARN = False
 
 
-
 class PositionsClustering:
     """
     hdbscan clustering on peak_locations previously done by localize_peaks()
