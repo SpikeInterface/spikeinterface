@@ -64,6 +64,7 @@ def _create_simple_study(study_folder):
     )
     # print(study)
 
+
 def _create_very_simple_study(study_folder):
     rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
 
@@ -305,10 +306,9 @@ def test_add_remove_cases(create_simple_study):
     case_key = list(study.cases.keys())[0]
     case = study.cases[case_key].copy()
     study.remove_cases([case_key])
-    study.add_cases({case_key : case})
+    study.add_cases({case_key: case})
     study.run()
 
-    
 
 if __name__ == "__main__":
     study_folder_simple = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy"
@@ -317,7 +317,9 @@ if __name__ == "__main__":
     _create_simple_study(_create_very_simple_study)
     test_SorterStudy(study_folder_simple)
 
-    study_folder_very_simple = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_AddRemoveCases"
+    study_folder_very_simple = (
+        Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_AddRemoveCases"
+    )
     if study_folder_very_simple.exists():
         shutil.rmtree(study_folder_very_simple)
     _create_simple_study(_create_very_simple_study)
