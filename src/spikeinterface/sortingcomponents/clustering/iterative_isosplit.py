@@ -311,7 +311,10 @@ class IterativeISOSPLITClustering:
         templates = dense_templates.to_sparse(sparsity)
 
         # clean very small cluster before peeler
-        if params["clean_low_firing"]["subsampling_factor"] is not None and params["clean_low_firing"]["min_firing_rate"] is not None:
+        if (
+            params["clean_low_firing"]["subsampling_factor"] is not None
+            and params["clean_low_firing"]["min_firing_rate"] is not None
+        ):
             final_peak_labels, to_keep = remove_small_cluster(
                 recording,
                 peaks,
