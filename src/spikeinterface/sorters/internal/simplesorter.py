@@ -39,7 +39,7 @@ class SimpleSorter(ComponentsBasedSorter):
             "method": "hdbscan",
             "min_cluster_size": 25,
             "allow_single_cluster": True,
-            "core_dist_n_jobs": -1,
+            "n_jobs": -1,
             "cluster_selection_method": "leaf",
         },
         # "cache_preprocessing": {"mode": None, "memory_limit": 0.5, "delete_cache": True},
@@ -58,7 +58,7 @@ class SimpleSorter(ComponentsBasedSorter):
         "clustering": (
             "A dictionary for specifying the clustering parameters: 'method' (to cluster) default: 'hdbscan', "
             "'min_cluster_size' (min number of spikes per cluster) default: 25, 'allow_single_cluster' default: True, "
-            " 'core_dist_n_jobs' (parallelization) default: -1, cluster_selection_method (for hdbscan) default: leaf"
+            " 'n_jobs' (parallelization) default: -1, cluster_selection_method (for hdbscan) default: leaf"
         ),
         "job_kwargs": "Spikeinterface job_kwargs (see job_kwargs documentation) default 'n_jobs': -1, 'chunk_duration': '1s'",
     }
