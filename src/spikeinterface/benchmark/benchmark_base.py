@@ -272,6 +272,39 @@ class BenchmarkStudy:
                 f.unlink()
         self.benchmarks[key] = None
 
+    def add_cases(self, cases):
+        # check that cases keys are homogeneous
+        key0 = list(self.cases.keys())[0]
+        for key in cases.keys():
+            print(key)
+            if isinstance(key0, str):
+                assert isinstance(key, str), f"Key {key} for cases is not homogeneous"
+                if levels is None:
+                    levels = "level0"
+                else:
+                    assert isinstance(levels, str)
+            elif isinstance(key0, tuple):
+                assert isinstance(key, tuple), f"Key {key} for cases is not homogeneous"
+                num_levels = len(key0)
+                assert len(key) == num_levels, f"Key {key} for cases is not homogeneous, tuple negth differ"
+            else:
+                raise ValueError("Keys for cases must str or tuple")
+        
+        for case in cases.values():
+            assert case["dataset"] in self.datasets.keys(), f"Unknown dataset {case["dataset"]}"
+
+        self.cases.update(cases)
+        benchmark = self.create_benchmark(key=key)
+        self.benchmarks[key] = benchmark
+        (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
+    
+    def remove_cases(self, case_keys):
+        for key in case_keys:
+            assert key in list(self.cases.keys()), f"Key {key} is not in the cases of the Study"
+            self.cases.pop(key)
+            self.remove_benchmark(key)
+        (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
+
     def run(self, case_keys=None, keep=True, verbose=False, **job_kwargs):
         if case_keys is None:
             case_keys = list(self.cases.keys())
