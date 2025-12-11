@@ -154,6 +154,7 @@ test = [
     "pytest-dependency",
     "pytest-cov",
     "psutil",
+    "scikit-learn",
 
     # preprocessing
     "ibllib>=3.4.1;python_version>='3.10'",
@@ -167,7 +168,6 @@ test = [
     # tridesclous2
     "numba<0.61.0;python_version<'3.13'",
     "numba>=0.61.0;python_version>='3.13'",
-    "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # isosplit is needed for trideclous2 noramaly but isosplit is only build until python3.11
     # so lets wait a new build of isosplit6
@@ -205,7 +205,6 @@ docs = [
     # for notebooks in the gallery
     "MEArec", # Use as an example
     "pandas", # in the modules gallery comparison tutorial
-    "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
     "skops", # For automated curation
