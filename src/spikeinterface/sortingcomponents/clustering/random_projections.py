@@ -7,7 +7,15 @@ import importlib
 import numpy as np
 
 
-from sklearn.cluster import HDBSCAN
+import importlib.util
+
+sklearn_spec = importlib.util.find_spec("sklearn")
+if sklearn_spec is not None:
+    HAVE_SKLEARN = True
+    from sklearn.cluster import HDBSCAN
+else:
+    HAVE_SKLEARN = False
+
 from spikeinterface.core.basesorting import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
@@ -51,6 +59,7 @@ class RandomProjectionClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
+        assert HAVE_SKLEARN, "position clustering need sklearn to be installed"
         fs = recording.get_sampling_frequency()
         radius_um = params.get("radius_um", 30)
         ms_before = params["waveforms"].get("ms_before", 0.5)

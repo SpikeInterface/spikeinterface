@@ -4,7 +4,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from sklearn.cluster import HDBSCAN
+import importlib.util
+
+sklearn_spec = importlib.util.find_spec("sklearn")
+if sklearn_spec is not None:
+    HAVE_SKLEARN = True
+    from sklearn.cluster import HDBSCAN
+else:
+    HAVE_SKLEARN = False
+
 
 
 class PositionsClustering:
@@ -30,7 +38,7 @@ class PositionsClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):
-
+        assert HAVE_SKLEARN, "position clustering need sklearn to be installed"
         if params["peak_locations"] is None:
             from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
