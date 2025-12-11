@@ -291,7 +291,8 @@ class BenchmarkStudy:
                 raise ValueError("Keys for cases must str or tuple")
 
         for case in cases.values():
-            assert case["dataset"] in self.datasets.keys(), f"Unknown dataset {case["dataset"]}"
+            dataset = case["dataset"]
+            assert dataset in list(self.datasets.keys()), f"Unknown dataset {dataset}"
 
         self.cases.update(cases)
         benchmark = self.create_benchmark(key=key)
