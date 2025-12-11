@@ -298,15 +298,15 @@ def test_add_remove_cases(create_simple_study):
     study = SorterStudy(study_folder)
 
     # # this run the sorters
-    #study.run()
+    # study.run()
     # this is from the base class
-    #rt = study.get_run_times()
+    # rt = study.get_run_times()
 
     case_key = list(study.cases.keys())[0]
     case = study.cases[case_key].copy()
     study.remove_cases([case_key])
     study.add_cases({case_key: case})
-    #study.run()
+    # study.run()
 
 
 if __name__ == "__main__":

@@ -271,7 +271,7 @@ class BenchmarkStudy:
         self.benchmarks[key] = None
 
     def add_cases(self, cases):
-        
+
         self._check_cases(cases, reference=list(self.cases.keys())[0])
         for case in cases.values():
             dataset = case["dataset"]
