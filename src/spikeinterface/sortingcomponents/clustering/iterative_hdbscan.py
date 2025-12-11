@@ -9,7 +9,7 @@ from spikeinterface.core.recording_tools import get_channel_distances
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
-from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd, remove_small_cluster
 from spikeinterface.sortingcomponents.tools import clean_templates
 from spikeinterface.core.recording_tools import get_noise_levels
 
@@ -54,6 +54,10 @@ class IterativeHDBSCANClustering:
         },
         "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
         "merge_from_features": None,
+        "clean_low_firing": {
+            "min_firing_rate": 0.1,
+            "subsampling_factor": None,
+        },
         "debug_folder": None,
         "verbose": True,
     }
@@ -181,6 +185,19 @@ class IterativeHDBSCANClustering:
                 probe=recording.get_probe(),
                 is_in_uV=False,
             )
+
+
+        # clean very small cluster before peeler
+        if params["clean_low_firing"]["subsampling_factor"] is not None and params["clean_low_firing"]["min_firing_rate"] is not None:
+            peak_labels, to_keep = remove_small_cluster(
+                recording,
+                peaks,
+                peak_labels,
+                min_firing_rate=params["clean_low_firing"]["min_firing_rate"],
+                subsampling_factor=params["clean_low_firing"]["subsampling_factor"],
+                verbose=verbose,
+            )
+            templates = templates.select_units(to_keep)
 
         labels = templates.unit_ids
 
