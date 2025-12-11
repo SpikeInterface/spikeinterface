@@ -19,7 +19,7 @@ from .extractors import *
 from .sorters import *
 from .preprocessing import *
 from .postprocessing import *
-from .qualitymetrics import *
+from .metrics import *
 from .curation import *
 from .comparison import *
 from .widgets import *

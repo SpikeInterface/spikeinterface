@@ -12,6 +12,7 @@ from spikeinterface.preprocessing import common_reference, whiten, bandpass_filt
 from spikeinterface.sortingcomponents.tools import (
     cache_preprocessing,
     get_shuffled_slices,
+    clean_cache_preprocessing,
     _set_optimal_chunk_size,
 )
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -42,7 +43,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {"method": "circus-omp", "method_kwargs": dict(), "pipeline_kwargs": dict()},
         "apply_preprocessing": True,
         "apply_whitening": True,
-        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5, "delete_cache": True},
+        "cache_preprocessing": {"mode": "memory", "memory_limit": 0.5},
         "chunk_preprocessing": {"memory_limit": None},
         "multi_units_only": False,
         "job_kwargs": {},
@@ -69,7 +70,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "apply_motion_correction": "Boolean to specify whether circus 2 should apply motion correction to the recording or not",
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
-                         memory_limit will control how much RAM can be used. In case of folder or zarr, delete_cache controls if cache is cleaned after sorting",
+                         memory_limit will control how much RAM can be used.",
         "chunk_preprocessing": "How much RAM (approximately) should be devoted to load all data chunks (given n_jobs).\
                 memory_limit will control how much RAM can be used as a fraction of available memory. Otherwise, use total_memory to fix a hard limit, with\
                 a string syntax  (e.g. '1G', '500M')",
@@ -140,7 +141,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 recording_f = common_reference(recording_f)
         else:
             if verbose:
-                print("Skipping preprocessing (whitening only)")
+                if apply_whitening:
+                    print("Skipping preprocessing (whitening only)")
+                else:
+                    print("Skipping preprocessing (no whitening)")
             recording_f = recording
             recording_f.annotate(is_filtered=True)
 
@@ -189,7 +193,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         elif recording_w.check_serializability("pickle"):
             recording_w.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
 
-        recording_w = cache_preprocessing(recording_w, **job_kwargs, **params["cache_preprocessing"])
+        recording_w, cache_info = cache_preprocessing(
+            recording_w, job_kwargs=job_kwargs, **params["cache_preprocessing"]
+        )
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_method = params["detection"].get("method", "matched_filtering")
@@ -312,7 +318,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             ]:
                 clustering_params.update(verbose=verbose)
                 clustering_params.update(seed=seed)
-                clustering_params.update(peak_svd=params["general"])
+                clustering_params.update(peaks_svd=params["general"])
                 if debug:
                     clustering_params["debug_folder"] = sorter_output_folder / "clustering"
 
@@ -373,10 +379,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 # this release the peak_svd memmap file
                 templates = dense_templates.to_sparse(new_sparse_mask)
 
-            # To be sure that templates have appropriate ms_before and ms_after, up to rounding
-            templates.ms_before = ms_before
-            templates.ms_after = ms_after
-
             del more_outs
 
             cleaning_kwargs = params.get("cleaning", {}).copy()
@@ -420,6 +422,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             merging_params = params["merging"].copy()
             merging_params["debug_folder"] = sorter_output_folder / "merging"
 
+            # To be sure that templates have appropriate ms_before and ms_after, up to rounding
+            templates.ms_before = ms_before
+            templates.ms_after = ms_after
+
             if len(merging_params) > 0:
                 if params["motion_correction"] and motion_folder is not None:
                     from spikeinterface.preprocessing.motion import load_motion_info
@@ -455,16 +461,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 if verbose:
                     print(f"Kept {len(sorting.unit_ids)} units after final merging")
 
-        folder_to_delete = None
-        cache_mode = params["cache_preprocessing"].get("mode", "memory")
-        delete_cache = params["cache_preprocessing"].get("delete_cache", True)
-
-        if cache_mode in ["folder", "zarr"] and delete_cache:
-            folder_to_delete = recording_w._kwargs["folder_path"]
-
         del recording_w
-        if folder_to_delete is not None:
-            shutil.rmtree(folder_to_delete)
+        clean_cache_preprocessing(cache_info)
 
         sorting = sorting.save(folder=sorting_folder)
 

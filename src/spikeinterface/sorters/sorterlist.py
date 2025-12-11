@@ -24,6 +24,7 @@ from .external.yass import YassSorter
 from .internal.spyking_circus2 import Spykingcircus2Sorter
 from .internal.tridesclous2 import Tridesclous2Sorter
 from .internal.simplesorter import SimpleSorter
+from .internal.lupin import LupinSorter
 
 sorter_full_list = [
     # external
@@ -49,6 +50,7 @@ sorter_full_list = [
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
     SimpleSorter,
+    LupinSorter,
 ]
 
 # archived

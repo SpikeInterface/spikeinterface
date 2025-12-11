@@ -230,7 +230,7 @@ def test_detect_bad_channels_ibl(num_channels):
 
     # Test on randomly sorted channels
     rng = np.random.default_rng(seed=None)
-    recording_scrambled = recording.channel_slice(
+    recording_scrambled = recording.select_channels(
         rng.choice(recording.channel_ids, len(recording.channel_ids), replace=False)
     )
     bad_channel_ids_scrambled, bad_channel_label_scrambled = detect_bad_channels(

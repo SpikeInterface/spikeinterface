@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.103.2"
+version = "0.103.3"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -113,7 +113,7 @@ widgets = [
     "sortingview>=0.12.0",
 ]
 
-qualitymetrics = [
+metrics = [
     "scikit-learn",
     "scipy",
     "pandas",
@@ -232,7 +232,7 @@ markers = [
     "extractors",
     "preprocessing",
     "postprocessing",
-    "qualitymetrics",
+    "mertrics",
     "sorters",
     "sorters_external",
     "sorters_internal",

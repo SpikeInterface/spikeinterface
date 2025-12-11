@@ -4,15 +4,16 @@ import numpy as np
 import json
 import spikeinterface
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.qualitymetrics import (
+
+# TODO fix with new metrics
+from spikeinterface.metrics import (
+    ComputeQualityMetrics,
+    ComputeTemplateMetrics,
     get_quality_metric_list,
     get_quality_pca_metric_list,
-    qm_compute_name_to_column_names,
+    get_template_metric_list,
 )
-from spikeinterface.postprocessing import get_template_metric_names
-from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
 from pathlib import Path
-from copy import deepcopy
 
 
 def get_default_classifier_search_spaces():
@@ -236,7 +237,7 @@ class CurationModelTrainer:
 
     def get_default_metrics_list(self):
         """Returns the default list of metrics."""
-        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
+        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_list()
 
     def load_and_preprocess_analyzers(self, analyzers, enforce_metric_params):
         """
@@ -325,10 +326,8 @@ class CurationModelTrainer:
 
     def get_metric_params_csv(self):
 
-        from itertools import chain
-
-        qm_metric_names = list(chain.from_iterable(qm_compute_name_to_column_names.values()))
-        tm_metric_names = list(chain.from_iterable(tm_compute_name_to_column_names.values()))
+        qm_metric_names = ComputeQualityMetrics.get_metric_columns()
+        tm_metric_names = ComputeTemplateMetrics.get_metric_columns()
 
         quality_metric_names = []
         template_metric_names = []

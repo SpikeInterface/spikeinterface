@@ -1735,7 +1735,7 @@ def generate_templates(
         An optional dict containing parameters per units.
         Keys are parameter names:
 
-            * "alpha": amplitude of the action potential in a.u. (default range: (6'000-9'000))
+            * "alpha": amplitude of the action potential in a.u. (default range: (100.0 - 500.0))
             * "depolarization_ms": the depolarization interval in ms (default range: (0.09-0.14))
             * "repolarization_ms": the repolarization interval in ms (default range: (0.5-0.8))
             * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))

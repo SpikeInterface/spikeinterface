@@ -143,6 +143,7 @@ def apply_curation(
     new_id_strategy: str = "append",
     merging_mode: str = "soft",
     sparsity_overlap: float = 0.75,
+    raise_error_if_overlap_fails: bool = True,
     verbose: bool = False,
     **job_kwargs,
 ):
@@ -181,6 +182,9 @@ def apply_curation(
     sparsity_overlap : float, default 0.75
         The percentage of overlap that units should share in order to accept merges. If this criteria is not
         achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
+    raise_error_if_overlap_fails : bool, default: True
+        If True and `sparsity_overlap` fails for any unit merges, this will raise an error. If False, units which fail the
+        `sparsity_overlap` threshold will be skipped in the merge.
     verbose : bool, default: False
         If True, output is verbose
     **job_kwargs : dict
@@ -234,6 +238,7 @@ def apply_curation(
                 censor_ms=censor_ms,
                 merging_mode=merging_mode,
                 sparsity_overlap=sparsity_overlap,
+                raise_error_if_overlap_fails=raise_error_if_overlap_fails,
                 new_id_strategy=new_id_strategy,
                 return_new_unit_ids=True,
                 format="memory",

@@ -158,6 +158,16 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         html_repr = html_header + html_segments + html_channel_ids + html_extra
         return html_repr
 
+    def __add__(self, other):
+        from .operatorrecordings import AddRecordings
+
+        return AddRecordings(self, other)
+
+    def __sub__(self, other):
+        from .operatorrecordings import SubtractRecordings
+
+        return SubtractRecordings(self, other)
+
     def get_sample_size_in_bytes(self):
         """
         Returns the size of a single sample across all channels in bytes.
