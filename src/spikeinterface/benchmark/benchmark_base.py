@@ -289,7 +289,7 @@ class BenchmarkStudy:
                 assert len(key) == num_levels, f"Key {key} for cases is not homogeneous, tuple negth differ"
             else:
                 raise ValueError("Keys for cases must str or tuple")
-        
+
         for case in cases.values():
             assert case["dataset"] in self.datasets.keys(), f"Unknown dataset {case["dataset"]}"
 
@@ -297,7 +297,7 @@ class BenchmarkStudy:
         benchmark = self.create_benchmark(key=key)
         self.benchmarks[key] = benchmark
         (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
-    
+
     def remove_cases(self, case_keys):
         for key in case_keys:
             assert key in list(self.cases.keys()), f"Key {key} is not in the cases of the Study"
