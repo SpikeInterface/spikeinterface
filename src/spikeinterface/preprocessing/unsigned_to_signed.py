@@ -39,6 +39,7 @@ class UnsignedToSignedRecording(BasePreprocessor):
 
         self._kwargs = dict(
             recording=recording,
+            bit_depth=bit_depth,
         )
 
 
