@@ -206,7 +206,7 @@ docs = [
     "MEArec", # Use as an example
     "pandas", # in the modules gallery comparison tutorial
     "numba", # For many postprocessing functions
-    "networkx", 
+    "networkx",
     "skops", # For automated curation
     "scikit-learn", # For automated curation
     "huggingface_hub", # For automated curation
