@@ -6,7 +6,7 @@ import numpy as np
 
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc
 
-from ...core.motion import Motion
+from spikeinterface.core.motion import Motion
 from .decentralized import DecentralizedRegistration
 from .iterative_template import IterativeTemplateRegistration
 from .dredge import DredgeLfpRegistration, DredgeApRegistration
@@ -24,7 +24,7 @@ def estimate_motion(
     win_step_um=200.0,
     win_scale_um=300.0,
     win_margin_um=None,
-    method="decentralized",
+    method="dredge_ap",
     extra_outputs=False,
     progress_bar=False,
     verbose=False,
@@ -79,7 +79,6 @@ def estimate_motion(
         Display progress bar or not
     verbose : bool, default: False
         If True, output is verbose
-    **method_kwargs :
 
     Returns
     -------

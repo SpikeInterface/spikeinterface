@@ -84,13 +84,15 @@ def test_apply_merges_to_sorting():
     labels = np.array(["a", "b", "c", "a", "b"])
 
     # unit_ids str
-    sorting1 = NumpySorting.from_times_labels([times, times], [labels, labels], 10_000.0, unit_ids=["a", "b", "c"])
+    sorting1 = NumpySorting.from_samples_and_labels(
+        [times, times], [labels, labels], 10_000.0, unit_ids=["a", "b", "c"]
+    )
     spikes1 = sorting1.to_spike_vector()
 
     sorting2 = apply_merges_to_sorting(sorting1, [["a", "b"]], censor_ms=None)
     spikes2 = sorting2.to_spike_vector()
     assert sorting2.unit_ids.size == 2
-    assert sorting1.to_spike_vector().size == sorting1.to_spike_vector().size
+    assert sorting1.to_spike_vector().size == sorting2.to_spike_vector().size
     assert np.array_equal(["c", "merge0"], sorting2.unit_ids)
     assert np.array_equal(
         spikes1[spikes1["unit_index"] == 2]["sample_index"], spikes2[spikes2["unit_index"] == 0]["sample_index"]
@@ -104,12 +106,14 @@ def test_apply_merges_to_sorting():
     assert st.size == 3  # one spike is removed by censor period
 
     # unit_ids int
-    sorting1 = NumpySorting.from_times_labels([times, times], [labels, labels], 10_000.0, unit_ids=[10, 20, 30])
+    sorting1 = NumpySorting.from_samples_and_labels([times, times], [labels, labels], 10_000.0, unit_ids=[10, 20, 30])
     spikes1 = sorting1.to_spike_vector()
     sorting2 = apply_merges_to_sorting(sorting1, [[10, 20]], censor_ms=None)
     assert np.array_equal(sorting2.unit_ids, [30, 31])
 
-    sorting1 = NumpySorting.from_times_labels([times, times], [labels, labels], 10_000.0, unit_ids=["a", "b", "c"])
+    sorting1 = NumpySorting.from_samples_and_labels(
+        [times, times], [labels, labels], 10_000.0, unit_ids=["a", "b", "c"]
+    )
     sorting2 = apply_merges_to_sorting(sorting1, [["a", "b"]], censor_ms=None, new_id_strategy="take_first")
     assert np.array_equal(sorting2.unit_ids, ["a", "c"])
 

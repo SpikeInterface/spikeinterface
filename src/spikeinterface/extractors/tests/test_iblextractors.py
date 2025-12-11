@@ -1,3 +1,4 @@
+import sys
 from re import escape
 from unittest import TestCase
 
@@ -5,10 +6,13 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
+from spikeinterface.extractors.extractor_classes import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
 
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
+
+if sys.version_info < (3, 10):
+    pytest.skip("IBL support requires Python 3.10 or higher", allow_module_level=True)
 
 
 @pytest.mark.streaming_extractors
@@ -43,10 +47,10 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 pytest.skip(f"Skipping test due to KeyError: {e}")
             else:
                 raise
-        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        )  # return_in_uV=False is SI default
 
     def test_get_stream_names(self):
         stream_names = IblRecordingExtractor.get_stream_names(eid=self.eid, one=self.one)
@@ -122,10 +126,10 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         except:
             pytest.skip("Skipping test due to server being down.")
         cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True, one=cls.one)
-        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        )  # return_in_uV=False is SI default
 
     def test_dtype(self):
         expected_datatype = "int16"
@@ -197,9 +201,9 @@ class TestIblSortingExtractor(TestCase):
             )
         except:
             pytest.skip("Skipping test due to server being down.")
-        sorting = read_ibl_sorting(pid=PID, one=one)
+        sorting = read_ibl_sorting(pid=PID, one=one, revision="2023-12-05")
         assert len(sorting.unit_ids) == 733
-        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
+        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True, one=one, revision="2023-12-05")
         assert len(sorting_good.unit_ids) == 108
 
         # check properties
@@ -208,14 +212,14 @@ class TestIblSortingExtractor(TestCase):
         assert "brain_area" in sorting_good.get_property_keys()
 
         # load without properties
-        sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
+        sorting_no_properties = read_ibl_sorting(pid=PID, one=one, load_unit_properties=False, revision="2023-12-05")
         # check properties
         assert "firing_rate" not in sorting_no_properties.get_property_keys()
 
 
 if __name__ == "__main__":
-    TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblStreamingExtractorApBand()
+    TestDefaultIblRecordingExtractorApBand.setUpClass()
+    test1 = TestDefaultIblRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -230,7 +234,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()

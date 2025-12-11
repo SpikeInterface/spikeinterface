@@ -199,6 +199,14 @@ class UnitLocalizationBenchmark(Benchmark):
 
 
 class UnitLocalizationStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peaks localization methods.
+
+    The ground truth position of units must be known and method outputs
+    will be compared to them.
+
+    See also UnitLocalizationStudy.
+    """
 
     benchmark_class = UnitLocalizationBenchmark
 
@@ -403,7 +411,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     ax2.spines["top"].set_visible(False)
 #     ax2.spines["right"].set_visible(False)
 #     ax2.set_xlim(xmin, xmax)
-#     ax2.set_xlabel(r"x ($\mu$m)")
+#     ax2.set_xlabel(r"x ($\\mu$m)")
 #     ax2.set_ylabel("# spikes")
 
 
@@ -442,7 +450,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     ax.legend()
 #     ax.set_ylabel("error (um)")
 #     ax.set_xticks(np.arange(3), ["x", "y", "z"])
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     x_means = []
 #     x_stds = []
@@ -454,7 +462,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     # ax.set_ylim(ymin, ymax)
 
 #     ax = axes[0, 1]
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     y_means = []
 #     y_stds = []

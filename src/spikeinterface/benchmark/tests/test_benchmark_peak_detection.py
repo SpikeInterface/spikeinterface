@@ -34,12 +34,12 @@ def test_benchmark_peak_detection(create_cache_folder):
         spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         peaks[dataset] = spikes
 
-    for method in ["locally_exclusive", "by_channel"]:
+    for method in ["locally_exclusive", "matched_filtering"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
             "init_kwargs": {"gt_peaks": peaks["toy"]},
-            "params": {"ms_before": 2, "method": method, "method_kwargs": {}},
+            "params": {"method": method, "method_kwargs": {}},
         }
 
     if study_folder.exists():
@@ -48,7 +48,6 @@ def test_benchmark_peak_detection(create_cache_folder):
     print(study)
 
     # this study needs analyzer
-    study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics(**job_kwargs)
 
     # run and result

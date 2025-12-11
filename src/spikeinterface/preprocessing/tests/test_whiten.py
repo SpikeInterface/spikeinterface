@@ -1,17 +1,19 @@
+import importlib.util
+
 import pytest
 import numpy as np
 
 from spikeinterface.core import generate_recording
-from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.preprocessing import whiten, scale, compute_whitening_matrix
 from spikeinterface.preprocessing.whiten import compute_sklearn_covariance_matrix
 
-try:
+sklearn_spec = importlib.util.find_spec("sklearn")
+if sklearn_spec is not None:
     from sklearn import covariance as sklearn_covariance
 
     HAS_SKLEARN = True
-except ImportError:
+else:
     HAS_SKLEARN = False
 
 
@@ -68,7 +70,7 @@ class TestWhiten:
 
         cov_mat = np.array([[1, 0.5, 0], [0.5, 1, -0.25], [0, -0.25, 1]])
 
-        rng = np.random.RandomState(seed)
+        rng = np.random.default_rng(seed)
         data = rng.multivariate_normal(means, cov_mat, num_samples)
 
         # Set the dtype, if `int16`, first scale to +/- 1 then cast to int16 range.

@@ -317,6 +317,7 @@ class WaveformsNode(PipelineNode):
         self.ms_after = ms_after
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
+        self.neighbours_mask = None
 
 
 class ExtractDenseWaveforms(WaveformsNode):
@@ -356,8 +357,6 @@ class ExtractDenseWaveforms(WaveformsNode):
             ms_after=ms_after,
             return_output=return_output,
         )
-        # this is a bad hack to differentiate in the child if the parents is dense or not.
-        self.neighbours_mask = None
 
     def get_trace_margin(self):
         return max(self.nbefore, self.nafter)
@@ -376,6 +375,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         parents: Optional[list[PipelineNode]] = None,
         return_output: bool = False,
         radius_um: float = 100.0,
+        sparsity_mask: np.ndarray = None,
     ):
         """
         Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
@@ -400,6 +400,11 @@ class ExtractSparseWaveforms(WaveformsNode):
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
+        radius_um : float, default: 100.0
+            The radius to determine the neighborhood of channels to extract waveforms from.
+        sparsity_mask : np.ndarray, default: None
+            Optional mask to specify the sparsity of the waveforms. If provided, it should be a boolean array of shape
+            (num_channels, num_channels) where True indicates that the channel is active in the neighborhood.
         """
         WaveformsNode.__init__(
             self,
@@ -410,10 +415,15 @@ class ExtractSparseWaveforms(WaveformsNode):
             return_output=return_output,
         )
 
-        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance <= radius_um
+
+        if sparsity_mask is not None:
+            self.neighbours_mask = sparsity_mask
+            self.radius_um = None
+        else:
+            self.radius_um = radius_um
+            self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
     def get_trace_margin(self):
@@ -515,7 +525,6 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
@@ -560,14 +569,14 @@ def run_node_pipeline(
         The classical job_kwargs
     job_name : str
         The name of the pipeline used for the progress_bar
-    gather_mode : "memory" | "npz"
-
+    gather_mode : "memory" | "npy"
+        How to gather the output of the nodes.
     gather_kwargs : dict
-        OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
+        Options to control the "gather engine". See GatherToMemory or GatherToNpy.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
     folder : str | Path | None
-        Used for gather_mode="npz"
+        Used for gather_mode="npy"
     names : list of str
         Names of outputs.
     verbose : bool, default False
@@ -774,7 +783,7 @@ class GatherToMemory:
 
 class GatherToNpy:
     """
-    Gather output of nodes into npy file and then open then as memmap.
+    Gather output of nodes into npy file and then open them as memmap.
 
 
     The trick is:
@@ -881,6 +890,6 @@ class GatherToNpy:
             return np.load(filename, mmap_mode="r")
 
 
-class GatherToHdf5:
+class GatherToZarr:
     pass
     # Fot me (sam) this is not necessary unless someone realy really want to use

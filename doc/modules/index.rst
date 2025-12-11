@@ -9,11 +9,12 @@ Modules documentation
     preprocessing
     sorters
     postprocessing
-    qualitymetrics
+    metrics
     comparison
     exporters
     widgets
     curation
-    sortingcomponents
     motion_correction
     generation
+    sortingcomponents
+    benchmark

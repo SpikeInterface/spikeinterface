@@ -174,7 +174,9 @@ class ModelBasedClassification:
                     if model_metric_params is None or metric not in model_metric_params:
                         inconsistent_metrics.append(metric)
                     else:
-                        if metric_params[metric] != model_metric_params[metric]:
+                        if metric not in metric_params:
+                            inconsistent_metrics.append(metric)
+                        elif metric_params[metric] != model_metric_params[metric]:
                             warning_message = f"{extension_name} params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
                             if enforce_metric_params is True:
                                 raise Exception(warning_message)
@@ -188,13 +190,8 @@ class ModelBasedClassification:
                     else:
                         warnings.warn(warning_message)
 
-    def _export_to_phy(self, classified_units):
+    def _export_to_phy(self, classified_df):
         """Export the classified units to Phy as cluster_prediction.tsv file"""
-
-        import pandas as pd
-
-        # Create a new DataFrame with unit_id, prediction, and probability columns from dict {unit_id: (prediction, probability)}
-        classified_df = pd.DataFrame.from_dict(classified_units, orient="index", columns=["prediction", "probability"])
 
         # Export to Phy format
         try:

@@ -21,8 +21,8 @@ import probeinterface
 
 import spikeinterface
 
-from .baserecording import BaseRecording
-from .basesorting import BaseSorting
+from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
+from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
@@ -31,7 +31,13 @@ from .core_tools import (
     is_path_remote,
     clean_zarr_folder_name,
 )
-from .sorting_tools import generate_unit_ids_for_merge_group, _get_ids_after_merging
+from .sorting_tools import (
+    generate_unit_ids_for_merge_group,
+    generate_unit_ids_for_split,
+    check_unit_splits_consistency,
+    _get_ids_after_merging,
+    _get_ids_after_splitting,
+)
 from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
@@ -48,7 +54,9 @@ def create_sorting_analyzer(
     folder=None,
     sparse=True,
     sparsity=None,
-    return_scaled=True,
+    set_sparsity_by_dict_key=False,
+    return_scaled=None,
+    return_in_uV=True,
     overwrite=False,
     backend_options=None,
     **sparsity_kwargs,
@@ -64,10 +72,10 @@ def create_sorting_analyzer(
 
     Parameters
     ----------
-    sorting : Sorting
-        The sorting object
-    recording : Recording
-        The recording object
+    sorting : Sorting | dict
+        The sorting object, or a dict of them
+    recording : Recording | dict
+        The recording object, or a dict of them
     folder : str or Path or None, default: None
         The folder where analyzer is cached
     format : "memory | "binary_folder" | "zarr", default: "memory"
@@ -81,16 +89,25 @@ def create_sorting_analyzer(
         You can control `estimate_sparsity()` : all extra arguments are propagated to it (included job_kwargs)
     sparsity : ChannelSparsity or None, default: None
         The sparsity used to compute exensions. If this is given, `sparse` is ignored.
-    return_scaled : bool, default: True
-        All extensions that play with traces will use this global return_scaled : "waveforms", "noise_levels", "templates".
-        This prevent return_scaled being differents from different extensions and having wrong snr for instance.
+    set_sparsity_by_dict_key : bool, default: False
+        If True and passing recording and sorting dicts, will set the sparsity based on the dict keys,
+        and other `sparsity_kwargs` are overwritten. If False, use other sparsity settings.
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+        All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
+        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
+    return_in_uV : bool, default: None
+        If True, all extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
+        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
+        If None, use return_scaled value.
     overwrite: bool, default: False
         If True, overwrite the folder if it already exists.
     backend_options : dict | None, default: None
         Keyword arguments for the backend specified by format. It can contain the:
-        - storage_options: dict | None (fsspec storage options)
-        - saving_options: dict | None (additional saving options for creating and saving datasets,
-                                       e.g. compression/filters for zarr)
+
+            * storage_options: dict | None (fsspec storage options)
+            * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
+
     sparsity_kwargs : keyword arguments
 
     Returns
@@ -126,6 +143,34 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
+
+    if isinstance(sorting, dict) and isinstance(recording, dict):
+
+        if sorting.keys() != recording.keys():
+            raise ValueError(
+                f"Keys of `sorting`, {sorting.keys()}, and `recording`, {recording.keys()}, dicts do not match."
+            )
+
+        aggregated_recording = aggregate_channels(recording)
+        aggregated_sorting = aggregate_units(sorting)
+
+        if set_sparsity_by_dict_key:
+            sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
+
+        return create_sorting_analyzer(
+            sorting=aggregated_sorting,
+            recording=aggregated_recording,
+            format=format,
+            folder=folder,
+            sparse=sparse,
+            sparsity=sparsity,
+            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
+            overwrite=overwrite,
+            backend_options=backend_options,
+            **sparsity_kwargs,
+        )
+
     if format != "memory":
         if format == "zarr":
             if not is_path_remote(folder):
@@ -152,9 +197,18 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    if return_scaled and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
-        print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_scaled=False")
-        return_scaled = False
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
+
+    if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
+        print("create_sorting_analyzer: recording does not have scaling to uV, forcing return_in_uV=False")
+        return_in_uV = False
 
     sorting_analyzer = SortingAnalyzer.create(
         sorting,
@@ -162,7 +216,7 @@ def create_sorting_analyzer(
         format=format,
         folder=folder,
         sparsity=sparsity,
-        return_scaled=return_scaled,
+        return_in_uV=return_in_uV,
         backend_options=backend_options,
     )
 
@@ -187,8 +241,9 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
     backend_options : dict | None, default: None
         The backend options for the backend.
         The dictionary can contain the following keys:
-        - storage_options: dict | None (fsspec storage options)
-        - saving_options: dict | None (additional saving options for creating and saving datasets)
+
+            * storage_options: dict | None (fsspec storage options)
+            * saving_options: dict | None (additional saving options for creating and saving datasets)
 
     Returns
     -------
@@ -228,7 +283,7 @@ class SortingAnalyzer:
         rec_attributes: dict | None = None,
         format: str | None = None,
         sparsity: ChannelSparsity | None = None,
-        return_scaled: bool = True,
+        return_in_uV: bool = True,
         backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
@@ -238,7 +293,10 @@ class SortingAnalyzer:
         self.rec_attributes = rec_attributes
         self.format = format
         self.sparsity = sparsity
-        self.return_scaled = return_scaled
+        self.return_in_uV = return_in_uV
+
+        # For backward compatibility
+        self.return_scaled = return_in_uV
         self.folder: str | Path | None = None
 
         # this is used to store temporary recording
@@ -290,7 +348,8 @@ class SortingAnalyzer:
         ] = "memory",
         folder=None,
         sparsity=None,
-        return_scaled=True,
+        return_scaled=None,
+        return_in_uV=True,
         backend_options=None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
@@ -314,15 +373,24 @@ class SortingAnalyzer:
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
 
+        if has_exceeding_spikes(sorting=sorting, recording=recording):
+            warnings.warn(
+                "Your sorting has spikes with samples times greater than your recording length. These spikes have been removed."
+            )
+            # import here to avoid circular import
+            from spikeinterface.curation.remove_excess_spikes import RemoveExcessSpikesSorting
+
+            sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
+
         if format == "memory":
-            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_scaled, rec_attributes=None)
+            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
         elif format == "binary_folder":
             sorting_analyzer = cls.create_binary_folder(
                 folder,
                 sorting,
                 recording,
                 sparsity,
-                return_scaled,
+                return_in_uV,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -335,7 +403,7 @@ class SortingAnalyzer:
                 sorting,
                 recording,
                 sparsity,
-                return_scaled,
+                return_in_uV,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -374,7 +442,7 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, return_scaled, rec_attributes):
+    def create_memory(cls, sorting, recording, sparsity, return_in_uV, rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -394,12 +462,12 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="memory",
             sparsity=sparsity,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes, backend_options):
+    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
 
         folder = Path(folder)
@@ -462,7 +530,7 @@ class SortingAnalyzer:
 
         settings_file = folder / f"settings.json"
         settings = dict(
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
@@ -529,12 +597,12 @@ class SortingAnalyzer:
             with open(settings_file, "r") as f:
                 settings = json.load(f)
         else:
-            warnings.warn("settings.json not found for this folder writing one with return_scaled=True")
-            settings = dict(return_scaled=True)
+            warnings.warn("settings.json not found for this folder writing one with return_in_uV=True")
+            settings = dict(return_in_uV=True)
             with open(settings_file, "w") as f:
                 json.dump(check_json(settings), f, indent=4)
 
-        return_scaled = settings["return_scaled"]
+        return_in_uV = settings.get("return_in_uV", settings.get("return_scaled", True))
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -542,7 +610,7 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -557,7 +625,7 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, return_scaled, rec_attributes, backend_options):
+    def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
         import zarr
         import numcodecs
@@ -581,7 +649,7 @@ class SortingAnalyzer:
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
 
-        settings = dict(return_scaled=return_scaled)
+        settings = dict(return_in_uV=return_in_uV)
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
@@ -701,7 +769,9 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
-        return_scaled = zarr_root.attrs["settings"]["return_scaled"]
+        return_in_uV = zarr_root.attrs["settings"].get(
+            "return_in_uV", zarr_root.attrs["settings"].get("return_scaled", True)
+        )
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -709,7 +779,7 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -865,7 +935,7 @@ class SortingAnalyzer:
         else:
             return mergeable
 
-    def _save_or_select_or_merge(
+    def _save_or_select_or_merge_or_split(
         self,
         format="binary_folder",
         folder=None,
@@ -874,9 +944,12 @@ class SortingAnalyzer:
         censor_ms=None,
         merging_mode="soft",
         sparsity_overlap=0.75,
-        verbose=False,
-        new_unit_ids=None,
+        merge_new_unit_ids=None,
+        split_units=None,
+        splitting_mode="soft",
+        split_new_unit_ids=None,
         backend_options=None,
+        verbose=False,
         **job_kwargs,
     ) -> "SortingAnalyzer":
         """
@@ -898,19 +971,26 @@ class SortingAnalyzer:
             When merging units, any spikes violating this refractory period will be discarded.
         merging_mode : "soft" | "hard", default: "soft"
             How merges are performed. In the "soft" mode, merges will be approximated, with no smart merging
-            of the extension data.
+            of the extension data. In the "hard" mode, the extensions for merged units will be recomputed.
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
             achieved, soft merging will not be performed.
-        new_unit_ids : list or None, default: None
+        merge_new_unit_ids : list or None, default: None
             The new unit ids for merged units. Required if `merge_unit_groups` is not None.
+        split_units : dict or None, default: None
+            A dictionary with the keys being the unit ids to split and the values being the split indices.
+        splitting_mode : "soft" | "hard", default: "soft"
+            How splits are performed. In the "soft" mode, splits will be approximated, with no smart splitting.
+            If `splitting_mode` is "hard", the extensons for split units willbe recomputed.
+        split_new_unit_ids : list or None, default: None
+            The new unit ids for split units. Required if `split_units` is not None.
         verbose : bool, default: False
             If True, output is verbose.
         backend_options : dict | None, default: None
             Keyword arguments for the backend specified by format. It can contain the:
-            - storage_options: dict | None (fsspec storage options)
-            - saving_options: dict | None (additional saving options for creating and saving datasets,
-                                           e.g. compression/filters for zarr)
+
+                * storage_options: dict | None (fsspec storage options)
+                * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
         job_kwargs : keyword arguments
             Keyword arguments for the job parallelization.
 
@@ -926,36 +1006,57 @@ class SortingAnalyzer:
         else:
             recording = None
 
-        if self.sparsity is not None and unit_ids is None and merge_unit_groups is None:
-            sparsity = self.sparsity
-        elif self.sparsity is not None and unit_ids is not None and merge_unit_groups is None:
-            sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
-            sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
-        elif self.sparsity is not None and merge_unit_groups is not None:
-            all_unit_ids = unit_ids
-            sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-            mergeable, masks = self.are_units_mergeable(
-                merge_unit_groups,
-                sparsity_overlap=sparsity_overlap,
-                return_masks=True,
-            )
+        has_removed = unit_ids is not None
+        has_merges = merge_unit_groups is not None
+        has_splits = split_units is not None
+        assert not has_merges if has_splits else True, "Cannot merge and split at the same time"
 
-            for unit_index, unit_id in enumerate(all_unit_ids):
-                if unit_id in new_unit_ids:
-                    merge_unit_group = tuple(merge_unit_groups[new_unit_ids.index(unit_id)])
-                    if not mergeable[merge_unit_group]:
-                        raise Exception(
-                            f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                            f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                            "a hard merge."
-                        )
-                    else:
+        if self.sparsity is not None:
+            if not has_removed and not has_merges and not has_splits:
+                # no changes in units
+                sparsity = self.sparsity
+            elif has_removed and not has_merges and not has_splits:
+                # remove units
+                sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
+                sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
+            elif has_merges:
+                # merge units
+                all_unit_ids = unit_ids
+                sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+                _, masks = self.are_units_mergeable(
+                    merge_unit_groups,
+                    sparsity_overlap=sparsity_overlap,
+                    merging_mode=merging_mode,
+                    return_masks=True,
+                )
+
+                for unit_index, unit_id in enumerate(all_unit_ids):
+                    if unit_id in merge_new_unit_ids:
+                        merge_unit_group = tuple(merge_unit_groups[merge_new_unit_ids.index(unit_id)])
                         sparsity_mask[unit_index] = masks[merge_unit_group]
-                else:
-                    # This means that the unit is already in the previous sorting
-                    index = self.sorting.id_to_index(unit_id)
-                    sparsity_mask[unit_index] = self.sparsity.mask[index]
-            sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
+                    else:
+                        # This means that the unit is already in the previous sorting
+                        index = self.sorting.id_to_index(unit_id)
+                        sparsity_mask[unit_index] = self.sparsity.mask[index]
+                sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
+            elif has_splits:
+                # split units
+                all_unit_ids = unit_ids
+                original_unit_ids = self.unit_ids
+                sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
+                for unit_index, unit_id in enumerate(all_unit_ids):
+                    if unit_id not in original_unit_ids:
+                        # then it is a new unit
+                        # we assign the original sparsity
+                        for split_unit, new_unit_ids in zip(split_units, split_new_unit_ids):
+                            if unit_id in new_unit_ids:
+                                original_unit_index = self.sorting.id_to_index(split_unit)
+                                sparsity_mask[unit_index] = self.sparsity.mask[original_unit_index]
+                                break
+                    else:
+                        original_unit_index = self.sorting.id_to_index(unit_id)
+                        sparsity_mask[unit_index] = self.sparsity.mask[original_unit_index]
+                sparsity = ChannelSparsity(sparsity_mask, list(all_unit_ids), self.channel_ids)
         else:
             sparsity = None
 
@@ -964,33 +1065,45 @@ class SortingAnalyzer:
         if sorting_provenance is None:
             # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
+        # add in-memory properties added to the analyzer
+        for key in self.sorting.get_property_keys():
+            if key not in sorting_provenance.get_property_keys():
+                sorting_provenance.set_property(key, self.sorting.get_property(key))
 
-        if merge_unit_groups is None:
+        if merge_unit_groups is None and split_units is None:
             # when only some unit_ids then the sorting must be sliced
             # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
-        else:
+        elif merge_unit_groups is not None:
+            assert split_units is None, "split_units must be None when merge_unit_groups is None"
             from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 
             sorting_provenance, keep_mask, _ = apply_merges_to_sorting(
                 sorting=sorting_provenance,
                 merge_unit_groups=merge_unit_groups,
-                new_unit_ids=new_unit_ids,
+                new_unit_ids=merge_new_unit_ids,
                 censor_ms=censor_ms,
                 return_extra=True,
             )
             if censor_ms is None:
                 # in this case having keep_mask None is faster instead of having a vector of ones
                 keep_mask = None
-            # TODO: sam/pierre would create a curation field / curation.json with the applied merges.
-            # What do you think?
+        elif split_units is not None:
+            assert merge_unit_groups is None, "merge_unit_groups must be None when split_units is not None"
+            from spikeinterface.core.sorting_tools import apply_splits_to_sorting
+
+            sorting_provenance = apply_splits_to_sorting(
+                sorting=sorting_provenance,
+                unit_splits=split_units,
+                new_unit_ids=split_new_unit_ids,
+            )
 
         backend_options = {} if backend_options is None else backend_options
 
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
-                sorting_provenance, recording, sparsity, self.return_scaled, self.rec_attributes
+                sorting_provenance, recording, sparsity, self.return_in_uV, self.rec_attributes
             )
 
         elif format == "binary_folder":
@@ -1002,7 +1115,7 @@ class SortingAnalyzer:
                 sorting_provenance,
                 recording,
                 sparsity,
-                self.return_scaled,
+                self.return_in_uV,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1015,7 +1128,7 @@ class SortingAnalyzer:
                 sorting_provenance,
                 recording,
                 sparsity,
-                self.return_scaled,
+                self.return_in_uV,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1032,26 +1145,34 @@ class SortingAnalyzer:
         recompute_dict = {}
 
         for extension_name, extension in sorted_extensions.items():
-            if merge_unit_groups is None:
+            if merge_unit_groups is None and split_units is None:
                 # copy full or select
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
                     new_sorting_analyzer, unit_ids=unit_ids
                 )
-            else:
+            elif merge_unit_groups is not None:
                 # merge
                 if merging_mode == "soft":
                     new_sorting_analyzer.extensions[extension_name] = extension.merge(
                         new_sorting_analyzer,
                         merge_unit_groups=merge_unit_groups,
-                        new_unit_ids=new_unit_ids,
+                        new_unit_ids=merge_new_unit_ids,
                         keep_mask=keep_mask,
                         verbose=verbose,
                         **job_kwargs,
                     )
                 elif merging_mode == "hard":
                     recompute_dict[extension_name] = extension.params
+            else:
+                # split
+                if splitting_mode == "soft":
+                    new_sorting_analyzer.extensions[extension_name] = extension.split(
+                        new_sorting_analyzer, split_units=split_units, new_unit_ids=split_new_unit_ids, verbose=verbose
+                    )
+                elif splitting_mode == "hard":
+                    recompute_dict[extension_name] = extension.params
 
-        if merge_unit_groups is not None and merging_mode == "hard" and len(recompute_dict) > 0:
+        if len(recompute_dict) > 0:
             new_sorting_analyzer.compute_several_extensions(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
@@ -1073,13 +1194,13 @@ class SortingAnalyzer:
             The new backend format to use
         backend_options : dict | None, default: None
             Keyword arguments for the backend specified by format. It can contain the:
-            - storage_options: dict | None (fsspec storage options)
-            - saving_options: dict | None (additional saving options for creating and saving datasets,
-                                           e.g. compression/filters for zarr)
+
+                * storage_options: dict | None (fsspec storage options)
+                * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
         """
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
-        return self._save_or_select_or_merge(format=format, folder=folder, backend_options=backend_options)
+        return self._save_or_select_or_merge_or_split(format=format, folder=folder, backend_options=backend_options)
 
     def select_units(self, unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -1106,7 +1227,7 @@ class SortingAnalyzer:
         # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
-        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
+        return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
 
     def remove_units(self, remove_unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -1134,24 +1255,25 @@ class SortingAnalyzer:
         unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
-        return self._save_or_select_or_merge(format=format, folder=folder, unit_ids=unit_ids)
+        return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
 
     def merge_units(
         self,
-        merge_unit_groups,
-        new_unit_ids=None,
-        censor_ms=None,
-        merging_mode="soft",
-        sparsity_overlap=0.75,
-        new_id_strategy="append",
-        return_new_unit_ids=False,
-        format="memory",
-        folder=None,
-        verbose=False,
+        merge_unit_groups: list[list[str | int]] | list[tuple[str | int]],
+        new_unit_ids: list[int | str] | None = None,
+        censor_ms: float | None = None,
+        merging_mode: str = "soft",
+        sparsity_overlap: float = 0.75,
+        raise_error_if_overlap_fails: bool = True,
+        new_id_strategy: str = "append",
+        return_new_unit_ids: bool = False,
+        format: str = "memory",
+        folder: Path | str | None = None,
+        verbose: bool = False,
         **job_kwargs,
-    ) -> "SortingAnalyzer":
+    ) -> "SortingAnalyzer | tuple[SortingAnalyzer, list[int | str]]":
         """
-        This method is equivalent to `save_as()`but with a list of merges that have to be achieved.
+        This method is equivalent to `save_as()` but with a list of merges that have to be achieved.
         Merges units by creating a new SortingAnalyzer object with the appropriate merges
 
         Extensions are also updated to display the merged `unit_ids`.
@@ -1172,9 +1294,13 @@ class SortingAnalyzer:
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible and an error will be raised
+            achieved for a pair of units, soft merging will not be applied to them.
+        raise_error_if_overlap_fails : bool, default: True
+            If True and `sparsity_overlap` fails for any unit merges, this will raise an error. If False, units which fail the
+            `sparsity_overlap` threshold will be skipped in the merge.
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
                 * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
                 * "take_first" : new_unit_ids will be the first unit_id of every list of merges
         return_new_unit_ids : bool, default False
@@ -1198,37 +1324,127 @@ class SortingAnalyzer:
         assert merging_mode in ["soft", "hard"], "Merging mode should be either soft or hard"
 
         if len(merge_unit_groups) == 0:
-            # TODO I think we should raise an error or at least make a copy and not return itself
-            if return_new_unit_ids:
-                return self, []
-            else:
-                return self
+            raise ValueError("Merging requires at least one group of units to merge")
 
         for units in merge_unit_groups:
-            # TODO more checks like one units is only in one group
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
-        # TODO : no this function did not exists before
-        if not isinstance(merge_unit_groups[0], (list, tuple)):
-            # keep backward compatibility : the previous behavior was only one merge
-            merge_unit_groups = [merge_unit_groups]
+        # remove units which do not pass the sparsity threshold
+        if self.sparsity is not None and merging_mode == "soft":
+
+            mergeable = self.are_units_mergeable(
+                merge_unit_groups,
+                sparsity_overlap=sparsity_overlap,
+                merging_mode=merging_mode,
+                return_masks=False,
+            )
+
+            mergeable_unit_groups = []
+            unmergeable_unit_groups = []
+            for merge_unit_group, mergeable in zip(merge_unit_groups, mergeable.values()):
+                if mergeable:
+                    mergeable_unit_groups.append(merge_unit_group)
+                else:
+                    unmergeable_unit_groups.append(merge_unit_group)
+
+            if len(unmergeable_unit_groups) > 0:
+                if raise_error_if_overlap_fails:
+                    error_message = f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. Either lower your `sparsity_overlap` or use the flag `raise_error_if_overlap_fails = False` to skip these units in your merge."
+                    raise Exception(error_message)
+                else:
+                    warning_message = f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. They will not be merged."
+                    warnings.warn(warning_message)
+        else:
+            mergeable_unit_groups = merge_unit_groups
 
         new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+            self.unit_ids, mergeable_unit_groups, new_unit_ids, new_id_strategy
         )
-        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, mergeable_unit_groups, new_unit_ids=new_unit_ids)
 
-        new_analyzer = self._save_or_select_or_merge(
+        new_analyzer = self._save_or_select_or_merge_or_split(
             format=format,
             folder=folder,
-            merge_unit_groups=merge_unit_groups,
+            merge_unit_groups=mergeable_unit_groups,
             unit_ids=all_unit_ids,
             censor_ms=censor_ms,
             merging_mode=merging_mode,
             sparsity_overlap=sparsity_overlap,
             verbose=verbose,
-            new_unit_ids=new_unit_ids,
+            merge_new_unit_ids=new_unit_ids,
+            **job_kwargs,
+        )
+        if return_new_unit_ids:
+            return new_analyzer, new_unit_ids
+        else:
+            return new_analyzer
+
+    def split_units(
+        self,
+        split_units: dict[list[str | int], list[int] | list[list[int]]],
+        new_unit_ids: list[list[int | str]] | None = None,
+        new_id_strategy: str = "append",
+        return_new_unit_ids: bool = False,
+        format: str = "memory",
+        folder: Path | str | None = None,
+        verbose: bool = False,
+        **job_kwargs,
+    ) -> "SortingAnalyzer | tuple[SortingAnalyzer, list[int | str]]":
+        """
+        This method is equivalent to `save_as()` but with a list of splits that have to be achieved.
+        Split units by creating a new SortingAnalyzer object with the appropriate splits
+
+        Extensions are also updated to display the split `unit_ids`.
+
+        Parameters
+        ----------
+        split_units : dict
+            A dictionary with the keys being the unit ids to split and the values being the split indices.
+            The split indices for each unit MUST be a list of lists, where each sublist (at least two) contains the
+            indices of the spikes to be assigned to the each split. The sum of the lengths of the sublists must equal
+            the number of spikes in the unit.
+        new_unit_ids : None | list, default: None
+            A new unit_ids for split units. If given, it needs to have the same length as `merge_unit_groups`. If None,
+            merged units will have the first unit_id of every lists of merges
+        new_id_strategy : "append" | "split", default: "append"
+            The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
+
+                * "append" : new_units_ids will be added at the end of max(sorting.unit_ids)
+                * "split" : new_unit_ids will be the original unit_id to split with -{subsplit}
+        return_new_unit_ids : bool, default False
+            Alse return new_unit_ids which are the ids of the new units.
+        folder : Path | None, default: None
+            The new folder where the analyzer with merged units is copied for `format` "binary_folder" or "zarr"
+        format : "memory" | "binary_folder" | "zarr", default: "memory"
+            The format of SortingAnalyzer
+        verbose : bool, default: False
+            Whether to display calculations (such as sparsity estimation)
+
+        Returns
+        -------
+        analyzer :  SortingAnalyzer
+            The newly create `SortingAnalyzer` with the selected units
+        """
+
+        if format == "zarr":
+            folder = clean_zarr_folder_name(folder)
+
+        if len(split_units) == 0:
+            raise ValueError("Splitting requires at least one unit to split")
+
+        check_unit_splits_consistency(split_units, self.sorting)
+
+        new_unit_ids = generate_unit_ids_for_split(self.unit_ids, split_units, new_unit_ids, new_id_strategy)
+        all_unit_ids = _get_ids_after_splitting(self.unit_ids, split_units, new_unit_ids=new_unit_ids)
+
+        new_analyzer = self._save_or_select_or_merge_or_split(
+            format=format,
+            folder=folder,
+            split_units=split_units,
+            unit_ids=all_unit_ids,
+            verbose=verbose,
+            split_new_unit_ids=new_unit_ids,
             **job_kwargs,
         )
         if return_new_unit_ids:
@@ -1240,7 +1456,7 @@ class SortingAnalyzer:
         """
         Create a a copy of SortingAnalyzer with format "memory".
         """
-        return self._save_or_select_or_merge(format="memory", folder=None)
+        return self._save_or_select_or_merge_or_split(format="memory", folder=None)
 
     def is_read_only(self) -> bool:
         if self.format == "memory":
@@ -1443,11 +1659,17 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"please remove the arguments {set(params_)} from the compute function."
+            )
             self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"please remove the arguments {set(params_)} from the compute function."
+            )
             extensions = {k: {} for k in input}
             if extension_params is not None:
                 for ext_name, ext_params in extension_params.items():
@@ -1700,7 +1922,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         Returns
         -------
-        ext_instanace:
+        ext_instance:
             The loaded instance of the extension
 
         """
@@ -1777,6 +1999,30 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             The default parameters for the extension
         """
         return get_default_analyzer_extension_params(extension_name)
+
+    def get_metrics_extension_data(self):
+        """
+        Get all metrics data into a single dataframe.
+
+        Returns
+        -------
+        metrics_df : pandas.DataFrame
+            A concatenated dataframe with all available metrics.
+        """
+        import pandas as pd
+        from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
+
+        all_metrics_data = []
+        for extension_name, ext in self.extensions.items():
+            if isinstance(ext, BaseMetricExtension):
+                metric_data = ext.get_data()
+                all_metrics_data.append(metric_data)
+
+        if len(all_metrics_data) > 0:
+            metrics_df = pd.concat(all_metrics_data, axis=1)
+        else:
+            metrics_df = pd.DataFrame(index=self.unit_ids)
+        return metrics_df
 
 
 def _sort_extensions_by_dependency(extensions):
@@ -1981,6 +2227,7 @@ class AnalyzerExtension:
     It also enables any custom computation on top of the SortingAnalyzer to be implemented by the user.
 
     An extension needs to inherit from this class and implement some attributes and abstract methods:
+
       * extension_name
       * depend_on
       * need_recording
@@ -2041,6 +2288,10 @@ class AnalyzerExtension:
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=False, **job_kwargs
     ):
+        # must be implemented in subclass
+        raise NotImplementedError
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -2194,6 +2445,7 @@ class AnalyzerExtension:
                     ext_data_file.name == "params.json"
                     or ext_data_file.name == "info.json"
                     or ext_data_file.name == "run_info.json"
+                    or str(ext_data_file.name).startswith("._")  # ignore AppleDouble format files
                 ):
                     continue
                 ext_data_name = ext_data_file.stem
@@ -2222,8 +2474,7 @@ class AnalyzerExtension:
                         ext_data = pickle.load(f)
                 else:
                     continue
-                self.data[ext_data_name] = ext_data
-
+                self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
@@ -2244,7 +2495,7 @@ class AnalyzerExtension:
                 else:
                     # this load in memmory
                     ext_data = np.array(ext_data_)
-                self.data[ext_data_name] = ext_data
+                self.set_data(ext_data_name, ext_data)
 
         if len(self.data) == 0:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
@@ -2274,6 +2525,23 @@ class AnalyzerExtension:
         new_extension.params = self.params.copy()
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
+        )
+        new_extension.run_info = copy(self.run_info)
+        new_extension.save()
+        return new_extension
+
+    def split(
+        self,
+        new_sorting_analyzer,
+        split_units,
+        new_unit_ids,
+        verbose=False,
+        **job_kwargs,
+    ):
+        new_extension = self.__class__(new_sorting_analyzer)
+        new_extension.params = self.params.copy()
+        new_extension.data = self._split_extension_data(
+            split_units, new_unit_ids, new_sorting_analyzer, verbose=verbose, **job_kwargs
         )
         new_extension.run_info = copy(self.run_info)
         new_extension.save()
@@ -2525,6 +2793,9 @@ class AnalyzerExtension:
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
+    def set_data(self, ext_data_name, ext_data):
+        self.data[ext_data_name] = ext_data
+
 
 # this is a hardcoded list to to improve error message and auto_import mechanism
 # this is important because extension are registered when the submodule is imported
@@ -2542,9 +2813,10 @@ _builtin_extensions = {
     "principal_components": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",
     "spike_locations": "spikeinterface.postprocessing",
-    "template_metrics": "spikeinterface.postprocessing",
     "template_similarity": "spikeinterface.postprocessing",
     "unit_locations": "spikeinterface.postprocessing",
-    # from quality metrics
-    "quality_metrics": "spikeinterface.qualitymetrics",
+    # from metrics
+    "quality_metrics": "spikeinterface.metrics",
+    "template_metrics": "spikeinterface.metrics",
+    "spiketrain_metrics": "spikeinterface.metrics",
 }

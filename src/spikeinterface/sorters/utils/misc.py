@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
+import importlib.util
 import subprocess  # TODO: decide best format for this
-from subprocess import check_output, CalledProcessError
-from typing import List, Union
-
-import numpy as np
+from subprocess import CalledProcessError, check_output
 
 
 class SpikeSortingError(RuntimeError):
@@ -16,7 +13,7 @@ def get_bash_path():
     """Return path to existing bash install."""
     try:
         return check_output(["which bash"], shell=True).decode().strip("\n")
-    except CalledProcessError as e:
+    except CalledProcessError:
         raise Exception("Bash is not installed or accessible on your system.")
 
 
@@ -35,14 +32,14 @@ def get_matlab_shell_name():
         # CalledProcessError if not defined
         matlab_shell_name = check_output(["which $MATLAB_SHELL"], shell=True).decode().strip("\n").split("/")[-1]
         return matlab_shell_name
-    except CalledProcessError as e:
+    except CalledProcessError:
         pass
     try:
         # Either of "", "bash", "zsh", "fish",...
         # CalledProcessError if not defined
         df_shell_name = check_output(["which $SHELL"], shell=True).decode().strip("\n").split("/")[-1]
         return df_shell_name
-    except CalledProcessError as e:
+    except CalledProcessError:
         pass
     return "sh"
 
@@ -66,13 +63,13 @@ def has_nvidia():
     """
     Checks if the machine has nvidia capability.
     """
-
-    try:
-        from cuda import cuda
-    except ModuleNotFoundError as err:
+    cuda_spec = importlib.util.find_spec("cuda")
+    if cuda_spec is not None:
+        import cuda.bindings.driver as cuda
+    else:
         raise Exception(
             "This sorter requires cuda, but the package 'cuda-python' is not installed. You can install it with:\npip install cuda-python"
-        ) from err
+        )
 
     try:
         (cu_result_init,) = cuda.cuInit(0)
@@ -118,14 +115,14 @@ def has_docker_nvidia_installed():
     Whether at least one of the dependencies listed in
     `get_nvidia_docker_dependecies()` is installed.
     """
-    all_dependencies = get_nvidia_docker_dependecies()
+    all_dependencies = get_nvidia_docker_dependencies()
     has_dep = []
     for dep in all_dependencies:
         has_dep.append(_run_subprocess_silently(f"{dep} --version").returncode == 0)
     return any(has_dep)
 
 
-def get_nvidia_docker_dependecies():
+def get_nvidia_docker_dependencies():
     """
     See `has_docker_nvidia_installed()`
     """
@@ -137,18 +134,16 @@ def get_nvidia_docker_dependecies():
 
 
 def has_docker_python():
-    try:
-        import docker
-
+    docker_spec = importlib.util.find_spec("docker")
+    if docker_spec is not None:
         return True
-    except ImportError:
+    else:
         return False
 
 
 def has_spython():
-    try:
-        import spython
-
+    spython_spec = importlib.util.find_spec("spython")
+    if spython_spec is not None:
         return True
-    except ImportError:
+    else:
         return False

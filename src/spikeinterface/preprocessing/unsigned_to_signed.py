@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
@@ -39,6 +39,7 @@ class UnsignedToSignedRecording(BasePreprocessor):
 
         self._kwargs = dict(
             recording=recording,
+            bit_depth=bit_depth,
         )
 
 
@@ -66,4 +67,6 @@ class UnsignedToSignedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-unsigned_to_signed = define_function_from_class(source_class=UnsignedToSignedRecording, name="unsigned_to_signed")
+unsigned_to_signed = define_function_handling_dict_from_class(
+    source_class=UnsignedToSignedRecording, name="unsigned_to_signed"
+)

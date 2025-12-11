@@ -31,14 +31,12 @@ if not os.path.isdir('sources'):
 folders =  [
     '../examples/tutorials/core/my_recording',
     '../examples/tutorials/core/my_sorting',
-    '../examples/tutorials/core/waveform_folder',
-    '../examples/tutorials/core/waveform_folder_parallel',
-    '../examples/tutorials/core/waveform_folder_sparse',
-    '../examples/tutorials/core/waveform_folder_sparse_direct',
-    '../examples/tutorials/core/waveform_folder2',
-    '../examples/tutorials/core/waveform_folder',
-    '../examples/tutorials/qualitymetrics/waveforms_mearec',
-    '../examples/tutorials/qualitymetrics/wfs_mearec',
+    '../examples/tutorials/core/analyzer_folder',
+    '../examples/tutorials/core/analyzer_some_units',
+    '../examples/tutorials/core/analyzer.zarr',
+    '../examples/tutorials/curation/my_folder',
+    '../examples/tutorials/metrics/curated_sorting',
+    '../examples/tutorials/metrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
 
 ]
@@ -51,8 +49,8 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
-author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+copyright = '2022-2025, SpikeInterface Team'
+author = 'SpikeInterface Team'
 
 
 # -- General configuration ---------------------------------------------------
@@ -65,6 +63,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinxcontrib.autodoc_pydantic',
     'sphinx.ext.autosectionlabel',
     'sphinx_design',
     'sphinxcontrib.jquery',
@@ -78,6 +77,8 @@ autosectionlabel_prefix_document = True
 
 numpydoc_show_class_members = False
 
+autodoc_pydantic_model_show_json = True
+autodoc_pydantic_model_show_config_summary = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -101,7 +102,6 @@ try:
     import sphinx_rtd_theme
 
     html_theme = "sphinx_rtd_theme"
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 except ImportError:
     print("RTD theme not installed, using default")
     html_theme = 'alabaster'
@@ -110,8 +110,9 @@ except ImportError:
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
-
-html_favicon = "images/favicon-32x32.png"
+# html_css_files = ['custom.css']
+html_favicon = "images/logo.png"
+html_logo = "images/logo.png"
 
 
 from sphinx_gallery.sorting import ExplicitOrder
@@ -128,9 +129,10 @@ sphinx_gallery_conf = {
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
                                        '../examples/tutorials/curation',
-                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/metrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
+                                       '../examples/tutorials/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_*',

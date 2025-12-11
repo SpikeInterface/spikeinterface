@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
+from spikeinterface.extractors.extractor_classes import MdaRecordingExtractor, MdaSortingExtractor
 
 
 def test_mda_extractors(create_cache_folder):
@@ -19,7 +19,7 @@ def test_mda_extractors(create_cache_folder):
     rec_mda = MdaRecordingExtractor(cache_folder / "mdatest")
     probe = rec_mda.get_probe()
 
-    check_recordings_equal(rec, rec_mda, return_scaled=False)
+    check_recordings_equal(rec, rec_mda, return_in_uV=False)
 
     # Write without setting max_channel
     MdaSortingExtractor.write_sorting(sort, cache_folder / "mdatest" / "firings.mda")

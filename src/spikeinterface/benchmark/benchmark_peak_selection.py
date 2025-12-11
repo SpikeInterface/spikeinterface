@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.comparison.comparisontools import make_matching_events
@@ -160,7 +160,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 #         nb_garbage = len(garbage_peaks)
 
 #         ratio = 100 * len(garbage_peaks) / len(times2)
-#         self.garbage_sorting = NumpySorting.from_times_labels(garbage_peaks, garbage_channels, self.sampling_rate)
+#         self.garbage_sorting = NumpySorting.from_samples_and_labels(garbage_peaks, garbage_channels, self.sampling_rate)
 
 #         print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
@@ -187,7 +187,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 #                     ms_before=2.5,
 #                     ms_after=3.5,
 #                     max_spikes_per_unit=500,
-#                     return_scaled=False,
+#                     return_in_uV=False,
 #                     **self.job_kwargs,
 #                 )
 
@@ -501,7 +501,7 @@ class PeakSelectionStudy(BenchmarkStudy):
 
 #         ax = axs[1, 0]
 
-#         noise_levels = get_noise_levels(self.recording, return_scaled=False)
+#         noise_levels = get_noise_levels(self.recording, return_in_uV=False)
 #         snrs = self.peaks["amplitude"] / noise_levels[self.peaks["channel_index"]]
 #         garbage_snrs = self.garbage_peaks["amplitude"] / noise_levels[self.garbage_peaks["channel_index"]]
 #         amin, amax = snrs.min(), snrs.max()
