@@ -320,7 +320,7 @@ if __name__ == "__main__":
     study_folder_very_simple = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_AddRemoveCases"
     if study_folder_very_simple.exists():
         shutil.rmtree(study_folder_very_simple)
-    _create_simple_study(_create_very_simple_study)
+    _create_very_simple_study(_create_very_simple_study)
     test_add_remove_cases(_create_very_simple_study)
 
     study_folder_complex = (
