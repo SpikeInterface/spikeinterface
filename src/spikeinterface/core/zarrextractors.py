@@ -14,6 +14,9 @@ from .job_tools import split_job_kwargs
 from .core_tools import is_path_remote
 
 
+zarr.config.set({"default_zarr_version": 3})
+
+
 def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
     """
     Open a zarr folder with super powers.
@@ -463,7 +466,9 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     zarr_group.attrs["num_segments"] = int(num_segments)
     zarr_group.create_array(name="unit_ids", data=sorting.unit_ids, compressors=None)
 
-    compressor = kwargs.get("compressor", get_default_zarr_compressor())
+    compressor = kwargs.get("compressors") or kwargs.get("compressor")
+    if compressor is None:
+        compressor = get_default_zarr_compressor()
 
     # save sub fields
     spikes_group = zarr_group.create_group(name="spikes")
@@ -508,7 +513,9 @@ def add_recording_to_zarr_group(
 
     dtype = recording.get_dtype() if dtype is None else dtype
     channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
-    global_compressor = zarr_kwargs.pop("compressor", get_default_zarr_compressor())
+    global_compressor = kwargs.get("compressors") or kwargs.get("compressor")
+    if global_compressor is None:
+        global_compressor = get_default_zarr_compressor()
     compressor_by_dataset = zarr_kwargs.pop("compressor_by_dataset", {})
     global_filters = zarr_kwargs.pop("filters", None)
     filters_by_dataset = zarr_kwargs.pop("filters_by_dataset", {})
@@ -609,6 +616,9 @@ def add_traces_to_zarr(
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
+    if not isinstance(compressors, (list, tuple)):
+        compressors = [compressors]
+
     # create zarr datasets files
     zarr_datasets = []
     for segment_index in range(recording.get_num_segments()):
@@ -618,13 +628,8 @@ def add_traces_to_zarr(
         shape = (num_frames, num_channels)
         # In zarr v3, chunks must be a tuple of integers (no None allowed)
         chunks = (chunk_size, channel_chunk_size if channel_chunk_size is not None else num_channels)
-        dset = zarr_group.create_array(
-            name=dset_name,
-            shape=shape,
-            chunks=chunks,
-            dtype=dtype,
-            filters=filters,
-            compressors=compressors,
+        dset = zarr_group.create(
+            name=dset_name, shape=shape, chunks=chunks, dtype=dtype, filters=filters, codecs=compressors, zarr_format=3
         )
         zarr_datasets.append(dset)
         # synchronizer=zarr.ThreadSynchronizer())
