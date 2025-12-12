@@ -29,59 +29,6 @@ import numpy as np
 class Tridesclous2Sorter(ComponentsBasedSorter):
     sorter_name = "tridesclous2"
 
-    # _default_params = {
-    #     "apply_preprocessing": True,
-    #     "apply_motion_correction": False,
-    #     "motion_correction": {"preset": "dredge_fast"},
-    #     "cache_preprocessing_mode": "auto",
-    #     "waveforms": {
-    #         "ms_before": 0.5,
-    #         "ms_after": 1.5,
-    #         "radius_um": 120.0,
-    #     },
-    #     "filtering": {
-    #         "freq_min": 150.0,
-    #         "freq_max": 6000.0,
-    #         "ftype": "bessel",
-    #         "filter_order": 2,
-    #     },
-    #     "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
-    #     "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-    #     "svd": {"n_components": 5},
-    #     "clustering": {
-    #         "recursive_depth": 3,
-    #     },
-    #     "min_firing_rate": 0.1,
-    #     "templates": {
-    #         "ms_before": 2.0,
-    #         "ms_after": 3.0,
-    #         "max_spikes_per_unit": 400,
-    #         "sparsity_threshold": 1.5,
-    #         "min_snr": 3.5,
-    #         "radius_um": 100.0,
-    #         "max_jitter_ms": 0.2,
-    #     },
-    #     "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
-    #     "job_kwargs": {},
-    #     "save_array": True,
-    #     "debug": False,
-    # }
-
-    # _params_description = {
-    #     "apply_preprocessing": "Apply internal preprocessing or not",
-    #     "cache_preprocessing": "A dict contaning how to cache the preprocessed recording. mode='memory' | 'folder | 'zarr' ",
-    #     "waveforms": "A dictonary containing waveforms params: ms_before, ms_after, radius_um",
-    #     "filtering": "A dictonary containing filtering params: freq_min, freq_max",
-    #     "detection": "A dictonary containing detection params: peak_sign, detect_threshold, exclude_sweep_ms, radius_um",
-    #     "selection": "A dictonary containing selection params: n_peaks_per_channel, min_n_peaks",
-    #     "svd": "A dictonary containing svd params: n_components",
-    #     "clustering": "A dictonary containing clustering params: split_radius_um, merge_radius_um",
-    #     "templates": "A dictonary containing waveforms params for peeler: ms_before, ms_after",
-    #     "matching": "A dictonary containing matching params for matching: peak_shift_ms, radius_um",
-    #     "job_kwargs": "A dictionary containing job kwargs",
-    #     "save_array": "Save or not intermediate arrays",
-    # }
-
     _default_params = {
         "apply_preprocessing": True,
         "apply_motion_correction": False,
