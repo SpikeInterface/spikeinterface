@@ -9,6 +9,8 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
+from __future__ import annotations
+
 import warnings
 import numpy as np
 from collections import namedtuple
