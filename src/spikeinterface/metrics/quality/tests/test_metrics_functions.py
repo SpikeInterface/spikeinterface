@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 import numpy as np
 from copy import deepcopy
 import csv
@@ -14,13 +13,9 @@ from spikeinterface.core import (
 
 from spikeinterface.metrics.quality.utils import create_ground_truth_pc_distributions
 
-# from spikeinterface.metrics.quality_metric_list import (
-#     _misc_metric_name_to_func,
-# )
 
 from spikeinterface.metrics.quality import (
     get_quality_metric_list,
-    get_quality_pca_metric_list,
     compute_quality_metrics,
 )
 from spikeinterface.metrics.quality.misc_metrics import (
@@ -28,12 +23,11 @@ from spikeinterface.metrics.quality.misc_metrics import (
     compute_amplitude_cutoffs,
     compute_presence_ratios,
     compute_isi_violations,
-    # compute_firing_rates,
-    # compute_num_spikes,
     compute_snrs,
     compute_refrac_period_violations,
     compute_sliding_rp_violations,
     compute_drift_metrics,
+    compute_waveform_ptp_medians,
     compute_amplitude_medians,
     compute_synchrony_metrics,
     compute_firing_ranges,
@@ -44,7 +38,6 @@ from spikeinterface.metrics.quality.misc_metrics import (
 )
 
 from spikeinterface.metrics.quality.pca_metrics import (
-    pca_metrics_list,
     mahalanobis_metrics,
     d_prime_metric,
     nearest_neighbors_metrics,
@@ -486,18 +479,6 @@ def test_simplified_silhouette_score_metrics():
     assert sim_sil_score1 < sim_sil_score2
 
 
-# def test_calculate_firing_rate_num_spikes(sorting_analyzer_simple):
-#     sorting_analyzer = sorting_analyzer_simple
-#     firing_rates = compute_firing_rates(sorting_analyzer)
-#     num_spikes = compute_num_spikes(sorting_analyzer)
-
-# testing method accuracy with magic number is not a good pratcice, I remove this.
-# firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
-# num_spikes_gt = {0: 1001, 1: 503, 2: 509}
-# assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
-# np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
-
-
 def test_calculate_firing_range(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     firing_ranges = compute_firing_ranges(sorting_analyzer)
@@ -530,6 +511,12 @@ def test_calculate_amplitude_median(sorting_analyzer_simple):
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
+
+
+def test_calculate_waveform_ptp_median(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+    wfs_ptp_medians = compute_waveform_ptp_medians(sorting_analyzer)
 
 
 def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple):
