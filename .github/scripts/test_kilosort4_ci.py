@@ -30,6 +30,7 @@ import spikeinterface.full as si
 from spikeinterface.core.testing import check_sortings_equal
 from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
 from probeinterface.io import write_prb
+from spikeinterface.extractors import read_kilosort_as_analyzer
 
 import kilosort
 from kilosort.parameters import DEFAULT_SETTINGS
@@ -405,11 +406,14 @@ class TestKilosort4Long:
         ops = ops.tolist()  # strangely this makes a dict
         assert ops[param_key] == param_value
 
-        # Finally, check out test parameters actually change the output of
-        # KS4, ensuring our tests are actually doing something (exxcept for some params).
+        # Check our test parameters actually change the output of
+        # KS4, ensuring our tests are actually doing something (except for some params).
         if param_key not in PARAMETERS_NOT_AFFECTING_RESULTS:
             with pytest.raises(AssertionError):
                 check_sortings_equal(default_kilosort_sorting, sorting_si)
+
+        # Check that the kilosort -> analyzer tool doesn't error
+        analyzer = read_kilosort_as_analyzer(kilosort_output_dir)
 
     def test_clear_cache(self,recording_and_paths, tmp_path):
         """
