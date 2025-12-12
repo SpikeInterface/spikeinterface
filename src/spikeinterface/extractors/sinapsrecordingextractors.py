@@ -28,9 +28,9 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
     def __init__(self, file_path: str | Path, stream_name: str = "filt"):
 
         assert stream_name in [
-        "filt",
-        "aux",
-        "raw"
+            "filt",
+            "aux",
+            "raw",
         ], f"'stream_name' should be 'filt', 'raw', or 'aux', but instead received value {stream_name}"
 
         from spikeinterface.preprocessing import unsigned_to_signed
@@ -58,7 +58,7 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         dtype = meta["voltageDataType"] if "voltageDataType" in list(meta.keys()) else self.DEFAULT_DTYPE
 
         recording = BinaryRecordingExtractor(
-                file_path, sampling_frequency, dtype=dtype, num_channels=num_total_channels
+            file_path, sampling_frequency, dtype=dtype, num_channels=num_total_channels
         )
         if dtype == "uint16":
             recording = unsigned_to_signed(recording, bit_depth=num_bits)
@@ -107,9 +107,9 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
     def __init__(self, file_path: str | Path, stream_name: str = "filt"):
 
         assert stream_name in [
-        "filt",
-        "aux",
-        "raw"
+            "filt",
+            "aux",
+            "raw",
         ], f"'stream_name' should be 'filt', 'raw', or 'aux', but instead received value {stream_name}"
 
         self._file_path = file_path
@@ -121,7 +121,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
             self,
             sampling_frequency=sinaps_info["sampling_frequency"],
             channel_ids=sinaps_info["channel_ids"],
-            dtype="int16", # traces always returned as int16 in SiNAPSH5RecordingSegment.get_traces()
+            dtype="int16",  # traces always returned as int16 in SiNAPSH5RecordingSegment.get_traces()
         )
 
         self.extra_requirements.append("h5py")
@@ -131,7 +131,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
             sinaps_info["num_frames"],
             sampling_frequency=sinaps_info["sampling_frequency"],
             num_bits=sinaps_info["num_bits"],
-            stream_name=stream_name
+            stream_name=stream_name,
         )
         self.add_recording_segment(recording_segment)
 
@@ -208,8 +208,10 @@ read_sinaps_research_platform_h5 = define_function_from_class(
 ##############################################
 
 
-def get_sinaps_probe_info(rec : SinapsResearchPlatformRecordingExtractor | SinapsResearchPlatformH5RecordingExtractor) -> dict:
-    """ 
+def get_sinaps_probe_info(
+    rec: SinapsResearchPlatformRecordingExtractor | SinapsResearchPlatformH5RecordingExtractor,
+) -> dict:
+    """
     Extracts probe information from metadata and returns as the following dict:
       {
         "name": <probe_type>,
@@ -223,7 +225,7 @@ def get_sinaps_probe_info(rec : SinapsResearchPlatformRecordingExtractor | Sinap
     ----------
     rec : SinapsResearchPlatformRecordingExtractor | SinapsResearchPlatformH5RecordingExtractor
         SiNAPS recording object, to extract metadata information from.
-    
+
     Returns
     -------
     probe_info : dict
@@ -232,6 +234,7 @@ def get_sinaps_probe_info(rec : SinapsResearchPlatformRecordingExtractor | Sinap
 
     if rec_path.suffix == ".h5":
         import h5py
+
         rf = h5py.File(rec_path, "r")
         probe_rf = rf.require_group("Advanced Recording Parameters").require_group("Probe")
         probe_info = {
@@ -239,7 +242,7 @@ def get_sinaps_probe_info(rec : SinapsResearchPlatformRecordingExtractor | Sinap
             "num_electrodes": probe_rf.get("nbElectrodes")[0],
             "num_cols_per_shank": probe_rf.get("nbColumnsShank")[0],
             "num_electrodes_per_shank": probe_rf.get("nbElectrodesShank")[0],
-            "num_shanks": probe_rf.get("nbShanks")[0]
+            "num_shanks": probe_rf.get("nbShanks")[0],
         }
         return probe_info
     elif rec_path.suffix == ".bin" or rec_path.suffix == ".dat":
@@ -250,7 +253,7 @@ def get_sinaps_probe_info(rec : SinapsResearchPlatformRecordingExtractor | Sinap
             "num_electrodes": meta["nbElectrodes"],
             "num_cols_per_shank": meta["nbColumnsShank"],
             "num_electrodes_per_shank": meta["nbElectrodesShank"],
-            "num_shanks": meta["nbShanks"]
+            "num_shanks": meta["nbShanks"],
         }
         return probe_info
     else:
@@ -258,7 +261,7 @@ def get_sinaps_probe_info(rec : SinapsResearchPlatformRecordingExtractor | Sinap
         return {}
 
 
-def get_sinaps_probe(probe_type : str) -> Probe:
+def get_sinaps_probe(probe_type: str) -> Probe:
     """
     Utility function to get probe object from the probeinterface library. Returns a Probe object or None if probe does not exist or could not be found in library.
 
@@ -286,14 +289,16 @@ def get_sinaps_probe(probe_type : str) -> Probe:
         try:
             probe = get_probe(manufacturer="sinaps-research-platform", probe_name=f"{probe_type}")
         except:
-            warnings.warn(f"Could not load probe information for {probe_type}. Probe needs to be linked manually with rec.set_probe()")
+            warnings.warn(
+                f"Could not load probe information for {probe_type}. Probe needs to be linked manually with rec.set_probe()"
+            )
             return None
-    
+
     probe.set_device_channel_indices(probe.contact_ids)
     return probe
 
 
-def parse_sinaps_meta(meta_file : str | Path) -> dict:
+def parse_sinaps_meta(meta_file: str | Path) -> dict:
     """
     Utility function to extract metadata from binary recording's associated txt file.
 
@@ -330,7 +335,7 @@ def parse_sinaps_meta(meta_file : str | Path) -> dict:
     return sinaps_info
 
 
-def parse_sinaps_h5(file_name : str, stream_name : str) -> dict:
+def parse_sinaps_h5(file_name: str, stream_name: str) -> dict:
     """
     Utility function to extract essential metadata from a SiNAPS recording stored as an HDF5 file.
 
@@ -339,13 +344,13 @@ def parse_sinaps_h5(file_name : str, stream_name : str) -> dict:
     file_name : str | Path
         Path to HDF5 file.
     stream_name : str
-        Name of stream to extract relevant metadata from ('filt', 'raw', 'aux'). 
+        Name of stream to extract relevant metadata from ('filt', 'raw', 'aux').
     Returns
     -------
     sinaps_info : dict
         Dictionary containing relevant metadata fields.
     """
-    
+
     import h5py
 
     rf = h5py.File(file_name, "r")
@@ -363,7 +368,11 @@ def parse_sinaps_h5(file_name : str, stream_name : str) -> dict:
 
     parameters = rf.require_group("Parameters")
     gain = parameters.get("VoltageConverter")[0]
-    gain_aux = parameters.get("VoltageConverterAUX")[0] if "VoltageConverterAUX" in list(parameters.keys()) else parameters.get("VoltageAUXConverter")[0]
+    gain_aux = (
+        parameters.get("VoltageConverterAUX")[0]
+        if "VoltageConverterAUX" in list(parameters.keys())
+        else parameters.get("VoltageAUXConverter")[0]
+    )
     offset = 0
 
     nRecCh, nFrames = data.shape
