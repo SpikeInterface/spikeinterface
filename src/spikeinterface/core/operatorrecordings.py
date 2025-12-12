@@ -27,7 +27,7 @@ class BaseOperatorRecording(BaseRecording):
 
         for segment1, segment2 in zip(recording1.segments, recording2.segments):
             add_segment = OperatorRecordingSegment(segment1, segment2, operator)
-            self.add_recording_segment(add_segment)
+            self.add_segment(add_segment)
 
         self._kwargs = dict(recording1=recording1, recording2=recording2, operator=operator)
 
