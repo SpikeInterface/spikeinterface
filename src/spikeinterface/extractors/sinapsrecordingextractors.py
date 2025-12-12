@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 import numpy as np
 
-from probeinterface import get_probe
+from probeinterface import get_probe, Probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BinaryRecordingExtractor, ChannelSliceRecording
 from spikeinterface.core.core_tools import define_function_from_class
@@ -23,8 +23,17 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         "filt" extracts the filtered data, "raw" extracts the raw data, and "aux" extracts the auxiliary data.
     """
 
+    DEFAULT_DTYPE = "uint16"
+
     def __init__(self, file_path: str | Path, stream_name: str = "filt"):
-        from spikeinterface.preprocessing import UnsignedToSignedRecording
+
+        assert stream_name in [
+            "filt",
+            "aux",
+            "raw",
+        ], f"'stream_name' should be 'filt', 'raw', or 'aux', but instead received value {stream_name}"
+
+        from spikeinterface.preprocessing import unsigned_to_signed
 
         file_path = Path(file_path)
         meta_file = file_path.parent / f"metadata_{file_path.stem}.txt"
@@ -35,16 +44,24 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         num_electrodes = meta["nbElectrodes"]
         sampling_frequency = meta["samplingFreq"]
 
+        if not file_path.suffix == ".bin":
+            # assume other binary file formats such as .dat have single stream
+            stream_name = "raw"
+            num_total_channels = num_electrodes
+
         probe_type = meta["probeType"]
         num_bits = int(np.log2(meta["nbADCLevels"]))
 
         gain_ephys = meta["voltageConverter"]
         gain_aux = meta["voltageAUXConverter"]
 
+        dtype = meta["voltageDataType"] if "voltageDataType" in list(meta.keys()) else self.DEFAULT_DTYPE
+
         recording = BinaryRecordingExtractor(
-            file_path, sampling_frequency, dtype="uint16", num_channels=num_total_channels
+            file_path, sampling_frequency, dtype=dtype, num_channels=num_total_channels
         )
-        recording = UnsignedToSignedRecording(recording, bit_depth=num_bits)
+        if dtype == "uint16":
+            recording = unsigned_to_signed(recording, bit_depth=num_bits)
 
         if stream_name == "raw":
             channel_slice = recording.channel_ids[:num_electrodes]
@@ -56,9 +73,7 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
             gain = gain_ephys
         elif stream_name == "aux":
             channel_slice = recording.channel_ids[2 * num_electrodes :]
-            hw_chans = meta["hwAUXChannelName"][1:-1].split(",")
-            user_chans = meta["userAuxName"][1:-1].split(",")
-            renamed_channels = hw_chans + user_chans
+            renamed_channels = np.arange(num_aux_channels)
             gain = gain_aux
         else:
             raise ValueError("stream_name must be 'raw', 'filt', or 'aux'")
@@ -67,10 +82,9 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
 
         self.set_channel_gains(gain)
         self.set_channel_offsets(0)
-        num_channels = self.get_num_channels()
 
         if (stream_name == "filt") | (stream_name == "raw"):
-            probe = get_sinaps_probe(probe_type, num_channels)
+            probe = get_sinaps_probe(probe_type)
             if probe is not None:
                 self.set_probe(probe, in_place=True)
 
@@ -85,19 +99,29 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
     ----------
     file_path : str | Path
         Path to the SiNAPS .h5 file.
+    stream_name : "filt" | "aux" | "raw", default: "filt"
+        The stream name to extract.
+        "filt" extracts the filtered data, and "aux" extracts the auxiliary data.
     """
 
-    def __init__(self, file_path: str | Path):
+    def __init__(self, file_path: str | Path, stream_name: str = "filt"):
+
+        assert stream_name in [
+            "filt",
+            "aux",
+            "raw",
+        ], f"'stream_name' should be 'filt', 'raw', or 'aux', but instead received value {stream_name}"
+
         self._file_path = file_path
 
-        sinaps_info = parse_sinapse_h5(self._file_path)
+        sinaps_info = parse_sinaps_h5(self._file_path, stream_name)
         self._rf = sinaps_info["filehandle"]
 
         BaseRecording.__init__(
             self,
             sampling_frequency=sinaps_info["sampling_frequency"],
             channel_ids=sinaps_info["channel_ids"],
-            dtype=sinaps_info["dtype"],
+            dtype="int16",  # traces always returned as int16 in SiNAPSH5RecordingSegment.get_traces()
         )
 
         self.extra_requirements.append("h5py")
@@ -107,40 +131,47 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
             sinaps_info["num_frames"],
             sampling_frequency=sinaps_info["sampling_frequency"],
             num_bits=sinaps_info["num_bits"],
+            stream_name=stream_name,
         )
         self.add_recording_segment(recording_segment)
 
-        # set gain
-        self.set_channel_gains(sinaps_info["gain"])
+        if stream_name == "aux":
+            self.set_channel_gains(sinaps_info["gain_aux"])
+        else:
+            self.set_channel_gains(sinaps_info["gain"])
         self.set_channel_offsets(sinaps_info["offset"])
         self.num_bits = sinaps_info["num_bits"]
-        num_channels = self.get_num_channels()
 
         # set probe
-        probe = get_sinaps_probe(sinaps_info["probe_type"], num_channels)
+        probe = get_sinaps_probe(sinaps_info["probe_type"])
         if probe is not None:
             self.set_probe(probe, in_place=True)
 
-        self._kwargs = {"file_path": str(Path(file_path).absolute())}
-
-    def __del__(self):
-        self._rf.close()
+        self._kwargs = {"file_path": str(Path(file_path).absolute()), "stream_name": stream_name}
 
 
 class SiNAPSH5RecordingSegment(BaseRecordingSegment):
-    def __init__(self, rf, num_frames, sampling_frequency, num_bits):
+    def __init__(self, rf, num_frames, sampling_frequency, num_bits, stream_name):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
         self._rf = rf
         self._num_samples = int(num_frames)
         self._num_bits = num_bits
-        self._stream = self._rf.require_group("RealTimeProcessedData")
+        if stream_name == "filt":
+            self._stream = self._rf.require_group("RealTimeProcessedData")
+            self._dataset_name = "FilteredData"
+        elif stream_name == "raw":
+            self._stream = self._rf.require_group("RawData")
+            self._dataset_name = "ElectrodeArrayData"
+        elif stream_name == "aux":
+            self._stream = self._rf.require_group("RawData")
+            self._dataset_name = "AuxData"
 
     def get_num_samples(self):
         return self._num_samples
 
     def get_traces(self, start_frame=None, end_frame=None, channel_indices=None):
         if isinstance(channel_indices, slice):
-            traces = self._stream.get("FilteredData")[channel_indices, start_frame:end_frame].T
+            traces = self._stream.get(self._dataset_name)[channel_indices, start_frame:end_frame].T
         else:
             # channel_indices is np.ndarray
             if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
@@ -148,10 +179,10 @@ class SiNAPSH5RecordingSegment(BaseRecordingSegment):
                 # to be indexed out of order
                 sorted_channel_indices = np.sort(channel_indices)
                 resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
-                recordings = self._stream.get("FilteredData")[sorted_channel_indices, start_frame:end_frame].T
+                recordings = self._stream.get(self._dataset_name)[sorted_channel_indices, start_frame:end_frame].T
                 traces = recordings[:, resorted_indices]
             else:
-                traces = self._stream.get("FilteredData")[channel_indices, start_frame:end_frame].T
+                traces = self._stream.get(self._dataset_name)[channel_indices, start_frame:end_frame].T
         # convert uint16 to int16 here to simplify extractor
         if traces.dtype == "uint16":
             dtype_signed = "int16"
@@ -177,20 +208,111 @@ read_sinaps_research_platform_h5 = define_function_from_class(
 ##############################################
 
 
-def get_sinaps_probe(probe_type, num_channels):
+def get_sinaps_probe_info(
+    rec: SinapsResearchPlatformRecordingExtractor | SinapsResearchPlatformH5RecordingExtractor,
+) -> dict:
+    """
+    Extracts probe information from metadata and returns as the following dict:
+      {
+        "name": <probe_type>,
+        "num_electrodes": <number_of_electrodes>,
+        "num_cols_per_shank": <number_of_columns_per_shank>,
+        "num_electrodes_per_shank": <number_of_electrodes_per_shank>,
+        "num_shanks": <number_of_shanks>
+      }
+
+    Parameters
+    ----------
+    rec : SinapsResearchPlatformRecordingExtractor | SinapsResearchPlatformH5RecordingExtractor
+        SiNAPS recording object, to extract metadata information from.
+
+    Returns
+    -------
+    probe_info : dict
+    """
+    rec_path = Path(rec._kwargs["file_path"])
+
+    if rec_path.suffix == ".h5":
+        import h5py
+
+        rf = h5py.File(rec_path, "r")
+        probe_rf = rf.require_group("Advanced Recording Parameters").require_group("Probe")
+        probe_info = {
+            "name": str(probe_rf.get("probeType").asstr()[...]),
+            "num_electrodes": probe_rf.get("nbElectrodes")[0],
+            "num_cols_per_shank": probe_rf.get("nbColumnsShank")[0],
+            "num_electrodes_per_shank": probe_rf.get("nbElectrodesShank")[0],
+            "num_shanks": probe_rf.get("nbShanks")[0],
+        }
+        return probe_info
+    elif rec_path.suffix == ".bin" or rec_path.suffix == ".dat":
+        meta_path = rec_path.parent / f"metadata_{rec_path.stem}.txt"
+        meta = parse_sinaps_meta(meta_path)
+        probe_info = {
+            "name": meta["probeType"],
+            "num_electrodes": meta["nbElectrodes"],
+            "num_cols_per_shank": meta["nbColumnsShank"],
+            "num_electrodes_per_shank": meta["nbElectrodesShank"],
+            "num_shanks": meta["nbShanks"],
+        }
+        return probe_info
+    else:
+        print(f"unrecognized file_path suffix. getting {rec_path.suffix}")
+        return {}
+
+
+def get_sinaps_probe(probe_type: str) -> Probe:
+    """
+    Utility function to get probe object from the probeinterface library. Returns a Probe object or None if probe does not exist or could not be found in library.
+
+    Parameters
+    ----------
+    probe_type : str
+        Probe type as defined in metadata.
+
+    Returns
+    -------
+    probe : Probe
+    """
+
     try:
-        probe = get_probe(manufacturer="sinaps", probe_name=f"SiNAPS-{probe_type}")
-        # now wire the probe
-        channel_indices = np.arange(num_channels)
-        probe.set_device_channel_indices(channel_indices)
-        return probe
+        probe = get_probe(manufacturer="sinaps-research-platform", probe_name=f"{probe_type}")
     except:
-        warnings.warn(f"Could not load probe information for {probe_type}")
-        return None
+        # check if custom version of probe was used such as "p256s1_camera"
+        if "_" in probe_type:
+            probe_type = probe_type.split("_")[0]
+
+        # if recording with M0004 probe was used, change to new standard name
+        if "M0004" in probe_type or probe_type == "p1024s8Chronic":
+            probe_type = "p1024s8"
+
+        try:
+            probe = get_probe(manufacturer="sinaps-research-platform", probe_name=f"{probe_type}")
+        except:
+            warnings.warn(
+                f"Could not load probe information for {probe_type}. Probe needs to be linked manually with rec.set_probe()"
+            )
+            return None
+
+    probe.set_device_channel_indices(probe.contact_ids)
+    return probe
 
 
-def parse_sinaps_meta(meta_file):
-    meta_dict = {}
+def parse_sinaps_meta(meta_file: str | Path) -> dict:
+    """
+    Utility function to extract metadata from binary recording's associated txt file.
+
+    Parameters
+    ----------
+    meta_file : str | Path
+        Path to metadata txt file.
+
+    Returns
+    -------
+    sinaps_info : dict
+        Dictionary containing all key/value pairs found in metadata.
+    """
+    sinaps_info = {}
     with open(meta_file) as f:
         lines = f.readlines()
         for l in lines:
@@ -205,25 +327,52 @@ def parse_sinaps_meta(meta_file):
                     pass
                 try:
                     val = eval(val)
+                    if isinstance(val, tuple):
+                        val = float(str(val[0]) + "." + str(val[1]))
                 except:
                     pass
-                meta_dict[key] = val
-    return meta_dict
+                sinaps_info[key] = val
+    return sinaps_info
 
 
-def parse_sinapse_h5(filename):
-    """Open an SiNAPS hdf5 file, read and return the recording info."""
+def parse_sinaps_h5(file_name: str, stream_name: str) -> dict:
+    """
+    Utility function to extract essential metadata from a SiNAPS recording stored as an HDF5 file.
+
+    Parameters
+    ----------
+    file_name : str | Path
+        Path to HDF5 file.
+    stream_name : str
+        Name of stream to extract relevant metadata from ('filt', 'raw', 'aux').
+    Returns
+    -------
+    sinaps_info : dict
+        Dictionary containing relevant metadata fields.
+    """
 
     import h5py
 
-    rf = h5py.File(filename, "r")
+    rf = h5py.File(file_name, "r")
 
-    stream = rf.require_group("RealTimeProcessedData")
-    data = stream.get("FilteredData")
+    if stream_name == "filt":
+        stream = rf.require_group("RealTimeProcessedData")
+        data = stream.get("FilteredData")
+    elif stream_name == "aux":
+        stream = rf.require_group("RawData")
+        data = stream.get("AuxData")
+    elif stream_name == "raw":
+        stream = rf.require_group("RawData")
+        data = stream.get("ElectrodeArrayData")
     dtype = data.dtype
 
     parameters = rf.require_group("Parameters")
     gain = parameters.get("VoltageConverter")[0]
+    gain_aux = (
+        parameters.get("VoltageConverterAUX")[0]
+        if "VoltageConverterAUX" in list(parameters.keys())
+        else parameters.get("VoltageAUXConverter")[0]
+    )
     offset = 0
 
     nRecCh, nFrames = data.shape
@@ -233,6 +382,7 @@ def parse_sinapse_h5(filename):
     probe_type = str(
         rf.require_group("Advanced Recording Parameters").require_group("Probe").get("probeType").asstr()[...]
     )
+
     num_bits = int(
         np.log2(rf.require_group("Advanced Recording Parameters").require_group("DAQ").get("nbADCLevels")[0])
     )
@@ -244,6 +394,7 @@ def parse_sinapse_h5(filename):
         "num_channels": nRecCh,
         "channel_ids": np.arange(nRecCh),
         "gain": gain,
+        "gain_aux": gain_aux,
         "offset": offset,
         "dtype": dtype,
         "probe_type": probe_type,
