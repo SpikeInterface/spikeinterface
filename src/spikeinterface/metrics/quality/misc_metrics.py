@@ -851,6 +851,52 @@ class AmplitudeMedian(BaseMetric):
     depend_on = ["spike_amplitudes"]
 
 
+def compute_waveform_ptp_medians(sorting_analyzer, unit_ids=None):
+    """
+    Compute median of the peak-to-peak (PTP) values of the waveforms.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    unit_ids : list or None
+        List of unit ids to compute the waveform PTP medians. If None, all units are used.
+
+    Returns
+    -------
+    all_waveform_ptp_medians : dict
+        Estimated waveform PTP median for each unit ID.
+
+    References
+    ----------
+    Inspired by bombcell folks
+    """
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    check_has_required_extensions("waveform_ptp_median", sorting_analyzer)
+
+    wfs_ext = sorting_analyzer.get_extension("waveforms")
+    extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index", mode="peak_to_peak")
+    all_waveform_ptp_medians = {}
+
+    for unit_id in unit_ids:
+        waveforms = wfs_ext.get_waveforms_one_unit(unit_id, force_dense=True)
+        waveform_max_channel = waveforms[:, :, extremum_channel_indices[unit_id]]
+        ptps = np.ptp(waveform_max_channel, axis=1)
+        median_ptp = np.median(ptps)
+        all_waveform_ptp_medians[unit_id] = median_ptp
+
+    return all_waveform_ptp_medians
+
+
+class WaveformPTPMedian(BaseMetric):
+    metric_name = "waveform_ptp_median"
+    metric_function = compute_waveform_ptp_medians
+    metric_columns = {"waveform_ptp_median": float}
+    depend_on = ["waveforms"]
+
+
 def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, low_quantile=0.1, n_bins=100):
     """
     A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
@@ -1258,6 +1304,7 @@ misc_metrics_list = [
     AmplitudeCutoff,
     NoiseCutoff,
     AmplitudeMedian,
+    WaveformPTPMedian,
     Drift,
     SDRatio,
 ]
