@@ -51,13 +51,15 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "clustering": {
             "recursive_depth": 3,
         },
+        "min_firing_rate": 0.1,
         "templates": {
             "ms_before": 2.0,
             "ms_after": 3.0,
             "max_spikes_per_unit": 400,
             "sparsity_threshold": 1.5,
-            "min_snr": 2.5,
+            "min_snr": 3.5,
             "radius_um": 100.0,
+            "max_jitter_ms": 0.2,
         },
         "matching": {"method": "tdc-peeler", "method_kwargs": {}, "gather_mode": "memory"},
         "job_kwargs": {},
@@ -93,7 +95,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering.main import find_clusters_from_peaks, clustering_methods
-        from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
         from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
@@ -194,6 +195,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["split"].update(params["clustering"])
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
+        clustering_kwargs["noise_levels"] = noise_levels
+        clustering_kwargs["clean_low_firing"]["min_firing_rate"] = params["min_firing_rate"]
+        clustering_kwargs["clean_low_firing"]["subsampling_factor"] = all_peaks.size / peaks.size
 
         # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
         #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
@@ -262,13 +266,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             is_in_uV=False,
         )
 
-        # this spasify more
+        # this clean and spasify more
         templates = clean_templates(
             templates,
             sparsify_threshold=params["templates"]["sparsity_threshold"],
             noise_levels=noise_levels,
             min_snr=params["templates"]["min_snr"],
-            max_jitter_ms=None,
+            max_jitter_ms=params["templates"]["max_jitter_ms"],
             remove_empty=True,
         )
 

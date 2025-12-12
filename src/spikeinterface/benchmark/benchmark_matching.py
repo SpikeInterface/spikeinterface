@@ -26,9 +26,14 @@ class MatchingBenchmark(Benchmark):
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
-    def run(self, **job_kwargs):
+    def run(self, verbose=True, **job_kwargs):
         spikes = find_spikes_from_templates(
-            self.recording, self.templates, method=self.method, method_kwargs=self.method_kwargs, job_kwargs=job_kwargs
+            self.recording,
+            self.templates,
+            method=self.method,
+            method_kwargs=self.method_kwargs,
+            verbose=verbose,
+            job_kwargs=job_kwargs,
         )
         unit_ids = self.templates.unit_ids
         sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
