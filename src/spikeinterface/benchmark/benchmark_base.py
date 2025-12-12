@@ -67,6 +67,7 @@ class BenchmarkStudy:
                 assert len(key) == num_levels, f"Case key {key} for cases is not homogeneous, tuple negth differ"
             else:
                 raise ValueError("Keys for cases must str or tuple")
+        return levels
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
@@ -94,7 +95,7 @@ class BenchmarkStudy:
         study : BenchmarkStudy
             The created study.
         """
-        cls._check_cases(cases, levels)
+        levels = cls._check_cases(cases, levels)
 
         study_folder = Path(study_folder)
         study_folder.mkdir(exist_ok=False, parents=True)
@@ -272,7 +273,7 @@ class BenchmarkStudy:
 
     def add_cases(self, cases):
 
-        self._check_cases(cases, reference=list(self.cases.keys())[0])
+        _ = self._check_cases(cases, reference=list(self.cases.keys())[0])
         for case in cases.values():
             dataset = case["dataset"]
             assert dataset in list(self.datasets.keys()), f"Unknown dataset {dataset} for the Study"
