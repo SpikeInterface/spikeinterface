@@ -263,11 +263,13 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 
-        mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
+        pad = self.pad
+        if pad is None:
+            mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
+        else:
+            mask = (self.triggers >= start_frame - pad[1]) & (self.triggers < end_frame + pad[0])
         triggers = self.triggers[mask] - start_frame
         labels = self.labels[mask]
-
-        pad = self.pad
 
         if self.mode == "zeros":
             for trig in triggers:
