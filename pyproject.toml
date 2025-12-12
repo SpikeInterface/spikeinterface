@@ -208,6 +208,7 @@ docs = [
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
+    "seaborn",
     "skops", # For automated curation
     "scikit-learn<1.8", # For automated curation
     "huggingface_hub", # For automated curation

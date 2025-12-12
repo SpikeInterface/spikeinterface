@@ -116,6 +116,7 @@ examples/tutorials/*.svg
 
 doc/_build/*
 doc/tutorials/*
+doc/forhowto/*
 doc/sources/*
 *sg_execution_times.rst
 
