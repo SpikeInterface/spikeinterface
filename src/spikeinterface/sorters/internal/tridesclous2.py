@@ -82,7 +82,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     #     "save_array": "Save or not intermediate arrays",
     # }
 
-
     _default_params = {
         "apply_preprocessing": True,
         "apply_motion_correction": False,
@@ -96,7 +95,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "freq_max": 6000.0,
         "cache_preprocessing_mode": "auto",
         "peak_sign": "neg",
-        "detect_threshold": 5.,
+        "detect_threshold": 5.0,
         "n_peaks_per_channel": 5000,
         "n_svd_components_per_channel": 5,
         "n_pca_features": 6,
@@ -270,7 +269,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
         #        )
 
-       # Clustering
+        # Clustering
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
         clustering_kwargs["peaks_svd"]["ms_before"] = params["clustering_ms_before"]
         clustering_kwargs["peaks_svd"]["ms_after"] = params["clustering_ms_after"]
@@ -318,13 +317,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             kept_peaks, spike_vector["unit_index"], sorting_pre_peeler.unit_ids, recording, params["template_radius_um"]
         )
 
-
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
         nbefore = int(ms_before * sampling_frequency / 1000.0)
         nafter = int(ms_after * sampling_frequency / 1000.0)
-
 
         templates_array = estimate_templates_with_accumulator(
             recording_for_peeler,
