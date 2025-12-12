@@ -4,6 +4,8 @@ import pytest
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 from spikeinterface.core.generate import inject_some_split_units
+from spikeinterface.curation import train_model
+from pathlib import Path
 
 job_kwargs = dict(n_jobs=-1)
 
@@ -80,6 +82,31 @@ def sorting_analyzer_multi_segment_for_curation():
 def sorting_analyzer_with_splits():
     sorting_analyzer = make_sorting_analyzer(sparse=True, durations=[50.0])
     return make_sorting_analyzer_with_splits(sorting_analyzer)
+
+
+@pytest.fixture(scope="module")
+def trained_pipeline_path():
+    """
+    Makes a model saved at "./trained_pipeline" which will be used by other tests in the module.
+    If the model already exists, this function does nothing.
+    """
+    trained_model_folder = Path(__file__).parent / Path("trained_pipeline")
+    analyzer = make_sorting_analyzer(sparse=True)
+    analyzer.compute(
+        {
+            "quality_metrics": {"metric_names": ["snr", "num_spikes"]},
+            "template_metrics": {"metric_names": ["half_width"]},
+        }
+    )
+    train_model(
+        analyzers=[analyzer] * 5,
+        labels=[[1, 0, 1, 0, 1]] * 5,
+        folder=trained_model_folder,
+        classifiers=["RandomForestClassifier"],
+        imputation_strategies=["median"],
+        scaling_techniques=["standard_scaler"],
+    )
+    yield trained_model_folder
 
 
 if __name__ == "__main__":
