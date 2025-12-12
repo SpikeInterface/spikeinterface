@@ -17,6 +17,7 @@ from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     _sort_extensions_by_dependency,
 )
+from spikeinterface.core.zarrextractors import check_compressors_match
 
 import numpy as np
 
@@ -38,6 +39,8 @@ def get_dataset():
     integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
 
     recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
+    # make sure the recording is serializable
+    recording = recording.save()
     sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
@@ -133,13 +136,12 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     # check that compression is applied
-    assert (
-        sorting_analyzer._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressor.codec_id
-        == default_compressor.codec_id
+    check_compressors_match(
+        default_compressor,
+        sorting_analyzer._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressors[0],
     )
-    assert (
-        sorting_analyzer._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
-        == default_compressor.codec_id
+    check_compressors_match(
+        default_compressor, sorting_analyzer._get_zarr_root()["extensions"]["templates"]["average"].compressors[0]
     )
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
@@ -160,35 +162,34 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         sparsity=None,
         return_in_uV=False,
         overwrite=True,
-        backend_options={"saving_options": {"compressor": None}},
+        backend_options={"saving_options": {"compressors": None}},
     )
     print(sorting_analyzer_no_compression._backend_options)
     sorting_analyzer_no_compression.compute(["random_spikes", "templates"])
     assert (
-        sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
-            "random_spikes_indices"
-        ].compressor
-        is None
+        len(
+            sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
+                "random_spikes_indices"
+            ].compressors
+        )
+        == 0
     )
-    assert sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressor is None
+    assert len(sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressors) == 0
 
     # test a different compressor
-    from numcodecs import LZMA
+    from zarr.codecs.numcodecs import LZMA
 
     lzma_compressor = LZMA()
     folder = tmp_path / "test_SortingAnalyzer_zarr_lzma.zarr"
     sorting_analyzer_lzma = sorting_analyzer_no_compression.save_as(
-        format="zarr", folder=folder, backend_options={"saving_options": {"compressor": lzma_compressor}}
+        format="zarr", folder=folder, backend_options={"saving_options": {"compressors": lzma_compressor}}
     )
-    assert (
-        sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"][
-            "random_spikes_indices"
-        ].compressor.codec_id
-        == LZMA.codec_id
+    check_compressors_match(
+        lzma_compressor,
+        sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressors[0],
     )
-    assert (
-        sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
-        == LZMA.codec_id
+    check_compressors_match(
+        lzma_compressor, sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressors[0]
     )
 
     # test set_sorting_property
