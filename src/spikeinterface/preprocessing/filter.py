@@ -111,8 +111,8 @@ class FilterRecording(BasePreprocessor):
             self.set_channel_offsets(0)
 
         margin = int(margin_ms * fs / 1000.0)
-        for parent_segment in recording._recording_segments:
-            self.add_recording_segment(
+        for parent_segment in recording.segments:
+            self.add_segment(
                 FilterRecordingSegment(
                     parent_segment,
                     filter_coeff,
@@ -315,8 +315,8 @@ class NotchFilterRecording(BasePreprocessor):
 
         sf = recording.get_sampling_frequency()
         margin = int(margin_ms * sf / 1000.0)
-        for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype))
+        for parent_segment in recording.segments:
+            self.add_segment(FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype))
 
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 

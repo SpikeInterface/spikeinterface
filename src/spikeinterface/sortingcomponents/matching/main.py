@@ -37,11 +37,11 @@ def find_spikes_from_templates(
         If True then a dict is also returned is also returned
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
-        like : gather_mode/folder/skip_after_n_peaks/recording_slices
+        like : gather_mode/folder/skip_after_n_peaks/slices
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
-        Parameters for ChunkRecordingExecutor
+        Parameters for ChunkExecutor
 
     {method_doc}
 

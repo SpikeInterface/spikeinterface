@@ -108,7 +108,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
             sampling_frequency=sinaps_info["sampling_frequency"],
             num_bits=sinaps_info["num_bits"],
         )
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         # set gain
         self.set_channel_gains(sinaps_info["gain"])

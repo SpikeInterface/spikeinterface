@@ -38,7 +38,7 @@ def detect_peaks(
         Important note, for flexibility,  if method=None, then the method can be given inside the method_kwargs dict.
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
-        like : gather_mode/folder/skip_after_n_peaks/recording_slices
+        like : gather_mode/folder/skip_after_n_peaks/slices
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict | None, default None

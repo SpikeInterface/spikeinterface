@@ -73,7 +73,7 @@ Low-level
 .. automodule:: spikeinterface.core
     :noindex:
 
-    .. autoclass:: ChunkRecordingExecutor
+    .. autoclass:: ChunkExecutor
 
 
 Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)
