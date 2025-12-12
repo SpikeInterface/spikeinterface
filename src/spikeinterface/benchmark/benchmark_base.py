@@ -51,6 +51,25 @@ class BenchmarkStudy:
         self.scan_folder()
 
     @classmethod
+    def _check_cases(cls, cases, levels=None, reference=None):
+        if reference is None:
+            reference = list(cases.keys())[0]
+        for key in cases.keys():
+            if isinstance(reference, str):
+                assert isinstance(key, str), f"Case key {key} for cases is not homogeneous"
+                if levels is None:
+                    levels = "level0"
+                else:
+                    assert isinstance(levels, str)
+            elif isinstance(reference, tuple):
+                assert isinstance(key, tuple), f"Case key {key} for cases is not homogeneous"
+                num_levels = len(reference)
+                assert len(key) == num_levels, f"Case key {key} for cases is not homogeneous, tuple negth differ"
+            else:
+                raise ValueError("Keys for cases must str or tuple")
+        return levels
+
+    @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
         """
         Create a BenchmarkStudy from a dict of datasets and cases.
@@ -76,27 +95,7 @@ class BenchmarkStudy:
         study : BenchmarkStudy
             The created study.
         """
-        # check that cases keys are homogeneous
-        key0 = list(cases.keys())[0]
-        if isinstance(key0, str):
-            assert all(isinstance(key, str) for key in cases.keys()), "Keys for cases are not homogeneous"
-            if levels is None:
-                levels = "level0"
-            else:
-                assert isinstance(levels, str)
-        elif isinstance(key0, tuple):
-            assert all(isinstance(key, tuple) for key in cases.keys()), "Keys for cases are not homogeneous"
-            num_levels = len(key0)
-            assert all(
-                len(key) == num_levels for key in cases.keys()
-            ), "Keys for cases are not homogeneous, tuple negth differ"
-            if levels is None:
-                levels = [f"level{i}" for i in range(num_levels)]
-            else:
-                levels = list(levels)
-                assert len(levels) == num_levels
-        else:
-            raise ValueError("Keys for cases must str or tuple")
+        levels = cls._check_cases(cases, levels)
 
         study_folder = Path(study_folder)
         study_folder.mkdir(exist_ok=False, parents=True)
@@ -271,6 +270,25 @@ class BenchmarkStudy:
             if f.exists():
                 f.unlink()
         self.benchmarks[key] = None
+
+    def add_cases(self, cases):
+
+        _ = self._check_cases(cases, reference=list(self.cases.keys())[0])
+        for case in cases.values():
+            dataset = case["dataset"]
+            assert dataset in list(self.datasets.keys()), f"Unknown dataset {dataset} for the Study"
+        self.cases.update(cases)
+        for key in cases.keys():
+            benchmark = self.create_benchmark(key=key)
+            self.benchmarks[key] = benchmark
+        (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
+
+    def remove_cases(self, case_keys):
+        for key in case_keys:
+            assert key in list(self.cases.keys()), f"Case {key} is not in the cases of the Study"
+            self.cases.pop(key)
+            self.remove_benchmark(key)
+        (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
 
     def run(self, case_keys=None, keep=True, verbose=False, **job_kwargs):
         if case_keys is None:
