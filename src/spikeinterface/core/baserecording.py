@@ -500,6 +500,7 @@ class BaseRecording(BaseRecordingSnippets):
         assert rs.get_num_samples() == times.shape[0], "times have wrong shape"
 
         rs.t_start = None
+        rs.sampling_frequency = None
         rs.time_vector = times.astype("float64", copy=False)
 
         if with_warning:
