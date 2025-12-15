@@ -17,7 +17,7 @@ class Tridesclous2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase
         output_folder = self.cache_folder / sorter_name
         sorter_params = self.SorterClass.default_params()
 
-        sorter_params["matching"]["gather_mode"] = "npy"
+        sorter_params["gather_mode"] = "npy"
 
         sorting = run_sorter(
             sorter_name,
