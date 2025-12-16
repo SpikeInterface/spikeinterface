@@ -51,7 +51,7 @@ class TridesclousSortingExtractor(BaseSorting):
         for seg_num in range(dataio.nb_segment):
             # load all spike in memory (this avoid to lock the folder with memmap throug dataio
             all_spikes = dataio.get_spikes(seg_num=seg_num, chan_grp=chan_grp, i_start=None, i_stop=None).copy()
-            self.add_sorting_segment(TridesclousSortingSegment(all_spikes))
+            self.add_segment(TridesclousSortingSegment(all_spikes))
 
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "chan_grp": chan_grp}
         self.extra_requirements.append("tridesclous")

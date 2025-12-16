@@ -125,7 +125,7 @@ class KlustaSortingExtractor(BaseSorting):
 
         self.extra_requirements.append("h5py")
 
-        self.add_sorting_segment(KlustSortingSegment(unit_ids, spiketrains))
+        self.add_segment(KlustSortingSegment(unit_ids, spiketrains))
 
         self.set_property("group", groups)
         quality = [e.lower() for e in cluster_groups_name]

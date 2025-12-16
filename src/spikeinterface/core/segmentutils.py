@@ -64,9 +64,9 @@ class AppendSegmentRecording(BaseRecording):
         rec0.copy_metadata(self)
 
         for rec in recording_list:
-            for parent_segment in rec._recording_segments:
+            for parent_segment in rec.segments:
                 rec_seg = ProxyAppendRecordingSegment(parent_segment)
-                self.add_recording_segment(rec_seg)
+                self.add_segment(rec_seg)
 
         self._kwargs = {"recording_list": recording_list, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
@@ -83,7 +83,7 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
         return self.parent_segment.get_traces(*args, **kwargs)
 
 
-append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="append_segment_recording")
+append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="add_segment_recording")
 
 
 class ConcatenateSegmentRecording(BaseRecording):
@@ -120,7 +120,7 @@ class ConcatenateSegmentRecording(BaseRecording):
 
         parent_segments = []
         for rec in recording_list:
-            for parent_segment in rec._recording_segments:
+            for parent_segment in rec.segments:
                 time_kwargs = parent_segment.get_times_kwargs()
                 if not ignore_times:
                     assert time_kwargs["time_vector"] is None, (
@@ -135,7 +135,7 @@ class ConcatenateSegmentRecording(BaseRecording):
         rec_seg = ProxyConcatenateRecordingSegment(
             parent_segments, one_rec.get_sampling_frequency(), ignore_times=ignore_times
         )
-        self.add_recording_segment(rec_seg)
+        self.add_segment(rec_seg)
 
         self._kwargs = {
             "recording_list": recording_list,
@@ -241,8 +241,8 @@ class SelectSegmentRecording(BaseRecording):
         ), f"'segment_index' must be between 0 and {num_segments - 1}"
 
         for segment_index in segment_indices:
-            rec_seg = recording._recording_segments[segment_index]
-            self.add_recording_segment(rec_seg)
+            rec_seg = recording.segments[segment_index]
+            self.add_segment(rec_seg)
         self._parent = recording
 
         self._kwargs = {"recording": recording, "segment_indices": segment_indices}
@@ -303,9 +303,9 @@ class AppendSegmentSorting(BaseSorting):
         sorting0.copy_metadata(self)
 
         for sorting in sorting_list:
-            for parent_segment in sorting._sorting_segments:
+            for parent_segment in sorting.segments:
                 sorting_seg = ProxyAppendSortingSegment(parent_segment)
-                self.add_sorting_segment(sorting_seg)
+                self.add_segment(sorting_seg)
 
         self._kwargs = {"sorting_list": sorting_list, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
@@ -385,7 +385,7 @@ class ConcatenateSegmentSorting(BaseSorting):
         parent_segments = []
         parent_num_samples = []
         for sorting_i, sorting in enumerate(sorting_list):
-            for segment_i, parent_segment in enumerate(sorting._sorting_segments):
+            for segment_i, parent_segment in enumerate(sorting.segments):
                 # Check t_start is not assigned
                 segment_t_start = parent_segment._t_start
                 if not ignore_times:
@@ -421,7 +421,7 @@ class ConcatenateSegmentSorting(BaseSorting):
         sorting_seg = ProxyConcatenateSortingSegment(
             parent_segments, parent_num_samples, one_sorting.get_sampling_frequency()
         )
-        self.add_sorting_segment(sorting_seg)
+        self.add_segment(sorting_seg)
 
         # Assign concatenated recording if possible
         if all_has_recording:
@@ -439,7 +439,7 @@ class ConcatenateSegmentSorting(BaseSorting):
     def get_num_samples(self, segment_index=None):
         """Overrides the BaseSorting method, which requires a recording."""
         segment_index = self._check_segment_index(segment_index)
-        n_samples = self._sorting_segments[segment_index].get_num_samples()
+        n_samples = self.segments[segment_index].get_num_samples()
         if self.has_recording():  # Sanity check
             assert n_samples == self._recording.get_num_samples(segment_index)
         return n_samples
@@ -555,7 +555,7 @@ class SplitSegmentSorting(BaseSorting):
 
         num_samples = [0]
         for recording in recording_list:
-            for recording_segment in recording._recording_segments:
+            for recording_segment in recording.segments:
                 num_samples.append(recording_segment.get_num_samples())
 
         cumsum_num_samples = np.cumsum(num_samples)
@@ -563,8 +563,8 @@ class SplitSegmentSorting(BaseSorting):
             sliced_parent_sorting = parent_sorting.frame_slice(
                 start_frame=cumsum_num_samples[idx], end_frame=cumsum_num_samples[idx + 1]
             )
-            sliced_segment = sliced_parent_sorting._sorting_segments[0]
-            self.add_sorting_segment(sliced_segment)
+            sliced_segment = sliced_parent_sorting.segments[0]
+            self.add_segment(sliced_segment)
         self._parent = parent_sorting
 
         self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
@@ -598,8 +598,8 @@ class SelectSegmentSorting(BaseSorting):
         ), f"'segment_index' must be between 0 and {num_segments - 1}"
 
         for segment_index in segment_indices:
-            sort_seg = sorting._sorting_segments[segment_index]
-            self.add_sorting_segment(sort_seg)
+            sort_seg = sorting.segments[segment_index]
+            self.add_segment(sort_seg)
 
         self._kwargs = {"sorting": sorting, "segment_indices": [int(s) for s in segment_indices]}
 
