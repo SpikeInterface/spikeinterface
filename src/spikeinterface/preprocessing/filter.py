@@ -47,8 +47,9 @@ class FilterRecording(BasePreprocessor):
         If list. band (low, high) in Hz for "bandpass" filter type
     btype : "bandpass" | "highpass", default: "bandpass"
         Type of the filter
-    margin_ms : float, default: 5.0
+    margin_ms : float, default: None
         Margin in ms on border to avoid border effect.
+        Must be provided by sub-class.
     coeff : array | None, default: None
         Filter coefficients in the filter_mode form.
     dtype : dtype or None, default: None
@@ -83,7 +84,7 @@ class FilterRecording(BasePreprocessor):
         filter_order=5,
         ftype="butter",
         filter_mode="sos",
-        margin_ms=5,
+        margin_ms=None,
         add_reflect_padding=False,
         coeff=None,
         dtype=None,
@@ -115,6 +116,7 @@ class FilterRecording(BasePreprocessor):
         if "offset_to_uV" in self.get_property_keys():
             self.set_channel_offsets(0)
 
+        assert margin_ms is not None, "margin_ms must be provided!"
         margin = int(margin_ms * fs / 1000.0)
         self.margin_samples = margin
         for parent_segment in recording._recording_segments:
