@@ -105,7 +105,7 @@ class BaseRecordingSnippets(BaseExtractor):
             The probe(s) to be attached to the recording
         group_mode: "by_probe" | "by_shank", default: "by_probe"
             "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
-            or  shanks ("by_shank")
+            or  shanks ("by_shank") or by probe side ("by_side")
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
@@ -115,7 +115,7 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording: BaseRecording
             A view of the recording (ChannelSlice or clone or itself)
         """
-        assert group_mode in ("by_probe", "by_shank"), "'group_mode' can be 'by_probe' or 'by_shank'"
+        assert group_mode in ("by_probe", "by_shank", "by_side"), "'group_mode' can be 'by_probe' or 'by_shank' or 'by_side'"
 
         # handle several input possibilities
         if isinstance(probe_or_probegroup, Probe):
@@ -213,6 +213,24 @@ class BaseRecordingSnippets(BaseExtractor):
                     probe_as_numpy_array["shank_ids"] == a["shank_ids"]
                 )
                 groups[mask] = group
+        elif group_mode == "by_side":
+            assert all(
+                probe.contact_sides is not None for probe in probegroup.probes
+            ), "contact_sides is None in probe, you cannot group by side"
+            if probe.shank_ids is None:
+                for group, a in enumerate(np.unique(probe_as_numpy_array[["probe_index", "contact_sides"]])):
+                    mask = (probe_as_numpy_array["probe_index"] == a["probe_index"]) & (
+                        probe_as_numpy_array["contact_sides"] == a["contact_sides"]
+                    )
+                    groups[mask] = group
+            else:
+                for group, a in enumerate(np.unique(probe_as_numpy_array[["probe_index", "shank_ids", "contact_sides"]])):
+                    mask = (probe_as_numpy_array["probe_index"] == a["probe_index"]) & (
+                        probe_as_numpy_array["shank_ids"] == a["shank_ids"]) & (
+                        probe_as_numpy_array["contact_sides"] == a["contact_sides"]
+                    )
+                    groups[mask] = group
+
         sub_recording.set_property("group", groups, ids=None)
 
         # add probe annotations to recording
