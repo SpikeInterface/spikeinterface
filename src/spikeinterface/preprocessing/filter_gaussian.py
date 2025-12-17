@@ -65,7 +65,7 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         freq_min: float,
         freq_max: float,
         margin_sd: float = 5.0,
-        sampling_frequency: float = None,
+        parent_sampling_frequency: float = None,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
@@ -73,14 +73,14 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         self.freq_max = freq_max
         self.cached_gaussian = dict()
 
-        self.sampling_frequency = sampling_frequency
+        self.parent_sampling_frequency = parent_sampling_frequency
 
         # Margin from widest gaussian
         sigmas = []
         if freq_min is not None:
-            sigmas.append(self.sampling_frequency / (2 * np.pi * freq_min))
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_min))
         if freq_max is not None:
-            sigmas.append(self.sampling_frequency / (2 * np.pi * freq_max))
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_max))
         self.margin = 1 + int(max(sigmas) * margin_sd)
 
     def get_traces(
@@ -125,12 +125,12 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         if cutoff_f in self.cached_gaussian and N in self.cached_gaussian[cutoff_f]:
             return self.cached_gaussian[cutoff_f][N]
 
-        faxis = np.fft.fftfreq(N, d=1 / self.sampling_frequency)
+        faxis = np.fft.fftfreq(N, d=1 / self.parent_sampling_frequency)
 
         if (
-            cutoff_f > self.sampling_frequency / 8
+            cutoff_f > self.parent_sampling_frequency / 8
         ):  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
-            sigma = self.sampling_frequency / (2 * np.pi * cutoff_f)
+            sigma = self.parent_sampling_frequency / (2 * np.pi * cutoff_f)
             limit = int(round(5 * sigma)) + 1
             xaxis = np.arange(-limit, limit + 1) / sigma
             gaussian = normal_pdf(xaxis) / sigma
