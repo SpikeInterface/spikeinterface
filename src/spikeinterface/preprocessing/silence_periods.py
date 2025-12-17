@@ -80,6 +80,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         if mode in ["noise"]:
             if noise_levels is None:
+                noise_levels_kwargs = noise_levels_kwargs.copy()
                 noise_levels_kwargs["return_in_uV"] = False
                 noise_levels_kwargs["seed"] = seed
                 noise_levels = get_noise_levels(recording, **noise_levels_kwargs)
