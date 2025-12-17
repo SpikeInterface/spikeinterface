@@ -120,6 +120,8 @@ def compute_merge_unit_groups(
         * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
         * "knn": the two units are close in the feature space
         * "quality_score": the unit "quality score" is increased after the merge
+        * "slay_score":  a combined score, factoring in a template similarity measure, a cross-correlation significance measure
+          and a sliding refractory period violation measure, based on the SLAy algorithm.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
     contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
@@ -151,6 +153,9 @@ def compute_merge_unit_groups(
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
+        * | "slay": an approximate implementation of SLAy, original implementation at https://github.com/saikoukunt/SLAy.
+          | The spikeinterface version uses `template_similarity`, rather than an auto-encoder.
+          | It uses the following steps: "template_similarity", "slay_score"
 
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: True
@@ -564,6 +569,7 @@ def get_potential_auto_merge(
         * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
         * "knn": the two units are close in the feature space
         * "quality_score": the unit "quality score" is increased after the merge
+        * "slay_score":  a combined score, factoring in a template similarity measure, a cross-correlation significance measure and a sliding refractory period violation measure, based on the SLAy algorithm.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
     contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
@@ -580,7 +586,7 @@ def get_potential_auto_merge(
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer
-    preset : "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors" | None, default: "similarity_correlograms"
+    preset : "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors" | "slay" | None, default: "similarity_correlograms"
         The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
 
         * | "similarity_correlograms": mainly focused on template similarity and correlograms.
@@ -595,6 +601,9 @@ def get_potential_auto_merge(
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
+        * | "slay": an approximate implementation of SLAy, original implementation at https://github.com/saikoukunt/SLAy.
+          | The spikeinterface version uses `template_similarity`, rather than an auto-encoder.
+          | It uses the following steps: "template_similarity", "slay_score"
 
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: False
