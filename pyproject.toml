@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.103.2"
+version = "0.103.3"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -96,7 +96,7 @@ full = [
     "h5py",
     "pandas",
     "scipy",
-    "scikit-learn",
+    "scikit-learn<1.8",
     "networkx",
     "distinctipy",
     "matplotlib>=3.6", # matplotlib.colormaps
@@ -113,8 +113,8 @@ widgets = [
     "sortingview>=0.12.0",
 ]
 
-qualitymetrics = [
-    "scikit-learn",
+metrics = [
+    "scikit-learn<1.8",
     "scipy",
     "pandas",
     "numba",
@@ -127,8 +127,8 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs,
     "pytest-mock"
@@ -139,8 +139,8 @@ test_extractors = [
     "pooch>=1.8.2",
     "datalad>=1.0.2",
     # Commenting out for release
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test_preprocessing = [
@@ -185,8 +185,8 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs
     "pytest-mock",
@@ -209,12 +209,12 @@ docs = [
     "numba", # For many postprocessing functions
     "networkx",
     "skops", # For automated curation
-    "scikit-learn", # For automated curation
+    "scikit-learn<1.8", # For automated curation
     "huggingface_hub", # For automated curation
 
     # for release we need pypi, so this needs to be commented
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 ]
 
 dev = [
@@ -232,7 +232,7 @@ markers = [
     "extractors",
     "preprocessing",
     "postprocessing",
-    "qualitymetrics",
+    "mertrics",
     "sorters",
     "sorters_external",
     "sorters_internal",
