@@ -319,7 +319,6 @@ def plot_unit_counts(
             else:
                 ymin = min(ymin, y - yerr[0])
                 ymax = max(ymax, y + yerr[0])
-            
 
     if with_rectangle:
         if revert_bad:
