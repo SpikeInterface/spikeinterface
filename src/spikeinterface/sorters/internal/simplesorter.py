@@ -65,7 +65,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "1.0"
+        return "2025.12"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -208,6 +208,11 @@ class SimpleSorter(ComponentsBasedSorter):
             from sklearn.mixture import GaussianMixture
 
             peak_labels = GaussianMixture(**clust_params).fit_predict(features_flat)
+        elif clust_method == "isosplit":
+            from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
+
+            peak_labels = isosplit(features_flat, **clust_params)
+
         else:
             raise ValueError(f"simple_sorter : unkown clustering method {clust_method}")
 
