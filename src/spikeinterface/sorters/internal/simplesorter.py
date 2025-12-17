@@ -211,7 +211,7 @@ class SimpleSorter(ComponentsBasedSorter):
         elif clust_method == "isosplit":
             from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isosplit
 
-            peak_labels = isosplit(features_flat)
+            peak_labels = isosplit(features_flat, **clust_params)
 
         else:
             raise ValueError(f"simple_sorter : unkown clustering method {clust_method}")
