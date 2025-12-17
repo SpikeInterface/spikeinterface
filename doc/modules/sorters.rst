@@ -546,8 +546,9 @@ Internal sorters
 In 2022, we started the :py:mod:`spikeinterface.sortingcomponents` module to break into components a sorting pipeline.
 These components can be gathered to create a new sorter. We already have 2 sorters to showcase this new module:
 
-* :code:`spykingcircus2` (experimental, but ready to be tested)
-* :code:`tridesclous2` (experimental, not ready to be used)
+* :code:`spykingcircus2`
+* :code:`tridesclous2`
+* :code:`lupin`
 
 There are some benefits of using these sorters:
   * they directly handle SpikeInterface objects, so they do not need any data copy.
