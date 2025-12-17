@@ -96,7 +96,7 @@ full = [
     "h5py",
     "pandas",
     "scipy",
-    "scikit-learn",
+    "scikit-learn<1.8",
     "networkx",
     "distinctipy",
     "matplotlib>=3.6", # matplotlib.colormaps
@@ -113,8 +113,8 @@ widgets = [
     "sortingview>=0.12.0",
 ]
 
-qualitymetrics = [
-    "scikit-learn",
+metrics = [
+    "scikit-learn<1.8",
     "scipy",
     "pandas",
     "numba",
@@ -210,7 +210,7 @@ docs = [
     "networkx",
     "seaborn",
     "skops", # For automated curation
-    "scikit-learn", # For automated curation
+    "scikit-learn<1.8", # For automated curation
     "huggingface_hub", # For automated curation
 
     # for release we need pypi, so this needs to be commented
@@ -233,7 +233,7 @@ markers = [
     "extractors",
     "preprocessing",
     "postprocessing",
-    "qualitymetrics",
+    "mertrics",
     "sorters",
     "sorters_external",
     "sorters_internal",

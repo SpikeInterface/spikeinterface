@@ -160,6 +160,4 @@ class HerdingspikesSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
-        return HerdingspikesSortingExtractor(
-            file_path=Path(sorter_output_folder) / "HS2_sorted.hdf5", load_unit_info=True
-        )
+        return HerdingspikesSortingExtractor(file_path=Path(sorter_output_folder) / "HS2_sorted.hdf5")

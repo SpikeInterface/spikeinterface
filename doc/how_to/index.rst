@@ -23,3 +23,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     benchmark_with_hybrid_recordings
     auto_curation_training
     auto_curation_prediction
+    import_kilosort_data
