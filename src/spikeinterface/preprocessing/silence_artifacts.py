@@ -28,9 +28,11 @@ class DetectThresholdCrossing(PeakDetector):
     ):
         PeakDetector.__init__(self, recording, return_output=True)
         if noise_levels is None:
-            noise_levels_kwargs["return_in_uV"] = False
-            noise_levels_kwargs["seed"] = seed
-            noise_levels = get_noise_levels(recording, **noise_levels_kwargs)
+            random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {})
+            random_slices_kwargs["seed"] = seed
+            noise_levels = get_noise_levels(recording, 
+                                            return_in_uV=False,
+                                            random_slices_kwargs=random_slices_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
         self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
 

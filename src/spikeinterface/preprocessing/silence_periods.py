@@ -68,9 +68,12 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         if mode in ["noise"]:
             if noise_levels is None:
-                noise_levels_kwargs["return_in_uV"] = False
-                noise_levels_kwargs["seed"] = seed
-                noise_levels = get_noise_levels(recording, **noise_levels_kwargs)
+                random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {})
+                random_slices_kwargs["seed"] = seed
+                noise_levels = get_noise_levels(recording, 
+                                            return_in_uV=False,
+                                            random_slices_kwargs=random_slices_kwargs)
+                
             noise_generator = NoiseGeneratorRecording(
                 num_channels=recording.get_num_channels(),
                 sampling_frequency=recording.sampling_frequency,
@@ -110,7 +113,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-        if self.periods.size > 0:
+        if len(self.periods) > 0:
             new_interval = np.array([start_frame, end_frame])
             lower_index = np.searchsorted(self.periods[:, 1], new_interval[0])
             upper_index = np.searchsorted(self.periods[:, 0], new_interval[1])
