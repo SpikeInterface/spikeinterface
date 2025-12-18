@@ -174,7 +174,7 @@ def random_spikes_selection(
     ----------
     sorting: BaseSorting
         The sorting object
-    num_samples: list[int] | None, default: None 
+    num_samples: list[int] | None, default: None
         The number of samples per segment.
         Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
@@ -243,7 +243,7 @@ def random_spikes_selection(
                 rng_size = min(max_spikes_per_unit, all_unit_indices.size)
 
             elif method == "percentage":
-                if percentage is None or not (0 < percentage <= 1) :
+                if percentage is None or not (0 < percentage <= 1):
                     raise ValueError(f"percentage must be in the interval (0, 1]")
 
                 rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
@@ -264,7 +264,9 @@ def random_spikes_selection(
                         missing.append("k_per_bin")
                     if bin_size_s is None:
                         missing.append("bin_size_s")
-                    print(f"the following args need to be defined when using the 'temporal bins' method : {', '.join(missing)}")
+                    print(
+                        f"the following args need to be defined when using the 'temporal bins' method : {', '.join(missing)}"
+                    )
 
                 sampling_frequency = sorting.get_sampling_frequency()
                 bin_size_freq = int(bin_size_s * sampling_frequency)
@@ -275,15 +277,15 @@ def random_spikes_selection(
                 bin_index = unit_spikes["sample_index"] // bin_size_freq
                 segment_index = unit_spikes["segment_index"]
 
-                group_values = np.stack((segment_index, bin_index), axis = 1)
-                _, group_keys = np.unique(group_values, return_inverse = True, axis= 0)
+                group_values = np.stack((segment_index, bin_index), axis=1)
+                _, group_keys = np.unique(group_values, return_inverse=True, axis=0)
 
                 score = rng.random(all_unit_indices.size)
                 order = np.lexsort((score, group_keys))
 
                 ordered_unit_indices = all_unit_indices[order]
-                
-                group_start = np.r_[0, np.flatnonzero(np.diff(group_keys)) + 1 ]
+
+                group_start = np.r_[0, np.flatnonzero(np.diff(group_keys)) + 1]
                 counts = np.diff(np.r_[group_start, ordered_unit_indices.size])
 
                 ranks = np.arange(ordered_unit_indices.size, step=1) - np.repeat(group_start, counts)
@@ -292,9 +294,7 @@ def random_spikes_selection(
                 random_spikes_indices.append(selected)
                 continue
 
-            selected_unit_indices = rng.choice(
-                all_unit_indices, size=rng_size, replace=False, shuffle=False
-            )
+            selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
@@ -304,6 +304,7 @@ def random_spikes_selection(
         raise ValueError(f"random_spikes_selection(): method must be 'all' or any in {', '.join(rng_methods)}")
 
     return random_spikes_indices
+
 
 ### MERGING ZONE ###
 def apply_merges_to_sorting(
