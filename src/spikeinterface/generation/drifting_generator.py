@@ -310,6 +310,7 @@ def generate_drifting_recording(
     sampling_frequency=30000.0,
     probe_name="Neuropixels1-128",
     generate_probe_kwargs=None,
+    unit_locations=None,
     generate_unit_locations_kwargs=dict(
         margin_um=20.0,
         minimum_z=5.0,
@@ -321,6 +322,7 @@ def generate_drifting_recording(
         # distribution="multimodal",
         # num_modes=2,
     ),
+    displacement_vector=None,
     generate_displacement_vector_kwargs=dict(
         displacement_sampling_frequency=5.0,
         drift_start_um=[0, 20],
@@ -336,6 +338,7 @@ def generate_drifting_recording(
             ),
         ],
     ),
+    templates=None,
     generate_templates_kwargs=dict(
         ms_before=1.5,
         ms_after=3.0,
@@ -347,7 +350,9 @@ def generate_drifting_recording(
             ellipse_angle=(0, np.pi * 2),
         ),
     ),
+    sorting=None,
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
+    noise_levels=None,
     generate_noise_kwargs=dict(noise_levels=(6.0, 8.0), spatial_decay=25.0),
     extra_outputs=False,
     seed=None,
@@ -406,6 +411,21 @@ def generate_drifting_recording(
 
     seed = _ensure_seed(seed)
 
+    if sorting is None:
+        sorting = generate_sorting(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=[
+            duration,
+        ],
+        **generate_sorting_kwargs,
+        seed=seed,
+        )
+    else:
+        num_units = sorting.get_num_units()
+        sampling_frequency = sorting.sampling_frequency
+        durations = sorting.get_duration()
+    
     # probe
     if generate_probe_kwargs is None:
         generate_probe_kwargs = _toy_probes[probe_name]
@@ -420,12 +440,13 @@ def generate_drifting_recording(
     # plt.show()
 
     # unit locations
-    unit_locations = generate_unit_locations(
-        num_units,
-        channel_locations,
-        seed=seed,
-        **generate_unit_locations_kwargs,
-    )
+    if unit_locations is None:
+        unit_locations = generate_unit_locations(
+            num_units,
+            channel_locations,
+            seed=seed,
+            **generate_unit_locations_kwargs,
+        )
 
     (
         unit_displacements,
@@ -470,15 +491,7 @@ def generate_drifting_recording(
 
     drifting_templates = DriftingTemplates.from_static_templates(templates)
 
-    sorting = generate_sorting(
-        num_units=num_units,
-        sampling_frequency=sampling_frequency,
-        durations=[
-            duration,
-        ],
-        **generate_sorting_kwargs,
-        seed=seed,
-    )
+    
 
     sorting.set_property("gt_unit_locations", unit_locations)
 
