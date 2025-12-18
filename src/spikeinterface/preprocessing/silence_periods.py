@@ -3,9 +3,16 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+<<<<<<< HEAD
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.recording_tools import get_noise_levels
+=======
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+
+from spikeinterface.core import get_noise_levels
+>>>>>>> 1cb3e7d6b702457ab94ee459b5e01405628f06bf
 from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.core.job_tools import split_job_kwargs
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -43,7 +50,15 @@ class SilencedPeriodsRecording(BasePreprocessor):
         The recording extractor after silencing some periods
     """
 
-    def __init__(self, recording, list_periods, mode="zeros", noise_levels=None, seed=None, **noise_levels_kwargs):
+    def __init__(
+        self,
+        recording,
+        list_periods,
+        mode="zeros",
+        noise_levels=None,
+        seed=None,
+        **noise_levels_kwargs,
+    ):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
         if num_seg == 1:
@@ -99,7 +114,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
         self._kwargs = dict(
             recording=recording, list_periods=list_periods, mode=mode, seed=seed, noise_levels=noise_levels
         )
-        self._kwargs.update(noise_levels_kwargs)
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):

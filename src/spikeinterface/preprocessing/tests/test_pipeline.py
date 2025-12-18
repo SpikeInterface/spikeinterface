@@ -80,6 +80,9 @@ def test_pipeline_equiv_to_step():
             elif pp_name == "decimate":
                 pp_dict[pp_name] = {"decimation_factor": 2}
                 pp_rec_from_class = pp_class(rec, decimation_factor=2)
+            elif pp_name == "filter":
+                pp_dict[pp_name] = {"margin_ms": 5.0}
+                pp_rec_from_class = pp_class(rec, margin_ms=5.0)
             else:
                 pp_rec_from_class = pp_class(rec)
 

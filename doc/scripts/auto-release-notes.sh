@@ -8,7 +8,7 @@ START_DATE="$1"
 END_DATE="$2"
 
 if [ -z "$3" ] || [ "$3" = "all" ]; then
-    LABELS=("core" "extractors" "preprocessing" "sorters" "postprocessing" "qualitymetrics" "curation" "widgets" "generators" "hybrid" "sortingcomponents" "motion correction" "documentation" "continuous integration" "packaging" "testing" "deprecations")
+    LABELS=("core" "extractors" "preprocessing" "sorters" "postprocessing" "metrics" "curation" "widgets" "generators" "hybrid" "sortingcomponents" "motion correction" "documentation" "continuous integration" "packaging" "testing" "deprecations")
 else
     LABELS=("$3")
 fi
@@ -26,14 +26,18 @@ else
 fi
 
 for LABEL in "${LABELS[@]}"; do
-    echo "$LABEL:"
-    echo ""
+    OUTPUT=""
     for BRANCH in "${BRANCHES[@]}"; do
-        gh pr list --repo SpikeInterface/spikeinterface --limit $LIMIT --label "$LABEL" --base "$BRANCH" --state merged --json number,title,mergedAt \
+        OUTPUT+=$(gh pr list --repo SpikeInterface/spikeinterface --limit $LIMIT --label "$LABEL" --base "$BRANCH" --state merged --json number,title,mergedAt \
             | jq -r --arg start_date "${START_DATE}T00:00:00Z" --arg end_date "${END_DATE}T00:00:00Z" \
-            '.[] | select(.mergedAt >= $start_date and .mergedAt <= $end_date) | "* \(.title) (#\(.number))"'
+            '.[] | select(.mergedAt >= $start_date and .mergedAt <= $end_date) | "* \(.title) (#\(.number))"')
     done
-    echo ""
+    if [ -n "$OUTPUT" ]; then
+        echo "$LABEL:"
+        echo ""
+        echo "$OUTPUT"
+        echo ""
+    fi
 done
 
 echo "Contributors:"
