@@ -323,6 +323,7 @@ def generate_drifting_recording(
         # distribution="multimodal",
         # num_modes=2,
     ),
+    displacement_data=None,
     generate_displacement_vector_kwargs=dict(
         displacement_sampling_frequency=5.0,
         drift_start_um=[0, 20],
@@ -378,8 +379,10 @@ def generate_drifting_recording(
         The unit locations of the cells
     generate_unit_locations_kwargs : dict
         Parameters given to generate_unit_locations() if unit_locations is None
+    displacement_data: tuple of arrays, default None
+        The output of generate_displacement_vector(), if precomputed by the user
     generate_displacement_vector_kwargs : dict
-        Parameters given to generate_displacement_vector().
+        Parameters given to generate_displacement_vector() if displacement_data is None
     generate_templates_kwargs : dict
         Parameters given to generate_templates()
     sorting: NumpySorting, default None
@@ -431,6 +434,8 @@ def generate_drifting_recording(
     else:
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
+        if sorting._recording is not None:
+            duration = sorting.get_total_duration()
     
     # probe
     if probe is None:
@@ -459,13 +464,22 @@ def generate_drifting_recording(
     else:
         assert len(unit_locations) == num_units, "We should have num_units unit locations"
 
-    (
-        unit_displacements,
-        displacement_vectors,
-        displacement_unit_factor,
-        displacement_sampling_frequency,
-        displacements_steps,
-    ) = generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
+    if displacement_data is None:
+        (
+            unit_displacements,
+            displacement_vectors,
+            displacement_unit_factor,
+            displacement_sampling_frequency,
+            displacements_steps,
+        ) = generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
+    else:
+        (
+            unit_displacements,
+            displacement_vectors,
+            displacement_unit_factor,
+            displacement_sampling_frequency,
+            displacements_steps,
+        ) = displacement_data
 
     # unit_params need to be fixed before the displacement steps
     generate_templates_kwargs = generate_templates_kwargs.copy()
