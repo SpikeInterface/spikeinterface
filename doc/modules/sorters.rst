@@ -560,6 +560,37 @@ From the user's perspective, they behave exactly like the external sorters:
 .. code-block:: python
 
     sorting = run_sorter(sorter_name="spykingcircus2", recording=recording, folder="/tmp/folder")
+  
+These sorters are based on the :py:mod:`spikeinterface.sortingcomponents`, allowing fast and modular implementations
+of various algorithms often encountered in spike-sorting. 
+
+SpyKING-CIRCUS 2
+^^^^^^^^^^^^^^^^
+
+This is an updated version of SpyKING-CIRCUS \cite{yger2018spike} based on the modular 
+components. In summary, this spike sorting pipeline uses (when motion is present) the DREDGE motion 
+correction algorithm before filtering and whitening the data. On these whitened data, the chains of components 
+that are used are: matched filtering for peak detection, iterative splits for clustering (Iter-HDBSCAN), 
+and orthogonal matching pursuit for template reconstruction (Circus-OMP).
+
+
+TriDesClous 2
+^^^^^^^^^^^^^
+
+This is an updated version of TriDesClous based on the modular components. In summary, 
+the code uses (when motion is present) the DREDGE motion correction algorithm before filtering the data 
+. On these filtered data, the chains of components that are used are: locally exclusive for peak detection, 
+iterative splits for clustering (Iter-ISOPLIT), and fast greedy partial deconvolution, 
+only applied at peak times for template reconstruction (TDC-peeler). 
+
+Lupin
+^^^^^
+
+In summary, the code uses (when motion is present) the DREDGE motion correction algorithm 
+before filtering and whitening the data. On these whitened data, the chains of components that are 
+used are: matched filtering for peak detection, iterative splits for clustering (Iter-ISOPLIT), 
+and augmented matching pursuit for the spike deconvolution (Wobble).
+
 
 Read more in the :ref:`sorting-components-module` docs.
 
