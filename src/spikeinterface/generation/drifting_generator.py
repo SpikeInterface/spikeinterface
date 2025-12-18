@@ -368,20 +368,28 @@ def generate_drifting_recording(
         The duration in seconds.
     sampling_frequency : float, dfault: 30000.
         The sampling frequency.
+    probe: Probe object, default None
+        If provided, the Probe geometry to consider
     probe_name : str, default: "Neuropixels1-128"
-        The probe type if generate_probe_kwargs is None.
+        The probe type if generate_probe_kwargs is None and probe is None.
     generate_probe_kwargs : None or dict
         A dict to generate the probe, this supersede probe_name when not None.
+    unit_locations: array, default None
+        The unit locations of the cells
     generate_unit_locations_kwargs : dict
-        Parameters given to generate_unit_locations().
+        Parameters given to generate_unit_locations() if unit_locations is None
     generate_displacement_vector_kwargs : dict
         Parameters given to generate_displacement_vector().
     generate_templates_kwargs : dict
         Parameters given to generate_templates()
+    sorting: NumpySorting, default None
+        The sorting to generate data from
     generate_sorting_kwargs : dict
-        Parameters given to generate_sorting().
+        Parameters given to generate_sorting() if sorting is None
+    noise: NoiseGenerator, default None
+        Noise generator used to generate background noise
     generate_noise_kwargs : dict
-        Parameters given to generate_noise().
+        Parameters given to generate_noise() if no noise is None
     extra_outputs : bool, default False
         Return optionaly a dict with more variables.
     seed : None ot int
@@ -423,10 +431,6 @@ def generate_drifting_recording(
     else:
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
-        if sorting._recording is not None:
-            durations=[
-                sorting.get_total_duration(),
-            ],
     
     # probe
     if probe is None:
@@ -452,6 +456,8 @@ def generate_drifting_recording(
             seed=seed,
             **generate_unit_locations_kwargs,
         )
+    else:
+        assert len(unit_locations) == num_units, "We should have num_units unit locations"
 
     (
         unit_displacements,
@@ -548,7 +554,7 @@ def generate_drifting_recording(
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
             templates=templates,
-            unit_params=unit_params
+            generate_templates_kwargs=generate_templates_kwargs
         )
         return static_recording, drifting_recording, sorting, extra_infos
     else:
