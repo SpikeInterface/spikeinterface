@@ -7,7 +7,6 @@ from typing import Literal
 
 import numpy as np
 
-from spikeinterface.widgets.utils import get_segment_durations
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
@@ -207,6 +206,7 @@ def random_spikes_selection(
         random_spikes_indices = np.arange(spikes.size)
 
     elif method in rng_methods:
+        from spikeinterface.widgets.utils import get_segment_durations
         rng = np.random.default_rng(seed=seed)
 
         # since un concatenated
