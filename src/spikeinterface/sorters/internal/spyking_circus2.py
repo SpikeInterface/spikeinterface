@@ -24,7 +24,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 0.5, "ms_after": 1.5, "radius_um": 100.0},
-        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 20},
+        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
         "whitening": {"mode": "local", "regularize": False},
         "detection": {
             "method": "matched_filtering",
