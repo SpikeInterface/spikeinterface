@@ -101,7 +101,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
             )
         else:
             noise_generator = None
-            noise_levels = None
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
