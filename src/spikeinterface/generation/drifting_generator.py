@@ -309,6 +309,7 @@ def generate_drifting_recording(
     duration=600.0,
     sampling_frequency=30000.0,
     probe_name="Neuropixels1-128",
+    probe=None,
     generate_probe_kwargs=None,
     unit_locations=None,
     generate_unit_locations_kwargs=dict(
@@ -322,7 +323,6 @@ def generate_drifting_recording(
         # distribution="multimodal",
         # num_modes=2,
     ),
-    displacement_vector=None,
     generate_displacement_vector_kwargs=dict(
         displacement_sampling_frequency=5.0,
         drift_start_um=[0, 20],
@@ -338,7 +338,6 @@ def generate_drifting_recording(
             ),
         ],
     ),
-    templates=None,
     generate_templates_kwargs=dict(
         ms_before=1.5,
         ms_after=3.0,
@@ -352,7 +351,7 @@ def generate_drifting_recording(
     ),
     sorting=None,
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
-    noise_levels=None,
+    noise=None,
     generate_noise_kwargs=dict(noise_levels=(6.0, 8.0), spatial_decay=25.0),
     extra_outputs=False,
     seed=None,
@@ -424,14 +423,20 @@ def generate_drifting_recording(
     else:
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
-        durations = sorting.get_duration()
+        if sorting._recording is not None:
+            durations=[
+                sorting.get_total_duration(),
+            ],
     
     # probe
-    if generate_probe_kwargs is None:
-        generate_probe_kwargs = _toy_probes[probe_name]
-    probe = generate_multi_columns_probe(**generate_probe_kwargs)
-    num_channels = probe.get_contact_count()
-    probe.set_device_channel_indices(np.arange(num_channels))
+    if probe is None:
+        if generate_probe_kwargs is None:
+            generate_probe_kwargs = _toy_probes[probe_name]
+                
+        probe = generate_multi_columns_probe(**generate_probe_kwargs)
+        num_channels = probe.get_contact_count()
+        probe.set_device_channel_indices(np.arange(num_channels))
+
     channel_locations = probe.contact_positions
     # import matplotlib.pyplot as plt
     # import probeinterface.plotting
@@ -491,8 +496,6 @@ def generate_drifting_recording(
 
     drifting_templates = DriftingTemplates.from_static_templates(templates)
 
-    
-
     sorting.set_property("gt_unit_locations", unit_locations)
 
     distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :], axis=2)
@@ -506,13 +509,14 @@ def generate_drifting_recording(
     drifting_templates.templates_array_moved = templates_array_moved
     drifting_templates.displacements = displacements_steps
 
-    noise = generate_noise(
-        probe=probe,
-        sampling_frequency=sampling_frequency,
-        durations=[duration],
-        seed=seed,
-        **generate_noise_kwargs,
-    )
+    if noise is None:
+        noise = generate_noise(
+            probe=probe,
+            sampling_frequency=sampling_frequency,
+            durations=[duration],
+            seed=seed,
+            **generate_noise_kwargs,
+        )
 
     static_recording = InjectDriftingTemplatesRecording(
         sorting=sorting,
@@ -544,6 +548,7 @@ def generate_drifting_recording(
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
             templates=templates,
+            unit_params=unit_params
         )
         return static_recording, drifting_recording, sorting, extra_infos
     else:
