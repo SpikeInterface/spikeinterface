@@ -221,10 +221,8 @@ def random_spikes_selection(
         random_spikes_indices = []
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             all_unit_indices = []
-            all_unit_trains = []
             for segment_index in range(sorting.get_num_segments()):
                 # this is local segment index
-                trains_in_seg = spike_trains[segment_index][unit_id]
                 inds_in_seg = spike_indices[segment_index][unit_id]
                 if margin_size is not None:
                     if num_samples is None:
@@ -265,7 +263,7 @@ def random_spikes_selection(
                         missing.append("k_per_bin")
                     if bin_size_s is None:
                         missing.append("bin_size_s")
-                    print(
+                    raise ValueError(
                         f"the following args need to be defined when using the 'temporal bins' method : {', '.join(missing)}"
                     )
 
