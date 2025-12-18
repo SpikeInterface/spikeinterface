@@ -207,6 +207,7 @@ def random_spikes_selection(
 
     elif method in rng_methods:
         from spikeinterface.widgets.utils import get_segment_durations
+
         rng = np.random.default_rng(seed=seed)
 
         # since un concatenated
