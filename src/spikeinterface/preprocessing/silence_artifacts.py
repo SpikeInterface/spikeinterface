@@ -51,7 +51,7 @@ class DetectThresholdCrossing(PeakDetector):
         return (threshold_crossings,)
 
 
-def detect_onsets(
+def detect_period_artifacts(
     recording,
     detect_threshold=5,
     min_duration_ms=50,
@@ -116,7 +116,7 @@ def detect_onsets(
 
         periods.append(sub_periods)
 
-    return periods
+    return periods, envelope
 
 
 class SilencedArtifactsRecording(SilencedPeriodsRecording):
@@ -175,7 +175,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
     ):
 
         if list_periods is None:
-            list_periods = detect_onsets(
+            list_periods, _ = detect_period_artifacts(
                 recording,
                 detect_threshold=detect_threshold,
                 min_duration_ms=min_duration_ms,
