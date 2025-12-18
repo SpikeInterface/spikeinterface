@@ -121,7 +121,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-        if len(self.periods) > 0:
+        if self.periods.size > 0:
             new_interval = np.array([start_frame, end_frame])
             lower_index = np.searchsorted(self.periods[:, 1], new_interval[0])
             upper_index = np.searchsorted(self.periods[:, 0], new_interval[1])
