@@ -280,8 +280,9 @@ def plot_unit_counts(
     ncol = len(columns)
     width = 1 / (ncol + 2)
 
-    colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-    colors["num_well_detected"] = "green"
+    if colors is None:
+        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
+        colors["num_well_detected"] = "green"
 
     case_colors = study.get_colors(levels_to_group_by=levels_to_group_by)
 
@@ -320,6 +321,8 @@ def plot_unit_counts(
                 ymax = max(ymax, y + yerr[0])
 
     if with_rectangle:
+        if revert_bad:
+            ymin = 0
         spacing = width * 0.3
         for i, key in enumerate(keys_mapping):
             rect = plt.Rectangle(
@@ -413,6 +416,7 @@ def _plot_performances_vs_metric(
     with_sigmoid_fit=False,
     show_average_by_bin=True,
     scatter_size=4,
+    scatter_alpha=1.0,
     num_bin_average=20,
     axs=None,
 ):
@@ -517,7 +521,7 @@ def _plot_performances_vs_metric(
             all_xs = np.concatenate(all_xs)
             all_ys = np.concatenate(all_ys)
 
-            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size)
+            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size, alpha=scatter_alpha)
             ax.set_ylabel(performance_name)
 
         ax.set_ylim(-0.05, 1.05)
@@ -542,6 +546,7 @@ def plot_performances_vs_snr(
     with_sigmoid_fit=False,
     show_average_by_bin=True,
     scatter_size=4,
+    scatter_alpha=1.0,
     num_bin_average=20,
     axs=None,
 ):
@@ -572,6 +577,8 @@ def plot_performances_vs_snr(
         Instead of the sigmoid an average by bins can be plotted.
     scatter_size : int, default 4
         scatter size
+    scatter_alpha : float, default 1.0
+        scatter alpha
     num_bin_average : int, default 2
         Num bin for average
     axs : matplotlib.axes.Axes | None, default: None
@@ -596,6 +603,7 @@ def plot_performances_vs_snr(
         with_sigmoid_fit=with_sigmoid_fit,
         show_average_by_bin=show_average_by_bin,
         scatter_size=scatter_size,
+        scatter_alpha=scatter_alpha,
         num_bin_average=num_bin_average,
         axs=axs,
     )
@@ -613,6 +621,7 @@ def plot_performances_vs_firing_rate(
     with_sigmoid_fit=False,
     show_average_by_bin=True,
     scatter_size=4,
+    scatter_alpha=1.0,
     num_bin_average=20,
     axs=None,
 ):
@@ -643,6 +652,8 @@ def plot_performances_vs_firing_rate(
         Instead of the sigmoid an average by bins can be plotted.
     scatter_size : int, default 4
         scatter size
+    scatter_alpha : float, default 1.0
+        scatter alpha
     num_bin_average : int, default 2
         Num bin for average
     axs : matplotlib.axes.Axes | None, default: None
@@ -667,6 +678,7 @@ def plot_performances_vs_firing_rate(
         with_sigmoid_fit=with_sigmoid_fit,
         show_average_by_bin=show_average_by_bin,
         scatter_size=scatter_size,
+        scatter_alpha=scatter_alpha,
         num_bin_average=num_bin_average,
         axs=axs,
     )

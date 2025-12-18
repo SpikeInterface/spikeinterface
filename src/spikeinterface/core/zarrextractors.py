@@ -161,7 +161,7 @@ class ZarrRecordingExtractor(BaseRecording):
                     if np.isnan(t_start):
                         t_start = None
                 time_kwargs["t_start"] = t_start
-                time_kwargs["sampling_frequency"] = sampling_frequency
+            time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
             self.add_recording_segment(rec_segment)

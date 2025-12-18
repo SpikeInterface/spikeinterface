@@ -10,10 +10,11 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     customize_a_plot
     combine_recordings
     process_by_channel_group
+    ../forhowto/plot_extract_lfps
     build_pipeline_with_dicts
     physical_units
     unsigned_to_signed
-    ../tutorials/forhowto/plot_1_working_with_tetrodes
+    ../forhowto/plot_working_with_tetrodes
     analyze_neuropixels
     handle_drift
     drift_with_lfp
@@ -22,3 +23,4 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     benchmark_with_hybrid_recordings
     auto_curation_training
     auto_curation_prediction
+    import_kilosort_data
