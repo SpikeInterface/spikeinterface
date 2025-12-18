@@ -30,9 +30,7 @@ class DetectThresholdCrossing(PeakDetector):
         if noise_levels is None:
             random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {})
             random_slices_kwargs["seed"] = seed
-            noise_levels = get_noise_levels(recording, 
-                                            return_in_uV=False,
-                                            random_slices_kwargs=random_slices_kwargs)
+            noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
         self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
 
@@ -53,14 +51,15 @@ class DetectThresholdCrossing(PeakDetector):
         return (threshold_crossings,)
 
 
-def detect_onsets(recording, 
-                  detect_threshold=5, 
-                  min_duration_ms=50, 
-                  freq_max=20.0, 
-                  seed=None,
-                  noise_levels=None,
-                  **noise_levels_kwargs):
-
+def detect_onsets(
+    recording,
+    detect_threshold=5,
+    min_duration_ms=50,
+    freq_max=20.0,
+    seed=None,
+    noise_levels=None,
+    **noise_levels_kwargs,
+):
 
     envelope = RectifyRecording(recording)
     envelope = GaussianFilterRecording(envelope, freq_min=None, freq_max=freq_max)
@@ -73,11 +72,9 @@ def detect_onsets(recording,
     _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    node0 = DetectThresholdCrossing(recording, 
-                                    detect_threshold=detect_threshold, 
-                                    noise_levels=noise_levels,
-                                    seed=seed, 
-                                    **noise_levels_kwargs)
+    node0 = DetectThresholdCrossing(
+        recording, detect_threshold=detect_threshold, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
+    )
 
     threshold_crossings = run_node_pipeline(
         recording,
