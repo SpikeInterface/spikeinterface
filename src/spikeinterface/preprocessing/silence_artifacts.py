@@ -32,7 +32,7 @@ class DetectThresholdCrossing(PeakDetector):
             noise_levels_kwargs["seed"] = seed
             noise_levels = get_noise_levels(recording, **noise_levels_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
-        self._dtype = np.dtype(base_peak_dtype + [("onset", "bool")])
+        self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
 
     def get_trace_margin(self):
         return 0
@@ -44,33 +44,48 @@ class DetectThresholdCrossing(PeakDetector):
         z = np.median(traces / self.abs_thresholds, 1)
         threshold_mask = np.diff((z > 1) != 0, axis=0)
         indices = np.flatnonzero(threshold_mask)
-        local_peaks = np.zeros(indices.size, dtype=self._dtype)
-        local_peaks["sample_index"] = indices
-        local_peaks["onset"][::2] = True
-        local_peaks["onset"][1::2] = False
-        return (local_peaks,)
+        threshold_crossings = np.zeros(indices.size, dtype=self._dtype)
+        threshold_crossings["sample_index"] = indices
+        threshold_crossings["front"][::2] = True
+        threshold_crossings["front"][1::2] = False
+        return (threshold_crossings,)
 
 
-def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwargs):
+def detect_onsets(recording, 
+                  detect_threshold=5, 
+                  min_duration_ms=50, 
+                  freq_max=20.0, 
+                  seed=None,
+                  noise_levels=None,
+                  **noise_levels_kwargs):
+
+
+    envelope = RectifyRecording(recording)
+    envelope = GaussianFilterRecording(envelope, freq_min=None, freq_max=freq_max)
+    envelope = CommonReferenceRecording(envelope)
 
     from spikeinterface.core.node_pipeline import (
         run_node_pipeline,
     )
 
-    noise_levels_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+    _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    node0 = DetectThresholdCrossing(recording, detect_threshold, **noise_levels_kwargs)
+    node0 = DetectThresholdCrossing(recording, 
+                                    detect_threshold=detect_threshold, 
+                                    noise_levels=noise_levels,
+                                    seed=seed, 
+                                    **noise_levels_kwargs)
 
-    peaks = run_node_pipeline(
+    threshold_crossings = run_node_pipeline(
         recording,
         [node0],
         job_kwargs,
         job_name="detect threshold crossings",
     )
 
-    order = np.lexsort((peaks["sample_index"], peaks["segment_index"]))
-    peaks = peaks[order]
+    order = np.lexsort((threshold_crossings["sample_index"], threshold_crossings["segment_index"]))
+    threshold_crossings = threshold_crossings[order]
 
     periods = []
     fs = recording.sampling_frequency
@@ -79,25 +94,24 @@ def detect_onsets(recording, detect_threshold=5, min_duration_ms=50, **extra_kwa
 
     for seg_index in range(num_seg):
         sub_periods = []
-        mask = peaks["segment_index"] == 0
-        sub_peaks = peaks[mask]
-        if len(sub_peaks) > 0:
-            if not sub_peaks["onset"][0]:
-                local_peaks = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("onset", "bool")]))
-                local_peaks["sample_index"] = 0
-                local_peaks["onset"] = True
-                sub_peaks = np.hstack((local_peaks, sub_peaks))
-            if sub_peaks["onset"][-1]:
-                local_peaks = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("onset", "bool")]))
-                local_peaks["sample_index"] = recording.get_num_samples(seg_index)
-                local_peaks["onset"] = False
-                sub_peaks = np.hstack((sub_peaks, local_peaks))
+        mask = threshold_crossings["segment_index"] == seg_index
+        sub_thr = threshold_crossings[mask]
+        if len(sub_thr) > 0:
+            local_thr = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("front", "bool")]))
+            if not sub_thr["front"][0]:
+                local_thr["sample_index"] = 0
+                local_thr["front"] = True
+                sub_thr = np.hstack((local_thr, sub_thr))
+            if sub_thr["front"][-1]:
+                local_thr["sample_index"] = recording.get_num_samples(seg_index)
+                local_thr["front"] = False
+                sub_thr = np.hstack((sub_thr, local_thr))
 
-            indices = np.flatnonzero(np.diff(sub_peaks["onset"]))
+            indices = np.flatnonzero(np.diff(sub_thr["front"]))
             for i, j in zip(indices[:-1], indices[1:]):
-                if sub_peaks["onset"][i]:
-                    start = sub_peaks["sample_index"][i]
-                    end = sub_peaks["sample_index"][j]
+                if sub_thr["front"][i]:
+                    start = sub_thr["sample_index"][i]
+                    end = sub_thr["sample_index"][j]
                     if end - start > max_duration_samples:
                         sub_periods.append((start, end))
 
@@ -145,12 +159,14 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         The recording extractor after silencing detected artifacts
     """
 
+    _precomputable_kwarg_names = ["list_periods"]
+
     def __init__(
         self,
         recording,
         detect_threshold=5,
         verbose=False,
-        freq_max=5.0,
+        freq_max=20.0,
         min_duration_ms=50,
         mode="zeros",
         noise_levels=None,
@@ -159,16 +175,14 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
         **noise_levels_kwargs,
     ):
 
-        self.envelope = RectifyRecording(recording)
-        self.envelope = GaussianFilterRecording(self.envelope, freq_min=None, freq_max=freq_max)
-        self.envelope = CommonReferenceRecording(self.envelope)
-
         if list_periods is None:
             list_periods = detect_onsets(
-                self.envelope,
+                recording,
                 detect_threshold=detect_threshold,
                 min_duration_ms=min_duration_ms,
+                freq_max=freq_max,
                 seed=seed,
+                noise_levels=noise_levels,
                 **noise_levels_kwargs,
             )
 
@@ -178,21 +192,8 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
                     percentage = 100 * total_time / recording.get_num_samples(i)
                     print(f"{percentage}% of segment {i} has been flagged as artifactual")
 
-        if "envelope" in noise_levels_kwargs:
-            noise_levels_kwargs.pop("envelope")
-
         SilencedPeriodsRecording.__init__(
             self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
-        )
-
-        self._kwargs.update(
-            {
-                "detect_threshold": detect_threshold,
-                "freq_max": freq_max,
-                "verbose": verbose,
-                "min_duration_ms": min_duration_ms,
-                "envelope": self.envelope,
-            }
         )
 
 
