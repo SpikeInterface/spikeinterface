@@ -61,9 +61,9 @@ def detect_period_artifacts_by_envelope(
     **noise_levels_kwargs,
 ):
     """
-    Docstring for detect_period_artifacts. Function to detect putative artifact periods as threshold crossings of 
+    Docstring for detect_period_artifacts. Function to detect putative artifact periods as threshold crossings of
     a global envelope of the channels.
-    
+
     Parameters
     ----------
     recording : RecordingExtractor
@@ -80,7 +80,7 @@ def detect_period_artifacts_by_envelope(
         Random seed for `get_noise_levels`.
         If none, `get_noise_levels` uses `seed=0`.
     **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
-    
+
     """
 
     envelope = RectifyRecording(recording)
