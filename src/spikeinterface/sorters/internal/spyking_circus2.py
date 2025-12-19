@@ -146,7 +146,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     print("Skipping preprocessing (whitening only)")
                 else:
                     print("Skipping preprocessing (no whitening)")
-            recording_f = recording
+            recording_f = recording.astype("float32")
             recording_f.annotate(is_filtered=True)
 
         if apply_whitening:
@@ -190,9 +190,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         )
 
         if recording_w.check_serializability("json"):
-            recording_w.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
+            recording_dump_file = sorter_output_folder / "preprocessed_recording.json"
         elif recording_w.check_serializability("pickle"):
-            recording_w.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
+            recording_dump_file = sorter_output_folder / "preprocessed_recording.pickle"
+        recording_w.dump(recording_dump_file, relative_to=None)
 
         recording_w, cache_info = cache_preprocessing(
             recording_w, job_kwargs=job_kwargs, **params["cache_preprocessing"]
@@ -469,8 +470,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
                 if sorting.get_non_empty_unit_ids().size > 0:
+                    from spikeinterface.core import load
+                    recording_ww = load(recording_dump_file)
+
                     final_analyzer = final_cleaning_circus(
-                        recording_w,
+                        recording_ww,
                         sorting,
                         templates,
                         amplitude_scalings=spikes['amplitude'],
