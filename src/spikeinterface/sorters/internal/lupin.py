@@ -152,7 +152,6 @@ class LupinSorter(ComponentsBasedSorter):
                 freq_max=params["freq_max"],
                 ftype="bessel",
                 filter_order=2,
-                margin_ms=20.0,
                 dtype="float32",
             )
 
