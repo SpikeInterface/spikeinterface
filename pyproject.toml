@@ -29,7 +29,7 @@ dependencies = [
     "probeinterface>=0.3.1",
     "packaging",
     "pydantic",
-    "numcodecs<0.16.0", # For supporting zarr < 3
+    "numcodecs",
 ]
 
 [build-system]
