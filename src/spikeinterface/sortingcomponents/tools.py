@@ -529,6 +529,13 @@ def create_sorting_analyzer_with_existing_templates(
         sa.extensions["amplitude_scalings"].run_info["run_completed"] = True
         sa.extensions["amplitude_scalings"].run_info["runtime_s"] = 0
 
+        from spikeinterface.postprocessing.spike_amplitudes import ComputeSpikeAmplitudes
+        sa.extensions["spike_amplitudes"] = ComputeSpikeAmplitudes(sa)
+        sa.extensions["spike_amplitudes"].params = dict()
+        sa.extensions["spike_amplitudes"].data["spike_amplitudes"] = amplitude_scalings
+        sa.extensions["spike_amplitudes"].run_info["run_completed"] = True
+        sa.extensions["spike_amplitudes"].run_info["runtime_s"] = 0
+
     return sa
 
 
