@@ -28,7 +28,7 @@ class DetectThresholdCrossing(PeakDetector):
     ):
         PeakDetector.__init__(self, recording, return_output=True)
         if noise_levels is None:
-            random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {})
+            random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {}).copy()
             random_slices_kwargs["seed"] = seed
             noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
@@ -51,7 +51,7 @@ class DetectThresholdCrossing(PeakDetector):
         return (threshold_crossings,)
 
 
-def detect_period_artifacts(
+def detect_period_artifacts_by_envelope(
     recording,
     detect_threshold=5,
     min_duration_ms=50,
@@ -60,6 +60,28 @@ def detect_period_artifacts(
     noise_levels=None,
     **noise_levels_kwargs,
 ):
+    """
+    Docstring for detect_period_artifacts. Function to detect putative artifact periods as threshold crossings of 
+    a global envelope of the channels.
+    
+    Parameters
+    ----------
+    recording : RecordingExtractor
+        The recording extractor to detect putative artifacts
+    detect_threshold : float, default: 5
+        The threshold to detect artifacts. The threshold is computed as `detect_threshold * noise_level`
+    freq_max : float, default: 20
+        The maximum frequency for the low pass filter used
+    min_duration_ms : float, default: 50
+        The minimum duration for a threshold crossing to be considered as an artefact.
+    noise_levels : array
+        Noise levels if already computed
+    seed : int | None, default: None
+        Random seed for `get_noise_levels`.
+        If none, `get_noise_levels` uses `seed=0`.
+    **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
+    
+    """
 
     envelope = RectifyRecording(recording)
     envelope = GaussianFilterRecording(envelope, freq_min=None, freq_max=freq_max)
@@ -175,7 +197,7 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
     ):
 
         if list_periods is None:
-            list_periods, _ = detect_period_artifacts(
+            list_periods, _ = detect_period_artifacts_by_envelope(
                 recording,
                 detect_threshold=detect_threshold,
                 min_duration_ms=min_duration_ms,

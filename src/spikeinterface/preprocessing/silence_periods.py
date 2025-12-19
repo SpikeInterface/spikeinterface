@@ -78,7 +78,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         if mode in ["noise"]:
             if noise_levels is None:
-                random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {})
+                random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {}).copy()
                 random_slices_kwargs["seed"] = seed
                 noise_levels = get_noise_levels(
                     recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs
