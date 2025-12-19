@@ -179,10 +179,14 @@ def test_BaseRecording(create_cache_folder):
 
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
-    positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0]]
-    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
-    probe.set_device_channel_indices([2, -1, 0])
+    positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0],
+                 [100.0, 0.0], [100.0, 15.0], [100.0, 30.0],
+                 ]
+    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5}, shank_ids=["a"]*3 + ["b"]*3)
+    probe.set_device_channel_indices([2, -1, 0, -1, -1, -1 ], )
     probe.create_auto_shape()
+
+    print("ici", probe.shank_ids)
 
     rec_p = rec.set_probe(probe, group_mode="by_shank")
     rec_p = rec.set_probe(probe, group_mode="by_probe")
@@ -216,7 +220,7 @@ def test_BaseRecording(create_cache_folder):
     # set unconnected probe
     probe = Probe(ndim=2)
     positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0]]
-    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
+    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5}, shank_ids=["a", "a", "a"])
     probe.set_device_channel_indices([-1, -1, -1])
     probe.create_auto_shape()
 
