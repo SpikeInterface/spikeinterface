@@ -182,7 +182,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
-            recording = recording_raw
+            recording = recording_raw.astype("float32")
             noise_levels = get_noise_levels(recording, return_in_uV=False)
             cache_info = None
 
