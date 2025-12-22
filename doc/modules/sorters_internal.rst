@@ -25,7 +25,7 @@ Lupin
 Lupin is components-based sorters, it combine components that give the best reults on benchmarks
 for each steps. It is theorically the "best" sorter, spikeiterface can offer internally.
 
-In summary, Lupin uses: 
+In summary, Lupin uses:
   * preprocessing (filtering, CMR, whitening)
   * the *DREDGE* motion correction algorithm (optional)
   * peak detection with *matched filtering*
@@ -37,7 +37,7 @@ Some note on this algos and related parameters:
     `clustering_ms_before` `clustering_ms_after` `ms_before` `ms_after`
   * the filtering is quite smooth `freq_max=7000.`
   * `n_pca_features` can impact the clustering step
-  * there is a clean step before the template matching using `template_sparsify_threshold` 
+  * there is a clean step before the template matching using `template_sparsify_threshold`
     `template_min_snr_ptp` `template_max_jitter_ms` `min_firing_rate`. This can impact a lot the result.
   * Lupin is a bit slower than `tridesclous2`` and `spkykingcircus2`
 
@@ -58,7 +58,7 @@ This is an updated version of TriDesClous based on the modular components.
 This do not give as good results as `lupin` but this was faster.
 This is sorter is a good choice for very fast exploration of a dataset.
 
-Internally tridesclous2 uses: 
+Internally tridesclous2 uses:
   * preprocessing (filtering, CMR) but no whitening
   * the *DREDGE* motion correction algorithm (optional)
   * peak detection with *locally_exlusive*
