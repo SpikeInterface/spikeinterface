@@ -122,23 +122,23 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
                 rec_for_motion = recording_raw
-                if params["apply_preprocessing"]:
-                    rec_for_motion = bandpass_filter(
-                        rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
-                    )
-                    if apply_cmr:
-                        rec_for_motion = common_reference(rec_for_motion)
-                    if verbose:
-                        print("Start correct_motion()")
-                    _, motion_info = correct_motion(
-                        rec_for_motion,
-                        folder=sorter_output_folder / "motion",
-                        output_motion_info=True,
-                        preset=params["motion_correction_preset"],
-                        # **params["motion_correction"],
-                    )
-                    if verbose:
-                        print("Done correct_motion()")
+                
+                rec_for_motion = bandpass_filter(
+                    rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
+                )
+                if apply_cmr:
+                    rec_for_motion = common_reference(rec_for_motion)
+                if verbose:
+                    print("Start correct_motion()")
+                 _, motion_info = correct_motion(
+                    rec_for_motion,
+                    folder=sorter_output_folder / "motion",
+                    output_motion_info=True,
+                    preset=params["motion_correction_preset"],
+                    # **params["motion_correction"],
+                )
+                if verbose:
+                    print("Done correct_motion()")
 
             # recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20.0, dtype="float32")
             recording = bandpass_filter(
