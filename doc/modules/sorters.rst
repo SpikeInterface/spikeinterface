@@ -322,14 +322,11 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
 :py:func:`~spikeinterface.sorters.run_sorters` has several "engines" available to launch the computation:
 
 * "loop": sequential
-* "joblib": in parallel
 * "slurm": in parallel, using the SLURM job manager
 
 .. code-block:: python
 
   run_sorter_jobs(job_list=job_list, engine='loop')
-
-  run_sorter_jobs(job_list=job_list, engine='joblib', engine_kwargs={'n_jobs': 2})
 
   run_sorter_jobs(job_list=job_list, engine='slurm', engine_kwargs={'cpus_per_task': 10, 'mem': '5G'})
 
@@ -549,6 +546,7 @@ These components can be gathered to create a new sorter. We already have 2 sorte
 * :code:`spykingcircus2`
 * :code:`tridesclous2`
 * :code:`lupin`
+* :code:`simple`
 
 There are some benefits of using these sorters:
   * they directly handle SpikeInterface objects, so they do not need any data copy.
@@ -564,35 +562,10 @@ From the user's perspective, they behave exactly like the external sorters:
 These sorters are based on the :py:mod:`spikeinterface.sortingcomponents`, allowing fast and modular implementations
 of various algorithms often encountered in spike-sorting.
 
-SpyKING-CIRCUS 2
-^^^^^^^^^^^^^^^^
+Please go to :ref:`internal_sorters` for more details on how they behave.
 
-This is an updated version of SpyKING-CIRCUS \cite{yger2018spike} based on the modular
-components. In summary, this spike sorting pipeline uses (when motion is present) the DREDGE motion
-correction algorithm before filtering and whitening the data. On these whitened data, the chains of components
-that are used are: matched filtering for peak detection, iterative splits for clustering (Iter-HDBSCAN),
-and orthogonal matching pursuit for template reconstruction (Circus-OMP).
+Read more in the :ref:`sorting-components-module` docs for more low level details on components.
 
-
-TriDesClous 2
-^^^^^^^^^^^^^
-
-This is an updated version of TriDesClous based on the modular components. In summary,
-the code uses (when motion is present) the DREDGE motion correction algorithm before filtering the data
-. On these filtered data, the chains of components that are used are: locally exclusive for peak detection,
-iterative splits for clustering (Iter-ISOPLIT), and fast greedy partial deconvolution,
-only applied at peak times for template reconstruction (TDC-peeler).
-
-Lupin
-^^^^^
-
-In summary, the code uses (when motion is present) the DREDGE motion correction algorithm
-before filtering and whitening the data. On these whitened data, the chains of components that are
-used are: matched filtering for peak detection, iterative splits for clustering (Iter-ISOPLIT),
-and augmented matching pursuit for the spike deconvolution (Wobble).
-
-
-Read more in the :ref:`sorting-components-module` docs.
 
 Contributing
 ------------

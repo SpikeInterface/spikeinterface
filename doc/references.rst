@@ -44,7 +44,7 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
 - :code:`rtsort` [van_der_Molen]_
-- :code:`spykingcircus` [Yger]_
+- :code:`spykingcircus` [Yger2018]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
 
@@ -173,6 +173,6 @@ References
 
 .. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
-.. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
+.. [Yger2018] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
 
 .. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_
