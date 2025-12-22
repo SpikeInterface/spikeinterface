@@ -335,7 +335,7 @@ class LupinSorter(ComponentsBasedSorter):
                 recording,
                 sorting,
                 templates,
-                amplitude_scalings=spikes['amplitude'],
+                amplitude_scalings=spikes["amplitude"],
                 noise_levels=noise_levels,
                 similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
                 sparsity_overlap=0.5,

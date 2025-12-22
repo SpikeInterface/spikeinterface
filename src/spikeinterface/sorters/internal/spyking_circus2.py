@@ -471,13 +471,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
                 if sorting.get_non_empty_unit_ids().size > 0:
                     from spikeinterface.core import load
+
                     recording_ww = load(recording_dump_file)
 
                     final_analyzer = final_cleaning_circus(
                         recording_ww,
                         sorting,
                         templates,
-                        amplitude_scalings=spikes['amplitude'],
+                        amplitude_scalings=spikes["amplitude"],
                         noise_levels=noise_levels,
                         job_kwargs=job_kwargs,
                         **merging_params,
@@ -516,11 +517,9 @@ def final_cleaning_circus(
     from spikeinterface.curation.auto_merge import auto_merge_units
 
     # First we compute the needed extensions
-    analyzer = create_sorting_analyzer_with_existing_templates(sorting, 
-                                                               recording, 
-                                                               templates, 
-                                                               noise_levels=noise_levels,
-                                                               amplitude_scalings=amplitude_scalings)
+    analyzer = create_sorting_analyzer_with_existing_templates(
+        sorting, recording, templates, noise_levels=noise_levels, amplitude_scalings=amplitude_scalings
+    )
     analyzer.compute("unit_locations", method="center_of_mass", **job_kwargs)
     analyzer.compute("template_similarity", **similarity_kwargs)
 

@@ -495,6 +495,7 @@ def create_sorting_analyzer_with_existing_templates(
         non_empty_sorting = sorting
 
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+
     sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
@@ -510,6 +511,7 @@ def create_sorting_analyzer_with_existing_templates(
 
     if noise_levels is not None:
         from spikeinterface.core.analyzer_extension_core import ComputeNoiseLevels
+
         sa.extensions["noise_levels"] = ComputeNoiseLevels(sa)
         sa.extensions["noise_levels"].params = {}
         sa.extensions["noise_levels"].data["noise_levels"] = noise_levels
@@ -518,13 +520,16 @@ def create_sorting_analyzer_with_existing_templates(
 
     if amplitude_scalings is not None:
         from spikeinterface.postprocessing.amplitude_scalings import ComputeAmplitudeScalings
+
         sa.extensions["amplitude_scalings"] = ComputeAmplitudeScalings(sa)
-        sa.extensions["amplitude_scalings"].params = dict(sparsity=None,
-                    max_dense_channels=16,
-                    ms_before=templates.ms_before,
-                    ms_after=templates.ms_after,
-                    handle_collisions=True,
-                    delta_collision_ms=2)
+        sa.extensions["amplitude_scalings"].params = dict(
+            sparsity=None,
+            max_dense_channels=16,
+            ms_before=templates.ms_before,
+            ms_after=templates.ms_after,
+            handle_collisions=True,
+            delta_collision_ms=2,
+        )
         sa.extensions["amplitude_scalings"].data["amplitude_scalings"] = amplitude_scalings
         sa.extensions["amplitude_scalings"].run_info["run_completed"] = True
         sa.extensions["amplitude_scalings"].run_info["runtime_s"] = 0
