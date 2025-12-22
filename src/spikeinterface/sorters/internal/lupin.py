@@ -35,6 +35,7 @@ class LupinSorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
+        "preprocessing_dict": None,
         "apply_motion_correction": False,
         "motion_correction_preset": "dredge_fast",
         "clustering_ms_before": 0.3,
@@ -67,7 +68,8 @@ class LupinSorter(ComponentsBasedSorter):
 
     _params_description = {
         "apply_preprocessing": "Apply internal preprocessing or not",
-        "apply_motion_correction": "Apply motion correction or not",
+        "preprocessing_dict": "Inject customized preprocessing chain via a dict, instead of the internal one",
+        "apply_motion_correction": "Apply motion correction or not (only used when apply_preprocessing=True)",
         "motion_correction_preset": "Motion correction preset",
         "clustering_ms_before": "Milliseconds before the spike peak for clustering",
         "clustering_ms_after": "Milliseconds after the spike peak  for clustering",
@@ -111,6 +113,7 @@ class LupinSorter(ComponentsBasedSorter):
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
         from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
+        from spikeinterface.preprocessing import apply_preprocessing_pipeline
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -144,17 +147,20 @@ class LupinSorter(ComponentsBasedSorter):
                 if verbose:
                     print("Done correct_motion()")
 
-            recording = bandpass_filter(
-                recording_raw,
-                freq_min=params["freq_min"],
-                freq_max=params["freq_max"],
-                ftype="bessel",
-                filter_order=2,
-                dtype="float32",
-            )
+            if params["preprocessing_dict"] is None:
+                recording = bandpass_filter(
+                    recording_raw,
+                    freq_min=params["freq_min"],
+                    freq_max=params["freq_max"],
+                    ftype="bessel",
+                    filter_order=2,
+                    dtype="float32",
+                )
 
-            if apply_cmr:
-                recording = common_reference(recording)
+                if apply_cmr:
+                    recording = common_reference(recording)
+            else:
+                recording = apply_preprocessing_pipeline(recording, params["preprocessing_dict"])
 
             recording = whiten(
                 recording,
