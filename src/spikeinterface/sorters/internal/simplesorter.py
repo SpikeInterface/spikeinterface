@@ -71,7 +71,7 @@ class SimpleSorter(ComponentsBasedSorter):
         seed = params["seed"]
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-        from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd        
+        from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 
         recording_raw = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         num_chans = recording_raw.get_num_channels()
@@ -79,12 +79,14 @@ class SimpleSorter(ComponentsBasedSorter):
 
         # preprocessing
         if params["apply_preprocessing"]:
-            recording = bandpass_filter(recording_raw,
+            recording = bandpass_filter(
+                recording_raw,
                 freq_min=params["freq_min"],
                 freq_max=params["freq_max"],
                 ftype="bessel",
                 filter_order=2,
-                dtype="float32")
+                dtype="float32",
+            )
             recording = zscore(recording)
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
@@ -96,19 +98,17 @@ class SimpleSorter(ComponentsBasedSorter):
             peak_sign=params["peak_sign"],
             detect_threshold=params["detect_threshold"],
             exclude_sweep_ms=1.5,
-            radius_um=150.,
+            radius_um=150.0,
             noise_levels=noise_levels,
         )
         peaks = detect_peaks(
             recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
         )
 
-
         if verbose:
             print("Simple sorter found %d peaks in total" % len(peaks))
 
-
-        # features with SVD 
+        # features with SVD
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
             recording,
             peaks,
