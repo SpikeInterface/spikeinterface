@@ -821,6 +821,7 @@ class BaseMetric:
     metric_name = None  # to be defined in subclass
     metric_params = {}  # to be defined in subclass
     metric_columns = {}  # column names and their dtypes of the dataframe
+    metric_descriptions = {}  # descriptions of each metric column
     needs_recording = False  # whether the metric needs recording
     needs_tmp_data = (
         False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
@@ -928,6 +929,35 @@ class BaseMetricExtension(AnalyzerExtension):
                 continue
             default_metric_columns.extend(m.metric_columns)
         return default_metric_columns
+
+    @classmethod
+    def get_metric_column_descriptions(cls, metric_names=None):
+        """Get the default metric columns.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to get columns for. If None, all metrics are considered.
+
+        Returns
+        -------
+        metric_column_descriptions : dict
+            Dictionary of metric columns and their descriptions for each metric.
+        """
+        metric_column_descriptions = {}
+        for m in cls.metric_list:
+            if metric_names is not None and m.metric_name not in metric_names:
+                continue
+            if m.metric_descriptions is None:
+                metric_column_descriptions.update({col: "no description" for col in m.metric_columns.keys()})
+            else:
+                if set(m.metric_descriptions.keys()) == set(m.metric_columns.keys()):
+                    metric_column_descriptions.update(m.metric_descriptions)
+                else:
+                    warnings.warn(
+                        f"Metric {m.metric_name} has inconsistent metric_descriptions and metric_columns keys."
+                    )
+        return metric_column_descriptions
 
     def _cast_metrics(self, metrics_df):
         metric_dtypes = {}
