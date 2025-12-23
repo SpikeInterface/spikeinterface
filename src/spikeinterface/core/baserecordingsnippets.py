@@ -150,6 +150,7 @@ class BaseRecordingSnippets(BaseExtractor):
             warn("The given probes have unconnected contacts: they are removed")
 
         probe_as_numpy_array = probe_as_numpy_array[keep]
+
         device_channel_indices = probe_as_numpy_array["device_channel_indices"]
         order = np.argsort(device_channel_indices)
         device_channel_indices = device_channel_indices[order]
@@ -199,8 +200,8 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording.set_property("location", locations, ids=None)
 
         # handle groups
-        all_has_shank_id = all(probe.shank_ids is not None for probe in probegroup.probes)
-        all_has_contact_side = all(probe.contact_sides is not None for probe in probegroup.probes)
+        all_has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
+        all_has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
         if group_mode == "auto":
             group_keys = ["probe_index"]
             if all_has_shank_id:
