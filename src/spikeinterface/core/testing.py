@@ -113,7 +113,7 @@ def check_sortings_equal(
     max_spike_index = SX1.to_spike_vector()["sample_index"].max()
 
     # TODO for later  use to_spike_vector() to do this without looping
-    def _slice_spikes(spikes, start_frame = None, end_frame = None):
+    def _slice_spikes(spikes, start_frame=None, end_frame=None):
         mask = np.ones(spikes.size, dtype=bool)
         if start_frame is not None:
             mask &= spikes["sample_index"] >= start_frame
