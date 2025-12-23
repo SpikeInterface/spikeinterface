@@ -71,7 +71,7 @@ class BaseRecordingSnippets(BaseExtractor):
             The probe(s) to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
             How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple, probe with multiple shanks and 2 sides.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
@@ -105,7 +105,7 @@ class BaseRecordingSnippets(BaseExtractor):
             The probe(s) to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
             How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple, probe with multiple shanks and 2 sides.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
