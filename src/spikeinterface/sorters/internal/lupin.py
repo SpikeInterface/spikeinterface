@@ -131,11 +131,17 @@ class LupinSorter(ComponentsBasedSorter):
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
-                rec_for_motion = bandpass_filter(
-                    rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
-                )
-                if apply_cmr:
-                    rec_for_motion = common_reference(rec_for_motion)
+                
+                rec_for_motion = recording_raw
+                if params["preprocessing_dict"] is None:
+                    rec_for_motion = bandpass_filter(
+                        rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
+                    )
+                    if apply_cmr:
+                        rec_for_motion = common_reference(rec_for_motion)
+                else:
+                    rec_for_motion = apply_preprocessing_pipeline(rec_for_motion, params["preprocessing_dict"])
+
                 if verbose:
                     print("Start correct_motion()")
                 _, motion_info = correct_motion(
