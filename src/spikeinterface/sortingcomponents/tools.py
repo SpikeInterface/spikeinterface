@@ -527,7 +527,7 @@ def create_sorting_analyzer_with_existing_templates(
             max_dense_channels=16,
             ms_before=templates.ms_before,
             ms_after=templates.ms_after,
-            handle_collisions=True,
+            handle_collisions=False,
             delta_collision_ms=2,
         )
         sa.extensions["amplitude_scalings"].data["amplitude_scalings"] = amplitude_scalings
