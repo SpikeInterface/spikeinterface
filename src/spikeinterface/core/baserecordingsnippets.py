@@ -205,22 +205,22 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording.set_property("location", locations, ids=None)
 
         # handle groups
-        all_has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
-        all_has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
+        has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
+        has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
         if group_mode == "auto":
             group_keys = ["probe_index"]
-            if all_has_shank_id:
+            if has_shank_id:
                 group_keys += ["shank_ids"]
-            if all_has_contact_side:
+            if has_contact_side:
                 group_keys += ["contact_sides"]
         elif group_mode == "by_probe":
             group_keys = ["probe_index"]
         elif group_mode == "by_shank":
-            assert all_has_shank_id, "shank_ids is None in probe, you cannot group by shank"
+            assert has_shank_id, "shank_ids is None in probe, you cannot group by shank"
             group_keys = ["probe_index", "shank_ids"]
         elif group_mode == "by_side":
-            assert all_has_contact_side, "contact_sides is None in probe, you cannot group by side"
-            if all_has_shank_id:
+            assert has_contact_side, "contact_sides is None in probe, you cannot group by side"
+            if has_shank_id:
                 group_keys = ["probe_index", "shank_ids", "contact_sides"]
             else:
                 group_keys = ["probe_index", "contact_sides"]
