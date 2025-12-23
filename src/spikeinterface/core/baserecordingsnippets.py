@@ -115,7 +115,12 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording: BaseRecording
             A view of the recording (ChannelSlice or clone or itself)
         """
-        assert group_mode in ("auto", "by_probe", "by_shank", "by_side"), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
+        assert group_mode in (
+            "auto",
+            "by_probe",
+            "by_shank",
+            "by_side",
+        ), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
 
         # handle several input possibilities
         if isinstance(probe_or_probegroup, Probe):
@@ -224,7 +229,7 @@ class BaseRecordingSnippets(BaseExtractor):
         for group, a in enumerate(unique_keys):
             mask = np.ones(probe_as_numpy_array.size, dtype=bool)
             for k in group_keys:
-                mask &= (probe_as_numpy_array[k] == a[k])
+                mask &= probe_as_numpy_array[k] == a[k]
             groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
