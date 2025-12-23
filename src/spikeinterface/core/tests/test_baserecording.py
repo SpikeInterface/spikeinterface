@@ -186,6 +186,7 @@ def test_BaseRecording(create_cache_folder):
     probe.set_device_channel_indices([2, -1, 0, -1, -1, -1 ], )
     probe.create_auto_shape()
 
+    rec_p = rec.set_probe(probe, group_mode="auto")
     rec_p = rec.set_probe(probe, group_mode="by_shank")
     rec_p = rec.set_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
