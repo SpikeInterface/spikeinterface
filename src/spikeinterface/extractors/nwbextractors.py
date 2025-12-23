@@ -1799,7 +1799,7 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     return outputs
 
 
-def load_analyzer_from_nwb(
+def read_nwb_as_analyzer(
     file_path: str | Path,
     t_start: float | None = None,
     sampling_frequency: float | None = None,
@@ -1878,7 +1878,7 @@ def load_analyzer_from_nwb(
         units = units.to_dataframe(index=True)
     else:
         units_dset = sorting._file["units"]
-        units = make_df(units_dset)
+        units = _create_df_from_nwb_table(units_dset)
         colnames = units.columns
 
     electrodes_indices = None
@@ -1887,7 +1887,7 @@ def load_analyzer_from_nwb(
         if "electrodes" in colnames:
             electrodes_indices = units["electrodes"]
     else:
-        electrodes_table = make_df(sorting._file["/general/extracellular_ephys/electrodes"])
+        electrodes_table = _create_df_from_nwb_table(sorting._file["/general/extracellular_ephys/electrodes"])
         if "electrodes" in colnames:
             electrodes_indices = electrodes_indices = units["electrodes"][:]
 
@@ -1939,8 +1939,6 @@ def load_analyzer_from_nwb(
             sampling_frequency=sorting.sampling_frequency,
             num_channels=len(channel_ids),
             num_samples=num_samples,
-            is_filtered=True,
-            dtype="float32",
         )
         # make a probegroup
         electrode_colnames = electrodes_table_sliced.columns
@@ -1948,7 +1946,7 @@ def load_analyzer_from_nwb(
             "rel_x" in electrode_colnames and "rel_y" in electrode_colnames
         ), "'rel_x' and 'rel_y' should be columns in the electrode name"
         locations = np.array([electrodes_table_sliced["rel_x"][:], electrodes_table_sliced["rel_y"][:]]).T
-        probegroup = create_dummy_probegroup_from_locations(locations)
+        probegroup = _create_dummy_probegroup_from_locations(locations)
         rec_attributes["probegroup"] = probegroup
 
     # instantiate analyzer
@@ -1960,18 +1958,22 @@ def load_analyzer_from_nwb(
     if "waveform_mean" in units:
         from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeRandomSpikes
 
-        # instantiate templates
+        # compute random spikes, which is a dependency for templates
+        # since we don't know the spike samples, we compute with method 'all'
         analyzer.compute("random_spikes", method="all")
 
+        # instantiate templates
         templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
         templates_avg_data = np.array([t for t in units["waveform_mean"].values]).astype("float")
         total_ms = templates_avg_data.shape[1] / analyzer.sampling_frequency * 1000
-        template_params = get_default_analyzer_extension_params("templates")
-        if total_ms != template_params["ms_before"] + template_params["ms_after"]:
-            if verbose:
-                print("Guessing correct template cutouts")
-            template_params["ms_before"] = int(1 / 3 * total_ms)
-            template_params["ms_after"] = total_ms - template_params["ms_before"]
+        # estimate ms_before and ms_after from minimum point in the average template
+        nbefore = np.unravel_index(np.argmin(templates_avg_data, axis=1), templates_avg_data.shape)[1]
+        print(nbefore)
+        ms_before = int(nbefore / analyzer.sampling_frequency * 1000)
+        ms_after = int(total_ms - ms_before)
+        template_params = {}
+        template_params["ms_before"] = ms_before
+        template_params["ms_after"] = ms_after
         template_params["operators"] = ["average", "std"]
         templates_ext.set_params(**template_params)
         templates_avg_data = np.array([t for t in units["waveform_mean"].values]).astype("float")
@@ -1988,29 +1990,32 @@ def load_analyzer_from_nwb(
     template_metric_columns = ComputeTemplateMetrics.get_metric_columns()
     quality_metric_columns = ComputeQualityMetrics.get_metric_columns()
 
-    tm = pd.DataFrame(index=sorting.unit_ids)
-    qm = pd.DataFrame(index=sorting.unit_ids)
+    template_metrics_df = pd.DataFrame(index=sorting.unit_ids)
+    quality_metric_df = pd.DataFrame(index=sorting.unit_ids)
 
     for col in units.columns:
         if col in template_metric_columns:
-            tm.loc[:, col] = units[col].values
+            template_metrics_df.loc[:, col] = units[col].values
         if col in quality_metric_columns:
-            qm.loc[:, col] = units[col].values
+            quality_metric_df.loc[:, col] = units[col].values
 
-    if len(tm.columns) > 0:
+    if len(template_metrics_df.columns) > 0:
         if verbose:
             print("Adding template metrics")
-        tm_ext = ComputeTemplateMetrics(analyzer)
-        tm_ext.data["metrics"] = tm
-        tm_ext.run_info["run_completed"] = True
-        analyzer.extensions["template_metrics"] = tm_ext
-    if len(qm.columns) > 0:
+        template_metrics_ext = ComputeTemplateMetrics(analyzer)
+        template_metrics_ext.data["metrics"] = template_metrics_df
+        template_metrics_ext.run_info["run_completed"] = True
+        # cast to correct dtypes
+        template_metrics_ext._cast_metrics()
+        analyzer.extensions["template_metrics"] = template_metrics_ext
+    if len(quality_metric_df.columns) > 0:
         if verbose:
             print("Adding quality metrics")
-        qm_ext = ComputeQualityMetrics(analyzer)
-        qm_ext.data["metrics"] = qm
-        qm_ext.run_info["run_completed"] = True
-        analyzer.extensions["quality_metrics"] = qm_ext
+        quality_metrics_ext = ComputeQualityMetrics(analyzer)
+        quality_metrics_ext.data["metrics"] = quality_metric_df
+        quality_metrics_ext.run_info["run_completed"] = True
+        quality_metrics_ext._cast_metrics()
+        analyzer.extensions["quality_metrics"] = quality_metrics_ext
 
     # compute extra required
     if compute_extra is not None:
@@ -2022,7 +2027,7 @@ def load_analyzer_from_nwb(
     return analyzer
 
 
-def create_dummy_probegroup_from_locations(locations, shape="circle", shape_params={"radius": 1}):
+def _create_dummy_probegroup_from_locations(locations, shape="circle", shape_params={"radius": 1}):
     """
     Creates a "dummy" probe based on locations.
 
@@ -2054,7 +2059,7 @@ def create_dummy_probegroup_from_locations(locations, shape="circle", shape_para
     return probegroup
 
 
-def make_df(group):
+def _create_df_from_nwb_table(group):
     """Makes pandas DataFrame from hdf5/zarr NWB group"""
     import pandas as pd
 

@@ -35,7 +35,6 @@ from .nwbextractors import (
     read_nwb_recording,
     read_nwb_sorting,
     read_nwb_timeseries,
-    load_analyzer_from_nwb,
 )
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
@@ -195,7 +194,6 @@ __all__ += [func["wrapper_string"] for func in _snippets_extractor_full_dict.val
 __all__.extend(
     [
         "read_nwb",  # convenience function for multiple nwb formats
-        "load_analyzer_from_nwb",
         "recording_extractor_full_dict",
         "sorting_extractor_full_dict",
         "event_extractor_full_dict",
