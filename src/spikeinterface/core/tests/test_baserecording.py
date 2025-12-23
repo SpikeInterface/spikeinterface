@@ -179,11 +179,20 @@ def test_BaseRecording(create_cache_folder):
 
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
-    positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0],
-                 [100.0, 0.0], [100.0, 15.0], [100.0, 30.0],
-                 ]
-    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5}, shank_ids=["a"]*3 + ["b"]*3)
-    probe.set_device_channel_indices([2, -1, 0, -1, -1, -1 ], )
+    positions = [
+        [0.0, 0.0],
+        [0.0, 15.0],
+        [0, 30.0],
+        [100.0, 0.0],
+        [100.0, 15.0],
+        [100.0, 30.0],
+    ]
+    probe.set_contacts(
+        positions=positions, shapes="circle", shape_params={"radius": 5}, shank_ids=["a"] * 3 + ["b"] * 3
+    )
+    probe.set_device_channel_indices(
+        [2, -1, 0, -1, -1, -1],
+    )
     probe.create_auto_shape()
 
     rec_p = rec.set_probe(probe, group_mode="auto")
