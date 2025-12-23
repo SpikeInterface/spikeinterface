@@ -8,7 +8,7 @@ Kilosort, Mountainsort, etc. (see :ref:`compatible-sorters`). All these sorter c
 from the :py:class:`~spikeinterface.sorters.BaseSorter` class, which provides the common tools to
 run spike sorters.
 
-On the other hand SpikeInterface directly implements some internal sorters (**spykingcircus2**)
+On the other hand SpikeInterface directly implements some internal sorters
 that do not depend on external tools, but depend on the :py:mod:`spikeinterface.sortingcomponents`
 module. Check the :ref:`internal_sorters` page for more details on internal sorters and their
 strategies.
@@ -487,11 +487,11 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
 
-Here is a list of internal sorter based on `spikeinterface.sortingcomponents`:
+Here is a list of internal sorter based on :py:mod:`spikeinterface.sortingcomponents`:
 
+* **Lupin** :code:`run_sorter(sorter_name='lupin')`
 * **Spyking Circus2** :code:`run_sorter(sorter_name='spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter(sorter_name='tridesclous2')`
-* **Lupin** :code:`run_sorter(sorter_name='lupin')`
 * **Simple** :code:`run_sorter(sorter_name='simple')`
 
 Here is the list of legacy sorters that are no longer supported, but can still be run
