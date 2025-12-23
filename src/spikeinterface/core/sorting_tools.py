@@ -177,7 +177,7 @@ def random_spikes_selection(
         The number of samples per segment.
         Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    method: "uniform" | "percentage" | "maximum_rate" | "all", default: "uniform"
+    method: "uniform" | "percentage" | "maximum_rate" | "all" | "temporal_bins", default: "uniform"
         The method to use.
     max_spikes_per_unit: int, default: 500
         The maximum number of spikes per units
@@ -215,7 +215,7 @@ def random_spikes_selection(
         spikes = sorting.to_spike_vector(concatenated=False)
         cum_sizes = np.cumsum([0] + [s.size for s in spikes])
 
-        # this fast when numba
+        # this is fast when numba is installed
         spike_indices = spike_vector_to_indices(spikes, sorting.unit_ids, absolute_index=False)
 
         random_spikes_indices = []
@@ -240,12 +240,14 @@ def random_spikes_selection(
 
             if method == "uniform":
                 rng_size = min(max_spikes_per_unit, all_unit_indices.size)
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "percentage":
                 if percentage is None or not (0 < percentage <= 1):
                     raise ValueError(f"percentage must be in the interval (0, 1]")
 
                 rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "maximum_rate":
                 if maximum_rate is None:
@@ -253,6 +255,7 @@ def random_spikes_selection(
 
                 t_duration = np.sum(get_segment_durations(sorting))
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "temporal_bins":
                 # expressed bin sampling as a dual sub sorting problem to be fully vectorized
@@ -289,11 +292,8 @@ def random_spikes_selection(
 
                 ranks = np.arange(ordered_unit_indices.size, step=1) - np.repeat(group_start, counts)
                 selection_mask = ranks <= k_per_bin
-                selected = ordered_unit_indices[selection_mask]
-                random_spikes_indices.append(selected)
-                continue
-
-            selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+                selected_unit_indices = ordered_unit_indices[selection_mask]
+            
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
