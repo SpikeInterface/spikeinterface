@@ -13,21 +13,20 @@ By default, the following metrics are computed:
 * "num_negative_peaks": the number of negative peaks
 
 The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
-input. Voltages are based on the units of the template. By default this is :math:`\mu V`
+input. Voltages are based on the units of the template. By default this is µV
 but can be the raw output from the recording device (this depends on the
 :code:`return_in_uV` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
-Distances are in :math:`\mu m` and times are in seconds. So, for example, if the
-templates are in units of :math:`\mu V` then: :code:`repolarization_slope` is in
-:math:`mV / s`; :code:`peak_to_trough_ratio` is in :math:`\mu m` and the
-:code:`halfwidth` is in :math:`s`.
+Distances are in µm and times are in seconds. So, for example, if the
+templates are in units of µV then :code:`recovery_slope` :code:`repolarization_slope` is in
+µV/s.
 
 Optionally, the following multi-channel metrics can be computed by setting:
-:code:`include_multi_channel_metrics=True`
+:code:`include_multi_channel_metrics=True` (default if the number of channels is greater than 64):
 
-* "velocity_above": the velocity in :math:`\mu m/s` above the max channel of the template
-* "velocity_below": the velocity in :math:`\mu m/s` below the max channel of the template
-* "exp_decay": the exponential decay in :math:`\mu m` of the template amplitude over distance
-* "spread": the spread in :math:`\mu m` of the template amplitude over distance
+* "velocity_above": the velocity in µm/ms above the max channel of the template
+* "velocity_below": the velocity in µm/ms below the max channel of the template
+* "exp_decay": the exponential decay in 1/µm of the template amplitude over distance
+* "spread": the spread in µm of the template amplitudes
 
 .. figure:: ../../images/1d_waveform_features.png
 

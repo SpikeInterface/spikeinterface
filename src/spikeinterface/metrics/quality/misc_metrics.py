@@ -115,6 +115,7 @@ class PresenceRatio(BaseMetric):
     metric_function = compute_presence_ratios
     metric_params = {"bin_duration_s": 60, "mean_fr_ratio_thresh": 0.0}
     metric_columns = {"presence_ratio": float}
+    metric_descriptions = {"presence_ratio": "Fraction of time the unit is active."}
 
 
 def compute_snrs(
@@ -177,6 +178,7 @@ class SNR(BaseMetric):
     metric_function = compute_snrs
     metric_params = {"peak_sign": "neg", "peak_mode": "extremum"}
     metric_columns = {"snr": float}
+    metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
     depend_on = ["noise_levels", "templates"]
 
 
@@ -271,6 +273,10 @@ class ISIViolation(BaseMetric):
     metric_function = compute_isi_violations
     metric_params = {"isi_threshold_ms": 1.5, "min_isi_ms": 0}
     metric_columns = {"isi_violations_ratio": float, "isi_violations_count": int}
+    metric_descriptions = {
+        "isi_violations_ratio": "Ratio of ISI violations for each unit.",
+        "isi_violations_count": "Count of ISI violations for each unit.",
+    }
 
 
 def compute_refrac_period_violations(
@@ -371,6 +377,10 @@ class RPViolation(BaseMetric):
     metric_function = compute_refrac_period_violations
     metric_params = {"refractory_period_ms": 1.0, "censored_period_ms": 0.0}
     metric_columns = {"rp_contamination": float, "rp_violations": int}
+    metric_descriptions = {
+        "rp_contamination": "Refractory period contamination described in Llobet & Wyngaard 2022.",
+        "rp_violations": "Number of refractory period violations.",
+    }
 
 
 def compute_sliding_rp_violations(
@@ -471,6 +481,9 @@ class SlidingRPViolation(BaseMetric):
         "contamination_values": None,
     }
     metric_columns = {"sliding_rp_violation": float}
+    metric_descriptions = {
+        "sliding_rp_violation": "Minimum contamination at 90% confidence using sliding refractory period method."
+    }
 
 
 def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=None):
@@ -536,6 +549,11 @@ class Synchrony(BaseMetric):
     metric_name = "synchrony"
     metric_function = compute_synchrony_metrics
     metric_columns = {"sync_spike_2": float, "sync_spike_4": float, "sync_spike_8": float}
+    metric_descriptions = {
+        "sync_spike_2": "Fraction of spikes that are synchronous with at least one other spike.",
+        "sync_spike_4": "Fraction of spikes that are synchronous with at least three other spikes.",
+        "sync_spike_8": "Fraction of spikes that are synchronous with at least seven other spikes.",
+    }
 
 
 def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percentiles=(5, 95)):
@@ -605,6 +623,9 @@ class FiringRange(BaseMetric):
     metric_function = compute_firing_ranges
     metric_params = {"bin_size_s": 5, "percentiles": (5, 95)}
     metric_columns = {"firing_range": float}
+    metric_descriptions = {
+        "firing_range": "Range between the percentiles (default: 5th and 95th) of the firing rates distribution."
+    }
 
 
 def compute_amplitude_cv_metrics(
@@ -718,6 +739,10 @@ class AmplitudeCV(BaseMetric):
         "amplitude_extension": "spike_amplitudes",
     }
     metric_columns = {"amplitude_cv_median": float, "amplitude_cv_range": float}
+    metric_descriptions = {
+        "amplitude_cv_median": "Median of the coefficient of variation of spike amplitudes within temporal bins.",
+        "amplitude_cv_range": "Range of the coefficient of variation of spike amplitudes within temporal bins.",
+    }
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
@@ -806,6 +831,9 @@ class AmplitudeCutoff(BaseMetric):
         "amplitudes_bins_min_ratio": 5,
     }
     metric_columns = {"amplitude_cutoff": float}
+    metric_descriptions = {
+        "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
+    }
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
@@ -848,6 +876,9 @@ class AmplitudeMedian(BaseMetric):
     metric_name = "amplitude_median"
     metric_function = compute_amplitude_medians
     metric_columns = {"amplitude_median": float}
+    metric_descriptions = {
+        "amplitude_median": "Median of the amplitude distributions (in absolute value) for each unit in uV."
+    }
     depend_on = ["spike_amplitudes"]
 
 
@@ -922,6 +953,13 @@ class NoiseCutoff(BaseMetric):
     metric_function = compute_noise_cutoffs
     metric_params = {"high_quantile": 0.25, "low_quantile": 0.1, "n_bins": 100}
     metric_columns = {"noise_cutoff": float, "noise_ratio": float}
+    metric_descriptions = {
+        "noise_cutoff": (
+            "Estimated metric based on the amplitude distribution indicating how many standard deviations "
+            "the lower-amplitude bins lie from the mean of the high-amplitude bins."
+        ),
+        "noise_ratio": "Ratio of counts in the lower-amplitude bins to the count in the highest bin.",
+    }
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
@@ -1099,6 +1137,11 @@ class Drift(BaseMetric):
         "min_num_bins": 2,
     }
     metric_columns = {"drift_ptp": float, "drift_std": float, "drift_mad": float}
+    metric_descriptions = {
+        "drift_ptp": "Peak-to-peak of the drift signal in um.",
+        "drift_std": "Standard deviation of the drift signal in um.",
+        "drift_mad": "Median absolute deviation of the drift signal in um.",
+    }
     depend_on = ["spike_locations"]
 
 
@@ -1239,6 +1282,9 @@ class SDRatio(BaseMetric):
         "correct_for_template_itself": True,
     }
     metric_columns = {"sd_ratio": float}
+    metric_descriptions = {
+        "sd_ratio": "Ratio between the standard deviation of spike amplitudes and the standard deviation of noise."
+    }
     needs_recording = True
     depend_on = ["templates", "spike_amplitudes"]
 

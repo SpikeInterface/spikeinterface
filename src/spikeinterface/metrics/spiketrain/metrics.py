@@ -39,6 +39,7 @@ class NumSpikes(BaseMetric):
     metric_name = "num_spikes"
     metric_function = compute_num_spikes
     metric_params = {}
+    metric_descriptions = {"num_spikes": "Total number of spikes for each unit across all segments."}
     metric_columns = {"num_spikes": int}
 
 
@@ -78,6 +79,7 @@ class FiringRate(BaseMetric):
     metric_name = "firing_rate"
     metric_function = compute_firing_rates
     metric_params = {}
+    metric_descriptions = {"firing_rate": "Firing rate (spikes per second) for each unit across all segments."}
     metric_columns = {"firing_rate": float}
 
 
