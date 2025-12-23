@@ -487,12 +487,12 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
 
-Here is a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
-experimental for now:
+Here is a list of internal sorter based on `spikeinterface.sortingcomponents`:
 
 * **Spyking Circus2** :code:`run_sorter(sorter_name='spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter(sorter_name='tridesclous2')`
 * **Lupin** :code:`run_sorter(sorter_name='lupin')`
+* **Simple** :code:`run_sorter(sorter_name='simple')`
 
 Here is the list of legacy sorters that are no longer supported, but can still be run
 with an older version of SpikeInterface:
