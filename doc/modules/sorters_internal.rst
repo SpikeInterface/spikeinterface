@@ -3,43 +3,42 @@
 Internal sorters
 ================
 
-:py:mod:`spikeinterface.sortingcomponents` implement algorithms to break into components
-a sorting pipeline. With this components it is easy to develop a new sorter.
+:py:mod:`spikeinterface.sortingcomponents` implement algorithms to break a sorting pipeline
+into individual components. With this components it is easy to develop a new sorter.
 
-Theses components and sorters havs been benchmarked [here](https://github.com/samuelgarcia/sorting_components_benchmark_paper).
+These components and sorters havs been benchmarked [here](https://github.com/samuelgarcia/sorting_components_benchmark_paper).
 
 
-At the moment 4 internal sorters are implemented in spikeinterface:
+At the moment, there are 4 internal sorters implemented in ``spikeinterface``:
 
 * :code:`lupin`
 * :code:`spykingcircus2`
 * :code:`tridesclous2`
 * :code:`simple`
 
-Please read more details below.
-
 
 Lupin
 -----
 
 Lupin is components-based sorters, it combine components that give the best reults on benchmarks
-for each steps. It is theorically the "best" sorter, spikeiterface can offer internally.
+for each steps. It is theorically the "best" sorter that ``spikeinterface`` can offer internally.
 
-In summary, Lupin uses:
+Lupin components are:
   * preprocessing (filtering, CMR, whitening)
   * the *DREDGE* motion correction algorithm (optional)
   * peak detection with *matched filtering*
   * iterative splits for clustering *Iter-ISOPLIT*
   * augmented matching pursuit for the spike deconvolution with *Wobble*
 
-Some note on this algos and related parameters:
-  * waveforms size is different for clustering and template matching
-    `clustering_ms_before` `clustering_ms_after` `ms_before` `ms_after`
-  * the filtering is quite smooth `freq_max=7000.`
-  * `n_pca_features` can impact the clustering step
-  * there is a clean step before the template matching using `template_sparsify_threshold`
-    `template_min_snr_ptp` `template_max_jitter_ms` `min_firing_rate`. This can impact a lot the result.
-  * Lupin is a bit slower than `tridesclous2`` and `spkykingcircus2`
+
+Some notes on this algorithm and related parameters:
+  * waveforms size is different for clustering and template matching:
+    ``clustering_ms_before``, ``clustering_ms_after``, ``ms_before``, ``ms_after``
+  * the filtering is quite smooth by default to filter out high-frequency noise: ``freq_max=7000``
+  * ``n_pca_features`` can impact the clustering step
+  * there is a cleaning step before the template matching using ``template_sparsify_threshold``,
+    ``template_min_snr_ptp``, ``template_max_jitter_ms``, and ``min_firing_rate``. This step can have a substantial impact on the result.
+  * Lupin is a bit slower than ``tridesclous2`` and ``spkykingcircus2``, but more accurate!
 
 SpyKING-CIRCUS 2
 ----------------
@@ -50,15 +49,21 @@ correction algorithm before filtering and whitening the data. On these whitened 
 that are used are: matched filtering for peak detection, iterative splits for clustering (Iter-HDBSCAN),
 and orthogonal matching pursuit for template reconstruction (Circus-OMP).
 
+SpyKING-CIRCUS 2 components are:
+  * preprocessing (filtering, CMR, whitening)
+  * the *DREDGE* motion correction algorithm (optional)
+  * peak detection with *matched filtering*
+  * iterative splits for clustering *Iter-HDBSCAN*
+  * orthogonal matching pursuit for the spike deconvolution with *Circus-OMP*
 
 TriDesClous 2
 -------------
 
 This is an updated version of TriDesClous based on the modular components.
-This do not give as good results as `lupin` but this was faster.
-This is sorter is a good choice for very fast exploration of a dataset.
+It is not as good as ``Lupin`` in terms of performance, but it's way faster.
+This is sorter is a good choice for a very fast exploration of a dataset.
 
-Internally tridesclous2 uses:
+TriDesClous 2 components are:
   * preprocessing (filtering, CMR) but no whitening
   * the *DREDGE* motion correction algorithm (optional)
   * peak detection with *locally_exlusive*
@@ -69,11 +74,11 @@ Internally tridesclous2 uses:
 Simple
 ------
 
-This is a simple sorter that **do not use the template matching**.
-It can be seen as an "old school" sorters with only peak detection, features reduction (svd) and
+This is a simple sorter that **does not use the template matching**.
+It can be seen as an "old school" sorter with only peak detection, feature reduction (svd) and
 clustering.
-Using this sorter can be very very usefull on mono channel and tetrode dataset.
+Using this sorter can be very useful on mono channel and tetrode datasets.
 Very often on 1-4 channel dataset when the SNR is too small then template matching is an overkill
-feature than give worst results.
+feature that gives worse results.
 
-The clustering step is quite flexible and several algos can be tested (kmeans, isosplit, hdbscan, ...)
+The clustering step is quite flexible and several algorithms can be tested (k-means, isosplit, hdbscan, ...)
