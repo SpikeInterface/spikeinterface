@@ -293,7 +293,7 @@ def random_spikes_selection(
                 ranks = np.arange(ordered_unit_indices.size, step=1) - np.repeat(group_start, counts)
                 selection_mask = ranks <= k_per_bin
                 selected_unit_indices = ordered_unit_indices[selection_mask]
-            
+
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
