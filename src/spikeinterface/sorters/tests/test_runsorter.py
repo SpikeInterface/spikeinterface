@@ -56,7 +56,7 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     recording.set_property(key="split_property", values=[4, 4, "g", "g", 4, 4, 4, "g"])
     dict_of_recordings = recording.split_by("split_property")
 
-    sorter_params = {"detection": {"detect_threshold": 4.9}}
+    sorter_params = {"detect_threshold": 4.9}
 
     folder = cache_folder / "sorting_tdc_local_dict"
 
