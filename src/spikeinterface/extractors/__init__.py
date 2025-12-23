@@ -6,6 +6,7 @@ from .bids import read_bids as read_bids
 from .neuropixels_utils import get_neuropixels_channel_groups, get_neuropixels_sample_shifts
 from .neoextractors import get_neo_num_blocks, get_neo_streams
 from .phykilosortextractors import read_kilosort_as_analyzer
+from .nwbextractors import read_nwb_as_analyzer
 
 from warnings import warn
 
