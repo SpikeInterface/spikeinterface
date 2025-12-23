@@ -131,7 +131,7 @@ class LupinSorter(ComponentsBasedSorter):
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
-                
+
                 rec_for_motion = recording_raw
                 if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(
