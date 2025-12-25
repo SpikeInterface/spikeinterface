@@ -35,9 +35,10 @@ folders =  [
     '../examples/tutorials/core/analyzer_some_units',
     '../examples/tutorials/core/analyzer.zarr',
     '../examples/tutorials/curation/my_folder',
-    '../examples/tutorials/qualitymetrics/curated_sorting',
-    '../examples/tutorials/qualitymetrics/clean_analyzer.zarr',
+    '../examples/tutorials/metrics/curated_sorting',
+    '../examples/tutorials/metrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
+    '../examples/forhowto/cached'
 
 ]
 
@@ -123,16 +124,16 @@ sphinx_gallery_conf = {
     # This is the default but including here explicitly. Should build all docs and fail on gallery failures only.
     # other option would be abort_on_example_error, but this fails on first failure. So we decided against this.
     'only_warn_on_example_error': False,
-    'examples_dirs': ['../examples/tutorials'],
-    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
+    'examples_dirs': ['../examples/tutorials', '../examples/forhowto'],
+    'gallery_dirs': ['tutorials', 'forhowto'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
                                        '../examples/tutorials/curation',
-                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/metrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
-                                       '../examples/tutorials/forhowto',
+                                       '../examples/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_*',

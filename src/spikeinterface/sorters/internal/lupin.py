@@ -35,6 +35,7 @@ class LupinSorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
+        "preprocessing_dict": None,
         "apply_motion_correction": False,
         "motion_correction_preset": "dredge_fast",
         "clustering_ms_before": 0.3,
@@ -54,8 +55,10 @@ class LupinSorter(ComponentsBasedSorter):
         "clustering_recursive_depth": 3,
         "ms_before": 1.0,
         "ms_after": 2.5,
-        "sparsity_threshold": 1.5,
-        "template_min_snr": 2.5,
+        "template_sparsify_threshold": 1.5,
+        "template_min_snr_ptp": 4.0,
+        "template_max_jitter_ms": 0.2,
+        "min_firing_rate": 0.1,
         "gather_mode": "memory",
         "job_kwargs": {},
         "seed": None,
@@ -65,7 +68,8 @@ class LupinSorter(ComponentsBasedSorter):
 
     _params_description = {
         "apply_preprocessing": "Apply internal preprocessing or not",
-        "apply_motion_correction": "Apply motion correction or not",
+        "preprocessing_dict": "Inject customized preprocessing chain via a dict, instead of the internal one",
+        "apply_motion_correction": "Apply motion correction or not (only used when apply_preprocessing=True)",
         "motion_correction_preset": "Motion correction preset",
         "clustering_ms_before": "Milliseconds before the spike peak for clustering",
         "clustering_ms_after": "Milliseconds after the spike peak  for clustering",
@@ -80,8 +84,10 @@ class LupinSorter(ComponentsBasedSorter):
         "clustering_recursive_depth": "Clustering recussivity",
         "ms_before": "Milliseconds before the spike peak for template matching",
         "ms_after": "Milliseconds after the spike peak for template matching",
-        "sparsity_threshold": "Threshold to sparsify templates before template matching",
-        "template_min_snr": "Threshold to remove templates before template matching",
+        "template_sparsify_threshold": "Threshold to sparsify templates before template matching",
+        "template_min_snr_ptp": "Threshold to remove templates before template matching",
+        "template_max_jitter_ms": "Threshold on jitters to remove templates before template matching",
+        "min_firing_rate": "To remove small cluster in size before template matching",
         "gather_mode": "How to accumalte spike in matching : memory/npy",
         "job_kwargs": "The famous and fabulous job_kwargs",
         "seed": "Seed for random number",
@@ -93,7 +99,7 @@ class LupinSorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.11"
+        return "2025.12"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -107,6 +113,7 @@ class LupinSorter(ComponentsBasedSorter):
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
         from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
+        from spikeinterface.preprocessing import apply_preprocessing_pipeline
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -121,39 +128,73 @@ class LupinSorter(ComponentsBasedSorter):
 
         apply_cmr = num_chans >= 32
 
+        if verbose:
+            version = cls.get_sorter_version()
+            lupin_ascii_art = f"""
+                            .::----::..
+                 ..:-+#%*+#%@@@@@@@+..:+#+.
+                .+@%%@@@@@@@@@@@@@@#:  .=@=
+                -@@@@@@@@@@@@@@@@@@%-. .=@*
+                .@@@@@@@@@@@@@@@@@@@*. .-%#
+                 %@@@@@@@@@@@@@@@@@@*.  :#%
+                 =%%@@@@@@@@@@@@@@%%+:  .+@.
+                 -%#@@@@@@@@@@@@@@%*==  .-@.
+                 :#%@@@@@@@@@@@@@@%#+#  .=@.
+                 .+%@@@@@@@@@@@@@@@%#@. .+@.
+                 .+*#@@@@@@@@@@@@@@@%@. .+@:
+                 .=%+@@@@@@@@@@@@@@@@*.  =%-.
+                  :#%##@@@@@@@@@@@@%%-.  :%+.
+               ..:=**%@@@@@@@@@@@@@@@:.  .%%......
+             .+#@%%%@**@%@@@@@@@@@@@*....=%@%@@@@@%=..
+            .*@@@@@@@@@@@=#@@@@@@@@@@*=:.:.#@@@@@@%%-.
+           .-%%@@@@@@@@@@@@@#+%@+-::-+=:=::+@@@@@@##-.
+           .:%@@@@@@@@@@@@@@@@@%+%##*%%%**%@@@@@@##+.
+            .+@@@@@@@@@@@@@@@@#***++***@@@@@@@@%%%=.
+             .:*@@@@@@@@%=-.....   ....:-*%%%%%+-.
+                 ..:-:..
+                        LUPIN version {version}
+            """
+            print(lupin_ascii_art)
+
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
+
                 rec_for_motion = recording_raw
-                if params["apply_preprocessing"]:
+                if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(
                         rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
                     )
                     if apply_cmr:
                         rec_for_motion = common_reference(rec_for_motion)
-                    if verbose:
-                        print("Start correct_motion()")
-                    _, motion_info = correct_motion(
-                        rec_for_motion,
-                        folder=sorter_output_folder / "motion",
-                        output_motion_info=True,
-                        preset=params["motion_correction_preset"],
-                    )
-                    if verbose:
-                        print("Done correct_motion()")
+                else:
+                    rec_for_motion = apply_preprocessing_pipeline(rec_for_motion, params["preprocessing_dict"])
 
-            recording = bandpass_filter(
-                recording_raw,
-                freq_min=params["freq_min"],
-                freq_max=params["freq_max"],
-                ftype="bessel",
-                filter_order=2,
-                margin_ms=20.0,
-                dtype="float32",
-            )
+                if verbose:
+                    print("Start correct_motion()")
+                _, motion_info = correct_motion(
+                    rec_for_motion,
+                    folder=sorter_output_folder / "motion",
+                    output_motion_info=True,
+                    preset=params["motion_correction_preset"],
+                )
+                if verbose:
+                    print("Done correct_motion()")
 
-            if apply_cmr:
-                recording = common_reference(recording)
+            if params["preprocessing_dict"] is None:
+                recording = bandpass_filter(
+                    recording_raw,
+                    freq_min=params["freq_min"],
+                    freq_max=params["freq_max"],
+                    ftype="bessel",
+                    filter_order=2,
+                    dtype="float32",
+                )
+
+                if apply_cmr:
+                    recording = common_reference(recording)
+            else:
+                recording = apply_preprocessing_pipeline(recording, params["preprocessing_dict"])
 
             recording = whiten(
                 recording,
@@ -187,7 +228,7 @@ class LupinSorter(ComponentsBasedSorter):
 
             noise_levels = get_noise_levels(recording, return_in_uV=False)
         else:
-            recording = recording_raw
+            recording = recording_raw.astype("float32")
             noise_levels = get_noise_levels(recording, return_in_uV=False)
             cache_info = None
 
@@ -232,6 +273,12 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components_per_channel"]
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
+        clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
+        clustering_kwargs["clean_templates"]["min_snr"] = params["template_min_snr_ptp"]
+        clustering_kwargs["clean_templates"]["max_jitter_ms"] = params["template_max_jitter_ms"]
+        clustering_kwargs["noise_levels"] = noise_levels
+        clustering_kwargs["clean_low_firing"]["min_firing_rate"] = params["min_firing_rate"]
+        clustering_kwargs["clean_low_firing"]["subsampling_factor"] = all_peaks.size / peaks.size
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
@@ -290,10 +337,10 @@ class LupinSorter(ComponentsBasedSorter):
         # this spasify more
         templates = clean_templates(
             templates,
-            sparsify_threshold=params["sparsity_threshold"],
+            sparsify_threshold=params["template_sparsify_threshold"],
             noise_levels=noise_levels,
-            min_snr=params["template_min_snr"],
-            max_jitter_ms=None,
+            min_snr=params["template_min_snr_ptp"],
+            max_jitter_ms=params["template_max_jitter_ms"],
             remove_empty=True,
         )
 
@@ -328,6 +375,8 @@ class LupinSorter(ComponentsBasedSorter):
                 recording,
                 sorting,
                 templates,
+                amplitude_scalings=spikes["amplitude"],
+                noise_levels=noise_levels,
                 similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
                 sparsity_overlap=0.5,
                 censor_ms=3.0,

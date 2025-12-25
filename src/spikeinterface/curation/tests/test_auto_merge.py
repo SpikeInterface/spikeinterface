@@ -15,7 +15,7 @@ from spikeinterface.curation.tests.common import (
 
 
 @pytest.mark.parametrize(
-    "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms", None]
+    "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms", "slay", None]
 )
 def test_compute_merge_unit_groups(sorting_analyzer_with_splits, preset):
 
@@ -59,7 +59,7 @@ def test_compute_merge_unit_groups(sorting_analyzer_with_splits, preset):
 
 
 @pytest.mark.parametrize(
-    "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms"]
+    "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms", "slay"]
 )
 def test_compute_merge_unit_groups_multi_segment(sorting_analyzer_multi_segment_for_curation, preset):
     job_kwargs = dict(n_jobs=-1)

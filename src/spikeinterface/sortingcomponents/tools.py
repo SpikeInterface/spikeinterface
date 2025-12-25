@@ -12,27 +12,31 @@ except:
 
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
-from spikeinterface.core.sorting_tools import spike_vector_to_indices, get_numba_vector_to_list_of_spiketrain
+from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
 
 
-def make_multi_method_doc(methods, ident="    "):
+def make_multi_method_doc(methods, indent="    "):
     doc = ""
 
     doc += "method : " + ", ".join(f"'{method.name}'" for method in methods) + "\n"
-    doc += ident + "    Method to use.\n"
+    doc += indent + "Method to use.\n"
 
     for method in methods:
         doc += "\n"
-        doc += ident + ident + f"arguments for method='{method.name}'"
+        doc += indent + indent + f"* arguments for method='{method.name}'\n"
         for line in method.params_doc.splitlines():
-            doc += ident + ident + line + "\n"
+            # add '* ' before the start of the text of each line
+            if len(line.strip()) == 0:
+                continue
+            line = line.lstrip()
+            line = "* " + line
+            doc += indent + indent + indent + line + "\n"
 
     return doc
 
@@ -475,7 +479,7 @@ def remove_empty_templates(templates):
 
 
 def create_sorting_analyzer_with_existing_templates(
-    sorting, recording, templates, remove_empty=True, noise_levels=None
+    sorting, recording, templates, remove_empty=True, noise_levels=None, amplitude_scalings=None
 ):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
@@ -489,6 +493,8 @@ def create_sorting_analyzer_with_existing_templates(
         sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
     else:
         non_empty_sorting = sorting
+
+    from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
     sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
     sa.compute("random_spikes")
@@ -504,11 +510,29 @@ def create_sorting_analyzer_with_existing_templates(
     sa.extensions["templates"].run_info["runtime_s"] = 0
 
     if noise_levels is not None:
+        from spikeinterface.core.analyzer_extension_core import ComputeNoiseLevels
+
         sa.extensions["noise_levels"] = ComputeNoiseLevels(sa)
         sa.extensions["noise_levels"].params = {}
         sa.extensions["noise_levels"].data["noise_levels"] = noise_levels
         sa.extensions["noise_levels"].run_info["run_completed"] = True
         sa.extensions["noise_levels"].run_info["runtime_s"] = 0
+
+    if amplitude_scalings is not None:
+        from spikeinterface.postprocessing.amplitude_scalings import ComputeAmplitudeScalings
+
+        sa.extensions["amplitude_scalings"] = ComputeAmplitudeScalings(sa)
+        sa.extensions["amplitude_scalings"].params = dict(
+            sparsity=None,
+            max_dense_channels=16,
+            ms_before=templates.ms_before,
+            ms_after=templates.ms_after,
+            handle_collisions=False,
+            delta_collision_ms=2,
+        )
+        sa.extensions["amplitude_scalings"].data["amplitude_scalings"] = amplitude_scalings
+        sa.extensions["amplitude_scalings"].run_info["run_completed"] = True
+        sa.extensions["amplitude_scalings"].run_info["runtime_s"] = 0
 
     return sa
 
@@ -533,14 +557,25 @@ def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
 
 
 def clean_templates(
-    templates, sparsify_threshold=0.25, noise_levels=None, min_snr=None, max_jitter_ms=None, remove_empty=True
+    templates,
+    sparsify_threshold=0.25,
+    noise_levels=None,
+    min_snr=None,
+    max_jitter_ms=None,
+    remove_empty=True,
+    mean_sd_ratio_threshold=3.0,
+    max_std_per_channel=None,
+    verbose=False,
 ):
     """
     Clean a Templates object by removing empty units and applying sparsity if provided.
     """
 
+    initial_ids = templates.unit_ids.copy()
+
     ## First we sparsify the templates (using peak-to-peak amplitude avoid sign issues)
     if sparsify_threshold is not None:
+        assert noise_levels is not None, "noise_levels must be provided if sparsify_threshold is set"
         if templates.are_templates_sparse():
             templates = templates.to_dense()
         sparsity = compute_sparsity(
@@ -554,22 +589,30 @@ def clean_templates(
 
     ## We removed non empty templates
     if remove_empty:
+        n_before = len(templates.unit_ids)
         templates = remove_empty_templates(templates)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} empty templates")
 
     ## We keep only units with a max jitter
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
-
+        n_before = len(templates.unit_ids)
         shifts = get_template_extremum_channel_peak_shift(templates)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:
                 to_select += [unit_id]
         templates = templates.select_units(to_select)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} unaligned templates")
 
     ## We remove units with a low SNR
     if min_snr is not None:
         assert noise_levels is not None, "noise_levels must be provided if min_snr is set"
+        n_before = len(templates.unit_ids)
         sparsity = compute_sparsity(
             templates.to_dense(),
             method="snr",
@@ -579,6 +622,25 @@ def clean_templates(
         )
         to_select = templates.unit_ids[np.flatnonzero(sparsity.mask.sum(axis=1) > 0)]
         templates = templates.select_units(to_select)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} templates with too low SNR")
+
+    ## Lastly, if stds_at_peak are provided, we remove the templates that have a too high sd_ratio
+    if max_std_per_channel is not None:
+        assert noise_levels is not None, "noise_levels must be provided if max_std_per_channel is given"
+        to_select = []
+        n_before = len(templates.unit_ids)
+        for count, unit_id in enumerate(templates.unit_ids):
+            old_index = np.where(unit_id == initial_ids)[0][0]
+            mask = templates.sparsity.mask[count, :]
+            sd_ratio = np.mean(max_std_per_channel[old_index][mask] / noise_levels[mask])
+            if sd_ratio <= mean_sd_ratio_threshold:
+                to_select += [unit_id]
+        templates = templates.select_units(to_select)
+        if verbose:
+            n_after = len(templates.unit_ids)
+            print(f"Removed {n_before - n_after} templates with too high mean sd / noise ratio")
 
     return templates
 
