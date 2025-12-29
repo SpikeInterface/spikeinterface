@@ -195,6 +195,7 @@ class LupinSorter(ComponentsBasedSorter):
                     recording = common_reference(recording)
             else:
                 recording = apply_preprocessing_pipeline(recording_raw, params["preprocessing_dict"])
+                recording = recording.astype("float32")
 
             recording = whiten(
                 recording,
