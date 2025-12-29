@@ -159,7 +159,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 if apply_cmr:
                     recording = common_reference(recording)
             else:
-                recording = apply_preprocessing_pipeline(recording, params["preprocessing_dict"])
+                recording = apply_preprocessing_pipeline(recording_raw, params["preprocessing_dict"])
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
