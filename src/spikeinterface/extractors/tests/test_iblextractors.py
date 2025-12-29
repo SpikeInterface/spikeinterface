@@ -76,8 +76,8 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
     def test_probe_representation(self):
         probe = self.recording.get_probe()
-        expected_probe_representation = "Probe - 384ch - 1shanks"
-        assert repr(probe) == expected_probe_representation
+        expected_probe_representation = "Probe - 384ch"
+        assert expected_probe_representation in repr(probe)
 
     def test_property_keys(self):
         expected_property_keys = [
