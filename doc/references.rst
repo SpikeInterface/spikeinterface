@@ -44,7 +44,7 @@ please include the appropriate citation for the :code:`sorter_name` parameter yo
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
 - :code:`rtsort` [van_der_Molen]_
-- :code:`spykingcircus` [Yger]_
+- :code:`spykingcircus` [Yger2018]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
 
@@ -87,7 +87,10 @@ please following citations:
 
 Curation Module
 ---------------
-If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
+
+If you use the default "similarity_correlograms" preset in the :code:`compute_merge_unit_groups` method from the curation module, please cite [Llobet]_
+
+If you use the "slay" preset in the :code:`compute_merge_unit_groups` method, please cite [Koukuntla]_
 
 If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
 
@@ -139,6 +142,8 @@ References
 
 .. [Jia] `High-density extracellular probes reveal dendritic backpropagation and facilitate neuron classification. 2019 <https://journals.physiology.org/doi/full/10.1152/jn.00680.2018>`_
 
+.. [Koukuntla] `SLAy-ing oversplitting errors in high-density electrophysiology spike sorting. 2025. <https://www.biorxiv.org/content/10.1101/2025.06.20.660590v1>`_
+
 .. [Lee] `YASS: Yet another spike sorter. 2017. <https://www.biorxiv.org/content/10.1101/151928v1>`_
 
 .. [Lemon] Methods for neuronal recording in conscious animals. IBRO Handbook Series. 1984.
@@ -173,6 +178,6 @@ References
 
 .. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
-.. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
+.. [Yger2018] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
 
 .. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_
