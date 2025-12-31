@@ -48,6 +48,10 @@ class Mahalanobis(BaseMetric):
     metric_function = _mahalanobis_metrics_function
     metric_params = {}
     metric_columns = {"isolation_distance": float, "l_ratio": float}
+    metric_descriptions = {
+        "isolation_distance": "Isolation distance metric based on Mahalanobis distance.",
+        "l_ratio": "L-ratio metric based on Mahalanobis distance.",
+    }
     depend_on = ["principal_components"]
     needs_tmp_data = True
 
@@ -81,6 +85,7 @@ class DPrime(BaseMetric):
     metric_function = _d_prime_metric_function
     metric_params = {}
     metric_columns = {"d_prime": float}
+    metric_descriptions = {"d_prime": "D-prime metric based on Linear Discriminant Analysis in PCA space."}
     depend_on = ["principal_components"]
     needs_tmp_data = True
 
@@ -157,6 +162,10 @@ class NearestNeighbor(BaseMetric):
     metric_function = _nearest_neighbor_metric_function
     metric_params = {"max_spikes": 10000, "n_neighbors": 5}
     metric_columns = {"nn_hit_rate": float, "nn_miss_rate": float}
+    metric_descriptions = {
+        "nn_hit_rate": "Nearest neighbor hit rate metric based on PCA space.",
+        "nn_miss_rate": "Nearest neighbor miss rate metric based on PCA space.",
+    }
     depend_on = ["principal_components"]
     needs_tmp_data = True
     needs_job_kwargs = True
@@ -302,6 +311,10 @@ class NearestNeighborAdvanced(BaseMetric):
         "seed": None,
     }
     metric_columns = {"nn_isolation": float, "nn_noise_overlap": float}
+    metric_descriptions = {
+        "nn_isolation": "Nearest neighbor isolation metric based on PCA space.",
+        "nn_noise_overlap": "Nearest neighbor noise overlap metric based on PCA space.",
+    }
     depend_on = ["principal_components", "waveforms", "templates"]
     needs_tmp_data = True
     needs_job_kwargs = True
@@ -336,6 +349,7 @@ class Silhouette(BaseMetric):
     metric_function = _silhouette_metric_function
     metric_params = {"method": "simplified"}
     metric_columns = {"silhouette": float}
+    metric_descriptions = {"silhouette": "Silhouette score metric based on PCA space."}
     depend_on = ["principal_components"]
     needs_tmp_data = True
 
@@ -496,7 +510,9 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
     # if no other units in the vicinity, return best possible option
     if len(np.unique(all_labels)) == 1:
-        warnings.warn(f"No other units found in the vicinity of {this_unit}. Setting nn_hit_rate=1 and nn_miss_rate=0")
+        warnings.warn(
+            f"No other units found in the vicinity of {this_unit_id}. Setting nn_hit_rate=1 and nn_miss_rate=0"
+        )
         return 1.0, 0.0
 
     this_unit = all_labels == this_unit_id

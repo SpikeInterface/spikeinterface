@@ -113,8 +113,7 @@ from the Allen Institute.
   qualitymetrics/firing_range
   qualitymetrics/firing_rate
   qualitymetrics/isi_violations
-  qualitymetrics/isolation_distance
-  qualitymetrics/l_ratio
+  qualitymetrics/mahalanobis
   qualitymetrics/nearest_neighbor
   qualitymetrics/noise_cutoff
   qualitymetrics/presence_ratio
