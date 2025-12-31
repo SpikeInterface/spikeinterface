@@ -207,6 +207,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces.copy()
 
         # apply AGC and keep the gains
+        traces = traces.astype(np.float32)
         if self.window is not None:
             traces, agc_gains = agc(traces, window=self.window)
         else:
@@ -255,7 +256,7 @@ highpass_spatial_filter = define_function_handling_dict_from_class(
 # -----------------------------------------------------------------------------------------------
 
 
-def agc(traces, window, epsilon=1e-8):
+def agc(traces, window, epsilon=None):
     """
     Automatic gain control
     w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
@@ -268,13 +269,15 @@ def agc(traces, window, epsilon=1e-8):
     """
     import scipy.signal
 
-    gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
+    # default value for epsilon is relative to the rms, loosely matching the IBL 1e-8 for an input in Volts
+    if epsilon is None:
+        epsilon = np.std(traces - np.mean(traces)) * 0.003
 
-    gain += (np.sum(gain, axis=0) * epsilon / traces.shape[0])[np.newaxis, :]
+    gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
 
     dead_channels = np.sum(gain, axis=0) == 0
 
-    traces[:, ~dead_channels] = traces[:, ~dead_channels] / gain[:, ~dead_channels]
+    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(epsilon, gain[:, ~dead_channels])
 
     return traces, gain
 

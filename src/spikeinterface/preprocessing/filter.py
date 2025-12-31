@@ -79,7 +79,7 @@ class FilterRecording(BasePreprocessor):
     def __init__(
         self,
         recording,
-        band=[300.0, 6000.0],
+        band=(300.0, 6000.0),
         btype="bandpass",
         filter_order=5,
         ftype="butter",
@@ -370,7 +370,7 @@ highpass_filter = define_function_handling_dict_from_class(source_class=Highpass
 def causal_filter(
     recording,
     direction="forward",
-    band=[300.0, 6000.0],
+    band=(300.0, 6000.0),
     btype="bandpass",
     filter_order=5,
     ftype="butter",

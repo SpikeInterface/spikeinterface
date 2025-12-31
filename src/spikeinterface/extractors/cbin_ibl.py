@@ -49,6 +49,8 @@ class CompressedBinaryIblExtractor(BaseRecording):
     ):
         from neo.rawio.spikeglxrawio import read_meta_file
 
+        if Path(folder_path).is_file():
+            folder_path = Path(folder_path).parent
         try:
             import mtscomp
         except ImportError:
