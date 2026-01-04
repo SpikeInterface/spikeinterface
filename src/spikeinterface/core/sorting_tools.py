@@ -754,17 +754,17 @@ def generate_unit_ids_for_split(
         # the new units made from the discard_spikes must be at the *front* of the new_units_for_split list.
         if new_id_strategy == "append":
             if just_discard:
-                # give the discard unit the id `max_id` so that the cleaned unit's id doesn't change.
+                # give the discard unit the highest possible id, leaving the cleaned unit's id untouched.
                 new_units_for_split = [highest_possible_unit_id, unit_to_split]
                 highest_possible_unit_id -= 1
             elif discard_and_split:
                 # give the discard unit the id `unit_to_split`, and the other units their expected append ids
                 new_units_for_split = [unit_to_split] + list(next_max_unit_id + np.arange(num_splits - 1))
-                next_max_unit_id += 1
+                next_max_unit_id += len(new_units_for_split) - 1
             else:
                 # there is no discard unit
                 new_units_for_split = list(next_max_unit_id + np.arange(num_splits))
-                next_max_unit_id += 1
+                next_max_unit_id += len(new_units_for_split)
 
         elif new_id_strategy == "split":
             if just_discard:
