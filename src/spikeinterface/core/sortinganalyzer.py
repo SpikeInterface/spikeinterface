@@ -1386,6 +1386,7 @@ class SortingAnalyzer:
         new_unit_ids: list[list[int | str]] | None = None,
         new_id_strategy: str = "append",
         return_new_unit_ids: bool = False,
+        discard_spikes_unit_ids=None,
         format: str = "memory",
         folder: Path | str | None = None,
         verbose: bool = False,
@@ -1435,7 +1436,9 @@ class SortingAnalyzer:
 
         check_unit_splits_consistency(split_units, self.sorting)
 
-        new_unit_ids = generate_unit_ids_for_split(self.unit_ids, split_units, new_unit_ids, new_id_strategy)
+        new_unit_ids = generate_unit_ids_for_split(
+            self.unit_ids, split_units, new_unit_ids, new_id_strategy, discard_spikes_unit_ids
+        )
         all_unit_ids = _get_ids_after_splitting(self.unit_ids, split_units, new_unit_ids=new_unit_ids)
 
         new_analyzer = self._save_or_select_or_merge_or_split(
