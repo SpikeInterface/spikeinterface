@@ -24,7 +24,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 0.5, "ms_after": 1.5, "radius_um": 100.0},
-        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2, "margin_ms": 20},
+        "filtering": {"freq_min": 150, "freq_max": 7000, "ftype": "bessel", "filter_order": 2},
         "whitening": {"mode": "local", "regularize": False},
         "detection": {
             "method": "matched_filtering",
@@ -68,6 +68,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "motion_correction": "A dictionary to be provided if motion correction has to be performed (dense probe only)",
         "apply_preprocessing": "Boolean to specify whether circus 2 should preprocess the recording or not. If yes, then high_pass filtering + common\
                                                     median reference + whitening",
+        "apply_whitening": "Boolean to specify whether circus 2 should whiten the recording or not",
         "apply_motion_correction": "Boolean to specify whether circus 2 should apply motion correction to the recording or not",
         "matched_filtering": "Boolean to specify whether circus 2 should detect peaks via matched filtering (slightly slower)",
         "cache_preprocessing": "How to cache the preprocessed recording. Mode can be memory, file, zarr, with extra arguments. In case of memory (default), \
@@ -145,7 +146,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     print("Skipping preprocessing (whitening only)")
                 else:
                     print("Skipping preprocessing (no whitening)")
-            recording_f = recording
+            recording_f = recording.astype("float32")
             recording_f.annotate(is_filtered=True)
 
         if apply_whitening:
@@ -189,9 +190,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         )
 
         if recording_w.check_serializability("json"):
-            recording_w.dump(sorter_output_folder / "preprocessed_recording.json", relative_to=None)
+            recording_dump_file = sorter_output_folder / "preprocessed_recording.json"
         elif recording_w.check_serializability("pickle"):
-            recording_w.dump(sorter_output_folder / "preprocessed_recording.pickle", relative_to=None)
+            recording_dump_file = sorter_output_folder / "preprocessed_recording.pickle"
+        recording_w.dump(recording_dump_file, relative_to=None)
 
         recording_w, cache_info = cache_preprocessing(
             recording_w, job_kwargs=job_kwargs, **params["cache_preprocessing"]
@@ -468,10 +470,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     # np.save(fitting_folder / "amplitudes", guessed_amplitudes)
 
                 if sorting.get_non_empty_unit_ids().size > 0:
+                    from spikeinterface.core import load
+
+                    recording_ww = load(recording_dump_file)
+
                     final_analyzer = final_cleaning_circus(
-                        recording_w,
+                        recording_ww,
                         sorting,
                         templates,
+                        amplitude_scalings=spikes["amplitude"],
                         noise_levels=noise_levels,
                         job_kwargs=job_kwargs,
                         **merging_params,
@@ -495,6 +502,7 @@ def final_cleaning_circus(
     recording,
     sorting,
     templates,
+    amplitude_scalings=None,
     similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
     sparsity_overlap=0.5,
     censor_ms=3.0,
@@ -509,7 +517,9 @@ def final_cleaning_circus(
     from spikeinterface.curation.auto_merge import auto_merge_units
 
     # First we compute the needed extensions
-    analyzer = create_sorting_analyzer_with_existing_templates(sorting, recording, templates, noise_levels=noise_levels)
+    analyzer = create_sorting_analyzer_with_existing_templates(
+        sorting, recording, templates, noise_levels=noise_levels, amplitude_scalings=amplitude_scalings
+    )
     analyzer.compute("unit_locations", method="center_of_mass", **job_kwargs)
     analyzer.compute("template_similarity", **similarity_kwargs)
 

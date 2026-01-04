@@ -303,7 +303,7 @@ def fit_velocity(peak_times, channel_dist):
 
 def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute both velocity above and below the max channel of the template in units um/s.
+    Compute both velocity above and below the max channel of the template in units um/ms.
 
     Parameters
     ----------
@@ -516,6 +516,9 @@ class PeakToValley(BaseMetric):
     metric_name = "peak_to_valley"
     metric_params = {}
     metric_columns = {"peak_to_valley": float}
+    metric_descriptions = {
+        "peak_to_valley": "Duration in s between the trough (minimum) and the peak (maximum) of the spike waveform."
+    }
     needs_tmp_data = True
 
     @staticmethod
@@ -535,6 +538,9 @@ class PeakToTroughRatio(BaseMetric):
     metric_name = "peak_trough_ratio"
     metric_params = {}
     metric_columns = {"peak_trough_ratio": float}
+    metric_descriptions = {
+        "peak_trough_ratio": "Ratio of the amplitude of the peak (maximum) to the trough (minimum) of the spike waveform."
+    }
     needs_tmp_data = True
 
     @staticmethod
@@ -554,6 +560,9 @@ class HalfWidth(BaseMetric):
     metric_name = "half_width"
     metric_params = {}
     metric_columns = {"half_width": float}
+    metric_descriptions = {
+        "half_width": "Duration in s at half the amplitude of the trough (minimum) of the spike waveform."
+    }
     needs_tmp_data = True
 
     @staticmethod
@@ -573,6 +582,9 @@ class RepolarizationSlope(BaseMetric):
     metric_name = "repolarization_slope"
     metric_params = {}
     metric_columns = {"repolarization_slope": float}
+    metric_descriptions = {
+        "repolarization_slope": "Slope of the repolarization phase of the spike waveform, between the trough (minimum) and return to baseline in uV/s."
+    }
     needs_tmp_data = True
 
     @staticmethod
@@ -592,6 +604,9 @@ class RecoverySlope(BaseMetric):
     metric_name = "recovery_slope"
     metric_params = {"recovery_window_ms": 0.7}
     metric_columns = {"recovery_slope": float}
+    metric_descriptions = {
+        "recovery_slope": "Slope of the recovery phase of the spike waveform, after the peak (maximum) returning to baseline in uV/s."
+    }
     needs_tmp_data = True
 
     @staticmethod
@@ -626,6 +641,10 @@ class NumberOfPeaks(BaseMetric):
     metric_function = _number_of_peaks_metric_function
     metric_params = {"peak_relative_threshold": 0.2, "peak_width_ms": 0.1}
     metric_columns = {"num_positive_peaks": int, "num_negative_peaks": int}
+    metric_descriptions = {
+        "num_positive_peaks": "Number of positive peaks in the template",
+        "num_negative_peaks": "Number of negative peaks in the template",
+    }
     needs_tmp_data = True
 
 
@@ -665,6 +684,10 @@ class VelocityFits(BaseMetric):
         "column_range": None,
     }
     metric_columns = {"velocity_above": float, "velocity_below": float}
+    metric_descriptions = {
+        "velocity_above": "Velocity of the spike propagation above the max channel in um/ms",
+        "velocity_below": "Velocity of the spike propagation below the max channel in um/ms",
+    }
     needs_tmp_data = True
 
 
@@ -686,6 +709,9 @@ class ExpDecay(BaseMetric):
     metric_name = "exp_decay"
     metric_params = {"peak_function": "ptp", "min_r2": 0.2}
     metric_columns = {"exp_decay": float}
+    metric_descriptions = {
+        "exp_decay": ("Exponential decay of the template amplitude over distance from the extremum channel (1/um).")
+    }
     needs_tmp_data = True
 
     @staticmethod
@@ -705,6 +731,12 @@ class Spread(BaseMetric):
     metric_name = "spread"
     metric_params = {"spread_threshold": 0.5, "spread_smooth_um": 20, "column_range": None}
     metric_columns = {"spread": float}
+    metric_descriptions = {
+        "spread": (
+            "Spread of the template amplitude in um, calculated as the distance between channels whose "
+            "templates exceed the spread_threshold."
+        )
+    }
     needs_tmp_data = True
 
     @staticmethod

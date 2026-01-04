@@ -8,6 +8,7 @@ Modules documentation
     extractors
     preprocessing
     sorters
+    sorters_internal
     postprocessing
     metrics
     comparison
