@@ -297,3 +297,117 @@ def test_discard_and_split_string_ids():
             spike_times_of_discarded_spikes = original_spike_train[discarded_spikes_each_unit[segment_index]]
 
             assert set(discard_spike_times) == set(spike_times_of_discarded_spikes)
+
+
+def test_discard_and_split_several_units():
+
+    spike_indices = [{unit_id: np.arange(10) for unit_id in [0, 1, 3, 6]}]
+    original_sort = NumpySorting.from_unit_dict(spike_indices, sampling_frequency=1000)  # to have 1 sample=1ms
+
+    discard_spikes = {0: [2, 4, 6, 8], 3: [1, 3, 5, 7, 9]}
+    remaining_spikes = {
+        0: [0, 1, 3, 5, 7, 9],
+        3: [0, 2, 4, 6, 8],
+    }
+
+    split_spikes = {1: [5, 6, 8], 3: [2, 3, 4, 7, 8, 9]}
+
+    expected_new_spikes = {
+        0: [0, 1, 3, 5, 7, 9],
+        6: np.arange(10),
+        # 1 should split into 7 and 8
+        7: [5, 6, 8],
+        8: [0, 1, 2, 3, 4, 7, 9],
+        # 3 should split into 9 and 10, without discarded spikes
+        9: [2, 4, 8],
+        10: [0, 6],
+    }
+
+    discard_spikes_curation = {
+        "format_version": "3",
+        "unit_ids": original_sort.unit_ids,
+        "splits": [
+            {"unit_id": 1, "mode": "indices", "indices": [split_spikes[1]]},
+            {"unit_id": 3, "mode": "indices", "indices": [split_spikes[3]]},
+        ],
+        "discard_spikes": [
+            {
+                "unit_id": 0,
+                "indices": discard_spikes[0],
+            },
+            {
+                "unit_id": 3,
+                "indices": discard_spikes[3],
+            },
+        ],
+    }
+
+    curated_sort = apply_curation(original_sort, discard_spikes_curation)
+
+    for expected_unit_id, spikes in expected_new_spikes.items():
+        assert np.all(curated_sort.get_unit_spike_train(unit_id=expected_unit_id) == spikes)
+
+
+def test_discard_and_split_several_units_string_ids():
+
+    spike_indices = [{unit_id: np.arange(10) for unit_id in ["0", "1", "3", "6"]}]
+    original_sort = NumpySorting.from_unit_dict(spike_indices, sampling_frequency=1000)  # to have 1 sample=1ms
+
+    discard_spikes = {0: [2, 4, 6, 8], 3: [1, 3, 5, 7, 9]}
+    remaining_spikes = {
+        0: [0, 1, 3, 5, 7, 9],
+        3: [0, 2, 4, 6, 8],
+    }
+
+    split_spikes = {1: [5, 6, 8], 3: [2, 3, 4, 7, 8, 9]}
+
+    expected_new_spikes = {
+        "0": [0, 1, 3, 5, 7, 9],
+        "6": np.arange(10),
+        # 1 should split into 7 and 8
+        "7": [5, 6, 8],
+        "8": [0, 1, 2, 3, 4, 7, 9],
+        # 3 should split into 9 and 10, without discarded spikes
+        "9": [2, 4, 8],
+        "10": [0, 6],
+    }
+
+    discard_spikes_curation = {
+        "format_version": "3",
+        "unit_ids": original_sort.unit_ids,
+        "splits": [
+            {"unit_id": "1", "mode": "indices", "indices": [split_spikes[1]]},
+            {"unit_id": "3", "mode": "indices", "indices": [split_spikes[3]]},
+        ],
+        "discard_spikes": [
+            {
+                "unit_id": "0",
+                "indices": discard_spikes[0],
+            },
+            {
+                "unit_id": "3",
+                "indices": discard_spikes[3],
+            },
+        ],
+    }
+
+    curated_sort = apply_curation(original_sort, discard_spikes_curation)
+
+    for expected_unit_id, spikes in expected_new_spikes.items():
+        assert np.all(curated_sort.get_unit_spike_train(unit_id=expected_unit_id) == spikes)
+
+    expected_new_spikes_split = {
+        "0": [0, 1, 3, 5, 7, 9],
+        "6": np.arange(10),
+        # 1 should split into "1-0" and "1-1"
+        "1-0": [5, 6, 8],
+        "1-1": [0, 1, 2, 3, 4, 7, 9],
+        # 3 should split into "3-0" and "3-1", without discarded spikes
+        "3-0": [2, 4, 8],
+        "3-1": [0, 6],
+    }
+
+    curated_sort_split = apply_curation(original_sort, discard_spikes_curation, new_id_strategy="split")
+
+    for expected_split_unit_id, spikes in expected_new_spikes_split.items():
+        assert np.all(curated_sort_split.get_unit_spike_train(unit_id=expected_split_unit_id) == spikes)

@@ -736,7 +736,9 @@ def generate_unit_ids_for_split(
 
     if new_id_strategy == "append":
         next_max_unit_id = max(old_unit_ids) + 1
-        highest_possible_unit_id = max(old_unit_ids) + len(discard_spikes_unit_ids)
+        highest_possible_unit_id = max(old_unit_ids)
+        for split_indices in unit_splits.values():
+            highest_possible_unit_id += len(split_indices)
 
     for unit_to_split, split_indices in unit_splits.items():
 
