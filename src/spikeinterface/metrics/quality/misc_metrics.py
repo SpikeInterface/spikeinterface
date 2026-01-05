@@ -327,9 +327,7 @@ def compute_refrac_period_violations(
     res = namedtuple("rp_violations", ["rp_contamination", "rp_violations"])
 
     if not HAVE_NUMBA:
-        warnings.warn("Error: numba is not installed.")
-        warnings.warn("compute_refrac_period_violations cannot run without numba.")
-        return None
+        raise ModuleNotFoundError("numba is not installed. compute_refrac_period_violations cannot run without numba.")
 
     sorting = sorting_analyzer.sorting
     fs = sorting_analyzer.sampling_frequency
