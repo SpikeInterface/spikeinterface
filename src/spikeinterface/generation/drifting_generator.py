@@ -539,6 +539,10 @@ def generate_drifting_recording(
             seed=seed,
             **generate_noise_kwargs,
         )
+    else:
+        assert noise.sampling_frequency == sampling_frequency, "Noise sampling frequency mismatch"
+        assert noise.probe.get_contact_count() == probe.get_contact_count(), "Noise num channels mismatch"
+        assert noise.get_total_duration() == duration, "Noise duration should be the same as the recording duration"
 
     static_recording = InjectDriftingTemplatesRecording(
         sorting=sorting,
