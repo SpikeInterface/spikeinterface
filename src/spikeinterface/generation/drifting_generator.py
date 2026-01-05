@@ -423,25 +423,25 @@ def generate_drifting_recording(
 
     if sorting is None:
         sorting = generate_sorting(
-        num_units=num_units,
-        sampling_frequency=sampling_frequency,
-        durations=[
-            duration,
-        ],
-        **generate_sorting_kwargs,
-        seed=seed,
+            num_units=num_units,
+            sampling_frequency=sampling_frequency,
+            durations=[
+                duration,
+            ],
+            **generate_sorting_kwargs,
+            seed=seed,
         )
     else:
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
         if sorting._recording is not None:
             duration = sorting.get_total_duration()
-    
+
     # probe
     if probe is None:
         if generate_probe_kwargs is None:
             generate_probe_kwargs = _toy_probes[probe_name]
-                
+
         probe = generate_multi_columns_probe(**generate_probe_kwargs)
         num_channels = probe.get_contact_count()
         probe.set_device_channel_indices(np.arange(num_channels))
@@ -471,7 +471,9 @@ def generate_drifting_recording(
             displacement_unit_factor,
             displacement_sampling_frequency,
             displacements_steps,
-        ) = generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
+        ) = generate_displacement_vector(
+            duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs
+        )
     else:
         (
             unit_displacements,
@@ -568,7 +570,7 @@ def generate_drifting_recording(
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
             templates=templates,
-            generate_templates_kwargs=generate_templates_kwargs
+            generate_templates_kwargs=generate_templates_kwargs,
         )
         return static_recording, drifting_recording, sorting, extra_infos
     else:
