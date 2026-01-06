@@ -25,9 +25,6 @@ class DetectSaturation(PeakDetector):
         voltage_per_sec_threshold=5,  # TODO: completely arbitrary default value
         proportion=0.5, # TODO: guess
         mute_window_samples=7, # TODO: check
-        noise_levels=None,  # TODO: REMOVE?
-        seed=None,
-        noise_levels_kwargs=dict(),
     ):
 
         # TODO: fix name
@@ -48,7 +45,7 @@ class DetectSaturation(PeakDetector):
         self.proportion = proportion
         self.mute_window_samples = mute_window_samples
 
-        self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
+        self._dtype = EVENT_VECTOR_TYPE
 
     def get_trace_margin(self):  # TODO: add margin
         return 0
@@ -122,34 +119,20 @@ def detect_period_artifacts_by_envelope(
     ----------
     recording : RecordingExtractor
         The recording extractor to detect putative artifacts
-    detect_threshold : float, default: 5
-        The threshold to detect artifacts. The threshold is computed as `detect_threshold * noise_level`
-    freq_max : float, default: 20
-        The maximum frequency for the low pass filter used
-    min_duration_ms : float, default: 50
-        The minimum duration for a threshold crossing to be considered as an artefact.
-    noise_levels : array
-        Noise levels if already computed
-    seed : int | None, default: None
-        Random seed for `get_noise_levels`.
-        If none, `get_noise_levels` uses `seed=0`.
+
     **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     """
-
-    envelope = RectifyRecording(recording)
-    envelope = GaussianFilterRecording(envelope, freq_min=None, freq_max=freq_max)
-    envelope = CommonReferenceRecording(envelope)
-
-    from spikeinterface.core.node_pipeline import (
+    from spikeinterface.core.node_pipeline import (  # TODO: ask can we import this at the top?
         run_node_pipeline,
     )
 
     _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    node0 = DetectThresholdCrossing(
-        recording, detect_threshold=detect_threshold, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
+    node0 = DetectSaturation(
+        recording,
+        seed=seed, **noise_levels_kwargs
     )
 
     threshold_crossings = run_node_pipeline(
