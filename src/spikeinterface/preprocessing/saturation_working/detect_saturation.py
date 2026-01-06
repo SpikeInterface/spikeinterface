@@ -23,8 +23,8 @@ class DetectSaturation(PeakDetector):
         recording,
         saturation_threshold=5,  # TODO: FIX,   max_voltage = max_voltage if max_voltage is not None else sr.range_volts[:-1]
         voltage_per_sec_threshold=5,  # TODO: completely arbitrary default value
-        proportion=0.5, # TODO: guess
-        mute_window_samples=7, # TODO: check
+        proportion=0.5,  # TODO: guess
+        mute_window_samples=7,  # TODO: check
     ):
 
         # TODO: fix name
