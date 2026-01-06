@@ -30,14 +30,14 @@ class DetectSaturation(PeakDetector):
         # TODO: fix name
         # TODO: review this
         EVENT_VECTOR_TYPE = [
-            ('start_sample_index', 'int64'),
-            ('stop_sample_index', 'int64'),
-            ('segment_index', 'int64'),
-            ('channel_x_start', 'float64'),
-            ('channel_x_stop', 'float64'),
-            ('channel_y_start', 'float64'),
-            ('channel_y_stop', 'float64'),
-            ('method_id', 'U128')
+            ("start_sample_index", "int64"),
+            ("stop_sample_index", "int64"),
+            ("segment_index", "int64"),
+            ("channel_x_start", "float64"),
+            ("channel_x_stop", "float64"),
+            ("channel_y_start", "float64"),
+            ("channel_y_stop", "float64"),
+            ("method_id", "U128"),
         ]
         self.saturation_threshold = saturation_threshold
         self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
@@ -62,6 +62,7 @@ class DetectSaturation(PeakDetector):
             mute [ns]: float array indicating the mute function to apply to the data [0-1]
         """
         import scipy  # TODO: handle import
+
         max_voltage = self.saturation_threshold
         data = traces.T  # TODO: handle
 
@@ -81,16 +82,14 @@ class DetectSaturation(PeakDetector):
         mute = np.maximum(0, 1 - scipy.signal.convolve(saturation, win, mode="same"))
         return saturation, mute
 
-
-
-        #z = np.median(traces / self.abs_thresholds, 1)
-        #threshold_mask = np.diff((z > 1) != 0, axis=0)
-        #indices = np.flatnonzero(threshold_mask)
-        #threshold_crossings = np.zeros(indices.size, dtype=self._dtype)
-        #threshold_crossings["sample_index"] = indices
-        #threshold_crossings["front"][::2] = True
-        #threshold_crossings["front"][1::2] = False
-        #return (threshold_crossings,)
+        # z = np.median(traces / self.abs_thresholds, 1)
+        # threshold_mask = np.diff((z > 1) != 0, axis=0)
+        # indices = np.flatnonzero(threshold_mask)
+        # threshold_crossings = np.zeros(indices.size, dtype=self._dtype)
+        # threshold_crossings["sample_index"] = indices
+        # threshold_crossings["front"][::2] = True
+        # threshold_crossings["front"][1::2] = False
+        # return (threshold_crossings,)
 
 
 def detect_period_artifacts_by_envelope(
