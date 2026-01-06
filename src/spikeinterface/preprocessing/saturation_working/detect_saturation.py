@@ -22,6 +22,9 @@ class DetectSaturation(PeakDetector):
         self,
         recording,
         saturation_threshold=5,  # TODO: FIX,   max_voltage = max_voltage if max_voltage is not None else sr.range_volts[:-1]
+        voltage_per_sec_threshold=5,  # TODO: completely arbitrary default value
+        proportion=0.5, # TODO: guess
+        mute_window_samples=7, # TODO: check
         noise_levels=None,  # TODO: REMOVE?
         seed=None,
         noise_levels_kwargs=dict(),
@@ -39,7 +42,12 @@ class DetectSaturation(PeakDetector):
             ('channel_y_stop', 'float64'),
             ('method_id', 'U128')
         ]
+        self.voltage_per_sec_threshold = voltage_per_sec_threshold
         self.saturation_threshold = saturation_threshold
+        self.sampling_frequency = recording.get_sampling_frequency()
+        self.proportion = proportion
+        self.mute_window_samples = mute_window_samples
+
         self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
 
     def get_trace_margin(self):  # TODO: add margin
@@ -63,6 +71,11 @@ class DetectSaturation(PeakDetector):
         """
         import scipy  # TODO: handle import
         max_voltage = self.saturation_threshold
+        v_per_sec = self.voltage_per_sec_threshold
+        fs = self.sampling_frequency
+        proportion = self.proportion
+        mute_window_samples = self.mute_window_samples
+
         data = traces.T  # TODO: handle
 
         # first computes the saturated samples
