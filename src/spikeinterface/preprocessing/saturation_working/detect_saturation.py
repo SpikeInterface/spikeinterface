@@ -138,15 +138,7 @@ def detect_period_artifacts_by_envelope(
     proportion = (0.5,)  # TODO: guess
     mute_window_samples = (7,)  # TODO: check
 
-    node0 = DetectSaturation(
-        recording,
-        saturation_threshold=saturation_threshold,
-        voltage_per_sec_threshold=voltage_per_sec_threshold,
-        proportion=proportion,
-        mute_window_samples=mute_window_samples,
-        seed=seed,
-        **noise_levels_kwargs,
-    )
+    node0 = DetectSaturation(recording, seed=seed, **noise_levels_kwargs)
 
     threshold_crossings = run_node_pipeline(
         recording,
