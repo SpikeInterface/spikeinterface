@@ -130,10 +130,7 @@ def detect_period_artifacts_by_envelope(
     _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    node0 = DetectSaturation(
-        recording,
-        seed=seed, **noise_levels_kwargs
-    )
+    node0 = DetectSaturation(recording, seed=seed, **noise_levels_kwargs)
 
     threshold_crossings = run_node_pipeline(
         recording,
