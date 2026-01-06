@@ -430,3 +430,12 @@ class CurationModel(BaseModel):
                         )
 
         return self
+
+
+class SequentialCuration(BaseModel):
+    curation_steps: List[CurationModel] = Field(description="List of curation steps applied sequentially")
+
+    @model_validator(mode="after")
+    def validate_sequential_curation(self):
+        # check that all new_unit_ids are defined
+        pass

@@ -824,7 +824,7 @@ class BaseMetric:
     metric_descriptions = {}  # descriptions of each metric column
     needs_recording = False  # whether the metric needs recording
     needs_tmp_data = (
-        False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
+        False  # whether the metric needs temporary data computed with _prepare_data at the MetricExtension level
     )
     needs_job_kwargs = False
     depend_on = []  # extensions the metric depends on
