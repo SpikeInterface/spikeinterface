@@ -21,7 +21,7 @@ class ComputeGoodTimeChunks(AnalyzerExtension):
     Parameters
     ----------
     method : "false_positives_and_negatives" | "user_defined" | "combined"
-        
+
 
     Returns
     -------
@@ -46,7 +46,9 @@ class ComputeGoodTimeChunks(AnalyzerExtension):
         elif method == "user_defined":
             assert user_defined_periods is not None, "user_defined_periods must be provided for method 'user_defined'"
         if method == "combined":
-            warnings.warn("ComputeGoodTimeChunks was called with method 'combined', yet user_defined_periods are not passed. Falling back to using false positives and negatives only.")
+            warnings.warn(
+                "ComputeGoodTimeChunks was called with method 'combined', yet user_defined_periods are not passed. Falling back to using false positives and negatives only."
+            )
             method = "false_positives_and_negatives"
 
         params = dict(method=method, user_defined_periods=user_defined_periods)
@@ -69,7 +71,7 @@ class ComputeGoodTimeChunks(AnalyzerExtension):
 
     def _run(self, verbose=False):
         method = self.params["method"]
-        flat_args = 0 #TODO extract from method_kwargs
+        flat_args = 0  # TODO extract from method_kwargs
 
         self.data["isi_histograms"] = isi_histograms
         self.data["bins"] = bins
