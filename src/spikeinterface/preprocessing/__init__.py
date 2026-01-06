@@ -20,6 +20,7 @@ from .pipeline import (
     PreprocessingPipeline,
 )
 
+from .detect_artifacts import detect_artifact_periods, detect_period_artifacts_by_envelope
 # for snippets
 from .align_snippets import AlignSnippets
 from warnings import warn
