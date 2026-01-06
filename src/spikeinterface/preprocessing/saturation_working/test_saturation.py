@@ -21,11 +21,9 @@ recording = NumpyRecording([data] * 3, sample_frequency)  # TODO: all segments t
 if VISUALISE:
     x = recording.get_traces(start_frame=0, end_frame=35000, segment_index=0)
 
-
     plt.plot(x[:, 3])
     plt.plot(x[:, 4])
     plt.plot(x[:, 5])
     plt.show()
     # pass recording to new function
     # check start, stops, channels match
-
