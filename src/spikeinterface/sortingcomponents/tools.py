@@ -429,11 +429,11 @@ def cache_preprocessing(
 
     elif mode == "folder":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_folder(folder=folder)
+        recording = recording.save_to_folder(folder=folder, **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "zarr":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_zarr(folder=folder)
+        recording = recording.save_to_zarr(folder=folder, **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "no-cache":
         recording = recording
@@ -445,7 +445,7 @@ def cache_preprocessing(
             cache_info["mode"] = "memory"
         elif folder is not None:
             # then try folder
-            recording = recording.save_to_folder(folder=folder)
+            recording = recording.save_to_folder(folder=folder, **job_kwargs)
             cache_info["mode"] = "folder"
             cache_info["folder"] = folder
         else:
