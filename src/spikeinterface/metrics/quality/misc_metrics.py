@@ -182,6 +182,114 @@ class SNR(BaseMetric):
     depend_on = ["noise_levels", "templates"]
 
 
+def compute_snrs_bombcell(
+    sorting_analyzer,
+    unit_ids=None,
+    peak_sign: str = "neg",
+    baseline_window_ms: float = 0.5,
+):
+    """
+    Compute signal to noise ratio using BombCell method.
+
+    This differs from the standard SNR by using:
+    - Signal: Max absolute value of raw waveforms on peak channel
+    - Noise: MAD (Median Absolute Deviation) of baseline samples from waveforms
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    unit_ids : list or None
+        The list of unit ids to compute the SNR. If None, all units are used.
+    peak_sign : "neg" | "pos" | "both", default: "neg"
+        The sign of the template to compute best channels.
+    baseline_window_ms : float, default: 0.5
+        Duration in ms at the start of the waveform to use as baseline for noise calculation.
+
+    Returns
+    -------
+    snrs : dict
+        Computed signal to noise ratio for each unit.
+
+    Notes
+    -----
+    This implementation follows the BombCell methodology:
+    - Signal is the maximum absolute amplitude of raw waveforms on the peak channel
+    - Noise is computed as MAD of baseline samples (first N samples of each waveform)
+
+    Requires the "waveforms" extension to be computed.
+    """
+    if not sorting_analyzer.has_extension("waveforms"):
+        raise ValueError(
+            "The 'waveforms' extension is required for compute_snrs_bombcell. "
+            "Please compute it first with: analyzer.compute('waveforms')"
+        )
+
+    if unit_ids is None:
+        unit_ids = sorting_analyzer.unit_ids
+
+    waveforms_ext = sorting_analyzer.get_extension("waveforms")
+    nbefore = waveforms_ext.nbefore
+    sampling_frequency = sorting_analyzer.sampling_frequency
+
+    # Calculate baseline samples from ms
+    baseline_samples = int(baseline_window_ms / 1000 * sampling_frequency)
+    baseline_samples = min(baseline_samples, nbefore)  # Can't exceed nbefore
+
+    # Get peak channel for each unit from templates
+    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
+
+    snrs = {}
+    for unit_id in unit_ids:
+        # Get waveforms for this unit (num_spikes, num_samples, num_channels)
+        waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
+
+        if waveforms is None or len(waveforms) == 0:
+            snrs[unit_id] = np.nan
+            continue
+
+        # Get peak channel index
+        peak_chan_id = extremum_channels_ids[unit_id]
+        if sorting_analyzer.is_sparse():
+            chan_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
+            if peak_chan_id not in chan_ids:
+                snrs[unit_id] = np.nan
+                continue
+            peak_chan_idx = np.where(chan_ids == peak_chan_id)[0][0]
+        else:
+            peak_chan_idx = sorting_analyzer.channel_ids_to_indices([peak_chan_id])[0]
+
+        # Extract waveforms on peak channel
+        waveforms_peak = waveforms[:, :, peak_chan_idx]  # (num_spikes, num_samples)
+
+        # Signal: max absolute value across all spikes
+        signal = np.max(np.abs(waveforms_peak))
+
+        # Noise: MAD of baseline samples (first N samples of each waveform)
+        baseline_samples_all = waveforms_peak[:, :baseline_samples].flatten()
+        median_baseline = np.median(baseline_samples_all)
+        noise = np.median(np.abs(baseline_samples_all - median_baseline))
+
+        # Calculate SNR (avoid division by zero)
+        if noise > 0:
+            snrs[unit_id] = signal / noise
+        else:
+            snrs[unit_id] = np.nan
+
+    return snrs
+
+
+class SNRBombcell(BaseMetric):
+    metric_name = "snr_bombcell"
+    metric_function = compute_snrs_bombcell
+    metric_params = {"peak_sign": "neg", "baseline_window_ms": 0.5}
+    metric_columns = {"snr_bombcell": float}
+    metric_descriptions = {
+        "snr_bombcell": "Signal to noise ratio using BombCell method (raw waveform max / baseline MAD)."
+    }
+    depend_on = ["waveforms", "templates"]
+
+
 def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5, min_isi_ms=0):
     """
     Calculate Inter-Spike Interval (ISI) violations.
@@ -752,6 +860,7 @@ def compute_amplitude_cutoffs(
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
+    plot_details=True,  # Hardcoded ON for debugging
 ):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes.
@@ -770,6 +879,9 @@ def compute_amplitude_cutoffs(
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
+    plot_details : bool, default: True
+        If True, generate diagnostic plots for each unit showing amplitude histogram
+        and gaussian fit. Hardcoded ON for debugging.
 
     Returns
     -------
@@ -807,13 +919,38 @@ def compute_amplitude_cutoffs(
 
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
 
+    # Get spike times for scatter plots if plot_details is enabled
+    spike_times_by_units = None
+    if plot_details:
+        sorting = sorting_analyzer.sorting
+        fs = sorting_analyzer.sampling_frequency
+        # Get spike times by unit (concatenated across segments)
+        spike_times_by_units = {}
+        for unit_id in unit_ids:
+            all_spike_times = []
+            time_offset = 0.0
+            for seg_idx in range(sorting_analyzer.get_num_segments()):
+                spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_idx)
+                spike_times_s = spike_train / fs + time_offset
+                all_spike_times.append(spike_times_s)
+                time_offset += sorting_analyzer.get_num_samples(seg_idx) / fs
+            spike_times_by_units[unit_id] = np.concatenate(all_spike_times) if all_spike_times else np.array([])
+
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
         if invert_amplitudes:
             amplitudes = -amplitudes
 
+        spike_times = spike_times_by_units[unit_id] if spike_times_by_units is not None else None
+
         all_fraction_missing[unit_id] = amplitude_cutoff(
-            amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
+            amplitudes,
+            num_histogram_bins,
+            histogram_smoothing_value,
+            amplitudes_bins_min_ratio,
+            spike_times=spike_times,
+            unit_id=unit_id,
+            plot_details=plot_details,
         )
 
     if np.any(np.isnan(list(all_fraction_missing.values()))):
@@ -829,6 +966,7 @@ class AmplitudeCutoff(BaseMetric):
         "num_histogram_bins": 100,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
+        "plot_details": True,  # Hardcoded ON for debugging
     }
     metric_columns = {"amplitude_cutoff": float}
     metric_descriptions = {
@@ -1295,6 +1433,7 @@ misc_metrics_list = [
     FiringRate,
     PresenceRatio,
     SNR,
+    SNRBombcell,
     ISIViolation,
     RPViolation,
     SlidingRPViolation,
@@ -1421,7 +1560,17 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
     return isi_violations_ratio, isi_violations_rate, isi_violations_count
 
 
-def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3, amplitudes_bins_min_ratio=5):
+def amplitude_cutoff(
+    amplitudes,
+    num_histogram_bins=500,
+    histogram_smoothing_value=3,
+    amplitudes_bins_min_ratio=5,
+    spike_times=None,
+    unit_id=None,
+    plot_details=True,  # Hardcoded ON for debugging
+    ax_scatter=None,
+    ax_hist=None,
+):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
@@ -1439,6 +1588,18 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
+    spike_times : ndarray_like or None, default: None
+        The spike times (in seconds) for this unit. Used for plotting scatter plot.
+    unit_id : any, default: None
+        The unit ID for labeling plots.
+    plot_details : bool, default: True
+        If True, generate diagnostic plots showing amplitude histogram and gaussian fit.
+        Hardcoded ON for debugging.
+    ax_scatter : matplotlib axis or None, default: None
+        Axis for scatter plot (spike times vs amplitudes). If None and plot_details=True,
+        a new figure is created.
+    ax_hist : matplotlib axis or None, default: None
+        Axis for histogram plot. If None and plot_details=True, uses same figure.
 
     Returns
     -------
@@ -1470,6 +1631,102 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         G = np.argmin(pdf_above) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
         fraction_missing = np.min([fraction_missing, 0.5])
+
+        # Plot details for debugging (similar to MATLAB BombCell)
+        if plot_details:
+            import matplotlib.pyplot as plt
+
+            # Create figure if no axes provided
+            if ax_scatter is None and ax_hist is None:
+                fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+                ax_scatter = axes[0]
+                ax_hist = axes[1]
+                created_figure = True
+            else:
+                created_figure = False
+
+            # Colors matching MATLAB BombCell style
+            main_color = [0, 0.35, 0.71]  # Blue
+            cutoff_color = [0.5430, 0, 0.5430]  # Purple
+            fit_color = "red"
+
+            # Plot 1: Scatter plot of spike times vs amplitudes (if spike_times provided)
+            if ax_scatter is not None and spike_times is not None:
+                ax_scatter.scatter(spike_times, amplitudes, s=4, c=[main_color], alpha=0.5)
+
+                # Add outlier threshold line (using IQR method like MATLAB)
+                q1, q3 = np.percentile(amplitudes, [25, 75])
+                iqr = q3 - q1
+                iqr_threshold = 4  # Same as MATLAB default
+                outlier_line = q3 + iqr_threshold * iqr
+
+                ylims = ax_scatter.get_ylim()
+                xlims = ax_scatter.get_xlim()
+
+                ax_scatter.axhline(outlier_line, color=cutoff_color, linewidth=1.5)
+                ax_scatter.text(
+                    xlims[1] * 0.98,
+                    outlier_line * 1.02,
+                    "Outlier Threshold",
+                    ha="right",
+                    va="bottom",
+                    color=cutoff_color,
+                    fontweight="bold",
+                    fontsize=8,
+                )
+
+                ax_scatter.set_xlabel("Time (s)")
+                ax_scatter.set_ylabel("Amplitude scaling factor")
+                title_str = f"Unit {unit_id}" if unit_id is not None else "Amplitudes over time"
+                ax_scatter.set_title(title_str)
+                ax_scatter.spines["top"].set_visible(False)
+                ax_scatter.spines["right"].set_visible(False)
+
+            elif ax_scatter is not None:
+                ax_scatter.text(
+                    0.5,
+                    0.5,
+                    "Spike times not provided",
+                    ha="center",
+                    va="center",
+                    transform=ax_scatter.transAxes,
+                )
+                ax_scatter.set_title("Scatter plot requires spike_times")
+
+            # Plot 2: Histogram with gaussian fit
+            if ax_hist is not None:
+                # Plot histogram as horizontal bars (like MATLAB)
+                bin_centers = (b[:-1] + b[1:]) / 2
+                ax_hist.barh(bin_centers, h, height=bin_size * 0.9, color=main_color, alpha=0.7, label="Histogram")
+
+                # Plot smoothed PDF (gaussian fit)
+                ax_hist.plot(pdf, support, color=fit_color, linewidth=2, label="Smoothed PDF")
+
+                # Mark the cutoff point G
+                cutoff_amplitude = support[G]
+                ax_hist.axhline(cutoff_amplitude, color=cutoff_color, linestyle="--", linewidth=1.5, label="Cutoff")
+
+                # Mark the peak
+                peak_amplitude = support[peak_index]
+                ax_hist.axhline(peak_amplitude, color="green", linestyle=":", linewidth=1.5, label="Peak")
+
+                ax_hist.set_xlabel("Density")
+                ax_hist.set_ylabel("Amplitude")
+
+                # Add percent missing text
+                rounded_p = f"{fraction_missing * 100:.1f}%"
+                title_str = f"% missing spikes: {rounded_p}"
+                if unit_id is not None:
+                    title_str = f"Unit {unit_id}\n{title_str}"
+                ax_hist.set_title(title_str, color=[0.7, 0.7, 0.7])
+
+                ax_hist.legend(loc="upper right", fontsize=8)
+                ax_hist.spines["top"].set_visible(False)
+                ax_hist.spines["right"].set_visible(False)
+
+            if created_figure:
+                plt.tight_layout()
+                plt.show()
 
         return fraction_missing
 

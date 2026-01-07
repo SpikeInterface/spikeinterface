@@ -46,5 +46,4 @@ from .unit_classification import (
     classify_units,
     apply_thresholds,
     get_classification_summary,
-    print_threshold_failures,
 )
