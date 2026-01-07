@@ -489,12 +489,12 @@ class SequentialCuration(BaseModel):
         for curation in self.curation_steps[:-1]:
             for merge in curation.merges:
                 if merge.new_unit_id is None:
-                    ValueError(
+                    raise ValueError(
                         "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
                     )
             for split in curation.splits:
                 if split.new_unit_ids is None:
-                    ValueError(
+                    raiseValueError(
                         "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
                     )
 
@@ -507,7 +507,7 @@ class SequentialCuration(BaseModel):
             next_model_initial_ids = curation_2.unit_ids
 
             if not (set(previous_model_final_ids) == set(next_model_initial_ids)):
-                ValueError(
+                raise ValueError(
                     f"The initial unit_ids of curation {curation_index+1} do not match the final unit_ids of curation {curation_index}."
                 )
 
