@@ -366,6 +366,48 @@ class CurationModel(BaseModel):
                 values["removed"] = list(removed_units)
         return values
 
+    def get_final_ids_from_new_unit_ids(self) -> list:
+        """
+        Returns the final unit ids of the `curation_model`, when new unit ids are
+        given for each curation choice. Raises an error if new unit ids are missing
+        for any curation choice.
+
+        Returns
+        -------
+        final_ids : list
+            The ids of the sorting/analyzer after curation takes place
+        """
+
+        intial_ids = self.unit_ids
+
+        ids_to_remove = []
+        ids_to_add = []
+
+        for remove in self.removed:
+            ids_to_remove.append(remove.unit_id)
+        for split in self.splits:
+            if split.new_unit_ids is None:
+                raise ValueError(
+                    f"The `new_unit_ids` for the split of unit {split.unit_id} is `None`. These must be given."
+                )
+            ids_to_remove.append(split.unit_id)
+            ids_to_add = ids_to_add + split.new_unit_ids
+        for merge in self.merges:
+            if merge.new_unit_id is None:
+                raise ValueError(
+                    f"The `new_unit_id` for the merge of units {merge.unit_ids} is `None`. This must be given."
+                )
+            ids_to_remove = ids_to_remove + merge.unit_ids
+            ids_to_add.append(merge.new_unit_id)
+
+        if ids_to_add is None:
+            ids_to_add = set()
+        if ids_to_remove is None:
+            ids_to_remove = set()
+
+        final_ids = set(intial_ids).difference(ids_to_remove).union(ids_to_add)
+        return list(final_ids)
+
     @model_validator(mode="before")
     def validate_fields(cls, values):
         values = dict(values)
@@ -433,9 +475,40 @@ class CurationModel(BaseModel):
 
 
 class SequentialCuration(BaseModel):
+    """
+    A Pydantic model which defines a sequence of curation steps. If using sequential curations,
+    we demand that each individual curation (except the final one) has manually defined new unit ids,
+    and that these match the unit ids of the following curation.
+    """
+
     curation_steps: List[CurationModel] = Field(description="List of curation steps applied sequentially")
 
     @model_validator(mode="after")
     def validate_sequential_curation(self):
-        # check that all new_unit_ids are defined
-        pass
+
+        for curation in self.curation_steps[:-1]:
+            for merge in curation.merges:
+                if merge.new_unit_id is None:
+                    ValueError(
+                        "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
+                    )
+            for split in curation.splits:
+                if split.new_unit_ids is None:
+                    ValueError(
+                        "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
+                    )
+
+        for curation_index in range(len(self.curation_steps))[:-1]:
+
+            curation_1 = self.curation_steps[curation_index]
+            curation_2 = self.curation_steps[curation_index + 1]
+
+            previous_model_final_ids = curation_1.get_final_ids_from_new_unit_ids()
+            next_model_initial_ids = curation_2.unit_ids
+
+            if not (set(previous_model_final_ids) == set(next_model_initial_ids)):
+                ValueError(
+                    f"The initial unit_ids of curation {curation_index+1} do not match the final unit_ids of curation {curation_index}."
+                )
+
+        return self
