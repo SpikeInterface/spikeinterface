@@ -14,6 +14,7 @@ if numba_spec is not None:
 else:
     HAVE_NUMBA = False
 
+
 class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
     """Compute good time periods per unit based on quality metrics.
 
@@ -61,24 +62,25 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self,
-                    method: str = "false_positives_and_negatives",
-                    subperiod_size_absolute: float = 10.0,
-                    subperiod_size_relative: int = 1000,
-                    subperiod_size_mode: str = "absolute",
-                    violations_ms: float = 0.8,
-                    fp_threshold: float = 0.05,
-                    fn_threshold: float = 0.05,
-                    minimum_n_spikes: int = 100,
-                    user_defined_periods: Optional[object] = None):
-        
+    def _set_params(
+        self,
+        method: str = "false_positives_and_negatives",
+        subperiod_size_absolute: float = 10.0,
+        subperiod_size_relative: int = 1000,
+        subperiod_size_mode: str = "absolute",
+        violations_ms: float = 0.8,
+        fp_threshold: float = 0.05,
+        fn_threshold: float = 0.05,
+        minimum_n_spikes: int = 100,
+        user_defined_periods: Optional[object] = None,
+    ):
+
         # method
-        assert method in ("false_positives_and_negatives", "user_defined", "combined"),\
-            f"Invalid method: {method}"
-        
+        assert method in ("false_positives_and_negatives", "user_defined", "combined"), f"Invalid method: {method}"
+
         if method == "user_defined" and user_defined_periods is None:
             raise ValueError("user_defined_periods required for 'user_defined' method")
-        
+
         if method == "combined" and user_defined_periods is None:
             warnings.warn("Combined method without user_defined_periods, falling back")
             method = "false_positives_and_negatives"
@@ -86,48 +88,59 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         if params.method in ["false_positives_and_negatives", "combined"]:
             if not self.sorting_analyzer.has_extension("amplitude_scalings"):
                 raise ValueError("Requires 'amplitude_scalings' extension; please compute it first.")
-            
+
         # subperiods
-        assert subperiod_size_mode in ("absolute", "relative"),\
-            f"Invalid subperiod_size_mode: {subperiod_size_mode}"
-        assert subperiod_size_absolute > 0 or subperiod_size_relative > 0,\
-            "Either subperiod_size_absolute or subperiod_size_relative must be positive."
-        assert isinstance(subperiod_size_relative, (int)),\
-            "subperiod_size_relative must be an integer."
+        assert subperiod_size_mode in ("absolute", "relative"), f"Invalid subperiod_size_mode: {subperiod_size_mode}"
+        assert (
+            subperiod_size_absolute > 0 or subperiod_size_relative > 0
+        ), "Either subperiod_size_absolute or subperiod_size_relative must be positive."
+        assert isinstance(subperiod_size_relative, (int)), "subperiod_size_relative must be an integer."
 
         # user_defined_periods format
         if user_defined_periods is not None:
             try:
                 user_defined_periods = np.asarray(user_defined_periods)
             except Exception as e:
-                raise ValueError(("user_defined_periods must be some (n_periods, 3) [unit, good_period_start, good_period_end] "
-                                  "or (n_periods, 4) [unit, segment_index, good_period_start, good_period_end] structure convertible to a numpy array")) from e
-            
+                raise ValueError(
+                    (
+                        "user_defined_periods must be some (n_periods, 3) [unit, good_period_start, good_period_end] "
+                        "or (n_periods, 4) [unit, segment_index, good_period_start, good_period_end] structure convertible to a numpy array"
+                    )
+                ) from e
+
             if user_defined_periods.ndim != 2 or user_defined_periods.shape[1] not in (3, 4):
-                raise ValueError("user_defined_periods must be of shape (n_periods, 3) [unit, good_period_start, good_period_end] or (n_periods, 4) [unit, segment_index, good_period_start, good_period_end]")
-            
+                raise ValueError(
+                    "user_defined_periods must be of shape (n_periods, 3) [unit, good_period_start, good_period_end] or (n_periods, 4) [unit, segment_index, good_period_start, good_period_end]"
+                )
+
             if not np.issubdtype(user_defined_periods.dtype, np.integer):
                 # Try converting to check if they're integer-valued floats
                 if not np.allclose(user_defined_periods, user_defined_periods.astype(int)):
                     raise ValueError("All values in user_defined_periods must be integers, in samples.")
                 user_defined_periods = user_defined_periods.astype(int)
-            
+
             if user_defined_periods.shape[1] == 3:
                 # add segment index 0 as column 1 if missing
-                user_defined_periods = np.hstack((user_defined_periods[:, 0:1],
-                                                  np.zeros((user_defined_periods.shape[0], 1), dtype=int),
-                                                  user_defined_periods[:, 1:3]))
+                user_defined_periods = np.hstack(
+                    (
+                        user_defined_periods[:, 0:1],
+                        np.zeros((user_defined_periods.shape[0], 1), dtype=int),
+                        user_defined_periods[:, 1:3],
+                    )
+                )
 
-        params = dict(method=method,
-                        subperiod_size_absolute=subperiod_size_absolute,
-                        subperiod_size_relative=subperiod_size_relative,
-                        subperiod_size_mode=subperiod_size_mode,
-                        violations_ms=violations_ms,
-                        fp_threshold=fp_threshold,
-                        fn_threshold=fn_threshold,
-                        minimum_n_spikes=minimum_n_spikes,
-                        user_defined_periods=user_defined_periods)
-        
+        params = dict(
+            method=method,
+            subperiod_size_absolute=subperiod_size_absolute,
+            subperiod_size_relative=subperiod_size_relative,
+            subperiod_size_mode=subperiod_size_mode,
+            violations_ms=violations_ms,
+            fp_threshold=fp_threshold,
+            fn_threshold=fn_threshold,
+            minimum_n_spikes=minimum_n_spikes,
+            user_defined_periods=user_defined_periods,
+        )
+
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -152,17 +165,18 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
         if self.params["method"] in ["false_positives_and_negatives", "combined"]:
             # ndarray: (n_periods, 3) with columns: segment_id, start_sample, end_sample
-            period_bounds = compute_period_bounds(self,
-                                self.params["subperiod_size_absolute"],
-                                self.params["subperiod_size_relative"],
-                                self.params["subperiod_size_mode"])
-            
+            period_bounds = compute_period_bounds(
+                self,
+                self.params["subperiod_size_absolute"],
+                self.params["subperiod_size_relative"],
+                self.params["subperiod_size_mode"],
+            )
+
             ## Compute fp and fn for all periods
 
             # fp computed from refractory period violations
             # dict: unit_id -> array of shape (n_periods)
-            periods_fp_per_unit = compute_fp_rates(self, period_bounds,
-                                                   self.params["violations_ms"])
+            periods_fp_per_unit = compute_fp_rates(self, period_bounds, self.params["violations_ms"])
 
             # fn computed from amplitude clippings
             # dict: unit_id -> array of shape (n_periods)
@@ -170,13 +184,14 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
             ## Combine fp and fn results with thresholds to define good periods
 
-
             ## Eventually combine with user defined periods if provided
 
             self.data["period_bounds"] = period_bounds
             self.data["periods_fp_per_unit"] = periods_fp_per_unit
             self.data["periods_fn_per_unit"] = periods_fn_per_unit
-            self.data["good_periods_per_unit"] = None  # (n_good_periods, 4) with (unit, segment, start, end) to be implemented
+            self.data["good_periods_per_unit"] = (
+                None  # (n_good_periods, 4) with (unit, segment, start, end) to be implemented
+            )
 
     def _get_data(self):
         return self.data["isi_histograms"], self.data["bins"]
@@ -185,11 +200,14 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 # register_result_extension(ComputeISIHistograms)
 # compute_isi_histograms = ComputeISIHistograms.function_factory()
 
-def compute_period_bounds(self,
-                            subperiod_size_absolute: float = 10,
-                            subperiod_size_relative: int = 1000,
-                            subperiod_size_mode: str = "absolute") -> np.ndarray:
-    
+
+def compute_period_bounds(
+    self,
+    subperiod_size_absolute: float = 10,
+    subperiod_size_relative: int = 1000,
+    subperiod_size_mode: str = "absolute",
+) -> np.ndarray:
+
     sorting = self.sorting_analyzer.sorting
     fs = sorting.get_sampling_frequency()
 
@@ -200,23 +218,27 @@ def compute_period_bounds(self,
 
     all_period_bounds = np.empty((0, 3))
     for segment_i in range(sorting.get_num_segments()):
-        n_samples = sorting.get_num_samples(segment_i) # int: samples
+        n_samples = sorting.get_num_samples(segment_i)  # int: samples
         n_periods = n_samples // period_size_samples + 1
 
         # list of sliding [start, end] in samples
         # for period size of 10s and margin size of 10s: [0, 30], [10, 40], [20, 50], ...
-        period_bounds = [(segment_i,
-                          i * period_size_samples,
-                          i * period_size_samples + 2 * margin_size_samples,
-                        )
-                for i in range(n_periods)]
-        all_period_bounds = np.vstack(all_period_bounds, period_bounds) if len(all_period_bounds) > 0 else np.array(period_bounds)
-    
+        period_bounds = [
+            (
+                segment_i,
+                i * period_size_samples,
+                i * period_size_samples + 2 * margin_size_samples,
+            )
+            for i in range(n_periods)
+        ]
+        all_period_bounds = (
+            np.vstack(all_period_bounds, period_bounds) if len(all_period_bounds) > 0 else np.array(period_bounds)
+        )
+
     return all_period_bounds
 
-def compute_fp_rates(self,
-                     period_bounds: list,
-                     violations_ms: float = 0.8) -> dict:
+
+def compute_fp_rates(self, period_bounds: list, violations_ms: float = 0.8) -> dict:
     units = self.sorting_analyzer.sorting.unit_ids
     n_periods = period_bounds.shape[0]
 
@@ -224,11 +246,12 @@ def compute_fp_rates(self,
     for unit in units:
         fp_violations[unit] = np.zeros((n_periods,), dtype=float)
         for i, (segment_i, start, end) in enumerate(period_bounds):
-                fp_rate = 0 # refractory period violations for this period
-                fp_violations[unit][i] = fp_rate
-                pass
+            fp_rate = 0  # refractory period violations for this period
+            fp_violations[unit][i] = fp_rate
+            pass
 
     return fp_violations
+
 
 def compute_fn_rates(self, period_bounds: list) -> dict:
     units = self.sorting_analyzer.sorting.unit_ids
@@ -238,8 +261,8 @@ def compute_fn_rates(self, period_bounds: list) -> dict:
     for unit in units:
         fn_violations[unit] = np.zeros((n_periods,), dtype=float)
         for i, (segment_i, start, end) in enumerate(period_bounds):
-                fn_rate = 0 # clipped amplitude AUC ratio for this period
-                fn_violations[unit][i] = fn_rate
-                pass
+            fn_rate = 0  # clipped amplitude AUC ratio for this period
+            fn_violations[unit][i] = fn_rate
+            pass
 
     return fn_violations
