@@ -174,10 +174,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             depth_direction=depth_direction,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
             smooth=smooth,
-            smooth_method=smooth_method,
             smooth_window_frac=smooth_window_frac,
             smooth_polyorder=smooth_polyorder,
-            svd_n_components=svd_n_components,
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
@@ -229,10 +227,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 template_upsampled,
                 min_thresh_detect_peaks_troughs=self.params['min_thresh_detect_peaks_troughs'],
                 smooth=self.params['smooth'],
-                smooth_method=self.params['smooth_method'],
                 smooth_window_frac=self.params['smooth_window_frac'],
                 smooth_polyorder=self.params['smooth_polyorder'],
-                svd_n_components=self.params['svd_n_components'],
             )
 
             templates_single.append(template_upsampled)

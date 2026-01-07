@@ -40,3 +40,11 @@ from .hybrid import (
     create_hybrid_units_recording,
     create_hybrid_spikes_recording,
 )
+
+from .unit_classification import (
+    get_default_thresholds,
+    classify_units,
+    apply_thresholds,
+    get_classification_summary,
+    print_threshold_failures,
+)

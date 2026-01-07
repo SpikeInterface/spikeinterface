@@ -760,7 +760,7 @@ def fit_velocity(peak_times, channel_dist):
 
     from sklearn.linear_model import TheilSenRegressor
 
-    theil = TheilSenRegressor()
+    theil = TheilSenRegressor(max_iter=1000)
     theil.fit(peak_times.reshape(-1, 1), channel_dist)
     slope = theil.coef_[0]
     intercept = theil.intercept_
@@ -843,7 +843,11 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
 
 def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs):
     """
-    Compute the exponential decay of the template amplitude over distance in units um/s.
+    Compute the spatial decay of the template amplitude over distance.
+
+    Can fit either an exponential decay (with offset) or a linear decay model. Channels are first
+    filtered by x-distance tolerance from the max channel, then the closest channels
+    in y-distance are used for fitting.
 
     Parameters
     ----------
@@ -854,13 +858,18 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     sampling_frequency : float
         The sampling frequency of the template
     **kwargs: Required kwargs:
-        - peak_function: the function to use to compute the peak amplitude for the exp decay ("ptp" or "min")
-        - min_r2: the minimum r2 to accept the exp decay fit
+        - peak_function: the function to use to compute the peak amplitude ("ptp" or "min")
+        - min_r2: the minimum r2 to accept the fit
+        - linear_fit: bool, if True use linear fit, otherwise exponential fit
+        - channel_tolerance: max x-distance (um) from max channel to include channels
+        - min_channels_for_fit: minimum number of valid channels required for fitting
+        - num_channels_for_fit: number of closest channels to use for fitting
+        - normalize_decay: bool, if True normalize amplitudes to max before fitting
 
     Returns
     -------
     exp_decay_value : float
-        The exponential decay of the template amplitude
+        The spatial decay slope (decay constant for exp fit, negative slope for linear fit)
     """
     from scipy.optimize import curve_fit
     from sklearn.metrics import r2_score
@@ -868,41 +877,117 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
     def exp_decay(x, decay, amp0, offset):
         return amp0 * np.exp(-decay * x) + offset
 
+    def linear_fit_func(x, a, b):
+        return a * x + b
+
+    # Extract parameters
     assert "peak_function" in kwargs, "peak_function must be given as kwarg"
     peak_function = kwargs["peak_function"]
     assert "min_r2" in kwargs, "min_r2 must be given as kwarg"
     min_r2 = kwargs["min_r2"]
-    # exp decay fit
+
+    use_linear_fit = kwargs.get("linear_fit", False)
+    channel_tolerance = kwargs.get("channel_tolerance", None)
+    normalize_decay = kwargs.get("normalize_decay", False)
+
+    # Set defaults based on fit type if not specified
+    min_channels_for_fit = kwargs.get("min_channels_for_fit")
+    if min_channels_for_fit is None:
+        min_channels_for_fit = 5 if use_linear_fit else 8
+
+    num_channels_for_fit = kwargs.get("num_channels_for_fit")
+    if num_channels_for_fit is None:
+        num_channels_for_fit = 6 if use_linear_fit else 10
+
+    # Compute peak amplitudes per channel
     if peak_function == "ptp":
         fun = np.ptp
     elif peak_function == "min":
         fun = np.min
-    peak_amplitudes = np.abs(fun(template, axis=0))
-    max_channel_location = channel_locations[np.argmax(peak_amplitudes)]
-    channel_distances = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations])
-    distances_sort_indices = np.argsort(channel_distances)
+    else:
+        fun = np.ptp
 
-    # longdouble is float128 when the platform supports it, otherwise it is float64
-    channel_distances_sorted = channel_distances[distances_sort_indices].astype(np.longdouble)
-    peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices].astype(np.longdouble)
+    peak_amplitudes = np.abs(fun(template, axis=0))
+    max_channel_idx = np.argmax(peak_amplitudes)
+    max_channel_location = channel_locations[max_channel_idx]
+
+    # Channel selection based on tolerance (new bombcell-style) or use all channels (old style)
+    if channel_tolerance is not None:
+        # Calculate x-distances from max channel
+        x_dist = np.abs(channel_locations[:, 0] - max_channel_location[0])
+
+        # Find channels within x-distance tolerance
+        valid_x_channels = np.argwhere(x_dist <= channel_tolerance).flatten()
+
+        if len(valid_x_channels) < min_channels_for_fit:
+            return np.nan
+
+        # Calculate y-distances for channel selection
+        y_dist = np.abs(channel_locations[:, 1] - max_channel_location[1])
+
+        # Set y distances to max for channels outside x tolerance (so they won't be selected)
+        y_dist_masked = y_dist.copy()
+        y_dist_masked[~np.isin(np.arange(len(y_dist)), valid_x_channels)] = y_dist.max() + 1
+
+        # Select the closest channels in y-distance
+        use_these_channels = np.argsort(y_dist_masked)[:num_channels_for_fit]
+
+        # Calculate distances from max channel for selected channels
+        channel_distances = np.sqrt(
+            np.sum(np.square(channel_locations[use_these_channels] - max_channel_location), axis=1)
+        )
+
+        # Get amplitudes for selected channels
+        spatial_decay_points = np.max(np.abs(template[:, use_these_channels]), axis=0)
+
+        # Sort by distance
+        sort_idx = np.argsort(channel_distances)
+        channel_distances_sorted = channel_distances[sort_idx]
+        peak_amplitudes_sorted = spatial_decay_points[sort_idx]
+
+        # Normalize if requested
+        if normalize_decay:
+            peak_amplitudes_sorted = peak_amplitudes_sorted / np.max(peak_amplitudes_sorted)
+
+        # Ensure float64 for numerical stability
+        channel_distances_sorted = np.float64(channel_distances_sorted)
+        peak_amplitudes_sorted = np.float64(peak_amplitudes_sorted)
+
+    else:
+        # Old style: use all channels sorted by distance
+        channel_distances = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations])
+        distances_sort_indices = np.argsort(channel_distances)
+
+        # longdouble is float128 when the platform supports it, otherwise it is float64
+        channel_distances_sorted = channel_distances[distances_sort_indices].astype(np.longdouble)
+        peak_amplitudes_sorted = peak_amplitudes[distances_sort_indices].astype(np.longdouble)
 
     try:
-        amp0 = peak_amplitudes_sorted[0]
-        offset0 = np.min(peak_amplitudes_sorted)
+        if use_linear_fit:
+            # Linear fit: y = a*x + b
+            popt, _ = curve_fit(linear_fit_func, channel_distances_sorted, peak_amplitudes_sorted)
+            predicted = linear_fit_func(channel_distances_sorted, *popt)
+            r2 = r2_score(peak_amplitudes_sorted, predicted)
+            exp_decay_value = -popt[0]  # Negative of slope
+        else:
+            # Exponential fit with offset: y = amp0 * exp(-decay * x) + offset
+            amp0 = peak_amplitudes_sorted[0]
+            offset0 = np.min(peak_amplitudes_sorted)
 
-        popt, _ = curve_fit(
-            exp_decay,
-            channel_distances_sorted,
-            peak_amplitudes_sorted,
-            bounds=([1e-5, amp0 - 0.5 * amp0, 0], [2, amp0 + 0.5 * amp0, 2 * offset0]),
-            p0=[1e-3, peak_amplitudes_sorted[0], offset0],
-        )
-        r2 = r2_score(peak_amplitudes_sorted, exp_decay(channel_distances_sorted, *popt))
-        exp_decay_value = popt[0]
+            popt, _ = curve_fit(
+                exp_decay,
+                channel_distances_sorted,
+                peak_amplitudes_sorted,
+                bounds=([1e-5, amp0 - 0.5 * amp0, 0], [2, amp0 + 0.5 * amp0, 2 * offset0]),
+                p0=[1e-3, peak_amplitudes_sorted[0], offset0],
+            )
+            r2 = r2_score(peak_amplitudes_sorted, exp_decay(channel_distances_sorted, *popt))
+            exp_decay_value = popt[0]
 
         if r2 < min_r2:
             exp_decay_value = np.nan
-    except:
+
+    except Exception:
         exp_decay_value = np.nan
 
     return exp_decay_value
@@ -1333,10 +1418,19 @@ def multi_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **
 
 class ExpDecay(BaseMetric):
     metric_name = "exp_decay"
-    metric_params = {"peak_function": "ptp", "min_r2": 0.2}
+    metric_params = {
+        "peak_function": "ptp",
+        "min_r2": 0.2,
+        "linear_fit": False,
+        "channel_tolerance": None,  # None uses old style (all channels), set to e.g. 33 for bombcell-style
+        "min_channels_for_fit": None,  # None means use default based on linear_fit (5 for linear, 8 for exp)
+        "num_channels_for_fit": None,  # None means use default based on linear_fit (6 for linear, 10 for exp)
+        "normalize_decay": False,
+    }
     metric_columns = {"exp_decay": float}
     metric_descriptions = {
-        "exp_decay": ("Exponential decay of the template amplitude over distance from the extremum channel (1/um).")
+        "exp_decay": ("Spatial decay of the template amplitude over distance from the extremum channel (1/um). "
+                      "Uses exponential or linear fit based on linear_fit parameter.")
     }
     needs_tmp_data = True
 
