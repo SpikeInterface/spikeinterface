@@ -19,6 +19,7 @@ from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection
 from .job_tools import fix_job_kwargs, split_job_kwargs
+from .node_pipeline import base_period_dtype
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -1331,6 +1332,21 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     need_backward_compatibility_on_load = False
     nodepipeline_variables = []  # to be defined in subclass
 
+    def __init__(self, sorting_analyzer):
+        super().__init__(sorting_analyzer)
+        self._segment_slices = None
+
+    @property
+    def segment_slices(self):
+        if self._segment_slices is None:
+            segment_slices = []
+            spikes = self.sorting_analyzer.sorting.to_spike_vector()
+            for segment_index in range(self.sorting_analyzer.get_num_segments()):
+                i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
+                segment_slices.append(slice(i0, i1))
+            self._segment_slices = segment_slices
+        return self._segment_slices
+
     def _set_params(self, **kwargs):
         params = kwargs.copy()
         return params
@@ -1369,7 +1385,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for d, name in zip(data, data_names):
             self.data[name] = d
 
-    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, copy=True):
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, periods=None, copy=True):
         """
         Return extension data. If the extension computes more than one `nodepipeline_variables`,
         the `return_data_name` is used to specify which one to return.
@@ -1383,13 +1399,15 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         return_data_name : str | None, default: None
             The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
             the first one is returned.
+        periods : array of unit_period dtype, default: None
+            Optional periods (segment_index, start_sample_index, end_sample_index, unit_index) to slice output data
         copy : bool, default: True
             Whether to return a copy of the data (only for outputs="numpy")
 
         Returns
         -------
         numpy.ndarray | dict
-            The
+            The requested data in numpy or by unit format.
         """
         from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
@@ -1404,6 +1422,18 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
 
         all_data = self.data[return_data_name]
+        if periods is not None:
+            # TODO: slice this properly with unit_indices
+            required = np.dtype(base_period_dtype).names
+            if not required.issubset(periods.dtype.names):
+                raise ValueError(f"Period must have the following fields: {required}")
+            # slice data according to period
+            segment_slices = self.segment_slices
+            all_data_segment = all_data[segment_slices[periods["segment_index"]]]
+            start = periods["start_sample_index"]
+            end = periods["end_sample_index"]
+            all_data = all_data_segment[start:end]
+
         if outputs == "numpy":
             if copy:
                 return all_data.copy()  # return a copy to avoid modification

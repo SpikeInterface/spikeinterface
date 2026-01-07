@@ -130,7 +130,7 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
         recording._properties["contact_vector"][idx][1] = x[idx]
 
     # generate random bad channel locations
-    bad_channel_indexes = rng.choice(num_channels, rng.randint(1, int(num_channels / 5)), replace=False)
+    bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
     bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
     # Run SI and IBL interpolation and check against eachother

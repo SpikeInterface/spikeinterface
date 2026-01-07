@@ -22,8 +22,17 @@ base_peak_dtype = [
     ("segment_index", "int64"),
 ]
 
-
 spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+base_period_dtype = [
+    ("start_sample_index", "int64"),
+    ("end_sample_index", "int64"),
+    ("segment_index", "int64"),
+]
+
+unit_period_dtype = base_period_dtype + [
     ("unit_index", "int64"),
 ]
 

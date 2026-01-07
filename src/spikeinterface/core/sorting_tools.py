@@ -228,6 +228,83 @@ def random_spikes_selection(
     return random_spikes_indices
 
 
+def select_sorting_periods_mask(sorting: BaseSorting, periods):
+    """
+    Returns a boolean mask for the spikes in the sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object.
+    periods : numpy.array of unit_period_dtype
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to restrict the sorting.
+
+    Returns
+    -------
+    numpy.array
+        A boolean mask of the spikes in the sorting object, with True for spikes within the specified periods.
+    """
+    spike_vector = sorting.to_spike_vector()
+    spike_vector_list = sorting.to_spike_vector(concatenated=False)
+    keep_mask = np.zeros(len(spike_vector), dtype=bool)
+    all_global_indices = spike_vector_to_indices(spike_vector_list, unit_ids=sorting.unit_ids, absolute_index=True)
+    for segment_index in range(sorting.get_num_segments()):
+        global_indices_segment = all_global_indices[segment_index]
+        # filter periods by segment
+        periods_in_segment = periods[periods["segment_index"] == segment_index]
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            # filter by unit index
+            periods_for_unit = periods_in_segment[periods_in_segment["unit_index"] == unit_index]
+            global_indices = global_indices_segment[unit_id]
+            spiketrains = spike_vector[global_indices]["sample_index"]
+            if len(periods_for_unit) > 0:
+                for period in periods_for_unit:
+                    mask = (spiketrains >= period["start_sample_index"]) & (spiketrains < period["end_sample_index"])
+                    keep_mask[global_indices[mask]] = True
+    return keep_mask
+
+
+def select_sorting_periods(sorting: BaseSorting, periods):
+    """
+    Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+    Parameters
+    ----------
+    S
+    periods : numpy.array of unit_period_dtype
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to restrict the sorting.
+
+    Returns
+    -------
+    BaseSorting
+        A new sorting object with only samples between start_sample_index and end_sample_index
+        for the given segment_index.
+    """
+    from spikeinterface.core.numpyextractors import NumpySorting
+    from spikeinterface.core.node_pipeline import unit_period_dtype
+
+    if periods is not None:
+        if not isinstance(periods, np.ndarray):
+            periods = np.array([periods], dtype=unit_period_dtype)
+        required = set(np.dtype(unit_period_dtype).names)
+        if not required.issubset(periods.dtype.names):
+            raise ValueError(f"Period must have the following fields: {required}")
+
+        spike_vector = sorting.to_spike_vector()
+        keep_mask = select_sorting_periods_mask(sorting, periods)
+        sliced_spike_vector = spike_vector[keep_mask]
+
+        sorting = NumpySorting(
+            sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
+        )
+        sorting.copy_metadata(sorting)
+        return sorting
+    else:
+        return sorting
+
+
 ### MERGING ZONE ###
 def apply_merges_to_sorting(
     sorting: BaseSorting,
