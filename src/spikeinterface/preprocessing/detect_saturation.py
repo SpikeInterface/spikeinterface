@@ -24,6 +24,7 @@ EVENT_VECTOR_TYPE = [
     ("method_id", "U128"),
 ]
 
+
 def _collapse_events(events):
     """
     If events are detected at a chunk edge, they will be split in two.
@@ -31,18 +32,18 @@ def _collapse_events(events):
     :param events:
     :return:
     """
-    order = np.lexsort((events['start_sample_index'], events['segment_index']))
+    order = np.lexsort((events["start_sample_index"], events["segment_index"]))
     events = events[order]
 
     to_drop = np.zeros(events.size, dtype=bool)
     # compute if duplicate
-    for i in np.arange(events.size -1):
-        same = events['stop_sample_index'][i] == events['start_sample_index'][i + 1]
-        for f in ['segment_index', 'channel_x_low', 'channel_x_high', 'channel_y_low', 'channel_y_high']:
+    for i in np.arange(events.size - 1):
+        same = events["stop_sample_index"][i] == events["start_sample_index"][i + 1]
+        for f in ["segment_index", "channel_x_low", "channel_x_high", "channel_y_low", "channel_y_high"]:
             same &= np.array_equal(events[f][i], events[f][i + 1], equal_nan=True)
         if same:
             to_drop[i] = True
-            events['start_sample_index'][i + 1] = events['start_sample_index'][i]
+            events["start_sample_index"][i + 1] = events["start_sample_index"][i]
     return events[~to_drop].copy()
 
 
@@ -55,10 +56,9 @@ class _DetectSaturation(PeakDetector):
         self,
         recording,
         saturation_threshold,  # 1200 uV
-        voltage_per_sec_threshold, # 1e-8 V.s-1
-        proportion=0.5,
-        mute_window_samples=7,
-        **kwargs,
+        voltage_per_sec_threshold,  # 1e-8 V.s-1
+        proportion,
+        mute_window_samples,
     ):
         PeakDetector.__init__(self, recording, return_output=True)
 
@@ -88,11 +88,9 @@ class _DetectSaturation(PeakDetector):
             saturation [ns]: boolean array indicating the saturated samples
             mute [ns]: float array indicating the mute function to apply to the data [0-1]
         """
-        import scipy  # TODO: handle import
-
         fs = self.sampling_frequency
 
-        data = traces.T
+        data = traces.T  # TODO: refactor for dimension
 
         # first computes the saturated samples
         max_voltage = np.atleast_1d(self.saturation_threshold)[:, np.newaxis]
@@ -110,101 +108,48 @@ class _DetectSaturation(PeakDetector):
         events = np.zeros(n_events, dtype=EVENT_VECTOR_TYPE)
 
         for i, (start, stop) in enumerate(zip(intervals[::2], intervals[1::2])):
-            events[i]['start_sample_index'] = start + start_frame
-            events[i]['stop_sample_index'] = stop + start_frame
-            events[i]['segment_index'] = segment_index
-            events[i]['channel_x_low'] = np.nan
-            events[i]['channel_x_high'] = np.nan
-            events[i]['channel_y_low'] = np.nan
-            events[i]['channel_y_high'] = np.nan
-            events[i]['method_id'] = 'saturation_detection'
+            events[i]["start_sample_index"] = start + start_frame
+            events[i]["stop_sample_index"] = stop + start_frame
+            events[i]["segment_index"] = segment_index
+            events[i]["channel_x_low"] = np.nan
+            events[i]["channel_x_high"] = np.nan
+            events[i]["channel_y_low"] = np.nan
+            events[i]["channel_y_high"] = np.nan
+            events[i]["method_id"] = "saturation_detection"
         # create a dummy return for the node processing management
-        toto = np.zeros(1, dtype=[("sample_index", "int64")],)
-        toto[0]['sample_index'] = start_frame
+        toto = np.zeros(
+            1,
+            dtype=[("sample_index", "int64")],
+        )
+        toto[0]["sample_index"] = start_frame
         return (toto, events)
 
 
-def detect_saturation(recording, *args, **kwargs):
-    node0 = _DetectSaturation(recording, *args, **kwargs)
-    _, job_kwargs = split_job_kwargs(kwargs)
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    _, events = run_node_pipeline(recording,[node0], job_kwargs=job_kwargs)
-    return _collapse_events(events)
-
-def detect_period_artifacts_by_envelope(
+def detect_saturation(
     recording,
-    detect_threshold=5,
-    min_duration_ms=50,
-    freq_max=20.0,
-    seed=None,
-    noise_levels=None,
-    **noise_levels_kwargs,
+    saturation_threshold,  # 1200 uV
+    voltage_per_sec_threshold,  # 1e-8 V.s-1
+    proportion=0.5,
+    mute_window_samples=7,
+    job_kwargs=None,
 ):
-    """
-    Docstring for detect_period_artifacts. Function to detect putative artifact periods as threshold crossings of
-    a global envelope of the channels.
+    """ """
+    if job_kwargs:
+        job_kwargs = {}
 
-    Parameters
-    ----------
-    recording : RecordingExtractor
-        The recording extractor to detect putative artifacts
-
-    **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
-
-    """
-    _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    saturation_threshold = (
-        5,
-    )  # TODO: FIX,   max_voltage = max_voltage if max_voltage is not None else sr.range_volts[:-1]
-    voltage_per_sec_threshold = (5,)  # TODO: completely arbitrary default value
-    proportion = (0.5,)  # TODO: guess
-    mute_window_samples = (7,)  # TODO: check
-
-    node0 = DetectSaturation(recording, seed=seed, **noise_levels_kwargs)
-
-    threshold_crossings = run_node_pipeline(
+    node0 = _DetectSaturation(
         recording,
-        [node0],
-        job_kwargs,
-        job_name="detect threshold crossings",
+        saturation_threshold=saturation_threshold,
+        voltage_per_sec_threshold=voltage_per_sec_threshold,
+        proportion=proportion,
+        mute_window_samples=mute_window_samples,
     )
 
-    order = np.lexsort((threshold_crossings["sample_index"], threshold_crossings["segment_index"]))
-    threshold_crossings = threshold_crossings[order]
+    _, events = run_node_pipeline(recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation events")
 
-    periods = []
-    fs = recording.sampling_frequency
-    max_duration_samples = int(min_duration_ms * fs / 1000)
-    num_seg = recording.get_num_segments()
-
-    for seg_index in range(num_seg):
-        sub_periods = []
-        mask = threshold_crossings["segment_index"] == seg_index
-        sub_thr = threshold_crossings[mask]
-        if len(sub_thr) > 0:
-            local_thr = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("front", "bool")]))
-            if not sub_thr["front"][0]:
-                local_thr["sample_index"] = 0
-                local_thr["front"] = True
-                sub_thr = np.hstack((local_thr, sub_thr))
-            if sub_thr["front"][-1]:
-                local_thr["sample_index"] = recording.get_num_samples(seg_index)
-                local_thr["front"] = False
-                sub_thr = np.hstack((sub_thr, local_thr))
-
-            indices = np.flatnonzero(np.diff(sub_thr["front"]))
-            for i, j in zip(indices[:-1], indices[1:]):
-                if sub_thr["front"][i]:
-                    start = sub_thr["sample_index"][i]
-                    end = sub_thr["sample_index"][j]
-                    if end - start > max_duration_samples:
-                        sub_periods.append((start, end))
-
-        periods.append(sub_periods)
-
-    return periods, envelope
+    return _collapse_events(events)
 
 
 class SilencedArtifactsRecording(SilencedPeriodsRecording):
@@ -285,6 +230,6 @@ class SilencedArtifactsRecording(SilencedPeriodsRecording):
 
 
 # function for API
-silence_artifacts = define_function_handling_dict_from_class(
-    source_class=SilencedArtifactsRecording, name="silence_artifacts"
-)
+# silence_artifacts = define_function_handling_dict_from_class(
+#    source_class=SilencedArtifactsRecording, name="silence_artifacts"
+# )
