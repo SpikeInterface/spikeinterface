@@ -80,5 +80,3 @@ def test_saturation_detection():
     )
     assert events["start_sample_index"][0] == 1000
     assert events["stop_sample_index"][0] == 1001
-
-    # TODO: test channe llocations
