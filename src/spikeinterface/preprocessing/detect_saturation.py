@@ -80,17 +80,15 @@ class _DetectSaturation(PeakDetector):
         """
         fs = self.sampling_frequency
 
-        data = traces.T  # TODO: refactor for dimension
-
         # first computes the saturated samples
         max_voltage = np.atleast_1d(self.saturation_threshold)[:, np.newaxis]
 
         # 0.98 is empirically determined as the true saturating point is
         # slightly lower than the documented saturation point of the probe
-        saturation = np.mean(np.abs(data) > max_voltage * 0.98, axis=0)
+        saturation = np.mean(np.abs(traces) > max_voltage * 0.98, axis=1)
 
         # then compute the derivative of the voltage saturation
-        n_diff_saturated = np.mean(np.abs(np.diff(data, axis=-1)) / fs >= self.voltage_per_sec_threshold, axis=0)
+        n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) / fs >= self.voltage_per_sec_threshold, axis=1)
         n_diff_saturated = np.r_[n_diff_saturated, 0]
 
         # if either of those reaches more than the proportion of channels labels the sample as saturated
