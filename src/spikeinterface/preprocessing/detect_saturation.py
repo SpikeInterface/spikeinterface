@@ -89,6 +89,8 @@ class _DetectSaturation(PeakDetector):
 
         # then compute the derivative of the voltage saturation
         n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) / fs >= self.voltage_per_sec_threshold, axis=1)
+        # Note this means the velocity is not checked for the last sample in the
+        # check because we are taking the forward derivative
         n_diff_saturated = np.r_[n_diff_saturated, 0]
 
         # if either of those reaches more than the proportion of channels labels the sample as saturated
