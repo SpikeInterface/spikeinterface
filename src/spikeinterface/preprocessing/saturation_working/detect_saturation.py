@@ -9,11 +9,44 @@ from spikeinterface.preprocessing.common_reference import CommonReferenceRecordi
 from spikeinterface.preprocessing.filter_gaussian import GaussianFilterRecording
 from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.node_pipeline import run_node_pipeline
 from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype
-import numpy as np
 
 
-class DetectSaturation(PeakDetector):
+EVENT_VECTOR_TYPE = [
+    ("start_sample_index", "int64"),
+    ("stop_sample_index", "int64"),
+    ("segment_index", "int64"),
+    ("channel_x_low", "float64"),
+    ("channel_x_high", "float64"),
+    ("channel_y_low", "float64"),
+    ("channel_y_high", "float64"),
+    ("method_id", "U128"),
+]
+
+def _collapse_events(events):
+    """
+    If events are detected at a chunk edge, they will be split in two.
+    This detects such cases and collapses them in a single record instead
+    :param events:
+    :return:
+    """
+    order = np.lexsort((events['start_sample_index'], events['segment_index']))
+    events = events[order]
+
+    to_drop = np.zeros(events.size, dtype=bool)
+    # compute if duplicate
+    for i in np.arange(events.size -1):
+        same = events['stop_sample_index'][i] == events['start_sample_index'][i + 1]
+        for f in ['segment_index', 'channel_x_low', 'channel_x_high', 'channel_y_low', 'channel_y_high']:
+            same &= np.array_equal(events[f][i], events[f][i + 1], equal_nan=True)
+        if same:
+            to_drop[i] = True
+            events['start_sample_index'][i + 1] = events['start_sample_index'][i]
+    return events[~to_drop].copy()
+
+
+class _DetectSaturation(PeakDetector):
 
     name = "detect_saturation"
     preferred_mp_context = None
@@ -21,34 +54,22 @@ class DetectSaturation(PeakDetector):
     def __init__(
         self,
         recording,
-        saturation_threshold=5,  # TODO: FIX,   max_voltage = max_voltage if max_voltage is not None else sr.range_volts[:-1]
-        voltage_per_sec_threshold=5,  # TODO: completely arbitrary default value
-        proportion=0.5,  # TODO: guess
-        mute_window_samples=7,  # TODO: check
+        saturation_threshold,  # 1200 uV
+        voltage_per_sec_threshold, # 1e-8 V.s-1
+        proportion=0.5,
+        mute_window_samples=7,
+        **kwargs,
     ):
         PeakDetector.__init__(self, recording, return_output=True)
 
-        # TODO: fix name
-        # TODO: review this
-        EVENT_VECTOR_TYPE = [
-            ("start_sample_index", "int64"),
-            ("stop_sample_index", "int64"),
-            ("segment_index", "int64"),
-            ("channel_x_start", "float64"),
-            ("channel_x_stop", "float64"),
-            ("channel_y_start", "float64"),
-            ("channel_y_stop", "float64"),
-            ("method_id", "U128"),
-        ]
         self.voltage_per_sec_threshold = voltage_per_sec_threshold
         self.saturation_threshold = saturation_threshold
         self.sampling_frequency = recording.get_sampling_frequency()
         self.proportion = proportion
         self.mute_window_samples = mute_window_samples
-
         self._dtype = EVENT_VECTOR_TYPE
 
-    def get_trace_margin(self):  # TODO: add margin
+    def get_trace_margin(self):
         return 0
 
     def get_dtype(self):
@@ -69,39 +90,46 @@ class DetectSaturation(PeakDetector):
         """
         import scipy  # TODO: handle import
 
-        max_voltage = self.saturation_threshold
-        v_per_sec = self.voltage_per_sec_threshold
         fs = self.sampling_frequency
-        proportion = self.proportion
-        mute_window_samples = self.mute_window_samples
 
-        data = traces.T  # TODO: handle
+        data = traces.T
 
         # first computes the saturated samples
-        max_voltage = np.atleast_1d(max_voltage)[:, np.newaxis]
+        max_voltage = np.atleast_1d(self.saturation_threshold)[:, np.newaxis]
         saturation = np.mean(np.abs(data) > max_voltage * 0.98, axis=0)
 
         # then compute the derivative of the voltage saturation
-        n_diff_saturated = np.mean(np.abs(np.diff(data, axis=-1)) / fs >= v_per_sec, axis=0)
+        n_diff_saturated = np.mean(np.abs(np.diff(data, axis=-1)) / fs >= self.voltage_per_sec_threshold, axis=0)
         n_diff_saturated = np.r_[n_diff_saturated, 0]
 
         # if either of those reaches more than the proportion of channels labels the sample as saturated
-        saturation = np.logical_or(saturation > proportion, n_diff_saturated > proportion)
+        saturation = np.logical_or(saturation > self.proportion, n_diff_saturated > self.proportion)
+        np.sum(saturation)
+        intervals = np.where(np.diff(saturation, prepend=False, append=False))[0]
+        n_events = len(intervals) // 2  # Number of saturation periods
+        events = np.zeros(n_events, dtype=EVENT_VECTOR_TYPE)
 
-        # apply a cosine taper to the saturation to create a mute function
-        win = scipy.signal.windows.cosine(mute_window_samples)
-        mute = np.maximum(0, 1 - scipy.signal.convolve(saturation, win, mode="same"))
-        return saturation, mute
+        for i, (start, stop) in enumerate(zip(intervals[::2], intervals[1::2])):
+            events[i]['start_sample_index'] = start + start_frame
+            events[i]['stop_sample_index'] = stop + start_frame
+            events[i]['segment_index'] = segment_index
+            events[i]['channel_x_low'] = np.nan
+            events[i]['channel_x_high'] = np.nan
+            events[i]['channel_y_low'] = np.nan
+            events[i]['channel_y_high'] = np.nan
+            events[i]['method_id'] = 'saturation_detection'
+        # create a dummy return for the node processing management
+        toto = np.zeros(1, dtype=[("sample_index", "int64")],)
+        toto[0]['sample_index'] = start_frame
+        return (toto, events)
 
-        # z = np.median(traces / self.abs_thresholds, 1)
-        # threshold_mask = np.diff((z > 1) != 0, axis=0)
-        # indices = np.flatnonzero(threshold_mask)
-        # threshold_crossings = np.zeros(indices.size, dtype=self._dtype)
-        # threshold_crossings["sample_index"] = indices
-        # threshold_crossings["front"][::2] = True
-        # threshold_crossings["front"][1::2] = False
-        # return (threshold_crossings,)
 
+def detect_saturation(recording, *args, **kwargs):
+    node0 = _DetectSaturation(recording, *args, **kwargs)
+    _, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    _, events = run_node_pipeline(recording,[node0], job_kwargs=job_kwargs)
+    return _collapse_events(events)
 
 def detect_period_artifacts_by_envelope(
     recording,
@@ -124,10 +152,6 @@ def detect_period_artifacts_by_envelope(
     **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     """
-    from spikeinterface.core.node_pipeline import (  # TODO: ask can we import this at the top?
-        run_node_pipeline,
-    )
-
     _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
 
