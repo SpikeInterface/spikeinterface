@@ -1064,17 +1064,17 @@ def single_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, *
     return result
 
 
-class PeakToValley(BaseMetric):
-    metric_name = "peak_to_valley"
+class PeakToTroughDuration(BaseMetric):
+    metric_name = "peak_to_trough_duration"
     metric_params = {}
-    metric_columns = {"peak_to_valley": float}
+    metric_columns = {"peak_to_trough_duration": float}
     metric_descriptions = {
-        "peak_to_valley": "Duration in s between the trough (minimum) and the peak (maximum) of the spike waveform."
+        "peak_to_trough_duration": "Duration in seconds between the trough (minimum) and the peak (maximum) of the spike waveform."
     }
     needs_tmp_data = True
 
     @staticmethod
-    def _peak_to_valley_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    def _peak_to_trough_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
         return single_channel_metric(
             unit_function=get_peak_to_valley,
             sorting_analyzer=sorting_analyzer,
@@ -1083,7 +1083,7 @@ class PeakToValley(BaseMetric):
             **metric_params,
         )
 
-    metric_function = _peak_to_valley_metric_function
+    metric_function = _peak_to_trough_duration_metric_function
 
 
 class PeakToTroughRatio(BaseMetric):
@@ -1356,7 +1356,7 @@ class WaveformBaselineFlatness(BaseMetric):
 
 
 single_channel_metrics = [
-    PeakToValley,
+    PeakToTroughDuration,
     PeakToTroughRatio,
     HalfWidth,
     RepolarizationSlope,

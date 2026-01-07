@@ -860,7 +860,7 @@ def compute_amplitude_cutoffs(
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
-    plot_details=True,  # Hardcoded ON for debugging
+    plot_details=False,
 ):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes.
@@ -966,7 +966,7 @@ class AmplitudeCutoff(BaseMetric):
         "num_histogram_bins": 100,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
-        "plot_details": True,  # Hardcoded ON for debugging
+        "plot_details": False, 
     }
     metric_columns = {"amplitude_cutoff": float}
     metric_descriptions = {
@@ -1567,7 +1567,7 @@ def amplitude_cutoff(
     amplitudes_bins_min_ratio=5,
     spike_times=None,
     unit_id=None,
-    plot_details=True,  # Hardcoded ON for debugging
+    plot_details=False,
     ax_scatter=None,
     ax_hist=None,
 ):

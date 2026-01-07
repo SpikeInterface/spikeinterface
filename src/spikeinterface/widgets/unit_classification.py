@@ -216,12 +216,18 @@ class ClassificationHistogramsWidget(BaseWidget):
 
         colors = plt.cm.tab10(np.linspace(0, 1, 10))
 
+        # Metrics that should use absolute values (amplitude values are negative in extracellular recordings)
+        absolute_value_metrics = ["amplitude_median"]
+
         for idx, metric_name in enumerate(metrics_to_plot):
             row = idx // n_cols
             col = idx % n_cols
             ax = axes[row, col]
 
             values = quality_metrics[metric_name].values
+            # Use absolute values for amplitude-based metrics
+            if metric_name in absolute_value_metrics:
+                values = np.abs(values)
             values = values[~np.isnan(values)]
             values = values[~np.isinf(values)]
 

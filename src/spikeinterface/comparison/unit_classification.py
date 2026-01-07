@@ -43,14 +43,14 @@ def get_default_thresholds() -> dict:
     Template metrics (from template_metrics extension):
     - num_positive_peaks: Number of positive peaks (repolarization peaks)
     - num_negative_peaks: Number of negative peaks (troughs)
-    - waveform_duration: Duration in microseconds
+    - peak_to_trough_duration: Duration in seconds from trough to peak
     - waveform_baseline_flatness: Baseline flatness metric
     - peak_after_to_trough_ratio: Ratio of peak after trough to trough amplitude
     - exp_decay: Exponential decay constant for spatial spread
 
     Quality metrics (from quality_metrics extension):
-    - amplitude_median: Median spike amplitude
-    - snr: Signal-to-noise ratio
+    - amplitude_median: Median spike amplitude (in uV)
+    - snr_bombcell: Signal-to-noise ratio (BombCell method: raw waveform max / baseline MAD)
     - amplitude_cutoff: Estimated fraction of missing spikes
     - num_spikes: Total spike count
     - rp_contamination: Refractory period contamination
@@ -70,13 +70,13 @@ def get_default_thresholds() -> dict:
         # Good units typically have 1 main trough
         "num_negative_peaks": {"min": np.nan, "max": 1},
 
-        # Waveform duration in MICROSECONDS (from template_metrics)
-        # Typical range: 100-1150 us
-        "waveform_duration": {"min": 100, "max": 1150},
+        # Peak to trough duration in SECONDS (from template_metrics)
+        # Typical range: 0.0001-0.00115 s (100-1150 μs)
+        "peak_to_trough_duration": {"min": 0.0001, "max": 0.00115},
 
         # Baseline flatness - max deviation as fraction of peak amplitude
         # Lower is better, typical threshold 0.3
-        "waveform_baseline_flatness": {"min": np.nan, "max": 0.3},
+        "waveform_baseline_flatness": {"min": np.nan, "max": 0.5},
 
         # Peak after trough to trough ratio - helps detect noise
         # High values indicate noise (ratio > 0.8 is suspicious)
@@ -94,9 +94,9 @@ def get_default_thresholds() -> dict:
         # Lower bound ensures sufficient signal
         "amplitude_median": {"min": 40, "max": np.nan},
 
-        # Signal-to-noise ratio
+        # Signal-to-noise ratio (BombCell method: raw waveform max / baseline MAD)
         # Higher is better, minimum ensures reliable detection
-        "snr": {"min": 5, "max": np.nan},
+        "snr_bombcell": {"min": 5, "max": np.nan},
 
         # Amplitude cutoff - estimates fraction of missing spikes
         # Lower is better (less missing), max 0.2 means <20% estimated missing
@@ -123,21 +123,26 @@ def get_default_thresholds() -> dict:
         # ============================================================
 
         # These thresholds identify axonal/dendritic units by their waveform shape
-        # Non-somatic units have characteristic triphasic waveforms
+        # Non-somatic (axonal) units have: large initial peak, narrow widths, small repolarization
 
-        # Peak before to trough ratio - non-somatic have large initial peak
+        # Peak before to trough ratio - non-somatic have large initial peak relative to trough
+        # If peak_before/trough > max, classify as non-somatic
         "peak_before_to_trough_ratio": {"min": np.nan, "max": 3},  # non-somatic if > max
 
-        # Peak before width (in samples at sampling rate) #QQ should be microseconds or something! 
-        "peak_before_width": {"min": 4, "max": np.nan},  # non-somatic if < min
+        # Peak before width in MICROSECONDS - non-somatic have narrow initial peaks
+        # If width < min, classify as non-somatic
+        "peak_before_width": {"min": 150, "max": np.nan},  # non-somatic if < 150 μs
 
-        # Trough width (in samples) #QQ should be microseconds or something! 
-        "trough_width": {"min": 5, "max": np.nan},  # non-somatic if < min
+        # Trough width in MICROSECONDS - non-somatic have narrow troughs
+        # If width < min, classify as non-somatic
+        "trough_width": {"min": 200, "max": np.nan},  # non-somatic if < 200 μs
 
-        # Peak before to peak after ratio
+        # Peak before to peak after ratio - non-somatic have large initial peak vs small repolarization
+        # If peak_before/peak_after > max, classify as non-somatic
         "peak_before_to_peak_after_ratio": {"min": np.nan, "max": 3},  # non-somatic if > max
 
-        # Main peak to trough ratio
+        # Main peak to trough ratio - non-somatic have peak almost as large as trough
+        # If max_peak/trough > max, classify as non-somatic (somatic units have trough >> peaks)
         "main_peak_to_trough_ratio": {"min": np.nan, "max": 0.8},  # non-somatic if > max
     }
 
@@ -147,7 +152,7 @@ def get_default_thresholds() -> dict:
 def classify_units(
     quality_metrics: pd.DataFrame,
     thresholds: Optional[dict] = None,
-    classify_non_somatic: bool = False,
+    classify_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -194,7 +199,7 @@ def classify_units(
     waveform_metrics = [
         "num_positive_peaks",
         "num_negative_peaks",
-        "waveform_duration",
+        "peak_to_trough_duration",
         "waveform_baseline_flatness",
         "peak_after_to_trough_ratio",
         "exp_decay",
@@ -202,7 +207,7 @@ def classify_units(
 
     spike_quality_metrics = [
         "amplitude_median",
-        "snr",
+        "snr_bombcell",
         "amplitude_cutoff",
         "num_spikes",
         "rp_contamination",
@@ -218,6 +223,10 @@ def classify_units(
         "main_peak_to_trough_ratio",
     ]
 
+    # Metrics that should use absolute values for comparison
+    # (amplitude values are typically negative in extracellular recordings)
+    absolute_value_metrics = ["amplitude_median"]
+
     # ========================================
     # NOISE classification
     # ========================================
@@ -230,6 +239,9 @@ def classify_units(
             continue
 
         values = quality_metrics[metric_name].values
+        # Use absolute values for amplitude-based metrics
+        if metric_name in absolute_value_metrics:
+            values = np.abs(values)
         thresh = thresholds[metric_name]
 
         # NaN values in metrics are considered failures for waveform metrics
@@ -257,6 +269,9 @@ def classify_units(
             continue
 
         values = quality_metrics[metric_name].values
+        # Use absolute values for amplitude-based metrics
+        if metric_name in absolute_value_metrics:
+            values = np.abs(values)
         thresh = thresholds[metric_name]
 
         # Only apply to units not yet classified as noise
@@ -281,25 +296,50 @@ def classify_units(
     # NON-SOMATIC classification
     # ========================================
     if classify_non_somatic:
-        is_non_somatic = np.zeros(n_units, dtype=bool)
+        # Non-somatic (axonal) units require BOTH ratio AND width criteria
+        # Logic from BombCell:
+        # is_non_somatic = (ratio_conditions & width_conditions) | standalone_ratio_condition
 
-        for metric_name in non_somatic_metrics:
-            if metric_name not in quality_metrics.columns:
-                continue
-            if metric_name not in thresholds:
-                continue
+        # Helper to get metric values safely
+        def get_metric(name):
+            if name in quality_metrics.columns:
+                return quality_metrics[name].values
+            return np.full(n_units, np.nan)
 
-            values = quality_metrics[metric_name].values
-            thresh = thresholds[metric_name]
+        # Width conditions (ALL must be met)
+        peak_before_width = get_metric("peak_before_width")
+        trough_width = get_metric("trough_width")
 
-            # Non-somatic detection uses OPPOSITE logic:
-            # - Values BELOW min threshold -> non-somatic
-            # - Values ABOVE max threshold -> non-somatic
-            if not np.isnan(thresh["min"]):
-                is_non_somatic |= ~np.isnan(values) & (values < thresh["min"])
+        width_thresh_peak = thresholds.get("peak_before_width", {}).get("min", np.nan)
+        width_thresh_trough = thresholds.get("trough_width", {}).get("min", np.nan)
 
-            if not np.isnan(thresh["max"]):
-                is_non_somatic |= ~np.isnan(values) & (values > thresh["max"])
+        narrow_peak = ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak) if not np.isnan(width_thresh_peak) else np.zeros(n_units, dtype=bool)
+        narrow_trough = ~np.isnan(trough_width) & (trough_width < width_thresh_trough) if not np.isnan(width_thresh_trough) else np.zeros(n_units, dtype=bool)
+
+        width_conditions = narrow_peak & narrow_trough
+
+        # Ratio conditions
+        peak_before_to_trough = get_metric("peak_before_to_trough_ratio")
+        peak_before_to_peak_after = get_metric("peak_before_to_peak_after_ratio")
+        main_peak_to_trough = get_metric("main_peak_to_trough_ratio")
+
+        ratio_thresh_pbt = thresholds.get("peak_before_to_trough_ratio", {}).get("max", np.nan)
+        ratio_thresh_pbpa = thresholds.get("peak_before_to_peak_after_ratio", {}).get("max", np.nan)
+        ratio_thresh_mpt = thresholds.get("main_peak_to_trough_ratio", {}).get("max", np.nan)
+
+        # Large initial peak relative to trough
+        large_initial_peak = ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt) if not np.isnan(ratio_thresh_pbt) else np.zeros(n_units, dtype=bool)
+
+        # Large initial peak relative to repolarization peak
+        large_peak_ratio = ~np.isnan(peak_before_to_peak_after) & (peak_before_to_peak_after > ratio_thresh_pbpa) if not np.isnan(ratio_thresh_pbpa) else np.zeros(n_units, dtype=bool)
+
+        # Main peak almost as large as trough (standalone condition)
+        large_main_peak = ~np.isnan(main_peak_to_trough) & (main_peak_to_trough > ratio_thresh_mpt) if not np.isnan(ratio_thresh_mpt) else np.zeros(n_units, dtype=bool)
+
+        # Combined logic: (ratio AND width conditions) OR standalone ratio
+        # Requires at least one ratio condition AND both width conditions, OR the standalone ratio
+        ratio_conditions = large_initial_peak | large_peak_ratio
+        is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
 
         # Apply non-somatic classification
         if split_non_somatic_good_mua:
