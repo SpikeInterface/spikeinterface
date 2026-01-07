@@ -2,25 +2,16 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.preprocessing.silence_periods import SilencedPeriodsRecording
-from spikeinterface.preprocessing.rectify import RectifyRecording
-from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
-from spikeinterface.preprocessing.filter_gaussian import GaussianFilterRecording
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
-from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.node_pipeline import run_node_pipeline
-from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype
+from spikeinterface.core.node_pipeline import PeakDetector
 
 
 EVENT_VECTOR_TYPE = [
     ("start_sample_index", "int64"),
     ("stop_sample_index", "int64"),
     ("segment_index", "int64"),
-    ("channel_x_low", "float64"),
-    ("channel_x_high", "float64"),
-    ("channel_y_low", "float64"),
-    ("channel_y_high", "float64"),
     ("method_id", "U128"),
 ]
 
@@ -34,16 +25,15 @@ def _collapse_events(events):
     """
     order = np.lexsort((events["start_sample_index"], events["segment_index"]))
     events = events[order]
-
     to_drop = np.zeros(events.size, dtype=bool)
+
     # compute if duplicate
     for i in np.arange(events.size - 1):
         same = events["stop_sample_index"][i] == events["start_sample_index"][i + 1]
-        for f in ["segment_index", "channel_x_low", "channel_x_high", "channel_y_low", "channel_y_high"]:
-            same &= np.array_equal(events[f][i], events[f][i + 1], equal_nan=True)
         if same:
             to_drop[i] = True
             events["start_sample_index"][i + 1] = events["start_sample_index"][i]
+
     return events[~to_drop].copy()
 
 
@@ -75,7 +65,7 @@ class _DetectSaturation(PeakDetector):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):  # TODO: required arguments
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         """
         Computes
         :param data: [nc, ns]: voltage traces array
@@ -94,6 +84,9 @@ class _DetectSaturation(PeakDetector):
 
         # first computes the saturated samples
         max_voltage = np.atleast_1d(self.saturation_threshold)[:, np.newaxis]
+
+        # 0.98 is empirically determined as the true saturating point is
+        # slightly lower than the documented saturation point of the probe
         saturation = np.mean(np.abs(data) > max_voltage * 0.98, axis=0)
 
         # then compute the derivative of the voltage saturation
@@ -102,7 +95,7 @@ class _DetectSaturation(PeakDetector):
 
         # if either of those reaches more than the proportion of channels labels the sample as saturated
         saturation = np.logical_or(saturation > self.proportion, n_diff_saturated > self.proportion)
-        np.sum(saturation)
+
         intervals = np.where(np.diff(saturation, prepend=False, append=False))[0]
         n_events = len(intervals) // 2  # Number of saturation periods
         events = np.zeros(n_events, dtype=EVENT_VECTOR_TYPE)
@@ -111,17 +104,12 @@ class _DetectSaturation(PeakDetector):
             events[i]["start_sample_index"] = start + start_frame
             events[i]["stop_sample_index"] = stop + start_frame
             events[i]["segment_index"] = segment_index
-            events[i]["channel_x_low"] = np.nan
-            events[i]["channel_x_high"] = np.nan
-            events[i]["channel_y_low"] = np.nan
-            events[i]["channel_y_high"] = np.nan
             events[i]["method_id"] = "saturation_detection"
-        # create a dummy return for the node processing management
-        toto = np.zeros(
-            1,
-            dtype=[("sample_index", "int64")],
-        )
-        toto[0]["sample_index"] = start_frame
+
+        # Because we inherit PeakDetector, we must expose this "sample_index"
+        # array. However, it is not used and changing the value has no effect.
+        toto = np.array([0], dtype=[("sample_index", "int64")])
+
         return (toto, events)
 
 
@@ -150,86 +138,3 @@ def detect_saturation(
     _, events = run_node_pipeline(recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation events")
 
     return _collapse_events(events)
-
-
-class SilencedArtifactsRecording(SilencedPeriodsRecording):
-    """
-    Silence user-defined periods from recording extractor traces. The code will construct
-    an enveloppe of the recording (as a low pass filtered version of the traces) and detect
-    threshold crossings to identify the periods to silence. The periods are then silenced either
-    on a per channel basis or across all channels by replacing the values by zeros or by
-    adding gaussian noise with the same variance as the one in the recordings
-
-    Parameters
-    ----------
-    recording : RecordingExtractor
-        The recording extractor to silence putative artifacts
-    detect_threshold : float, default: 5
-        The threshold to detect artifacts. The threshold is computed as `detect_threshold * noise_level`
-    freq_max : float, default: 20
-        The maximum frequency for the low pass filter used
-    min_duration_ms : float, default: 50
-        The minimum duration for a threshold crossing to be considered as an artefact.
-    noise_levels : array
-        Noise levels if already computed
-    seed : int | None, default: None
-        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
-        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
-    mode : "zeros" | "noise", default: "zeros"
-        Determines what periods are replaced by. Can be one of the following:
-
-        - "zeros": Artifacts are replaced by zeros.
-
-        - "noise": The periods are filled with a gaussion noise that has the
-                   same variance that the one in the recordings, on a per channel
-                   basis
-    **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
-
-    Returns
-    -------
-    silenced_recording : SilencedArtifactsRecording
-        The recording extractor after silencing detected artifacts
-    """
-
-    _precomputable_kwarg_names = ["list_periods"]
-
-    def __init__(
-        self,
-        recording,
-        detect_threshold=5,
-        verbose=False,
-        freq_max=20.0,
-        min_duration_ms=50,
-        mode="zeros",
-        noise_levels=None,
-        seed=None,
-        list_periods=None,
-        **noise_levels_kwargs,
-    ):
-
-        if list_periods is None:
-            list_periods, _ = detect_period_artifacts_by_envelope(
-                recording,
-                detect_threshold=detect_threshold,
-                min_duration_ms=min_duration_ms,
-                freq_max=freq_max,
-                seed=seed,
-                noise_levels=noise_levels,
-                **noise_levels_kwargs,
-            )
-
-            if verbose:
-                for i, periods in enumerate(list_periods):
-                    total_time = np.sum([end - start for start, end in periods])
-                    percentage = 100 * total_time / recording.get_num_samples(i)
-                    print(f"{percentage}% of segment {i} has been flagged as artifactual")
-
-        SilencedPeriodsRecording.__init__(
-            self, recording, list_periods, mode=mode, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
-        )
-
-
-# function for API
-# silence_artifacts = define_function_handling_dict_from_class(
-#    source_class=SilencedArtifactsRecording, name="silence_artifacts"
-# )
