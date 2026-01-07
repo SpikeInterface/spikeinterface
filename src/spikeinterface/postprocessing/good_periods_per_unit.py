@@ -7,6 +7,8 @@ import numpy as np
 from typing import Optional, Literal
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.node_pipeline import unit_period_dtype
+from spikeinterface.metrics.quality import compute_refrac_period_violations, compute_amplitude_cutoffs
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -164,7 +166,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             self.data["good_periods_per_unit"] = self.params["user_defined_periods"]
 
         if self.params["method"] in ["false_positives_and_negatives", "combined"]:
-            # ndarray: (n_periods, 3) with columns: segment_id, start_sample, end_sample
+            # dict: unit_name -> (n_periods, 3) with columns: segment_id, start_sample, end_sample
             period_bounds = compute_period_bounds(
                 self,
                 self.params["subperiod_size_absolute"],
@@ -210,47 +212,48 @@ def compute_period_bounds(
 
     sorting = self.sorting_analyzer.sorting
     fs = sorting.get_sampling_frequency()
+    units = sorting.unit_ids
+    n_units = len(units)
 
     if subperiod_size_mode == "absolute":
         period_size_samples = margin_size_samples = np.round(subperiod_size_absolute * fs).astype(int)
     else:  # relative
-        period_size_samples = margin_size_samples = 0  # to be implemented based on firing rates
+        pass  # to be implemented based on firing rates
 
-    all_period_bounds = np.empty((0, 3))
-    for segment_i in range(sorting.get_num_segments()):
-        n_samples = sorting.get_num_samples(segment_i)  # int: samples
+    all_period_bounds = np.array([], dtype=unit_period_dtype)
+    for segment_index in range(sorting.get_num_segments()):
+        n_samples = sorting.get_num_samples(segment_index)  # int: samples
         n_periods = n_samples // period_size_samples + 1
+        intervals = [
+            [i * period_size_samples, i * period_size_samples + 2 * margin_size_samples] for i in range(n_periods)
+        ]
 
         # list of sliding [start, end] in samples
         # for period size of 10s and margin size of 10s: [0, 30], [10, 40], [20, 50], ...
-        period_bounds = [
-            (
-                segment_i,
-                i * period_size_samples,
-                i * period_size_samples + 2 * margin_size_samples,
-            )
-            for i in range(n_periods)
-        ]
-        all_period_bounds = (
-            np.vstack(all_period_bounds, period_bounds) if len(all_period_bounds) > 0 else np.array(period_bounds)
-        )
+        period_bounds = np.zeros((n_periods * n_units,), dtype=unit_period_dtype)
+        for int_index, int in enumerate(intervals):
+            periods_per_units = np.zeros((n_units,), dtype=unit_period_dtype)
+            periods_per_units["segment_index"] = segment_index
+            periods_per_units["start_sample_index"] = int[0]
+            periods_per_units["end_sample_index"] = int[1]
+            periods_per_units["unit_index"] = np.arange(n_units)
+            period_bounds[int_index * n_units : (int_index + 1) * n_units] = periods_per_units
+        all_period_bounds = np.concatenate(all_period_bounds, period_bounds)
 
     return all_period_bounds
 
 
-def compute_fp_rates(self, period_bounds: list, violations_ms: float = 0.8) -> dict:
-    units = self.sorting_analyzer.sorting.unit_ids
-    n_periods = period_bounds.shape[0]
+def compute_fp_rates(self, period_bounds: np.ndarray, violations_ms: float = 0.8) -> dict:
 
-    fp_violations = {}
-    for unit in units:
-        fp_violations[unit] = np.zeros((n_periods,), dtype=float)
-        for i, (segment_i, start, end) in enumerate(period_bounds):
-            fp_rate = 0  # refractory period violations for this period
-            fp_violations[unit][i] = fp_rate
-            pass
+    isi_violations = compute_refrac_period_violations(
+        self.sorting_analyzer.sorting,
+        refractory_period_ms=violations_ms,
+        periods=period_bounds,
+    )
 
-    return fp_violations
+    fp_rates = isi_violations["rp_contamination"]  # dict: unit_id -> array of shape (n_subperiods)
+
+    return fp_rates
 
 
 def compute_fn_rates(self, period_bounds: list) -> dict:
