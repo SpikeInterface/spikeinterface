@@ -478,11 +478,11 @@ def remove_empty_templates(templates):
 
 
 def create_sorting_analyzer_with_existing_templates(
-    sorting, 
-    recording, 
-    templates, 
-    remove_empty=True, 
-    noise_levels=None, 
+    sorting,
+    recording,
+    templates,
+    remove_empty=True,
+    noise_levels=None,
     amplitude_scalings=None,
     spike_amplitudes=None,
     spike_locations=None,
@@ -548,7 +548,7 @@ def create_sorting_analyzer_with_existing_templates(
         sa.extensions["spike_amplitudes"].data["amplitudes"] = spike_amplitudes
         sa.extensions["spike_amplitudes"].run_info["run_completed"] = True
         sa.extensions["spike_amplitudes"].run_info["runtime_s"] = 0
-    
+
     if spike_locations is not None:
         from spikeinterface.postprocessing.spike_locations import ComputeSpikeLocations
 
