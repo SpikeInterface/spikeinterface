@@ -6,58 +6,7 @@ from scipy.signal import find_peaks, savgol_filter
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def _svd_denoise(signal, n_components=3):
-    """
-    Denoise a 1D signal using SVD on a Hankel matrix embedding.
-
-    Parameters
-    ----------
-    signal : numpy.ndarray
-        The 1D signal to denoise
-    n_components : int
-        Number of SVD components to keep for reconstruction
-
-    Returns
-    -------
-    denoised : numpy.ndarray
-        The denoised signal
-    """
-    n = len(signal)
-    # Window size for Hankel matrix (roughly half the signal length)
-    window = n // 2
-    if window < n_components + 1:
-        window = n_components + 1
-
-    # Build Hankel matrix
-    num_rows = n - window + 1
-    hankel = np.zeros((num_rows, window))
-    for i in range(num_rows):
-        hankel[i, :] = signal[i:i + window]
-
-    # SVD decomposition
-    U, s, Vt = np.linalg.svd(hankel, full_matrices=False)
-
-    # Keep only top n_components
-    n_components = min(n_components, len(s))
-    s[n_components:] = 0
-
-    # Reconstruct
-    hankel_denoised = U @ np.diag(s) @ Vt
-
-    # Average along anti-diagonals to get back the 1D signal
-    denoised = np.zeros(n)
-    counts = np.zeros(n)
-    for i in range(num_rows):
-        for j in range(window):
-            idx = i + j
-            denoised[idx] += hankel_denoised[i, j]
-            counts[idx] += 1
-    denoised /= counts
-
-    return denoised
-
-
-def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smooth=True, smooth_method="savgol", smooth_window_frac=0.1, smooth_polyorder=3, svd_n_components=3):
+def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smooth=True, smooth_window_frac=0.1, smooth_polyorder=3):
     """
     Detect troughs and peaks in a template waveform and return detailed information
     about each detected feature.
@@ -70,14 +19,10 @@ def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smoot
         Minimum prominence threshold as a fraction of the template's absolute max value
     smooth : bool, default: True
         Whether to apply smoothing before peak detection
-    smooth_method : str, default: "savgol"
-        Smoothing method: "savgol" (Savitzky-Golay) or "svd" (SVD-based denoising)
     smooth_window_frac : float, default: 0.1
-        Smoothing window length as a fraction of template length (for savgol, 0.05-0.2 recommended)
+        Smoothing window length as a fraction of template length (0.05-0.2 recommended)
     smooth_polyorder : int, default: 3
         Polynomial order for Savitzky-Golay filter (must be < window_length)
-    svd_n_components : int, default: 3
-        Number of SVD components to keep for reconstruction (for svd method)
 
     Returns
     -------
@@ -111,18 +56,11 @@ def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smoot
     # Save original for plotting
     template_original = template.copy()
 
-    # Smooth template to reduce noise while preserving peaks
+    # Smooth template to reduce noise while preserving peaks using Savitzky-Golay filter
     if smooth:
-        if smooth_method == "savgol":
-            # Savitzky-Golay filter
-            window_length = int(len(template) * smooth_window_frac) // 2 * 2 + 1
-            window_length = max(smooth_polyorder + 2, window_length)  # Must be > polyorder
-            template = savgol_filter(template, window_length=window_length, polyorder=smooth_polyorder)
-        elif smooth_method == "svd":
-            # SVD-based denoising using Hankel matrix embedding
-            template = _svd_denoise(template, n_components=svd_n_components)
-        else:
-            raise ValueError(f"Unknown smooth_method: {smooth_method}. Use 'savgol' or 'svd'.")
+        window_length = int(len(template) * smooth_window_frac) // 2 * 2 + 1
+        window_length = max(smooth_polyorder + 2, window_length)  # Must be > polyorder
+        template = savgol_filter(template, window_length=window_length, polyorder=smooth_polyorder)
 
     # Initialize empty result dictionaries
     empty_dict = {
@@ -263,7 +201,7 @@ def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smoot
         peaks_after = empty_dict.copy()
 
     # Quick visualization (set to True for debugging)
-    _plot = True
+    _plot = False
     if _plot:
         import matplotlib.pyplot as plt
 
@@ -443,7 +381,7 @@ def get_waveform_baseline_flatness(template, sampling_frequency, **kwargs):
 
     This metric measures the ratio of the max absolute amplitude in the baseline
     window to the max absolute amplitude of the whole waveform. A lower value
-    indicates a flatter (quieter) baseline, which is expected for good units.
+    indicates a flat baseline (expected for good units).
 
     Parameters
     ----------
