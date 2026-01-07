@@ -25,27 +25,48 @@ def test_saturation_detection():
     # Add test saturation at the start, end of recording
     # as well as across and within chunks (30k samples)
     # fmt:off
-    all_starts = [0,    29950,  45123,     149500]
-    all_stops =  [1000, 30010,  45123+103, 149655]
+    all_starts = np.array([0,    29950,  45123,     149500])
+    all_stops =  np.array([1000, 30010,  45123+103, 149999])
     # fmt:on
 
     job_kwargs = {"chunk_size": chunk_size}
 
     second_seg_offset = 1
     for start, stop in zip(all_starts, all_stops):
-        # TODO: another mode add in np.linspace(start, stop, /fs > 1e-8)
         data_seg_1[start:stop, :] = sat_value
         data_seg_2[start : stop + second_seg_offset, :] = sat_value
 
     recording = NumpyRecording([data_seg_1, data_seg_2], sample_frequency)
+
     events = detect_saturation(
-        recording, saturation_threshold=1200 * 1e-6, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
+        recording, saturation_threshold=sat_value * 0.98, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
     )
 
     seg_1_events = events[np.where(events["segment_index"] == 0)]
     seg_2_events = events[np.where(events["segment_index"] == 1)]
 
-    assert seg_1_events["start_sample_index"] == np.array(all_starts)
-    assert seg_2_events["start_sample_index"] == np.array(all_starts)
-    assert seg_1_events["stop_sample_index"] == np.array(all_starts)
-    assert seg_2_events["stop_sample_index"] == np.array(all_starts) + second_seg_offset
+    # For the start times, all are one sample before the actual saturated
+    # period starts because the derivative threshold is exceeded at one
+    # sample before the saturation starts. Therefore this one-sample-offset
+    # on the start times is an implicit test that the derivative threshold
+    # is working properly.
+    for seg_events in [seg_1_events, seg_2_events]:
+        assert seg_events["start_sample_index"][0] == all_starts[0]
+        assert np.array_equal(seg_events["start_sample_index"][1:], np.array(all_starts)[1:] - 1)
+
+    assert np.array_equal(seg_1_events["stop_sample_index"], np.array(all_stops))
+    assert np.array_equal(seg_2_events["stop_sample_index"], np.array(all_stops) + second_seg_offset)
+
+    # Just do a quick test that a threshold slightly over the sat value is not detected.
+    # In this case we only see the derivative threshold detection. We do not play around with this
+    # threshold because the derivative threshold is not easy to predict (the baseline sample is random).
+    events = detect_saturation(
+        recording,
+        saturation_threshold=sat_value * (1.0 / 0.98) + 1e-6,
+        voltage_per_sec_threshold=1e-8,
+        job_kwargs=job_kwargs,
+    )
+    assert events["start_sample_index"][0] == 999
+    assert events["stop_sample_index"][0] == 1000
+
+    # TODO: test channe llocations
