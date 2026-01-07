@@ -2,32 +2,430 @@ from __future__ import annotations
 
 import numpy as np
 from collections import namedtuple
-
+from scipy.signal import find_peaks, savgol_filter
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def get_trough_and_peak_idx(template):
+def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smooth=True, smooth_window_frac=0.1, smooth_polyorder=3):
     """
-    Return the indices into the input template of the detected trough
-    (minimum of template) and peak (maximum of template, after trough).
-    Assumes negative trough and positive peak.
+    Detect troughs and peaks in a template waveform and return detailed information
+    about each detected feature.
 
     Parameters
     ----------
-    template: numpy.ndarray
+    template : numpy.ndarray
         The 1D template waveform
+    min_thresh_detect_peaks_troughs : float, default: 0.4
+        Minimum prominence threshold as a fraction of the template's absolute max value
+    smooth : bool, default: True
+        Whether to apply Savitzky-Golay smoothing before peak detection
+    smooth_window_frac : float, default: 0.1
+        Smoothing window length as a fraction of template length (0.05-0.2 recommended)
+    smooth_polyorder : int, default: 3
+        Polynomial order for Savitzky-Golay filter (must be < window_length)
 
     Returns
     -------
-    trough_idx: int
-        The index of the trough
-    peak_idx: int
-        The index of the peak
+    troughs : dict
+        Dictionary containing:
+        - "indices": array of all trough indices
+        - "values": array of all trough values
+        - "prominences": array of all trough prominences
+        - "widths": array of all trough widths
+        - "main_idx": index of the main trough (most prominent)
+        - "main_loc": location (sample index) of the main trough in template
+    peaks_before : dict
+        Dictionary containing peaks detected before the main trough (initial peaks):
+        - "indices": array of all peak indices (in original template coordinates)
+        - "values": array of all peak values
+        - "prominences": array of all peak prominences
+        - "widths": array of all peak widths
+        - "main_idx": index of the main peak (most prominent)
+        - "main_loc": location (sample index) of the main peak in template
+    peaks_after : dict
+        Dictionary containing peaks detected after the main trough (repolarization peaks):
+        - "indices": array of all peak indices (in original template coordinates)
+        - "values": array of all peak values
+        - "prominences": array of all peak prominences
+        - "widths": array of all peak widths
+        - "main_idx": index of the main peak (most prominent)
+        - "main_loc": location (sample index) of the main peak in template
     """
     assert template.ndim == 1
-    trough_idx = np.argmin(template)
-    peak_idx = trough_idx + np.argmax(template[trough_idx:])
-    return trough_idx, peak_idx
+
+    # Save original for plotting
+    template_original = template.copy()
+
+    # Smooth template to reduce noise while preserving peaks (Savitzky-Golay filter)
+    if smooth:
+        # Calculate window length from fraction, ensure odd, min 5
+        window_length = int(len(template) * smooth_window_frac) // 2 * 2 + 1
+        window_length = max(smooth_polyorder + 2, window_length)  # Must be > polyorder
+        template = savgol_filter(template, window_length=window_length, polyorder=smooth_polyorder)
+
+    # Initialize empty result dictionaries
+    empty_dict = {
+        "indices": np.array([], dtype=int),
+        "values": np.array([]),
+        "prominences": np.array([]),
+        "widths": np.array([]),
+        "main_idx": None,
+        "main_loc": None,
+    }
+
+    # Get min prominence to detect peaks and troughs relative to template abs max value
+    min_prominence = min_thresh_detect_peaks_troughs * np.nanmax(np.abs(template))
+
+    # --- Find troughs (by inverting waveform and using find_peaks) ---
+    trough_locs, trough_props = find_peaks(-template, prominence=min_prominence, width=0)
+
+    if len(trough_locs) == 0:
+        # Fallback: use global minimum
+        trough_locs = np.array([np.nanargmin(template)])
+        trough_props = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+
+    # Determine main trough (most prominent, or first if no valid prominences)
+    trough_prominences = trough_props.get("prominences", np.array([]))
+    if len(trough_prominences) > 0 and not np.all(np.isnan(trough_prominences)):
+        main_trough_idx = np.nanargmax(trough_prominences)
+    else:
+        main_trough_idx = 0
+
+    main_trough_loc = trough_locs[main_trough_idx]
+
+    troughs = {
+        "indices": trough_locs,
+        "values": template[trough_locs],
+        "prominences": trough_props.get("prominences", np.full(len(trough_locs), np.nan)),
+        "widths": trough_props.get("widths", np.full(len(trough_locs), np.nan)),
+        "main_idx": main_trough_idx,
+        "main_loc": main_trough_loc,
+    }
+
+    # --- Find peaks before the main trough ---
+    if main_trough_loc > 3:
+        template_before = template[:main_trough_loc]
+
+        # Try with original prominence
+        peak_locs_before, peak_props_before = find_peaks(
+            template_before, prominence=min_prominence, width=0
+        )
+
+        # If no peaks found, try with lower prominence (keep only max peak)
+        if len(peak_locs_before) == 0:
+            lower_prominence = 0.075 * min_thresh_detect_peaks_troughs * np.nanmax(np.abs(template))
+            peak_locs_before, peak_props_before = find_peaks(
+                template_before, prominence=lower_prominence, width=0
+            )
+            # Keep only the most prominent peak when using lower threshold
+            if len(peak_locs_before) > 1:
+                prominences = peak_props_before.get("prominences", np.array([]))
+                if len(prominences) > 0 and not np.all(np.isnan(prominences)):
+                    max_idx = np.nanargmax(prominences)
+                    peak_locs_before = np.array([peak_locs_before[max_idx]])
+                    peak_props_before = {
+                        "prominences": np.array([prominences[max_idx]]),
+                        "widths": np.array([peak_props_before.get("widths", np.array([np.nan]))[max_idx]]),
+                    }
+
+        # If still no peaks found, fall back to argmax
+        if len(peak_locs_before) == 0:
+            peak_locs_before = np.array([np.nanargmax(template_before)])
+            peak_props_before = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+
+        peak_prominences_before = peak_props_before.get("prominences", np.array([]))
+        if len(peak_prominences_before) > 0 and not np.all(np.isnan(peak_prominences_before)):
+            main_peak_before_idx = np.nanargmax(peak_prominences_before)
+        else:
+            main_peak_before_idx = 0
+
+        peaks_before = {
+            "indices": peak_locs_before,
+            "values": template[peak_locs_before],
+            "prominences": peak_props_before.get("prominences", np.full(len(peak_locs_before), np.nan)),
+            "widths": peak_props_before.get("widths", np.full(len(peak_locs_before), np.nan)),
+            "main_idx": main_peak_before_idx,
+            "main_loc": peak_locs_before[main_peak_before_idx],
+        }
+    else:
+        peaks_before = empty_dict.copy()
+
+    # --- Find peaks after the main trough (repolarization peaks) ---
+    if main_trough_loc < len(template) - 3:
+        template_after = template[main_trough_loc:]
+
+        # Try with original prominence
+        peak_locs_after, peak_props_after = find_peaks(
+            template_after, prominence=min_prominence, width=0
+        )
+
+        # If no peaks found, try with lower prominence (keep only max peak)
+        if len(peak_locs_after) == 0:
+            lower_prominence = 0.075 * min_thresh_detect_peaks_troughs * np.nanmax(np.abs(template))
+            peak_locs_after, peak_props_after = find_peaks(
+                template_after, prominence=lower_prominence, width=0
+            )
+            # Keep only the most prominent peak when using lower threshold
+            if len(peak_locs_after) > 1:
+                prominences = peak_props_after.get("prominences", np.array([]))
+                if len(prominences) > 0 and not np.all(np.isnan(prominences)):
+                    max_idx = np.nanargmax(prominences)
+                    peak_locs_after = np.array([peak_locs_after[max_idx]])
+                    peak_props_after = {
+                        "prominences": np.array([prominences[max_idx]]),
+                        "widths": np.array([peak_props_after.get("widths", np.array([np.nan]))[max_idx]]),
+                    }
+
+        # If still no peaks found, fall back to argmax
+        if len(peak_locs_after) == 0:
+            peak_locs_after = np.array([np.nanargmax(template_after)])
+            peak_props_after = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+
+        # Convert to original template coordinates
+        peak_locs_after_abs = peak_locs_after + main_trough_loc
+
+        peak_prominences_after = peak_props_after.get("prominences", np.array([]))
+        if len(peak_prominences_after) > 0 and not np.all(np.isnan(peak_prominences_after)):
+            main_peak_after_idx = np.nanargmax(peak_prominences_after)
+        else:
+            main_peak_after_idx = 0
+
+        peaks_after = {
+            "indices": peak_locs_after_abs,
+            "values": template[peak_locs_after_abs],
+            "prominences": peak_props_after.get("prominences", np.full(len(peak_locs_after), np.nan)),
+            "widths": peak_props_after.get("widths", np.full(len(peak_locs_after), np.nan)),
+            "main_idx": main_peak_after_idx,
+            "main_loc": peak_locs_after_abs[main_peak_after_idx],
+        }
+    else:
+        peaks_after = empty_dict.copy()
+
+    # Quick visualization (set to True for debugging)
+    _plot = True
+    if _plot:
+        import matplotlib.pyplot as plt
+
+        # Old simple method for comparison (argmin/argmax)
+        old_trough_idx = np.nanargmin(template)
+        old_peak_idx = np.nanargmax(template[old_trough_idx:]) + old_trough_idx
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(template_original, color="lightgray", lw=1, label="original (noisy)")
+        ax.plot(template, "k-", lw=1.5, label="smoothed")
+
+        # Plot old method (simple argmin/argmax)
+        ax.axvline(old_trough_idx, color="gray", ls="--", alpha=0.5, label="old trough (argmin)")
+        ax.axvline(old_peak_idx, color="gray", ls=":", alpha=0.5, label="old peak (argmax after trough)")
+
+        # Plot all detected troughs
+        ax.scatter(troughs["indices"], troughs["values"], c="blue", s=50, marker="v", zorder=5, label="troughs")
+        if troughs["main_loc"] is not None:
+            ax.scatter(troughs["main_loc"], template[troughs["main_loc"]], c="blue", s=150, marker="v",
+                       edgecolors="red", linewidths=2, zorder=6, label="main trough")
+
+        # Plot all peaks before
+        if len(peaks_before["indices"]) > 0:
+            ax.scatter(peaks_before["indices"], peaks_before["values"], c="green", s=50, marker="^",
+                       zorder=5, label="peaks before")
+            if peaks_before["main_loc"] is not None:
+                ax.scatter(peaks_before["main_loc"], template[peaks_before["main_loc"]], c="green", s=150,
+                           marker="^", edgecolors="red", linewidths=2, zorder=6, label="main peak before")
+
+        # Plot all peaks after
+        if len(peaks_after["indices"]) > 0:
+            ax.scatter(peaks_after["indices"], peaks_after["values"], c="orange", s=50, marker="^",
+                       zorder=5, label="peaks after")
+            if peaks_after["main_loc"] is not None:
+                ax.scatter(peaks_after["main_loc"], template[peaks_after["main_loc"]], c="orange", s=150,
+                           marker="^", edgecolors="red", linewidths=2, zorder=6, label="main peak after")
+
+        ax.axhline(0, color="gray", ls="-", alpha=0.3)
+        ax.set_xlabel("Sample")
+        ax.set_ylabel("Amplitude")
+        ax.legend(loc="best", fontsize=8)
+        ax.set_title(f"Trough/Peak Detection (prominence threshold: {min_thresh_detect_peaks_troughs})")
+        plt.tight_layout()
+        plt.show()
+
+    return troughs, peaks_before, peaks_after
+
+
+def get_waveform_duration(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
+    """
+    Calculate waveform duration from the main extremum to the next extremum.
+
+    The duration is measured from the largest absolute feature (main trough or main peak)
+    to the next extremum. For typical negative-first waveforms, this is trough-to-peak.
+    For positive-first waveforms, this is peak-to-trough.
+
+    Parameters
+    ----------
+    template : numpy.ndarray
+        The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency in Hz
+    troughs : dict
+        Trough detection results from get_trough_and_peak_idx
+    peaks_before : dict
+        Peak before trough results from get_trough_and_peak_idx
+    peaks_after : dict
+        Peak after trough results from get_trough_and_peak_idx
+
+    Returns
+    -------
+    waveform_duration_us : float
+        Waveform duration in microseconds
+    """
+
+    # Get main locations and values
+    trough_loc = troughs["main_loc"]
+    trough_val = template[trough_loc] if trough_loc is not None else None
+
+    peak_before_loc = peaks_before["main_loc"]
+    peak_before_val = template[peak_before_loc] if peak_before_loc is not None else None
+
+    peak_after_loc = peaks_after["main_loc"]
+    peak_after_val = template[peak_after_loc] if peak_after_loc is not None else None
+
+    # Find the main extremum (largest absolute value)
+    candidates = []
+    if trough_loc is not None and trough_val is not None:
+        candidates.append(("trough", trough_loc, abs(trough_val)))
+    if peak_before_loc is not None and peak_before_val is not None:
+        candidates.append(("peak_before", peak_before_loc, abs(peak_before_val)))
+    if peak_after_loc is not None and peak_after_val is not None:
+        candidates.append(("peak_after", peak_after_loc, abs(peak_after_val)))
+
+    if len(candidates) == 0:
+        return np.nan
+
+    # Sort by absolute value to find main extremum
+    candidates.sort(key=lambda x: x[2], reverse=True)
+    main_type, main_loc, _ = candidates[0]
+
+    # Find the next extremum after the main one
+    if main_type == "trough":
+        # Main is trough, next is peak_after
+        if peak_after_loc is not None:
+            duration_samples = abs(peak_after_loc - main_loc)
+        elif peak_before_loc is not None:
+            duration_samples = abs(main_loc - peak_before_loc)
+        else:
+            return np.nan
+    elif main_type == "peak_before":
+        # Main is peak before, next is trough
+        if trough_loc is not None:
+            duration_samples = abs(trough_loc - main_loc)
+        else:
+            return np.nan
+    else:  # peak_after
+        # Main is peak after, previous is trough
+        if trough_loc is not None:
+            duration_samples = abs(main_loc - trough_loc)
+        else:
+            return np.nan
+
+    # Convert to microseconds
+    waveform_duration_us = (duration_samples / sampling_frequency) * 1e6
+
+    return waveform_duration_us
+
+
+def get_waveform_ratios(template, troughs, peaks_before, peaks_after, **kwargs):
+    """
+    Calculate various waveform amplitude ratios.
+
+    Parameters
+    ----------
+    template : numpy.ndarray
+        The 1D template waveform
+    troughs : dict
+        Trough detection results from get_trough_and_peak_idx
+    peaks_before : dict
+        Peak before trough results from get_trough_and_peak_idx
+    peaks_after : dict
+        Peak after trough results from get_trough_and_peak_idx
+
+    Returns
+    -------
+    ratios : dict
+        Dictionary containing:
+        - "peak_before_to_trough_ratio": ratio of peak before to trough amplitude
+        - "peak_after_to_trough_ratio": ratio of peak after to trough amplitude
+        - "peak_before_to_peak_after_ratio": ratio of peak before to peak after amplitude
+        - "main_peak_to_trough_ratio": ratio of larger peak to trough amplitude
+    """
+    # Get absolute amplitudes
+    trough_amp = abs(template[troughs["main_loc"]]) if troughs["main_loc"] is not None else np.nan
+    peak_before_amp = abs(template[peaks_before["main_loc"]]) if peaks_before["main_loc"] is not None else np.nan
+    peak_after_amp = abs(template[peaks_after["main_loc"]]) if peaks_after["main_loc"] is not None else np.nan
+
+    def safe_ratio(a, b):
+        if np.isnan(a) or np.isnan(b) or b == 0:
+            return np.nan
+        return a / b
+
+    ratios = {
+        "peak_before_to_trough_ratio": safe_ratio(peak_before_amp, trough_amp),
+        "peak_after_to_trough_ratio": safe_ratio(peak_after_amp, trough_amp),
+        "peak_before_to_peak_after_ratio": safe_ratio(peak_before_amp, peak_after_amp),
+        "main_peak_to_trough_ratio": safe_ratio(max(peak_before_amp, peak_after_amp) if not (np.isnan(peak_before_amp) and np.isnan(peak_after_amp)) else np.nan, trough_amp),
+    }
+
+    return ratios
+
+
+def get_waveform_widths(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
+    """
+    Get the widths of the main trough and peaks in microseconds.
+
+    Parameters
+    ----------
+    template : numpy.ndarray
+        The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency in Hz
+    troughs : dict
+        Trough detection results from get_trough_and_peak_idx
+    peaks_before : dict
+        Peak before trough results from get_trough_and_peak_idx
+    peaks_after : dict
+        Peak after trough results from get_trough_and_peak_idx
+
+    Returns
+    -------
+    widths : dict
+        Dictionary containing:
+        - "trough_width_us": width of main trough in microseconds
+        - "peak_before_width_us": width of main peak before trough in microseconds
+        - "peak_after_width_us": width of main peak after trough in microseconds
+    """
+    def get_main_width(feature_dict):
+        if feature_dict["main_idx"] is None:
+            return np.nan
+        widths = feature_dict.get("widths", np.array([]))
+        if len(widths) == 0:
+            return np.nan
+        main_idx = feature_dict["main_idx"]
+        if main_idx < len(widths):
+            return widths[main_idx]
+        return np.nan
+
+    # Convert from samples to microseconds
+    samples_to_us = 1e6 / sampling_frequency
+
+    trough_width = get_main_width(troughs)
+    peak_before_width = get_main_width(peaks_before)
+    peak_after_width = get_main_width(peaks_after)
+
+    widths = {
+        "trough_width_us": trough_width * samples_to_us if not np.isnan(trough_width) else np.nan,
+        "peak_before_width_us": peak_before_width * samples_to_us if not np.isnan(peak_before_width) else np.nan,
+        "peak_after_width_us": peak_after_width * samples_to_us if not np.isnan(peak_after_width) else np.nan,
+    }
+
+    return widths
 
 
 #########################################################################################
@@ -53,7 +451,11 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
         The peak to valley duration in seconds
     """
     if trough_idx is None or peak_idx is None:
-        trough_idx, peak_idx = get_trough_and_peak_idx(template_single)
+        troughs, _, peaks_after = get_trough_and_peak_idx(template_single)
+        trough_idx = troughs["main_loc"]
+        peak_idx = peaks_after["main_loc"]
+    if trough_idx is None or peak_idx is None:
+        return np.nan
     ptv = (peak_idx - trough_idx) / sampling_frequency
     return ptv
 
@@ -79,7 +481,11 @@ def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=N
         The peak to trough ratio
     """
     if trough_idx is None or peak_idx is None:
-        trough_idx, peak_idx = get_trough_and_peak_idx(template_single)
+        troughs, _, peaks_after = get_trough_and_peak_idx(template_single)
+        trough_idx = troughs["main_loc"]
+        peak_idx = peaks_after["main_loc"]
+    if trough_idx is None or peak_idx is None:
+        return np.nan
     ptratio = template_single[peak_idx] / template_single[trough_idx]
     return ptratio
 
@@ -105,9 +511,11 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
         The half width in seconds
     """
     if trough_idx is None or peak_idx is None:
-        trough_idx, peak_idx = get_trough_and_peak_idx(template_single)
+        troughs, _, peaks_after = get_trough_and_peak_idx(template_single)
+        trough_idx = troughs["main_loc"]
+        peak_idx = peaks_after["main_loc"]
 
-    if peak_idx == 0:
+    if peak_idx is None or peak_idx == 0:
         return np.nan
 
     trough_val = template_single[trough_idx]
@@ -156,11 +564,12 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
         The repolarization slope
     """
     if trough_idx is None:
-        trough_idx, _ = get_trough_and_peak_idx(template_single)
+        troughs, _, _ = get_trough_and_peak_idx(template_single)
+        trough_idx = troughs["main_loc"]
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
-    if trough_idx == 0:
+    if trough_idx is None or trough_idx == 0:
         return np.nan
 
     (rtrn_idx,) = np.nonzero(template_single[trough_idx:] >= 0)
@@ -209,11 +618,12 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     assert "recovery_window_ms" in kwargs, "recovery_window_ms must be given as kwarg"
     recovery_window_ms = kwargs["recovery_window_ms"]
     if peak_idx is None:
-        _, peak_idx = get_trough_and_peak_idx(template_single)
+        _, _, peaks_after = get_trough_and_peak_idx(template_single)
+        peak_idx = peaks_after["main_loc"]
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
-    if peak_idx == 0:
+    if peak_idx is None or peak_idx == 0:
         return np.nan
     max_idx = int(peak_idx + ((recovery_window_ms / 1000) * sampling_frequency))
     max_idx = np.min([max_idx, template_single.shape[0]])
@@ -222,9 +632,12 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     return res.slope
 
 
-def get_number_of_peaks(template_single, sampling_frequency, **kwargs):
+def get_number_of_peaks(template_single, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
     """
-    Count the total number of peaks (positive + negative) in the template.
+    Count the total number of peaks (positive) and troughs (negative) in the template.
+
+    Uses the pre-computed peak/trough detection from get_trough_and_peak_idx which
+    applies smoothing for more robust detection.
 
     Parameters
     ----------
@@ -232,28 +645,28 @@ def get_number_of_peaks(template_single, sampling_frequency, **kwargs):
         The 1D template waveform
     sampling_frequency : float
         The sampling frequency of the template
-    **kwargs: Required kwargs:
-        - peak_relative_threshold: the relative threshold to detect positive and negative peaks
-        - peak_width_ms: the width in samples to detect peaks
+    troughs : dict
+        Trough detection results from get_trough_and_peak_idx
+    peaks_before : dict
+        Peak before trough results from get_trough_and_peak_idx
+    peaks_after : dict
+        Peak after trough results from get_trough_and_peak_idx
 
     Returns
     -------
-    number_of_peaks: int
-        the total number of peaks (positive + negative)
+    num_positive_peaks : int
+        The number of positive peaks (peaks_before + peaks_after)
+    num_negative_peaks : int
+        The number of negative peaks (troughs)
     """
-    from scipy.signal import find_peaks
+    # Count peaks (positive) from peaks_before and peaks_after
+    num_peaks_before = len(peaks_before["indices"])
+    num_peaks_after = len(peaks_after["indices"])
+    num_positive = num_peaks_before + num_peaks_after
 
-    assert "peak_relative_threshold" in kwargs, "peak_relative_threshold must be given as kwarg"
-    assert "peak_width_ms" in kwargs, "peak_width_ms must be given as kwarg"
-    peak_relative_threshold = kwargs["peak_relative_threshold"]
-    peak_width_ms = kwargs["peak_width_ms"]
-    max_value = np.max(np.abs(template_single))
-    peak_width_samples = int(peak_width_ms / 1000 * sampling_frequency)
+    # Count troughs (negative)
+    num_negative = len(troughs["indices"])
 
-    pos_peaks = find_peaks(template_single, height=peak_relative_threshold * max_value, width=peak_width_samples)
-    neg_peaks = find_peaks(-template_single, height=peak_relative_threshold * max_value, width=peak_width_samples)
-    num_positive = len(pos_peaks[0])
-    num_negative = len(neg_peaks[0])
     return num_positive, num_negative
 
 
@@ -626,11 +1039,18 @@ def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
     num_peaks_result = namedtuple("NumberOfPeaksResult", ["num_positive_peaks", "num_negative_peaks"])
     num_positive_peaks_dict = {}
     num_negative_peaks_dict = {}
-    sampling_frequency = sorting_analyzer.sampling_frequency
+    sampling_frequency = tmp_data["sampling_frequency"]
     templates_single = tmp_data["templates_single"]
+    troughs_info = tmp_data["troughs_info"]
+    peaks_before_info = tmp_data["peaks_before_info"]
+    peaks_after_info = tmp_data["peaks_after_info"]
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
-        num_positive, num_negative = get_number_of_peaks(template_single, sampling_frequency, **metric_params)
+        num_positive, num_negative = get_number_of_peaks(
+            template_single, sampling_frequency,
+            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
+            **metric_params
+        )
         num_positive_peaks_dict[unit_id] = num_positive
         num_negative_peaks_dict[unit_id] = num_negative
     return num_peaks_result(num_positive_peaks=num_positive_peaks_dict, num_negative_peaks=num_negative_peaks_dict)
@@ -639,11 +1059,137 @@ def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
 class NumberOfPeaks(BaseMetric):
     metric_name = "number_of_peaks"
     metric_function = _number_of_peaks_metric_function
-    metric_params = {"peak_relative_threshold": 0.2, "peak_width_ms": 0.1}
+    metric_params = {}
     metric_columns = {"num_positive_peaks": int, "num_negative_peaks": int}
     metric_descriptions = {
         "num_positive_peaks": "Number of positive peaks in the template",
-        "num_negative_peaks": "Number of negative peaks in the template",
+        "num_negative_peaks": "Number of negative peaks (troughs) in the template",
+    }
+    needs_tmp_data = True
+
+
+def _waveform_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    result = {}
+    templates_single = tmp_data["templates_single"]
+    troughs_info = tmp_data["troughs_info"]
+    peaks_before_info = tmp_data["peaks_before_info"]
+    peaks_after_info = tmp_data["peaks_after_info"]
+    sampling_frequency = tmp_data["sampling_frequency"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        template_single = templates_single[unit_index]
+        value = get_waveform_duration(
+            template_single, sampling_frequency,
+            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
+            **metric_params
+        )
+        result[unit_id] = value
+    return result
+
+
+class WaveformDuration(BaseMetric):
+    metric_name = "waveform_duration"
+    metric_function = _waveform_duration_metric_function
+    metric_params = {}
+    metric_columns = {"waveform_duration": float}
+    metric_descriptions = {
+        "waveform_duration": "Waveform duration in microseconds from main extremum to next extremum."
+    }
+    needs_tmp_data = True
+
+
+def _waveform_ratios_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    waveform_ratios_result = namedtuple("WaveformRatiosResult", [
+        "peak_before_to_trough_ratio", "peak_after_to_trough_ratio",
+        "peak_before_to_peak_after_ratio", "main_peak_to_trough_ratio"
+    ])
+    peak_before_to_trough = {}
+    peak_after_to_trough = {}
+    peak_before_to_peak_after = {}
+    main_peak_to_trough = {}
+    templates_single = tmp_data["templates_single"]
+    troughs_info = tmp_data["troughs_info"]
+    peaks_before_info = tmp_data["peaks_before_info"]
+    peaks_after_info = tmp_data["peaks_after_info"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        template_single = templates_single[unit_index]
+        ratios = get_waveform_ratios(
+            template_single,
+            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
+            **metric_params
+        )
+        peak_before_to_trough[unit_id] = ratios["peak_before_to_trough_ratio"]
+        peak_after_to_trough[unit_id] = ratios["peak_after_to_trough_ratio"]
+        peak_before_to_peak_after[unit_id] = ratios["peak_before_to_peak_after_ratio"]
+        main_peak_to_trough[unit_id] = ratios["main_peak_to_trough_ratio"]
+    return waveform_ratios_result(
+        peak_before_to_trough_ratio=peak_before_to_trough,
+        peak_after_to_trough_ratio=peak_after_to_trough,
+        peak_before_to_peak_after_ratio=peak_before_to_peak_after,
+        main_peak_to_trough_ratio=main_peak_to_trough
+    )
+
+
+class WaveformRatios(BaseMetric):
+    metric_name = "waveform_ratios"
+    metric_function = _waveform_ratios_metric_function
+    metric_params = {}
+    metric_columns = {
+        "peak_before_to_trough_ratio": float,
+        "peak_after_to_trough_ratio": float,
+        "peak_before_to_peak_after_ratio": float,
+        "main_peak_to_trough_ratio": float,
+    }
+    metric_descriptions = {
+        "peak_before_to_trough_ratio": "Ratio of peak before amplitude to trough amplitude",
+        "peak_after_to_trough_ratio": "Ratio of peak after amplitude to trough amplitude",
+        "peak_before_to_peak_after_ratio": "Ratio of peak before amplitude to peak after amplitude",
+        "main_peak_to_trough_ratio": "Ratio of main peak amplitude to trough amplitude",
+    }
+    needs_tmp_data = True
+
+
+def _waveform_widths_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    waveform_widths_result = namedtuple("WaveformWidthsResult", [
+        "trough_width", "peak_before_width", "peak_after_width"
+    ])
+    trough_width_dict = {}
+    peak_before_width_dict = {}
+    peak_after_width_dict = {}
+    templates_single = tmp_data["templates_single"]
+    troughs_info = tmp_data["troughs_info"]
+    peaks_before_info = tmp_data["peaks_before_info"]
+    peaks_after_info = tmp_data["peaks_after_info"]
+    sampling_frequency = tmp_data["sampling_frequency"]
+    for unit_index, unit_id in enumerate(unit_ids):
+        template_single = templates_single[unit_index]
+        widths = get_waveform_widths(
+            template_single, sampling_frequency,
+            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
+            **metric_params
+        )
+        trough_width_dict[unit_id] = widths["trough_width_us"]
+        peak_before_width_dict[unit_id] = widths["peak_before_width_us"]
+        peak_after_width_dict[unit_id] = widths["peak_after_width_us"]
+    return waveform_widths_result(
+        trough_width=trough_width_dict,
+        peak_before_width=peak_before_width_dict,
+        peak_after_width=peak_after_width_dict
+    )
+
+
+class WaveformWidths(BaseMetric):
+    metric_name = "waveform_widths"
+    metric_function = _waveform_widths_metric_function
+    metric_params = {}
+    metric_columns = {
+        "trough_width": float,
+        "peak_before_width": float,
+        "peak_after_width": float,
+    }
+    metric_descriptions = {
+        "trough_width": "Width of the main trough in microseconds",
+        "peak_before_width": "Width of the main peak before trough in microseconds",
+        "peak_after_width": "Width of the main peak after trough in microseconds",
     }
     needs_tmp_data = True
 
@@ -655,6 +1201,9 @@ single_channel_metrics = [
     RepolarizationSlope,
     RecoverySlope,
     NumberOfPeaks,
+    WaveformDuration,
+    WaveformRatios,
+    WaveformWidths,
 ]
 
 
