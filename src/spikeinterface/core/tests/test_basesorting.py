@@ -253,6 +253,7 @@ def test_select_periods():
     periods["start_sample_index"] = start_samples
     periods["end_sample_index"] = end_samples
     periods["unit_index"] = unit_index
+    periods = np.sort(periods, order=["segment_index", "start_sample_index"])
 
     t_start = time.perf_counter()
     sliced_sorting = sorting.select_periods(periods=periods)
@@ -262,19 +263,23 @@ def test_select_periods():
 
     # Check that all spikes in the sliced sorting are within the periods
     for segment_index in range(sorting.get_num_segments()):
+        periods_in_segment = periods[periods["segment_index"] == segment_index]
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             spiketrain = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
-            spiketrain_sliced = sliced_sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
-            spikes_in_periods = np.array([], dtype=spiketrain.dtype)
-            periods_in_segment = periods[periods["segment_index"] == segment_index]
+
             periods_for_unit = periods_in_segment[periods_in_segment["unit_index"] == unit_index]
+            spiketrain_in_periods = []
             for period in periods_for_unit:
                 start_sample = period["start_sample_index"]
                 end_sample = period["end_sample_index"]
-                spikes_in_period = spiketrain[(spiketrain >= start_sample) & (spiketrain < end_sample)]
-                spikes_in_periods = np.concatenate((spikes_in_periods, spikes_in_period))
-            if not len(spikes_in_periods) == len(spiketrain_sliced):
-                print(f"Mismatch in number of spikes!: {len(spikes_in_periods)} vs {len(spiketrain_sliced)}")
+                spiketrain_in_periods.append(spiketrain[(spiketrain >= start_sample) & (spiketrain < end_sample)])
+            if len(spiketrain_in_periods) == 0:
+                spiketrain_in_periods = np.array([], dtype=spiketrain.dtype)
+            else:
+                spiketrain_in_periods = np.unique(np.concatenate(spiketrain_in_periods))
+
+            spiketrain_sliced = sliced_sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+            assert len(spiketrain_in_periods) == len(spiketrain_sliced)
 
 
 if __name__ == "__main__":

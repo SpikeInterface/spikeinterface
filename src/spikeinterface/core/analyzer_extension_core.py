@@ -17,9 +17,8 @@ from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
-from .sorting_tools import random_spikes_selection
+from .sorting_tools import random_spikes_selection, select_sorting_periods_mask
 from .job_tools import fix_job_kwargs, split_job_kwargs
-from .node_pipeline import base_period_dtype
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -1423,16 +1422,11 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
         all_data = self.data[return_data_name]
         if periods is not None:
-            # TODO: slice this properly with unit_indices
-            required = np.dtype(base_period_dtype).names
-            if not required.issubset(periods.dtype.names):
-                raise ValueError(f"Period must have the following fields: {required}")
-            # slice data according to period
-            segment_slices = self.segment_slices
-            all_data_segment = all_data[segment_slices[periods["segment_index"]]]
-            start = periods["start_sample_index"]
-            end = periods["end_sample_index"]
-            all_data = all_data_segment[start:end]
+            keep_mask = select_sorting_periods_mask(
+                self.sorting_analyzer.sorting,
+                periods,
+            )
+            all_data = all_data[keep_mask]
 
         if outputs == "numpy":
             if copy:
