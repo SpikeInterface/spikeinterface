@@ -54,11 +54,8 @@ def get_default_thresholds() -> dict:
     - amplitude_cutoff: Estimated fraction of missing spikes
     - num_spikes: Total spike count
     - rp_contamination: Refractory period contamination
-    - isi_violations_ratio: ISI violations ratio
     - presence_ratio: Fraction of recording where unit is present
-    - drift_mad: Median absolute deviation of drift
-    - nn_isolation: Nearest neighbor isolation score
-    - nn_noise_overlap: Nearest neighbor noise overlap
+    - drift_ptp: Peak-to-peak drift in um
     """
     thresholds = {
         # ============================================================
@@ -113,25 +110,13 @@ def get_default_thresholds() -> dict:
         # Lower is better, max typically 0.1 (10%)
         "rp_contamination": {"min": np.nan, "max": 0.1},
 
-        # ISI violations ratio
-        # Lower is better, alternative to rp_contamination
-        "isi_violations_ratio": {"min": np.nan, "max": 0.1},
-
         # Presence ratio - fraction of recording where unit is active
         # Higher is better, ensures unit present throughout
         "presence_ratio": {"min": 0.7, "max": np.nan},
 
         # Drift MAD - median absolute deviation of drift in um
         # Lower is better, ensures stable unit location
-        "drift_mad": {"min": np.nan, "max": 100},
-
-        # Nearest neighbor isolation (from PCA metrics)
-        # Higher is better, ensures good cluster separation
-        "nn_isolation": {"min": 0.8, "max": np.nan},
-
-        # Nearest neighbor noise overlap (from PCA metrics)
-        # Lower is better, ensures separation from noise
-        "nn_noise_overlap": {"min": np.nan, "max": 0.1},
+        "drift_ptp": {"min": np.nan, "max": 100},
 
         # ============================================================
         # NON-SOMATIC DETECTION THRESHOLDS (optional)
@@ -141,12 +126,12 @@ def get_default_thresholds() -> dict:
         # Non-somatic units have characteristic triphasic waveforms
 
         # Peak before to trough ratio - non-somatic have large initial peak
-        "peak_before_to_trough_ratio": {"min": np.nan, "max": 5},  # non-somatic if > max
+        "peak_before_to_trough_ratio": {"min": np.nan, "max": 3},  # non-somatic if > max
 
-        # Peak before width (in samples at sampling rate)
+        # Peak before width (in samples at sampling rate) #QQ should be microseconds or something! 
         "peak_before_width": {"min": 4, "max": np.nan},  # non-somatic if < min
 
-        # Trough width (in samples)
+        # Trough width (in samples) #QQ should be microseconds or something! 
         "trough_width": {"min": 5, "max": np.nan},  # non-somatic if < min
 
         # Peak before to peak after ratio
@@ -198,24 +183,6 @@ def classify_units(
     unit_type_string : np.ndarray
         String labels for each unit type.
 
-    Examples
-    --------
-    >>> import spikeinterface.comparison as sc
-    >>> import pandas as pd
-    >>>
-    >>> # Get metrics from SortingAnalyzer
-    >>> qm = analyzer.get_extension("quality_metrics").get_data()
-    >>> tm = analyzer.get_extension("template_metrics").get_data()
-    >>> metrics = pd.concat([qm, tm], axis=1)
-    >>>
-    >>> # Classify with default thresholds
-    >>> unit_type, unit_labels = sc.classify_units(metrics)
-    >>>
-    >>> # Classify with custom thresholds
-    >>> thresholds = sc.get_default_thresholds()
-    >>> thresholds["snr"]["min"] = 3  # Lower SNR threshold
-    >>> thresholds["amplitude_median"]["min"] = np.nan  # Disable
-    >>> unit_type, unit_labels = sc.classify_units(metrics, thresholds=thresholds)
     """
     if thresholds is None:
         thresholds = get_default_thresholds()
@@ -239,11 +206,8 @@ def classify_units(
         "amplitude_cutoff",
         "num_spikes",
         "rp_contamination",
-        "isi_violations_ratio",
         "presence_ratio",
-        "drift_mad",
-        "nn_isolation",
-        "nn_noise_overlap",
+        "drift_ptp",
     ]
 
     non_somatic_metrics = [
@@ -255,7 +219,7 @@ def classify_units(
     ]
 
     # ========================================
-    # NOISE classification (waveform failures)
+    # NOISE classification
     # ========================================
     noise_mask = np.zeros(n_units, dtype=bool)
 
@@ -282,7 +246,7 @@ def classify_units(
     unit_type[noise_mask] = 0
 
     # ========================================
-    # MUA classification (spike quality failures)
+    # MUA classification
     # ========================================
     mua_mask = np.zeros(n_units, dtype=bool)
 
@@ -314,7 +278,7 @@ def classify_units(
     unit_type[np.isnan(unit_type)] = 1
 
     # ========================================
-    # NON-SOMATIC classification (optional)
+    # NON-SOMATIC classification
     # ========================================
     if classify_non_somatic:
         is_non_somatic = np.zeros(n_units, dtype=bool)
