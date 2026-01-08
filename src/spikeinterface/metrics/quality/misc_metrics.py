@@ -1220,7 +1220,7 @@ def compute_sd_ratio(
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
     spikes = sorting.to_spike_vector()
-    
+
     sd_ratio = {}
 
     segment_indices = {}
@@ -1235,11 +1235,11 @@ def compute_sd_ratio(
         spk_amp = []
 
         for segment_index in range(sorting.get_num_segments()):
-            
+
             sub_spikes = spikes[segment_indices[segment_index]]
             sub_amplitudes = spike_amplitudes[segment_indices[segment_index]]
 
-            spike_mask = (sub_spikes["unit_index"] == unit_index)
+            spike_mask = sub_spikes["unit_index"] == unit_index
             spike_train = sub_spikes[spike_mask]["sample_index"]
             amplitudes = sub_amplitudes[spike_mask]
 
