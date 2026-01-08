@@ -187,6 +187,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             self.data["good_periods_per_unit"] = self.params["user_defined_periods"]
 
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
+
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
             subperiods_per_unit = self.compute_subperiods(
                 self.params["subperiod_size_absolute"],
@@ -194,47 +195,19 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 self.params["subperiod_size_mode"],
             )
 
-            # Compute fp and fn for all periods
+            # Compute fp and fn for all periods.
+            # fp computed from refractory period violations; fn computed from amplitude clippings
+            subperiods_fp_per_unit = self.compute_fp_rates(subperiods_per_unit, self.params["violations_ms"])
+            subperiods_fn_per_unit = self.compute_fn_rates(subperiods_per_unit)
 
-            # fp computed from refractory period violations
-            # dict: unit_id -> array of shape (n_subperiods)
-            periods_fp_per_unit = self.compute_fp_rates(subperiods_per_unit, self.params["violations_ms"])
-
-            # fn computed from amplitude clippings
-            # dict: unit_id -> array of shape (n_subperiods)
-            periods_fn_per_unit = self.compute_fn_rates(subperiods_per_unit)
             # Combine fp and fn results with thresholds to define good periods
             # get n spikes per unit to set the fp or fn rates to 1 if not enough spikes
-            minimum_valid_period_duration = self.params["minimum_valid_period_duration"]
-            fs = self.sorting_analyzer.sampling_frequency
-            min_valid_period_samples = int(minimum_valid_period_duration * fs)
-
-            n_spikes_per_unit = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
-            good_periods_per_unit = np.array([], dtype=unit_period_dtype)
-            for unit_id, subperiods in subperiods_per_unit.items():
-                n_spikes = n_spikes_per_unit[unit_id]
-                if n_spikes < self.params["minimum_n_spikes"]:
-                    periods_fp_per_unit[unit_id] = [1] * len(periods_fp_per_unit[unit_id])
-                    periods_fn_per_unit[unit_id] = [1] * len(periods_fn_per_unit[unit_id])
-
-                fp_rates = periods_fp_per_unit[unit_id]
-                fn_rates = periods_fn_per_unit[unit_id]
-
-                good_periods_mask = (np.array(fp_rates) < self.params["fp_threshold"]) & (
-                    np.array(fn_rates) < self.params["fn_threshold"]
-                )
-                good_subperiods = np.array(subperiods)[good_periods_mask]
-                good_segments = np.unique(good_subperiods["segment_index"])
-                for segment_index in good_segments:
-                    segment_mask = good_subperiods["segment_index"] == segment_index
-                    good_segment_subperiods = good_subperiods[segment_mask]
-                    good_segment_periods = merge_overlapping_periods(good_segment_subperiods)
-                    good_periods_per_unit = np.concatenate((good_periods_per_unit, good_segment_periods), axis=0)
+            good_periods_per_unit = self.compute_good_periods_from_fp_fn(
+                subperiods_per_unit, subperiods_fp_per_unit, subperiods_fn_per_unit
+            )
 
             # Remove good periods that are too short
-            duration_samples = good_periods_per_unit["end_sample_index"] - good_periods_per_unit["start_sample_index"]
-            valid_mask = duration_samples >= min_valid_period_samples
-            good_periods_per_unit = good_periods_per_unit[valid_mask]
+            good_periods_per_unit = self.filter_out_short_periods(good_periods_per_unit)
 
             # Eventually combine with user-defined periods if provided
             if self.params["method"] == "combined":
@@ -242,21 +215,18 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 all_periods = np.concatenate((good_periods_per_unit, user_defined_periods), axis=0)
                 good_periods_per_unit = merge_overlapping_periods_across_units_and_segments(all_periods)
 
-            # Convert subperiods per unit in period_centers_s
-            period_centers = []
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
-                period_centers_dict = {}
-                for unit_id in self.sorting_analyzer.unit_ids:
-                    periods_unit = subperiods_per_unit[unit_id]
-                    periods_segment = periods_unit[periods_unit["segment_index"] == segment_index]
-                    centers = list(0.5 * (periods_segment["start_sample_index"] + periods_segment["end_sample_index"]))
-                    period_centers_dict[unit_id] = centers
-                period_centers.append(period_centers_dict)
+            ## Convert datastructures in spikeinterface-friendly serializable formats
+            # periods_fp_per_unit, periods_fn_per_unit: convert to (n_segments) list of unit -> values dicts
+            (
+                subperiod_centers_per_segment_per_unit,
+                subperiods_fp_per_segment_per_unit,
+                subperiods_fn_per_segment_per_unit,
+            ) = self.reformat_subperiod_data(subperiods_per_unit, subperiods_fp_per_unit, subperiods_fn_per_unit)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
-            self.data["period_centers"] = period_centers
-            self.data["periods_fp_per_unit"] = periods_fp_per_unit
-            self.data["periods_fn_per_unit"] = periods_fn_per_unit
+            self.data["period_centers_per_unit"] = subperiod_centers_per_segment_per_unit
+            self.data["periods_fp_per_unit"] = subperiods_fp_per_segment_per_unit
+            self.data["periods_fn_per_unit"] = subperiods_fn_per_segment_per_unit
             self.data["good_periods_per_unit"] = good_periods_per_unit
 
     def _get_data(self, outputs: str = "by_unit", return_subperiods_metadata: bool = False):
@@ -285,25 +255,33 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         good_periods = self.data["good_periods_per_unit"]
 
         # list of dictionnaries; one dictionnary per segment
-        if outputs == "by_unit":
-            unit_ids = self.sorting_analyzer.unit_ids
-            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
-            data_by_units = {}
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
-                data_by_units[segment_index] = {}
-                for unit_id in unit_ids:
-                    inds = spike_indices[segment_index][unit_id]
-                    data_by_units[segment_index][unit_id] = all_data[inds]
+        if outputs == "numpy":
+            good_periods = self.data["good_periods_per_unit"]
+        else:
+            # by_unit
+            unit_ids = np.unique(self.data["good_periods_per_unit"]["unit_index"])
+            segments = np.unique(self.data["good_periods_per_unit"]["segment_index"])
+            good_periods = []
+            for segment_index in range(segments):
+                segment_mask = good_periods["segment_index"] == segment_index
+                periods_dict = {}
+                for unit_index in unit_ids:
+                    periods_dict[unit_index] = []
+                    unit_mask = good_periods["unit_index"] == unit_index
+                    good_periods_unit_segment = good_periods[segment_mask & unit_mask]
+                    for start, end in good_periods_unit_segment[["start_sample_index", "end_sample_index"]]:
+                        periods_dict[unit_index].append((start, end))
+                good_periods.append(periods_dict)
 
-            return data_by_units
+        if return_subperiods_metadata:
+            return (
+                self.data["period_centers_per_unit"],
+                self.data["periods_fp_per_unit"],
+                self.data["periods_fn_per_unit"],
+                good_periods,
+            )
 
-        return (
-            self.data["subperiods_per_unit"],
-            self.data["periods_fp_per_unit"],
-            self.data["periods_fn_per_unit"],
-            good_periods,
-        )
+        return good_periods
 
     def compute_subperiods(
         self,
@@ -392,6 +370,76 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 )
                 fn_rates[unit_id].append(all_fraction_missing[unit_id])  # missed spikes for this subperiod
         return fn_rates
+
+    def compute_good_periods_from_fp_fn(self, subperiods_per_unit, subperiods_fp_per_unit, subperiods_fn_per_unit):
+        n_spikes_per_unit = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
+        good_periods_per_unit = np.array([], dtype=unit_period_dtype)
+        for unit_id, subperiods in subperiods_per_unit.items():
+            n_spikes = n_spikes_per_unit[unit_id]
+            if n_spikes < self.params["minimum_n_spikes"]:
+                subperiods_fp_per_unit[unit_id] = [1] * len(subperiods_fp_per_unit[unit_id])
+                subperiods_fn_per_unit[unit_id] = [1] * len(subperiods_fn_per_unit[unit_id])
+
+            fp_rates = subperiods_fp_per_unit[unit_id]
+            fn_rates = subperiods_fn_per_unit[unit_id]
+
+            good_periods_mask = (np.array(fp_rates) < self.params["fp_threshold"]) & (
+                np.array(fn_rates) < self.params["fn_threshold"]
+            )
+            good_subperiods = np.array(subperiods)[good_periods_mask]
+            good_segments = np.unique(good_subperiods["segment_index"])
+            for segment_index in good_segments:
+                segment_mask = good_subperiods["segment_index"] == segment_index
+                good_segment_subperiods = good_subperiods[segment_mask]
+                good_segment_periods = merge_overlapping_periods(good_segment_subperiods)
+                good_periods_per_unit = np.concatenate((good_periods_per_unit, good_segment_periods), axis=0)
+        return good_periods_per_unit
+
+    def filter_out_short_periods(self, good_periods_per_unit):
+        fs = self.sorting_analyzer.sampling_frequency
+        minimum_valid_period_duration = self.params["minimum_valid_period_duration"]
+        min_valid_period_samples = int(minimum_valid_period_duration * fs)
+        duration_samples = good_periods_per_unit["end_sample_index"] - good_periods_per_unit["start_sample_index"]
+        valid_mask = duration_samples >= min_valid_period_samples
+        return good_periods_per_unit[valid_mask]
+
+    def reformat_subperiod_data(self, subperiods_per_unit, subperiods_fp_per_unit, subperiods_fn_per_unit):
+        n_segments = self.sorting_analyzer.sorting.get_num_segments()
+        subperiod_centers_per_segment_per_unit = []
+        subperiods_fp_per_segment_per_unit = []
+        subperiods_fn_per_segment_per_unit = []
+        for segment_index in range(n_segments):
+            period_centers_dict = {}
+            fp_dict = {}
+            fn_dict = {}
+            for unit_id in self.sorting_analyzer.unit_ids:
+                periods_unit = subperiods_per_unit[unit_id]
+                periods_segment = periods_unit[periods_unit["segment_index"] == segment_index]
+
+                centers = list(0.5 * (periods_segment["start_sample_index"] + periods_segment["end_sample_index"]))
+                fp_values = [
+                    subperiods_fp_per_unit[unit_id][i]
+                    for i in range(len(periods_unit))
+                    if periods_unit[i]["segment_index"] == segment_index
+                ]
+                fn_values = [
+                    subperiods_fn_per_unit[unit_id][i]
+                    for i in range(len(periods_unit))
+                    if periods_unit[i]["segment_index"] == segment_index
+                ]
+
+                period_centers_dict[unit_id] = centers
+                fp_dict[unit_id] = fp_values
+                fn_dict[unit_id] = fn_values
+
+            subperiod_centers_per_segment_per_unit.append(period_centers_dict)
+            subperiods_fp_per_segment_per_unit.append(fp_dict)
+            subperiods_fn_per_segment_per_unit.append(fn_dict)
+        return (
+            subperiod_centers_per_segment_per_unit,
+            subperiods_fp_per_segment_per_unit,
+            subperiods_fn_per_segment_per_unit,
+        )
 
 
 def merge_overlapping_periods(subperiods):
