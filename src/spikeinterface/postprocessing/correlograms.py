@@ -320,7 +320,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
         To use "numpy" or "numba". "auto" will use numba if available,
         otherwise numpy.
     fast_mode : bool
-        If True, use faster implementations (currently only if method is 'numba'), 
+        If True, use faster implementations (currently only if method is 'numba'),
         at the cost of possible minor numerical differences.
 
     Returns
@@ -400,7 +400,7 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     bin_size : int
         The size of which to bin lags, in samples.
     fast_mode : bool
-        If True, use faster implementations (currently only if method is 'numba'), 
+        If True, use faster implementations (currently only if method is 'numba'),
         at the cost of possible minor numerical differences.
 
     Returns
@@ -507,7 +507,7 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
     bin_size : int
         The size of which to bin lags, in samples.
     fast_mode : bool
-        If True, use faster implementations (currently only if method is 'numba'), 
+        If True, use faster implementations (currently only if method is 'numba'),
         at the cost of possible minor numerical differences.
 
     Returns
@@ -542,7 +542,7 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
             window_size,
             bin_size,
             num_half_bins,
-            num_threads
+            num_threads,
         )
 
     return correlograms
