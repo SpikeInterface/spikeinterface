@@ -1421,6 +1421,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
 
         all_data = self.data[return_data_name]
+        keep_mask = None
         if periods is not None:
             keep_mask = select_sorting_periods_mask(
                 self.sorting_analyzer.sorting,
@@ -1436,6 +1437,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            if keep_mask is not None:
+                spike_vector = spike_vector[keep_mask]
             spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             data_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
