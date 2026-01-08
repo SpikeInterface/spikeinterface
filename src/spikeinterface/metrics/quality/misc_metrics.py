@@ -688,9 +688,8 @@ def compute_amplitude_cv_metrics(
     # precompute segment slice
     segment_slices = []
     for segment_index in range(sorting_analyzer.get_num_segments()):
-        i0 = np.searchsorted(spikes["segment_index"], segment_index)
-        i1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
-        segment_slices.append(slice(i0, i1))
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        segment_slices.append(slice(s0, s1))
 
     all_unit_ids = list(sorting.unit_ids)
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
@@ -712,9 +711,10 @@ def compute_amplitude_cv_metrics(
             spike_indices_unit = spikes_in_segment["sample_index"][unit_mask]
             amps_unit = amps_in_segment[unit_mask]
             amp_mean = np.abs(np.mean(amps_unit))
-            for t0, t1 in zip(sample_bin_edges[:-1], sample_bin_edges[1:]):
-                i0 = np.searchsorted(spike_indices_unit, t0)
-                i1 = np.searchsorted(spike_indices_unit, t1)
+
+            bounds = np.searchsorted(spike_indices_unit, sample_bin_edges, side="left")
+
+            for i0, i1 in zip(bounds[:-1], bounds[1:]):
                 amp_spreads.append(np.std(amps_unit[i0:i1]) / amp_mean)
 
         if len(amp_spreads) < min_num_bins:
