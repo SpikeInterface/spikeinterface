@@ -41,12 +41,3 @@ from .hybrid import (
     create_hybrid_spikes_recording,
 )
 
-from .unit_classification import (
-    WAVEFORM_METRICS,
-    SPIKE_QUALITY_METRICS,
-    NON_SOMATIC_METRICS,
-    get_default_thresholds,
-    classify_units,
-    apply_thresholds,
-    get_classification_summary,
-)

@@ -20,10 +20,10 @@ class UnitClassificationWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        from spikeinterface.comparison import get_default_thresholds
+        from spikeinterface.curation import bombcell_get_default_thresholds
 
         if thresholds is None:
-            thresholds = get_default_thresholds()
+            thresholds = bombcell_get_default_thresholds()
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         plot_data = dict(
@@ -101,10 +101,10 @@ class ClassificationHistogramsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        from spikeinterface.comparison import get_default_thresholds
+        from spikeinterface.curation import bombcell_get_default_thresholds
 
         if thresholds is None:
-            thresholds = get_default_thresholds()
+            thresholds = bombcell_get_default_thresholds()
         if metrics_to_plot is None:
             metrics_to_plot = [m for m in thresholds.keys() if m in quality_metrics.columns]
 
@@ -291,10 +291,10 @@ class UpsetPlotWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        from spikeinterface.comparison import get_default_thresholds #QQ need to change to user thresholds! should be in some self ? 
+        from spikeinterface.curation import bombcell_get_default_thresholds #QQ need to change to user thresholds! should be in some self ? 
 
         if thresholds is None:
-            thresholds = get_default_thresholds()
+            thresholds = bombcell_get_default_thresholds()
         if unit_types_to_plot is None:
             if split_non_somatic:
                 unit_types_to_plot = ["NOISE", "MUA", "NON_SOMA_GOOD", "NON_SOMA_MUA"]
