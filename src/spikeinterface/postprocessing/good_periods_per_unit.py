@@ -250,8 +250,51 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 good_periods_per_unit  # (n_good_periods, 4) with (unit, segment, start, end) to be implemented
             )
 
-    def _get_data(self):
-        return self.data["isi_histograms"], self.data["bins"]
+    def _get_data(self, outputs: str = "by_unit", return_subperiods_metadata: bool = False):
+        """
+        Return extension data. If the extension computes more than one `nodepipeline_variables`,
+        the `return_data_name` is used to specify which one to return.
+
+        Parameters
+        ----------
+        outputs : "numpy" | "by_unit", default: "numpy"
+            How to return the data, by default "numpy"
+        return_subperiods_metadata: bool, default: False
+            Whether to also return metadata of subperiods used to compute the good periods
+            as dictionnaries per unit:
+                - subperiods_per_unit: unit_name -> list of n_subperiods subperiods (each subperiod is an array of dtype unit_period_dtype with 4 fields)
+                - periods_fp_per_unit: unit_name -> array of n_subperiods, false positive rates (refractory period violations) per subperiod
+                - periods_fn_per_unit: unit_name -> array of n_subperiods, false negative rates (amplitude cutoffs) per subperiod
+
+        Returns
+        -------
+        numpy.ndarray | dict | tuple
+            The periods in numpy or dictionnary by unit format,
+            or a tuple that contains the former as well as metadata of subperiods if return_subperiods_metadata is True.
+        """
+
+        good_periods = self.data["good_periods_per_unit"]
+
+        # list of dictionnaries; one dictionnary per segment
+        if outputs == "by_unit":
+            unit_ids = self.sorting_analyzer.unit_ids
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            data_by_units = {}
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                data_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    data_by_units[segment_index][unit_id] = all_data[inds]
+
+            return data_by_units
+
+        return (
+            self.data["subperiods_per_unit"],
+            self.data["periods_fp_per_unit"],
+            self.data["periods_fn_per_unit"],
+            good_periods,
+        )
 
 
 register_result_extension(ComputeGoodPeriodsPerUnit)
