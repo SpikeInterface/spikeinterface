@@ -26,7 +26,7 @@ from spikeinterface.postprocessing.correlograms import (
     _make_bins,
     compute_acgs_3d,
     compute_correlograms,
-    compute_auto_correlograms
+    compute_auto_correlograms,
 )
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
@@ -133,7 +133,7 @@ def test_equal_results_correlograms(window_and_bin_ms):
     )
 
     assert np.array_equal(result_numpy, result_numba)
-    
+
 
 @pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 @pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
@@ -366,7 +366,6 @@ def test_compute_auto_correlograms_different_units(method):
 
     assert np.array_equal(result[0], np.array([0, 0, 1, 0, 0, 1, 0, 0]))
     assert np.array_equal(result[1], np.array([0, 1, 0, 0, 0, 0, 1, 0]))
-
 
 
 def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin_edge):
