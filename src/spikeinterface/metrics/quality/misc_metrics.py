@@ -69,7 +69,7 @@ def compute_presence_ratios(
     To do so, spike trains across segments are concatenated to mimic a continuous segment.
     """
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(periods=periods)
+    sorting = sorting.select_periods(periods=periods)
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
@@ -245,7 +245,7 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     res = namedtuple("isi_violation", ["isi_violations_ratio", "isi_violations_count"])
 
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(sorting, periods=periods)
+    sorting = sorting.select_periods(periods=periods)
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
@@ -346,7 +346,7 @@ def compute_refrac_period_violations(
         return None
 
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(periods=periods)
+    sorting = sorting.select_periods(periods=periods)
 
     fs = sorting_analyzer.sampling_frequency
     num_units = len(sorting_analyzer.unit_ids)
@@ -451,7 +451,7 @@ def compute_sliding_rp_violations(
     """
     duration = sorting_analyzer.get_total_duration()
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(periods=periods)
+    sorting = sorting.select_periods(periods=periods)
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -545,7 +545,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
     res = namedtuple("synchrony_metrics", [f"sync_spike_{size}" for size in synchrony_sizes])
 
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(periods=periods)
+    sorting = sorting.select_periods(periods=periods)
 
     if unit_ids is None:
         unit_ids = sorting.unit_ids
@@ -613,7 +613,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
     sampling_frequency = sorting_analyzer.sampling_frequency
     bin_size_samples = int(bin_size_s * sampling_frequency)
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(periods=periods)
+    sorting = sorting.select_periods(periods=periods)
 
     if unit_ids is None:
         unit_ids = sorting.unit_ids
@@ -717,7 +717,7 @@ def compute_amplitude_cv_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    amps = sorting_analyzer.get_extension(amplitude_extension).get_data(period=period)
+    amps = sorting_analyzer.get_extension(amplitude_extension).get_data(periods=periods)
 
     # precompute segment slice
     segment_slices = []
@@ -843,7 +843,7 @@ def compute_amplitude_cutoffs(
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, period=period)
+    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -906,7 +906,7 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
 
     all_amplitude_medians = {}
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
-    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True, period=period)
+    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
     for unit_id in unit_ids:
         all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
 
@@ -980,7 +980,7 @@ def compute_noise_cutoffs(
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, period=period)
+    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -1082,7 +1082,7 @@ def compute_drift_metrics(
         unit_ids = sorting.unit_ids
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-    spike_locations = spike_locations_ext.get_data(period=period)
+    spike_locations = spike_locations_ext.get_data(periods=periods)
     spikes = sorting.to_spike_vector()
     spike_locations_by_unit = {}
     for unit_id in unit_ids:
@@ -1243,7 +1243,7 @@ def compute_sd_ratio(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     sorting = sorting_analyzer.sorting
-    sorting = sorting.select_period(periods=periods)
+    sorting = sorting.select_periods(periods=periods)
 
     censored_period = int(round(censored_period_ms * 1e-3 * sorting_analyzer.sampling_frequency))
     if unit_ids is None:
@@ -1256,7 +1256,7 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(period=period)
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(periods=periods)
 
     if not HAVE_NUMBA:
         warnings.warn(
