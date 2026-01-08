@@ -1,5 +1,5 @@
 """
-Unit classification based on quality metrics (similar to BombCell).
+Unit classification based on quality metrics (Bombcell).
 
 Unit Types:
     0 (NOISE): Failed waveform quality checks
@@ -43,12 +43,14 @@ NON_SOMATIC_METRICS = [
 ]
 
 
-def get_default_thresholds() -> dict:
+def get_default_thresholds() -> dict: 
     """
-    Returns default thresholds for unit classification.
+    Bombcell - Returns default thresholds for unit classification.
 
-    Each metric has 'min' and 'max' values. Use np.nan to disable a threshold.
+    Each metric has 'min' and 'max' values. Use np.nan to disable a threshold (e.g. to ignore a metric completly
+    or to only have a min or a max threshold)
     """
+    # QQ need to make it so user can change this!
     return {
         # Waveform quality (failures -> NOISE)
         "num_positive_peaks": {"min": np.nan, "max": 2},
@@ -81,7 +83,7 @@ def classify_units(
     split_non_somatic_good_mua: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Classify units based on quality metrics and thresholds.
+    Bombcell - classify units based on quality metrics and thresholds.
 
     Parameters
     ----------

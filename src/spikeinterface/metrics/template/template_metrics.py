@@ -47,8 +47,8 @@ def get_template_metric_names():
 class ComputeTemplateMetrics(BaseMetricExtension):
     """
     Compute template metrics including:
-        * peak_to_valley
-        * peak_trough_ratio
+        * peak_to_trough_duration
+        * peak_to_trough_ratio
         * halfwidth
         * repolarization_slope
         * recovery_slope
@@ -126,6 +126,16 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             self.params["metric_names"].remove("velocity_below")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
+        # peak to valley -> peak_to_trough_duration 
+        if "peak_to_valley" in self.params["metric_names"]:
+            self.params["metric_names"].remove("peak_to_valley")
+            if "peak_to_trough_duration" not in self.params["metric_names"]:
+                self.params["metric_names"].append("peak_to_trough_duration")
+        # peak to trough ratio -> main peak to trough ratio
+        if "peak_to_trough_ratio" in self.params["metric_names"]:
+            self.params["metric_names"].remove("peak_to_trough_ratio")
+            if "main_peak_to_trough_ratio" not in self.params["metric_names"]:
+                self.params["metric_names"].append("main_peak_to_trough_ratio")
 
     def _set_params(
         self,

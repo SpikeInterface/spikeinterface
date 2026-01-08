@@ -557,35 +557,6 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
     return ptv
 
 
-def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=None, peak_idx=None, **kwargs) -> float:
-    """
-    Return the peak to trough ratio of input waveforms.
-
-    Parameters
-    ----------
-    template_single: numpy.ndarray
-        The 1D template waveform
-    sampling_frequency : float
-        The sampling frequency of the template
-    trough_idx: int, default: None
-        The index of the trough
-    peak_idx: int, default: None
-        The index of the peak
-
-    Returns
-    -------
-    ptratio: float
-        The peak to trough ratio
-    """
-    if trough_idx is None or peak_idx is None:
-        troughs, _, peaks_after = get_trough_and_peak_idx(template_single)
-        trough_idx = troughs["main_loc"]
-        peak_idx = peaks_after["main_loc"]
-    if trough_idx is None or peak_idx is None:
-        return np.nan
-    ptratio = template_single[peak_idx] / template_single[trough_idx]
-    return ptratio
-
 
 def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
     """
@@ -1129,28 +1100,6 @@ class PeakToTroughDuration(BaseMetric):
     metric_function = _peak_to_trough_duration_metric_function
 
 
-class PeakToTroughRatio(BaseMetric):
-    metric_name = "peak_trough_ratio"
-    metric_params = {}
-    metric_columns = {"peak_trough_ratio": float}
-    metric_descriptions = {
-        "peak_trough_ratio": "Ratio of the amplitude of the peak (maximum) to the trough (minimum) of the spike waveform."
-    }
-    needs_tmp_data = True
-
-    @staticmethod
-    def _peak_to_trough_ratio_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
-        return single_channel_metric(
-            unit_function=get_peak_trough_ratio,
-            sorting_analyzer=sorting_analyzer,
-            unit_ids=unit_ids,
-            tmp_data=tmp_data,
-            **metric_params,
-        )
-
-    metric_function = _peak_to_trough_ratio_metric_function
-
-
 class HalfWidth(BaseMetric):
     metric_name = "half_width"
     metric_params = {}
@@ -1414,7 +1363,6 @@ class WaveformBaselineFlatness(BaseMetric):
 
 single_channel_metrics = [
     PeakToTroughDuration,
-    PeakToTroughRatio,
     HalfWidth,
     RepolarizationSlope,
     RecoverySlope,

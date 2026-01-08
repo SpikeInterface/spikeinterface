@@ -291,7 +291,7 @@ class UpsetPlotWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        from spikeinterface.comparison import get_default_thresholds
+        from spikeinterface.comparison import get_default_thresholds #QQ need to change to user thresholds! should be in some self ? 
 
         if thresholds is None:
             thresholds = get_default_thresholds()
