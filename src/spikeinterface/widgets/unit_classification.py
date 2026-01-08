@@ -402,6 +402,272 @@ class WaveformOverlayWidget(BaseWidget):
         self.axes = axes
 
 
+class UpsetPlotWidget(BaseWidget):
+    """
+    Plot UpSet plots showing which metrics fail together for each unit type.
+
+    UpSet plots visualize set intersections, showing which combinations of
+    metric failures are most common for units classified as NOISE, MUA, etc.
+
+    Each unit type shows only the relevant metrics:
+    - NOISE: waveform quality metrics (num_positive_peaks, peak_to_trough_duration, etc.)
+    - MUA: spike quality metrics (amplitude_median, snr_bombcell, rp_contamination, etc.)
+    - NON_SOMA: non-somatic detection metrics (peak_before_to_trough_ratio, widths, etc.)
+
+    Parameters
+    ----------
+    quality_metrics : pd.DataFrame
+        DataFrame with quality metrics.
+    unit_type : np.ndarray
+        Numeric unit type array from classify_units().
+    unit_type_string : np.ndarray
+        String labels from classify_units().
+    thresholds : dict, optional
+        Threshold dictionary. If None, uses default thresholds.
+    unit_types_to_plot : list of str, optional
+        Which unit types to create upset plots for.
+        Default: ["NOISE", "MUA", "NON_SOMA"] or with split: ["NOISE", "MUA", "NON_SOMA_GOOD", "NON_SOMA_MUA"]
+    split_non_somatic : bool, default: False
+        If True, uses split non-somatic labels.
+    min_subset_size : int, default: 1
+        Minimum size of subsets to show in the plot.
+
+    Notes
+    -----
+    Requires the `upsetplot` package to be installed. If not installed, displays
+    a message instructing the user to install it.
+    """
+
+    # Define metric categories
+    WAVEFORM_METRICS = [
+        "num_positive_peaks",
+        "num_negative_peaks",
+        "peak_to_trough_duration",
+        "waveform_baseline_flatness",
+        "peak_after_to_trough_ratio",
+        "exp_decay",
+    ]
+
+    SPIKE_QUALITY_METRICS = [
+        "amplitude_median",
+        "snr_bombcell",
+        "amplitude_cutoff",
+        "num_spikes",
+        "rp_contamination",
+        "presence_ratio",
+        "drift_ptp",
+    ]
+
+    NON_SOMATIC_METRICS = [
+        "peak_before_to_trough_ratio",
+        "peak_before_width",
+        "trough_width",
+        "peak_before_to_peak_after_ratio",
+        "main_peak_to_trough_ratio",
+    ]
+
+    def __init__(
+        self,
+        quality_metrics,
+        unit_type: np.ndarray,
+        unit_type_string: np.ndarray,
+        thresholds: Optional[dict] = None,
+        unit_types_to_plot: Optional[list] = None,
+        split_non_somatic: bool = False,
+        min_subset_size: int = 1,
+        backend=None,
+        **backend_kwargs,
+    ):
+        from spikeinterface.comparison import get_default_thresholds
+
+        if thresholds is None:
+            thresholds = get_default_thresholds()
+
+        if unit_types_to_plot is None:
+            if split_non_somatic:
+                unit_types_to_plot = ["NOISE", "MUA", "NON_SOMA_GOOD", "NON_SOMA_MUA"]
+            else:
+                unit_types_to_plot = ["NOISE", "MUA", "NON_SOMA"]
+
+        plot_data = dict(
+            quality_metrics=quality_metrics,
+            unit_type=unit_type,
+            unit_type_string=unit_type_string,
+            thresholds=thresholds,
+            unit_types_to_plot=unit_types_to_plot,
+            min_subset_size=min_subset_size,
+        )
+
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def _get_metrics_for_unit_type(self, unit_type_label):
+        """Get the relevant metrics for a given unit type."""
+        if unit_type_label == "NOISE":
+            return self.WAVEFORM_METRICS
+        elif unit_type_label == "MUA":
+            return self.SPIKE_QUALITY_METRICS
+        elif unit_type_label in ("NON_SOMA", "NON_SOMA_GOOD", "NON_SOMA_MUA"):
+            return self.NON_SOMATIC_METRICS
+        else:
+            return None  # Show all metrics
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        import pandas as pd
+
+        dp = to_attr(data_plot)
+        quality_metrics = dp.quality_metrics
+        unit_type_string = dp.unit_type_string
+        thresholds = dp.thresholds
+        unit_types_to_plot = dp.unit_types_to_plot
+        min_subset_size = dp.min_subset_size
+
+        # Check if upsetplot is available
+        try:
+            from upsetplot import UpSet, from_memberships
+        except ImportError:
+            # Display message to install upsetplot
+            fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+            ax.text(
+                0.5,
+                0.5,
+                "UpSet plots require the 'upsetplot' package.\n\n"
+                "Please install it with:\n\n"
+                "    pip install upsetplot\n\n"
+                "Then re-run this plot.",
+                ha="center",
+                va="center",
+                fontsize=14,
+                family="monospace",
+                bbox=dict(boxstyle="round", facecolor="lightyellow", edgecolor="orange"),
+            )
+            ax.axis("off")
+            ax.set_title("UpSet Plot - Package Not Installed", fontsize=16)
+            self.figure = fig
+            self.axes = ax
+            self.figures = [fig]
+            return
+
+        # Build failure table for ALL metrics once
+        failure_table = self._build_failure_table(quality_metrics, thresholds)
+
+        figures = []
+        axes_list = []
+
+        for unit_type_label in unit_types_to_plot:
+            # Get units of this type
+            mask = unit_type_string == unit_type_label
+            n_units = np.sum(mask)
+
+            if n_units == 0:
+                continue
+
+            # Get relevant metrics for this unit type
+            relevant_metrics = self._get_metrics_for_unit_type(unit_type_label)
+
+            # Filter failure table to relevant metrics only
+            if relevant_metrics is not None:
+                available_metrics = [m for m in relevant_metrics if m in failure_table.columns]
+                if len(available_metrics) == 0:
+                    # No relevant metrics available, skip this unit type
+                    continue
+                unit_failure_table = failure_table[available_metrics]
+            else:
+                unit_failure_table = failure_table
+
+            # Get failure data for these units
+            unit_failures = unit_failure_table.loc[mask]
+
+            # Build membership list for upsetplot
+            memberships = []
+            for idx in unit_failures.index:
+                failed_metrics = unit_failures.columns[unit_failures.loc[idx]].tolist()
+                if len(failed_metrics) > 0:
+                    memberships.append(failed_metrics)
+
+            if len(memberships) == 0:
+                continue
+
+            # Create upset data
+            upset_data = from_memberships(memberships)
+
+            # Filter by min_subset_size
+            upset_data = upset_data[upset_data >= min_subset_size]
+
+            if len(upset_data) == 0:
+                continue
+
+            # Create figure
+            fig = plt.figure(figsize=(12, 6))
+            upset = UpSet(
+                upset_data,
+                subset_size="count",
+                show_counts=True,
+                sort_by="cardinality",
+                sort_categories_by="cardinality",
+            )
+            upset.plot(fig=fig)
+            fig.suptitle(f"{unit_type_label} (n={n_units})", fontsize=14, y=1.02)
+
+            figures.append(fig)
+            axes_list.append(fig.axes)
+
+        if len(figures) == 0:
+            fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+            ax.text(
+                0.5,
+                0.5,
+                "No units found for the specified unit types\nor no metric failures detected.",
+                ha="center",
+                va="center",
+                fontsize=12,
+            )
+            ax.axis("off")
+            figures = [fig]
+            axes_list = [ax]
+
+        self.figures = figures
+        self.figure = figures[0] if figures else None
+        self.axes = axes_list
+
+    def _build_failure_table(self, quality_metrics, thresholds):
+        """Build a boolean DataFrame indicating which metrics failed for each unit."""
+        import pandas as pd
+
+        # Metrics that should use absolute values
+        absolute_value_metrics = ["amplitude_median"]
+
+        failure_data = {}
+
+        for metric_name, thresh in thresholds.items():
+            if metric_name not in quality_metrics.columns:
+                continue
+
+            values = quality_metrics[metric_name].values.copy()
+
+            # Use absolute values for amplitude-based metrics
+            if metric_name in absolute_value_metrics:
+                values = np.abs(values)
+
+            # Check failures
+            failed = np.zeros(len(values), dtype=bool)
+
+            # NaN is a failure
+            failed |= np.isnan(values)
+
+            # Check min threshold
+            if not np.isnan(thresh.get("min", np.nan)):
+                failed |= values < thresh["min"]
+
+            # Check max threshold
+            if not np.isnan(thresh.get("max", np.nan)):
+                failed |= values > thresh["max"]
+
+            failure_data[metric_name] = failed
+
+        return pd.DataFrame(failure_data, index=quality_metrics.index)
+
+
 # Convenience functions for direct plotting
 def plot_unit_classification(
     sorting_analyzer,
@@ -519,6 +785,64 @@ def plot_waveform_overlay(
         unit_type,
         unit_type_string,
         split_non_somatic=split_non_somatic,
+        backend=backend,
+        **backend_kwargs,
+    )
+    return widget
+
+
+def plot_upset(
+    quality_metrics,
+    unit_type,
+    unit_type_string,
+    thresholds=None,
+    unit_types_to_plot=None,
+    split_non_somatic=False,
+    min_subset_size=1,
+    backend=None,
+    **backend_kwargs,
+):
+    """
+    Plot UpSet plots showing which metrics fail together for each unit type.
+
+    UpSet plots visualize set intersections, showing which combinations of
+    metric failures are most common for units classified as NOISE, MUA, etc.
+
+    Parameters
+    ----------
+    quality_metrics : pd.DataFrame
+        DataFrame with quality metrics.
+    unit_type : np.ndarray
+        Numeric unit type array from classify_units().
+    unit_type_string : np.ndarray
+        String labels from classify_units().
+    thresholds : dict, optional
+        Threshold dictionary. If None, uses default thresholds.
+    unit_types_to_plot : list of str, optional
+        Which unit types to create upset plots for.
+        Default: ["NOISE", "MUA", "NON_SOMA"] or with split: ["NOISE", "MUA", "NON_SOMA_GOOD", "NON_SOMA_MUA"]
+    split_non_somatic : bool, default: False
+        If True, uses split non-somatic labels.
+    min_subset_size : int, default: 1
+        Minimum size of subsets to show in the plot.
+    backend : str, optional
+        Backend to use for plotting.
+    **backend_kwargs
+        Additional kwargs for the backend.
+
+    Returns
+    -------
+    widget : UpsetPlotWidget
+        The widget object. Access individual figures via widget.figures.
+    """
+    widget = UpsetPlotWidget(
+        quality_metrics,
+        unit_type,
+        unit_type_string,
+        thresholds=thresholds,
+        unit_types_to_plot=unit_types_to_plot,
+        split_non_somatic=split_non_somatic,
+        min_subset_size=min_subset_size,
         backend=backend,
         **backend_kwargs,
     )

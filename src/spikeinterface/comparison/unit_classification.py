@@ -297,7 +297,7 @@ def classify_units(
     # ========================================
     if classify_non_somatic:
         # Non-somatic (axonal) units require BOTH ratio AND width criteria
-        # Logic from BombCell:
+        # Logic from bombcell:
         # is_non_somatic = (ratio_conditions & width_conditions) | standalone_ratio_condition
 
         # Helper to get metric values safely

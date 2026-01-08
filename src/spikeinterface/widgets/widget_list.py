@@ -41,9 +41,11 @@ from .unit_classification import (
     UnitClassificationWidget,
     ClassificationHistogramsWidget,
     WaveformOverlayWidget,
+    UpsetPlotWidget,
     plot_unit_classification,
     plot_classification_histograms,
     plot_waveform_overlay,
+    plot_upset,
 )
 
 widget_list = [
@@ -85,6 +87,7 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
+    UpsetPlotWidget,
     WaveformOverlayWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
