@@ -1130,10 +1130,11 @@ class BaseMetricExtension(AnalyzerExtension):
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
             import time
-            t_start = time.perf_counter()            
+
+            t_start = time.perf_counter()
             try:
                 metric_params = self.params["metric_params"].get(metric_name, {})
-                
+
                 res = metric.compute(
                     sorting_analyzer,
                     unit_ids=unit_ids,
@@ -1199,8 +1200,7 @@ class BaseMetricExtension(AnalyzerExtension):
                 computed_metrics[column_name] = extension.data["metrics"][column_name]
 
         self.data["metrics"] = computed_metrics
-        self.data['runtime_s'] = run_times
-
+        self.data["runtime_s"] = run_times
 
     def _get_data(self):
         # convert to correct dtype
