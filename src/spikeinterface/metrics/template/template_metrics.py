@@ -126,7 +126,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             self.params["metric_names"].remove("velocity_below")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
-        # peak to valley -> peak_to_trough_duration 
+        # peak to valley -> peak_to_trough_duration
         if "peak_to_valley" in self.params["metric_names"]:
             self.params["metric_names"].remove("peak_to_valley")
             if "peak_to_trough_duration" not in self.params["metric_names"]:

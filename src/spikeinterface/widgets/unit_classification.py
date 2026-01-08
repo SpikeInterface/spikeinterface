@@ -56,8 +56,14 @@ class UnitClassificationWidget(BaseWidget):
         ax.set_ylabel("Number of units")
         ax.set_title("Unit Classification Summary")
         for bar, count in zip(bars, counts):
-            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
-                    str(count), ha="center", va="bottom", fontsize=10)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.5,
+                str(count),
+                ha="center",
+                va="bottom",
+                fontsize=10,
+            )
 
         # Pie chart
         ax = axes[0, 1]
@@ -66,8 +72,15 @@ class UnitClassificationWidget(BaseWidget):
 
         # Placeholder
         ax = axes[1, 0]
-        ax.text(0.5, 0.5, "Waveform overlay\n(requires templates extension)",
-                ha="center", va="center", fontsize=12, transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "Waveform overlay\n(requires templates extension)",
+            ha="center",
+            va="center",
+            fontsize=12,
+            transform=ax.transAxes,
+        )
         ax.set_title("Template Waveforms by Type")
         ax.axis("off")
 
@@ -81,8 +94,7 @@ class UnitClassificationWidget(BaseWidget):
             pct = 100 * count / n_total
             summary_text += f"{label}: {count} ({pct:.1f}%)\n"
         summary_text += "=" * 30 + f"\nTotal: {n_total} units"
-        ax.text(0.1, 0.5, summary_text, ha="left", va="center",
-                fontsize=11, family="monospace", transform=ax.transAxes)
+        ax.text(0.1, 0.5, summary_text, ha="left", va="center", fontsize=11, family="monospace", transform=ax.transAxes)
         ax.axis("off")
 
         plt.tight_layout()
@@ -211,8 +223,14 @@ class WaveformOverlayWidget(BaseWidget):
 
         if not sorting_analyzer.has_extension("templates"):
             fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-            ax.text(0.5, 0.5, "Templates extension not computed.\nRun: analyzer.compute('templates')",
-                    ha="center", va="center", fontsize=12)
+            ax.text(
+                0.5,
+                0.5,
+                "Templates extension not computed.\nRun: analyzer.compute('templates')",
+                ha="center",
+                va="center",
+                fontsize=12,
+            )
             ax.axis("off")
             self.figure = fig
             self.axes = ax
@@ -271,16 +289,28 @@ class UpsetPlotWidget(BaseWidget):
     """
 
     WAVEFORM_METRICS = [
-        "num_positive_peaks", "num_negative_peaks", "peak_to_trough_duration",
-        "waveform_baseline_flatness", "peak_after_to_trough_ratio", "exp_decay",
+        "num_positive_peaks",
+        "num_negative_peaks",
+        "peak_to_trough_duration",
+        "waveform_baseline_flatness",
+        "peak_after_to_trough_ratio",
+        "exp_decay",
     ]
     SPIKE_QUALITY_METRICS = [
-        "amplitude_median", "snr_bombcell", "amplitude_cutoff",
-        "num_spikes", "rp_contamination", "presence_ratio", "drift_ptp",
+        "amplitude_median",
+        "snr_bombcell",
+        "amplitude_cutoff",
+        "num_spikes",
+        "rp_contamination",
+        "presence_ratio",
+        "drift_ptp",
     ]
     NON_SOMATIC_METRICS = [
-        "peak_before_to_trough_ratio", "peak_before_width", "trough_width",
-        "peak_before_to_peak_after_ratio", "main_peak_to_trough_ratio",
+        "peak_before_to_trough_ratio",
+        "peak_before_width",
+        "trough_width",
+        "peak_before_to_peak_after_ratio",
+        "main_peak_to_trough_ratio",
     ]
 
     def __init__(
@@ -295,7 +325,9 @@ class UpsetPlotWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        from spikeinterface.curation import bombcell_get_default_thresholds #QQ need to change to user thresholds! should be in some self ? 
+        from spikeinterface.curation import (
+            bombcell_get_default_thresholds,
+        )  # QQ need to change to user thresholds! should be in some self ?
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
@@ -342,10 +374,16 @@ class UpsetPlotWidget(BaseWidget):
                 from upsetplot import UpSet, from_memberships
         except ImportError:
             fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-            ax.text(0.5, 0.5,
-                    "UpSet plots require 'upsetplot' package.\n\npip install upsetplot",
-                    ha="center", va="center", fontsize=14, family="monospace",
-                    bbox=dict(boxstyle="round", facecolor="lightyellow", edgecolor="orange"))
+            ax.text(
+                0.5,
+                0.5,
+                "UpSet plots require 'upsetplot' package.\n\npip install upsetplot",
+                ha="center",
+                va="center",
+                fontsize=14,
+                family="monospace",
+                bbox=dict(boxstyle="round", facecolor="lightyellow", edgecolor="orange"),
+            )
             ax.axis("off")
             ax.set_title("UpSet Plot - Package Not Installed", fontsize=16)
             self.figure = fig
@@ -390,16 +428,20 @@ class UpsetPlotWidget(BaseWidget):
                     continue
 
                 fig = plt.figure(figsize=(12, 6))
-                UpSet(upset_data, subset_size="count", show_counts=True,
-                      sort_by="cardinality", sort_categories_by="cardinality").plot(fig=fig)
+                UpSet(
+                    upset_data,
+                    subset_size="count",
+                    show_counts=True,
+                    sort_by="cardinality",
+                    sort_categories_by="cardinality",
+                ).plot(fig=fig)
             fig.suptitle(f"{unit_type_label} (n={n_units})", fontsize=14, y=1.02)
             figures.append(fig)
             axes_list.append(fig.axes)
 
         if not figures:
             fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-            ax.text(0.5, 0.5, "No units found or no metric failures detected.",
-                    ha="center", va="center", fontsize=12)
+            ax.text(0.5, 0.5, "No units found or no metric failures detected.", ha="center", va="center", fontsize=12)
             ax.axis("off")
             figures = [fig]
             axes_list = [ax]
@@ -434,28 +476,50 @@ class UpsetPlotWidget(BaseWidget):
 # Convenience functions
 def plot_unit_classification(sorting_analyzer, unit_type, unit_type_string, thresholds=None, backend=None, **kwargs):
     """Plot summary of unit classification results."""
-    return UnitClassificationWidget(sorting_analyzer, unit_type, unit_type_string,
-                                     thresholds=thresholds, backend=backend, **kwargs)
+    return UnitClassificationWidget(
+        sorting_analyzer, unit_type, unit_type_string, thresholds=thresholds, backend=backend, **kwargs
+    )
 
 
 def plot_classification_histograms(quality_metrics, thresholds=None, metrics_to_plot=None, backend=None, **kwargs):
     """Plot histograms of quality metrics with threshold lines."""
-    return ClassificationHistogramsWidget(quality_metrics, thresholds=thresholds,
-                                           metrics_to_plot=metrics_to_plot, backend=backend, **kwargs)
+    return ClassificationHistogramsWidget(
+        quality_metrics, thresholds=thresholds, metrics_to_plot=metrics_to_plot, backend=backend, **kwargs
+    )
 
 
-def plot_waveform_overlay(sorting_analyzer, unit_type, unit_type_string, split_non_somatic=False, backend=None, **kwargs):
+def plot_waveform_overlay(
+    sorting_analyzer, unit_type, unit_type_string, split_non_somatic=False, backend=None, **kwargs
+):
     """Plot overlaid waveforms grouped by unit classification type."""
-    return WaveformOverlayWidget(sorting_analyzer, unit_type, unit_type_string,
-                                  split_non_somatic=split_non_somatic, backend=backend, **kwargs)
+    return WaveformOverlayWidget(
+        sorting_analyzer, unit_type, unit_type_string, split_non_somatic=split_non_somatic, backend=backend, **kwargs
+    )
 
 
-def plot_upset(quality_metrics, unit_type, unit_type_string, thresholds=None,
-               unit_types_to_plot=None, split_non_somatic=False, min_subset_size=1, backend=None, **kwargs):
+def plot_upset(
+    quality_metrics,
+    unit_type,
+    unit_type_string,
+    thresholds=None,
+    unit_types_to_plot=None,
+    split_non_somatic=False,
+    min_subset_size=1,
+    backend=None,
+    **kwargs,
+):
     """Plot UpSet plots showing which metrics fail together for each unit type."""
-    return UpsetPlotWidget(quality_metrics, unit_type, unit_type_string, thresholds=thresholds,
-                           unit_types_to_plot=unit_types_to_plot, split_non_somatic=split_non_somatic,
-                           min_subset_size=min_subset_size, backend=backend, **kwargs)
+    return UpsetPlotWidget(
+        quality_metrics,
+        unit_type,
+        unit_type_string,
+        thresholds=thresholds,
+        unit_types_to_plot=unit_types_to_plot,
+        split_non_somatic=split_non_somatic,
+        min_subset_size=min_subset_size,
+        backend=backend,
+        **kwargs,
+    )
 
 
 def plot_unit_classification_all(
@@ -534,8 +598,13 @@ def plot_unit_classification_all(
     # UpSet plots
     if include_upset and quality_metrics is not None:
         results["upset"] = plot_upset(
-            quality_metrics, unit_type, unit_type_string, thresholds=thresholds,
-            split_non_somatic=split_non_somatic, backend=backend, **kwargs
+            quality_metrics,
+            unit_type,
+            unit_type_string,
+            thresholds=thresholds,
+            split_non_somatic=split_non_somatic,
+            backend=backend,
+            **kwargs,
         )
 
     return results

@@ -40,4 +40,3 @@ from .hybrid import (
     create_hybrid_units_recording,
     create_hybrid_spikes_recording,
 )
-

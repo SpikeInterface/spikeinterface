@@ -43,14 +43,14 @@ NON_SOMATIC_METRICS = [
 ]
 
 
-def bombcell_get_default_thresholds() -> dict: 
+def bombcell_get_default_thresholds() -> dict:
     """
     Bombcell - Returns default thresholds for unit classification.
 
     Each metric has 'min' and 'max' values. Use np.nan to disable a threshold (e.g. to ignore a metric completly
     or to only have a min or a max threshold)
     """
-    # bombcell 
+    # bombcell
     return {
         # Waveform quality (failures -> NOISE)
         "num_positive_peaks": {"min": np.nan, "max": 2},
@@ -147,6 +147,7 @@ def bombcell_classify_units(
 
     # NON-SOMATIC
     if classify_non_somatic:
+
         def get_metric(name):
             if name in quality_metrics.columns:
                 return quality_metrics[name].values
