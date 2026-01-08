@@ -1,5 +1,5 @@
 """
-Unit classification based on quality metrics (Bombcell).
+Unit labelling based on quality metrics (Bombcell).
 
 Unit Types:
     0 (NOISE): Failed waveform quality checks
@@ -45,7 +45,7 @@ NON_SOMATIC_METRICS = [
 
 def bombcell_get_default_thresholds() -> dict:
     """
-    Bombcell - Returns default thresholds for unit classification.
+    Bombcell - Returns default thresholds for unit labelling.
 
     Each metric has 'min' and 'max' values. Use np.nan to disable a threshold (e.g. to ignore a metric completly
     or to only have a min or a max threshold)
@@ -76,22 +76,36 @@ def bombcell_get_default_thresholds() -> dict:
     }
 
 
-def bombcell_classify_units(
-    quality_metrics: pd.DataFrame,
+def _combine_metrics(quality_metrics, template_metrics):
+    """Combine quality_metrics and template_metrics into a single DataFrame."""
+    if quality_metrics is None and template_metrics is None:
+        return None
+    if quality_metrics is None:
+        return template_metrics
+    if template_metrics is None:
+        return quality_metrics
+    return quality_metrics.join(template_metrics, how="outer")
+
+
+def bombcell_label_units(
+    quality_metrics=None,
+    template_metrics=None,
     thresholds: Optional[dict] = None,
-    classify_non_somatic: bool = True,
+    label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Bombcell - classify units based on quality metrics and thresholds.
+    Bombcell - label units based on quality metrics and thresholds.
 
     Parameters
     ----------
-    quality_metrics : pd.DataFrame
+    quality_metrics : pd.DataFrame, optional
         DataFrame with quality metrics (index = unit_ids).
+    template_metrics : pd.DataFrame, optional
+        DataFrame with template metrics (index = unit_ids).
     thresholds : dict or None
         Threshold dict: {"metric": {"min": val, "max": val}}. Use np.nan to disable.
-    classify_non_somatic : bool
+    label_non_somatic : bool
         If True, detect non-somatic (axonal) units.
     split_non_somatic_good_mua : bool
         If True, split non-somatic into NON_SOMA_GOOD (3) and NON_SOMA_MUA (4).
@@ -103,19 +117,23 @@ def bombcell_classify_units(
     unit_type_string : np.ndarray
         String labels.
     """
+    combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+    if combined_metrics is None:
+        raise ValueError("At least one of quality_metrics or template_metrics must be provided")
+
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
 
-    n_units = len(quality_metrics)
+    n_units = len(combined_metrics)
     unit_type = np.full(n_units, np.nan)
     absolute_value_metrics = ["amplitude_median"]
 
     # NOISE: waveform failures
     noise_mask = np.zeros(n_units, dtype=bool)
     for metric_name in WAVEFORM_METRICS:
-        if metric_name not in quality_metrics.columns or metric_name not in thresholds:
+        if metric_name not in combined_metrics.columns or metric_name not in thresholds:
             continue
-        values = quality_metrics[metric_name].values
+        values = combined_metrics[metric_name].values
         if metric_name in absolute_value_metrics:
             values = np.abs(values)
         thresh = thresholds[metric_name]
@@ -129,9 +147,9 @@ def bombcell_classify_units(
     # MUA: spike quality failures
     mua_mask = np.zeros(n_units, dtype=bool)
     for metric_name in SPIKE_QUALITY_METRICS:
-        if metric_name not in quality_metrics.columns or metric_name not in thresholds:
+        if metric_name not in combined_metrics.columns or metric_name not in thresholds:
             continue
-        values = quality_metrics[metric_name].values
+        values = combined_metrics[metric_name].values
         if metric_name in absolute_value_metrics:
             values = np.abs(values)
         thresh = thresholds[metric_name]
@@ -146,11 +164,11 @@ def bombcell_classify_units(
     unit_type[np.isnan(unit_type)] = 1
 
     # NON-SOMATIC
-    if classify_non_somatic:
+    if label_non_somatic:
 
         def get_metric(name):
-            if name in quality_metrics.columns:
-                return quality_metrics[name].values
+            if name in combined_metrics.columns:
+                return combined_metrics[name].values
             return np.full(n_units, np.nan)
 
         peak_before_width = get_metric("peak_before_width")
@@ -256,7 +274,7 @@ def apply_thresholds(
     return pd.DataFrame(results, index=quality_metrics.index)
 
 
-def get_classification_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
+def get_labelling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
     """Get counts and percentages for each unit type."""
     n_total = len(unit_type)
     unique_types, counts = np.unique(unit_type, return_counts=True)
@@ -327,3 +345,84 @@ def load_thresholds(filepath) -> dict:
         }
 
     return thresholds
+
+
+def save_labelling_results(
+    quality_metrics: pd.DataFrame,
+    unit_type: np.ndarray,
+    unit_type_string: np.ndarray,
+    thresholds: dict,
+    folder,
+    save_narrow: bool = True,
+    save_wide: bool = True,
+) -> None:
+    """
+    Save labelling results to CSV files.
+
+    Parameters
+    ----------
+    quality_metrics : pd.DataFrame
+        DataFrame with quality metrics (index = unit_ids).
+    unit_type : np.ndarray
+        Numeric unit type codes.
+    unit_type_string : np.ndarray
+        String labels for each unit.
+    thresholds : dict
+        Threshold dictionary used for labelling.
+    folder : str or Path
+        Folder to save the CSV files.
+    save_narrow : bool, default: True
+        Save narrow/tidy format (one row per unit-metric).
+    save_wide : bool, default: True
+        Save wide format (one row per unit, metrics as columns).
+    """
+    from pathlib import Path
+
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    unit_ids = quality_metrics.index.values
+
+    # Wide format: one row per unit
+    if save_wide:
+        wide_df = quality_metrics.copy()
+        wide_df.insert(0, "label", unit_type_string)
+        wide_df.insert(1, "label_code", unit_type)
+        wide_df.to_csv(folder / "labelling_results_wide.csv")
+
+    # Narrow format: one row per unit-metric combination
+    if save_narrow:
+        rows = []
+        for i, unit_id in enumerate(unit_ids):
+            label = unit_type_string[i]
+            label_code = unit_type[i]
+            for metric_name in quality_metrics.columns:
+                if metric_name not in thresholds:
+                    continue
+                value = quality_metrics.loc[unit_id, metric_name]
+                thresh = thresholds[metric_name]
+                thresh_min = thresh.get("min", np.nan)
+                thresh_max = thresh.get("max", np.nan)
+
+                # Determine pass/fail
+                passed = True
+                if np.isnan(value):
+                    passed = False
+                elif not np.isnan(thresh_min) and value < thresh_min:
+                    passed = False
+                elif not np.isnan(thresh_max) and value > thresh_max:
+                    passed = False
+
+                rows.append({
+                    "unit_id": unit_id,
+                    "label": label,
+                    "label_code": label_code,
+                    "metric_name": metric_name,
+                    "value": value,
+                    "threshold_min": None if np.isnan(thresh_min) else thresh_min,
+                    "threshold_max": None if np.isnan(thresh_max) else thresh_max,
+                    "passed": passed,
+                })
+
+        narrow_df = pd.DataFrame(rows)
+        narrow_df.to_csv(folder / "labelling_results_narrow.csv", index=False)

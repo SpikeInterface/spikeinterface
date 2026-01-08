@@ -21,16 +21,17 @@ from .curation_format import validate_curation_dict, curation_label_to_dataframe
 from .sortingview_curation import apply_sortingview_curation
 
 # automated curation
-from .unit_classification import (
+from .unit_labelling import (
     WAVEFORM_METRICS,
     SPIKE_QUALITY_METRICS,
     NON_SOMATIC_METRICS,
     bombcell_get_default_thresholds,
-    bombcell_classify_units,
+    bombcell_label_units,
     apply_thresholds,
-    get_classification_summary,
+    get_labelling_summary,
     save_thresholds,
     load_thresholds,
+    save_labelling_results,
 )
 
 from .model_based_curation import auto_label_units, load_model

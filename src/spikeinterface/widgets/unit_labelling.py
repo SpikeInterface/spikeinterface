@@ -1,4 +1,4 @@
-"""Widgets for visualizing unit classification results."""
+"""Widgets for visualizing unit labelling results."""
 
 from __future__ import annotations
 
@@ -8,106 +8,24 @@ from typing import Optional
 from .base import BaseWidget, to_attr
 
 
-class UnitClassificationWidget(BaseWidget):
-    """Plot summary of unit classification (bar chart, pie chart, text summary)."""
-
-    def __init__(
-        self,
-        sorting_analyzer,
-        unit_type: np.ndarray,
-        unit_type_string: np.ndarray,
-        thresholds: Optional[dict] = None,
-        backend=None,
-        **backend_kwargs,
-    ):
-        from spikeinterface.curation import bombcell_get_default_thresholds
-
-        if thresholds is None:
-            thresholds = bombcell_get_default_thresholds()
-
-        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-        plot_data = dict(
-            sorting_analyzer=sorting_analyzer,
-            unit_type=unit_type,
-            unit_type_string=unit_type_string,
-            thresholds=thresholds,
-        )
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-    def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-
-        dp = to_attr(data_plot)
-        unit_type = dp.unit_type
-        unit_type_string = dp.unit_type_string
-
-        unique_types = np.unique(unit_type)
-        type_counts = {t: np.sum(unit_type == t) for t in unique_types}
-        type_labels = {t: unit_type_string[unit_type == t][0] for t in unique_types}
-
-        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-
-        # Bar chart
-        ax = axes[0, 0]
-        labels = [type_labels[t] for t in unique_types]
-        counts = [type_counts[t] for t in unique_types]
-        colors = ["red", "green", "orange", "blue", "purple"][: len(unique_types)]
-        bars = ax.bar(labels, counts, color=colors, alpha=0.7, edgecolor="black")
-        ax.set_ylabel("Number of units")
-        ax.set_title("Unit Classification Summary")
-        for bar, count in zip(bars, counts):
-            ax.text(
-                bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + 0.5,
-                str(count),
-                ha="center",
-                va="bottom",
-                fontsize=10,
-            )
-
-        # Pie chart
-        ax = axes[0, 1]
-        ax.pie(counts, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)
-        ax.set_title("Unit Classification Distribution")
-
-        # Placeholder
-        ax = axes[1, 0]
-        ax.text(
-            0.5,
-            0.5,
-            "Waveform overlay\n(requires templates extension)",
-            ha="center",
-            va="center",
-            fontsize=12,
-            transform=ax.transAxes,
-        )
-        ax.set_title("Template Waveforms by Type")
-        ax.axis("off")
-
-        # Text summary
-        ax = axes[1, 1]
-        n_total = len(unit_type)
-        summary_text = "Classification Summary\n" + "=" * 30 + "\n"
-        for t in unique_types:
-            label = type_labels[t]
-            count = type_counts[t]
-            pct = 100 * count / n_total
-            summary_text += f"{label}: {count} ({pct:.1f}%)\n"
-        summary_text += "=" * 30 + f"\nTotal: {n_total} units"
-        ax.text(0.1, 0.5, summary_text, ha="left", va="center", fontsize=11, family="monospace", transform=ax.transAxes)
-        ax.axis("off")
-
-        plt.tight_layout()
-        self.figure = fig
-        self.axes = axes
+def _combine_metrics(quality_metrics, template_metrics):
+    """Combine quality_metrics and template_metrics into a single DataFrame."""
+    if quality_metrics is None and template_metrics is None:
+        return None
+    if quality_metrics is None:
+        return template_metrics
+    if template_metrics is None:
+        return quality_metrics
+    return quality_metrics.join(template_metrics, how="outer")
 
 
-class ClassificationHistogramsWidget(BaseWidget):
+class LabellingHistogramsWidget(BaseWidget):
     """Plot histograms of quality metrics with threshold lines."""
 
     def __init__(
         self,
-        quality_metrics,
+        quality_metrics=None,
+        template_metrics=None,
         thresholds: Optional[dict] = None,
         metrics_to_plot: Optional[list] = None,
         backend=None,
@@ -115,13 +33,17 @@ class ClassificationHistogramsWidget(BaseWidget):
     ):
         from spikeinterface.curation import bombcell_get_default_thresholds
 
+        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+        if combined_metrics is None:
+            raise ValueError("At least one of quality_metrics or template_metrics must be provided")
+
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
         if metrics_to_plot is None:
-            metrics_to_plot = [m for m in thresholds.keys() if m in quality_metrics.columns]
+            metrics_to_plot = [m for m in thresholds.keys() if m in combined_metrics.columns]
 
         plot_data = dict(
-            quality_metrics=quality_metrics,
+            quality_metrics=combined_metrics,
             thresholds=thresholds,
             metrics_to_plot=metrics_to_plot,
         )
@@ -193,7 +115,7 @@ class ClassificationHistogramsWidget(BaseWidget):
 
 
 class WaveformOverlayWidget(BaseWidget):
-    """Plot overlaid waveforms grouped by unit classification type."""
+    """Plot overlaid waveforms grouped by unit label type."""
 
     def __init__(
         self,
@@ -315,9 +237,10 @@ class UpsetPlotWidget(BaseWidget):
 
     def __init__(
         self,
-        quality_metrics,
         unit_type: np.ndarray,
         unit_type_string: np.ndarray,
+        quality_metrics=None,
+        template_metrics=None,
         thresholds: Optional[dict] = None,
         unit_types_to_plot: Optional[list] = None,
         split_non_somatic: bool = False,
@@ -325,9 +248,11 @@ class UpsetPlotWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        from spikeinterface.curation import (
-            bombcell_get_default_thresholds,
-        )  # QQ need to change to user thresholds! should be in some self ?
+        from spikeinterface.curation import bombcell_get_default_thresholds
+
+        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+        if combined_metrics is None:
+            raise ValueError("At least one of quality_metrics or template_metrics must be provided")
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
@@ -338,7 +263,7 @@ class UpsetPlotWidget(BaseWidget):
                 unit_types_to_plot = ["NOISE", "MUA", "NON_SOMA"]
 
         plot_data = dict(
-            quality_metrics=quality_metrics,
+            quality_metrics=combined_metrics,
             unit_type=unit_type,
             unit_type_string=unit_type_string,
             thresholds=thresholds,
@@ -474,33 +399,34 @@ class UpsetPlotWidget(BaseWidget):
 
 
 # Convenience functions
-def plot_unit_classification(sorting_analyzer, unit_type, unit_type_string, thresholds=None, backend=None, **kwargs):
-    """Plot summary of unit classification results."""
-    return UnitClassificationWidget(
-        sorting_analyzer, unit_type, unit_type_string, thresholds=thresholds, backend=backend, **kwargs
-    )
-
-
-def plot_classification_histograms(quality_metrics, thresholds=None, metrics_to_plot=None, backend=None, **kwargs):
+def plot_labelling_histograms(
+    quality_metrics=None, template_metrics=None, thresholds=None, metrics_to_plot=None, backend=None, **kwargs
+):
     """Plot histograms of quality metrics with threshold lines."""
-    return ClassificationHistogramsWidget(
-        quality_metrics, thresholds=thresholds, metrics_to_plot=metrics_to_plot, backend=backend, **kwargs
+    return LabellingHistogramsWidget(
+        quality_metrics=quality_metrics,
+        template_metrics=template_metrics,
+        thresholds=thresholds,
+        metrics_to_plot=metrics_to_plot,
+        backend=backend,
+        **kwargs,
     )
 
 
 def plot_waveform_overlay(
     sorting_analyzer, unit_type, unit_type_string, split_non_somatic=False, backend=None, **kwargs
 ):
-    """Plot overlaid waveforms grouped by unit classification type."""
+    """Plot overlaid waveforms grouped by unit label type."""
     return WaveformOverlayWidget(
         sorting_analyzer, unit_type, unit_type_string, split_non_somatic=split_non_somatic, backend=backend, **kwargs
     )
 
 
 def plot_upset(
-    quality_metrics,
     unit_type,
     unit_type_string,
+    quality_metrics=None,
+    template_metrics=None,
     thresholds=None,
     unit_types_to_plot=None,
     split_non_somatic=False,
@@ -510,9 +436,10 @@ def plot_upset(
 ):
     """Plot UpSet plots showing which metrics fail together for each unit type."""
     return UpsetPlotWidget(
-        quality_metrics,
         unit_type,
         unit_type_string,
+        quality_metrics=quality_metrics,
+        template_metrics=template_metrics,
         thresholds=thresholds,
         unit_types_to_plot=unit_types_to_plot,
         split_non_somatic=split_non_somatic,
@@ -522,19 +449,21 @@ def plot_upset(
     )
 
 
-def plot_unit_classification_all(
+def plot_unit_labelling_all(
     sorting_analyzer,
     unit_type: np.ndarray,
     unit_type_string: np.ndarray,
     quality_metrics=None,
+    template_metrics=None,
     thresholds: Optional[dict] = None,
     split_non_somatic: bool = False,
     include_upset: bool = True,
+    save_folder=None,
     backend=None,
     **kwargs,
 ):
     """
-    Generate all unit classification plots.
+    Generate all unit labelling plots and optionally save to folder.
 
     Parameters
     ----------
@@ -545,13 +474,17 @@ def plot_unit_classification_all(
     unit_type_string : np.ndarray
         Array of unit type labels as strings.
     quality_metrics : pd.DataFrame, optional
-        Quality metrics DataFrame. If None, attempts to get from sorting_analyzer.
+        Quality metrics DataFrame. If None, loads from sorting_analyzer.
+    template_metrics : pd.DataFrame, optional
+        Template metrics DataFrame. If None, loads from sorting_analyzer.
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
     split_non_somatic : bool, default: False
         Whether to split NON_SOMA into NON_SOMA_GOOD and NON_SOMA_MUA.
     include_upset : bool, default: True
         Whether to include UpSet plots (requires upsetplot package).
+    save_folder : str or Path, optional
+        If provided, saves all plots and CSV results to this folder.
     backend : str, optional
         Plotting backend.
     **kwargs
@@ -560,34 +493,32 @@ def plot_unit_classification_all(
     Returns
     -------
     dict
-        Dictionary with keys 'summary', 'histograms', 'waveforms', 'upset' containing widget objects.
+        Dictionary with keys 'histograms', 'waveforms', 'upset' containing widget objects.
     """
-    from spikeinterface.curation import bombcell_get_default_thresholds
+    from pathlib import Path
+    from spikeinterface.curation import bombcell_get_default_thresholds, save_labelling_results
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
 
-    if quality_metrics is None:
-        if sorting_analyzer.has_extension("quality_metrics"):
-            quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
-        if sorting_analyzer.has_extension("template_metrics"):
-            tm = sorting_analyzer.get_extension("template_metrics").get_data()
-            if quality_metrics is not None:
-                quality_metrics = quality_metrics.join(tm, how="outer")
-            else:
-                quality_metrics = tm
+    # Load metrics from sorting_analyzer if not provided
+    if quality_metrics is None and sorting_analyzer.has_extension("quality_metrics"):
+        quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
+    if template_metrics is None and sorting_analyzer.has_extension("template_metrics"):
+        template_metrics = sorting_analyzer.get_extension("template_metrics").get_data()
+
+    combined_metrics = _combine_metrics(quality_metrics, template_metrics)
 
     results = {}
 
-    # Summary plot
-    results["summary"] = plot_unit_classification(
-        sorting_analyzer, unit_type, unit_type_string, thresholds=thresholds, backend=backend, **kwargs
-    )
-
     # Histograms
-    if quality_metrics is not None:
-        results["histograms"] = plot_classification_histograms(
-            quality_metrics, thresholds=thresholds, backend=backend, **kwargs
+    if combined_metrics is not None:
+        results["histograms"] = plot_labelling_histograms(
+            quality_metrics=quality_metrics,
+            template_metrics=template_metrics,
+            thresholds=thresholds,
+            backend=backend,
+            **kwargs,
         )
 
     # Waveform overlay
@@ -596,15 +527,35 @@ def plot_unit_classification_all(
     )
 
     # UpSet plots
-    if include_upset and quality_metrics is not None:
+    if include_upset and combined_metrics is not None:
         results["upset"] = plot_upset(
-            quality_metrics,
             unit_type,
             unit_type_string,
+            quality_metrics=quality_metrics,
+            template_metrics=template_metrics,
             thresholds=thresholds,
             split_non_somatic=split_non_somatic,
             backend=backend,
             **kwargs,
         )
 
+    # Save to folder if requested
+    if save_folder is not None:
+        save_folder = Path(save_folder)
+        save_folder.mkdir(parents=True, exist_ok=True)
+
+        # Save plots
+        if "histograms" in results and results["histograms"].figure is not None:
+            results["histograms"].figure.savefig(save_folder / "labelling_histograms.png", dpi=150, bbox_inches="tight")
+        if "waveforms" in results and results["waveforms"].figure is not None:
+            results["waveforms"].figure.savefig(save_folder / "waveform_overlay.png", dpi=150, bbox_inches="tight")
+        if "upset" in results and hasattr(results["upset"], "figures"):
+            for i, fig in enumerate(results["upset"].figures):
+                fig.savefig(save_folder / f"upset_plot_{i}.png", dpi=150, bbox_inches="tight")
+
+        # Save CSV results
+        if combined_metrics is not None:
+            save_labelling_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
+
     return results
+
