@@ -456,3 +456,86 @@ def plot_upset(quality_metrics, unit_type, unit_type_string, thresholds=None,
     return UpsetPlotWidget(quality_metrics, unit_type, unit_type_string, thresholds=thresholds,
                            unit_types_to_plot=unit_types_to_plot, split_non_somatic=split_non_somatic,
                            min_subset_size=min_subset_size, backend=backend, **kwargs)
+
+
+def plot_unit_classification_all(
+    sorting_analyzer,
+    unit_type: np.ndarray,
+    unit_type_string: np.ndarray,
+    quality_metrics=None,
+    thresholds: Optional[dict] = None,
+    split_non_somatic: bool = False,
+    include_upset: bool = True,
+    backend=None,
+    **kwargs,
+):
+    """
+    Generate all unit classification plots.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object.
+    unit_type : np.ndarray
+        Array of unit type codes (0=NOISE, 1=GOOD, 2=MUA, 3=NON_SOMA, etc.).
+    unit_type_string : np.ndarray
+        Array of unit type labels as strings.
+    quality_metrics : pd.DataFrame, optional
+        Quality metrics DataFrame. If None, attempts to get from sorting_analyzer.
+    thresholds : dict, optional
+        Threshold dictionary. If None, uses default thresholds.
+    split_non_somatic : bool, default: False
+        Whether to split NON_SOMA into NON_SOMA_GOOD and NON_SOMA_MUA.
+    include_upset : bool, default: True
+        Whether to include UpSet plots (requires upsetplot package).
+    backend : str, optional
+        Plotting backend.
+    **kwargs
+        Additional arguments passed to plot functions.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys 'summary', 'histograms', 'waveforms', 'upset' containing widget objects.
+    """
+    from spikeinterface.curation import bombcell_get_default_thresholds
+
+    if thresholds is None:
+        thresholds = bombcell_get_default_thresholds()
+
+    if quality_metrics is None:
+        if sorting_analyzer.has_extension("quality_metrics"):
+            quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
+        if sorting_analyzer.has_extension("template_metrics"):
+            tm = sorting_analyzer.get_extension("template_metrics").get_data()
+            if quality_metrics is not None:
+                quality_metrics = quality_metrics.join(tm, how="outer")
+            else:
+                quality_metrics = tm
+
+    results = {}
+
+    # Summary plot
+    results["summary"] = plot_unit_classification(
+        sorting_analyzer, unit_type, unit_type_string, thresholds=thresholds, backend=backend, **kwargs
+    )
+
+    # Histograms
+    if quality_metrics is not None:
+        results["histograms"] = plot_classification_histograms(
+            quality_metrics, thresholds=thresholds, backend=backend, **kwargs
+        )
+
+    # Waveform overlay
+    results["waveforms"] = plot_waveform_overlay(
+        sorting_analyzer, unit_type, unit_type_string, split_non_somatic=split_non_somatic, backend=backend, **kwargs
+    )
+
+    # UpSet plots
+    if include_upset and quality_metrics is not None:
+        results["upset"] = plot_upset(
+            quality_metrics, unit_type, unit_type_string, thresholds=thresholds,
+            split_non_somatic=split_non_somatic, backend=backend, **kwargs
+        )
+
+    return results

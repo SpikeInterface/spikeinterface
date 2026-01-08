@@ -46,6 +46,7 @@ from .unit_classification import (
     plot_classification_histograms,
     plot_waveform_overlay,
     plot_upset,
+    plot_unit_classification_all,
 )
 
 widget_list = [
