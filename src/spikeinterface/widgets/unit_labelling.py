@@ -558,4 +558,3 @@ def plot_unit_labelling_all(
             save_labelling_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
 
     return results
-

@@ -413,16 +413,18 @@ def save_labelling_results(
                 elif not np.isnan(thresh_max) and value > thresh_max:
                     passed = False
 
-                rows.append({
-                    "unit_id": unit_id,
-                    "label": label,
-                    "label_code": label_code,
-                    "metric_name": metric_name,
-                    "value": value,
-                    "threshold_min": None if np.isnan(thresh_min) else thresh_min,
-                    "threshold_max": None if np.isnan(thresh_max) else thresh_max,
-                    "passed": passed,
-                })
+                rows.append(
+                    {
+                        "unit_id": unit_id,
+                        "label": label,
+                        "label_code": label_code,
+                        "metric_name": metric_name,
+                        "value": value,
+                        "threshold_min": None if np.isnan(thresh_min) else thresh_min,
+                        "threshold_max": None if np.isnan(thresh_max) else thresh_max,
+                        "passed": passed,
+                    }
+                )
 
         narrow_df = pd.DataFrame(rows)
         narrow_df.to_csv(folder / "labelling_results_narrow.csv", index=False)
