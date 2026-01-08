@@ -44,3 +44,8 @@ from .template_metrics import (
     ComputeTemplateMetrics,
     compute_template_metrics,
 )
+
+from .good_periods_per_unit import (
+    ComputeGoodPeriodsPerUnit,
+    compute_good_periods_per_unit,
+)

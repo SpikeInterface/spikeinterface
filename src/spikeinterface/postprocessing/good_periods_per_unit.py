@@ -91,7 +91,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             warnings.warn("Combined method without user_defined_periods, falling back")
             method = "false_positives_and_negatives"
 
-        if params.method in ["false_positives_and_negatives", "combined"]:
+        if method in ["false_positives_and_negatives", "combined"]:
             if not self.sorting_analyzer.has_extension("amplitude_scalings"):
                 raise ValueError("Requires 'amplitude_scalings' extension; please compute it first.")
 
@@ -254,8 +254,8 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         return self.data["isi_histograms"], self.data["bins"]
 
 
-# register_result_extension(ComputeISIHistograms)
-# compute_isi_histograms = ComputeISIHistograms.function_factory()
+register_result_extension(ComputeGoodPeriodsPerUnit)
+compute_good_periods_per_unit = ComputeGoodPeriodsPerUnit.function_factory()
 
 
 def compute_subperiods(
@@ -285,7 +285,7 @@ def compute_subperiods(
 
         all_subperiods[unit_name] = []
         for segment_index in range(sorting.get_num_segments()):
-            n_samples = sorting.get_num_samples(segment_index)  # int: samples
+            n_samples = self.sorting_analyzer.get_num_samples(segment_index)  # int: samples
             n_subperiods = n_samples // period_size_samples + 1
             starts_ends = np.array(
                 [
@@ -311,14 +311,12 @@ def compute_fp_rates(self, subperiods_per_unit: dict, violations_ms: float = 0.8
         fp_rates[unit_name] = []
         for subperiod in subperiods:
             isi_violations = compute_refrac_period_violations(
-                self.sorting_analyzer.sorting,
+                self.sorting_analyzer,
                 unit_ids=[unit_name],
                 refractory_period_ms=violations_ms,
                 periods=subperiod,
             )
-            fp_rates[unit_name].append(
-                isi_violations["rp_contamination"][unit_name]
-            )  # contamination for this subperiod
+            fp_rates[unit_name].append(isi_violations.rp_contamination[unit_name])  # contamination for this subperiod
 
     return fp_rates
 
@@ -330,7 +328,7 @@ def compute_fn_rates(self, subperiods_per_unit: dict) -> dict:
         fn_rates[unit_name] = []
         for subperiod in subperiods:
             all_fraction_missing = compute_amplitude_cutoffs(
-                self.sorting_analyzer.sorting,
+                self.sorting_analyzer,
                 unit_ids=[unit_name],
                 num_histogram_bins=500,
                 histogram_smoothing_value=3,
