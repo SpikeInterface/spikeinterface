@@ -89,14 +89,21 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         )
         presence_ratios = {unit_id: np.nan for unit_id in unit_ids}
     else:
-        for unit_id in unit_ids:
-            spike_train = []
-            for segment_index in range(num_segs):
-                st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                st = st + np.sum(seg_lengths[:segment_index])
-                spike_train.append(st)
-            spike_train = np.concatenate(spike_train)
 
+        spikes = sorting.to_spike_vector()
+        order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+        new_spikes = spikes[order]
+
+        # precompute segment slice
+        unit_slices = []
+        for unit_id in sorting.unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
+            s0, s1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+            unit_slices.append(slice(s0, s1))
+
+        for unit_id, unit_slice in zip(unit_ids, unit_slices):
+            spike_train = new_spikes[unit_slice]["sample_index"]
+            
             unit_fr = spike_train.size / total_duration
             bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thresh)
 
@@ -685,11 +692,19 @@ def compute_amplitude_cv_metrics(
 
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
-    # precompute segment slice
-    segment_slices = []
-    for segment_index in range(sorting_analyzer.get_num_segments()):
-        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
-        segment_slices.append(slice(s0, s1))
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
+    new_amps = amps[order]
+
+    unit_slices = {}
+    for unit_id in sorting.unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[slice(u0, u1)]
+        unit_slices[unit_id] = []
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            unit_slices[unit_id] += [slice(u0+s0, u0+s1)]
 
     all_unit_ids = list(sorting.unit_ids)
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
@@ -705,11 +720,10 @@ def compute_amplitude_cv_metrics(
             sample_bin_edges = np.arange(
                 0, sorting_analyzer.get_num_samples(segment_index) + 1, temporal_bin_size_samples
             )
-            spikes_in_segment = spikes[segment_slices[segment_index]]
-            amps_in_segment = amps[segment_slices[segment_index]]
-            unit_mask = spikes_in_segment["unit_index"] == all_unit_ids.index(unit_id)
-            spike_indices_unit = spikes_in_segment["sample_index"][unit_mask]
-            amps_unit = amps_in_segment[unit_mask]
+
+            spikes_in_segment = new_spikes[unit_slices[unit_id][segment_index]]
+            amps_unit = new_amps[unit_slices[unit_id][segment_index]]
+            spike_indices_unit = spikes_in_segment["sample_index"]
             amp_mean = np.abs(np.mean(amps_unit))
 
             bounds = np.searchsorted(spike_indices_unit, sample_bin_edges, side="left")
@@ -1220,14 +1234,21 @@ def compute_sd_ratio(
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
     spikes = sorting.to_spike_vector()
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
+    new_spike_amplitudes = spike_amplitudes[order]
 
     sd_ratio = {}
 
-    segment_indices = {}
-
-    for segment_index in range(sorting.get_num_segments()):
-        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
-        segment_indices[segment_index] = slice(s0, s1)
+    unit_slices = {}
+    for unit_id in sorting.unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[slice(u0, u1)]
+        unit_slices[unit_id] = []
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            unit_slices[unit_id] += [slice(u0+s0, u0+s1)]
 
     for unit_id in unit_ids:
         unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
@@ -1236,12 +1257,8 @@ def compute_sd_ratio(
 
         for segment_index in range(sorting.get_num_segments()):
 
-            sub_spikes = spikes[segment_indices[segment_index]]
-            sub_amplitudes = spike_amplitudes[segment_indices[segment_index]]
-
-            spike_mask = sub_spikes["unit_index"] == unit_index
-            spike_train = sub_spikes[spike_mask]["sample_index"]
-            amplitudes = sub_amplitudes[spike_mask]
+            spike_train = new_spikes[unit_slices[unit_id][segment_index]]["sample_index"]
+            amplitudes = new_spike_amplitudes[unit_slices[unit_id][segment_index]]
 
             censored_indices = find_duplicated_spikes(
                 spike_train,
