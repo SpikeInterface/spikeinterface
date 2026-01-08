@@ -35,9 +35,10 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
 
     spikes = sorting.to_spike_vector()
     unit_indices, total_counts = np.unique(spikes["unit_index"], return_counts=True)
-    for unit_ind, unit_id in enumerate(unit_ids):
-        if unit_ind in unit_indices:
-            idx = np.flatnonzero(unit_indices == unit_ind)
+    for unit_id in unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        if unit_index in unit_indices:
+            idx = np.flatnonzero(unit_indices == unit_index)
             num_spikes[unit_id] = total_counts[idx]
         else:
             num_spikes[unit_id] = 0
