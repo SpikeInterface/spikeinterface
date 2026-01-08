@@ -260,7 +260,6 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
-
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -312,13 +311,12 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         else:
             new_bins = self.data["bins"]
             all_new_units = new_sorting_analyzer.unit_ids
-            num_dims = len(self.data["bins"])
             arr = self.data["acgs"]
-            new_acgs = np.zeros((len(all_new_units), num_dims), dtype=np.int64)
 
             # compute all new isi at once
             new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
-            only_new_acgs, _ = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
+            only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
+            new_acgs = np.zeros((len(all_new_units), only_new_acgs.shape[1]), dtype=np.int64)
 
             for unit_ind, unit_id in enumerate(all_new_units):
                 if unit_id not in new_unit_ids:
@@ -434,7 +432,6 @@ def _compute_num_bins(window_size, bin_size):
     """
     num_half_bins = int(window_size // bin_size)
     num_bins = int(2 * num_half_bins)
-
     return num_bins, num_half_bins
 
 
