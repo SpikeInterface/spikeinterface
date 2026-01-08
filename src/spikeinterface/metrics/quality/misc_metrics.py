@@ -103,7 +103,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
 
         for unit_id, unit_slice in zip(unit_ids, unit_slices):
             spike_train = new_spikes[unit_slice]["sample_index"]
-            
+
             unit_fr = spike_train.size / total_duration
             bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thresh)
 
@@ -704,7 +704,7 @@ def compute_amplitude_cv_metrics(
         unit_slices[unit_id] = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            unit_slices[unit_id] += [slice(u0+s0, u0+s1)]
+            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
 
     all_unit_ids = list(sorting.unit_ids)
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
@@ -1248,7 +1248,7 @@ def compute_sd_ratio(
         unit_slices[unit_id] = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            unit_slices[unit_id] += [slice(u0+s0, u0+s1)]
+            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
 
     for unit_id in unit_ids:
         unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
