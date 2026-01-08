@@ -103,6 +103,7 @@ def test_equal_results_correlograms(window_and_bin_ms):
 
     assert np.array_equal(result_numpy, result_numba)
 
+
 @pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 @pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
 def test_equal_results_fast_correlograms(window_and_bin_ms):
@@ -121,6 +122,7 @@ def test_equal_results_fast_correlograms(window_and_bin_ms):
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
     )
     from numpy.testing import assert_almost_equal
+
     assert_almost_equal(result_numba_fast, result_numba)
 
 
