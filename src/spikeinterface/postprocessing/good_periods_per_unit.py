@@ -243,7 +243,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 good_periods_per_unit = merge_overlapping_periods_across_units_and_segments(all_periods)
 
             # Convert subperiods per unit in period_centers_s
-            period_centers_s = []
+            period_centers = []
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 period_centers_dict = {}
                 for unit_id in self.sorting_analyzer.unit_ids:
@@ -251,16 +251,59 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                     periods_segment = periods_unit[periods_unit["segment_index"] == segment_index]
                     centers = list(0.5 * (periods_segment["start_sample_index"] + periods_segment["end_sample_index"]))
                     period_centers_dict[unit_id] = centers
-                period_centers_s.append(period_centers_dict)
+                period_centers.append(period_centers_dict)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
-            self.data["period_centers_s"] = period_centers_s
+            self.data["period_centers"] = period_centers
             self.data["periods_fp_per_unit"] = periods_fp_per_unit
             self.data["periods_fn_per_unit"] = periods_fn_per_unit
             self.data["good_periods_per_unit"] = good_periods_per_unit
 
-    def _get_data(self):
-        return self.data["good_periods_per_unit"]
+    def _get_data(self, outputs: str = "by_unit", return_subperiods_metadata: bool = False):
+        """
+        Return extension data. If the extension computes more than one `nodepipeline_variables`,
+        the `return_data_name` is used to specify which one to return.
+
+        Parameters
+        ----------
+        outputs : "numpy" | "by_unit", default: "numpy"
+            How to return the data, by default "numpy"
+        return_subperiods_metadata: bool, default: False
+            Whether to also return metadata of subperiods used to compute the good periods
+            as dictionnaries per unit:
+                - subperiods_per_unit: unit_name -> list of n_subperiods subperiods (each subperiod is an array of dtype unit_period_dtype with 4 fields)
+                - periods_fp_per_unit: unit_name -> array of n_subperiods, false positive rates (refractory period violations) per subperiod
+                - periods_fn_per_unit: unit_name -> array of n_subperiods, false negative rates (amplitude cutoffs) per subperiod
+
+        Returns
+        -------
+        numpy.ndarray | dict | tuple
+            The periods in numpy or dictionnary by unit format,
+            or a tuple that contains the former as well as metadata of subperiods if return_subperiods_metadata is True.
+        """
+
+        good_periods = self.data["good_periods_per_unit"]
+
+        # list of dictionnaries; one dictionnary per segment
+        if outputs == "by_unit":
+            unit_ids = self.sorting_analyzer.unit_ids
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            data_by_units = {}
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                data_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    data_by_units[segment_index][unit_id] = all_data[inds]
+
+            return data_by_units
+
+        return (
+            self.data["subperiods_per_unit"],
+            self.data["periods_fp_per_unit"],
+            self.data["periods_fn_per_unit"],
+            good_periods,
+        )
 
     def compute_subperiods(
         self,
