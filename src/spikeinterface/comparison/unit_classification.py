@@ -61,86 +61,65 @@ def get_default_thresholds() -> dict:
         # ============================================================
         # WAVEFORM QUALITY THRESHOLDS (failures classify as NOISE)
         # ============================================================
-
         # Number of positive peaks (repolarization peaks after trough)
         # Good units typically have 1-2 peaks
         "num_positive_peaks": {"min": np.nan, "max": 2},
-
         # Number of negative peaks (troughs) in waveform
         # Good units typically have 1 main trough
         "num_negative_peaks": {"min": np.nan, "max": 1},
-
         # Peak to trough duration in SECONDS (from template_metrics)
         # Typical range: 0.0001-0.00115 s (100-1150 μs)
         "peak_to_trough_duration": {"min": 0.0001, "max": 0.00115},
-
         # Baseline flatness - max deviation as fraction of peak amplitude
         # Lower is better, typical threshold 0.3
         "waveform_baseline_flatness": {"min": np.nan, "max": 0.5},
-
         # Peak after trough to trough ratio - helps detect noise
         # High values indicate noise (ratio > 0.8 is suspicious)
         "peak_after_to_trough_ratio": {"min": np.nan, "max": 0.8},
-
         # Exponential decay constant for spatial spread
         # Values outside typical range indicate noise
         "exp_decay": {"min": 0.01, "max": 0.1},
-
         # ============================================================
         # SPIKE QUALITY THRESHOLDS (failures classify as MUA)
         # ============================================================
-
         # Median spike amplitude (in uV typically)
         # Lower bound ensures sufficient signal
         "amplitude_median": {"min": 40, "max": np.nan},
-
         # Signal-to-noise ratio (BombCell method: raw waveform max / baseline MAD)
         # Higher is better, minimum ensures reliable detection
         "snr_bombcell": {"min": 5, "max": np.nan},
-
         # Amplitude cutoff - estimates fraction of missing spikes
         # Lower is better (less missing), max 0.2 means <20% estimated missing
         "amplitude_cutoff": {"min": np.nan, "max": 0.2},
-
         # Minimum number of spikes
         # Ensures sufficient data for reliable metrics
         "num_spikes": {"min": 300, "max": np.nan},
-
         # Refractory period contamination rate
         # Lower is better, max typically 0.1 (10%)
         "rp_contamination": {"min": np.nan, "max": 0.1},
-
         # Presence ratio - fraction of recording where unit is active
         # Higher is better, ensures unit present throughout
         "presence_ratio": {"min": 0.7, "max": np.nan},
-
         # Drift MAD - median absolute deviation of drift in um
         # Lower is better, ensures stable unit location
         "drift_ptp": {"min": np.nan, "max": 100},
-
         # ============================================================
         # NON-SOMATIC DETECTION THRESHOLDS (optional)
         # ============================================================
-
         # These thresholds identify axonal/dendritic units by their waveform shape
         # Non-somatic (axonal) units have: large initial peak, narrow widths, small repolarization
-
         # Peak before to trough ratio - non-somatic have large initial peak relative to trough
         # If peak_before/trough > max, classify as non-somatic
         "peak_before_to_trough_ratio": {"min": np.nan, "max": 3},  # non-somatic if > max
-
         # Peak before width in MICROSECONDS - non-somatic have narrow initial peaks
         # If width < min, classify as non-somatic
         "peak_before_width": {"min": 150, "max": np.nan},  # non-somatic if < 150 μs
-
         # Trough width in MICROSECONDS - non-somatic have narrow troughs
         # If width < min, classify as non-somatic
         "trough_width": {"min": 200, "max": np.nan},  # non-somatic if < 200 μs
-
         # Peak before to peak after ratio - non-somatic have large initial peak vs small repolarization
         # If peak_before/peak_after > max, classify as non-somatic
         "peak_before_to_peak_after_ratio": {"min": np.nan, "max": 3},  # non-somatic if > max
-
         # Main peak to trough ratio - non-somatic have peak almost as large as trough
         # If max_peak/trough > max, classify as non-somatic (somatic units have trough >> peaks)
         "main_peak_to_trough_ratio": {"min": np.nan, "max": 0.8},  # non-somatic if > max
@@ -313,8 +292,16 @@ def classify_units(
         width_thresh_peak = thresholds.get("peak_before_width", {}).get("min", np.nan)
         width_thresh_trough = thresholds.get("trough_width", {}).get("min", np.nan)
 
-        narrow_peak = ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak) if not np.isnan(width_thresh_peak) else np.zeros(n_units, dtype=bool)
-        narrow_trough = ~np.isnan(trough_width) & (trough_width < width_thresh_trough) if not np.isnan(width_thresh_trough) else np.zeros(n_units, dtype=bool)
+        narrow_peak = (
+            ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak)
+            if not np.isnan(width_thresh_peak)
+            else np.zeros(n_units, dtype=bool)
+        )
+        narrow_trough = (
+            ~np.isnan(trough_width) & (trough_width < width_thresh_trough)
+            if not np.isnan(width_thresh_trough)
+            else np.zeros(n_units, dtype=bool)
+        )
 
         width_conditions = narrow_peak & narrow_trough
 
@@ -328,13 +315,25 @@ def classify_units(
         ratio_thresh_mpt = thresholds.get("main_peak_to_trough_ratio", {}).get("max", np.nan)
 
         # Large initial peak relative to trough
-        large_initial_peak = ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt) if not np.isnan(ratio_thresh_pbt) else np.zeros(n_units, dtype=bool)
+        large_initial_peak = (
+            ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt)
+            if not np.isnan(ratio_thresh_pbt)
+            else np.zeros(n_units, dtype=bool)
+        )
 
         # Large initial peak relative to repolarization peak
-        large_peak_ratio = ~np.isnan(peak_before_to_peak_after) & (peak_before_to_peak_after > ratio_thresh_pbpa) if not np.isnan(ratio_thresh_pbpa) else np.zeros(n_units, dtype=bool)
+        large_peak_ratio = (
+            ~np.isnan(peak_before_to_peak_after) & (peak_before_to_peak_after > ratio_thresh_pbpa)
+            if not np.isnan(ratio_thresh_pbpa)
+            else np.zeros(n_units, dtype=bool)
+        )
 
         # Main peak almost as large as trough (standalone condition)
-        large_main_peak = ~np.isnan(main_peak_to_trough) & (main_peak_to_trough > ratio_thresh_mpt) if not np.isnan(ratio_thresh_mpt) else np.zeros(n_units, dtype=bool)
+        large_main_peak = (
+            ~np.isnan(main_peak_to_trough) & (main_peak_to_trough > ratio_thresh_mpt)
+            if not np.isnan(ratio_thresh_mpt)
+            else np.zeros(n_units, dtype=bool)
+        )
 
         # Combined logic: (ratio AND width conditions) OR standalone ratio
         # Requires at least one ratio condition AND both width conditions, OR the standalone ratio

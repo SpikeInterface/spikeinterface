@@ -966,7 +966,7 @@ class AmplitudeCutoff(BaseMetric):
         "num_histogram_bins": 100,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
-        "plot_details": False, 
+        "plot_details": False,
     }
     metric_columns = {"amplitude_cutoff": float}
     metric_descriptions = {
