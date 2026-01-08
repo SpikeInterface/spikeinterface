@@ -138,7 +138,7 @@ def apply_curation_labels(
 
 def apply_curation(
     sorting_or_analyzer: BaseSorting | SortingAnalyzer,
-    curation_dict_or_model: dict | CurationModel | SequentialCuration,
+    curation_dict_or_model: dict | list | CurationModel | SequentialCuration,
     censor_ms: float | None = None,
     new_id_strategy: str = "append",
     merging_mode: str = "soft",
@@ -199,15 +199,19 @@ def apply_curation(
         sorting_or_analyzer, (BaseSorting, SortingAnalyzer)
     ), f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
     assert isinstance(
-        curation_dict_or_model, (dict, CurationModel, SequentialCuration)
+        curation_dict_or_model, (dict, list, CurationModel, SequentialCuration)
     ), f"`curation_dict_or_model` must be a dict, CurationModel or a SequentialCuration not an object of type {type(curation_dict_or_model)}"
     if isinstance(curation_dict_or_model, dict):
         curation_model = CurationModel(**curation_dict_or_model)
+    elif isinstance(curation_dict_or_model, list):
+        curation_model = SequentialCuration(curation_steps=curation_dict_or_model)
     else:
         curation_model = curation_dict_or_model.model_copy(deep=True)
 
     if isinstance(curation_model, SequentialCuration):
-        for single_curation_model in curation_model.curation_steps:
+        for c, single_curation_model in enumerate(curation_model.curation_steps):
+            if verbose:
+                print(f"Applying curation step: {c + 1} / {len(curation_model.curation_steps)}")
             sorting_or_analyzer = apply_curation(
                 sorting_or_analyzer,
                 single_curation_model,
@@ -220,7 +224,7 @@ def apply_curation(
             )
         return sorting_or_analyzer
 
-    if not np.array_equal(np.asarray(curation_model.unit_ids), sorting_or_analyzer.unit_ids):
+    if not set(curation_model.unit_ids) == set(sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
 
     # 1. Apply labels
