@@ -206,10 +206,183 @@ class ComputeCorrelograms(AnalyzerExtension):
         return self.data["ccgs"], self.data["bins"]
 
 
+
+class ComputeAutoCorrelograms(AnalyzerExtension):
+    """
+    Compute only auto correlograms of unit spike times.
+
+    Parameters
+    ----------
+    window_ms : float, default: 50.0
+        The window around the spike to compute the correlation in ms. For example,
+         if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
+    bin_ms : float, default: 1.0
+        The bin size in ms. This determines the bin size over which to
+        combine lags. For example, with a window size of -25 ms to 25 ms, and
+        bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
+    method : "auto" | "numpy" | "numba", default: "auto"
+         If "auto" and numba is installed, numba is used, otherwise numpy is used.
+
+    Returns
+    -------
+    correlogram : np.array
+        Auto Correlograms with shape (num_units, num_bins)
+    bins :  np.array
+        The bin edges in ms
+
+    Notes
+    -----
+    In the extracellular electrophysiology context, a correlogram
+    is a visualisation of the results of a cross-correlation
+    between two spike trains. The cross-correlation slides one spike train
+    along another sample-by-sample, taking the correlation at each 'lag'. This results
+    in a plot with 'lag' (i.e. time offset) on the x-axis and 'correlation'
+    (i.e. how similar to two spike trains are) on the y-axis. In this
+    implementation, the y-axis result is the 'counts' of spike matches per
+    time bin (rather than a computer correlation or covariance).
+
+    In the present implementation, a 'window' around spikes is first
+    specified. For example, if a window of 100 ms is taken, we will
+    take the correlation at lags from -50 ms to +50 ms around the spike peak.
+    In theory, we can have as many lags as we have samples. Often, this
+    visualisation is too high resolution and instead the lags are binned
+    (e.g. -50 to -45 ms, ..., -5 to 0 ms, 0 to 5 ms, ...., 45 to 50 ms).
+    When using counts as output, binning the lags involves adding up all counts across
+    a range of lags.
+
+
+    """
+
+    extension_name = "auto_correlograms"
+    depend_on = []
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = False
+
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
+        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+        return params
+
+    def _select_extension_data(self, unit_ids):
+        # filter metrics dataframe
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+        new_acgs = self.data["acgs"][unit_indices]
+        new_bins = self.data["bins"]
+        new_data = dict(ccgs=new_acgs, bins=new_bins)
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
+    ):
+        """
+        When two units are merged, their cross-correlograms with other units become the sum
+        of the previous cross-correlograms. More precisely, if units i and j get merged into
+        unit k, then the new unit's cross-correlogram with any other unit l is:
+            C_{k,l} = C_{i,l} + C_{j,l}
+            C_{l,k} = C_{l,k} + C_{l,j}
+        Here, we apply this formula to quickly compute correlograms for merged units.
+        """
+
+        can_apply_soft_method = True
+        if censor_ms is not None:
+            # if censor_ms has no effect, can apply "soft" method. Check if any spikes have been removed
+            for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
+                num_segments = new_sorting_analyzer.get_num_segments()
+                for segment_index in range(num_segments):
+                    merged_spike_train_length = len(
+                        new_sorting_analyzer.sorting.get_unit_spike_train(new_unit_id, segment_index=segment_index)
+                    )
+
+                    old_spike_train_lengths = len(
+                        np.concatenate(
+                            [
+                                self.sorting_analyzer.sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+                                for unit_id in merge_unit_group
+                            ]
+                        )
+                    )
+
+                    if merged_spike_train_length != old_spike_train_lengths:
+                        can_apply_soft_method = False
+                        break
+
+        if can_apply_soft_method is False:
+            new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
+            new_data = dict(acgs=new_acgs, bins=new_bins)
+        else:
+            # Make a transformation dict, which tells us how unit_indices from the
+            # old to the new sorter are mapped.
+            old_to_new_unit_index_map = {}
+            for old_unit in self.sorting_analyzer.unit_ids:
+                old_unit_index = self.sorting_analyzer.sorting.id_to_index(old_unit)
+                unit_involved_in_merge = False
+                for merge_unit_group, new_unit_id in zip(merge_unit_groups, new_unit_ids):
+                    new_unit_index = new_sorting_analyzer.sorting.id_to_index(new_unit_id)
+                    # check if the old_unit is involved in a merge
+                    if old_unit in merge_unit_group:
+                        # check if it is mapped to itself
+                        if old_unit == new_unit_id:
+                            old_to_new_unit_index_map[old_unit_index] = new_unit_index
+                        # or to a unit_id outwith the old ones
+                        elif new_unit_id not in self.sorting_analyzer.unit_ids:
+                            if new_unit_index not in old_to_new_unit_index_map.values():
+                                old_to_new_unit_index_map[old_unit_index] = new_unit_index
+                        unit_involved_in_merge = True
+                if unit_involved_in_merge is False:
+                    old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
+
+            correlograms, new_bins = deepcopy(self.get_data())
+
+            for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
+                merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
+
+                # Sum unit rows of the correlogram matrix: C_{k,l} = C_{i,l} + C_{j,l}
+                # and place this sum in all indices from the merge group
+                new_col = np.sum(correlograms[merge_unit_group_indices, :, :], axis=0)
+                # correlograms[merge_unit_group_indices[0], :, :] = new_col
+                correlograms[merge_unit_group_indices, :, :] = new_col
+                # correlograms[merge_unit_group_indices[1:], :, :] = 0
+
+                # Sum unit columns of the correlogram matrix: C_{l,k} = C_{l,i} + C_{l,j}
+                # and put this sum in all indices from the merge group
+                new_row = np.sum(correlograms[:, merge_unit_group_indices, :], axis=1)
+
+                for merge_unit_group_index in merge_unit_group_indices:
+                    correlograms[:, merge_unit_group_index, :] = new_row
+
+            new_correlograms = np.zeros(
+                (len(new_sorting_analyzer.unit_ids), len(new_sorting_analyzer.unit_ids), correlograms.shape[2])
+            )
+            for old_index_1, new_index_1 in old_to_new_unit_index_map.items():
+                for old_index_2, new_index_2 in old_to_new_unit_index_map.items():
+                    new_correlograms[new_index_1, new_index_2, :] = correlograms[old_index_1, old_index_2, :]
+                    new_correlograms[new_index_2, new_index_1, :] = correlograms[old_index_2, old_index_1, :]
+
+            new_data = dict(ccgs=new_correlograms, bins=new_bins)
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # TODO: for now we just copy
+        new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
+        new_data = dict(acgs=new_acgs, bins=new_bins)
+        return new_data
+
+    def _run(self, verbose=False):
+        acgs, bins = _compute_auto_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
+        self.data["acgs"] = acgs
+        self.data["bins"] = bins
+
+    def _get_data(self):
+        return self.data["acgs"], self.data["bins"]
+
+
+
+
 register_result_extension(ComputeCorrelograms)
-#register_result_extension(ComputeAutoCorrelograms)
+register_result_extension(ComputeAutoCorrelograms)
 compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
-#compute_auto_correlograms_sorting_analyzer = ComputeAutoCorrelograms.function_factory()
+compute_auto_correlograms_sorting_analyzer = ComputeAutoCorrelograms.function_factory()
 
 
 
@@ -234,11 +407,6 @@ def compute_correlograms(
         return _compute_correlograms_on_sorting(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
-
-
-compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
-#compute_auto_correlograms.__doc__ = compute_auto_correlograms_sorting_analyzer.__doc__
-
 
 def _make_bins(sorting, window_ms, bin_ms) -> tuple[np.ndarray, int, int]:
     """
@@ -831,22 +999,20 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
 
     correlograms = np.zeros((num_units, num_bins), dtype="int64")
 
-    for unit_id in range(num_units):
-        unit_mask = spike_unit_indices == unit_id
+    for unit_ind in range(num_units):
+        unit_mask = spike_unit_indices == unit_ind
         spike_times_unit = spike_times[unit_mask]
-        spike_unit_indices_unit = spike_unit_indices[unit_mask]
 
         # At a given shift, the mask precises which spikes have matching spikes
         # within the correlogram time window.
-        mask = np.ones_like(spike_times, dtype="bool")
+        mask = np.ones_like(spike_times_unit, dtype="bool")
 
         # The loop continues as long as there is at least one
         # spike with a matching spike.
         shift = 1
         while mask[:-shift].any():
             # Number of time samples between spike i and spike i+shift.
-            spike_diff = spike_times[shift:] - spike_times[:-shift]
-
+            spike_diff = spike_times_unit[shift:] - spike_times_unit[:-shift]
             for sign in (-1, 1):
                 # Binarize the delays between spike i and spike i+shift for negative and positive
                 # the operator // is np.floor_divide
@@ -863,19 +1029,13 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
                 # Find the indices in the raveled correlograms array that need
                 # to be incremented, taking into account the spike unit labels.
                 if sign == 1:
-                    indices = np.ravel_multi_index(
-                        (spike_unit_indices[+shift:][m], spike_unit_indices[:-shift][m], spike_diff_b[m] + num_half_bins),
-                        correlograms.shape,
-                    )
+                    indices = spike_diff_b[m] + num_half_bins
                 else:
-                    indices = np.ravel_multi_index(
-                        (spike_unit_indices[:-shift][m], spike_unit_indices[+shift:][m], spike_diff_b[m] + num_half_bins),
-                        correlograms.shape,
-                    )
+                    indices = spike_diff_b[m] + num_half_bins
 
                 # Increment the matching spikes in the correlograms array.
                 bbins = np.bincount(indices)
-                correlograms.ravel()[: len(bbins)] += bbins
+                correlograms[unit_ind, :len(bbins)] += bbins
 
                 if sign == 1:
                     # For positive sign, the end bin is < num_half_bins (e.g.
@@ -1355,3 +1515,5 @@ def compute_acgs_3d(
 
 
 compute_acgs_3d.__doc__ = compute_acgs_3d_sorting_analyzer.__doc__
+compute_correlograms.__doc__ = compute_correlograms_sorting_analyzer.__doc__
+compute_auto_correlograms.__doc__ = compute_auto_correlograms_sorting_analyzer.__doc__
