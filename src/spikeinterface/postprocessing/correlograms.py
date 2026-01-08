@@ -206,7 +206,6 @@ class ComputeCorrelograms(AnalyzerExtension):
         return self.data["ccgs"], self.data["bins"]
 
 
-
 class ComputeAutoCorrelograms(AnalyzerExtension):
     """
     Compute only auto correlograms of unit spike times.
@@ -347,13 +346,10 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         return self.data["acgs"], self.data["bins"]
 
 
-
-
 register_result_extension(ComputeCorrelograms)
 register_result_extension(ComputeAutoCorrelograms)
 compute_correlograms_sorting_analyzer = ComputeCorrelograms.function_factory()
 compute_auto_correlograms_sorting_analyzer = ComputeAutoCorrelograms.function_factory()
-
 
 
 def compute_correlograms(
@@ -377,6 +373,7 @@ def compute_correlograms(
         return _compute_correlograms_on_sorting(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
+
 
 def _make_bins(sorting, window_ms, bin_ms) -> tuple[np.ndarray, int, int]:
     """
@@ -744,7 +741,6 @@ if HAVE_NUMBA:
                 bin = diff // bin_size
 
                 correlograms[spike_unit_indices[i], spike_unit_indices[j], num_half_bins + bin] += 1
-    
 
     @numba.jit(
         nopython=True,
@@ -787,7 +783,7 @@ if HAVE_NUMBA:
             for j in range(start_j, spike_times.size):
                 if i == j:
                     continue
-            
+
                 if spike_unit_indices[i] != spike_unit_indices[j]:
                     continue
 
@@ -820,6 +816,7 @@ if HAVE_NUMBA:
 
 ###### ACG area ######
 
+
 def compute_auto_correlograms(
     sorting_analyzer_or_sorting,
     window_ms: float = 50.0,
@@ -841,6 +838,7 @@ def compute_auto_correlograms(
         return _compute_auto_correlograms_on_sorting(
             sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
         )
+
 
 def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto"):
     """
@@ -1005,7 +1003,7 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
 
                 # Increment the matching spikes in the correlograms array.
                 bbins = np.bincount(indices)
-                correlograms[unit_ind, :len(bbins)] += bbins
+                correlograms[unit_ind, : len(bbins)] += bbins
 
                 if sign == 1:
                     # For positive sign, the end bin is < num_half_bins (e.g.
@@ -1072,8 +1070,8 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size):
     return correlograms
 
 
-
 ###### 3D ACG area ######
+
 
 class ComputeACG3D(AnalyzerExtension):
     """
