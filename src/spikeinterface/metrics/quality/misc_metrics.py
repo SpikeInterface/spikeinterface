@@ -1220,27 +1220,37 @@ def compute_sd_ratio(
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
     spikes = sorting.to_spike_vector()
+    
     sd_ratio = {}
+
+    segment_indices = {}
+
+    for segment_index in range(sorting.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        segment_indices[segment_index] = slice(s0, s1)
+
     for unit_id in unit_ids:
         unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
 
         spk_amp = []
 
-        for segment_index in range(sorting_analyzer.get_num_segments()):
+        for segment_index in range(sorting.get_num_segments()):
+            
+            sub_spikes = spikes[segment_indices[segment_index]]
+            sub_amplitudes = spike_amplitudes[segment_indices[segment_index]]
 
-            spike_mask = (spikes["unit_index"] == unit_index) & (spikes["segment_index"] == segment_index)
-            spike_train = spikes[spike_mask]["sample_index"].astype(np.int64, copy=False)
-            amplitudes = spike_amplitudes[spike_mask]
+            spike_mask = (sub_spikes["unit_index"] == unit_index)
+            spike_train = sub_spikes[spike_mask]["sample_index"]
+            amplitudes = sub_amplitudes[spike_mask]
 
             censored_indices = find_duplicated_spikes(
                 spike_train,
                 censored_period,
                 method="keep_first_iterative",
             )
-
             spk_amp.append(np.delete(amplitudes, censored_indices))
 
-        spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
+        spk_amp = np.concatenate(spk_amp)
 
         if len(spk_amp) == 0:
             sd_ratio[unit_id] = np.nan
@@ -1255,6 +1265,8 @@ def compute_sd_ratio(
             best_channel = best_channels[unit_id]
             std_noise = noise_levels[best_channel]
 
+            n_samples = sorting_analyzer.get_total_samples()
+
             if correct_for_template_itself:
                 # template = sorting_analyzer.get_template(unit_id, force_dense=True)[:, best_channel]
 
@@ -1263,7 +1275,7 @@ def compute_sd_ratio(
 
                 # Computing the variance of a trace that is all 0 and n_spikes non-overlapping template.
                 # TODO: Take into account that templates for different segments might differ.
-                p = nsamples * n_spikes[unit_id] / sorting_analyzer.get_total_samples()
+                p = nsamples * n_spikes[unit_id] / n_samples
                 total_variance = p * np.mean(template**2) - p**2 * np.mean(template) ** 2
 
                 std_noise = np.sqrt(std_noise**2 - total_variance)
