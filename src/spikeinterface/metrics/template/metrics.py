@@ -195,7 +195,7 @@ def get_trough_and_peak_idx(
         peaks_after = empty_dict.copy()
 
     # Quick visualization (set to True for debugging)
-    _plot = False
+    _plot = True #QQ set to false
     if _plot:
         import matplotlib.pyplot as plt
 

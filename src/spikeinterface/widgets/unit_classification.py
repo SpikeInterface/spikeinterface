@@ -157,14 +157,18 @@ class ClassificationHistogramsWidget(BaseWidget):
             ax.hist(values, bins=30, color=colors[idx % 10], alpha=0.7, edgecolor="black", density=True)
 
             thresh = thresholds.get(metric_name, {})
+            has_thresh = False
             if not np.isnan(thresh.get("min", np.nan)):
                 ax.axvline(thresh["min"], color="red", ls="--", lw=2, label=f"min={thresh['min']:.2g}")
+                has_thresh = True
             if not np.isnan(thresh.get("max", np.nan)):
                 ax.axvline(thresh["max"], color="blue", ls="--", lw=2, label=f"max={thresh['max']:.2g}")
+                has_thresh = True
 
             ax.set_xlabel(metric_name)
             ax.set_ylabel("Density")
-            ax.legend(fontsize=8, loc="upper right")
+            if has_thresh:
+                ax.legend(fontsize=8, loc="upper right")
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
 
@@ -321,6 +325,7 @@ class UpsetPlotWidget(BaseWidget):
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import warnings
         import matplotlib.pyplot as plt
         import pandas as pd
 
@@ -332,7 +337,9 @@ class UpsetPlotWidget(BaseWidget):
         min_subset_size = dp.min_subset_size
 
         try:
-            from upsetplot import UpSet, from_memberships
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning, module="upsetplot")
+                from upsetplot import UpSet, from_memberships
         except ImportError:
             fig, ax = plt.subplots(1, 1, figsize=(10, 6))
             ax.text(0.5, 0.5,
@@ -375,14 +382,16 @@ class UpsetPlotWidget(BaseWidget):
             if not memberships:
                 continue
 
-            upset_data = from_memberships(memberships)
-            upset_data = upset_data[upset_data >= min_subset_size]
-            if len(upset_data) == 0:
-                continue
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning, module="upsetplot")
+                upset_data = from_memberships(memberships)
+                upset_data = upset_data[upset_data >= min_subset_size]
+                if len(upset_data) == 0:
+                    continue
 
-            fig = plt.figure(figsize=(12, 6))
-            UpSet(upset_data, subset_size="count", show_counts=True,
-                  sort_by="cardinality", sort_categories_by="cardinality").plot(fig=fig)
+                fig = plt.figure(figsize=(12, 6))
+                UpSet(upset_data, subset_size="count", show_counts=True,
+                      sort_by="cardinality", sort_categories_by="cardinality").plot(fig=fig)
             fig.suptitle(f"{unit_type_label} (n={n_units})", fontsize=14, y=1.02)
             figures.append(fig)
             axes_list.append(fig.axes)
