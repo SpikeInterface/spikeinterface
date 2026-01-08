@@ -10,7 +10,6 @@ try:
 except:
     HAVE_PSUTIL = False
 
-from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -479,7 +478,14 @@ def remove_empty_templates(templates):
 
 
 def create_sorting_analyzer_with_existing_templates(
-    sorting, recording, templates, remove_empty=True, noise_levels=None, amplitude_scalings=None
+    sorting,
+    recording,
+    templates,
+    remove_empty=True,
+    noise_levels=None,
+    amplitude_scalings=None,
+    spike_amplitudes=None,
+    spike_locations=None,
 ):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
@@ -533,6 +539,30 @@ def create_sorting_analyzer_with_existing_templates(
         sa.extensions["amplitude_scalings"].data["amplitude_scalings"] = amplitude_scalings
         sa.extensions["amplitude_scalings"].run_info["run_completed"] = True
         sa.extensions["amplitude_scalings"].run_info["runtime_s"] = 0
+
+    if spike_amplitudes is not None:
+        from spikeinterface.postprocessing.spike_amplitudes import ComputeSpikeAmplitudes
+
+        sa.extensions["spike_amplitudes"] = ComputeSpikeAmplitudes(sa)
+        sa.extensions["spike_amplitudes"].params = dict()
+        sa.extensions["spike_amplitudes"].data["amplitudes"] = spike_amplitudes
+        sa.extensions["spike_amplitudes"].run_info["run_completed"] = True
+        sa.extensions["spike_amplitudes"].run_info["runtime_s"] = 0
+
+    if spike_locations is not None:
+        from spikeinterface.postprocessing.spike_locations import ComputeSpikeLocations
+
+        sa.extensions["spike_locations"] = ComputeSpikeLocations(sa)
+        sa.extensions["spike_locations"].params = dict(
+            ms_before=0.5,
+            ms_after=0.5,
+            spike_retriver_kwargs=None,
+            method="center_of_mass",
+            method_kwargs={},
+        )
+        sa.extensions["spike_locations"].data["spike_locations"] = spike_locations
+        sa.extensions["spike_locations"].run_info["run_completed"] = True
+        sa.extensions["spike_locations"].run_info["runtime_s"] = 0
 
     return sa
 
