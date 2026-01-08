@@ -237,7 +237,7 @@ class BaseRecordingSnippets(BaseExtractor):
         probes_info = []
         for probe in probegroup.probes:
             probes_info.append(probe.annotations)
-        self.annotate(probes_info=probes_info)
+        sub_recording.annotate(probes_info=probes_info)
 
         return sub_recording
 
@@ -264,6 +264,12 @@ class BaseRecordingSnippets(BaseExtractor):
                 probegroup.add_probe(probe)
         else:
             probegroup = ProbeGroup.from_numpy(arr)
+
+            if "probes_info" in self.get_annotation_keys():
+                probes_info = self.get_annotation("probes_info")
+                for probe, probe_info in zip(probegroup.probes, probes_info):
+                    probe.annotations = probe_info
+
             for probe_index, probe in enumerate(probegroup.probes):
                 contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
                 if contour is not None:
