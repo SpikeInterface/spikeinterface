@@ -6,7 +6,9 @@ from scipy.signal import find_peaks, savgol_filter
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smooth=True, smooth_window_frac=0.1, smooth_polyorder=3):
+def get_trough_and_peak_idx(
+    template, min_thresh_detect_peaks_troughs=0.4, smooth=True, smooth_window_frac=0.1, smooth_polyorder=3
+):
     """
     Detect troughs and peaks in a template waveform and return detailed information
     about each detected feature.
@@ -106,16 +108,12 @@ def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smoot
         template_before = template[:main_trough_loc]
 
         # Try with original prominence
-        peak_locs_before, peak_props_before = find_peaks(
-            template_before, prominence=min_prominence, width=0
-        )
+        peak_locs_before, peak_props_before = find_peaks(template_before, prominence=min_prominence, width=0)
 
         # If no peaks found, try with lower prominence (keep only max peak)
         if len(peak_locs_before) == 0:
             lower_prominence = 0.075 * min_thresh_detect_peaks_troughs * np.nanmax(np.abs(template))
-            peak_locs_before, peak_props_before = find_peaks(
-                template_before, prominence=lower_prominence, width=0
-            )
+            peak_locs_before, peak_props_before = find_peaks(template_before, prominence=lower_prominence, width=0)
             # Keep only the most prominent peak when using lower threshold
             if len(peak_locs_before) > 1:
                 prominences = peak_props_before.get("prominences", np.array([]))
@@ -154,16 +152,12 @@ def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smoot
         template_after = template[main_trough_loc:]
 
         # Try with original prominence
-        peak_locs_after, peak_props_after = find_peaks(
-            template_after, prominence=min_prominence, width=0
-        )
+        peak_locs_after, peak_props_after = find_peaks(template_after, prominence=min_prominence, width=0)
 
         # If no peaks found, try with lower prominence (keep only max peak)
         if len(peak_locs_after) == 0:
             lower_prominence = 0.075 * min_thresh_detect_peaks_troughs * np.nanmax(np.abs(template))
-            peak_locs_after, peak_props_after = find_peaks(
-                template_after, prominence=lower_prominence, width=0
-            )
+            peak_locs_after, peak_props_after = find_peaks(template_after, prominence=lower_prominence, width=0)
             # Keep only the most prominent peak when using lower threshold
             if len(peak_locs_after) > 1:
                 prominences = peak_props_after.get("prominences", np.array([]))
@@ -220,24 +214,65 @@ def get_trough_and_peak_idx(template, min_thresh_detect_peaks_troughs=0.4, smoot
         # Plot all detected troughs
         ax.scatter(troughs["indices"], troughs["values"], c="blue", s=50, marker="v", zorder=5, label="troughs")
         if troughs["main_loc"] is not None:
-            ax.scatter(troughs["main_loc"], template[troughs["main_loc"]], c="blue", s=150, marker="v",
-                       edgecolors="red", linewidths=2, zorder=6, label="main trough")
+            ax.scatter(
+                troughs["main_loc"],
+                template[troughs["main_loc"]],
+                c="blue",
+                s=150,
+                marker="v",
+                edgecolors="red",
+                linewidths=2,
+                zorder=6,
+                label="main trough",
+            )
 
         # Plot all peaks before
         if len(peaks_before["indices"]) > 0:
-            ax.scatter(peaks_before["indices"], peaks_before["values"], c="green", s=50, marker="^",
-                       zorder=5, label="peaks before")
+            ax.scatter(
+                peaks_before["indices"],
+                peaks_before["values"],
+                c="green",
+                s=50,
+                marker="^",
+                zorder=5,
+                label="peaks before",
+            )
             if peaks_before["main_loc"] is not None:
-                ax.scatter(peaks_before["main_loc"], template[peaks_before["main_loc"]], c="green", s=150,
-                           marker="^", edgecolors="red", linewidths=2, zorder=6, label="main peak before")
+                ax.scatter(
+                    peaks_before["main_loc"],
+                    template[peaks_before["main_loc"]],
+                    c="green",
+                    s=150,
+                    marker="^",
+                    edgecolors="red",
+                    linewidths=2,
+                    zorder=6,
+                    label="main peak before",
+                )
 
         # Plot all peaks after
         if len(peaks_after["indices"]) > 0:
-            ax.scatter(peaks_after["indices"], peaks_after["values"], c="orange", s=50, marker="^",
-                       zorder=5, label="peaks after")
+            ax.scatter(
+                peaks_after["indices"],
+                peaks_after["values"],
+                c="orange",
+                s=50,
+                marker="^",
+                zorder=5,
+                label="peaks after",
+            )
             if peaks_after["main_loc"] is not None:
-                ax.scatter(peaks_after["main_loc"], template[peaks_after["main_loc"]], c="orange", s=150,
-                           marker="^", edgecolors="red", linewidths=2, zorder=6, label="main peak after")
+                ax.scatter(
+                    peaks_after["main_loc"],
+                    template[peaks_after["main_loc"]],
+                    c="orange",
+                    s=150,
+                    marker="^",
+                    edgecolors="red",
+                    linewidths=2,
+                    zorder=6,
+                    label="main peak after",
+                )
 
         ax.axhline(0, color="gray", ls="-", alpha=0.3)
         ax.set_xlabel("Sample")
@@ -369,7 +404,14 @@ def get_waveform_ratios(template, troughs, peaks_before, peaks_after, **kwargs):
         "peak_before_to_trough_ratio": safe_ratio(peak_before_amp, trough_amp),
         "peak_after_to_trough_ratio": safe_ratio(peak_after_amp, trough_amp),
         "peak_before_to_peak_after_ratio": safe_ratio(peak_before_amp, peak_after_amp),
-        "main_peak_to_trough_ratio": safe_ratio(max(peak_before_amp, peak_after_amp) if not (np.isnan(peak_before_amp) and np.isnan(peak_after_amp)) else np.nan, trough_amp),
+        "main_peak_to_trough_ratio": safe_ratio(
+            (
+                max(peak_before_amp, peak_after_amp)
+                if not (np.isnan(peak_before_amp) and np.isnan(peak_after_amp))
+                else np.nan
+            ),
+            trough_amp,
+        ),
     }
 
     return ratios
@@ -455,6 +497,7 @@ def get_waveform_widths(template, sampling_frequency, troughs, peaks_before, pea
         - "peak_before_width_us": width of main peak before trough in microseconds
         - "peak_after_width_us": width of main peak after trough in microseconds
     """
+
     def get_main_width(feature_dict):
         if feature_dict["main_idx"] is None:
             return np.nan
@@ -1186,9 +1229,12 @@ def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
         num_positive, num_negative = get_number_of_peaks(
-            template_single, sampling_frequency,
-            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
-            **metric_params
+            template_single,
+            sampling_frequency,
+            troughs_info[unit_id],
+            peaks_before_info[unit_id],
+            peaks_after_info[unit_id],
+            **metric_params,
         )
         num_positive_peaks_dict[unit_id] = num_positive
         num_negative_peaks_dict[unit_id] = num_negative
@@ -1217,9 +1263,12 @@ def _waveform_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **m
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
         value = get_waveform_duration(
-            template_single, sampling_frequency,
-            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
-            **metric_params
+            template_single,
+            sampling_frequency,
+            troughs_info[unit_id],
+            peaks_before_info[unit_id],
+            peaks_after_info[unit_id],
+            **metric_params,
         )
         result[unit_id] = value
     return result
@@ -1237,10 +1286,15 @@ class WaveformDuration(BaseMetric):
 
 
 def _waveform_ratios_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
-    waveform_ratios_result = namedtuple("WaveformRatiosResult", [
-        "peak_before_to_trough_ratio", "peak_after_to_trough_ratio",
-        "peak_before_to_peak_after_ratio", "main_peak_to_trough_ratio"
-    ])
+    waveform_ratios_result = namedtuple(
+        "WaveformRatiosResult",
+        [
+            "peak_before_to_trough_ratio",
+            "peak_after_to_trough_ratio",
+            "peak_before_to_peak_after_ratio",
+            "main_peak_to_trough_ratio",
+        ],
+    )
     peak_before_to_trough = {}
     peak_after_to_trough = {}
     peak_before_to_peak_after = {}
@@ -1253,8 +1307,10 @@ def _waveform_ratios_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
         template_single = templates_single[unit_index]
         ratios = get_waveform_ratios(
             template_single,
-            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
-            **metric_params
+            troughs_info[unit_id],
+            peaks_before_info[unit_id],
+            peaks_after_info[unit_id],
+            **metric_params,
         )
         peak_before_to_trough[unit_id] = ratios["peak_before_to_trough_ratio"]
         peak_after_to_trough[unit_id] = ratios["peak_after_to_trough_ratio"]
@@ -1264,7 +1320,7 @@ def _waveform_ratios_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
         peak_before_to_trough_ratio=peak_before_to_trough,
         peak_after_to_trough_ratio=peak_after_to_trough,
         peak_before_to_peak_after_ratio=peak_before_to_peak_after,
-        main_peak_to_trough_ratio=main_peak_to_trough
+        main_peak_to_trough_ratio=main_peak_to_trough,
     )
 
 
@@ -1288,9 +1344,9 @@ class WaveformRatios(BaseMetric):
 
 
 def _waveform_widths_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
-    waveform_widths_result = namedtuple("WaveformWidthsResult", [
-        "trough_width", "peak_before_width", "peak_after_width"
-    ])
+    waveform_widths_result = namedtuple(
+        "WaveformWidthsResult", ["trough_width", "peak_before_width", "peak_after_width"]
+    )
     trough_width_dict = {}
     peak_before_width_dict = {}
     peak_after_width_dict = {}
@@ -1302,17 +1358,18 @@ def _waveform_widths_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
         widths = get_waveform_widths(
-            template_single, sampling_frequency,
-            troughs_info[unit_id], peaks_before_info[unit_id], peaks_after_info[unit_id],
-            **metric_params
+            template_single,
+            sampling_frequency,
+            troughs_info[unit_id],
+            peaks_before_info[unit_id],
+            peaks_after_info[unit_id],
+            **metric_params,
         )
         trough_width_dict[unit_id] = widths["trough_width_us"]
         peak_before_width_dict[unit_id] = widths["peak_before_width_us"]
         peak_after_width_dict[unit_id] = widths["peak_after_width_us"]
     return waveform_widths_result(
-        trough_width=trough_width_dict,
-        peak_before_width=peak_before_width_dict,
-        peak_after_width=peak_after_width_dict
+        trough_width=trough_width_dict, peak_before_width=peak_before_width_dict, peak_after_width=peak_after_width_dict
     )
 
 
@@ -1429,8 +1486,10 @@ class ExpDecay(BaseMetric):
     }
     metric_columns = {"exp_decay": float}
     metric_descriptions = {
-        "exp_decay": ("Spatial decay of the template amplitude over distance from the extremum channel (1/um). "
-                      "Uses exponential or linear fit based on linear_fit parameter.")
+        "exp_decay": (
+            "Spatial decay of the template amplitude over distance from the extremum channel (1/um). "
+            "Uses exponential or linear fit based on linear_fit parameter."
+        )
     }
     needs_tmp_data = True
 
