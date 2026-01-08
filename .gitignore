@@ -145,11 +145,4 @@ test_folder/
 # Mac OS
 .DS_Store
 test_data.json
-analyzer_TDC_binary/
-CLAUDE.md
-playground.ipynbd
-playground.ipynb
-analyzer_TDC_binary/
-spykingcircus2_output/
-kilosort4_output/
-playground2.ipynb
+
