@@ -25,12 +25,22 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     num_segs = sorting.get_num_segments()
 
     num_spikes = {}
-    for unit_id in unit_ids:
-        n = 0
-        for segment_index in range(num_segs):
-            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            n += st.size
-        num_spikes[unit_id] = n
+    
+    # for unit_id in unit_ids:
+    #     n = 0
+    #     for segment_index in range(num_segs):
+    #         st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+    #         n += st.size
+    #     num_spikes[unit_id] = n
+
+    spikes = sorting.to_spike_vector()
+    unit_indices, total_counts = np.unique(spikes['unit_index'], return_counts=True)
+    for unit_ind, unit_id in enumerate(unit_ids):
+        if unit_ind in unit_indices:
+            idx = np.flatnonzero(unit_indices == unit_ind)
+            num_spikes[unit_id] = total_counts[idx]
+        else:
+            num_spikes[unit_id] = 0
 
     return num_spikes
 
