@@ -2633,6 +2633,7 @@ class AnalyzerExtension:
                     extension_group.create_dataset(
                         name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
                     )
+                    extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):

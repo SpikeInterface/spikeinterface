@@ -350,7 +350,7 @@ def compute_refrac_period_violations(
 
     fs = sorting_analyzer.sampling_frequency
     num_units = len(sorting_analyzer.unit_ids)
-    num_segments = sorting_analyzer.get_num_segments()
+    num_segments = sorting.get_num_segments()
 
     spikes = sorting.to_spike_vector(concatenated=False)
 
@@ -849,7 +849,6 @@ def compute_amplitude_cutoffs(
         amplitudes = amplitudes_by_units[unit_id]
         if invert_amplitudes:
             amplitudes = -amplitudes
-
         all_fraction_missing[unit_id] = amplitude_cutoff(
             amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
         )
