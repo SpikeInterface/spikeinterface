@@ -215,7 +215,7 @@ def compute_correlograms(
     window_ms: float = 50.0,
     bin_ms: float = 1.0,
     method: str = "auto",
-    fast_mode: bool = True,
+    fast_mode: bool = False,
 ):
     """
     Compute correlograms using Numba or Numpy.
