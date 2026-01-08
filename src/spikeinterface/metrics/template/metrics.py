@@ -195,7 +195,7 @@ def get_trough_and_peak_idx(
         peaks_after = empty_dict.copy()
 
     # Quick visualization (set to True for debugging)
-    _plot = True #QQ set to false
+    _plot = True  # QQ set to false
     if _plot:
         import matplotlib.pyplot as plt
 
@@ -555,7 +555,6 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
         return np.nan
     ptv = (peak_idx - trough_idx) / sampling_frequency
     return ptv
-
 
 
 def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
