@@ -382,7 +382,7 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size, fast_mode):
     return correlograms
 
 
-def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, fast_mode):
+def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, fast_mode=False):
     """
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -399,7 +399,7 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
-    fast_mode : bool
+    fast_mode : bool, default: False
         If True, use faster implementations (currently only if method is 'numba'),
         at the cost of possible minor numerical differences.
 
