@@ -311,55 +311,25 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
             new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
             new_data = dict(acgs=new_acgs, bins=new_bins)
         else:
-            # Make a transformation dict, which tells us how unit_indices from the
-            # old to the new sorter are mapped.
-            old_to_new_unit_index_map = {}
-            for old_unit in self.sorting_analyzer.unit_ids:
-                old_unit_index = self.sorting_analyzer.sorting.id_to_index(old_unit)
-                unit_involved_in_merge = False
-                for merge_unit_group, new_unit_id in zip(merge_unit_groups, new_unit_ids):
-                    new_unit_index = new_sorting_analyzer.sorting.id_to_index(new_unit_id)
-                    # check if the old_unit is involved in a merge
-                    if old_unit in merge_unit_group:
-                        # check if it is mapped to itself
-                        if old_unit == new_unit_id:
-                            old_to_new_unit_index_map[old_unit_index] = new_unit_index
-                        # or to a unit_id outwith the old ones
-                        elif new_unit_id not in self.sorting_analyzer.unit_ids:
-                            if new_unit_index not in old_to_new_unit_index_map.values():
-                                old_to_new_unit_index_map[old_unit_index] = new_unit_index
-                        unit_involved_in_merge = True
-                if unit_involved_in_merge is False:
-                    old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
+            new_bins = self.data["bins"]
+            all_new_units = new_sorting_analyzer.unit_ids
+            num_dims = len(self.data["bins"])
+            arr = self.data["acgs"]
+            new_acgs = np.zeros((len(all_new_units), num_dims), dtype=np.int64)
 
-            correlograms, new_bins = deepcopy(self.get_data())
+            # compute all new isi at once
+            new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
+            only_new_acgs, _ = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
 
-            for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
-                merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
+            for unit_ind, unit_id in enumerate(all_new_units):
+                if unit_id not in new_unit_ids:
+                    keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                    new_acgs[unit_ind, :] = arr[keep_unit_index, :]
+                else:
+                    new_unit_index = new_sorting.id_to_index(unit_id)
+                    new_acgs[unit_ind, :] = only_new_acgs[new_unit_index, :]
 
-                # Sum unit rows of the correlogram matrix: C_{k,l} = C_{i,l} + C_{j,l}
-                # and place this sum in all indices from the merge group
-                new_col = np.sum(correlograms[merge_unit_group_indices, :, :], axis=0)
-                # correlograms[merge_unit_group_indices[0], :, :] = new_col
-                correlograms[merge_unit_group_indices, :, :] = new_col
-                # correlograms[merge_unit_group_indices[1:], :, :] = 0
-
-                # Sum unit columns of the correlogram matrix: C_{l,k} = C_{l,i} + C_{l,j}
-                # and put this sum in all indices from the merge group
-                new_row = np.sum(correlograms[:, merge_unit_group_indices, :], axis=1)
-
-                for merge_unit_group_index in merge_unit_group_indices:
-                    correlograms[:, merge_unit_group_index, :] = new_row
-
-            new_correlograms = np.zeros(
-                (len(new_sorting_analyzer.unit_ids), len(new_sorting_analyzer.unit_ids), correlograms.shape[2])
-            )
-            for old_index_1, new_index_1 in old_to_new_unit_index_map.items():
-                for old_index_2, new_index_2 in old_to_new_unit_index_map.items():
-                    new_correlograms[new_index_1, new_index_2, :] = correlograms[old_index_1, old_index_2, :]
-                    new_correlograms[new_index_2, new_index_1, :] = correlograms[old_index_2, old_index_1, :]
-
-            new_data = dict(ccgs=new_correlograms, bins=new_bins)
+            new_data = dict(acgs=new_acgs, bins=new_bins)
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
