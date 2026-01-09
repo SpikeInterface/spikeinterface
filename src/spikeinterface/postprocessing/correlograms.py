@@ -282,51 +282,24 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         Here, we apply this formula to quickly compute correlograms for merged units.
         """
 
-        can_apply_soft_method = True
-        if censor_ms is not None:
-            # if censor_ms has no effect, can apply "soft" method. Check if any spikes have been removed
-            for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
-                num_segments = new_sorting_analyzer.get_num_segments()
-                for segment_index in range(num_segments):
-                    merged_spike_train_length = len(
-                        new_sorting_analyzer.sorting.get_unit_spike_train(new_unit_id, segment_index=segment_index)
-                    )
+        new_bins = self.data["bins"]
+        all_new_units = new_sorting_analyzer.unit_ids
+        arr = self.data["acgs"]
 
-                    old_spike_train_lengths = len(
-                        np.concatenate(
-                            [
-                                self.sorting_analyzer.sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-                                for unit_id in merge_unit_group
-                            ]
-                        )
-                    )
+        # compute all new isi at once
+        new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
+        only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
+        new_acgs = np.zeros((len(all_new_units), only_new_acgs.shape[1]), dtype=np.int64)
 
-                    if merged_spike_train_length != old_spike_train_lengths:
-                        can_apply_soft_method = False
-                        break
+        for unit_ind, unit_id in enumerate(all_new_units):
+            if unit_id not in new_unit_ids:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_acgs[unit_ind, :] = arr[keep_unit_index, :]
+            else:
+                new_unit_index = new_sorting.id_to_index(unit_id)
+                new_acgs[unit_ind, :] = only_new_acgs[new_unit_index, :]
 
-        if can_apply_soft_method is False:
-            new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
-            new_data = dict(acgs=new_acgs, bins=new_bins)
-        else:
-            new_bins = self.data["bins"]
-            all_new_units = new_sorting_analyzer.unit_ids
-            arr = self.data["acgs"]
-
-            # compute all new isi at once
-            new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
-            only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
-            new_acgs = np.zeros((len(all_new_units), only_new_acgs.shape[1]), dtype=np.int64)
-
-            for unit_ind, unit_id in enumerate(all_new_units):
-                if unit_id not in new_unit_ids:
-                    keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
-                    new_acgs[unit_ind, :] = arr[keep_unit_index, :]
-                else:
-                    new_unit_index = new_sorting.id_to_index(unit_id)
-                    new_acgs[unit_ind, :] = only_new_acgs[new_unit_index, :]
-
-            new_data = dict(acgs=new_acgs, bins=new_bins)
+        new_data = dict(acgs=new_acgs, bins=new_bins)
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
