@@ -5,8 +5,9 @@ import warnings
 
 import numpy as np
 from typing import Optional
+from copy import deepcopy
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
@@ -51,9 +52,11 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         Minimum spikes required in period for analysis.
     minimum_valid_period_duration : float, default: 180
         Minimum duration that detected good periods must have to be kept, in seconds.
-    user_defined_periods : array-like or None, default: None
-        In SAMPLES, user-specified (unit, good_period_start, good_period_end) or (unit, segment_index, good_period_start, good_period_end) time pairs.
-        Required if method="user_defined" or "combined".
+    user_defined_periods : array of unit_period_dtype or shape (num_periods, 3) or (num_periods, 4) or None, default: None
+        Periods of unit_period_dtype (segment_index, start_sample_index, end_sample_index, unit_index)
+        or numpy array of shape (num_periods, 3) [unit_index, start_sample, end_sample]
+        or (num_periods, 4) [unit_index, segment_index, start_sample, end_sample]
+        in samples, over which to compute the metric.
     refractory_period_ms : float, default: 0.8
         Refractory period duration for violation detection (ms).
     censored_period_ms : float, default: 0.0
@@ -66,9 +69,6 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -125,6 +125,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         assert isinstance(period_target_num_spikes, (int)), "period_target_num_spikes must be an integer."
 
         # user_defined_periods formatting
+        self.user_defined_periods = None
         if user_defined_periods is not None:
             try:
                 user_defined_periods = np.asarray(user_defined_periods)
@@ -134,35 +135,31 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                         "user_defined_periods must be some (n_periods, 3) [unit, good_period_start, good_period_end] "
                         "or (n_periods, 4) [unit, segment_index, good_period_start, good_period_end] structure convertible to a numpy array"
                     )
-                ) from e
-
-            if user_defined_periods.ndim != 2 or user_defined_periods.shape[1] not in (3, 4):
-                raise ValueError(
-                    "user_defined_periods must be of shape (n_periods, 3) [unit, good_period_start, good_period_end] or (n_periods, 4) [unit, segment_index, good_period_start, good_period_end]"
                 )
 
-            if not np.issubdtype(user_defined_periods.dtype, np.integer):
-                # Try converting to check if they're integer-valued floats
-                if not np.allclose(user_defined_periods, user_defined_periods.astype(int)):
-                    raise ValueError("All values in user_defined_periods must be integers, in samples.")
-                user_defined_periods = user_defined_periods.astype(int)
-
-            if user_defined_periods.shape[1] == 3:
-                # add segment index 0 as column 1 if missing
-                user_defined_periods = np.hstack(
-                    (
-                        user_defined_periods[:, 0:1],
-                        np.zeros((user_defined_periods.shape[0], 1), dtype=int),
-                        user_defined_periods[:, 1:3],
+            if user_defined_periods.dtype != np.dtype(unit_period_dtype):
+                if user_defined_periods.ndim != 2 or user_defined_periods.shape[1] not in (3, 4):
+                    raise ValueError(
+                        "user_defined_periods must be of shape (n_periods, 3) [unit_index, good_period_start, good_period_end] or (n_periods, 4) [unit_index, segment_index, good_period_start, good_period_end]"
                     )
-                )
-            # Cast user defined periods to unit_period_dtype
-            user_defined_periods_typed = np.zeros(user_defined_periods.shape[0], dtype=unit_period_dtype)
-            user_defined_periods_typed["unit_index"] = user_defined_periods[:, 0]
-            user_defined_periods_typed["segment_index"] = user_defined_periods[:, 1]
-            user_defined_periods_typed["start_sample_index"] = user_defined_periods[:, 2]
-            user_defined_periods_typed["end_sample_index"] = user_defined_periods[:, 3]
-            user_defined_periods = user_defined_periods_typed
+
+                if not np.issubdtype(user_defined_periods.dtype, np.integer):
+                    # Try converting to check if they're integer-valued floats
+                    if not np.allclose(user_defined_periods, user_defined_periods.astype(int)):
+                        raise ValueError("All values in user_defined_periods must be integers, in samples.")
+                    user_defined_periods = user_defined_periods.astype(int)
+
+                if user_defined_periods.shape[1] == 3:
+                    # add segment index 0 as column 1 if missing
+                    user_defined_periods = np.hstack(
+                        (
+                            user_defined_periods[:, 0:1],
+                            np.zeros((user_defined_periods.shape[0], 1), dtype=int),
+                            user_defined_periods[:, 1:3],
+                        )
+                    )
+                # Cast user defined periods to unit_period_dtype
+                user_defined_periods = np.frombuffer(user_defined_periods, dtype=unit_period_dtype)
 
             # assert that user-defined periods are not too short
             fs = self.sorting_analyzer.sampling_frequency
@@ -172,6 +169,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 raise ValueError(
                     f"All user-defined periods must be at least {minimum_valid_period_duration} seconds long."
                 )
+            self.user_defined_periods = user_defined_periods
 
         params = dict(
             method=method,
@@ -182,7 +180,6 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             fn_threshold=fn_threshold,
             minimum_n_spikes=minimum_n_spikes,
             minimum_valid_period_duration=minimum_valid_period_duration,
-            user_defined_periods=user_defined_periods,
             refractory_period_ms=refractory_period_ms,
             censored_period_ms=censored_period_ms,
             num_histogram_bins=num_histogram_bins,
@@ -193,33 +190,186 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         return params
 
     def _select_extension_data(self, unit_ids):
-        new_extension_data = self.data
+        new_extension_data = {}
+        good_periods = self.data["good_periods_per_unit"]
+        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+        mask = np.isin(good_periods["unit_index"], unit_indices)
+        new_extension_data["good_periods_per_unit"] = good_periods[mask]
         return new_extension_data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
-        new_extension_data = self.data
+        new_extension_data = {}
+        good_periods = self.data["good_periods_per_unit"]
+        if self.params["method"] in ("false_positives_and_negatives", "combined"):
+            # need to recompute for merged units
+            recompute = True
+        else:
+            # in case of user-defined periods, just merge periods
+            recompute = False
+
+        if recompute:
+            new_periods_centers = deepcopy(self.data.get("period_centers"))
+            new_periods_fp_per_unit = deepcopy(self.data.get("periods_fp_per_unit"))
+            new_periods_fn_per_unit = deepcopy(self.data.get("periods_fn_per_unit"))
+            # remove data of merged units
+            merged_unit_indices = []
+            for unit_ids in merge_unit_groups:
+                unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+                merged_unit_indices.append(unit_indices)
+                for unit_id in unit_ids:
+                    for segment_index in range(self.sorting_analyzer.get_num_segments()):
+                        new_periods_centers[segment_index].pop(unit_id, None)
+                        new_periods_fp_per_unit[segment_index].pop(unit_id, None)
+                        new_periods_fn_per_unit[segment_index].pop(unit_id, None)
+
+            # remove periods of merged units
+            good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], np.array(merged_unit_indices))]
+            # recompute for merged units
+            good_periods_merged, period_centers, fps, fns = self._compute_periods(
+                new_sorting_analyzer,
+                unit_ids=new_unit_ids,
+            )
+            new_good_periods = np.concatenate((good_periods_valid, good_periods_merged), axis=0)
+
+            # update period centers, fps, fns
+            for segment_index in range(new_sorting_analyzer.get_num_segments()):
+                new_periods_centers[segment_index].update(period_centers[segment_index])
+                new_periods_fp_per_unit[segment_index].update(fps[segment_index])
+                new_periods_fn_per_unit[segment_index].update(fns[segment_index])
+
+            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+            new_extension_data["period_centers"] = period_centers
+            new_extension_data["periods_fp_per_unit"] = fps
+            new_extension_data["periods_fn_per_unit"] = fns
+        else:
+            # just merge periods
+            merged_periods = np.array([], dtype=unit_period_dtype)
+            merged_unit_indices = []
+            for unit_ids in merge_unit_groups:
+                unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+                merged_unit_indices.append(unit_indices)
+                # get periods of all units to be merged
+                masked_periods = good_periods[np.isin(good_periods["unit_index"], unit_indices)]
+                if len(masked_periods) == 0:
+                    continue
+                # merge periods
+                _merged_periods = merge_overlapping_periods_across_units_and_segments(masked_periods)
+                merged_periods = np.concatenate((merged_periods, _merged_periods))
+
+            # get periods of unmerged units
+            unmerged_mask = ~np.isin(good_periods["unit_index"], np.concatenate(merged_unit_indices))
+            unmerged_periods = good_periods[unmerged_mask]
+
+            new_good_periods = np.concatenate((unmerged_periods, merged_periods))
+            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+
         return new_extension_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        new_extension_data = self.data
+        new_extension_data = {}
+        good_periods = self.data["good_periods_per_unit"]
+        if self.params["method"] in ("false_positives_and_negatives", "combined"):
+            # need to recompute for split units
+            recompute = True
+        else:
+            # in case of user-defined periods, we can only duplicate valid periods for the split
+            recompute = False
+
+        if recompute:
+            new_periods_centers = deepcopy(self.data.get("period_centers"))
+            new_periods_fp_per_unit = deepcopy(self.data.get("periods_fp_per_unit"))
+            new_periods_fn_per_unit = deepcopy(self.data.get("periods_fn_per_unit"))
+            # remove data of split units
+            split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_units)
+            for unit_id in split_units:
+                for segment_index in range(self.sorting_analyzer.get_num_segments()):
+                    new_periods_centers[segment_index].pop(unit_id, None)
+                    new_periods_fp_per_unit[segment_index].pop(unit_id, None)
+                    new_periods_fn_per_unit[segment_index].pop(unit_id, None)
+
+            # remove periods of split units
+            good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], split_unit_indices)]
+            # recompute for split units
+            good_periods_split, period_centers, fps, fns = self._compute_periods(
+                new_sorting_analyzer,
+                unit_ids=new_unit_ids,
+            )
+            new_good_periods = np.concatenate((good_periods_valid, good_periods_split))
+            # update period centers, fps, fns
+            for segment_index in range(new_sorting_analyzer.get_num_segments()):
+                new_periods_centers[segment_index].update(period_centers[segment_index])
+                new_periods_fp_per_unit[segment_index].update(fps[segment_index])
+                new_periods_fn_per_unit[segment_index].update(fns[segment_index])
+
+            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+            new_extension_data["period_centers"] = period_centers
+            new_extension_data["periods_fp_per_unit"] = fps
+            new_extension_data["periods_fn_per_unit"] = fns
+        else:
+            # just duplicate periods to the split units
+            split_periods = []
+            split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_units)
+            for split_unit_id, new_unit_ids in zip(split_units, new_unit_ids):
+                unit_index = self.sorting_analyzer.sorting.id_to_index(split_unit_id)
+                new_unit_indices = new_sorting_analyzer.sorting.ids_to_indices(new_unit_ids)
+                split_unit_indices.append(unit_index)
+                # get periods of all units to be merged
+                masked_periods = good_periods[good_periods["unit_index"] == unit_index]
+                for new_unit_index in new_unit_indices:
+                    _split_periods = masked_periods.copy()
+                    _split_periods["unit_index"] = new_unit_index
+                    split_periods = np.concatenate((split_periods, _split_periods), axis=0)
+                if len(masked_periods) == 0:
+                    continue
+                # merge periods
+                _split_periods = merge_overlapping_periods_across_units_and_segments(masked_periods)
+                split_periods.append(_split_periods)
+            split_periods = np.concatenate(split_periods, axis=0)
+            # get periods of unmerged units
+            unsplit_mask = ~np.isin(good_periods["unit_index"], np.array(split_unit_indices))
+            unsplit_periods = good_periods[unsplit_mask]
+
+            new_good_periods = np.concatenate((unsplit_periods, split_periods), axis=0)
+            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+
         return new_extension_data
 
-    def _run(self, verbose=False):
+    def _run(self, unit_ids=None, verbose=False):
+        good_periods_per_unit, period_centers, fps, fns = self._compute_periods(
+            self.sorting_analyzer,
+            unit_ids=unit_ids,
+        )
+        self.data["good_periods_per_unit"] = good_periods_per_unit
+        if period_centers is not None:
+            self.data["period_centers"] = period_centers
+        if fps is not None:
+            self.data["periods_fp_per_unit"] = fps
+        if fns is not None:
+            self.data["periods_fn_per_unit"] = fns
+
+    def _compute_periods(
+        self,
+        sorting_analyzer,
+        unit_ids=None,
+    ):
         from spikeinterface import get_global_job_kwargs
 
         if self.params["method"] == "user_defined":
+
             # directly use user defined periods
-            self.data["good_periods_per_unit"] = self.params["user_defined_periods"]
+            return self.user_defined_periods, None, None, None
 
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
 
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
-            all_periods = self.compute_subperiods(
+            all_periods = compute_subperiods(
+                sorting_analyzer,
                 self.params["period_duration_s_absolute"],
                 self.params["period_target_num_spikes"],
                 self.params["period_mode"],
+                unit_ids=unit_ids,
             )
 
             job_kwargs = get_global_job_kwargs()
@@ -230,10 +380,10 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
             # Compute fp and fn for all periods
             # Process units in parallel
-            amp_scalings = self.sorting_analyzer.get_extension("amplitude_scalings")
+            amp_scalings = sorting_analyzer.get_extension("amplitude_scalings")
             all_amplitudes_by_unit = amp_scalings.get_data(outputs="by_unit", concatenated=False)
 
-            init_args = (self.sorting_analyzer.sorting, all_amplitudes_by_unit, self.params, max_threads_per_worker)
+            init_args = (sorting_analyzer.sorting, all_amplitudes_by_unit, self.params, max_threads_per_worker)
 
             # Each item is one computation of fp and fn for one period and one unit
             items = [(period,) for period in all_periods]
@@ -265,14 +415,14 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             # fps and fns are lists of segments with dicts unit_id -> array of shape (n_subperiods)
             fps = []
             fns = []
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+            for segment_index in range(sorting_analyzer.sorting.get_num_segments()):
                 fp_in_segment = {}
                 fn_in_segment = {}
                 segment_mask = all_periods["segment_index"] == segment_index
                 periods_segment = all_periods[segment_mask]
                 fps_segment = all_fps[segment_mask]
                 fns_segment = all_fns[segment_mask]
-                for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
                     unit_mask = periods_segment["unit_index"] == unit_index
                     fp_in_segment[unit_id] = fps_segment[unit_mask]
                     fn_in_segment[unit_id] = fns_segment[unit_mask]
@@ -283,10 +433,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             good_periods = all_periods[good_period_mask]
 
             # Sort good periods on segment_index, unit_index, start_sample_index
-            sort_idx = np.lexsort(
-                (good_periods["start_sample_index"], good_periods["unit_index"], good_periods["segment_index"])
-            )
-            good_periods_per_unit = good_periods[sort_idx]
+            good_periods_per_unit = self._sort_periods(good_periods)
 
             # Combine with user-defined periods if provided
             if self.params["method"] == "combined":
@@ -296,27 +443,24 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
             # Remove good periods that are too short
             minimum_valid_period_duration = self.params["minimum_valid_period_duration"]
-            min_valid_period_samples = int(minimum_valid_period_duration * self.sorting_analyzer.sampling_frequency)
+            min_valid_period_samples = int(minimum_valid_period_duration * sorting_analyzer.sampling_frequency)
             duration_samples = good_periods_per_unit["end_sample_index"] - good_periods_per_unit["start_sample_index"]
             valid_mask = duration_samples >= min_valid_period_samples
             good_periods_per_unit = good_periods_per_unit[valid_mask]
 
             # Convert subperiods per unit in period_centers_s
             period_centers = []
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+            for segment_index in range(sorting_analyzer.sorting.get_num_segments()):
                 periods_segment = all_periods[all_periods["segment_index"] == segment_index]
                 period_centers_dict = {}
-                for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
                     periods_unit = periods_segment[periods_segment["unit_index"] == unit_index]
                     centers = list(0.5 * (periods_unit["start_sample_index"] + periods_unit["end_sample_index"]))
                     period_centers_dict[unit_id] = centers
                 period_centers.append(period_centers_dict)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
-            self.data["period_centers"] = period_centers
-            self.data["periods_fp_per_unit"] = fps
-            self.data["periods_fn_per_unit"] = fns
-            self.data["good_periods_per_unit"] = good_periods_per_unit
+            return good_periods_per_unit, period_centers, fps, fns
 
     def _get_data(self, outputs: str = "by_unit"):
         """
@@ -338,7 +482,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             (start_sample_index, end_sample_index) tuples.
         """
         if outputs == "numpy":
-            good_periods = self.data["good_periods_per_unit"]
+            good_periods = self.data["good_periods_per_unit"].copy()
         else:
             # by_unit
             unit_ids = self.sorting_analyzer.unit_ids
@@ -357,57 +501,65 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
         return good_periods
 
-    def compute_subperiods(
-        self,
-        period_duration_s_absolute: float = 10,
-        period_target_num_spikes: int = 1000,
-        period_mode: str = "absolute",
-    ) -> dict:
-        """
-        Computes subperiods per unit based on specified size mode.
+    def _sort_periods(self, periods):
+        sort_idx = np.lexsort((periods["start_sample_index"], periods["unit_index"], periods["segment_index"]))
+        sorted_periods = periods[sort_idx]
+        return sorted_periods
 
-        Returns
-        -------
-        all_subperiods : dict
-            Dictionary mapping unit IDs to lists of subperiods (arrays of dtype unit_period_dtype).
-        """
-        sorting = self.sorting_analyzer.sorting
-        fs = sorting.sampling_frequency
+
+def compute_subperiods(
+    sorting_analyzer,
+    period_duration_s_absolute: float = 10,
+    period_target_num_spikes: int = 1000,
+    period_mode: str = "absolute",
+    unit_ids: Optional[list] = None,
+) -> dict:
+    """
+    Computes subperiods per unit based on specified size mode.
+
+    Returns
+    -------
+    all_subperiods : dict
+        Dictionary mapping unit IDs to lists of subperiods (arrays of dtype unit_period_dtype).
+    """
+    sorting = sorting_analyzer.sorting
+    fs = sorting.sampling_frequency
+    if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-        if period_mode == "absolute":
-            period_sizes_samples = {u: np.round(period_duration_s_absolute * fs).astype(int) for u in unit_ids}
-        else:  # relative
-            mean_firing_rates = compute_firing_rates(self.sorting_analyzer, unit_ids)
-            period_sizes_samples = {
-                u: np.round((period_target_num_spikes / mean_firing_rates[u]) * fs).astype(int) for u in unit_ids
-            }
-        margin_sizes_samples = period_sizes_samples
+    if period_mode == "absolute":
+        period_sizes_samples = {u: np.round(period_duration_s_absolute * fs).astype(int) for u in unit_ids}
+    else:  # relative
+        mean_firing_rates = compute_firing_rates(sorting_analyzer, unit_ids)
+        period_sizes_samples = {
+            u: np.round((period_target_num_spikes / mean_firing_rates[u]) * fs).astype(int) for u in unit_ids
+        }
+    margin_sizes_samples = period_sizes_samples
 
-        all_subperiods = np.array([], dtype=unit_period_dtype)
-        for unit_index, unit_id in enumerate(unit_ids):
-            period_size_samples = period_sizes_samples[unit_id]
-            margin_size_samples = margin_sizes_samples[unit_id]
+    all_subperiods = []
+    for unit_index, unit_id in enumerate(unit_ids):
+        period_size_samples = period_sizes_samples[unit_id]
+        margin_size_samples = margin_sizes_samples[unit_id]
 
-            for segment_index in range(sorting.get_num_segments()):
-                n_samples = self.sorting_analyzer.get_num_samples(segment_index)  # int: samples
-                n_subperiods = n_samples // period_size_samples + 1
-                starts_ends = np.array(
-                    [
-                        [i * period_size_samples, i * period_size_samples + 2 * margin_size_samples]
-                        for i in range(n_subperiods)
-                    ]
-                )
-                periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
-                for i, (start, end) in enumerate(starts_ends):
-                    subperiod = np.zeros((1,), dtype=unit_period_dtype)
-                    subperiod["segment_index"] = segment_index
-                    subperiod["start_sample_index"] = start
-                    subperiod["end_sample_index"] = end
-                    subperiod["unit_index"] = unit_index
-                    periods_for_unit[i] = subperiod
-                all_subperiods = np.concatenate((all_subperiods, periods_for_unit), axis=0)
-        return all_subperiods
+        for segment_index in range(sorting.get_num_segments()):
+            n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
+            n_subperiods = n_samples // period_size_samples + 1
+            starts_ends = np.array(
+                [
+                    [i * period_size_samples, i * period_size_samples + 2 * margin_size_samples]
+                    for i in range(n_subperiods)
+                ]
+            )
+            periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+            for i, (start, end) in enumerate(starts_ends):
+                subperiod = np.zeros((1,), dtype=unit_period_dtype)
+                subperiod["segment_index"] = segment_index
+                subperiod["start_sample_index"] = start
+                subperiod["end_sample_index"] = end
+                subperiod["unit_index"] = unit_index
+                periods_for_unit[i] = subperiod
+            all_subperiods.append(periods_for_unit)
+    return np.concatenate(all_subperiods)
 
 
 def merge_overlapping_periods(subperiods):
@@ -452,7 +604,7 @@ def merge_overlapping_periods(subperiods):
 def merge_overlapping_periods_across_units_and_segments(periods):
     segments = np.unique(periods["segment_index"])
     units = np.unique(periods["unit_index"])
-    merged_periods = np.array([], dtype=unit_period_dtype)
+    merged_periods = []
     for segment_index in segments:
         periods_per_segment = periods[periods["segment_index"] == segment_index]
         for unit_index in units:
@@ -460,7 +612,9 @@ def merge_overlapping_periods_across_units_and_segments(periods):
             if len(masked_periods) == 0:
                 continue
             _merged_periods = merge_overlapping_periods(masked_periods)
-            merged_periods = np.concatenate((merged_periods, _merged_periods), axis=0)
+            merged_periods.append(_merged_periods)
+    if len(merged_periods) == 0:
+        merged_periods = np.array([], dtype=unit_period_dtype)
 
     return merged_periods
 

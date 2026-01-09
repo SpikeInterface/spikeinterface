@@ -346,8 +346,15 @@ def compute_refrac_period_violations(
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
 
-    # TODO: in case of periods, should we use total samples only in provided periods?
-    total_samples = sorting_analyzer.get_total_samples()
+    if periods is None:
+        total_samples = sorting_analyzer.get_total_samples()
+    else:
+        total_samples = {}
+        for unit_id in sorting.unit_ids:
+            total_samples[unit_id] = 0
+        for period in periods:
+            unit_id = sorting.unit_ids[period["unit_index"]]
+            total_samples[unit_id] += period["end_sample_index"] - period["start_sample_index"]
 
     fs = sorting.sampling_frequency
     num_units = len(sorting.unit_ids)
