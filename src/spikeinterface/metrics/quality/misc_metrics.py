@@ -1770,7 +1770,7 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
         num_of_syncs = sync_counts[i]
         # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
         # to the 2 simultaneous spike bins.
-        units_with_sync = spikes[sync_index:sync_index+num_of_syncs]["unit_index"]
+        units_with_sync = spikes[sync_index : sync_index + num_of_syncs]["unit_index"]
         how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
         synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
 
