@@ -67,7 +67,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
 
-    #seg_lengths = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
+    # seg_lengths = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
     total_length = sorting_analyzer.get_total_samples()
     total_duration = sorting_analyzer.get_total_duration()
     bin_duration_samples = int((bin_duration_s * sorting_analyzer.sampling_frequency))
