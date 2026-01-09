@@ -81,7 +81,9 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
     good_periods_per_unit : numpy.ndarray, int
         (n_periods, 4) array with columns: unit_id, segment_id, start_time, end_time (times in samples)
 
-    Implementation: Maxime Beau
+    Notes
+    -----
+    Implementation by Maxime Beau and Alessio Buccino, inspired by NeuroPyxels and Bombcell.
     """
 
     extension_name = "good_periods_per_unit"
