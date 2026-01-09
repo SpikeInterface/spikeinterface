@@ -169,7 +169,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         dp = to_attr(data_plot)
 
-        if backend_kwargs['axes'] is None and backend_kwargs['ax'] is None:
+        if backend_kwargs["axes"] is None and backend_kwargs["ax"] is None:
             backend_kwargs["ncols"] = 1
             backend_kwargs["num_axes"] = 1 if dp.same_axis else len(dp.unit_ids)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
@@ -189,7 +189,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         else:
             for ax, unit_id in zip(self.axes.flatten(), dp.unit_ids):
                 hist2d = dp.all_hist2d[unit_id]
-                x_max = len(hist2d) / freq_khz # in milliseconds
+                x_max = len(hist2d) / freq_khz  # in milliseconds
                 ax.imshow(
                     hist2d.T,
                     interpolation="nearest",
@@ -222,5 +222,5 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                 y = (dp.bin_max + dp.bin_min) / 2.0
                 ax.text(x, y, f"chan_id {channel_id}", color="w", ha="center", va="center")
 
-            ax.set_xlabel('Time [ms]')
+            ax.set_xlabel("Time [ms]")
             ax.set_ylabel(f"unit_id {unit_id}")
