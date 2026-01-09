@@ -1501,7 +1501,7 @@ class SortingAnalyzer:
         return self.sparsity is not None
 
     def is_filtered(self) -> bool:
-        return self.rec_attributes["is_filtered"]
+        return self.rec_attributes.get("is_filtered", True)
 
     def get_sorting_provenance(self):
         """
@@ -1602,7 +1602,7 @@ class SortingAnalyzer:
         return self.sorting.get_property(key)
 
     def get_dtype(self):
-        return self.rec_attributes["dtype"]
+        return self.rec_attributes.get("dtype")
 
     def get_num_units(self) -> int:
         return self.sorting.get_num_units()
