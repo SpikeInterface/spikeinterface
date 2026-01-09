@@ -242,19 +242,19 @@ def test_unit_structure_in_output(small_sorting_analyzer):
         error = "Problem with metric: " + metric_name
 
         if isinstance(result_all, dict):
-            assert list(result_all.keys()) == ["#3", "#9", "#4"], error 
-            assert list(result_sub.keys()) == ["#4", "#9"], error 
-            assert result_sub["#9"] == result_all["#9"], error 
-            assert result_sub["#4"] == result_all["#4"], error 
+            assert list(result_all.keys()) == ["#3", "#9", "#4"], error
+            assert list(result_sub.keys()) == ["#4", "#9"], error
+            assert result_sub["#9"] == result_all["#9"], error
+            assert result_sub["#4"] == result_all["#4"], error
 
         else:
             for result_ind, result in enumerate(result_sub):
 
-                assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"], error 
-                assert result_sub[result_ind].keys() == set(["#4", "#9"]), error 
+                assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"], error
+                assert result_sub[result_ind].keys() == set(["#4", "#9"]), error
 
-                assert result_sub[result_ind]["#9"] == result_all[result_ind]["#9"], error 
-                assert result_sub[result_ind]["#4"] == result_all[result_ind]["#4"], error 
+                assert result_sub[result_ind]["#9"] == result_all[result_ind]["#9"], error
+                assert result_sub[result_ind]["#4"] == result_all[result_ind]["#4"], error
 
 
 def test_unit_id_order_independence(small_sorting_analyzer):
