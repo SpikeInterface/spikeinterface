@@ -415,7 +415,7 @@ def compute_sliding_rp_violations(
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
-    correlograms_kwargs=dict(method="auto")
+    correlograms_kwargs=dict(method="auto"),
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
@@ -459,7 +459,7 @@ def compute_sliding_rp_violations(
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
-    
+
     fs = sorting_analyzer.sampling_frequency
 
     contamination = {}
@@ -471,16 +471,17 @@ def compute_sliding_rp_violations(
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        
+
         sub_spikes = new_spikes[slice(u0, u1)].copy()
         sub_spikes["unit_index"] = 0  # single unit sorting
-        
+
         unit_n_spikes = len(sub_spikes)
         if unit_n_spikes <= min_spikes:
             contamination[unit_id] = np.nan
             continue
-        
+
         from spikeinterface.core.numpyextractors import NumpySorting
+
         sub_sorting = NumpySorting(sub_spikes, fs, unit_ids=[unit_id])
 
         contamination[unit_id] = slidingRP_violations(
@@ -491,7 +492,7 @@ def compute_sliding_rp_violations(
             exclude_ref_period_below_ms,
             max_ref_period_ms,
             contamination_values,
-            correlograms_kwargs=correlograms_kwargs
+            correlograms_kwargs=correlograms_kwargs,
         )
 
     return contamination
@@ -1548,7 +1549,7 @@ def slidingRP_violations(
     max_ref_period_ms=10,
     contamination_values=None,
     return_conf_matrix=False,
-    correlograms_kwargs=dict(method="auto")
+    correlograms_kwargs=dict(method="auto"),
 ):
     """
     A metric developed by IBL which determines whether the refractory period violations
@@ -1592,7 +1593,7 @@ def slidingRP_violations(
     # compute firing rate and spike count (concatenate for multi-segments)
     n_spikes = len(sorting.to_spike_vector())
     firing_rate = n_spikes / duration
-    
+
     method = correlograms_kwargs.get("method", "auto")
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
@@ -1602,16 +1603,18 @@ def slidingRP_violations(
 
     if method == "numpy":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
+
         correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
     if method == "numba":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
+
         correlogram = _compute_correlograms_numba(sorting, window_size, bin_size)[0, 0]
 
     ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
-    # the choice of the bin_size above, but I am not the author of the code...    
+    # the choice of the bin_size above, but I am not the author of the code...
     # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, **correlograms_kwargs)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
-    
+
     conf_matrix = _compute_violations(
         np.cumsum(correlogram_positive[0 : rp_centers.size])[np.newaxis, :],
         firing_rate,
