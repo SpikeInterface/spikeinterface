@@ -220,6 +220,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             self.data["good_periods_per_unit"] = self.params["user_defined_periods"]
 
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
+
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
             all_periods = self.compute_subperiods(
                 self.params["period_duration_s_absolute"],
