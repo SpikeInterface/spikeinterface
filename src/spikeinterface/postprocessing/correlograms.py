@@ -966,10 +966,7 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
 
                 # Find the indices in the raveled correlograms array that need
                 # to be incremented, taking into account the spike unit labels.
-                if sign == 1:
-                    indices = spike_diff_b[m] + num_half_bins
-                else:
-                    indices = spike_diff_b[m] + num_half_bins
+                indices = spike_diff_b[m] + num_half_bins
 
                 # Increment the matching spikes in the correlograms array.
                 bbins = np.bincount(indices)
