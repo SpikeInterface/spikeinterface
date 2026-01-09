@@ -298,10 +298,13 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
     )
 
+
+
     for metric, metric_2_data in quality_metrics_2.items():
-        assert quality_metrics_1[metric]["#3"] == metric_2_data[2]
-        assert quality_metrics_1[metric]["#9"] == metric_2_data[7]
-        assert quality_metrics_1[metric]["#4"] == metric_2_data[1]
+        error = "Problem with the metric " + metric
+        assert quality_metrics_1[metric]["#3"] == metric_2_data[2], error
+        assert quality_metrics_1[metric]["#9"] == metric_2_data[7], error
+        assert quality_metrics_1[metric]["#4"] == metric_2_data[1], error
 
 
 def _sorting_violation():

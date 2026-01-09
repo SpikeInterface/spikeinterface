@@ -96,7 +96,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
 
         # precompute segment slice
         unit_slices = {}
-        for unit_id in sorting.unit_ids:
+        for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
             unit_slices[unit_id] = slice(u0, u1)
@@ -262,7 +262,7 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
 
     # precompute segment slice
     unit_slices = {}
-    for unit_id in sorting.unit_ids:
+    for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         sub_data = new_spikes[slice(u0, u1)]
@@ -468,7 +468,7 @@ def compute_sliding_rp_violations(
     order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
     new_spikes = spikes[order]
 
-    for unit_id in sorting.unit_ids:
+    for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         
@@ -635,13 +635,13 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         s0, s1 = np.searchsorted(new_spikes["segment_index"], [segment_index, segment_index + 1], side="left")
         segment_slices[segment_index] = {}
         sub_data = new_spikes[slice(s0, s1)]
-        for unit_id in sorting.unit_ids:
+        for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
             segment_slices[segment_index][unit_id] = slice(s0 + u0, s0 + u1)
 
     # for each segment, we compute the firing rate histogram and we concatenate them
-    firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in sorting.unit_ids}
+    firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in unit_ids}
     for segment_index in range(sorting_analyzer.get_num_segments()):
         num_samples = sorting_analyzer.get_num_samples(segment_index)
         edges = np.arange(0, num_samples + 1, bin_size_samples)
@@ -734,7 +734,7 @@ def compute_amplitude_cv_metrics(
     new_amps = amps[order]
 
     unit_slices = {}
-    for unit_id in sorting.unit_ids:
+    for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         sub_data = new_spikes[slice(u0, u1)]
@@ -1277,7 +1277,7 @@ def compute_sd_ratio(
     sd_ratio = {}
 
     unit_slices = {}
-    for unit_id in sorting.unit_ids:
+    for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         sub_data = new_spikes[slice(u0, u1)]
@@ -1560,8 +1560,6 @@ def slidingRP_violations(
     ----------
     spike_samples : ndarray_like or list (for multi-segment)
         The spike times in samples.
-    sample_rate : float
-        The acquisition sampling rate.
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
@@ -1593,29 +1591,25 @@ def slidingRP_violations(
 
     # compute firing rate and spike count (concatenate for multi-segments)
     n_spikes = len(sorting.to_spike_vector())
-    print(n_spikes)
-    sample_rate = sorting.get_sampling_frequency()
     firing_rate = n_spikes / duration
-    # if np.isscalar(spike_samples[0]):
-    #     spike_samples_list = [spike_samples]
-    # else:
-    #     spike_samples_list = spike_samples
-    # compute correlograms
-    # correlogram = None
-    # for spike_samples in spike_samples_list:
-    #     c0 = correlogram_for_one_segment(
-    #         spike_samples,
-    #         np.zeros(len(spike_samples), dtype="int8"),
-    #         bin_size=max(int(bin_size_ms / 1000 * sample_rate), 1),  # convert to sample counts
-    #         window_size=int(window_size_s * sample_rate),
-    #     )[0, 0]
-    #     if correlogram is None:
-    #         correlogram = c0
-    #     else:
-    #         correlogram += c0
-    from spikeinterface.postprocessing.correlograms import compute_correlograms
-    correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, **correlograms_kwargs)[0][0, 0]
-    #print(correlogram.shape, rp_edges.shape, int(window_size_s * sample_rate), max(int(bin_size_ms / 1000 * sample_rate), 1))
+    
+    method = correlograms_kwargs.get("method", "auto")
+    if method == "auto":
+        method = "numba" if HAVE_NUMBA else "numpy"
+
+    bin_size = max(int(bin_size_ms / 1000 * sorting.sampling_frequency), 1)
+    window_size = int(window_size_s * sorting.sampling_frequency)
+
+    if method == "numpy":
+        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
+        correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
+    if method == "numba":
+        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
+        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size)[0, 0]
+
+    ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
+    # the choice of the bin_size above, but I am not the author of the code...    
+    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, **correlograms_kwargs)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
     
     conf_matrix = _compute_violations(
