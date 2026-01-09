@@ -359,7 +359,9 @@ def compute_refrac_period_violations(
     num_units = len(sorting_analyzer.unit_ids)
     num_segments = sorting_analyzer.get_num_segments()
 
-    spikes = sorting.to_spike_vector(concatenated=False)
+    spikes = sorting.to_spike_vector()
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -370,10 +372,17 @@ def compute_refrac_period_violations(
     t_r = int(round(refractory_period_ms * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
-    for seg_index in range(num_segments):
-        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
-        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
-        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
+    # precompute segment slice
+    unit_slices = {}
+    for unit_id in sorting.unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[slice(u0, u1)]
+        unit_slices[unit_id] = []
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            spike_times = new_spikes[slice(u0 + s0, u0 + s1)]["sample_index"]
+            nb_rp_violations[unit_index] += _compute_nb_violations_numba(spike_times, t_r)
 
     T = sorting_analyzer.get_total_samples()
 
@@ -1555,6 +1564,7 @@ def slidingRP_violations(
     max_ref_period_ms=10,
     contamination_values=None,
     return_conf_matrix=False,
+    correlograms_kwargs=dict()
 ):
     """
     A metric developed by IBL which determines whether the refractory period violations
@@ -1580,6 +1590,8 @@ def slidingRP_violations(
         The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
     return_conf_matrix : bool, default: False
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
+    correlograms_kwargs : dict, default: {}
+        Additional keyword arguments to be passed to correlogram computation. (i.e fast_mode)
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
