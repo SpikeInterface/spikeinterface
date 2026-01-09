@@ -349,8 +349,6 @@ def compute_refrac_period_violations(
     # TODO: in case of periods, should we use total samples only in provided periods?
     total_samples = sorting_analyzer.get_total_samples()
 
-    from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes
-
     fs = sorting.sampling_frequency
     num_units = len(sorting.unit_ids)
     num_segments = sorting.get_num_segments()
@@ -360,7 +358,7 @@ def compute_refrac_period_violations(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    num_spikes = compute_num_spikes(sorting)
+    num_spikes = sorting.count_num_spikes_per_unit()
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
