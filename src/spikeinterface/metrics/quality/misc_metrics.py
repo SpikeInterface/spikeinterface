@@ -95,13 +95,14 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         new_spikes = spikes[order]
 
         # precompute segment slice
-        unit_slices = []
+        unit_slices = {}
         for unit_id in sorting.unit_ids:
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-            unit_slices.append(slice(u0, u1))
+            unit_slices[unit_id] = slice(u0, u1)
 
-        for unit_id, unit_slice in zip(unit_ids, unit_slices):
+        for unit_id in unit_ids:
+            unit_slice = unit_slices[unit_id]
             spike_train = new_spikes[unit_slice]["sample_index"]
 
             unit_fr = spike_train.size / total_duration
