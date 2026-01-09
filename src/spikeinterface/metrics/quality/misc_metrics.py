@@ -415,6 +415,7 @@ def compute_sliding_rp_violations(
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
+    correlograms_kwargs=dict(method="auto")
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
@@ -440,6 +441,8 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
+    correlograms_kwargs : dict, default: dict("method"="auto")
+        Additional keyword arguments to pass to `correlogram_for_one_segment`.
 
     Returns
     -------
@@ -456,7 +459,7 @@ def compute_sliding_rp_violations(
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
-    num_segs = sorting_analyzer.get_num_segments()
+    
     fs = sorting_analyzer.sampling_frequency
 
     contamination = {}
@@ -465,41 +468,30 @@ def compute_sliding_rp_violations(
     order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
     new_spikes = spikes[order]
 
-    # precompute segment slice
-    unit_slices = {}
     for unit_id in sorting.unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[slice(u0, u1)]
-        unit_slices[unit_id] = []
-        for segment_index in range(sorting_analyzer.get_num_segments()):
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
-
-    # all units converted to seconds
-    for unit_id in unit_ids:
-        spike_train_list = []
-
-        for segment_index in range(num_segs):
-            spike_train_list.append(new_spikes[unit_slices[unit_id][segment_index]]["sample_index"])
-
-        if not any([np.any(train) for train in spike_train_list]):
-            continue
-
-        unit_n_spikes = np.sum([len(train) for train in spike_train_list])
+        
+        sub_spikes = new_spikes[slice(u0, u1)].copy()
+        sub_spikes["unit_index"] = 0  # single unit sorting
+        
+        unit_n_spikes = len(sub_spikes)
         if unit_n_spikes <= min_spikes:
             contamination[unit_id] = np.nan
             continue
+        
+        from spikeinterface.core.numpyextractors import NumpySorting
+        sub_sorting = NumpySorting(sub_spikes, fs, unit_ids=[unit_id])
 
         contamination[unit_id] = slidingRP_violations(
-            spike_train_list,
-            fs,
+            sub_sorting,
             duration,
             bin_size_ms,
             window_size_s,
             exclude_ref_period_below_ms,
             max_ref_period_ms,
             contamination_values,
+            correlograms_kwargs=correlograms_kwargs
         )
 
     return contamination
@@ -515,6 +507,7 @@ class SlidingRPViolation(BaseMetric):
         "exclude_ref_period_below_ms": 0.5,
         "max_ref_period_ms": 10,
         "contamination_values": None,
+        "correlograms_kwargs": dict(method="auto"),
     }
     metric_columns = {"sliding_rp_violation": float}
     metric_descriptions = {
@@ -564,6 +557,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
 
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
+
     synchrony_counts = _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids)
 
     synchrony_metrics_dict = {}
@@ -1546,8 +1540,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
 
 
 def slidingRP_violations(
-    spike_samples,
-    sample_rate,
+    sorting,
     duration,
     bin_size_ms=0.25,
     window_size_s=1,
@@ -1555,6 +1548,7 @@ def slidingRP_violations(
     max_ref_period_ms=10,
     contamination_values=None,
     return_conf_matrix=False,
+    correlograms_kwargs=dict(method="auto")
 ):
     """
     A metric developed by IBL which determines whether the refractory period violations
@@ -1580,6 +1574,8 @@ def slidingRP_violations(
         The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
     return_conf_matrix : bool, default: False
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
+    correlograms_kwargs : dict, default: {}
+        Additional keyword arguments for correlogram computation.
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
@@ -1596,27 +1592,32 @@ def slidingRP_violations(
     rp_centers = rp_edges + ((rp_edges[1] - rp_edges[0]) / 2)  # vector of refractory period durations to test
 
     # compute firing rate and spike count (concatenate for multi-segments)
-    n_spikes = len(np.concatenate(spike_samples))
+    n_spikes = len(sorting.to_spike_vector())
+    print(n_spikes)
+    sample_rate = sorting.get_sampling_frequency()
     firing_rate = n_spikes / duration
-    if np.isscalar(spike_samples[0]):
-        spike_samples_list = [spike_samples]
-    else:
-        spike_samples_list = spike_samples
+    # if np.isscalar(spike_samples[0]):
+    #     spike_samples_list = [spike_samples]
+    # else:
+    #     spike_samples_list = spike_samples
     # compute correlograms
-    correlogram = None
-    for spike_samples in spike_samples_list:
-        c0 = correlogram_for_one_segment(
-            spike_samples,
-            np.zeros(len(spike_samples), dtype="int8"),
-            bin_size=max(int(bin_size_ms / 1000 * sample_rate), 1),  # convert to sample counts
-            window_size=int(window_size_s * sample_rate),
-        )[0, 0]
-        if correlogram is None:
-            correlogram = c0
-        else:
-            correlogram += c0
+    # correlogram = None
+    # for spike_samples in spike_samples_list:
+    #     c0 = correlogram_for_one_segment(
+    #         spike_samples,
+    #         np.zeros(len(spike_samples), dtype="int8"),
+    #         bin_size=max(int(bin_size_ms / 1000 * sample_rate), 1),  # convert to sample counts
+    #         window_size=int(window_size_s * sample_rate),
+    #     )[0, 0]
+    #     if correlogram is None:
+    #         correlogram = c0
+    #     else:
+    #         correlogram += c0
+    from spikeinterface.postprocessing.correlograms import compute_correlograms
+    correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, **correlograms_kwargs)[0][0, 0]
+    #print(correlogram.shape, rp_edges.shape, int(window_size_s * sample_rate), max(int(bin_size_ms / 1000 * sample_rate), 1))
     correlogram_positive = correlogram[len(correlogram) // 2 :]
-
+    
     conf_matrix = _compute_violations(
         np.cumsum(correlogram_positive[0 : rp_centers.size])[np.newaxis, :],
         firing_rate,
@@ -1764,8 +1765,9 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     # compute the occurrence of each sample_index. Count >2 means there's synchrony
     _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
 
-    sync_indices = unique_spike_index[counts >= 2]
-    sync_counts = counts[counts >= 2]
+    mask = counts >= 2
+    sync_indices = unique_spike_index[mask]
+    sync_counts = counts[mask]
 
     for i, sync_index in enumerate(sync_indices):
 
