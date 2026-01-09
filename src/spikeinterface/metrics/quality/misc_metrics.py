@@ -67,7 +67,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
 
-    seg_lengths = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
+    #seg_lengths = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
     total_length = sorting_analyzer.get_total_samples()
     total_duration = sorting_analyzer.get_total_duration()
     bin_duration_samples = int((bin_duration_s * sorting_analyzer.sampling_frequency))
@@ -98,8 +98,8 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         unit_slices = []
         for unit_id in sorting.unit_ids:
             unit_index = sorting.id_to_index(unit_id)
-            s0, s1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-            unit_slices.append(slice(s0, s1))
+            u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+            unit_slices.append(slice(u0, u1))
 
         for unit_id, unit_slice in zip(unit_ids, unit_slices):
             spike_train = new_spikes[unit_slice]["sample_index"]
@@ -255,12 +255,27 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     isi_violations_count = {}
     isi_violations_ratio = {}
 
+    spikes = sorting.to_spike_vector()
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
+
+    # precompute segment slice
+    unit_slices = {}
+    for unit_id in sorting.unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[slice(u0, u1)]
+        unit_slices[unit_id] = []
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
+
     # all units converted to seconds
     for unit_id in unit_ids:
         spike_train_list = []
 
         for segment_index in range(num_segs):
-            spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            spike_train = new_spikes[unit_slices[unit_id][segment_index]]["sample_index"]
             if len(spike_train) > 0:
                 spike_train_list.append(spike_train / fs)
 
@@ -445,14 +460,27 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
+    spikes = sorting.to_spike_vector()
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
+
+    # precompute segment slice
+    unit_slices = {}
+    for unit_id in sorting.unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[slice(u0, u1)]
+        unit_slices[unit_id] = []
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
+
     # all units converted to seconds
     for unit_id in unit_ids:
         spike_train_list = []
 
         for segment_index in range(num_segs):
-            spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            if np.any(spike_train):
-                spike_train_list.append(spike_train)
+            spike_train_list.append(new_spikes[unit_slices[unit_id][segment_index]]["sample_index"])
 
         if not any([np.any(train) for train in spike_train_list]):
             continue
@@ -603,6 +631,20 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
         return {unit_id: np.nan for unit_id in unit_ids}
 
+    spikes = sorting.to_spike_vector()
+    order = np.lexsort((spikes["sample_index"], spikes["unit_index"], spikes["segment_index"]))
+    new_spikes = spikes[order]
+
+    segment_slices = {}
+    for segment_index in range(sorting_analyzer.get_num_segments()):
+        s0, s1 = np.searchsorted(new_spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        segment_slices[segment_index] = {}
+        sub_data = new_spikes[slice(s0, s1)]
+        for unit_id in sorting.unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
+            u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
+            segment_slices[segment_index][unit_id] = slice(s0 + u0, s0 + u1)
+
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in sorting.unit_ids}
     for segment_index in range(sorting_analyzer.get_num_segments()):
@@ -610,7 +652,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         edges = np.arange(0, num_samples + 1, bin_size_samples)
 
         for unit_id in unit_ids:
-            spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            spike_times = new_spikes[segment_slices[segment_index][unit_id]]["sample_index"]
             spike_counts, _ = np.histogram(spike_times, bins=edges)
             firing_rates = spike_counts / bin_size_s
             firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
@@ -706,7 +748,6 @@ def compute_amplitude_cv_metrics(
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
             unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
 
-    all_unit_ids = list(sorting.unit_ids)
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
         firing_rate = num_spikes[unit_id] / total_duration
