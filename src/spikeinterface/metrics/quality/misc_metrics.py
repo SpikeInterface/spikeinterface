@@ -19,7 +19,7 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface.postprocessing import correlogram_for_one_segment
-from spikeinterface.core import SortingAnalyzer, get_noise_levels, select_segment_sorting
+from spikeinterface.core import SortingAnalyzer, BaseSorting, get_noise_levels
 from spikeinterface.core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
@@ -336,8 +336,6 @@ def compute_refrac_period_violations(
     ----------
     Based on metrics described in [Llobet]_
     """
-    from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes
-
     res = namedtuple("rp_violations", ["rp_contamination", "rp_violations"])
 
     if not HAVE_NUMBA:
@@ -348,16 +346,21 @@ def compute_refrac_period_violations(
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
 
-    fs = sorting_analyzer.sampling_frequency
-    num_units = len(sorting_analyzer.unit_ids)
+    # TODO: in case of periods, should we use total samples only in provided periods?
+    total_samples = sorting_analyzer.get_total_samples()
+
+    from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes
+
+    fs = sorting.sampling_frequency
+    num_units = len(sorting.unit_ids)
     num_segments = sorting.get_num_segments()
 
     spikes = sorting.to_spike_vector(concatenated=False)
 
     if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
+        unit_ids = sorting.unit_ids
 
-    num_spikes = compute_num_spikes(sorting_analyzer)
+    num_spikes = compute_num_spikes(sorting)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
@@ -368,22 +371,25 @@ def compute_refrac_period_violations(
         spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
         _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
 
-    T = sorting_analyzer.get_total_samples()
-
     nb_violations = {}
     rp_contamination = {}
 
     for unit_index, unit_id in enumerate(sorting.unit_ids):
         if unit_id not in unit_ids:
             continue
-
-        nb_violations[unit_id] = n_v = nb_rp_violations[unit_index]
-        N = num_spikes[unit_id]
-        if N == 0:
-            rp_contamination[unit_id] = np.nan
+        if isinstance(total_samples, dict):
+            total_samples_unit = total_samples[unit_id]
         else:
-            D = 1 - n_v * (T - 2 * N * t_c) / (N**2 * (t_r - t_c))
-            rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
+            total_samples_unit = total_samples
+
+        nb_violations[unit_id] = nb_rp_violations[unit_index]
+        rp_contamination[unit_id] = _compute_rp_contamination_one_unit(
+            nb_rp_violations[unit_index],
+            num_spikes[unit_id],
+            total_samples_unit,
+            t_c,
+            t_r,
+        )
 
     return res(rp_contamination, nb_violations)
 
@@ -1621,6 +1627,46 @@ def slidingRP_violations(
         return min_cont_with_90_confidence, conf_matrix
     else:
         return min_cont_with_90_confidence
+
+
+def _compute_rp_contamination_one_unit(
+    n_v,
+    n_spikes,
+    total_samples,
+    t_c,
+    t_r,
+):
+    """
+    Compute the refractory period contamination for one unit.
+
+    Parameters
+    ----------
+    n_v : int
+        Number of refractory period violations.
+    n_spikes : int
+        Number of spikes for the unit.
+    total_samples : int
+        Total number of samples in the recording.
+    t_c : int
+        Censored period in samples.
+    t_r : int
+        Refractory period in samples.
+
+    Returns
+    -------
+    rp_contamination : float
+        The refractory period contamination for the unit.
+    """
+    if n_spikes <= 1:
+        return np.nan
+
+    denom = 1 - n_v * (total_samples - 2 * n_spikes * t_c) / (n_spikes**2 * (t_r - t_c))
+    if denom < 0:
+        return 1.0
+
+    rp_contamination = 1 - math.sqrt(denom)
+
+    return rp_contamination
 
 
 def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop):

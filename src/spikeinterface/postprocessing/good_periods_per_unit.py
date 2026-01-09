@@ -4,11 +4,21 @@ import importlib.util
 import warnings
 
 import numpy as np
-from typing import Optional, Literal
+from typing import Optional
+
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import multiprocessing as mp
+from threadpoolctl import threadpool_limits
+from tqdm.auto import tqdm
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.node_pipeline import unit_period_dtype
-from spikeinterface.metrics.quality import compute_refrac_period_violations, compute_amplitude_cutoffs
+from spikeinterface.core.job_tools import process_worker_initializer, process_function_wrapper
+from spikeinterface.metrics.quality.misc_metrics import (
+    amplitude_cutoff,
+    _compute_nb_violations_numba,
+    _compute_rp_contamination_one_unit,
+)
 from spikeinterface.metrics.spiketrain import compute_firing_rates
 
 numba_spec = importlib.util.find_spec("numba")
@@ -29,29 +39,42 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         to estimate good periods (as periods with fn_rate<fn_threshold AND fp_rate<fp_threshold).
         If "user_defined", uses periods passed as user_defined_periods (see below).
         If "combined", uses the intersection of fp/fn-defined and user-defined good periods.
-    subperiod_size_absolute : float, default=10.0
+    period_duration_s_absolute : float, default: 10.0
         Duration of individual periods used to define good periods, in seconds. Same across all units.
         Note: the margin size will be the same as the period size.
             A period size of 10s sets the margin to 10s, which means that periods of 10+2*10=30s are used
             to estimate the false positive and negative rates of the central 10s.
-    subperiod_size_relative : int | None, default=1000
+    period_target_num_spikes : int | None, default: 300
         Alternative to period_size_absolute, different for each unit: mean number of spikes that should be present in each estimation period.
-        For neurons firing at 100Hz, this would correspond to periods of 10s (1000 spikes / 100 Hz = 10s).
-    subperiod_size_mode: {"absolute", "relative"}, default="absolute"
+        For neurons firing at 10 Hz, this would correspond to periods of 10s (100 spikes / 10 Hz = 10s).
+    period_size_mode: {"absolute", "relative"}, default: "absolute"
         Whether to use absolute (in seconds) or relative (in mean number of spikes) period sizes.
-    violations_ms : float, default=0.8
-        Refractory period duration for violation detection (ms).
-    fp_threshold : float, default=0.05
+    fp_threshold : float, default: 0.05
         Maximum false positive rate to mark period as good.
-    fn_threshold : float, default=0.05
+    fn_threshold : float, default: 0.05
         Maximum false negative rate to mark period as good.
-    minimum_n_spikes : int, default=100
+    minimum_n_spikes : int, default: 100
         Minimum spikes required in period for analysis.
-    minimum_valid_period_duration : float, default=180
+    minimum_valid_period_duration : float, default: 180
         Minimum duration that detected good periods must have to be kept, in seconds.
-    user_defined_periods : array-like or None, default=None
+    user_defined_periods : array-like or None, default: None
         In SAMPLES, user-specified (unit, good_period_start, good_period_end) or (unit, segment_index, good_period_start, good_period_end) time pairs.
         Required if method="user_defined" or "combined".
+    refractory_period_ms : float, default: 0.8
+        Refractory period duration for violation detection (ms).
+    censored_period_ms : float, default: 0.0
+        Censored period after each spike during which violations are not counted (ms).
+    num_histogram_bins : int, default: 100
+        The number of bins to use to compute the amplitude histogram.
+    histogram_smoothing_value : int, default: 3
+        Controls the smoothing applied to the amplitude histogram.
+    amplitudes_bins_min_ratio : int, default: 5
+        The minimum ratio between number of amplitudes for a unit and the number of bins.
+        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
+        to NaN.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -70,17 +93,20 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
     def _set_params(
         self,
         method: str = "false_positives_and_negatives",
-        subperiod_size_absolute: float = 10.0,
-        subperiod_size_relative: int = 1000,
-        subperiod_size_mode: str = "absolute",
-        violations_ms: float = 0.8,
-        fp_threshold: float = 0.05,
-        fn_threshold: float = 0.05,
+        period_duration_s_absolute: float = 30.0,
+        period_target_num_spikes: int = 300,
+        period_mode: str = "absolute",
+        fp_threshold: float = 0.1,
+        fn_threshold: float = 0.1,
         minimum_n_spikes: int = 100,
         minimum_valid_period_duration: float = 180,
         user_defined_periods: Optional[object] = None,
+        refractory_period_ms: float = 0.8,
+        censored_period_ms: float = 0.0,
+        num_histogram_bins: int = 50,
+        histogram_smoothing_value: int = 3,
+        amplitudes_bins_min_ratio: int = 5,
     ):
-
         # method
         assert method in ("false_positives_and_negatives", "user_defined", "combined"), f"Invalid method: {method}"
 
@@ -96,11 +122,11 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 raise ValueError("Requires 'amplitude_scalings' extension; please compute it first.")
 
         # subperiods
-        assert subperiod_size_mode in ("absolute", "relative"), f"Invalid subperiod_size_mode: {subperiod_size_mode}"
+        assert period_mode in ("absolute", "relative"), f"Invalid subperiod_size_mode: {period_mode}"
         assert (
-            subperiod_size_absolute > 0 or subperiod_size_relative > 0
-        ), "Either subperiod_size_absolute or subperiod_size_relative must be positive."
-        assert isinstance(subperiod_size_relative, (int)), "subperiod_size_relative must be an integer."
+            period_duration_s_absolute > 0 or period_target_num_spikes > 0
+        ), "Either period_duration_s_absolute or period_target_num_spikes must be positive."
+        assert isinstance(period_target_num_spikes, (int)), "period_target_num_spikes must be an integer."
 
         # user_defined_periods formatting
         if user_defined_periods is not None:
@@ -153,15 +179,19 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
         params = dict(
             method=method,
-            subperiod_size_absolute=subperiod_size_absolute,
-            subperiod_size_relative=subperiod_size_relative,
-            subperiod_size_mode=subperiod_size_mode,
-            violations_ms=violations_ms,
+            period_duration_s_absolute=period_duration_s_absolute,
+            period_target_num_spikes=period_target_num_spikes,
+            period_mode=period_mode,
             fp_threshold=fp_threshold,
             fn_threshold=fn_threshold,
             minimum_n_spikes=minimum_n_spikes,
             minimum_valid_period_duration=minimum_valid_period_duration,
             user_defined_periods=user_defined_periods,
+            refractory_period_ms=refractory_period_ms,
+            censored_period_ms=censored_period_ms,
+            num_histogram_bins=num_histogram_bins,
+            histogram_smoothing_value=histogram_smoothing_value,
+            amplitudes_bins_min_ratio=amplitudes_bins_min_ratio,
         )
 
         return params
@@ -181,6 +211,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         return new_extension_data
 
     def _run(self, verbose=False):
+        from spikeinterface import get_global_job_kwargs
 
         if self.params["method"] == "user_defined":
             # directly use user defined periods
@@ -188,128 +219,160 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
-            subperiods_per_unit = self.compute_subperiods(
-                self.params["subperiod_size_absolute"],
-                self.params["subperiod_size_relative"],
-                self.params["subperiod_size_mode"],
+            all_periods = self.compute_subperiods(
+                self.params["period_duration_s_absolute"],
+                self.params["period_target_num_spikes"],
+                self.params["period_mode"],
             )
 
+            job_kwargs = get_global_job_kwargs()
+            n_jobs = job_kwargs["n_jobs"]
+            progress_bar = job_kwargs["progress_bar"]
+            max_threads_per_worker = job_kwargs["max_threads_per_worker"]
+            mp_context = job_kwargs["mp_context"]
+
             # Compute fp and fn for all periods
+            # Process units in parallel
+            amp_scalings = self.sorting_analyzer.get_extension("amplitude_scalings")
+            all_amplitudes_by_unit = amp_scalings.get_data(outputs="by_unit", concatenated=False)
 
-            # fp computed from refractory period violations
-            # dict: unit_id -> array of shape (n_subperiods)
-            periods_fp_per_unit = self.compute_fp_rates(subperiods_per_unit, self.params["violations_ms"])
+            init_args = (self.sorting_analyzer.sorting, all_amplitudes_by_unit, self.params, max_threads_per_worker)
 
-            # fn computed from amplitude clippings
-            # dict: unit_id -> array of shape (n_subperiods)
-            periods_fn_per_unit = self.compute_fn_rates(subperiods_per_unit)
-            # Combine fp and fn results with thresholds to define good periods
-            # get n spikes per unit to set the fp or fn rates to 1 if not enough spikes
-            minimum_valid_period_duration = self.params["minimum_valid_period_duration"]
-            fs = self.sorting_analyzer.sampling_frequency
-            min_valid_period_samples = int(minimum_valid_period_duration * fs)
+            # Each item is one computation of fp and fn for one period and one unit
+            items = [(period,) for period in all_periods]
+            job_name = f"computing false positives and negatives"
 
-            n_spikes_per_unit = self.sorting_analyzer.sorting.count_num_spikes_per_unit()
-            good_periods_per_unit = np.array([], dtype=unit_period_dtype)
-            for unit_id, subperiods in subperiods_per_unit.items():
-                n_spikes = n_spikes_per_unit[unit_id]
-                if n_spikes < self.params["minimum_n_spikes"]:
-                    periods_fp_per_unit[unit_id] = [1] * len(periods_fp_per_unit[unit_id])
-                    periods_fn_per_unit[unit_id] = [1] * len(periods_fn_per_unit[unit_id])
+            # parallel
+            with ProcessPoolExecutor(
+                max_workers=n_jobs,
+                initializer=process_worker_initializer,
+                mp_context=mp.get_context(mp_context),
+                initargs=(
+                    fp_fn_worker_func,
+                    fp_fn_worker_init,
+                    init_args,
+                    max_threads_per_worker,
+                    False,  # no worker index
+                    None,
+                    None,
+                ),
+            ) as executor:
+                results = executor.map(fp_fn_worker_func_wrapper, items)
 
-                fp_rates = periods_fp_per_unit[unit_id]
-                fn_rates = periods_fn_per_unit[unit_id]
+                if progress_bar:
+                    results = tqdm(results, desc=f"{job_name} (workers: {n_jobs} processes)", total=len(items))
 
-                good_periods_mask = (np.array(fp_rates) < self.params["fp_threshold"]) & (
-                    np.array(fn_rates) < self.params["fn_threshold"]
-                )
-                good_subperiods = np.array(subperiods)[good_periods_mask]
-                good_segments = np.unique(good_subperiods["segment_index"])
-                for segment_index in good_segments:
-                    segment_mask = good_subperiods["segment_index"] == segment_index
-                    good_segment_subperiods = good_subperiods[segment_mask]
-                    good_segment_periods = merge_overlapping_periods(good_segment_subperiods)
-                    good_periods_per_unit = np.concatenate((good_periods_per_unit, good_segment_periods), axis=0)
+                all_fps = np.zeros(len(all_periods))
+                all_fns = np.zeros(len(all_periods))
+                for i, (fp, fn) in enumerate(results):
+                    all_fps[i] = fp
+                    all_fns[i] = fn
+
+            # set NaNs to 1 (they will be exluded anyways)
+            all_fps[np.isnan(all_fps)] = 1.0
+            all_fns[np.isnan(all_fns)] = 1.0
+
+            # split values by segment and units
+            # fps and fns are lists of segments with dicts unit_id -> array of shape (n_subperiods)
+            fps = []
+            fns = []
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                fp_in_segment = {}
+                fn_in_segment = {}
+                segment_mask = all_periods["segment_index"] == segment_index
+                periods_segment = all_periods[segment_mask]
+                fps_segment = all_fps[segment_mask]
+                fns_segment = all_fns[segment_mask]
+                for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                    unit_mask = periods_segment["unit_index"] == unit_index
+                    fp_in_segment[unit_id] = fps_segment[unit_mask]
+                    fn_in_segment[unit_id] = fns_segment[unit_mask]
+                fps.append(fp_in_segment)
+                fns.append(fn_in_segment)
+
+            good_period_mask = (all_fps < self.params["fp_threshold"]) & (all_fns < self.params["fn_threshold"])
+            good_periods = all_periods[good_period_mask]
+
+            # Sort good periods on segment_index, unit_index, start_sample_index
+            sort_idx = np.lexsort(
+                (good_periods["start_sample_index"], good_periods["unit_index"], good_periods["segment_index"])
+            )
+            good_periods_per_unit = good_periods[sort_idx]
+
+            # Combine with user-defined periods if provided
+            if self.params["method"] == "combined":
+                user_defined_periods = self.params["user_defined_periods"]
+                all_periods = np.concatenate((good_periods_per_unit, user_defined_periods), axis=0)
+            good_periods_per_unit = merge_overlapping_periods_across_units_and_segments(good_periods_per_unit)
 
             # Remove good periods that are too short
+            minimum_valid_period_duration = self.params["minimum_valid_period_duration"]
+            min_valid_period_samples = int(minimum_valid_period_duration * self.sorting_analyzer.sampling_frequency)
             duration_samples = good_periods_per_unit["end_sample_index"] - good_periods_per_unit["start_sample_index"]
             valid_mask = duration_samples >= min_valid_period_samples
             good_periods_per_unit = good_periods_per_unit[valid_mask]
 
-            # Eventually combine with user-defined periods if provided
-            if self.params["method"] == "combined":
-                user_defined_periods = self.params["user_defined_periods"]
-                all_periods = np.concatenate((good_periods_per_unit, user_defined_periods), axis=0)
-                good_periods_per_unit = merge_overlapping_periods_across_units_and_segments(all_periods)
-
             # Convert subperiods per unit in period_centers_s
             period_centers = []
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                periods_segment = all_periods[all_periods["segment_index"] == segment_index]
                 period_centers_dict = {}
-                for unit_id in self.sorting_analyzer.unit_ids:
-                    periods_unit = subperiods_per_unit[unit_id]
-                    periods_segment = periods_unit[periods_unit["segment_index"] == segment_index]
-                    centers = list(0.5 * (periods_segment["start_sample_index"] + periods_segment["end_sample_index"]))
+                for unit_index, unit_id in enumerate(self.sorting_analyzer.unit_ids):
+                    periods_unit = periods_segment[periods_segment["unit_index"] == unit_index]
+                    centers = list(0.5 * (periods_unit["start_sample_index"] + periods_unit["end_sample_index"]))
                     period_centers_dict[unit_id] = centers
                 period_centers.append(period_centers_dict)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
             self.data["period_centers"] = period_centers
-            self.data["periods_fp_per_unit"] = periods_fp_per_unit
-            self.data["periods_fn_per_unit"] = periods_fn_per_unit
+            self.data["periods_fp_per_unit"] = fps
+            self.data["periods_fn_per_unit"] = fns
             self.data["good_periods_per_unit"] = good_periods_per_unit
 
-    def _get_data(self, outputs: str = "by_unit", return_subperiods_metadata: bool = False):
+    def _get_data(self, outputs: str = "by_unit"):
         """
         Return extension data. If the extension computes more than one `nodepipeline_variables`,
         the `return_data_name` is used to specify which one to return.
 
         Parameters
         ----------
-        outputs : "numpy" | "by_unit", default: "numpy"
-            How to return the data, by default "numpy"
-        return_subperiods_metadata: bool, default: False
-            Whether to also return metadata of subperiods used to compute the good periods
-            as dictionnaries per unit:
-                - subperiods_per_unit: unit_name -> list of n_subperiods subperiods (each subperiod is an array of dtype unit_period_dtype with 4 fields)
-                - periods_fp_per_unit: unit_name -> array of n_subperiods, false positive rates (refractory period violations) per subperiod
-                - periods_fn_per_unit: unit_name -> array of n_subperiods, false negative rates (amplitude cutoffs) per subperiod
+        outputs : "numpy" | "by_unit", default: "by_unit"
+            How to return the data.
 
         Returns
         -------
-        numpy.ndarray | dict | tuple
-            The periods in numpy or dictionnary by unit format,
-            or a tuple that contains the former as well as metadata of subperiods if return_subperiods_metadata is True.
+        numpy.ndarray | list
+            The periods in numpy or dictionary by unit format, depending on `outputs`.
+            If "numpy", returns an array of dtype unit_period_dtype with columns:
+            unit_index, segment_index, start_sample_index, end_sample_index.
+            If "by_unit", returns a list (per segment) of dictionaries mapping unit IDs to lists of
+            (start_sample_index, end_sample_index) tuples.
         """
-
-        good_periods = self.data["good_periods_per_unit"]
-
-        # list of dictionnaries; one dictionnary per segment
-        if outputs == "by_unit":
+        if outputs == "numpy":
+            good_periods = self.data["good_periods_per_unit"]
+        else:
+            # by_unit
             unit_ids = self.sorting_analyzer.unit_ids
-            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
-            data_by_units = {}
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
-                data_by_units[segment_index] = {}
-                for unit_id in unit_ids:
-                    inds = spike_indices[segment_index][unit_id]
-                    data_by_units[segment_index][unit_id] = all_data[inds]
+            good_periods = []
+            good_periods_array = self.data["good_periods_per_unit"]
+            for segment_index in range(self.sorting_analyzer.get_num_segments()):
+                segment_mask = good_periods_array["segment_index"] == segment_index
+                periods_dict = {}
+                for unit_index in unit_ids:
+                    periods_dict[unit_index] = []
+                    unit_mask = good_periods_array["unit_index"] == unit_index
+                    good_periods_unit_segment = good_periods_array[segment_mask & unit_mask]
+                    for start, end in good_periods_unit_segment[["start_sample_index", "end_sample_index"]]:
+                        periods_dict[unit_index].append((start, end))
+                good_periods.append(periods_dict)
 
-            return data_by_units
-
-        return (
-            self.data["subperiods_per_unit"],
-            self.data["periods_fp_per_unit"],
-            self.data["periods_fn_per_unit"],
-            good_periods,
-        )
+        return good_periods
 
     def compute_subperiods(
         self,
-        subperiod_size_absolute: float = 10,
-        subperiod_size_relative: int = 1000,
-        subperiod_size_mode: str = "absolute",
+        period_duration_s_absolute: float = 10,
+        period_target_num_spikes: int = 1000,
+        period_mode: str = "absolute",
     ) -> dict:
         """
         Computes subperiods per unit based on specified size mode.
@@ -323,21 +386,20 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
         fs = sorting.sampling_frequency
         unit_ids = sorting.unit_ids
 
-        if subperiod_size_mode == "absolute":
-            period_sizes_samples = {u: np.round(subperiod_size_absolute * fs).astype(int) for u in unit_ids}
+        if period_mode == "absolute":
+            period_sizes_samples = {u: np.round(period_duration_s_absolute * fs).astype(int) for u in unit_ids}
         else:  # relative
             mean_firing_rates = compute_firing_rates(self.sorting_analyzer, unit_ids)
             period_sizes_samples = {
-                u: np.round((subperiod_size_relative / mean_firing_rates[u]) * fs).astype(int) for u in unit_ids
+                u: np.round((period_target_num_spikes / mean_firing_rates[u]) * fs).astype(int) for u in unit_ids
             }
         margin_sizes_samples = period_sizes_samples
 
-        all_subperiods = {}
+        all_subperiods = np.array([], dtype=unit_period_dtype)
         for unit_index, unit_id in enumerate(unit_ids):
             period_size_samples = period_sizes_samples[unit_id]
             margin_size_samples = margin_sizes_samples[unit_id]
 
-            all_subperiods[unit_id] = []
             for segment_index in range(sorting.get_num_segments()):
                 n_samples = self.sorting_analyzer.get_num_samples(segment_index)  # int: samples
                 n_subperiods = n_samples // period_size_samples + 1
@@ -347,51 +409,16 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                         for i in range(n_subperiods)
                     ]
                 )
-                for start, end in starts_ends:
+                periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+                for i, (start, end) in enumerate(starts_ends):
                     subperiod = np.zeros((1,), dtype=unit_period_dtype)
                     subperiod["segment_index"] = segment_index
                     subperiod["start_sample_index"] = start
                     subperiod["end_sample_index"] = end
                     subperiod["unit_index"] = unit_index
-                    all_subperiods[unit_id].append(subperiod)
-            all_subperiods[unit_id] = np.array(all_subperiods[unit_id])
+                    periods_for_unit[i] = subperiod
+                all_subperiods = np.concatenate((all_subperiods, periods_for_unit), axis=0)
         return all_subperiods
-
-    def compute_fp_rates(self, subperiods_per_unit: dict, violations_ms: float = 0.8) -> dict:
-        """
-        Computes false positive rates (RP violations) for each subperiod per unit.
-        """
-        fp_rates = {}
-        for unit_id, subperiods in subperiods_per_unit.items():
-            fp_rates[unit_id] = []
-            for subperiod in subperiods:
-                isi_violations = compute_refrac_period_violations(
-                    self.sorting_analyzer,
-                    unit_ids=[unit_id],
-                    refractory_period_ms=violations_ms,
-                    periods=subperiod,
-                )
-                fp_rates[unit_id].append(isi_violations.rp_contamination[unit_id])  # contamination for this subperiod
-        return fp_rates
-
-    def compute_fn_rates(self, subperiods_per_unit: dict) -> dict:
-        """
-        Computes false negative rates (amplitude cutoffs) for each subperiod per unit.
-        """
-        fn_rates = {}
-        for unit_id, subperiods in subperiods_per_unit.items():
-            fn_rates[unit_id] = []
-            for subperiod in subperiods:
-                all_fraction_missing = compute_amplitude_cutoffs(
-                    self.sorting_analyzer,
-                    unit_ids=[unit_id],
-                    num_histogram_bins=50,
-                    histogram_smoothing_value=3,
-                    amplitudes_bins_min_ratio=3,
-                    periods=subperiod,
-                )
-                fn_rates[unit_id].append(all_fraction_missing[unit_id])  # missed spikes for this subperiod
-        return fn_rates
 
 
 def merge_overlapping_periods(subperiods):
@@ -434,16 +461,13 @@ def merge_overlapping_periods(subperiods):
 
 
 def merge_overlapping_periods_across_units_and_segments(periods):
-
-    units = np.unique(periods["unit_index"])
     segments = np.unique(periods["segment_index"])
-
+    units = np.unique(periods["unit_index"])
     merged_periods = np.array([], dtype=unit_period_dtype)
-    for unit_index in units:
-        for segment_index in segments:
-            masked_periods = periods[
-                (periods["unit_index"] == unit_index) & (periods["segment_index"] == segment_index)
-            ]
+    for segment_index in segments:
+        periods_per_segment = periods[periods["segment_index"] == segment_index]
+        for unit_index in units:
+            masked_periods = periods_per_segment[(periods_per_segment["unit_index"] == unit_index)]
             if len(masked_periods) == 0:
                 continue
             _merged_periods = merge_overlapping_periods(masked_periods)
@@ -454,3 +478,74 @@ def merge_overlapping_periods_across_units_and_segments(periods):
 
 register_result_extension(ComputeGoodPeriodsPerUnit)
 compute_good_periods_per_unit = ComputeGoodPeriodsPerUnit.function_factory()
+
+
+global worker_ctx
+
+
+def fp_fn_worker_init(sorting, all_amplitudes_by_unit, params, max_threads_per_worker):
+    global worker_ctx
+    worker_ctx = {}
+
+    # cache spike vector and spiketrains
+    sorting.precompute_spike_trains()
+
+    worker_ctx["sorting"] = sorting
+    worker_ctx["all_amplitudes_by_unit"] = all_amplitudes_by_unit
+    worker_ctx["params"] = params
+    worker_ctx["max_threads_per_worker"] = max_threads_per_worker
+
+
+def fp_fn_worker_func(period, sorting, all_amplitudes_by_unit, params):
+    """
+    Low level computation of false positives and false negatives for one period and one unit.
+    """
+    # period is of dtype unit_period_dtype: 0: segment_index, 1: start_sample_index, 2: end_sample_index, 3: unit_index
+    period_sample = period[0]
+    segment_index = period_sample["segment_index"]
+    start_sample_index = period_sample["start_sample_index"]
+    end_sample_index = period_sample["end_sample_index"]
+    unit_index = period_sample["unit_index"]
+    unit_id = sorting.unit_ids[unit_index]
+
+    amplitudes_unit = all_amplitudes_by_unit[segment_index][unit_id]
+    spiketrain = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+
+    mask = (spiketrain >= start_sample_index) & (spiketrain < end_sample_index)
+    total_samples_in_period = end_sample_index - start_sample_index
+    spiketrain_period = spiketrain[mask]
+    amplitudes_period = amplitudes_unit[mask]
+
+    # compute fp (rp_violations). See _compute_refrac_period_violations in quality metrics
+    fs = sorting.sampling_frequency
+    t_c = int(round(params["censored_period_ms"] * fs * 1e-3))
+    t_r = int(round(params["refractory_period_ms"] * fs * 1e-3))
+    n_v = _compute_nb_violations_numba(spiketrain_period, t_r)
+    fp = _compute_rp_contamination_one_unit(
+        n_v,
+        len(spiketrain_period),
+        total_samples_in_period,
+        t_c,
+        t_r,
+    )
+
+    # compute fn (amplitude_cutoffs)
+    fn = amplitude_cutoff(
+        amplitudes_period,
+        params["num_histogram_bins"],
+        params["histogram_smoothing_value"],
+        params["amplitudes_bins_min_ratio"],
+    )
+    return fp, fn
+
+
+def fp_fn_worker_func_wrapper(period):
+    global worker_ctx
+    with threadpool_limits(limits=worker_ctx["max_threads_per_worker"]):
+        fp, fn = fp_fn_worker_func(
+            period,
+            worker_ctx["sorting"],
+            worker_ctx["all_amplitudes_by_unit"],
+            worker_ctx["params"],
+        )
+    return fp, fn
