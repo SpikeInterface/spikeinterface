@@ -13,12 +13,6 @@ from tqdm.auto import tqdm
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.node_pipeline import unit_period_dtype
-from spikeinterface.core.job_tools import process_worker_initializer, process_function_wrapper
-from spikeinterface.metrics.quality.misc_metrics import (
-    amplitude_cutoff,
-    _compute_nb_violations_numba,
-    _compute_rp_contamination_one_unit,
-)
 from spikeinterface.metrics.spiketrain import compute_firing_rates
 
 numba_spec = importlib.util.find_spec("numba")
@@ -248,17 +242,9 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             # parallel
             with ProcessPoolExecutor(
                 max_workers=n_jobs,
-                initializer=process_worker_initializer,
+                initializer=fp_fn_worker_init,
                 mp_context=mp.get_context(mp_context),
-                initargs=(
-                    fp_fn_worker_func,
-                    fp_fn_worker_init,
-                    init_args,
-                    max_threads_per_worker,
-                    False,  # no worker index
-                    None,
-                    None,
-                ),
+                initargs=init_args,
             ) as executor:
                 results = executor.map(fp_fn_worker_func_wrapper, items)
 
@@ -503,6 +489,12 @@ def fp_fn_worker_func(period, sorting, all_amplitudes_by_unit, params):
     """
     Low level computation of false positives and false negatives for one period and one unit.
     """
+    from spikeinterface.metrics.quality.misc_metrics import (
+        amplitude_cutoff,
+        _compute_nb_violations_numba,
+        _compute_rp_contamination_one_unit,
+    )
+
     # period is of dtype unit_period_dtype: 0: segment_index, 1: start_sample_index, 2: end_sample_index, 3: unit_index
     period_sample = period[0]
     segment_index = period_sample["segment_index"]
