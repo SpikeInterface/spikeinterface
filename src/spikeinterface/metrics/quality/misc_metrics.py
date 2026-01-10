@@ -95,15 +95,10 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         new_spikes = spikes[order]
 
         # precompute segment slice
-        unit_slices = {}
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-            unit_slices[unit_id] = slice(u0, u1)
-
-        for unit_id in unit_ids:
-            unit_slice = unit_slices[unit_id]
-            spike_train = new_spikes[unit_slice]["sample_index"]
+            spike_train = new_spikes[slice(u0, u1)]["sample_index"]
 
             unit_fr = spike_train.size / total_duration
             bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thresh)
@@ -266,17 +261,10 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         sub_data = new_spikes[slice(u0, u1)]
-        unit_slices[unit_id] = []
+        spike_train_list = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
-
-    # all units converted to seconds
-    for unit_id in unit_ids:
-        spike_train_list = []
-
-        for segment_index in range(num_segs):
-            spike_train = new_spikes[unit_slices[unit_id][segment_index]]["sample_index"]
+            spike_train = new_spikes[slice(u0 + s0, u0 + s1)]["sample_index"]
             if len(spike_train) > 0:
                 spike_train_list.append(spike_train / fs)
 
@@ -370,21 +358,22 @@ def compute_refrac_period_violations(
     t_r = int(round(refractory_period_ms * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
+    all_unit_indices = sorting.ids_to_indices(unit_ids)
+
     for seg_index in range(num_segments):
         spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
         spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
-        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
+        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r, all_unit_indices)
 
     T = sorting_analyzer.get_total_samples()
 
     nb_violations = {}
     rp_contamination = {}
 
-    for unit_index, unit_id in enumerate(sorting.unit_ids):
-        if unit_id not in unit_ids:
-            continue
-
-        nb_violations[unit_id] = n_v = nb_rp_violations[unit_index]
+    for unit_id in unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        n_v = nb_rp_violations[unit_index]
+        nb_violations[unit_id] = n_v
         N = num_spikes[unit_id]
         if N == 0:
             rp_contamination[unit_id] = np.nan
@@ -1828,10 +1817,10 @@ if HAVE_NUMBA:
         cache=False,
         parallel=True,
     )
-    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
-        n_units = len(nb_rp_violations)
-
-        for i in numba.prange(n_units):
-            spike_train = spike_trains[spike_clusters == i]
+    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r, all_units_indices):
+        
+        for i in numba.prange(len(all_units_indices)):
+            unit_index = all_units_indices[i]
+            spike_train = spike_trains[spike_clusters == unit_index]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
-            nb_rp_violations[i] += n_v
+            nb_rp_violations[unit_index] += n_v
