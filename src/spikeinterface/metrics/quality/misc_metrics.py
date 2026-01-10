@@ -1818,7 +1818,7 @@ if HAVE_NUMBA:
         parallel=True,
     )
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r, all_units_indices):
-        
+
         for i in numba.prange(len(all_units_indices)):
             unit_index = all_units_indices[i]
             spike_train = spike_trains[spike_clusters == unit_index]
