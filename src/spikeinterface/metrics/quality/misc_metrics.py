@@ -1758,18 +1758,18 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 
     all_syncs = np.unique(sync_counts)
     num_bins = [np.size(synchrony_sizes[synchrony_sizes <= i]) for i in all_syncs]
-    
+
     indices = {}
     for num_of_syncs in all_syncs:
         indices[num_of_syncs] = np.flatnonzero(all_syncs == num_of_syncs)[0]
 
     for i, sync_index in enumerate(sync_indices):
-        
+
         num_of_syncs = sync_counts[i]
         # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
         # to the 2 simultaneous spike bins.
         units_with_sync = spikes[sync_index : sync_index + num_of_syncs]["unit_index"]
-        synchrony_counts[:num_bins[indices[num_of_syncs]], units_with_sync] += 1
+        synchrony_counts[: num_bins[indices[num_of_syncs]], units_with_sync] += 1
 
     return synchrony_counts
 
