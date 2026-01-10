@@ -1751,17 +1751,25 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     # compute the occurrence of each sample_index. Count >2 means there's synchrony
     _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
 
-    mask = counts >= 2
+    min_synchrony = 2
+    mask = counts >= min_synchrony
     sync_indices = unique_spike_index[mask]
     sync_counts = counts[mask]
 
+    all_syncs = np.unique(sync_counts)
+    num_bins = [np.size(synchrony_sizes[synchrony_sizes <= i]) for i in all_syncs]
+    
+    indices = {}
+    for num_of_syncs in all_syncs:
+        indices[num_of_syncs] = np.flatnonzero(all_syncs == num_of_syncs)[0]
+
     for i, sync_index in enumerate(sync_indices):
+        
         num_of_syncs = sync_counts[i]
         # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
         # to the 2 simultaneous spike bins.
         units_with_sync = spikes[sync_index : sync_index + num_of_syncs]["unit_index"]
-        how_many_bins_to_add_to = np.size(synchrony_sizes[synchrony_sizes <= num_of_syncs])
-        synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
+        synchrony_counts[:num_bins[indices[num_of_syncs]], units_with_sync] += 1
 
     return synchrony_counts
 
