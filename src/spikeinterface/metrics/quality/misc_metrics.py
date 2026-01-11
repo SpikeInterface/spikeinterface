@@ -264,7 +264,7 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
         spike_train_list = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spike_train = new_spikes[u0 + s0: u0 + s1]["sample_index"]
+            spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
             if len(spike_train) > 0:
                 spike_train_list.append(spike_train / fs)
 
@@ -630,7 +630,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
-            spike_times = new_spikes[s0 + u0:s0 + u1]["sample_index"]
+            spike_times = new_spikes[s0 + u0 : s0 + u1]["sample_index"]
             spike_counts, _ = np.histogram(spike_times, bins=edges)
             firing_rates = spike_counts / bin_size_s
             firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
@@ -726,7 +726,6 @@ def compute_amplitude_cv_metrics(
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         sub_data = new_spikes[u0:u1]
-        
 
         amp_spreads = []
         # bins and amplitude means are computed for each segment
@@ -736,8 +735,8 @@ def compute_amplitude_cv_metrics(
             )
 
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spikes_in_segment = new_spikes[u0 + s0:u0 + s1]
-            amps_unit = new_amps[u0 + s0:u0 + s1]
+            spikes_in_segment = new_spikes[u0 + s0 : u0 + s1]
+            amps_unit = new_amps[u0 + s0 : u0 + s1]
             spike_indices_unit = spikes_in_segment["sample_index"]
             amp_mean = np.abs(np.mean(amps_unit))
 
@@ -1117,7 +1116,7 @@ def compute_drift_metrics(
             u0, u1 = np.searchsorted(spikes_in_segment["unit_index"], [unit_index, unit_index + 1], side="left")
             spikes_in_segment_of_unit = spikes_in_segment[u0:u1]
             spike_locations_in_segment_of_unit = spike_locations_in_segment[u0:u1]
-            
+
             for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
                 i0, i1 = np.searchsorted(spikes_in_segment_of_unit["sample_index"], [start_frame, end_frame])
                 spikes_in_bin = spikes_in_segment_of_unit[i0:i1]
@@ -1129,8 +1128,8 @@ def compute_drift_metrics(
             median_position_segments = median_positions
         else:
             median_position_segments = np.hstack((median_position_segments, median_positions))
-    
-    #finally, compute deviations and drifts
+
+    # finally, compute deviations and drifts
     position_diffs = median_position_segments - reference_positions[:, None]
     for i, unit_id in enumerate(unit_ids):
         position_diff = position_diffs[i]
@@ -1265,10 +1264,10 @@ def compute_sd_ratio(
         spk_amp = []
 
         for segment_index in range(sorting.get_num_segments()):
-            
+
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spike_train = new_spikes[u0+s0:u0+s1]["sample_index"]
-            amplitudes = new_spike_amplitudes[u0+s0:u0+s1]
+            spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
+            amplitudes = new_spike_amplitudes[u0 + s0 : u0 + s1]
 
             censored_indices = find_duplicated_spikes(
                 spike_train,
