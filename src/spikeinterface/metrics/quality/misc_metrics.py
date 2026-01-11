@@ -98,7 +98,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-            spike_train = new_spikes[slice(u0, u1)]["sample_index"]
+            spike_train = new_spikes[u0:u1]["sample_index"]
 
             unit_fr = spike_train.size / total_duration
             bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thresh)
@@ -260,11 +260,11 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[slice(u0, u1)]
+        sub_data = new_spikes[u0:u1]
         spike_train_list = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spike_train = new_spikes[slice(u0 + s0, u0 + s1)]["sample_index"]
+            spike_train = new_spikes[u0 + s0: u0 + s1]["sample_index"]
             if len(spike_train) > 0:
                 spike_train_list.append(spike_train / fs)
 
@@ -461,7 +461,7 @@ def compute_sliding_rp_violations(
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
 
-        sub_spikes = new_spikes[slice(u0, u1)].copy()
+        sub_spikes = new_spikes[u0:u1].copy()
         sub_spikes["unit_index"] = 0  # single unit sorting
 
         unit_n_spikes = len(sub_spikes)
@@ -620,24 +620,17 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
     order = np.lexsort((spikes["sample_index"], spikes["unit_index"], spikes["segment_index"]))
     new_spikes = spikes[order]
 
-    segment_slices = {}
-    for segment_index in range(sorting_analyzer.get_num_segments()):
-        s0, s1 = np.searchsorted(new_spikes["segment_index"], [segment_index, segment_index + 1], side="left")
-        segment_slices[segment_index] = {}
-        sub_data = new_spikes[slice(s0, s1)]
-        for unit_id in unit_ids:
-            unit_index = sorting.id_to_index(unit_id)
-            u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
-            segment_slices[segment_index][unit_id] = slice(s0 + u0, s0 + u1)
-
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in unit_ids}
     for segment_index in range(sorting_analyzer.get_num_segments()):
+        s0, s1 = np.searchsorted(new_spikes["segment_index"], [segment_index, segment_index + 1], side="left")
         num_samples = sorting_analyzer.get_num_samples(segment_index)
         edges = np.arange(0, num_samples + 1, bin_size_samples)
-
+        sub_data = new_spikes[s0:s1]
         for unit_id in unit_ids:
-            spike_times = new_spikes[segment_slices[segment_index][unit_id]]["sample_index"]
+            unit_index = sorting.id_to_index(unit_id)
+            u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
+            spike_times = new_spikes[s0 + u0:s0 + u1]["sample_index"]
             spike_counts, _ = np.histogram(spike_times, bins=edges)
             firing_rates = spike_counts / bin_size_s
             firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
@@ -723,22 +716,17 @@ def compute_amplitude_cv_metrics(
     new_spikes = spikes[order]
     new_amps = amps[order]
 
-    unit_slices = {}
-    for unit_id in unit_ids:
-        unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[slice(u0, u1)]
-        unit_slices[unit_id] = []
-        for segment_index in range(sorting_analyzer.get_num_segments()):
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
-
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
         firing_rate = num_spikes[unit_id] / total_duration
         temporal_bin_size_samples = int(
             (average_num_spikes_per_bin / firing_rate) * sorting_analyzer.sampling_frequency
         )
+
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[u0:u1]
+        
 
         amp_spreads = []
         # bins and amplitude means are computed for each segment
@@ -747,8 +735,9 @@ def compute_amplitude_cv_metrics(
                 0, sorting_analyzer.get_num_samples(segment_index) + 1, temporal_bin_size_samples
             )
 
-            spikes_in_segment = new_spikes[unit_slices[unit_id][segment_index]]
-            amps_unit = new_amps[unit_slices[unit_id][segment_index]]
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            spikes_in_segment = new_spikes[u0 + s0:u0 + s1]
+            amps_unit = new_amps[u0 + s0:u0 + s1]
             spike_indices_unit = spikes_in_segment["sample_index"]
             amp_mean = np.abs(np.mean(amps_unit))
 
@@ -1073,14 +1062,11 @@ def compute_drift_metrics(
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
     spike_locations = spike_locations_ext.get_data()
-    # spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit")
+
     spikes = sorting.to_spike_vector()
-    spike_locations_by_unit = {}
-    for unit_id in unit_ids:
-        unit_index = sorting.id_to_index(unit_id)
-        # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
-        spike_mask = spikes["unit_index"] == unit_index
-        spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
+    new_spike_locations = spike_locations[order]
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
@@ -1105,41 +1091,42 @@ def compute_drift_metrics(
 
     # reference positions are the medians across segments
     reference_positions = np.zeros(len(unit_ids))
-    for i, unit_id in enumerate(unit_ids):
-        unit_ind = sorting.id_to_index(unit_id)
-        reference_positions[i] = np.median(spike_locations_by_unit[unit_id][direction])
-
-    # now compute median positions and concatenate them over segments
     median_position_segments = None
+
+    for unit_id in unit_ids:
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        reference_positions[unit_index] = np.median(new_spike_locations[u0:u1][direction])
+
     for segment_index in range(sorting_analyzer.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
         seg_length = sorting_analyzer.get_num_samples(segment_index)
         num_bin_edges = seg_length // interval_samples + 1
         bins = np.arange(num_bin_edges) * interval_samples
-        spike_vector = sorting.to_spike_vector()
+        spikes_in_segment = spikes[s0:s1]
+        spike_locations_in_segment = spike_locations[s0:s1]
 
-        # retrieve spikes in segment
-        i0, i1 = np.searchsorted(spike_vector["segment_index"], [segment_index, segment_index + 1])
-        spikes_in_segment = spike_vector[i0:i1]
-        spike_locations_in_segment = spike_locations[i0:i1]
-
-        # compute median positions (if less than min_spikes_per_interval, median position is 0)
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
-        for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-            i0, i1 = np.searchsorted(spikes_in_segment["sample_index"], [start_frame, end_frame])
-            spikes_in_bin = spikes_in_segment[i0:i1]
-            spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
-            for i, unit_id in enumerate(unit_ids):
-                unit_ind = sorting.id_to_index(unit_id)
-                mask = spikes_in_bin["unit_index"] == unit_ind
-                if np.sum(mask) >= min_spikes_per_interval:
-                    median_positions[i, bin_index] = np.median(spike_locations_in_bin[mask])
+        for unit_id in unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
+            u0, u1 = np.searchsorted(spikes_in_segment["unit_index"], [unit_index, unit_index + 1], side="left")
+            spikes_in_segment_of_unit = spikes_in_segment[u0:u1]
+            spike_locations_in_segment_of_unit = spike_locations_in_segment[u0:u1]
+            # compute median positions (if less than min_spikes_per_interval, median position is 0)
+            for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
+                i0, i1 = np.searchsorted(spikes_in_segment_of_unit["sample_index"], [start_frame, end_frame])
+                spikes_in_bin = spikes_in_segment_of_unit[i0:i1]
+                spike_locations_in_bin = spike_locations_in_segment_of_unit[i0:i1][direction]
+                if len(spikes_in_bin) >= min_spikes_per_interval:
+                    median_positions[unit_index, bin_index] = np.median(spike_locations_in_bin)
+
         if median_position_segments is None:
             median_position_segments = median_positions
         else:
             median_position_segments = np.hstack((median_position_segments, median_positions))
-
-    # finally, compute deviations and drifts
+    
+    #finally, compute deviations and drifts
     position_diffs = median_position_segments - reference_positions[:, None]
     for i, unit_id in enumerate(unit_ids):
         position_diff = position_diffs[i]
@@ -1266,25 +1253,18 @@ def compute_sd_ratio(
 
     sd_ratio = {}
 
-    unit_slices = {}
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[slice(u0, u1)]
-        unit_slices[unit_id] = []
-        for segment_index in range(sorting_analyzer.get_num_segments()):
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            unit_slices[unit_id] += [slice(u0 + s0, u0 + s1)]
-
-    for unit_id in unit_ids:
-        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        sub_data = new_spikes[u0:u1]
 
         spk_amp = []
 
         for segment_index in range(sorting.get_num_segments()):
-
-            spike_train = new_spikes[unit_slices[unit_id][segment_index]]["sample_index"]
-            amplitudes = new_spike_amplitudes[unit_slices[unit_id][segment_index]]
+            
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+            spike_train = new_spikes[u0+s0:u0+s1]["sample_index"]
+            amplitudes = new_spike_amplitudes[u0+s0:u0+s1]
 
             censored_indices = find_duplicated_spikes(
                 spike_train,
