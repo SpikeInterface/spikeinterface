@@ -1068,6 +1068,10 @@ def compute_drift_metrics(
     new_spikes = spikes[order]
     new_spike_locations = spike_locations[order]
 
+    order_bis = np.lexsort((spikes["sample_index"], spikes["unit_index"], spikes["segment_index"]))
+    new_spikes_bis = spikes[order]
+    new_spike_locations_bis = spike_locations[order]
+
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
         f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
@@ -1093,33 +1097,33 @@ def compute_drift_metrics(
     reference_positions = np.zeros(len(unit_ids))
     median_position_segments = None
 
-    for unit_id in unit_ids:
+    for i, unit_id in enumerate(unit_ids):
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        reference_positions[unit_index] = np.median(new_spike_locations[u0:u1][direction])
+        reference_positions[i] = np.median(new_spike_locations[u0:u1][direction])
 
     for segment_index in range(sorting_analyzer.get_num_segments()):
-        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
+        s0, s1 = np.searchsorted(new_spikes_bis["segment_index"], [segment_index, segment_index + 1], side="left")
         seg_length = sorting_analyzer.get_num_samples(segment_index)
         num_bin_edges = seg_length // interval_samples + 1
         bins = np.arange(num_bin_edges) * interval_samples
-        spikes_in_segment = spikes[s0:s1]
-        spike_locations_in_segment = spike_locations[s0:s1]
+        spikes_in_segment = new_spikes_bis[s0:s1]
+        spike_locations_in_segment = new_spike_locations_bis[s0:s1]
 
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
 
-        for unit_id in unit_ids:
+        for i, unit_id in enumerate(unit_ids):
             unit_index = sorting.id_to_index(unit_id)
             u0, u1 = np.searchsorted(spikes_in_segment["unit_index"], [unit_index, unit_index + 1], side="left")
             spikes_in_segment_of_unit = spikes_in_segment[u0:u1]
             spike_locations_in_segment_of_unit = spike_locations_in_segment[u0:u1]
-            # compute median positions (if less than min_spikes_per_interval, median position is 0)
+            
             for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
                 i0, i1 = np.searchsorted(spikes_in_segment_of_unit["sample_index"], [start_frame, end_frame])
                 spikes_in_bin = spikes_in_segment_of_unit[i0:i1]
                 spike_locations_in_bin = spike_locations_in_segment_of_unit[i0:i1][direction]
                 if len(spikes_in_bin) >= min_spikes_per_interval:
-                    median_positions[unit_index, bin_index] = np.median(spike_locations_in_bin)
+                    median_positions[i, bin_index] = np.median(spike_locations_in_bin)
 
         if median_position_segments is None:
             median_position_segments = median_positions
