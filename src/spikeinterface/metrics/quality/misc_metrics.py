@@ -18,7 +18,6 @@ import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
-from spikeinterface.postprocessing import correlogram_for_one_segment
 from spikeinterface.core import SortingAnalyzer, get_noise_levels
 from spikeinterface.core.template_tools import (
     get_template_extremum_channel,
@@ -90,15 +89,14 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         presence_ratios = {unit_id: np.nan for unit_id in unit_ids}
     else:
 
-        spikes = sorting.to_spike_vector()
-        order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-        new_spikes = spikes[order]
+        spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
 
         # precompute segment slice
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
-            u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-            spike_train = new_spikes[u0:u1]["sample_index"]
+            u0 = slices[unit_index, 0, 0]
+            u1 = slices[unit_index, -1, 1]
+            spike_train = spikes[u0:u1]["sample_index"]
 
             unit_fr = spike_train.size / total_duration
             bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thresh)
@@ -240,7 +238,6 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
-    num_segs = sorting_analyzer.get_num_segments()
 
     total_duration_s = sorting_analyzer.get_total_duration()
     fs = sorting_analyzer.sampling_frequency
@@ -251,18 +248,15 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     isi_violations_count = {}
     isi_violations_ratio = {}
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[u0:u1]
         spike_train_list = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
+            u0 = slices[unit_index, segment_index, 0]
+            u1 = slices[unit_index, segment_index, 1]
+            spike_train = spikes[u0:u1]["sample_index"]
             if len(spike_train) > 0:
                 spike_train_list.append(spike_train / fs)
 
@@ -343,9 +337,6 @@ def compute_refrac_period_violations(
     sorting = sorting_analyzer.sorting
     fs = sorting_analyzer.sampling_frequency
     num_units = len(sorting_analyzer.unit_ids)
-    num_segments = sorting_analyzer.get_num_segments()
-
-    spikes = sorting.to_spike_vector(concatenated=False)
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
@@ -356,17 +347,20 @@ def compute_refrac_period_violations(
     t_r = int(round(refractory_period_ms * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
-    all_unit_indices = sorting.ids_to_indices(unit_ids)
-
-    for seg_index in range(num_segments):
-        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
-        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
-        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r, all_unit_indices)
+    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
 
     T = sorting_analyzer.get_total_samples()
 
     nb_violations = {}
     rp_contamination = {}
+
+    for segment_index in range(sorting_analyzer.get_num_segments()):
+        for unit_id in unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
+            u0 = slices[segment_index, unit_index, 0]
+            u1 = slices[segment_index, unit_index, 1]
+            spike_times = spikes[u0:u1]["sample_index"]
+            nb_rp_violations[unit_index] += _compute_rp_violations_numba(spike_times, t_c, t_r)
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
@@ -451,15 +445,13 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-
-        sub_spikes = new_spikes[u0:u1].copy()
+        u0 = slices[unit_index, 0, 0]
+        u1 = slices[unit_index, -1, 1]
+        sub_spikes = spikes[u0:u1].copy()
         sub_spikes["unit_index"] = 0  # single unit sorting
 
         unit_n_spikes = len(sub_spikes)
@@ -614,21 +606,19 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["unit_index"], spikes["segment_index"]))
-    new_spikes = spikes[order]
+
+    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
 
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in unit_ids}
     for segment_index in range(sorting_analyzer.get_num_segments()):
-        s0, s1 = np.searchsorted(new_spikes["segment_index"], [segment_index, segment_index + 1], side="left")
         num_samples = sorting_analyzer.get_num_samples(segment_index)
         edges = np.arange(0, num_samples + 1, bin_size_samples)
-        sub_data = new_spikes[s0:s1]
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
-            u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
-            spike_times = new_spikes[s0 + u0 : s0 + u1]["sample_index"]
+            u0 = slices[segment_index, unit_index, 0]
+            u1 = slices[segment_index, unit_index, 1]
+            spike_times = spikes[u0:u1]["sample_index"]
             spike_counts, _ = np.histogram(spike_times, bins=edges)
             firing_rates = spike_counts / bin_size_s
             firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
@@ -703,15 +693,14 @@ def compute_amplitude_cv_metrics(
     ), "Invalid amplitude_extension. It can be either 'spike_amplitudes' or 'amplitude_scalings'"
     sorting = sorting_analyzer.sorting
     total_duration = sorting_analyzer.get_total_duration()
-    spikes = sorting.to_spike_vector()
+
     num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    spikes, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_amps = amps[order]
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
@@ -722,9 +711,7 @@ def compute_amplitude_cv_metrics(
         )
 
         unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[u0:u1]
-
+    
         amp_spreads = []
         # bins and amplitude means are computed for each segment
         for segment_index in range(sorting_analyzer.get_num_segments()):
@@ -732,9 +719,11 @@ def compute_amplitude_cv_metrics(
                 0, sorting_analyzer.get_num_samples(segment_index) + 1, temporal_bin_size_samples
             )
 
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spikes_in_segment = new_spikes[u0 + s0 : u0 + s1]
-            amps_unit = new_amps[u0 + s0 : u0 + s1]
+            u0 = slices[unit_index, segment_index, 0]
+            u1 = slices[unit_index, segment_index, 1]
+
+            spikes_in_segment = spikes[u0:u1]
+            amps_unit = new_amps[u0:u1]
             spike_indices_unit = spikes_in_segment["sample_index"]
             amp_mean = np.abs(np.mean(amps_unit))
 
@@ -1060,14 +1049,11 @@ def compute_drift_metrics(
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
     spike_locations = spike_locations_ext.get_data()
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    _, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_spike_locations = spike_locations[order]
 
-    order_bis = np.lexsort((spikes["sample_index"], spikes["unit_index"], spikes["segment_index"]))
-    new_spikes_bis = spikes[order]
-    new_spike_locations_bis = spike_locations[order]
+    new_spikes_bis, order_bis, slices_bis = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
+    new_spike_locations_bis = spike_locations[order_bis]
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
@@ -1096,25 +1082,21 @@ def compute_drift_metrics(
 
     for i, unit_id in enumerate(unit_ids):
         unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        u0 = slices[unit_index, 0, 0]
+        u1 = slices[unit_index, -1, 1]
         reference_positions[i] = np.median(new_spike_locations[u0:u1][direction])
 
     for segment_index in range(sorting_analyzer.get_num_segments()):
-        s0, s1 = np.searchsorted(new_spikes_bis["segment_index"], [segment_index, segment_index + 1], side="left")
         seg_length = sorting_analyzer.get_num_samples(segment_index)
         num_bin_edges = seg_length // interval_samples + 1
         bins = np.arange(num_bin_edges) * interval_samples
-        spikes_in_segment = new_spikes_bis[s0:s1]
-        spike_locations_in_segment = new_spike_locations_bis[s0:s1]
-
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
-
         for i, unit_id in enumerate(unit_ids):
             unit_index = sorting.id_to_index(unit_id)
-            u0, u1 = np.searchsorted(spikes_in_segment["unit_index"], [unit_index, unit_index + 1], side="left")
-            spikes_in_segment_of_unit = spikes_in_segment[u0:u1]
-            spike_locations_in_segment_of_unit = spike_locations_in_segment[u0:u1]
-
+            u0 = slices_bis[segment_index, unit_index, 0]
+            u1 = slices_bis[segment_index, unit_index, 1]
+            spikes_in_segment_of_unit = new_spikes_bis[u0:u1]
+            spike_locations_in_segment_of_unit = new_spike_locations_bis[u0:u1]
             for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
                 i0, i1 = np.searchsorted(spikes_in_segment_of_unit["sample_index"], [start_frame, end_frame])
                 spikes_in_bin = spikes_in_segment_of_unit[i0:i1]
@@ -1247,25 +1229,19 @@ def compute_sd_ratio(
     if correct_for_template_itself:
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    spikes, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_spike_amplitudes = spike_amplitudes[order]
 
     sd_ratio = {}
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[u0:u1]
-
         spk_amp = []
-
-        for segment_index in range(sorting.get_num_segments()):
-
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
-            spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
-            amplitudes = new_spike_amplitudes[u0 + s0 : u0 + s1]
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            u0 = slices[unit_index, segment_index, 0]
+            u1 = slices[unit_index, segment_index, 1]
+            spike_train = spikes[u0:u1]["sample_index"]
+            amplitudes = new_spike_amplitudes[u0:u1]
 
             censored_indices = find_duplicated_spikes(
                 spike_train,
@@ -1804,12 +1780,8 @@ if HAVE_NUMBA:
         nopython=True,
         nogil=True,
         cache=False,
-        parallel=True,
     )
-    def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r, all_units_indices):
+    def _compute_rp_violations_numba(spike_train, t_c, t_r):
 
-        for i in numba.prange(len(all_units_indices)):
-            unit_index = all_units_indices[i]
-            spike_train = spike_trains[spike_clusters == unit_index]
-            n_v = _compute_nb_violations_numba(spike_train, t_r)
-            nb_rp_violations[unit_index] += n_v
+        return _compute_nb_violations_numba(spike_train, t_r)
+

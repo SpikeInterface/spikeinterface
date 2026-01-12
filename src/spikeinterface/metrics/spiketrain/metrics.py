@@ -22,26 +22,14 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting.unit_ids
-    num_segs = sorting.get_num_segments()
-
+    
     num_spikes = {}
 
-    # for unit_id in unit_ids:
-    #     n = 0
-    #     for segment_index in range(num_segs):
-    #         st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-    #         n += st.size
-    #     num_spikes[unit_id] = n
-
-    spikes = sorting.to_spike_vector()
-    unit_indices, total_counts = np.unique(spikes["unit_index"], return_counts=True)
+    _, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    total_num_spikes = np.diff(slices, axis=2).sum(axis=(1, 2))
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
-        if unit_index in unit_indices:
-            idx = np.flatnonzero(unit_indices == unit_index)
-            num_spikes[unit_id] = total_counts[idx]
-        else:
-            num_spikes[unit_id] = 0
+        num_spikes[unit_id] = total_num_spikes[unit_index]
 
     return num_spikes
 
@@ -77,7 +65,7 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None):
     total_duration = sorting_analyzer.get_total_duration()
 
     firing_rates = {}
-    num_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
+    num_spikes = compute_num_spikes(sorting_analyzer)
     for unit_id in unit_ids:
         if num_spikes[unit_id] == 0:
             firing_rates[unit_id] = np.nan

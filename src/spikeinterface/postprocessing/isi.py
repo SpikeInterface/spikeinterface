@@ -150,23 +150,16 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
 
-    for i, unit_id in enumerate(sorting.unit_ids):
-
+    for unit_id in sorting.unit_ids:
         unit_index = sorting.id_to_index(unit_id)
-        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
-        sub_data = new_spikes[u0:u1]
-
         for seg_index in range(sorting.get_num_segments()):
-
-            s0, s1 = np.searchsorted(sub_data["segment_index"], [seg_index, seg_index + 1], side="left")
-            spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
-
+            u0 = slices[unit_index, seg_index, 0]
+            u1 = slices[unit_index, seg_index, 1]
+            spike_train = spikes[u0:u1]["sample_index"]
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
-            ISIs[i] += ISI
+            ISIs[unit_index] += ISI
 
     return ISIs, bins * 1e3 / fs
 
