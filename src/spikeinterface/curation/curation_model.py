@@ -190,7 +190,7 @@ class CurationModel(BaseModel):
 
             # Check new unit id not already used
             if merge.new_unit_id is not None:
-                if merge.new_unit_id in unit_ids:
+                if merge.new_unit_id in unit_ids and merge.new_unit_id not in merge.unit_ids:
                     raise ValueError(f"New unit ID {merge.new_unit_id} is already in the unit list")
 
         values["merges"] = merges
