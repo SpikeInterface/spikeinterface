@@ -23,7 +23,7 @@ else:
     HAVE_NUMBA = False
 
 
-class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
+class ComputeValidUnitPeriods(AnalyzerExtension):
     """Compute good time periods per unit based on quality metrics.
 
     Paraneters
@@ -72,7 +72,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
     Returns
     -------
-    good_periods_per_unit : numpy.ndarray, int
+    valid_unit_periods : numpy.ndarray, int
         (n_periods, 4) array with columns: unit_id, segment_id, start_time, end_time (times in samples)
 
     Notes
@@ -80,7 +80,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
     Implementation by Maxime Beau and Alessio Buccino, inspired by NeuroPyxels and Bombcell.
     """
 
-    extension_name = "good_periods_per_unit"
+    extension_name = "valid_unit_periods"
     depend_on = []
     need_recording = False
     use_nodepipeline = False
@@ -191,17 +191,17 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
 
     def _select_extension_data(self, unit_ids):
         new_extension_data = {}
-        good_periods = self.data["good_periods_per_unit"]
+        good_periods = self.data["valid_unit_periods"]
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         mask = np.isin(good_periods["unit_index"], unit_indices)
-        new_extension_data["good_periods_per_unit"] = good_periods[mask]
+        new_extension_data["valid_unit_periods"] = good_periods[mask]
         return new_extension_data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
         new_extension_data = {}
-        good_periods = self.data["good_periods_per_unit"]
+        good_periods = self.data["valid_unit_periods"]
         if self.params["method"] in ("false_positives_and_negatives", "combined"):
             # need to recompute for merged units
             recompute = True
@@ -239,7 +239,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 new_periods_fp_per_unit[segment_index].update(fps[segment_index])
                 new_periods_fn_per_unit[segment_index].update(fns[segment_index])
 
-            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
             new_extension_data["period_centers"] = period_centers
             new_extension_data["periods_fp_per_unit"] = fps
             new_extension_data["periods_fn_per_unit"] = fns
@@ -263,13 +263,13 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             unmerged_periods = good_periods[unmerged_mask]
 
             new_good_periods = np.concatenate((unmerged_periods, merged_periods))
-            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
 
         return new_extension_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_extension_data = {}
-        good_periods = self.data["good_periods_per_unit"]
+        good_periods = self.data["valid_unit_periods"]
         if self.params["method"] in ("false_positives_and_negatives", "combined"):
             # need to recompute for split units
             recompute = True
@@ -303,7 +303,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 new_periods_fp_per_unit[segment_index].update(fps[segment_index])
                 new_periods_fn_per_unit[segment_index].update(fns[segment_index])
 
-            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
             new_extension_data["period_centers"] = period_centers
             new_extension_data["periods_fp_per_unit"] = fps
             new_extension_data["periods_fn_per_unit"] = fns
@@ -332,16 +332,16 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             unsplit_periods = good_periods[unsplit_mask]
 
             new_good_periods = np.concatenate((unsplit_periods, split_periods), axis=0)
-            new_extension_data["good_periods_per_unit"] = self._sort_periods(new_good_periods)
+            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
 
         return new_extension_data
 
     def _run(self, unit_ids=None, verbose=False):
-        good_periods_per_unit, period_centers, fps, fns = self._compute_periods(
+        valid_unit_periods, period_centers, fps, fns = self._compute_periods(
             self.sorting_analyzer,
             unit_ids=unit_ids,
         )
-        self.data["good_periods_per_unit"] = good_periods_per_unit
+        self.data["valid_unit_periods"] = valid_unit_periods
         if period_centers is not None:
             self.data["period_centers"] = period_centers
         if fps is not None:
@@ -433,20 +433,20 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             good_periods = all_periods[good_period_mask]
 
             # Sort good periods on segment_index, unit_index, start_sample_index
-            good_periods_per_unit = self._sort_periods(good_periods)
+            valid_unit_periods = self._sort_periods(good_periods)
 
             # Combine with user-defined periods if provided
             if self.params["method"] == "combined":
                 user_defined_periods = self.params["user_defined_periods"]
-                all_periods = np.concatenate((good_periods_per_unit, user_defined_periods), axis=0)
-            good_periods_per_unit = merge_overlapping_periods_across_units_and_segments(good_periods_per_unit)
+                all_periods = np.concatenate((valid_unit_periods, user_defined_periods), axis=0)
+            valid_unit_periods = merge_overlapping_periods_across_units_and_segments(valid_unit_periods)
 
             # Remove good periods that are too short
             minimum_valid_period_duration = self.params["minimum_valid_period_duration"]
             min_valid_period_samples = int(minimum_valid_period_duration * sorting_analyzer.sampling_frequency)
-            duration_samples = good_periods_per_unit["end_sample_index"] - good_periods_per_unit["start_sample_index"]
+            duration_samples = valid_unit_periods["end_sample_index"] - valid_unit_periods["start_sample_index"]
             valid_mask = duration_samples >= min_valid_period_samples
-            good_periods_per_unit = good_periods_per_unit[valid_mask]
+            valid_unit_periods = valid_unit_periods[valid_mask]
 
             # Convert subperiods per unit in period_centers_s
             period_centers = []
@@ -460,7 +460,7 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
                 period_centers.append(period_centers_dict)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
-            return good_periods_per_unit, period_centers, fps, fns
+            return valid_unit_periods, period_centers, fps, fns
 
     def _get_data(self, outputs: str = "by_unit"):
         """
@@ -482,12 +482,12 @@ class ComputeGoodPeriodsPerUnit(AnalyzerExtension):
             (start_sample_index, end_sample_index) tuples.
         """
         if outputs == "numpy":
-            good_periods = self.data["good_periods_per_unit"].copy()
+            good_periods = self.data["valid_unit_periods"].copy()
         else:
             # by_unit
             unit_ids = self.sorting_analyzer.unit_ids
             good_periods = []
-            good_periods_array = self.data["good_periods_per_unit"]
+            good_periods_array = self.data["valid_unit_periods"]
             for segment_index in range(self.sorting_analyzer.get_num_segments()):
                 segment_mask = good_periods_array["segment_index"] == segment_index
                 periods_dict = {}
@@ -615,12 +615,14 @@ def merge_overlapping_periods_across_units_and_segments(periods):
             merged_periods.append(_merged_periods)
     if len(merged_periods) == 0:
         merged_periods = np.array([], dtype=unit_period_dtype)
+    else:
+        merged_periods = np.concatenate(merged_periods, axis=0)
 
     return merged_periods
 
 
-register_result_extension(ComputeGoodPeriodsPerUnit)
-compute_good_periods_per_unit = ComputeGoodPeriodsPerUnit.function_factory()
+register_result_extension(ComputeValidUnitPeriods)
+compute_valid_unit_periods = ComputeValidUnitPeriods.function_factory()
 
 
 global worker_ctx
