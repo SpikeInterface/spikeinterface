@@ -49,7 +49,7 @@ widget_list = [
     CrossCorrelogramsWidget,
     DriftingTemplatesWidget,
     DriftRasterMapWidget,
-    UnitGoodPeriodsWidget,
+    UnitValidPeriodsWidget,
     ISIDistributionWidget,
     LocationsWidget,
     MotionWidget,
