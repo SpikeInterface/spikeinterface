@@ -350,7 +350,7 @@ def compute_refrac_period_violations(
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
-    num_spikes = compute_num_spikes(sorting_analyzer)
+    num_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
