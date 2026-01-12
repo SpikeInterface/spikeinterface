@@ -122,7 +122,7 @@ def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
-        method = "numba" if HAVE_NUMBA else "numpy"
+        method = "numpy" if HAVE_NUMBA else "numpy"
 
     if method == "numpy":
         return compute_isi_histograms_numpy(sorting, window_ms, bin_ms)
@@ -150,10 +150,22 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
-    # TODO: There might be a better way than a double for loop?
+    spikes = sorting.to_spike_vector()
+    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
+    new_spikes = spikes[order]
+
+
     for i, unit_id in enumerate(sorting.unit_ids):
+        
+        unit_index = sorting.id_to_index(unit_id)
+        u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
+        sub_data = new_spikes[u0:u1]
+
         for seg_index in range(sorting.get_num_segments()):
-            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
+            
+            s0, s1 = np.searchsorted(sub_data["segment_index"], [seg_index, seg_index + 1], side="left")
+            spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
+
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
             ISIs[i] += ISI
 
