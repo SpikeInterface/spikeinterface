@@ -67,6 +67,7 @@ class TestWidgets(unittest.TestCase):
             templates=dict(),
             noise_levels=dict(),
             spike_amplitudes=dict(),
+            amplitude_scalings=dict(max_dense_channels=None),  # required by valid unit periods
             unit_locations=dict(),
             spike_locations=dict(),
             quality_metrics=dict(
@@ -82,6 +83,18 @@ class TestWidgets(unittest.TestCase):
         cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
         cls.sorting_analyzer_dense.compute("random_spikes")
         cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
+        # compute valid periods later, since it depends on amplitude_scalings
+        cls.sorting_analyzer_dense.compute(
+            dict(
+                valid_unit_periods=dict(
+                    period_mode="relative",
+                    period_target_num_spikes=200,
+                    relative_margin_size=0.5,
+                    min_num_periods_relative=5,
+                )
+            ),
+            **job_kwargs,
+        )
 
         sw.set_default_plotter_backend("matplotlib")
 
@@ -687,6 +700,14 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_motion_info(motion_info, recording=self.recording, backend=backend)
+
+    def test_plot_valid_unit_periods(self):
+        possible_backends = list(sw.ValidUnitPeriodsWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_valid_unit_periods(
+                    self.sorting_analyzer_dense, backend=backend, show_only_units_with_valid_periods=False
+                )
 
 
 if __name__ == "__main__":

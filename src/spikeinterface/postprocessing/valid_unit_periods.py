@@ -12,6 +12,7 @@ import multiprocessing as mp
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.node_pipeline import unit_period_dtype
 from spikeinterface.metrics.spiketrain import compute_firing_rates
@@ -42,8 +43,14 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     period_target_num_spikes : int | None, default: 300
         Alternative to period_size_absolute, different for each unit: mean number of spikes that should be present in each estimation period.
         For neurons firing at 10 Hz, this would correspond to periods of 10s (100 spikes / 10 Hz = 10s).
-    period_size_mode: {"absolute", "relative"}, default: "absolute"
-        Whether to use absolute (in seconds) or relative (in mean number of spikes) period sizes.
+    period_mode: {"absolute", "relative"}, default: "absolute"
+        Whether to use absolute (in seconds) or relative (in target number of spikes) period sizes.
+    relative_margin_size : float, default: 1.0
+        The margin to the left and the right for each period, expressed as a multiple of the period size.
+        For example, a value of 1.0 means that the margin size is equal to the period size: for a period of 10s,
+        each value will be computed using 30s of data (10s + 10s margin on each side).
+    min_num_periods_relative : int, default: 5
+        Minimum number of periods per unit, when using period_mode "relative".
     fp_threshold : float, default: 0.05
         Maximum false positive rate to mark period as good.
     fn_threshold : float, default: 0.05
@@ -70,10 +77,6 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
 
-    Returns
-    -------
-    valid_unit_periods : numpy.ndarray, int
-        (n_periods, 4) array with columns: unit_id, segment_id, start_time, end_time (times in samples)
 
     Notes
     -----
@@ -83,6 +86,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     extension_name = "valid_unit_periods"
     depend_on = []
     need_recording = False
+    need_job_kwargs = True
     use_nodepipeline = False
     need_job_kwargs = False
 
@@ -92,10 +96,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         period_duration_s_absolute: float = 30.0,
         period_target_num_spikes: int = 300,
         period_mode: str = "absolute",
+        relative_margin_size: float = 1.0,
         fp_threshold: float = 0.1,
         fn_threshold: float = 0.1,
         minimum_n_spikes: int = 100,
         minimum_valid_period_duration: float = 180,
+        min_num_periods_relative: int = 5,
         user_defined_periods: Optional[object] = None,
         refractory_period_ms: float = 0.8,
         censored_period_ms: float = 0.0,
@@ -176,6 +182,8 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             period_duration_s_absolute=period_duration_s_absolute,
             period_target_num_spikes=period_target_num_spikes,
             period_mode=period_mode,
+            relative_margin_size=relative_margin_size,
+            min_num_periods_relative=min_num_periods_relative,
             fp_threshold=fp_threshold,
             fn_threshold=fn_threshold,
             minimum_n_spikes=minimum_n_spikes,
@@ -227,7 +235,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             # remove periods of merged units
             good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], np.array(merged_unit_indices))]
             # recompute for merged units
-            good_periods_merged, period_centers, fps, fns = self._compute_periods(
+            good_periods_merged, period_centers, fps, fns = self._compute_valid_periods(
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
@@ -292,7 +300,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             # remove periods of split units
             good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], split_unit_indices)]
             # recompute for split units
-            good_periods_split, period_centers, fps, fns = self._compute_periods(
+            good_periods_split, period_centers, fps, fns = self._compute_valid_periods(
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
@@ -336,10 +344,11 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         return new_extension_data
 
-    def _run(self, unit_ids=None, verbose=False):
-        valid_unit_periods, period_centers, fps, fns = self._compute_periods(
+    def _run(self, unit_ids=None, verbose=False, **job_kwargs):
+        valid_unit_periods, period_centers, fps, fns = self._compute_valid_periods(
             self.sorting_analyzer,
             unit_ids=unit_ids,
+            **job_kwargs,
         )
         self.data["valid_unit_periods"] = valid_unit_periods
         if period_centers is not None:
@@ -349,11 +358,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         if fns is not None:
             self.data["periods_fn_per_unit"] = fns
 
-    def _compute_periods(
-        self,
-        sorting_analyzer,
-        unit_ids=None,
-    ):
+    def _compute_valid_periods(self, sorting_analyzer, unit_ids=None, **job_kwargs):
         from spikeinterface import get_global_job_kwargs
 
         if self.params["method"] == "user_defined":
@@ -369,10 +374,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 self.params["period_duration_s_absolute"],
                 self.params["period_target_num_spikes"],
                 self.params["period_mode"],
+                self.params["relative_margin_size"],
+                self.params["min_num_periods_relative"],
                 unit_ids=unit_ids,
             )
 
-            job_kwargs = get_global_job_kwargs()
+            job_kwargs = fix_job_kwargs(job_kwargs)
             n_jobs = job_kwargs["n_jobs"]
             progress_bar = job_kwargs["progress_bar"]
             max_threads_per_worker = job_kwargs["max_threads_per_worker"]
@@ -512,6 +519,8 @@ def compute_subperiods(
     period_duration_s_absolute: float = 10,
     period_target_num_spikes: int = 1000,
     period_mode: str = "absolute",
+    relative_margin_size: float = 1.0,
+    min_num_periods_relative: int = 5,
     unit_ids: Optional[list] = None,
 ) -> dict:
     """
@@ -534,7 +543,7 @@ def compute_subperiods(
         period_sizes_samples = {
             u: np.round((period_target_num_spikes / mean_firing_rates[u]) * fs).astype(int) for u in unit_ids
         }
-    margin_sizes_samples = period_sizes_samples
+    margin_sizes_samples = {u: np.round(relative_margin_size * period_sizes_samples[u]).astype(int) for u in unit_ids}
 
     all_subperiods = []
     for unit_index, unit_id in enumerate(unit_ids):
@@ -543,13 +552,24 @@ def compute_subperiods(
 
         for segment_index in range(sorting.get_num_segments()):
             n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
-            n_subperiods = n_samples // period_size_samples + 1
+            # We round the number of subperiods to ensure coverage of the entire recording
+            # the end of the last period is then clipped or extended to the end of the recording
+            n_subperiods = round(n_samples / period_size_samples)
+            if period_mode == "relative" and n_subperiods < min_num_periods_relative:
+                n_subperiods = min_num_periods_relative  # at least min_num_periods_relative subperiods
+                period_size_samples = n_samples // n_subperiods
+                margin_size_samples = int(relative_margin_size * period_size_samples)
             starts_ends = np.array(
                 [
-                    [i * period_size_samples, i * period_size_samples + 2 * margin_size_samples]
+                    [i * period_size_samples, i * period_size_samples + period_size_samples + 2 * margin_size_samples]
                     for i in range(n_subperiods)
                 ]
             )
+            # remove periods whose end is above the expected number of samples
+            starts_ends = starts_ends[starts_ends[:, 1] <= n_subperiods * period_size_samples]
+            # extend last period to the end of the recording
+            starts_ends[-1][1] = n_samples
+
             periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
             for i, (start, end) in enumerate(starts_ends):
                 subperiod = np.zeros((1,), dtype=unit_period_dtype)

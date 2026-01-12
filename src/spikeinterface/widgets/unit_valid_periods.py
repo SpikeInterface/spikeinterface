@@ -7,7 +7,7 @@ from spikeinterface.core import SortingAnalyzer
 from .base import BaseWidget, to_attr
 
 
-class UnitValidPeriodsWidget(BaseWidget):
+class ValidUnitPeriodsWidget(BaseWidget):
     """
     Plots the valid periods for units based on valid periods extension.
 
@@ -19,8 +19,8 @@ class UnitValidPeriodsWidget(BaseWidget):
         The segment index. If None, uses first segment.
     unit_ids : list | None, default: None
         List of unit ids to plot. If None, all units are plotted.
-    show_only_units_with_good_periods : bool, default: True
-        If True, only units with good periods are shown.
+    show_only_units_with_valid_periods : bool, default: True
+        If True, only units with valid periods are shown.
     """
 
     def __init__(
@@ -28,15 +28,15 @@ class UnitValidPeriodsWidget(BaseWidget):
         sorting_analyzer: SortingAnalyzer | None = None,
         segment_index: int | None = None,
         unit_ids: list | None = None,
-        show_only_units_with_good_periods: bool = True,
+        show_only_units_with_valid_periods: bool = True,
         backend: str | None = None,
         **backend_kwargs,
     ):
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(sorting_analyzer, "valid_unit_periods")
-        good_periods_ext = sorting_analyzer.get_extension("valid_unit_periods")
-        if good_periods_ext.params["method"] == "user_defined":
-            raise ValueError("UnitValidPeriodsWidget cannot be used with 'user_defined' good periods.")
+        valid_periods_ext = sorting_analyzer.get_extension("valid_unit_periods")
+        if valid_periods_ext.params["method"] == "user_defined":
+            raise ValueError("UnitValidPeriodsWidget cannot be used with 'user_defined' valid periods.")
 
         if segment_index is None:
             nseg = sorting_analyzer.get_num_segments()
@@ -45,18 +45,18 @@ class UnitValidPeriodsWidget(BaseWidget):
             else:
                 segment_index = 0
 
-        good_periods = good_periods_ext.get_data(outputs="numpy")
-        if show_only_units_with_good_periods:
-            good_unit_ids = sorting_analyzer.unit_ids[np.unique(good_periods["unit_index"])]
+        valid_periods = valid_periods_ext.get_data(outputs="numpy")
+        if show_only_units_with_valid_periods:
+            valid_unit_ids = sorting_analyzer.unit_ids[np.unique(valid_periods["unit_index"])]
         else:
-            good_unit_ids = sorting_analyzer.unit_ids
+            valid_unit_ids = sorting_analyzer.unit_ids
         if unit_ids is not None:
-            good_unit_ids = [u for u in unit_ids if u in good_unit_ids]
+            valid_unit_ids = [u for u in unit_ids if u in valid_unit_ids]
 
         data_plot = dict(
             sorting_analyzer=sorting_analyzer,
             segment_index=segment_index,
-            unit_ids=good_unit_ids,
+            unit_ids=valid_unit_ids,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -70,6 +70,8 @@ class UnitValidPeriodsWidget(BaseWidget):
 
         if backend_kwargs["axes"] is not None:
             axes = backend_kwargs["axes"]
+            if axes.ndim == 1:
+                axes = axes[:, None]
             assert np.asarray(axes).shape == (3, num_units), "Axes shape does not match number of units"
         else:
             if "figsize" not in backend_kwargs:
@@ -94,12 +96,12 @@ class UnitValidPeriodsWidget(BaseWidget):
         amp_scalings_ext = sorting_analyzer.get_extension("amplitude_scalings")
         amp_scalings_by_unit = amp_scalings_ext.get_data(outputs="by_unit")[segment_index]
 
-        for unit_id in dp.unit_ids:
+        for ui, unit_id in enumerate(dp.unit_ids):
             fp = fp_per_unit[unit_id]
             fn = fn_per_unit[unit_id]
             unit_index = list(sorting_analyzer.unit_ids).index(unit_id)
 
-            axs = self.axes[:, unit_index]
+            axs = self.axes[:, ui]
             # for simplicity we don't use timestamps here
             spiketrain = (
                 sorting_analyzer.sorting.get_unit_spike_train(unit_id, segment_index=segment_index) / sampling_frequency
@@ -126,7 +128,15 @@ class UnitValidPeriodsWidget(BaseWidget):
             axs[2].set_ylabel("Amplitude Scaling")
             axs[0].set_title(f"Unit {unit_id}")
 
-    # TODO: fix update
+            axs[1].sharex(axs[0])
+            axs[2].sharex(axs[0])
+
+        for ax in self.axes.flatten():
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
+        self.figure.subplots_adjust(hspace=0.4)
+
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
@@ -161,25 +171,30 @@ class UnitValidPeriodsWidget(BaseWidget):
         )
 
         # a first update
-        self.axes = None
-        self._update_ipywidget()
+        self._full_update_plot()
 
-        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
+        self.unit_selector.observe(self._update_plot, names=["value"], type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _update_ipywidget(self, change=None):
-        if self.axes is None:
-            self.figure.clear()
-        else:
-            for ax in self.axes.flatten():
-                ax.clear()
+    def _full_update_plot(self, change=None):
+        self.figure.clear()
+        data_plot = self.next_data_plot
+        data_plot["unit_ids"] = self.unit_selector.value
+        backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
+        self.plot_matplotlib(data_plot, **backend_kwargs)
+
+    def _update_plot(self, change=None):
+        print(f"_update_plot called! change={change}", flush=True)
+
+        for ax in self.axes.flatten():
+            ax.clear()
 
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = self.unit_selector.value
 
-        backend_kwargs = dict(figure=self.figure, axes=self.axes, ax=None)
+        backend_kwargs = dict(figure=None, axes=self.axes, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
 
         self.figure.canvas.draw()
