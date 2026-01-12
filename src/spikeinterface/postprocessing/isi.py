@@ -154,15 +154,14 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
     new_spikes = spikes[order]
 
-
     for i, unit_id in enumerate(sorting.unit_ids):
-        
+
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
         sub_data = new_spikes[u0:u1]
 
         for seg_index in range(sorting.get_num_segments()):
-            
+
             s0, s1 = np.searchsorted(sub_data["segment_index"], [seg_index, seg_index + 1], side="left")
             spike_train = new_spikes[u0 + s0 : u0 + s1]["sample_index"]
 
