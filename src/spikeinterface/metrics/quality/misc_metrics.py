@@ -255,8 +255,6 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
     new_spikes = spikes[order]
 
-    # precompute segment slice
-    unit_slices = {}
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
         u0, u1 = np.searchsorted(new_spikes["unit_index"], [unit_index, unit_index + 1], side="left")
@@ -347,9 +345,7 @@ def compute_refrac_period_violations(
     num_units = len(sorting_analyzer.unit_ids)
     num_segments = sorting_analyzer.get_num_segments()
 
-    spikes = sorting.to_spike_vector()
-    order = np.lexsort((spikes["sample_index"], spikes["segment_index"], spikes["unit_index"]))
-    new_spikes = spikes[order]
+    spikes = sorting.to_spike_vector(concatenated=False)
 
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
