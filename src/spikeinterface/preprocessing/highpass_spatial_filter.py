@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
 from .filter import fix_dtype
 from spikeinterface.core import order_channels_by_depth, get_chunk_with_margin
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
@@ -66,7 +66,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
 
     def __init__(
         self,
-        recording,
+        recording: BaseRecording,
         n_channel_pad=60,
         n_channel_taper=0,
         direction="y",
@@ -74,6 +74,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         agc_window_length_s=0.1,
         highpass_butter_order=3,
         highpass_butter_wn=0.01,
+        epsilon=None,
         dtype=None,
     ):
         BasePreprocessor.__init__(self, recording)
@@ -133,6 +134,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 order_f,
                 order_r,
                 dtype=dtype,
+                epsilon=epsilon,
             )
             self.add_recording_segment(rec_segment)
 
@@ -161,6 +163,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         order_f,
         order_r,
         dtype,
+        epsilon,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment

@@ -3,7 +3,7 @@ import os
 import numpy as np
 from copy import deepcopy
 
-import spikeinterface.full as si
+import spikeinterface.core as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
@@ -57,9 +57,9 @@ def test_highpass_spatial_filter_real_data(lagc):
     local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
     si_recording = spre.astype(si_recording, "float")
-    recording_ps = si.phase_shift(si_recording)
-    recording_hp = si.highpass_filter(recording_ps, freq_min=300, filter_order=3)
-    recording_hps = si.highpass_spatial_filter(recording_hp)
+    recording_ps = spre.phase_shift(si_recording)
+    recording_hp = spre.highpass_filter(recording_ps, freq_min=300, filter_order=3)
+    recording_hps = spre.highpass_spatial_filter(recording_hp)
     raw = si_recording.get_traces().astype(np.float32).T * neuropixel.S2V_AP
     si_filtered = recording_hps.get_traces().astype(np.float32).T * neuropixel.S2V_AP
 
