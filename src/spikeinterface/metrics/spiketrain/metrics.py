@@ -77,7 +77,7 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None):
     total_duration = sorting_analyzer.get_total_duration()
 
     firing_rates = {}
-    num_spikes = compute_num_spikes(sorting_analyzer)
+    num_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
     for unit_id in unit_ids:
         if num_spikes[unit_id] == 0:
             firing_rates[unit_id] = np.nan
