@@ -380,11 +380,10 @@ class CurationModel(BaseModel):
 
         intial_ids = self.unit_ids
 
-        ids_to_remove = []
         ids_to_add = []
+        ids_to_remove = []
+        ids_to_remove = ids_to_remove + self.removed
 
-        for remove in self.removed:
-            ids_to_remove.append(remove.unit_id)
         for split in self.splits:
             if split.new_unit_ids is None:
                 raise ValueError(

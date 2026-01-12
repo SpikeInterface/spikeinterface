@@ -604,8 +604,9 @@ class ComputeTemplates(AnalyzerExtension):
                             arr = np.std(wfs, axis=0)
                         elif operator == "median":
                             arr = np.median(wfs, axis=0)
-                        elif "percentile" in operator:
-                            _, percentile = operator.splot("_")
+                        # there was a spelling error "pencentile" in old versions
+                        elif "percentile" in operator or "pencentile" in operator:
+                            _, percentile = operator.split("_")
                             arr = np.percentile(wfs, float(percentile), axis=0)
                         new_array[split_unit_index, ...] = arr
                 else:

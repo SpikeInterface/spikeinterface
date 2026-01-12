@@ -244,7 +244,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             # templates_multi is a list of 2D arrays of shape (n_times, n_channels)
             tmp_data["templates_multi"] = templates_multi
             tmp_data["channel_locations_multi"] = channel_locations_multi
-            tmp_data["depth_direction"] = self.params["depth_direction"]
+            tmp_data["depth_direction"] = self.params.get("depth_direction")
 
         return tmp_data
 
