@@ -22,7 +22,7 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     sorting = sorting_analyzer.sorting
     if unit_ids is None:
         unit_ids = sorting.unit_ids
-    
+
     num_spikes = {}
 
     _, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])

@@ -830,8 +830,10 @@ class BaseSorting(BaseExtractor):
 
     def to_lexsorted_spike_vector(self, lexsort=["sample_index", "unit_index", "segment_index"]):
 
-        assert lexsort in [["sample_index", "unit_index", "segment_index"], 
-                           ["sample_index", "segment_index", "unit_index"]]
+        assert lexsort in [
+            ["sample_index", "unit_index", "segment_index"],
+            ["sample_index", "segment_index", "unit_index"],
+        ]
 
         key = str(lexsort)
 
@@ -840,29 +842,34 @@ class BaseSorting(BaseExtractor):
             order = np.lexsort((spikes[lexsort[0]], spikes[lexsort[1]], spikes[lexsort[2]]))
             new_data = spikes[order]
             self._cached_lexsorted_spike_vector[key] = {}
-            self._cached_lexsorted_spike_vector[key]['data'] = new_data
-            self._cached_lexsorted_spike_vector[key]['order'] = order
+            self._cached_lexsorted_spike_vector[key]["data"] = new_data
+            self._cached_lexsorted_spike_vector[key]["order"] = order
 
             num_units = len(self.unit_ids)
-            num_segments = self.get_num_segments()            
+            num_segments = self.get_num_segments()
 
             if lexsort[-1] == "unit_index":
 
-                self._cached_lexsorted_spike_vector[key]['slices'] = np.zeros((num_units, num_segments, 2), dtype=np.int64)
+                self._cached_lexsorted_spike_vector[key]["slices"] = np.zeros(
+                    (num_units, num_segments, 2), dtype=np.int64
+                )
 
                 for unit_id in self.unit_ids:
                     unit_index = self.id_to_index(unit_id)
                     u0, u1 = np.searchsorted(new_data["unit_index"], [unit_index, unit_index + 1], side="left")
                     sub_data = new_data[u0:u1]
                     for segment_index in range(self.get_num_segments()):
-                        s0, s1 = np.searchsorted(sub_data["segment_index"], [segment_index, segment_index + 1], side="left")
+                        s0, s1 = np.searchsorted(
+                            sub_data["segment_index"], [segment_index, segment_index + 1], side="left"
+                        )
                         amin, amax = u0 + s0, u0 + s1
-                        self._cached_lexsorted_spike_vector[key]['slices'][unit_index, segment_index, :] = amin, amax
-
+                        self._cached_lexsorted_spike_vector[key]["slices"][unit_index, segment_index, :] = amin, amax
 
             if lexsort[-1] == "segment_index":
 
-                self._cached_lexsorted_spike_vector[key]['slices'] = np.zeros((num_segments, num_units, 2), dtype=np.int64)
+                self._cached_lexsorted_spike_vector[key]["slices"] = np.zeros(
+                    (num_segments, num_units, 2), dtype=np.int64
+                )
 
                 for segment_index in range(self.get_num_segments()):
                     s0, s1 = np.searchsorted(new_data["segment_index"], [segment_index, segment_index + 1], side="left")
@@ -871,12 +878,11 @@ class BaseSorting(BaseExtractor):
                         unit_index = self.id_to_index(unit_id)
                         u0, u1 = np.searchsorted(sub_data["unit_index"], [unit_index, unit_index + 1], side="left")
                         amin, amax = s0 + u0, s0 + u1
-                        self._cached_lexsorted_spike_vector[key]['slices'][segment_index, unit_index, :] = amin, amax
-                        
+                        self._cached_lexsorted_spike_vector[key]["slices"][segment_index, unit_index, :] = amin, amax
 
-        data = self._cached_lexsorted_spike_vector[key]['data']
-        slices = self._cached_lexsorted_spike_vector[key]['slices']
-        order = self._cached_lexsorted_spike_vector[key]['order']
+        data = self._cached_lexsorted_spike_vector[key]["data"]
+        slices = self._cached_lexsorted_spike_vector[key]["slices"]
+        order = self._cached_lexsorted_spike_vector[key]["order"]
         return data, order, slices
 
     def to_numpy_sorting(self, propagate_cache=True):

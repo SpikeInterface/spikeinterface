@@ -606,7 +606,6 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
         return {unit_id: np.nan for unit_id in unit_ids}
 
-
     spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
 
     # for each segment, we compute the firing rate histogram and we concatenate them
@@ -711,7 +710,7 @@ def compute_amplitude_cv_metrics(
         )
 
         unit_index = sorting.id_to_index(unit_id)
-    
+
         amp_spreads = []
         # bins and amplitude means are computed for each segment
         for segment_index in range(sorting_analyzer.get_num_segments()):
@@ -1052,7 +1051,9 @@ def compute_drift_metrics(
     _, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_spike_locations = spike_locations[order]
 
-    new_spikes_bis, order_bis, slices_bis = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
+    new_spikes_bis, order_bis, slices_bis = sorting.to_lexsorted_spike_vector(
+        ["sample_index", "unit_index", "segment_index"]
+    )
     new_spike_locations_bis = spike_locations[order_bis]
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
@@ -1784,4 +1785,3 @@ if HAVE_NUMBA:
     def _compute_rp_violations_numba(spike_train, t_c, t_r):
 
         return _compute_nb_violations_numba(spike_train, t_r)
-
