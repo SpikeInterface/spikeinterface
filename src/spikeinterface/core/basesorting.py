@@ -842,7 +842,7 @@ class BaseSorting(BaseExtractor):
         Parameters
         ----------
         lexsort : list, default: ["sample_index", "unit_index", "segment_index"]
-            
+
         Returns
         -------
         spikes : np.array
@@ -851,10 +851,9 @@ class BaseSorting(BaseExtractor):
         order : np.array
             Numpy array needed to sort the spike vector given the lexsort
         slices :  np.array
-            Numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2) given the lexsort, 
+            Numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2) given the lexsort,
             where one can obtain the indices amin, amax of all the (segment,unit_index) values.
         """
-
 
         assert lexsort in [
             ["sample_index", "unit_index", "segment_index"],
