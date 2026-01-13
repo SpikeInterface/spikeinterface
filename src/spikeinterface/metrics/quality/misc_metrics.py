@@ -26,7 +26,11 @@ from spikeinterface.core.template_tools import (
     get_dense_templates_array,
 )
 from spikeinterface.metrics.spiketrain.metrics import NumSpikes, FiringRate
-from spikeinterface.metrics.utils import compute_bin_edges_per_unit, compute_total_durations_per_unit
+from spikeinterface.metrics.utils import (
+    compute_bin_edges_per_unit,
+    compute_total_durations_per_unit,
+    compute_total_samples_per_unit,
+)
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -366,7 +370,7 @@ def compute_refrac_period_violations(
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
-    num_spikes = compute_num_spikes(sorting_analyzer)
+    num_spikes = sorting.count_num_spikes_per_unit()
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
@@ -377,7 +381,7 @@ def compute_refrac_period_violations(
         spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
         _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
 
-    T = sorting_analyzer.get_total_samples()
+    total_samples = compute_total_samples_per_unit(sorting_analyzer, periods=periods)
 
     nb_violations = {}
     rp_contamination = {}
@@ -388,6 +392,7 @@ def compute_refrac_period_violations(
 
         nb_violations[unit_id] = n_v = nb_rp_violations[unit_index]
         N = num_spikes[unit_id]
+        T = total_samples[unit_id]
         if N == 0:
             rp_contamination[unit_id] = np.nan
         else:

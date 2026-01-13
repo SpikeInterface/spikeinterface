@@ -44,6 +44,37 @@ def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, per
     return bin_edges_for_units
 
 
+def get_total_samples_per_unit(sorting_analyzer, periods=None):
+    """
+    Get total number of samples for each unit, optionally taking into account periods.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object.
+    periods : array of unit_period_dtype, default: None
+        Periods to consider for each unit.
+
+    Returns
+    -------
+    dict
+        Total number of samples for each unit.
+    """
+    if periods is not None:
+        total_samples = {}
+        sorting = sorting_analyzer.sorting
+        for unit_id in sorting.unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
+            periods_unit = periods[periods["unit_index"] == unit_index]
+            num_samples_in_period = 0
+            for period in periods_unit:
+                num_samples_in_period += period["end_sample_index"] - period["start_sample_index"]
+            total_samples[unit_id] = num_samples_in_period
+    else:
+        total_samples = {unit_id: sorting_analyzer.get_total_samples() for unit_id in sorting_analyzer.unit_ids}
+    return total_samples
+
+
 def compute_total_durations_per_unit(sorting_analyzer, periods=None):
     """
     Compute total duration for each unit, optionally taking into account periods.
@@ -60,20 +91,10 @@ def compute_total_durations_per_unit(sorting_analyzer, periods=None):
     dict
         Total duration for each unit.
     """
-    if periods is not None:
-        total_durations = {}
-        sorting = sorting_analyzer.sorting
-        for unit_id in sorting.unit_ids:
-            unit_index = sorting.id_to_index(unit_id)
-            periods_unit = periods[periods["unit_index"] == unit_index]
-            total_duration = 0
-            for period in periods_unit:
-                total_duration += period["end_sample_index"] - period["start_sample_index"]
-            total_durations[unit_id] = total_duration / sorting.sampling_frequency
-    else:
-        total_durations = {
-            unit_id: sorting_analyzer.get_total_duration_per_unit() for unit_id in sorting_analyzer.unit_ids
-        }
+    total_samples = get_total_samples_per_unit(sorting_analyzer, periods=periods)
+    total_durations = {
+        unit_id: samples / sorting_analyzer.sorting.sampling_frequency for unit_id, samples in total_samples.items()
+    }
     return total_durations
 
 
