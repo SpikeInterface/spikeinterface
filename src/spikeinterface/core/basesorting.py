@@ -9,9 +9,6 @@ from .base import BaseExtractor, BaseSegment
 from .waveform_tools import has_exceeding_spikes
 
 
-minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-
-
 class BaseSorting(BaseExtractor):
     """
     Abstract class representing several segment several units and relative spiketrains.
