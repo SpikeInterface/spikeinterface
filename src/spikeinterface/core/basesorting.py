@@ -806,12 +806,12 @@ class BaseSorting(BaseExtractor):
         return spikes
 
     def to_reordered_spike_vector(
-            self,
-            lexsort=("sample_index", "unit_index", "segment_index"),
-            use_cache=True,
-            return_order=True,
-            return_slices=True,
-        ):
+        self,
+        lexsort=("sample_index", "unit_index", "segment_index"),
+        use_cache=True,
+        return_order=True,
+        return_slices=True,
+    ):
         """
         Re order, in memory, the "spike_vector" using a lexsort.
 
