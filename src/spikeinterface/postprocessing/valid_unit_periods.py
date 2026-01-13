@@ -552,6 +552,9 @@ def compute_subperiods(
 
         for segment_index in range(sorting.get_num_segments()):
             n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
+            print(
+                f"Num samples segment {segment_index}: {n_samples} - period size: {period_size_samples} - margin size: {margin_size_samples}"
+            )
             # We round the number of subperiods to ensure coverage of the entire recording
             # the end of the last period is then clipped or extended to the end of the recording
             n_subperiods = round(n_samples / period_size_samples)
@@ -566,19 +569,25 @@ def compute_subperiods(
                 ]
             )
             # remove periods whose end is above the expected number of samples
-            starts_ends = starts_ends[starts_ends[:, 1] <= n_subperiods * period_size_samples]
-            # extend last period to the end of the recording
-            starts_ends[-1][1] = n_samples
+            if len(starts_ends) > 0:
+                beyond_samples_mask = starts_ends[:, 1] > n_samples
+                if sum(beyond_samples_mask) == len(starts_ends):
+                    # all periods end beyond n_samples: keep only first period
+                    starts_ends = starts_ends[:1].copy()
+                else:
+                    starts_ends = starts_ends[starts_ends[:, 1] <= n_subperiods * period_size_samples]
+                # set last period to the end of the recording
+                starts_ends[-1][1] = n_samples
 
-            periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
-            for i, (start, end) in enumerate(starts_ends):
-                subperiod = np.zeros((1,), dtype=unit_period_dtype)
-                subperiod["segment_index"] = segment_index
-                subperiod["start_sample_index"] = start
-                subperiod["end_sample_index"] = end
-                subperiod["unit_index"] = unit_index
-                periods_for_unit[i] = subperiod
-            all_subperiods.append(periods_for_unit)
+                periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+                for i, (start, end) in enumerate(starts_ends):
+                    subperiod = np.zeros((1,), dtype=unit_period_dtype)
+                    subperiod["segment_index"] = segment_index
+                    subperiod["start_sample_index"] = start
+                    subperiod["end_sample_index"] = end
+                    subperiod["unit_index"] = unit_index
+                    periods_for_unit[i] = subperiod
+                all_subperiods.append(periods_for_unit)
     return np.concatenate(all_subperiods)
 
 

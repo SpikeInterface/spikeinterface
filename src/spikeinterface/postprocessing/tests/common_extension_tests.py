@@ -150,7 +150,11 @@ class AnalyzerExtensionCommonTestSuite:
             ext_loaded = sorting_analyzer_loaded.get_extension(extension_class.extension_name)
             for ext_data_name, ext_data_loaded in ext_loaded.data.items():
                 if isinstance(ext_data_loaded, np.ndarray):
-                    assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
+                    if len(ext_data_loaded) > 0 and isinstance(ext_data_loaded[0], dict):
+                        for i in range(len(ext_data_loaded)):
+                            assert np.array_equal(np.array(ext.data[ext_data_name][i]), np.array(ext_data_loaded[i]))
+                    else:
+                        assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
                 elif isinstance(ext_data_loaded, pd.DataFrame):
                     # skip nan values
                     for col in ext_data_loaded.columns:

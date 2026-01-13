@@ -10,8 +10,8 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
     @pytest.mark.parametrize(
         "params",
         [
-            dict(period_mode="absolute"),
-            dict(period_mode="relative"),
+            dict(period_mode="absolute", period_duration_s_absolute=1.1, minimum_valid_period_duration=1.0),
+            dict(period_mode="relative", period_target_num_spikes=30, minimum_valid_period_duration=1.0),
         ],
     )
     def test_extension(self, params):
@@ -42,3 +42,12 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
         sorting_analyzer = self._prepare_sorting_analyzer(
             "memory", sparse=False, extension_class=ComputeValidUnitPeriods
         )
+        ext = sorting_analyzer.compute(
+            ComputeValidUnitPeriods.extension_name,
+            method="user_defined",
+            user_defined_periods=periods,
+            minimum_valid_period_duration=1,
+        )
+        # check that valid periods correspond to user defined periods
+        ext_periods = ext.get_data(outputs="numpy")
+        np.testing.assert_array_equal(ext_periods, periods)
