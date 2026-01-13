@@ -825,10 +825,17 @@ def compute_amplitude_cutoffs(
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
+    amplitudes_by_units = extension.get_data(concatenated=True)
+
+    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    new_amps = amplitudes_by_units[order]
 
     for unit_id in unit_ids:
-        amplitudes = amplitudes_by_units[unit_id]
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        u0 = slices[unit_index, 0, 0]
+        u1 = slices[unit_index, -1, 1]
+        amplitudes = new_amps[u0:u1]
+
         if invert_amplitudes:
             amplitudes = -amplitudes
 
@@ -885,9 +892,16 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None):
 
     all_amplitude_medians = {}
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
-    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True)
+    amplitudes_by_units = amplitude_extension.get_data(concatenated=True)
+
+    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    new_amps = amplitudes_by_units[order]
+
     for unit_id in unit_ids:
-        all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        u0 = slices[unit_index, 0, 0]
+        u1 = slices[unit_index, -1, 1]
+        all_amplitude_medians[unit_id] = np.median(new_amps[u0:u1])
 
     return all_amplitude_medians
 
@@ -954,10 +968,15 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
+    amplitudes_by_units = extension.get_data(concatenated=True)
+    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    new_amps = amplitudes_by_units[order]
 
     for unit_id in unit_ids:
-        amplitudes = amplitudes_by_units[unit_id]
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        u0 = slices[unit_index, 0, 0]
+        u1 = slices[unit_index, -1, 1]
+        amplitudes = new_amps[u0:u1]
         if invert_amplitudes:
             amplitudes = -amplitudes
 
