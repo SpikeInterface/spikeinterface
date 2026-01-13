@@ -827,7 +827,9 @@ def compute_amplitude_cutoffs(
 
     amplitudes_by_units = extension.get_data(concatenated=True)
 
-    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(
+        ["sample_index", "segment_index", "unit_index"]
+    )
     new_amps = amplitudes_by_units[order]
 
     for unit_id in unit_ids:
@@ -894,7 +896,9 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None):
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
     amplitudes_by_units = amplitude_extension.get_data(concatenated=True)
 
-    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(
+        ["sample_index", "segment_index", "unit_index"]
+    )
     new_amps = amplitudes_by_units[order]
 
     for unit_id in unit_ids:
@@ -969,7 +973,9 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
     amplitudes_by_units = extension.get_data(concatenated=True)
-    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    _, order, slices = sorting_analyzer.sorting.to_lexsorted_spike_vector(
+        ["sample_index", "segment_index", "unit_index"]
+    )
     new_amps = amplitudes_by_units[order]
 
     for unit_id in unit_ids:
