@@ -265,13 +265,12 @@ def select_sorting_periods_mask(sorting: BaseSorting, periods):
     return keep_mask
 
 
-def select_sorting_periods(sorting: BaseSorting, periods):
+def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
     """
     Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
 
     Parameters
     ----------
-    S
     periods : numpy.array of unit_period_dtype
         Periods (segment_index, start_sample_index, end_sample_index, unit_index)
         on which to restrict the sorting.
