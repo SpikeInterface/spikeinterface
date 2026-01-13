@@ -157,11 +157,31 @@ with 10 units:
     # times are not set, the samples are divided by the sampling frequency
 
 
-Internally, any sorting object can construct 2 internal caches:
-  1. a list (per segment) of dict (per unit) of numpy.array. This cache is useful when accessing spike trains on a unit
-     per unit basis across segments.
-  2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
-     time, like for extracting amplitudes from a recording.
+Efficiency and cache for fetching spiketrains
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By design a Sorting object is lazy, so the constructor is fast : no data are fetch during init.
+Sorting that read data (extractor) or Sorting that modify data (select unit, remove spikes) behave
+the same, they are lazy. Then, each spiketrain per unit and per segment can fetch or reconstructed
+using `sorting.get_unit_spike_train()` : this can lead to very slow access depending how the
+underlying data is organized, the `Sorting` object is agnostic of the underlying data organizsation.
+
+This is why  we are using optionally an internal representation called the `spike_vector`. This is
+a uniquebuffer :  a numpy.array with this dtype
+`[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+This internal representation is internally cache at the first demand.
+For some operation, like fecthing recording chunk and spiketrain chunk to accumlate waveforms, this
+memory layout is very efficient.
+
+For some other operations, like computing ISI, this is not the best representation because spikes for
+a unit are not compact in memory. For this we can re-order this `spike_vector` in different ways:
+  * order by unit, then segment, then sample
+  * order by segment, then unit, then sample
+
+The function `sorting.to_reordered_spike_vector()` is done for this purpose : re-ordering the memory
+layout of spikes to be more efficient for some operation.
+All theses re-ordering are cached by default.
+
 
 SortingAnalyzer
 ---------------
