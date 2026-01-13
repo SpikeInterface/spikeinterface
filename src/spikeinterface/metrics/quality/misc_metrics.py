@@ -100,7 +100,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
                 u0 = slices[unit_index, segment_index, 0]
                 u1 = slices[unit_index, segment_index, 1]
                 st = spikes[u0:u1]["sample_index"]
-                st = st + u1-u0
+                st = st + u1 - u0
                 spike_train.append(st)
             spike_train = np.concatenate(spike_train)
 
