@@ -186,7 +186,7 @@ class BaseSorting(BaseExtractor):
         if use_cache:
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
                 lexsort=("sample_index", "segment_index", "unit_index"),
-                use_cahe=True,
+                use_cache=True,
                 return_order=False,
                 return_slices=True,
             )
@@ -809,7 +809,7 @@ class BaseSorting(BaseExtractor):
 
     def to_reordered_spike_vector(self,
             lexsort=("sample_index", "unit_index", "segment_index"),
-            use_cahe=True,
+            use_cache=True,
             return_order=True,
             return_slices=True,
         ):
@@ -866,7 +866,7 @@ class BaseSorting(BaseExtractor):
 
         if lexsort == ("unit_index", "sample_index", "segment_index"):
             assert not return_order and not return_slices
-            spikes = self.to_spike_vector(concatenated=True, use_cache=use_cahe)
+            spikes = self.to_spike_vector(concatenated=True, use_cache=use_cache)
             return spikes
 
         assert lexsort in [
