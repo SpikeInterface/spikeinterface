@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from .base import BaseExtractor, BaseSegment
+from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
 
 
