@@ -427,8 +427,6 @@ class NumpySorting(BaseSorting):
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
-        # Trick : populate the cache with dict that already exists
-        sorting._cached_spike_trains = {seg_ind: d for seg_ind, d in enumerate(units_dict_list)}
 
         return sorting
 
