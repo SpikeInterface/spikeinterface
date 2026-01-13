@@ -163,9 +163,9 @@ class BaseSorting(BaseExtractor):
             If True, returns spike times in seconds instead of frames
         use_cache : bool, default: True
             If True, then precompute (or use) the to_reordered_spike_vector using
-            lexsort=("sample_index", "segment_index", "unit_index") which make a spiketrain
+            lexsort=("sample_index", "segment_index", "unit_index"), which makes a spiketrain
             per unit and per segment compact in memory.
-            Using the cache make the first call quite slow but then very fast for other spiketrains.
+            Using the cache makes the first call quite slow but then future calls are very fast.
 
         Returns
         -------
@@ -434,7 +434,7 @@ class BaseSorting(BaseExtractor):
         """
         For each unit : get number of spikes  across segments.
 
-        The computation depend of the the internal cache (spike_vector, reordered_spike_vector...)
+        The computation depends on the internal cache (spike_vector, reordered_spike_vector...)
 
         Parameters
         ----------
@@ -698,7 +698,7 @@ class BaseSorting(BaseExtractor):
     def precompute_spike_trains(self):
         """
         Pre-computes and caches all spike trains for this sorting.
-        This is equivalent to cahe lexsort ("sample_index", "segment_index", "unit_index").
+        This is equivalent to cache lexsort ("sample_index", "segment_index", "unit_index").
         """
         cache_key = ("sample_index", "segment_index", "unit_index")
         if cache_key not in self._cached_lexsorted_spike_vector:
@@ -860,30 +860,30 @@ class BaseSorting(BaseExtractor):
         return_slices=True,
     ):
         """
-        Re order, in memory, the "spike_vector" using a lexsort.
+        Reorder, in memory, the "spike_vector" using a lexsort.
 
-        Having different memory layout can speedup some metrics computation make make spiketrain
-        continuous in memory for instance.
+        Having different memory layout can speedup some computations e.g. many metrics
+        are more efficient to compute when spikes are continuous in memory.
 
         Please note that the lexsort syntax is the **reverse** of natural reading.
 
-        By default the spike_vector is lexsort like this:
+        By default the spike_vector is lexsort-ed like this:
           - ("unit_index", "sample_index", "segment_index") (segment then sample then unit)
 
-        But particular ordering can be better for some computation :
+        But particular orderings can be better for some computations:
           - ("sample_index", "unit_index", "segment_index") (segment then unit_index then sample)
           - ("sample_index", "segment_index", "unit_index") (unit_index then segment then sample)
 
-        Note that the later representaion make the spiketrain per segment compact in memory.
+        Note that the last representation makes the spiketrain per segment compact in memory.
 
         This operation is internally cached.
 
-        The order vector is also rendered and can be applied to other external vector like
+        The order vector is also computed and can be applied to other external vectors like
         spike_amplitudes, spike_locations, ...
 
-        An array of internal slices is also precomputed to have a fast acces to compact
-        portion of the re ordered spikes.
-        Theses slices is stored as a 3d array to handle start->stop and depend of the lexsort itself.
+        An array of internal slices is also precomputed to have a fast access to a compact
+        portion of the reordered spikes.
+        Theses slices are stored as a 3d array to handle start->stop and depend of the lexsort itself.
         Theses slices are pre computed using nested searchsorted.
 
         Parameters
@@ -891,9 +891,9 @@ class BaseSorting(BaseExtractor):
         lexsort : tuple, default: ("sample_index", "unit_index", "segment_index")
             Tuple for lexsort. Please note that this is the reverse natural reading order!
         return_order: bool, default: True
-            Return or not the order.
+            Return the order, or not. See Returns.
         return_slices: bool, default: True
-            Return or not the slices, see returns.
+            Return the slices, or not. See Returns.
 
         Returns
         -------
