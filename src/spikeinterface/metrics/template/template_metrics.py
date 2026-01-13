@@ -112,19 +112,48 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             self.params["metric_names"].remove("num_positive_peaks")
             if "number_of_peaks" not in self.params["metric_names"]:
                 self.params["metric_names"].append("number_of_peaks")
+                self.params["metric_params"]["number_of_peaks"] = self.params["metric_params"]["num_positive_peaks"]
         if "num_negative_peaks" in self.params["metric_names"]:
             self.params["metric_names"].remove("num_negative_peaks")
             if "number_of_peaks" not in self.params["metric_names"]:
                 self.params["metric_names"].append("number_of_peaks")
+
         # velocity_above/velocity_below merged into velocity_fits
         if "velocity_above" in self.params["metric_names"]:
             self.params["metric_names"].remove("velocity_above")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
+
+            # also update parameters
+            if "velocity_above" in self.params["metric_params"]:
+                self.params["metric_params"]["velocity_fits"] = self.params["metric_params"]["velocity_above"]
+                self.params["metric_params"]["velocity_fits"]["min_channels"] = self.params["metric_params"][
+                    "velocity_above"
+                ]["min_channels_for_velocity"]
+                self.params["metric_params"]["velocity_fits"]["min_r2"] = self.params["metric_params"][
+                    "velocity_above"
+                ]["min_r2_velocity"]
+                del self.params["metric_params"]["velocity_above"]
+
         if "velocity_below" in self.params["metric_names"]:
             self.params["metric_names"].remove("velocity_below")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
+            if "velocity_below" in self.params["metric_params"]:
+                del self.params["metric_params"]["velocity_below"]
+
+        if "exp_decay" in self.params["metric_names"]:
+            if "exp_peak_function" in self.params["metric_params"]["exp_decay"]:
+                self.params["metric_params"]["exp_decay"]["peak_function"] = self.params["metric_params"]["exp_decay"][
+                    "exp_peak_function"
+                ]
+            if "min_r2_exp_decay" in self.params["metric_params"]["exp_decay"]:
+                self.params["metric_params"]["exp_decay"]["min_r2"] = self.params["metric_params"]["exp_decay"][
+                    "min_r2_exp_decay"
+                ]
+
+        if "depth_direction" not in self.params:
+            self.params["depth_direction"] = "y"
 
     def _set_params(
         self,
@@ -244,7 +273,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             # templates_multi is a list of 2D arrays of shape (n_times, n_channels)
             tmp_data["templates_multi"] = templates_multi
             tmp_data["channel_locations_multi"] = channel_locations_multi
-            tmp_data["depth_direction"] = self.params.get("depth_direction")
+            tmp_data["depth_direction"] = self.params["depth_direction"]
 
         return tmp_data
 
