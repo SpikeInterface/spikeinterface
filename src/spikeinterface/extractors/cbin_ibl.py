@@ -44,10 +44,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
 
-    def __init__(
-        self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file_path=None
-    ):
+    def __init__(self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file_path=None):
         from neo.rawio.spikeglxrawio import read_meta_file
+
         try:
             import mtscomp
         except ImportError:
