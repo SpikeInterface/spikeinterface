@@ -687,7 +687,6 @@ class FiringRange(BaseMetric):
     }
 
 
-# TODO: refactor for periods
 def compute_amplitude_cv_metrics(
     sorting_analyzer,
     unit_ids=None,
@@ -1223,7 +1222,6 @@ class Drift(BaseMetric):
     depend_on = ["spike_locations"]
 
 
-# TODO
 def compute_sd_ratio(
     sorting_analyzer: SortingAnalyzer,
     unit_ids=None,
