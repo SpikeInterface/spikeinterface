@@ -597,7 +597,6 @@ class Synchrony(BaseMetric):
     }
 
 
-# TODO: refactor for periods
 def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percentiles=(5, 95), periods=None):
     """
     Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
@@ -630,6 +629,9 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
     bin_size_samples = int(bin_size_s * sampling_frequency)
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
+    segment_samples = [
+        sorting_analyzer.get_num_samples(segment_index) for segment_index in range(sorting_analyzer.get_num_segments())
+    ]
 
     if unit_ids is None:
         unit_ids = sorting.unit_ids
@@ -645,15 +647,25 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
 
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in sorting.unit_ids}
-    for segment_index in range(sorting_analyzer.get_num_segments()):
-        num_samples = sorting_analyzer.get_num_samples(segment_index)
-        edges = np.arange(0, num_samples + 1, bin_size_samples)
+    bin_edges_per_unit = compute_bin_edges_per_unit(
+        sorting,
+        segment_samples=segment_samples,
+        periods=periods,
+        bin_duration_s=bin_size_s,
+    )
+    for unit_id in unit_ids:
+        bin_edges = bin_edges_per_unit[unit_id]
 
-        for unit_id in unit_ids:
-            spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            spike_counts, _ = np.histogram(spike_times, bins=edges)
-            firing_rates = spike_counts / bin_size_s
-            firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
+        # we can concatenate spike trains across segments adding the cumulative number of samples
+        # as offset, since bin edges are already cumulative
+        for segment_index in range(sorting_analyzer.get_num_segments()):
+            st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            st = st + np.sum(segment_samples[:segment_index])
+            spike_train.append(st)
+            spike_train = np.concatenate(spike_train)
+
+        spike_counts, _ = np.histogram(spike_train, bins=bin_edges)
+        firing_rate_histograms[unit_id] = spike_counts / bin_size_s
 
     # finally we compute the percentiles
     firing_ranges = {}
@@ -731,9 +743,9 @@ def compute_amplitude_cv_metrics(
         unit_ids = sorting.unit_ids
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
-    total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
 
     spikes = sorting.to_spike_vector()
+    total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
     num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data(periods=periods)
 
@@ -1106,21 +1118,9 @@ def compute_drift_metrics(
     spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(sorting_analyzer.get_num_segments())]
-    interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
         f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
     )
-    # total_duration = sorting_analyzer.get_total_duration()
-    # if total_duration < min_num_bins * interval_s:
-    #     warnings.warn(
-    #         "The recording is too short given the specified 'interval_s' and "
-    #         "'min_num_bins'. Drift metrics will be set to NaN"
-    #     )
-    #     empty_dict = {unit_id: np.nan for unit_id in unit_ids}
-    #     if return_positions:
-    #         return res(empty_dict, empty_dict, empty_dict), np.nan
-    #     else:
-    #         return res(empty_dict, empty_dict, empty_dict)
 
     # we need
     drift_ptps = {}
@@ -1133,8 +1133,14 @@ def compute_drift_metrics(
         reference_positions[unit_id] = np.median(spike_locations_by_unit[unit_id][direction])
 
     # now compute median positions and concatenate them over segments
-    median_position_segments = None
     spike_vector = sorting.to_spike_vector()
+    spike_sample_indices = spike_vector["sample_index"]
+    # we need to add the cumulative sum of segment samples to have global sample indices
+    cumulative_segment_samples = np.cumsum([0] + segment_samples[:-1])
+    for segment_index in range(sorting_analyzer.get_num_segments()):
+        seg_mask = spike_vector["segment_index"] == segment_index
+        spike_sample_indices[seg_mask] += cumulative_segment_samples[segment_index]
+
     bin_edges_for_units = compute_bin_edges_per_unit(
         sorting,
         segment_samples=segment_samples,
@@ -1143,7 +1149,7 @@ def compute_drift_metrics(
     )
 
     median_positions_per_unit = {}
-    for i, unit in enumerate(unit_ids):
+    for unit in unit_ids:
         bins = bin_edges_for_units[unit]
         num_bins = len(bins) - 1
         if num_bins < min_num_bins:
@@ -1156,7 +1162,9 @@ def compute_drift_metrics(
             drift_mads[unit] = np.nan
             continue
 
-        bin_spike_indices = np.searchsorted(spike_vector["sample_index"], bins)
+        # bin_edges are global across segments, so we have to use spike_sample_indices,
+        # since we offseted them to be global
+        bin_spike_indices = np.searchsorted(spike_sample_indices, bins)
         median_positions = np.nan * np.zeros(num_bins)
         for bin_index, (i0, i1) in enumerate(zip(bin_spike_indices[:-1], bin_spike_indices[1:])):
             spikes_in_bin = spike_vector[i0:i1]
@@ -1781,29 +1789,6 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
         synchrony_counts[:how_many_bins_to_add_to, units_with_sync] += 1
 
     return synchrony_counts
-
-
-def _get_amplitudes_by_units(sorting_analyzer, unit_ids, peak_sign):
-    # used by compute_amplitude_cutoffs and compute_amplitude_medians
-
-    if (spike_amplitudes_extension := sorting_analyzer.get_extension("spike_amplitudes")) is not None:
-        return spike_amplitudes_extension.get_data(outputs="by_unit", concatenated=True)
-
-    elif sorting_analyzer.has_extension("waveforms"):
-        amplitudes_by_units = {}
-        waveforms_ext = sorting_analyzer.get_extension("waveforms")
-        before = waveforms_ext.nbefore
-        extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
-        for unit_id in unit_ids:
-            waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
-            chan_id = extremum_channels_ids[unit_id]
-            if sorting_analyzer.is_sparse():
-                chan_ind = np.where(sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
-            else:
-                chan_ind = sorting_analyzer.channel_ids_to_indices([chan_id])[0]
-            amplitudes_by_units[unit_id] = waveforms[:, before, chan_ind]
-
-    return amplitudes_by_units
 
 
 if HAVE_NUMBA:
