@@ -271,7 +271,6 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
 
     Parameters
     ----------
-    S
     periods : numpy.array of unit_period_dtype
         Periods (segment_index, start_sample_index, end_sample_index, unit_index)
         on which to restrict the sorting.
