@@ -1123,11 +1123,10 @@ def compute_drift_metrics(
             u1 = slices_bis[segment_index, unit_index, 1]
             spikes_in_segment_of_unit = new_spikes_bis[u0:u1]
             spike_locations_in_segment_of_unit = new_spike_locations_bis[u0:u1]
-            for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-                i0, i1 = np.searchsorted(spikes_in_segment_of_unit["sample_index"], [start_frame, end_frame])
-                spikes_in_bin = spikes_in_segment_of_unit[i0:i1]
+            bounds = np.searchsorted(spikes_in_segment_of_unit["sample_index"], bins, side="left")
+            for bin_index, (i0, i1) in enumerate(zip(bounds[:-1], bounds[1:])):
                 spike_locations_in_bin = spike_locations_in_segment_of_unit[i0:i1][direction]
-                if len(spikes_in_bin) >= min_spikes_per_interval:
+                if (i1-i0) >= min_spikes_per_interval:
                     median_positions[i, bin_index] = np.median(spike_locations_in_bin)
 
         if median_position_segments is None:
