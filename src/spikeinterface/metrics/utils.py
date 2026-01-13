@@ -44,7 +44,7 @@ def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, per
     return bin_edges_for_units
 
 
-def get_total_samples_per_unit(sorting_analyzer, periods=None):
+def compute_total_samples_per_unit(sorting_analyzer, periods=None):
     """
     Get total number of samples for each unit, optionally taking into account periods.
 
@@ -91,7 +91,7 @@ def compute_total_durations_per_unit(sorting_analyzer, periods=None):
     dict
         Total duration for each unit.
     """
-    total_samples = get_total_samples_per_unit(sorting_analyzer, periods=periods)
+    total_samples = compute_total_samples_per_unit(sorting_analyzer, periods=periods)
     total_durations = {
         unit_id: samples / sorting_analyzer.sorting.sampling_frequency for unit_id, samples in total_samples.items()
     }
