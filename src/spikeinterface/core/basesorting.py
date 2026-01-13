@@ -27,7 +27,7 @@ class BaseSorting(BaseExtractor):
         self._recording = None
         self._sorting_info = None
 
-        # caching: 
+        # caching:
         # 1. the spike vector : one vector complex dtype
         self._cached_spike_vector = None
         # 2. the segment slices in the spike vector
@@ -715,7 +715,6 @@ class BaseSorting(BaseExtractor):
         """
         pass
 
-
     def _compute_and_cache_spike_vector(self):
         # internal function for computing spike vector
 
@@ -756,10 +755,12 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
 
-
-
     def to_spike_vector(
-        self, concatenated=True, extremum_channel_inds=None, use_cache=True, return_slices=False,
+        self,
+        concatenated=True,
+        extremum_channel_inds=None,
+        use_cache=True,
+        return_slices=False,
     ) -> np.ndarray | list[np.ndarray]:
         """
         Construct a unique structured numpy vector concatenating all spikes
@@ -817,14 +818,13 @@ class BaseSorting(BaseExtractor):
                     spikes_.append(spikes[s0:s1])
                 spikes = spikes_
 
-
         if return_slices:
             segment_slices = self._get_spike_vector_segment_slices()
             return spikes, segment_slices
         else:
             # the default and legacy case
             return spikes
-    
+
     def get_spike_vector_to_indices(self):
         """
         Return a cached version the "spike indices" per unit inside the spike vector
@@ -835,16 +835,19 @@ class BaseSorting(BaseExtractor):
 
         if self._cached_spike_vector_to_indices is None:
             from .sorting_tools import spike_vector_to_indices
+
             spike_vector = self.to_spike_vector(concatenated=False)
-            self._cached_spike_vector_to_indices = spike_vector_to_indices(spike_vector, self.unit_ids, absolute_index=True)
+            self._cached_spike_vector_to_indices = spike_vector_to_indices(
+                spike_vector, self.unit_ids, absolute_index=True
+            )
 
         return self._cached_spike_vector_to_indices
-    
+
     def _get_spike_vector_segment_slices(self):
         if self._cached_spike_vector_segment_slices is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
             num_seg = self.get_num_segments()
-            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg +1))
+            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
             self._cached_spike_vector_segment_slices = np.arange((num_seg, 2), dtype="int64")
             for seg_index in range(num_seg):
                 self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
