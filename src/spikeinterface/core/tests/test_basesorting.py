@@ -111,12 +111,15 @@ def test_BaseSorting(create_cache_folder):
     assert np.array_equal(spikes[order], ordered_spikes)
 
     ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
-        lexsort=("sample_index", "unit_index", "segment_index",),
+        lexsort=(
+            "sample_index",
+            "unit_index",
+            "segment_index",
+        ),
         return_order=True,
         return_slices=True,
     )
     assert np.array_equal(spikes[order], ordered_spikes)
-
 
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="dict")
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="array")
@@ -244,6 +247,7 @@ def test_time_slice():
 
 if __name__ == "__main__":
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         cache_folder = Path(tmpdirname)
 

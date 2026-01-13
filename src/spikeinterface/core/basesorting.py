@@ -704,9 +704,8 @@ class BaseSorting(BaseExtractor):
         if cache_key not in self._cached_lexsorted_spike_vector:
             self.to_reordered_spike_vector(lexsort=cache_key)
 
-
     def _compute_and_cache_spike_vector(self) -> None:
-        # 
+        #
         """
         Internal function for computing spike vector.
 
@@ -726,9 +725,9 @@ class BaseSorting(BaseExtractor):
             unit_indices = []
             for u, unit_id in enumerate(self.unit_ids):
                 segment = self._sorting_segments[segment_index]
-                spike_frames = segment.get_unit_spike_train(
-                    unit_id=unit_id, start_frame=None, end_frame=None
-                ).astype("int64")
+                spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
+                    "int64"
+                )
                 sample_indices.append(spike_frames)
                 unit_indices.append(np.full(spike_frames.size, u, dtype="int64"))
 
@@ -847,7 +846,7 @@ class BaseSorting(BaseExtractor):
         if self._cached_spike_vector_segment_slices is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
             num_seg = self.get_num_segments()
-            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg +1))
+            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
             self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
             for seg_index in range(num_seg):
                 self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
@@ -968,9 +967,9 @@ class BaseSorting(BaseExtractor):
         ordered_spikes = self._cached_lexsorted_spike_vector[key]["ordered_spikes"]
         out = (ordered_spikes,)
         if return_order:
-            out += (self._cached_lexsorted_spike_vector[key]["order"], )
+            out += (self._cached_lexsorted_spike_vector[key]["order"],)
         if return_slices:
-            out += (self._cached_lexsorted_spike_vector[key]["slices"], )
+            out += (self._cached_lexsorted_spike_vector[key]["slices"],)
         if len(out) == 1:
             return out[0]
         else:
