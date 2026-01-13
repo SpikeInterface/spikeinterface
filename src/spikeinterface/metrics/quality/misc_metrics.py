@@ -19,15 +19,14 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface.postprocessing import correlogram_for_one_segment
-from spikeinterface.core import SortingAnalyzer, get_noise_levels, select_segment_sorting
+from spikeinterface.core import SortingAnalyzer, get_noise_levels
 from spikeinterface.core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
     get_dense_templates_array,
 )
-from spikeinterface.core.node_pipeline import base_period_dtype
-
-from ..spiketrain.metrics import NumSpikes, FiringRate
+from spikeinterface.metrics.spiketrain.metrics import NumSpikes, FiringRate
+from spikeinterface.metrics.utils import compute_bin_edges_per_unit, compute_total_durations_per_unit
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -74,12 +73,16 @@ def compute_presence_ratios(
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
 
-    seg_lengths = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
-    total_length = sorting_analyzer.get_total_samples()
-    total_duration = sorting_analyzer.get_total_duration()
+    segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
+    total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
+    total_samples = np.sum(segment_samples)
     bin_duration_samples = int((bin_duration_s * sorting_analyzer.sampling_frequency))
-    num_bin_edges = total_length // bin_duration_samples + 1
-    bin_edges = np.arange(num_bin_edges) * bin_duration_samples
+    bin_edges_per_unit = compute_bin_edges_per_unit(
+        sorting,
+        segment_samples=segment_samples,
+        periods=periods,
+        bin_duration_s=bin_duration_s,
+    )
 
     mean_fr_ratio_thresh = float(mean_fr_ratio_thresh)
     if mean_fr_ratio_thresh < 0:
@@ -90,7 +93,7 @@ def compute_presence_ratios(
         warnings.warn("`mean_fr_ratio_thres` parameter above 1 might lead to low presence ratios.")
 
     presence_ratios = {}
-    if total_length < bin_duration_samples:
+    if total_samples < bin_duration_samples:
         warnings.warn(
             f"Bin duration of {bin_duration_s}s is larger than recording duration. " f"Presence ratios are set to NaN."
         )
@@ -98,9 +101,15 @@ def compute_presence_ratios(
     else:
         for unit_id in unit_ids:
             spike_train = []
+            bin_edges = bin_edges_per_unit[unit_id]
+            if len(bin_edges) < 2:
+                presence_ratios[unit_id] = 0.0
+                continue
+            total_duration = total_durations[unit_id]
+
             for segment_index in range(num_segs):
                 st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                st = st + np.sum(seg_lengths[:segment_index])
+                st = st + np.sum(segment_samples[:segment_index])
                 spike_train.append(st)
             spike_train = np.concatenate(spike_train)
 
@@ -109,7 +118,6 @@ def compute_presence_ratios(
 
             presence_ratios[unit_id] = presence_ratio(
                 spike_train,
-                total_length,
                 bin_edges=bin_edges,
                 bin_n_spikes_thres=bin_n_spikes_thres,
             )
@@ -250,7 +258,7 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
 
-    total_duration_s = sorting_analyzer.get_total_duration()
+    total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
     fs = sorting_analyzer.sampling_frequency
 
     isi_threshold_s = isi_threshold_ms / 1000
@@ -271,7 +279,8 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
         if not any([len(train) > 0 for train in spike_train_list]):
             continue
 
-        ratio, _, count = isi_violations(spike_train_list, total_duration_s, isi_threshold_s, min_isi_s)
+        total_duration = total_durations[unit_id]
+        ratio, _, count = isi_violations(spike_train_list, total_duration, isi_threshold_s, min_isi_s)
 
         isi_violations_ratio[unit_id] = ratio
         isi_violations_count[unit_id] = count
@@ -449,7 +458,7 @@ def compute_sliding_rp_violations(
     This code was adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
-    duration = sorting_analyzer.get_total_duration()
+    total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
 
@@ -477,6 +486,7 @@ def compute_sliding_rp_violations(
             contamination[unit_id] = np.nan
             continue
 
+        duration = total_durations[unit_id]
         contamination[unit_id] = slidingRP_violations(
             spike_train_list,
             fs,
@@ -582,6 +592,7 @@ class Synchrony(BaseMetric):
     }
 
 
+# TODO: refactor for periods
 def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percentiles=(5, 95), periods=None):
     """
     Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
@@ -659,6 +670,7 @@ class FiringRange(BaseMetric):
     }
 
 
+# TODO: refactor for periods
 def compute_amplitude_cv_metrics(
     sorting_analyzer,
     unit_ids=None,
@@ -710,13 +722,14 @@ def compute_amplitude_cv_metrics(
         "spike_amplitudes",
         "amplitude_scalings",
     ), "Invalid amplitude_extension. It can be either 'spike_amplitudes' or 'amplitude_scalings'"
-    sorting = sorting_analyzer.sorting
-    total_duration = sorting_analyzer.get_total_duration()
-    spikes = sorting.to_spike_vector()
-    num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     if unit_ids is None:
         unit_ids = sorting.unit_ids
+    sorting = sorting_analyzer.sorting
+    sorting = sorting.select_periods(periods=periods)
+    total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
 
+    spikes = sorting.to_spike_vector()
+    num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data(periods=periods)
 
     # precompute segment slice
@@ -729,6 +742,7 @@ def compute_amplitude_cv_metrics(
     all_unit_ids = list(sorting.unit_ids)
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
+        total_duration = total_durations[unit_id]
         firing_rate = num_spikes[unit_id] / total_duration
         temporal_bin_size_samples = int(
             (average_num_spikes_per_bin / firing_rate) * sorting_analyzer.sampling_frequency
@@ -1078,34 +1092,30 @@ def compute_drift_metrics(
     check_has_required_extensions("drift", sorting_analyzer)
     res = namedtuple("drift_metrics", ["drift_ptp", "drift_std", "drift_mad"])
     sorting = sorting_analyzer.sorting
+    sorting = sorting.select_periods(periods=periods)
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
     spike_locations = spike_locations_ext.get_data(periods=periods)
-    spikes = sorting.to_spike_vector()
-    spike_locations_by_unit = {}
-    for unit_id in unit_ids:
-        unit_index = sorting.id_to_index(unit_id)
-        # TODO @alessio this is very slow this sjould be done with spike_vector_to_indices() in code
-        spike_mask = spikes["unit_index"] == unit_index
-        spike_locations_by_unit[unit_id] = spike_locations[spike_mask]
+    spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
+    segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(sorting_analyzer.get_num_segments())]
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
         f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
     )
-    total_duration = sorting_analyzer.get_total_duration()
-    if total_duration < min_num_bins * interval_s:
-        warnings.warn(
-            "The recording is too short given the specified 'interval_s' and "
-            "'min_num_bins'. Drift metrics will be set to NaN"
-        )
-        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
-        if return_positions:
-            return res(empty_dict, empty_dict, empty_dict), np.nan
-        else:
-            return res(empty_dict, empty_dict, empty_dict)
+    # total_duration = sorting_analyzer.get_total_duration()
+    # if total_duration < min_num_bins * interval_s:
+    #     warnings.warn(
+    #         "The recording is too short given the specified 'interval_s' and "
+    #         "'min_num_bins'. Drift metrics will be set to NaN"
+    #     )
+    #     empty_dict = {unit_id: np.nan for unit_id in unit_ids}
+    #     if return_positions:
+    #         return res(empty_dict, empty_dict, empty_dict), np.nan
+    #     else:
+    #         return res(empty_dict, empty_dict, empty_dict)
 
     # we need
     drift_ptps = {}
@@ -1113,45 +1123,50 @@ def compute_drift_metrics(
     drift_mads = {}
 
     # reference positions are the medians across segments
-    reference_positions = np.zeros(len(unit_ids))
-    for i, unit_id in enumerate(unit_ids):
-        unit_ind = sorting.id_to_index(unit_id)
-        reference_positions[i] = np.median(spike_locations_by_unit[unit_id][direction])
+    reference_positions = {}
+    for unit_id in unit_ids:
+        reference_positions[unit_id] = np.median(spike_locations_by_unit[unit_id][direction])
 
     # now compute median positions and concatenate them over segments
     median_position_segments = None
-    for segment_index in range(sorting_analyzer.get_num_segments()):
-        seg_length = sorting_analyzer.get_num_samples(segment_index)
-        num_bin_edges = seg_length // interval_samples + 1
-        bins = np.arange(num_bin_edges) * interval_samples
-        spike_vector = sorting.to_spike_vector()
+    spike_vector = sorting.to_spike_vector()
+    bin_edges_for_units = compute_bin_edges_per_unit(
+        sorting,
+        segment_samples=segment_samples,
+        periods=periods,
+        bin_duration_s=interval_s,
+    )
 
-        # retrieve spikes in segment
-        i0, i1 = np.searchsorted(spike_vector["segment_index"], [segment_index, segment_index + 1])
-        spikes_in_segment = spike_vector[i0:i1]
-        spike_locations_in_segment = spike_locations[i0:i1]
+    median_positions_per_unit = {}
+    for i, unit in enumerate(unit_ids):
+        bins = bin_edges_for_units[unit]
+        num_bins = len(bins) - 1
+        if num_bins < min_num_bins:
+            warnings.warn(
+                f"Unit {unit} has only {num_bins} bins given the specified 'interval_s' and "
+                f"'min_num_bins'. Drift metrics will be set to NaN"
+            )
+            drift_ptps[unit] = np.nan
+            drift_stds[unit] = np.nan
+            drift_mads[unit] = np.nan
+            continue
 
-        # compute median positions (if less than min_spikes_per_interval, median position is 0)
-        median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
-        for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-            i0, i1 = np.searchsorted(spikes_in_segment["sample_index"], [start_frame, end_frame])
-            spikes_in_bin = spikes_in_segment[i0:i1]
-            spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
+        bin_spike_indices = np.searchsorted(spike_vector["sample_index"], bins)
+        median_positions = np.nan * np.zeros(num_bins)
+        for bin_index, (i0, i1) in enumerate(zip(bin_spike_indices[:-1], bin_spike_indices[1:])):
+            spikes_in_bin = spike_vector[i0:i1]
+            spike_locations_in_bin = spike_locations[i0:i1][direction]
 
-            for i, unit_id in enumerate(unit_ids):
-                unit_ind = sorting.id_to_index(unit_id)
-                mask = spikes_in_bin["unit_index"] == unit_ind
-                if np.sum(mask) >= min_spikes_per_interval:
-                    median_positions[i, bin_index] = np.median(spike_locations_in_bin[mask])
-        if median_position_segments is None:
-            median_position_segments = median_positions
-        else:
-            median_position_segments = np.hstack((median_position_segments, median_positions))
+            unit_index = sorting_analyzer.sorting.id_to_index(unit)
+            mask = spikes_in_bin["unit_index"] == unit_index
+            if np.sum(mask) >= min_spikes_per_interval:
+                median_positions[bin_index] = np.median(spike_locations_in_bin[mask])
+            else:
+                median_positions[bin_index] = np.nan
+        median_positions_per_unit[unit] = median_positions
 
-    # finally, compute deviations and drifts
-    position_diffs = median_position_segments - reference_positions[:, None]
-    for i, unit_id in enumerate(unit_ids):
-        position_diff = position_diffs[i]
+        # now compute deviations and drifts for this unit
+        position_diff = median_positions - reference_positions[unit_id]
         if np.any(np.isnan(position_diff)):
             # deal with nans: if more than 50% nans --> set to nan
             if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
@@ -1169,8 +1184,9 @@ def compute_drift_metrics(
         drift_ptps[unit_id] = ptp_drift
         drift_stds[unit_id] = std_drift
         drift_mads[unit_id] = mad_drift
+
     if return_positions:
-        outs = res(drift_ptps, drift_stds, drift_mads), median_positions
+        outs = res(drift_ptps, drift_stds, drift_mads), median_positions_per_unit
     else:
         outs = res(drift_ptps, drift_stds, drift_mads)
     return outs
@@ -1385,7 +1401,7 @@ def check_has_required_extensions(metric_name, sorting_analyzer):
 
 
 ### LOW-LEVEL FUNCTIONS ###
-def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None, bin_n_spikes_thres=0):
+def presence_ratio(spike_train, bin_edges=None, num_bin_edges=None, bin_n_spikes_thres=0):
     """
     Calculate the presence ratio for a single unit.
 
@@ -1393,8 +1409,6 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
     ----------
     spike_train : np.ndarray
         Spike times for this unit, in samples.
-    total_length : int
-        Total length of the recording in samples.
     bin_edges : np.array, optional
         Pre-computed bin edges (mutually exclusive with num_bin_edges).
     num_bin_edges : int, optional

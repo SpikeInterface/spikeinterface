@@ -12,11 +12,8 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.metrics.quality.utils import create_ground_truth_pc_distributions
+from spikeinterface.metrics.utils import create_ground_truth_pc_distributions
 
-# from spikeinterface.metrics.quality_metric_list import (
-#     _misc_metric_name_to_func,
-# )
 
 from spikeinterface.metrics.quality import (
     get_quality_metric_list,

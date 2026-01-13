@@ -2,7 +2,7 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
+def compute_num_spikes(sorting_analyzer, unit_ids=None, periods=None, **kwargs):
     """
     Compute the number of spike across segments.
 
@@ -12,6 +12,8 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
         A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the number of spikes. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
 
     Returns
     -------
@@ -20,6 +22,7 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
     """
 
     sorting = sorting_analyzer.sorting
+    sorting = sorting.select_periods(periods)
     if unit_ids is None:
         unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
@@ -43,7 +46,7 @@ class NumSpikes(BaseMetric):
     metric_columns = {"num_spikes": int}
 
 
-def compute_firing_rates(sorting_analyzer, unit_ids=None):
+def compute_firing_rates(sorting_analyzer, unit_ids=None, periods=None):
     """
     Compute the firing rate across segments.
 
@@ -53,6 +56,8 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None):
         A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the firing rate. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
 
     Returns
     -------
@@ -61,6 +66,7 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None):
     """
 
     sorting = sorting_analyzer.sorting
+    sorting = sorting.select_periods(periods)
     if unit_ids is None:
         unit_ids = sorting.unit_ids
     total_duration = sorting_analyzer.get_total_duration()
