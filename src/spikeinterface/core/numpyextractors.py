@@ -427,7 +427,6 @@ class NumpySorting(BaseSorting):
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
-
         return sorting
 
     @staticmethod
