@@ -855,7 +855,6 @@ class BaseSorting(BaseExtractor):
     def to_reordered_spike_vector(
         self,
         lexsort=("sample_index", "segment_index", "unit_index"),
-        use_cache=True,
         return_order=True,
         return_slices=True,
     ):
@@ -890,8 +889,6 @@ class BaseSorting(BaseExtractor):
         ----------
         lexsort : tuple, default: ("sample_index", "unit_index", "segment_index")
             Tuple for lexsort. Please note that this is the reverse natural reading order!
-        use_cache : bool, default: True
-            Use cache for spike vector and and reordered if available.
         return_order: bool, default: True
             Return or not the order.
         return_slices: bool, default: True
@@ -912,7 +909,7 @@ class BaseSorting(BaseExtractor):
 
         if lexsort == ("unit_index", "sample_index", "segment_index"):
             assert not return_order and not return_slices
-            spikes = self.to_spike_vector(concatenated=True, use_cache=use_cache)
+            spikes = self.to_spike_vector(concatenated=True)
             return spikes
 
         assert lexsort in [
