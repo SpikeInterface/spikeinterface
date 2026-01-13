@@ -19,6 +19,7 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface.core import SortingAnalyzer, get_noise_levels
+from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes
 from spikeinterface.core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
@@ -533,7 +534,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    spike_counts = sorting.count_num_spikes_per_unit(outputs="dict")
+    spike_counts = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
 
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
@@ -693,10 +694,10 @@ def compute_amplitude_cv_metrics(
     sorting = sorting_analyzer.sorting
     total_duration = sorting_analyzer.get_total_duration()
 
-    num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
+    num_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
     spikes, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
@@ -1225,7 +1226,7 @@ def compute_sd_ratio(
         sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )
     best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
-    n_spikes = sorting.count_num_spikes_per_unit()
+    n_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
 
     if correct_for_template_itself:
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
