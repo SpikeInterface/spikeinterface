@@ -829,6 +829,32 @@ class BaseSorting(BaseExtractor):
         return spikes
 
     def to_lexsorted_spike_vector(self, lexsort=["sample_index", "unit_index", "segment_index"]):
+        """
+        Construct a unique structured numpy vector concatenating all spikes
+        with several fields: sample_index, unit_index, segment_index, lexosrted given a particular
+        order that could be
+        - ["sample_index", "unit_index", "segment_index"] (segment then unit_index)
+        - ["sample_index", "segment_index", "unit_index"] (unit_index then segment)
+
+        By contrast, the classical spike vector is a particular case with
+        ["unit_index", "sample_index", "segment_index"]
+
+        Parameters
+        ----------
+        lexsort : list, default: ["sample_index", "unit_index", "segment_index"]
+            
+        Returns
+        -------
+        spikes : np.array
+            Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes in the desired
+            lexsort order
+        order : np.array
+            Numpy array needed to sort the spike vector given the lexsort
+        slices :  np.array
+            Numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2) given the lexsort, 
+            where one can obtain the indices amin, amax of all the (segment,unit_index) values.
+        """
+
 
         assert lexsort in [
             ["sample_index", "unit_index", "segment_index"],
