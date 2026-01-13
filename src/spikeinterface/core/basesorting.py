@@ -27,7 +27,7 @@ class BaseSorting(BaseExtractor):
         self._recording = None
         self._sorting_info = None
 
-        # caching: 
+        # caching:
         # 1. the spike vector : one vector complex dtype
         self._cached_spike_vector = None
         # 2. the segment slices in the spike vector
@@ -192,7 +192,6 @@ class BaseSorting(BaseExtractor):
         if use_cache:
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
                 lexsort=("sample_index", "segment_index", "unit_index"),
-                use_cache=True,
                 return_order=False,
                 return_slices=True,
             )
@@ -718,7 +717,6 @@ class BaseSorting(BaseExtractor):
         instance the `UnitsSelectionSorting` implementation.
         """
 
-
         num_seg = self.get_num_segments()
         spikes = []
         segment_slices = np.zeros((num_seg, 2), dtype="int64")
@@ -759,10 +757,12 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
 
-
-
     def to_spike_vector(
-        self, concatenated=True, extremum_channel_inds=None, use_cache=True, return_slices=False,
+        self,
+        concatenated=True,
+        extremum_channel_inds=None,
+        use_cache=True,
+        return_slices=False,
     ) -> np.ndarray | list[np.ndarray]:
         """
         Construct a unique structured numpy vector concatenating all spikes
@@ -810,7 +810,6 @@ class BaseSorting(BaseExtractor):
             if extremum_channel_inds is not None:
                 spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
 
-        
         if not concatenated:
             segment_slices = self._get_spike_vector_segment_slices()
             spikes_ = []
@@ -825,7 +824,7 @@ class BaseSorting(BaseExtractor):
         else:
             # the default and legacy case
             return spikes
-    
+
     def get_spike_vector_to_indices(self):
         """
         Return a cached version the "spike indices" per unit inside the spike vector
@@ -836,11 +835,14 @@ class BaseSorting(BaseExtractor):
 
         if self._cached_spike_vector_to_indices is None:
             from .sorting_tools import spike_vector_to_indices
+
             spike_vector = self.to_spike_vector(concatenated=False)
-            self._cached_spike_vector_to_indices = spike_vector_to_indices(spike_vector, self.unit_ids, absolute_index=True)
+            self._cached_spike_vector_to_indices = spike_vector_to_indices(
+                spike_vector, self.unit_ids, absolute_index=True
+            )
 
         return self._cached_spike_vector_to_indices
-    
+
     def _get_spike_vector_segment_slices(self):
         if self._cached_spike_vector_segment_slices is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
