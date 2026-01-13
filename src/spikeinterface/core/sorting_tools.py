@@ -265,7 +265,7 @@ def select_sorting_periods_mask(sorting: BaseSorting, periods):
     return keep_mask
 
 
-def select_sorting_periods(sorting: BaseSorting, periods):
+def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
     """
     Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
 
