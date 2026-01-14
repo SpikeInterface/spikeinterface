@@ -791,7 +791,7 @@ def compute_amplitude_cutoffs(
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(concatenated=True, outputs='by_unit')
+    amplitudes_by_units = extension.get_data(concatenated=True, outputs="by_unit")
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -852,7 +852,7 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None):
 
     all_amplitude_medians = {}
     amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
-    amplitudes_by_units = amplitude_extension.get_data(outputs='by_unit', concatenated=True)
+    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True)
 
     for unit_id in unit_ids:
         all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
