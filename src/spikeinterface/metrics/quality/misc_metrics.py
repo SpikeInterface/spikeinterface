@@ -678,7 +678,7 @@ def compute_amplitude_cv_metrics(
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+    num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids, outputs="dict")
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data(outputs="by_unit", concatenated=False)
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
