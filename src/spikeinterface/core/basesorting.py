@@ -459,7 +459,7 @@ class BaseSorting(BaseExtractor):
         if unit_ids is not None:
             assert outputs == "dict", "count_num_spikes_per_unit() with unit_ids not None works only for output='dict'"
 
-            keep_mask = np.isin(unit_ids, self.unit_ids)
+            keep_mask = np.isin(self.unit_ids, unit_ids)
             # this is important because this ensure the order of unit_ids
             unit_ids = self.unit_ids[keep_mask]
 
