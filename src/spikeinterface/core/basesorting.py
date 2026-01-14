@@ -471,13 +471,12 @@ class BaseSorting(BaseExtractor):
             keep_mask = slice(None)
             unit_ids = self.unit_ids
 
-        
         if cache_key in self._cached_lexsorted_spike_vector:
             # case 1
             slices = self._cached_lexsorted_spike_vector[cache_key]["slices"]
             # end of last segment minus start of first segment
             num_spikes = slices[keep_mask, -1, 1] - slices[keep_mask, 0, 0]
-            
+
         else:
             # case 2 and 3
             spike_vector = self.to_spike_vector()
