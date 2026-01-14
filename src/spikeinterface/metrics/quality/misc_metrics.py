@@ -1023,20 +1023,11 @@ def compute_drift_metrics(
     spike_locations_by_unit_and_segments = spike_locations_ext.get_data(outputs='by_unit')
     spike_locations_by_unit = spike_locations_ext.get_data(outputs='by_unit', concatenated=True)
 
-    # _, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
-    # new_spike_locations = spike_locations[order]
-
-    # new_spikes_bis, order_bis, slices_bis = sorting.to_reordered_spike_vector(
-    #     ["sample_index", "unit_index", "segment_index"]
-    # )
-    # new_spike_locations_bis = spike_locations[order_bis]
-
-
-
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
-    # assert direction in spike_locations.dtype.names, (
-    #     f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
-    # )
+    data = spike_locations_by_unit[unit_ids[0]]
+    assert direction in data.dtype.names, (
+        f"Direction {direction} is invalid. Available directions: " f"{data.dtype.names}"
+    )
     total_duration = sorting_analyzer.get_total_duration()
     if total_duration < min_num_bins * interval_s:
         warnings.warn(
