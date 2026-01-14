@@ -1018,7 +1018,7 @@ def compute_drift_metrics(
         unit_ids = sorting.unit_ids
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-    spike_locations_by_unit_and_segments = spike_locations_ext.get_data(outputs="by_unit")
+    spike_locations_by_unit_and_segments = spike_locations_ext.get_data(outputs="by_unit", concatenated=False)
     spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit", concatenated=True)
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
