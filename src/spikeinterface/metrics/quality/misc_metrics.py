@@ -681,10 +681,7 @@ def compute_amplitude_cv_metrics(
         unit_ids = sorting.unit_ids
 
     num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
-    amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
-
-    _, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
-    new_amps = amps[order]
+    amps = sorting_analyzer.get_extension(amplitude_extension).get_data(outputs='by_unit', concatenated=False)
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
@@ -693,18 +690,14 @@ def compute_amplitude_cv_metrics(
             (average_num_spikes_per_bin / firing_rate) * sorting_analyzer.sampling_frequency
         )
 
-        unit_index = sorting.id_to_index(unit_id)
-
         amp_spreads = []
         # bins and amplitude means are computed for each segment
         for segment_index in range(sorting_analyzer.get_num_segments()):
             sample_bin_edges = np.arange(
                 0, sorting_analyzer.get_num_samples(segment_index) + 1, temporal_bin_size_samples
             )
-            u0 = slices[unit_index, segment_index, 0]
-            u1 = slices[unit_index, segment_index, 1]
             spikes_in_segment = sorting.get_unit_spike_train(unit_id, segment_index)
-            amps_unit = new_amps[u0:u1]
+            amps_unit = amps[segment_index][unit_id]
             amp_mean = np.abs(np.mean(amps_unit))
             bounds = np.searchsorted(spikes_in_segment, sample_bin_edges, side="left")
             for i0, i1 in zip(bounds[:-1], bounds[1:]):
@@ -929,17 +922,10 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(concatenated=True)
-    _, order, slices = sorting_analyzer.sorting.to_reordered_spike_vector(
-        ["sample_index", "segment_index", "unit_index"]
-    )
-    new_amps = amplitudes_by_units[order]
+    amplitudes_by_units = extension.get_data(outputs='by_unit', concatenated=True)
 
     for unit_id in unit_ids:
-        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
-        u0 = slices[unit_index, 0, 0]
-        u1 = slices[unit_index, -1, 1]
-        amplitudes = new_amps[u0:u1]
+        amplitudes = amplitudes_by_units[unit_id]
         if invert_amplitudes:
             amplitudes = -amplitudes
 
@@ -1034,20 +1020,23 @@ def compute_drift_metrics(
         unit_ids = sorting.unit_ids
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-    spike_locations = spike_locations_ext.get_data()
+    spike_locations_by_unit_and_segments = spike_locations_ext.get_data(outputs='by_unit')
+    spike_locations_by_unit = spike_locations_ext.get_data(outputs='by_unit', concatenated=True)
 
-    _, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
-    new_spike_locations = spike_locations[order]
+    # _, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
+    # new_spike_locations = spike_locations[order]
 
-    new_spikes_bis, order_bis, slices_bis = sorting.to_reordered_spike_vector(
-        ["sample_index", "unit_index", "segment_index"]
-    )
-    new_spike_locations_bis = spike_locations[order_bis]
+    # new_spikes_bis, order_bis, slices_bis = sorting.to_reordered_spike_vector(
+    #     ["sample_index", "unit_index", "segment_index"]
+    # )
+    # new_spike_locations_bis = spike_locations[order_bis]
+
+
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
-    assert direction in spike_locations.dtype.names, (
-        f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
-    )
+    # assert direction in spike_locations.dtype.names, (
+    #     f"Direction {direction} is invalid. Available directions: " f"{spike_locations.dtype.names}"
+    # )
     total_duration = sorting_analyzer.get_total_duration()
     if total_duration < min_num_bins * interval_s:
         warnings.warn(
@@ -1070,10 +1059,7 @@ def compute_drift_metrics(
     median_position_segments = None
 
     for i, unit_id in enumerate(unit_ids):
-        unit_index = sorting.id_to_index(unit_id)
-        u0 = slices[unit_index, 0, 0]
-        u1 = slices[unit_index, -1, 1]
-        reference_positions[i] = np.median(new_spike_locations[u0:u1][direction])
+        reference_positions[i] = np.median(spike_locations_by_unit[unit_id][direction])
 
     for segment_index in range(sorting_analyzer.get_num_segments()):
         seg_length = sorting_analyzer.get_num_samples(segment_index)
@@ -1081,14 +1067,10 @@ def compute_drift_metrics(
         bins = np.arange(num_bin_edges) * interval_samples
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
         for i, unit_id in enumerate(unit_ids):
-            unit_index = sorting.id_to_index(unit_id)
-            u0 = slices_bis[segment_index, unit_index, 0]
-            u1 = slices_bis[segment_index, unit_index, 1]
-            spikes_in_segment_of_unit = new_spikes_bis[u0:u1]
-            spike_locations_in_segment_of_unit = new_spike_locations_bis[u0:u1]
-            bounds = np.searchsorted(spikes_in_segment_of_unit["sample_index"], bins, side="left")
+            spikes_in_segment_of_unit = sorting.get_unit_spike_train(unit_id, segment_index)
+            bounds = np.searchsorted(spikes_in_segment_of_unit, bins, side="left")
             for bin_index, (i0, i1) in enumerate(zip(bounds[:-1], bounds[1:])):
-                spike_locations_in_bin = spike_locations_in_segment_of_unit[i0:i1][direction]
+                spike_locations_in_bin = spike_locations_by_unit_and_segments[segment_index][unit_id][i0:i1][direction]
                 if (i1 - i0) >= min_spikes_per_interval:
                     median_positions[i, bin_index] = np.median(spike_locations_in_bin)
 
