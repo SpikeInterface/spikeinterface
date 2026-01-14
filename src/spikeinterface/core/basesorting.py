@@ -430,7 +430,7 @@ class BaseSorting(BaseExtractor):
         v = values[self.id_to_index(unit_id)]
         return v
 
-    def count_num_spikes_per_unit(self, outputs="dict"):
+    def count_num_spikes_per_unit(self, outputs="dict", unit_ids=None):
         """
         For each unit : get number of spikes  across segments.
 
@@ -440,7 +440,8 @@ class BaseSorting(BaseExtractor):
         ----------
         outputs : "dict" | "array", default: "dict"
             Control the type of the returned object : a dict (keys are unit_ids) or an numpy array.
-
+        unit_ids: np.array | None
+            Compute the number of spikes on a subset unit_ids only
         Returns
         -------
         dict or numpy.array
@@ -454,22 +455,41 @@ class BaseSorting(BaseExtractor):
         # 3. compute spikevector and do np.unique()
 
         cache_key = ("sample_index", "segment_index", "unit_index")
+
+        if unit_ids is not None:
+            assert outputs == "dict", "count_num_spikes_per_unit() with unit_ids not None works only for output='dict'"
+
+            keep_mask = np.isin(unit_ids, self.unit_ids)
+            # this is important because this ensure the order of unit_ids
+            unit_ids = self.unit_ids[keep_mask]
+
+            if cache_key not in self._cached_lexsorted_spike_vector:
+                # force case 1 when a few units
+                # the lexsort internally this will be faster when only subset of units
+                self.to_reordered_spike_vector(lexsort=cache_key)
+        else:
+            keep_mask = slice(None)
+            unit_ids = self.unit_ids
+
+        
         if cache_key in self._cached_lexsorted_spike_vector:
             # case 1
             slices = self._cached_lexsorted_spike_vector[cache_key]["slices"]
             # end of last segment minus start of first segment
-            num_spikes = slices[:, -1, 1] - slices[:, 0, 0]
+            num_spikes = slices[keep_mask, -1, 1] - slices[keep_mask, 0, 0]
+            
         else:
             # case 2 and 3
             spike_vector = self.to_spike_vector()
             unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
             num_spikes = np.zeros(self.unit_ids.size, dtype="int64")
             num_spikes[unit_indices] = counts
+            num_spikes = num_spikes[keep_mask]
 
         if outputs == "array":
             return num_spikes
         elif outputs == "dict":
-            num_spikes = dict(zip(self.unit_ids, num_spikes))
+            num_spikes = dict(zip(unit_ids, num_spikes))
             return num_spikes
         else:
             raise ValueError("count_num_spikes_per_unit() output must be 'dict' or 'array'")
