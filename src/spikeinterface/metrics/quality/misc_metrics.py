@@ -596,13 +596,15 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in unit_ids}
     for unit_id in unit_ids:
+        firing_histograms = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             num_samples = sorting_analyzer.get_num_samples(segment_index)
             edges = np.arange(0, num_samples + 1, bin_size_samples)
             spike_times = sorting.get_unit_spike_train(unit_id, segment_index)
             spike_counts, _ = np.histogram(spike_times, bins=edges)
             firing_rates = spike_counts / bin_size_s
-            firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
+            firing_histograms += [firing_rates]
+        firing_rate_histograms[unit_id] = np.concatenate(firing_histograms)
 
     # finally we compute the percentiles
     firing_ranges = {}
