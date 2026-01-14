@@ -1004,7 +1004,7 @@ class BaseSorting(BaseExtractor):
         from .numpyextractors import NumpySorting
 
         sorting = NumpySorting.from_sorting(self)
-        if propagate_cache:
+        if propagate_cache and len(self._cached_lexsorted_spike_vector) > 0:
             sorting._cached_lexsorted_spike_vector = deepcopy(self._cached_lexsorted_spike_vector)
         return sorting
 
