@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import numpy as np
-from itertools import chain
 
 from spikeinterface.core import BaseSorting, SortingAnalyzer, apply_merges_to_sorting, apply_splits_to_sorting
 from spikeinterface.curation.curation_model import CurationModel
+from spikeinterface.core.sorting_tools import generate_unit_ids_for_split
 
 
 def validate_curation_dict(curation_dict: dict):
@@ -153,9 +153,9 @@ def apply_curation(
     Steps are done in this order:
 
       1. Apply labels using curation_dict["manual_labels"]
-      2. Apply removal using curation_dict["removed"]
-      3. Apply merges using curation_dict["merges"]
-      4. Apply splits using curation_dict["splits"]
+      2. Remove whole units using curation_dict["removed"]
+      3. Apply splits using curation_dict["splits"] and remove spikes from units using curation_dict["discard_spikes"]
+      4. Apply merges using curation_dict["merges"]
 
     A new Sorting or SortingAnalyzer (in memory) is returned.
     The user (an adult) has the responsability to save it somewhere (or not).
@@ -218,7 +218,85 @@ def apply_curation(
     else:
         curated_sorting_or_analyzer = sorting_or_analyzer
 
-    # 3. Merge units
+    # 3. Split and discard_spikes from units
+    # Do this at the same time, otherwise have to do a lot of spike index shuffling.
+    # Strategy: put the discarded spikes in a new unit when splitting, then remove them at the end.
+    if len(curation_model.splits) > 0 or len(curation_model.discard_spikes) > 0:
+
+        split_spikes_unit_ids = []
+        split_new_unit_ids_from_user = None
+        if len(curation_model.splits) > 0:
+            split_spikes_unit_ids = [split.unit_id for split in curation_model.splits]
+            split_new_unit_ids_from_user = [s.new_unit_ids for s in curation_model.splits if s.new_unit_ids is not None]
+
+        discard_spikes_unit_ids = []
+        if len(curation_model.discard_spikes) > 0:
+            discard_spikes_unit_ids = [discard_spike.unit_id for discard_spike in curation_model.discard_spikes]
+
+        split_units = {}
+
+        sorting = (
+            curated_sorting_or_analyzer if isinstance(sorting_or_analyzer, BaseSorting) else sorting_or_analyzer.sorting
+        )
+
+        num_spikes_per_unit = sorting.count_num_spikes_per_unit()
+
+        for unit_id in curation_model.unit_ids:
+
+            if unit_id in split_spikes_unit_ids:
+                split_spikes_list_index = np.where(np.array(split_spikes_unit_ids) == unit_id)[0][0]
+                split = curation_model.splits[split_spikes_list_index]
+
+                split_units[unit_id] = split.get_full_spike_indices(sorting)
+
+            # If the unit is not split but does contain spikes to discard, make an initial "split"
+            # unit containing the indices of the entire spike train.
+            elif unit_id in discard_spikes_unit_ids:
+                split_units[unit_id] = [np.arange(num_spikes_per_unit[unit_id])]
+
+            # If there are spikes to discard, find these, and remove them from the units-to-split.
+            # Put the discarded spikes in their own unit, at the start of the list of split units.
+            if unit_id in discard_spikes_unit_ids:
+
+                discard_spikes_list_index = np.where(np.array(discard_spikes_unit_ids) == unit_id)[0][0]
+                discard_spikes_indices = np.array(curation_model.discard_spikes[discard_spikes_list_index].indices)
+
+                split_units_with_discard = [discard_spikes_indices]
+                for split_spike_train in split_units[unit_id]:
+                    split_spike_train_cleaned = np.setdiff1d(split_spike_train, discard_spikes_indices)
+                    split_units_with_discard.append(split_spike_train_cleaned)
+
+                split_units[unit_id] = split_units_with_discard
+
+        if isinstance(sorting_or_analyzer, BaseSorting):
+            curated_sorting_or_analyzer, new_ids = apply_splits_to_sorting(
+                curated_sorting_or_analyzer,
+                split_units,
+                new_id_strategy=new_id_strategy,
+                new_unit_ids=split_new_unit_ids_from_user,
+                discard_spikes_unit_ids=discard_spikes_unit_ids,
+                return_extra=True,
+            )
+        else:
+            curated_sorting_or_analyzer, new_ids = curated_sorting_or_analyzer.split_units(
+                split_units,
+                new_id_strategy=new_id_strategy,
+                new_unit_ids=split_new_unit_ids_from_user,
+                discard_spikes_unit_ids=discard_spikes_unit_ids,
+                format="memory",
+                verbose=verbose,
+                return_new_unit_ids=True,
+            )
+
+        if len(discard_spikes_unit_ids) > 0:
+            ids_to_remove = []
+            for new_id_set in new_ids:
+                if new_id_set[0] in discard_spikes_unit_ids or new_id_set[1] in discard_spikes_unit_ids:
+                    ids_to_remove.append(new_id_set[0])
+
+            curated_sorting_or_analyzer = curated_sorting_or_analyzer.remove_units(ids_to_remove)
+
+    # 4. Merge units
     if len(curation_model.merges) > 0:
         merge_unit_groups = [m.unit_ids for m in curation_model.merges]
         merge_new_unit_ids = [m.new_unit_id for m in curation_model.merges if m.new_unit_id is not None]
@@ -244,37 +322,6 @@ def apply_curation(
                 format="memory",
                 verbose=verbose,
                 **job_kwargs,
-            )
-
-    # 4. Split units
-    if len(curation_model.splits) > 0:
-        split_units = {}
-        for split in curation_model.splits:
-            sorting = (
-                curated_sorting_or_analyzer
-                if isinstance(sorting_or_analyzer, BaseSorting)
-                else sorting_or_analyzer.sorting
-            )
-            split_units[split.unit_id] = split.get_full_spike_indices(sorting)
-        split_new_unit_ids = [s.new_unit_ids for s in curation_model.splits if s.new_unit_ids is not None]
-        if len(split_new_unit_ids) == 0:
-            split_new_unit_ids = None
-        if isinstance(sorting_or_analyzer, BaseSorting):
-            curated_sorting_or_analyzer, _ = apply_splits_to_sorting(
-                curated_sorting_or_analyzer,
-                split_units,
-                new_unit_ids=split_new_unit_ids,
-                new_id_strategy=new_id_strategy,
-                return_extra=True,
-            )
-        else:
-            curated_sorting_or_analyzer, _ = curated_sorting_or_analyzer.split_units(
-                split_units,
-                new_id_strategy=new_id_strategy,
-                return_new_unit_ids=True,
-                new_unit_ids=split_new_unit_ids,
-                format="memory",
-                verbose=verbose,
             )
 
     return curated_sorting_or_analyzer

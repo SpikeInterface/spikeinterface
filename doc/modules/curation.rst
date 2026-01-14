@@ -206,7 +206,7 @@ Curation format
 SpikeInterface internally supports a JSON-based manual curation format.
 When manual curation is necessary, modifying a dataset in place is a bad practice.
 Instead, to ensure the reproducibility of the spike sorting pipelines, we have introduced a simple and JSON-based manual curation format.
-This format defines at the moment : merges + deletions + manual tags.
+This format defines at the moment : manual labelling, removal, merging, splitting and removal of spikes from a unit.
 The simple file can be kept along side the output of a sorter and applied on the result to have a "clean" result.
 
 This format has two part:
@@ -216,21 +216,26 @@ This format has two part:
     * "format_version" : format specification
     * "unit_ids" : the list of unit_ds
     * "label_definitions" : list of label categories and possible labels per category.
-                            Every category can be *exclusive=True* onely one label or *exclusive=False* several labels possible
+        If a unit can only have one label, the category can be set to be *exclusive=True*. If several labels can be used at once, the category can be set to be *exclusive=False*.
 
   * **manual output** curation with the folowing keys:
 
     * "manual_labels"
-    * "merge_unit_groups"
-    * "removed_units"
+    * "merges"
+    * "removed"
+    * "splits"
+    * "discard_spikes"
 
-Here is the description of the format with a simple example (the first part of the
-format is the definition; the second part of the format is manual action):
+The first three ("manual_labels", "merges" and "removed") act at the unit level. They label, merge or remove whole units. While the final two
+("splits" and "discard_spikes") act at the spike level: we need to define which spikes from a unit are being split into a new unit, or which
+spikes from a unit are to be discarded. Note that all spike indices are with respect to the original analyzer.
+
+Here is a simple example of the format:
 
 .. code-block:: json
 
     {
-        "format_version": "1",
+        "format_version": "3",
         "unit_ids": [
             "u1",
             "u2",
@@ -266,25 +271,31 @@ format is the definition; the second part of the format is manual action):
         "manual_labels": [
             {
                 "unit_id": "u1",
-                "quality": [
-                    "good"
-                ]
+                "labels": {
+                    "quality": [
+                        "good"
+                    ]
+                }
             },
             {
                 "unit_id": "u2",
-                "quality": [
-                    "noise"
-                ],
-                "putative_type": [
-                    "excitatory",
-                    "pyramidal"
-                ]
+                "labels": {
+                    "quality": [
+                        "noise"
+                    ],
+                    "putative_type": [
+                        "excitatory",
+                        "pyramidal"
+                    ]
+                }
             },
             {
                 "unit_id": "u3",
-                "putative_type": [
-                    "inhibitory"
-                ]
+                "labels": {
+                    "putative_type": [
+                        "inhibitory"
+                    ]
+                }
             }
         ],
         "merge_unit_groups": [
@@ -301,9 +312,48 @@ format is the definition; the second part of the format is manual action):
         "removed_units": [
             "u31",
             "u42"
+        ],
+        "splits": [
+            {
+                "unit_id": "u1",
+                "mode": "indices",
+                "indices": [
+                    [
+                        10,
+                        20,
+                        30
+                    ]
+                ],
+                "new_unit_ids": [
+                    "u1-1",
+                    "u1-2"
+                ]
+            }
+        ],
+        "discard_spikes": [
+            {
+                "unit_id": "u10",
+                "indices": [
+                    56,
+                    57,
+                    59,
+                    60
+                ]
+            },
+            {
+                "unit_id": "u14",
+                "indices": [
+                    123,
+                    321
+                ]
+            }
         ]
     }
 
+Note that you cannot split and merge a unit at the same time.
+
+We do not expect users to create their own curation json files. Instead, our internal curation algorithms will output
+results which can be easily transformed into the format. We also hope that external packages can use our format.
 
 The curation format can be loaded into a dictionary and directly applied to
 a ``BaseSorting`` or ``SortingAnalyzer`` object using the :py:func:`~spikeinterface.curation.apply_curation` function.

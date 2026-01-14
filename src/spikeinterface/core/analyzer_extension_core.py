@@ -604,8 +604,9 @@ class ComputeTemplates(AnalyzerExtension):
                             arr = np.std(wfs, axis=0)
                         elif operator == "median":
                             arr = np.median(wfs, axis=0)
-                        elif "percentile" in operator:
-                            _, percentile = operator.splot("_")
+                        # old versions have spelling error in "percentile"
+                        elif "percentile" in operator or "pencentile" in operator:
+                            _, percentile = operator.split("_")
                             arr = np.percentile(wfs, float(percentile), axis=0)
                         new_array[split_unit_index, ...] = arr
                 else:
@@ -1126,6 +1127,7 @@ class BaseMetricExtension(AnalyzerExtension):
             column_names = list(metric.metric_columns.keys())
             try:
                 metric_params = self.params["metric_params"].get(metric_name, {})
+                # TODO: deal with number_of_peaks and velocity_fits here
                 res = metric.compute(
                     sorting_analyzer,
                     unit_ids=unit_ids,
