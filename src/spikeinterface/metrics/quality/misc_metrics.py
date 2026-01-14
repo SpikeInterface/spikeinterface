@@ -90,7 +90,7 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         presence_ratios = {unit_id: np.nan for unit_id in unit_ids}
     else:
 
-        spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+        spikes, _, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
 
         # precompute segment slice
         for unit_id in unit_ids:
@@ -249,7 +249,7 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
     isi_violations_count = {}
     isi_violations_ratio = {}
 
-    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    spikes, _, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
@@ -348,7 +348,7 @@ def compute_refrac_period_violations(
     t_r = int(round(refractory_period_ms * fs * 1e-3))
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
-    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
+    spikes, _, slices = sorting.to_reordered_spike_vector(["sample_index", "unit_index", "segment_index"])
 
     T = sorting_analyzer.get_total_samples()
 
@@ -446,7 +446,7 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    spikes, _, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
@@ -607,7 +607,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    spikes, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "unit_index", "segment_index"])
+    spikes, _, slices = sorting.to_reordered_spike_vector(["sample_index", "unit_index", "segment_index"])
 
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in unit_ids}
@@ -700,7 +700,7 @@ def compute_amplitude_cv_metrics(
     num_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
     amps = sorting_analyzer.get_extension(amplitude_extension).get_data()
 
-    spikes, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    spikes, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_amps = amps[order]
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
@@ -1049,10 +1049,10 @@ def compute_drift_metrics(
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
     spike_locations = spike_locations_ext.get_data()
 
-    _, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    _, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_spike_locations = spike_locations[order]
 
-    new_spikes_bis, order_bis, slices_bis = sorting.to_lexsorted_spike_vector(
+    new_spikes_bis, order_bis, slices_bis = sorting.to_reordered_spike_vector(
         ["sample_index", "unit_index", "segment_index"]
     )
     new_spike_locations_bis = spike_locations[order_bis]
@@ -1231,7 +1231,7 @@ def compute_sd_ratio(
     if correct_for_template_itself:
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
-    spikes, order, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
+    spikes, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
     new_spike_amplitudes = spike_amplitudes[order]
 
     sd_ratio = {}

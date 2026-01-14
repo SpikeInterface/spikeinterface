@@ -102,6 +102,25 @@ def test_BaseSorting(create_cache_folder):
     spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
     # print(spikes)
 
+    spikes = sorting.to_spike_vector()
+    ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
+        lexsort=("sample_index", "segment_index", "unit_index"),
+        return_order=True,
+        return_slices=True,
+    )
+    assert np.array_equal(spikes[order], ordered_spikes)
+
+    ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
+        lexsort=(
+            "sample_index",
+            "unit_index",
+            "segment_index",
+        ),
+        return_order=True,
+        return_slices=True,
+    )
+    assert np.array_equal(spikes[order], ordered_spikes)
+
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="dict")
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="array")
     total_spikes = sorting.count_total_num_spikes()
@@ -227,6 +246,11 @@ def test_time_slice():
 
 
 if __name__ == "__main__":
-    test_BaseSorting()
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        cache_folder = Path(tmpdirname)
+
+    test_BaseSorting(cache_folder)
     test_npy_sorting()
     test_empty_sorting()
