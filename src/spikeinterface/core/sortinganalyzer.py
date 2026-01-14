@@ -2816,6 +2816,7 @@ _builtin_extensions = {
     "spike_locations": "spikeinterface.postprocessing",
     "template_similarity": "spikeinterface.postprocessing",
     "unit_locations": "spikeinterface.postprocessing",
+    "valid_unit_periods": "spikeinterface.postprocessing",
     # from metrics
     "quality_metrics": "spikeinterface.metrics",
     "template_metrics": "spikeinterface.metrics",
