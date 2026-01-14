@@ -1172,7 +1172,7 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(outputs='by_unit', concatenated=False)
 
     if not HAVE_NUMBA:
         warnings.warn(
@@ -1190,19 +1190,14 @@ def compute_sd_ratio(
     if correct_for_template_itself:
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
-    _, order, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"])
-    new_spike_amplitudes = spike_amplitudes[order]
-
+    
     sd_ratio = {}
 
     for unit_id in unit_ids:
-        unit_index = sorting.id_to_index(unit_id)
         spk_amp = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
-            u0 = slices[unit_index, segment_index, 0]
-            u1 = slices[unit_index, segment_index, 1]
             spike_train = sorting.get_unit_spike_train(unit_id, segment_index)
-            amplitudes = new_spike_amplitudes[u0:u1]
+            amplitudes = spike_amplitudes[segment_index][unit_id]
 
             censored_indices = find_duplicated_spikes(
                 spike_train,
@@ -1230,6 +1225,7 @@ def compute_sd_ratio(
 
             if correct_for_template_itself:
                 # template = sorting_analyzer.get_template(unit_id, force_dense=True)[:, best_channel]
+                unit_index = sorting.id_to_index(unit_id)
 
                 template = tamplates_array[unit_index, :, :][:, best_channel]
                 nsamples = template.shape[0]
