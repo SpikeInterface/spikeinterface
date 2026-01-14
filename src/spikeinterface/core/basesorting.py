@@ -924,14 +924,16 @@ class BaseSorting(BaseExtractor):
         lexsort = tuple(lexsort)
 
         if lexsort == ("unit_index", "sample_index", "segment_index"):
-            assert not return_order and not return_slices
+            assert not return_order and not return_slices, 'If lexsort = ("unit_index", "sample_index", "segment_index"), both `return_order` and `return_slices` must be set to `False`.'
+
             spikes = self.to_spike_vector(concatenated=True)
             return spikes
 
         assert lexsort in [
             ("sample_index", "unit_index", "segment_index"),
             ("sample_index", "segment_index", "unit_index"),
-        ]
+        ], '`lexsort` must be equal to ("unit_index", "sample_index", "segment_index"),  ("sample_index", "unit_index", "segment_index") or ("sample_index", "segment_index", "unit_index")'
+
 
         key = str(lexsort)
 
