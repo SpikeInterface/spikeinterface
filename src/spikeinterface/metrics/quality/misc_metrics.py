@@ -88,7 +88,6 @@ def compute_presence_ratios(sorting_analyzer, unit_ids=None, bin_duration_s=60.0
         presence_ratios = {unit_id: np.nan for unit_id in unit_ids}
     else:
 
-        # precompute segment slice
         for unit_id in unit_ids:
             spike_train = []
             for segment_index in range(num_segs):
