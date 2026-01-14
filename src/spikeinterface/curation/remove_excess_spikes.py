@@ -47,9 +47,9 @@ class RemoveExcessSpikesSorting(BaseSorting):
 
         self._kwargs = {"sorting": sorting, "recording": recording}
 
-    def _custom_cache_spike_vector(self) -> None:
+    def _compute_and_cache_spike_vector(self) -> None:
         if self._parent_sorting._cached_spike_vector is None:
-            self._parent_sorting._custom_cache_spike_vector()
+            self._parent_sorting._compute_and_cache_spike_vector()
 
             if self._parent_sorting._cached_spike_vector is None:
                 return
