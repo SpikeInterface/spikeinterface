@@ -432,7 +432,9 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes, slices = sorting.to_reordered_spike_vector(["sample_index", "segment_index", "unit_index"], return_order=False)
+    spikes, slices = sorting.to_reordered_spike_vector(
+        ["sample_index", "segment_index", "unit_index"], return_order=False
+    )
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
