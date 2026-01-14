@@ -12,9 +12,9 @@ import multiprocessing as mp
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
+from spikeinterface.core.base import unit_period_dtype
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from spikeinterface.core.node_pipeline import unit_period_dtype
 from spikeinterface.metrics.spiketrain import compute_firing_rates
 
 numba_spec = importlib.util.find_spec("numba")
@@ -61,8 +61,8 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         Minimum duration that detected good periods must have to be kept, in seconds.
     user_defined_periods : array of unit_period_dtype or shape (num_periods, 3) or (num_periods, 4) or None, default: None
         Periods of unit_period_dtype (segment_index, start_sample_index, end_sample_index, unit_index)
-        or numpy array of shape (num_periods, 3) [unit_index, start_sample, end_sample]
-        or (num_periods, 4) [unit_index, segment_index, start_sample, end_sample]
+        or numpy array of shape (num_periods, 3) [start_sample, end_sample, unit_index]
+        or (num_periods, 4) [segment_index, start_sample, end_sample, unit_index]
         in samples, over which to compute the metric.
     refractory_period_ms : float, default: 0.8
         Refractory period duration for violation detection (ms).
@@ -156,12 +156,15 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                     user_defined_periods = user_defined_periods.astype(int)
 
                 if user_defined_periods.shape[1] == 3:
-                    # add segment index 0 as column 1 if missing
+                    if self.sorting_analyzer.get_num_segments() > 1:
+                        raise ValueError(
+                            "For multi-segment recordings, user_defined_periods must include segment_index as column 1."
+                        )
+                    # add segment index 0 as column 0 if missing
                     user_defined_periods = np.hstack(
                         (
-                            user_defined_periods[:, 0:1],
                             np.zeros((user_defined_periods.shape[0], 1), dtype=int),
-                            user_defined_periods[:, 1:3],
+                            user_defined_periods,
                         )
                     )
                 # Cast user defined periods to unit_period_dtype
@@ -444,8 +447,10 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
             # Combine with user-defined periods if provided
             if self.params["method"] == "combined":
-                user_defined_periods = self.params["user_defined_periods"]
-                all_periods = np.concatenate((valid_unit_periods, user_defined_periods), axis=0)
+                user_defined_periods = self.user_defined_periods
+                valid_unit_periods = self._sort_periods(
+                    np.concatenate((valid_unit_periods, user_defined_periods), axis=0)
+                )
             valid_unit_periods = merge_overlapping_periods_across_units_and_segments(valid_unit_periods)
 
             # Remove good periods that are too short
@@ -512,6 +517,18 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         sort_idx = np.lexsort((periods["start_sample_index"], periods["unit_index"], periods["segment_index"]))
         sorted_periods = periods[sort_idx]
         return sorted_periods
+
+    def set_data(self, ext_data_name, ext_data):
+        # cast back lists of dicts (required for dumping) back to arrays
+        if ext_data_name in ("period_centers", "periods_fp_per_unit", "periods_fn_per_unit"):
+            ext_data = []
+            # lists of dicts to lists of dicts with arrays
+            for segment_dict in ext_data:
+                segment_dict_arrays = {}
+                for unit_id, values in segment_dict.items():
+                    segment_dict_arrays[unit_id] = np.array(values)
+                ext_data.append(segment_dict_arrays)
+        self.data[ext_data_name] = ext_data
 
 
 def compute_subperiods(
