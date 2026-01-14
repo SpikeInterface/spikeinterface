@@ -460,13 +460,9 @@ class BaseSorting(BaseExtractor):
             assert outputs == "dict", "count_num_spikes_per_unit() with unit_ids not None works only for output='dict'"
 
             keep_mask = np.isin(self.unit_ids, unit_ids)
-            # this is important because this ensure the order of unit_ids
+            # this is important because this ensure the "good" order of unit_ids
             unit_ids = self.unit_ids[keep_mask]
 
-            if cache_key not in self._cached_lexsorted_spike_vector:
-                # force case 1 when a few units
-                # the lexsort internally this will be faster when only subset of units
-                self.to_reordered_spike_vector(lexsort=cache_key)
         else:
             keep_mask = slice(None)
             unit_ids = self.unit_ids
