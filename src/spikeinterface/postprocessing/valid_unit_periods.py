@@ -531,6 +531,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         self.data[ext_data_name] = ext_data
 
 
+# TODO: deal with margin when returning periods
 def compute_subperiods(
     sorting_analyzer,
     period_duration_s_absolute: float = 10,
@@ -569,9 +570,6 @@ def compute_subperiods(
 
         for segment_index in range(sorting.get_num_segments()):
             n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
-            print(
-                f"Num samples segment {segment_index}: {n_samples} - period size: {period_size_samples} - margin size: {margin_size_samples}"
-            )
             # We round the number of subperiods to ensure coverage of the entire recording
             # the end of the last period is then clipped or extended to the end of the recording
             n_subperiods = round(n_samples / period_size_samples)
