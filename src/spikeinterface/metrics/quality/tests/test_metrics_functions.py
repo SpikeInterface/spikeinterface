@@ -12,8 +12,11 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.metrics.utils import create_ground_truth_pc_distributions
+from spikeinterface.metrics.quality.utils import create_ground_truth_pc_distributions
 
+# from spikeinterface.metrics.quality_metric_list import (
+#     _misc_metric_name_to_func,
+# )
 
 from spikeinterface.metrics.quality import (
     get_quality_metric_list,
@@ -50,7 +53,7 @@ from spikeinterface.metrics.quality.pca_metrics import (
 )
 
 
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")

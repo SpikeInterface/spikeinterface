@@ -1333,18 +1333,6 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
     def __init__(self, sorting_analyzer):
         super().__init__(sorting_analyzer)
-        self._segment_slices = None
-
-    @property
-    def segment_slices(self):
-        if self._segment_slices is None:
-            segment_slices = []
-            spikes = self.sorting_analyzer.sorting.to_spike_vector()
-            for segment_index in range(self.sorting_analyzer.get_num_segments()):
-                i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
-                segment_slices.append(slice(i0, i1))
-            self._segment_slices = segment_slices
-        return self._segment_slices
 
     def _set_params(self, **kwargs):
         params = kwargs.copy()

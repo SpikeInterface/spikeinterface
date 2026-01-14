@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.util
 import numpy as np
 
-
-from spikeinterface.core.node_pipeline import (
-    PeakDetector,
-    base_peak_dtype,
-)
-
+from spikeinterface.core.base import base_peak_dtype
+from spikeinterface.core.node_pipeline import PeakDetector
 from spikeinterface.core.recording_tools import get_channel_distances, get_random_data_chunks
 from spikeinterface.postprocessing.localization_tools import get_convolution_weights
 
-import importlib.util
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:

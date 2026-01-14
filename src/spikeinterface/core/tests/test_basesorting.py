@@ -21,9 +21,8 @@ from spikeinterface.core import (
     generate_sorting,
     load,
 )
-from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
-from spikeinterface.core.node_pipeline import unit_period_dtype
 
 
 def test_BaseSorting(create_cache_folder):

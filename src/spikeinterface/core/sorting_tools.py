@@ -281,8 +281,8 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
         A new sorting object with only samples between start_sample_index and end_sample_index
         for the given segment_index.
     """
+    from spikeinterface.core.base import unit_period_dtype
     from spikeinterface.core.numpyextractors import NumpySorting
-    from spikeinterface.core.node_pipeline import unit_period_dtype
 
     if periods is not None:
         if not isinstance(periods, np.ndarray):
@@ -295,6 +295,7 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
         keep_mask = select_sorting_periods_mask(sorting, periods)
         sliced_spike_vector = spike_vector[keep_mask]
 
+        # important: we keep the original unit ids so the unit_index field in spike vector is still valid
         sorting = NumpySorting(
             sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
         )

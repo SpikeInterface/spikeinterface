@@ -13,7 +13,7 @@ from spikeinterface.core import (
     generate_recording,
 )
 
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.testing import check_sortings_equal
 
 
