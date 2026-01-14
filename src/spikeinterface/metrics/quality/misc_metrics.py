@@ -1172,7 +1172,9 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(outputs='by_unit', concatenated=False)
+    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(
+        outputs="by_unit", concatenated=False
+    )
 
     if not HAVE_NUMBA:
         warnings.warn(
@@ -1190,7 +1192,6 @@ def compute_sd_ratio(
     if correct_for_template_itself:
         tamplates_array = get_dense_templates_array(sorting_analyzer, return_in_uV=sorting_analyzer.return_in_uV)
 
-    
     sd_ratio = {}
 
     for unit_id in unit_ids:
