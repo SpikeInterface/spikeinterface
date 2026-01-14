@@ -1004,8 +1004,14 @@ class BaseSorting(BaseExtractor):
         from .numpyextractors import NumpySorting
 
         sorting = NumpySorting.from_sorting(self)
-        if propagate_cache and len(self._cached_lexsorted_spike_vector) > 0:
-            sorting._cached_lexsorted_spike_vector = deepcopy(self._cached_lexsorted_spike_vector)
+        if propagate_cache:
+            if len(self._cached_lexsorted_spike_vector) > 0:
+                sorting._cached_lexsorted_spike_vector = deepcopy(self._cached_lexsorted_spike_vector)
+            if self._cached_spike_vector_segment_slices is not None:
+                sorting._cached_spike_vector_segment_slices = self._cached_spike_vector_segment_slices.copy()
+            if self._cached_spike_vector_to_indices is not None:
+                sorting._cached_spike_vector_to_indices = deepcopy(self._cached_spike_vector_to_indices)
+
         return sorting
 
     def to_shared_memory_sorting(self):
