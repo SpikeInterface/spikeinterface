@@ -13,7 +13,7 @@ if hdbscan_spec is not None:
 else:
     HAVE_HDBSCAN = False
 
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser

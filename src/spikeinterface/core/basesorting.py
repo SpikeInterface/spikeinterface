@@ -7,11 +7,8 @@ from copy import deepcopy
 
 import numpy as np
 
-from .base import BaseExtractor, BaseSegment
+from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
-
-
-minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
 
 class BaseSorting(BaseExtractor):
@@ -460,13 +457,9 @@ class BaseSorting(BaseExtractor):
             assert outputs == "dict", "count_num_spikes_per_unit() with unit_ids not None works only for output='dict'"
 
             keep_mask = np.isin(self.unit_ids, unit_ids)
-            # this is important because this ensure the order of unit_ids
+            # this is important because this ensure the "good" order of unit_ids
             unit_ids = self.unit_ids[keep_mask]
 
-            if cache_key not in self._cached_lexsorted_spike_vector:
-                # force case 1 when a few units
-                # the lexsort internally this will be faster when only subset of units
-                self.to_reordered_spike_vector(lexsort=cache_key)
         else:
             keep_mask = slice(None)
             unit_ids = self.unit_ids
@@ -928,14 +921,17 @@ class BaseSorting(BaseExtractor):
         lexsort = tuple(lexsort)
 
         if lexsort == ("unit_index", "sample_index", "segment_index"):
-            assert not return_order and not return_slices
+            assert (
+                not return_order and not return_slices
+            ), 'If lexsort = ("unit_index", "sample_index", "segment_index"), both `return_order` and `return_slices` must be set to `False`.'
+
             spikes = self.to_spike_vector(concatenated=True)
             return spikes
 
         assert lexsort in [
             ("sample_index", "unit_index", "segment_index"),
             ("sample_index", "segment_index", "unit_index"),
-        ]
+        ], '`lexsort` must be equal to ("unit_index", "sample_index", "segment_index"),  ("sample_index", "unit_index", "segment_index") or ("sample_index", "segment_index", "unit_index")'
 
         key = str(lexsort)
 
@@ -1009,7 +1005,13 @@ class BaseSorting(BaseExtractor):
 
         sorting = NumpySorting.from_sorting(self)
         if propagate_cache:
-            sorting._cached_lexsorted_spike_vector = deepcopy(self._cached_lexsorted_spike_vector)
+            if len(self._cached_lexsorted_spike_vector) > 0:
+                sorting._cached_lexsorted_spike_vector = deepcopy(self._cached_lexsorted_spike_vector)
+            if self._cached_spike_vector_segment_slices is not None:
+                sorting._cached_spike_vector_segment_slices = self._cached_spike_vector_segment_slices.copy()
+            if self._cached_spike_vector_to_indices is not None:
+                sorting._cached_spike_vector_to_indices = deepcopy(self._cached_spike_vector_to_indices)
+
         return sorting
 
     def to_shared_memory_sorting(self):
