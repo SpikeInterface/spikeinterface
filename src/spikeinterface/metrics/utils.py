@@ -40,7 +40,7 @@ def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, per
     else:
         total_length = np.sum(segment_samples)
         for unit_id in sorting.unit_ids:
-            bin_edges_for_units[unit_id] = np.arange(0, total_length, bin_duration_samples) * bin_duration_samples
+            bin_edges_for_units[unit_id] = np.arange(0, total_length, bin_duration_samples)
     return bin_edges_for_units
 
 

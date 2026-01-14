@@ -111,6 +111,7 @@ def compute_presence_ratios(
                 continue
             total_duration = total_durations[unit_id]
 
+            spike_train = []
             for segment_index in range(num_segs):
                 st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 st = st + np.sum(segment_samples[:segment_index])
@@ -656,6 +657,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
 
         # we can concatenate spike trains across segments adding the cumulative number of samples
         # as offset, since bin edges are already cumulative
+        spike_train = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             st = st + np.sum(segment_samples[:segment_index])
@@ -737,7 +739,7 @@ def compute_amplitude_cv_metrics(
         "amplitude_scalings",
     ), "Invalid amplitude_extension. It can be either 'spike_amplitudes' or 'amplitude_scalings'"
     if unit_ids is None:
-        unit_ids = sorting.unit_ids
+        unit_ids = sorting_analyzer.unit_ids
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
 
@@ -1145,17 +1147,17 @@ def compute_drift_metrics(
     )
 
     median_positions_per_unit = {}
-    for unit in unit_ids:
-        bins = bin_edges_for_units[unit]
+    for unit_id in unit_ids:
+        bins = bin_edges_for_units[unit_id]
         num_bins = len(bins) - 1
         if num_bins < min_num_bins:
             warnings.warn(
-                f"Unit {unit} has only {num_bins} bins given the specified 'interval_s' and "
+                f"Unit {unit_id} has only {num_bins} bins given the specified 'interval_s' and "
                 f"'min_num_bins'. Drift metrics will be set to NaN"
             )
-            drift_ptps[unit] = np.nan
-            drift_stds[unit] = np.nan
-            drift_mads[unit] = np.nan
+            drift_ptps[unit_id] = np.nan
+            drift_stds[unit_id] = np.nan
+            drift_mads[unit_id] = np.nan
             continue
 
         # bin_edges are global across segments, so we have to use spike_sample_indices,
@@ -1166,13 +1168,13 @@ def compute_drift_metrics(
             spikes_in_bin = spike_vector[i0:i1]
             spike_locations_in_bin = spike_locations[i0:i1][direction]
 
-            unit_index = sorting_analyzer.sorting.id_to_index(unit)
+            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
             mask = spikes_in_bin["unit_index"] == unit_index
             if np.sum(mask) >= min_spikes_per_interval:
                 median_positions[bin_index] = np.median(spike_locations_in_bin[mask])
             else:
                 median_positions[bin_index] = np.nan
-        median_positions_per_unit[unit] = median_positions
+        median_positions_per_unit[unit_id] = median_positions
 
         # now compute deviations and drifts for this unit
         position_diff = median_positions - reference_positions[unit_id]
