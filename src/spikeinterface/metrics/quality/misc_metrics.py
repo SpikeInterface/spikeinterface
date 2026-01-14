@@ -681,7 +681,7 @@ def compute_amplitude_cv_metrics(
         unit_ids = sorting.unit_ids
 
     num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
-    amps = sorting_analyzer.get_extension(amplitude_extension).get_data(outputs='by_unit', concatenated=False)
+    amps = sorting_analyzer.get_extension(amplitude_extension).get_data(outputs="by_unit", concatenated=False)
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
@@ -922,7 +922,7 @@ def compute_noise_cutoffs(sorting_analyzer, unit_ids=None, high_quantile=0.25, l
         invert_amplitudes = True
         extension = sorting_analyzer.get_extension("amplitude_scalings")
 
-    amplitudes_by_units = extension.get_data(outputs='by_unit', concatenated=True)
+    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -1020,8 +1020,8 @@ def compute_drift_metrics(
         unit_ids = sorting.unit_ids
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-    spike_locations_by_unit_and_segments = spike_locations_ext.get_data(outputs='by_unit')
-    spike_locations_by_unit = spike_locations_ext.get_data(outputs='by_unit', concatenated=True)
+    spike_locations_by_unit_and_segments = spike_locations_ext.get_data(outputs="by_unit")
+    spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit", concatenated=True)
 
     interval_samples = int(interval_s * sorting_analyzer.sampling_frequency)
     data = spike_locations_by_unit[unit_ids[0]]
