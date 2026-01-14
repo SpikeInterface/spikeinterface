@@ -27,6 +27,31 @@ from .core_tools import (
 from .job_tools import _shared_job_kwargs_doc
 
 
+# base dtypes used throughout spikeinterface
+base_peak_dtype = [
+    ("sample_index", "int64"),
+    ("channel_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+]
+
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+
+base_period_dtype = [
+    ("start_sample_index", "int64"),
+    ("end_sample_index", "int64"),
+    ("segment_index", "int64"),
+]
+
+unit_period_dtype = base_period_dtype + [
+    ("unit_index", "int64"),
+]
+
+
 class BaseExtractor:
     """
     Base class for Recording/Sorting

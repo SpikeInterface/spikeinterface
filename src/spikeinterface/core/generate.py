@@ -5,9 +5,9 @@ import numpy as np
 from typing import Literal, Optional
 from math import ceil
 
+from .base import minimum_spike_dtype
 from .basesorting import SpikeVectorSortingSegment
 from .numpyextractors import NumpySorting
-from .basesorting import minimum_spike_dtype
 
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 

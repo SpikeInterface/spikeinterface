@@ -12,7 +12,7 @@ from spikeinterface.core import (
     BaseSnippets,
     BaseSnippetsSegment,
 )
-from .basesorting import minimum_spike_dtype
+from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
