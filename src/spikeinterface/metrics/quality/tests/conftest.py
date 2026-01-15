@@ -10,7 +10,7 @@ job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 def make_small_analyzer():
     recording, sorting = generate_ground_truth_recording(
-        durations=[2.0],
+        durations=[10.0],
         num_units=10,
         seed=1205,
     )

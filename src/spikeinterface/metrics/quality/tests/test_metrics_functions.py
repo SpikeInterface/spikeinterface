@@ -223,7 +223,7 @@ def test_unit_structure_in_output(small_sorting_analyzer):
         "amplitude_cv": {"average_num_spikes_per_bin": 7, "min_num_bins": 3},
         "firing_range": {"bin_size_s": 1},
         "isi_violation": {"isi_threshold_ms": 10},
-        "drift": {"interval_s": 1, "min_spikes_per_interval": 5},
+        "drift": {"interval_s": 1, "min_spikes_per_interval": 5, "min_fraction_valid_intervals": 0.2},
         "sliding_rp_violation": {"max_ref_period_ms": 50, "bin_size_ms": 0.15},
         "rp_violation": {"refractory_period_ms": 10.0, "censored_period_ms": 0.0},
     }
