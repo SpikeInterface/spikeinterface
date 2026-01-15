@@ -235,7 +235,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         # apply AGC and keep the gains
         traces = traces.astype(np.float32)
         if self.window is not None:
-            traces, agc_gains = agc(traces, window=self.window, epsilon=self.epsilon_values_for_agc)
+            traces, agc_gains = agc(traces, window=self.window, epsilons=self.epsilon_values_for_agc)
         else:
             agc_gains = None
         # pad the array with a mirrored version of itself and apply a cosine taper
