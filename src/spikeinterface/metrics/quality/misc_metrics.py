@@ -648,6 +648,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         periods=periods,
         bin_duration_s=bin_size_s,
     )
+    cumulative_segment_samples = np.cumsum([0] + segment_samples[:-1])
     for unit_id in unit_ids:
         bin_edges = bin_edges_per_unit[unit_id]
 
@@ -656,9 +657,9 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         spike_trains = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            spike_times = spike_times + np.sum(segment_samples[:segment_index])
+            spike_times = spike_times + cumulative_segment_samples[segment_index]
             spike_trains.append(spike_times)
-        spike_train = np.concatenate(spike_trains)
+        spike_train = np.concatenate(spike_trains, dtype="int64")
 
         spike_counts, _ = np.histogram(spike_train, bins=bin_edges)
         firing_rate_histograms[unit_id] = spike_counts / bin_size_s

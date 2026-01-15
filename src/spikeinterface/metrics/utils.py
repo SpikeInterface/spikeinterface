@@ -35,12 +35,22 @@ def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, per
                 for period in seg_periods:
                     start_sample = seg_start + period["start_sample_index"]
                     end_sample = seg_start + period["end_sample_index"]
+                    end_sample = end_sample // bin_duration_samples * bin_duration_samples + 1  # align to bin
                     bin_edges.extend(np.arange(start_sample, end_sample, bin_duration_samples))
             bin_edges_for_units[unit_id] = np.array(bin_edges)
     else:
-        total_length = np.sum(segment_samples)
         for unit_id in sorting.unit_ids:
-            bin_edges_for_units[unit_id] = np.arange(0, total_length, bin_duration_samples)
+            bin_edges = []
+            for seg_index in range(num_segments):
+                seg_start = np.sum(segment_samples[:seg_index])
+                seg_end = seg_start + segment_samples[seg_index]
+                # for segments which are not the last, we don't need to correct the end
+                # since the first index of the next segment will be the end of the current segment
+                if seg_index == num_segments - 1:
+                    seg_end = seg_end // bin_duration_samples * bin_duration_samples + 1  # align to bin
+                bins = np.arange(seg_start, seg_end, bin_duration_samples)
+                bin_edges.extend(bins)
+            bin_edges_for_units[unit_id] = np.array(bin_edges)
     return bin_edges_for_units
 
 
