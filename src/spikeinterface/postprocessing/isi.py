@@ -122,7 +122,7 @@ def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
-        method = "numpy" # numpy is faster for ISI computationc currently
+        method = "numpy"  # numpy is faster for ISI computationc currently
 
     if method == "numpy":
         return compute_isi_histograms_numpy(sorting, window_ms, bin_ms)
