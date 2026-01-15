@@ -372,7 +372,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
 
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
-            all_periods = compute_subperiods(
+            all_periods, all_periods_w_margins, period_centers = compute_subperiods(
                 sorting_analyzer,
                 self.params["period_duration_s_absolute"],
                 self.params["period_target_num_spikes"],
@@ -396,7 +396,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             init_args = (sorting_analyzer.sorting, all_amplitudes_by_unit, self.params, max_threads_per_worker)
 
             # Each item is one computation of fp and fn for one period and one unit
-            items = [(period,) for period in all_periods]
+            items = [(period,) for period in all_periods_w_margins]
             job_name = f"computing false positives and negatives"
 
             # parallel
@@ -460,16 +460,16 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             valid_mask = duration_samples >= min_valid_period_samples
             valid_unit_periods = valid_unit_periods[valid_mask]
 
-            # Convert subperiods per unit in period_centers_s
-            period_centers = []
-            for segment_index in range(sorting_analyzer.sorting.get_num_segments()):
-                periods_segment = all_periods[all_periods["segment_index"] == segment_index]
-                period_centers_dict = {}
-                for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
-                    periods_unit = periods_segment[periods_segment["unit_index"] == unit_index]
-                    centers = list(0.5 * (periods_unit["start_sample_index"] + periods_unit["end_sample_index"]))
-                    period_centers_dict[unit_id] = centers
-                period_centers.append(period_centers_dict)
+            # # Convert subperiods per unit in period_centers_s
+            # period_centers = []
+            # for segment_index in range(sorting_analyzer.sorting.get_num_segments()):
+            #     periods_segment = all_periods[all_periods["segment_index"] == segment_index]
+            #     period_centers_dict = {}
+            #     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+            #         periods_unit = periods_segment[periods_segment["unit_index"] == unit_index]
+            #         centers = list(0.5 * (periods_unit["start_sample_index"] + periods_unit["end_sample_index"]))
+            #         period_centers_dict[unit_id] = centers
+            #     period_centers.append(period_centers_dict)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
             return valid_unit_periods, period_centers, fps, fns
@@ -564,12 +564,15 @@ def compute_subperiods(
     margin_sizes_samples = {u: np.round(relative_margin_size * period_sizes_samples[u]).astype(int) for u in unit_ids}
 
     all_subperiods = []
-    for unit_index, unit_id in enumerate(unit_ids):
-        period_size_samples = period_sizes_samples[unit_id]
-        margin_size_samples = margin_sizes_samples[unit_id]
-
-        for segment_index in range(sorting.get_num_segments()):
-            n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
+    all_subperiods_w_margins = []
+    all_period_centers = []
+    for segment_index in range(sorting.get_num_segments()):
+        n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
+        period_centers = {}
+        for unit_index, unit_id in enumerate(unit_ids):
+            period_centers[unit_id] = []
+            period_size_samples = period_sizes_samples[unit_id]
+            margin_size_samples = margin_sizes_samples[unit_id]
             # We round the number of subperiods to ensure coverage of the entire recording
             # the end of the last period is then clipped or extended to the end of the recording
             n_subperiods = round(n_samples / period_size_samples)
@@ -583,27 +586,47 @@ def compute_subperiods(
                     for i in range(n_subperiods)
                 ]
             )
-            # remove periods whose end is above the expected number of samples
-            if len(starts_ends) > 0:
-                beyond_samples_mask = starts_ends[:, 1] > n_samples
-                if sum(beyond_samples_mask) == len(starts_ends):
-                    # all periods end beyond n_samples: keep only first period
-                    starts_ends = starts_ends[:1].copy()
-                else:
-                    starts_ends = starts_ends[starts_ends[:, 1] <= n_subperiods * period_size_samples]
-                # set last period to the end of the recording
-                starts_ends[-1][1] = n_samples
+            starts = np.arange(0, n_samples, period_size_samples)
+            periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+            periods_for_unit_w_margins = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+            for i, start in enumerate(starts):
+                end = start + period_size_samples
+                ext_start = max(0, start - margin_size_samples)
+                ext_end = min(n_samples, end + margin_size_samples)
+                center = start + period_size_samples // 2
+                period_centers[unit_id].append((segment_index, unit_id, center))
+                periods_for_unit[i]["segment_index"] = segment_index
+                periods_for_unit[i]["start_sample_index"] = start
+                periods_for_unit[i]["end_sample_index"] = end
+                periods_for_unit[i]["unit_index"] = unit_index
+                periods_for_unit_w_margins[i]["segment_index"] = segment_index
+                periods_for_unit_w_margins[i]["start_sample_index"] = ext_start
+                periods_for_unit_w_margins[i]["end_sample_index"] = ext_end
+                periods_for_unit_w_margins[i]["unit_index"] = unit_index
 
-                periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
-                for i, (start, end) in enumerate(starts_ends):
-                    subperiod = np.zeros((1,), dtype=unit_period_dtype)
-                    subperiod["segment_index"] = segment_index
-                    subperiod["start_sample_index"] = start
-                    subperiod["end_sample_index"] = end
-                    subperiod["unit_index"] = unit_index
-                    periods_for_unit[i] = subperiod
-                all_subperiods.append(periods_for_unit)
-    return np.concatenate(all_subperiods)
+            # # remove periods whose end is above the expected number of samples
+            # if len(starts_ends) > 0:
+            #     beyond_samples_mask = starts_ends[:, 1] > n_samples
+            #     if sum(beyond_samples_mask) == len(starts_ends):
+            #         # all periods end beyond n_samples: keep only first period
+            #         starts_ends = starts_ends[:1].copy()
+            #     else:
+            #         starts_ends = starts_ends[starts_ends[:, 1] <= n_subperiods * period_size_samples]
+            #     # set last period to the end of the recording
+            #     starts_ends[-1][1] = n_samples
+
+            #     periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+            #     for i, (start, end) in enumerate(starts_ends):
+            #         subperiod = np.zeros((1,), dtype=unit_period_dtype)
+            #         subperiod["segment_index"] = segment_index
+            #         subperiod["start_sample_index"] = start
+            #         subperiod["end_sample_index"] = end
+            #         subperiod["unit_index"] = unit_index
+            #         periods_for_unit[i] = subperiod
+            all_subperiods.append(periods_for_unit)
+            all_subperiods_w_margins.append(periods_for_unit_w_margins)
+            all_period_centers.append(period_centers)
+    return np.concatenate(all_subperiods), np.concatenate(all_subperiods_w_margins), all_period_centers
 
 
 def merge_overlapping_periods(subperiods):
