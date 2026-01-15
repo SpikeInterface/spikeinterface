@@ -1106,6 +1106,9 @@ class BaseMetricExtension(AnalyzerExtension):
         -------
         metrics : pd.DataFrame
             DataFrame containing the computed metrics for each unit.
+        run_times : dict
+            Dictionary containing the computation time for each metric.
+
         """
         import pandas as pd
 
@@ -1122,11 +1125,17 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
 
+        run_times = {}
+
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
+            import time
+
+            t_start = time.perf_counter()
             try:
                 metric_params = self.params["metric_params"].get(metric_name, {})
+
                 res = metric.compute(
                     sorting_analyzer,
                     unit_ids=unit_ids,
@@ -1140,6 +1149,8 @@ class BaseMetricExtension(AnalyzerExtension):
                     res = {unit_id: np.nan for unit_id in unit_ids}
                 else:
                     res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+            t_end = time.perf_counter()
+            run_times[metric_name] = t_end - t_start
 
             # res is a namedtuple with several dictionary entries (one per column)
             if isinstance(res, dict):
@@ -1151,7 +1162,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics = self._cast_metrics(metrics)
 
-        return metrics
+        return metrics, run_times
 
     def _run(self, **job_kwargs):
 
@@ -1162,7 +1173,7 @@ class BaseMetricExtension(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         # compute the metrics which have been specified by the user
-        computed_metrics = self._compute_metrics(
+        computed_metrics, run_times = self._compute_metrics(
             sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute, **job_kwargs
         )
 
@@ -1190,6 +1201,7 @@ class BaseMetricExtension(AnalyzerExtension):
                 computed_metrics[column_name] = extension.data["metrics"][column_name]
 
         self.data["metrics"] = computed_metrics
+        self.data["runtime_s"] = run_times
 
     def _get_data(self):
         # convert to correct dtype
@@ -1266,7 +1278,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+        metrics.loc[new_unit_ids, :], _ = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
         metrics = self._cast_metrics(metrics)
@@ -1310,7 +1322,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+        metrics.loc[new_unit_ids_f, :], _ = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
         metrics = self._cast_metrics(metrics)
@@ -1392,7 +1404,6 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         numpy.ndarray | dict
             The
         """
-        from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
         if len(self.nodepipeline_variables) == 1:
             return_data_name = self.nodepipeline_variables[0]
@@ -1412,8 +1423,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 return all_data
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
-            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            # use the cache of indices
+            spike_indices = self.sorting_analyzer.sorting.get_spike_vector_to_indices()
             data_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 data_by_units[segment_index] = {}
