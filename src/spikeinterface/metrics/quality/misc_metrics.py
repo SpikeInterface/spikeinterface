@@ -382,10 +382,10 @@ def compute_refrac_period_violations(
 
         for segment_index in range(sorting_analyzer.get_num_segments()):
             spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            nb_rp_violations[unit_id] += _compute_rp_violations_numba(spike_times, t_c, t_r)
+            nb_violations[unit_id] += _compute_rp_violations_numba(spike_times, t_c, t_r)
 
         rp_contamination[unit_id] = _compute_rp_contamination_one_unit(
-            nb_rp_violations[unit_id],
+            nb_violations[unit_id],
             num_spikes[unit_id],
             total_samples_unit,
             t_c,
@@ -1122,9 +1122,8 @@ def compute_drift_metrics(
     # we need to add the cumulative sum of segment samples to have global sample indices
     cumulative_segment_samples = np.cumsum([0] + segment_samples[:-1])
     for segment_index in range(sorting_analyzer.get_num_segments()):
-        spike_sample_indices[sorting._get_spike_vector_segment_slices()[segment_index]] += cumulative_segment_samples[
-            segment_index
-        ]
+        segment_slice = sorting._get_spike_vector_segment_slices()[segment_index]
+        spike_sample_indices[segment_slice[0] : segment_slice[1]] += cumulative_segment_samples[segment_index]
 
     bin_edges_for_units = compute_bin_edges_per_unit(
         sorting,

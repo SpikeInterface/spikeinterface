@@ -26,7 +26,12 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, periods=None):
     sorting = sorting.select_periods(periods)
     if unit_ids is None:
         unit_ids = sorting.unit_ids
-        return sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+    # re-order dict to match unit_ids order
+    count_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+    num_spikes = {}
+    for unit_id in unit_ids:
+        num_spikes[unit_id] = count_spikes[unit_id]
+    return num_spikes
 
 
 class NumSpikes(BaseMetric):
