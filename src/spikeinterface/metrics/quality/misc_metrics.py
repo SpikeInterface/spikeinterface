@@ -454,7 +454,7 @@ def compute_sliding_rp_violations(
             window_size_s,
             exclude_ref_period_below_ms,
             max_ref_period_ms,
-            contamination_values
+            contamination_values,
         )
 
     return contamination
@@ -1497,9 +1497,11 @@ def slidingRP_violations(
 
     if method == "numpy":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
+
         correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
     if method == "numba":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
+
         correlogram = _compute_correlograms_numba(sorting, window_size, bin_size)[0, 0]
 
     ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
