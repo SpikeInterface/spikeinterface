@@ -61,6 +61,8 @@ class _DetectSaturation(PeakDetector):
         self.proportion = proportion
         self.mute_window_samples = mute_window_samples
         self._dtype = EVENT_VECTOR_TYPE
+        self.gain  = recording.get_channel_gains()
+        self.offset = recording.get_channel_offsets()
 
     def get_trace_margin(self):
         return 0
@@ -91,6 +93,11 @@ class _DetectSaturation(PeakDetector):
         traces = traces * self.gains + self.offsets
 
         fs = self.sampling_frequency
+        if traces.dtype != np.float64:  # 32 or 64? 32 is convention in the lib? Used 64 here as we are in V for ibl
+            traces = traces.astype(np.float64)
+
+        traces *= np.array(self.gain)[np.newaxis, :]
+        traces += np.array(self.offset)[np.newaxis, :]
 
         # first computes the saturated samples
         max_voltage = np.atleast_1d(self.saturation_threshold)[:, np.newaxis]

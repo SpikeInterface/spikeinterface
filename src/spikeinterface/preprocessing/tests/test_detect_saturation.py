@@ -6,20 +6,20 @@ from spikeinterface.preprocessing.detect_saturation import detect_saturation
 
 # TODO: add pre-sets and document? or at least reccomend values in documentation probably easier
 
-
 def test_saturation_detection():
     """
     TODO: NOTE: we have one sample before the saturation starts as we take the forward derivative for the velocity
                 we have an extra sample after due to taking the diff on the final saturation mask
                 this means we always take one sample before and one sample after the diff period, which is fine.
     """
+    num_chans = 384
     sample_frequency = 30000
     chunk_size = 30000  # This value is critical to ensure hard-coded start / stops below
     job_kwargs = {"chunk_size": chunk_size}
 
     # cross a chunk boundary. Do not change without changing the below.
     sat_value = 1200 * 1e-6
-    data = np.random.uniform(low=-0.5, high=0.5, size=(150000, 384)) * 10 * 1e-6
+    data = np.random.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10 * 1e-6
 
     # Design the Butterworth filter
     sos = scipy.signal.butter(N=3, Wn=12000 / (sample_frequency / 2), btype="low", output="sos")
@@ -48,7 +48,25 @@ def test_saturation_detection():
         # differentiate the second segment for testing purposes
         data_seg_2[start : stop + 1 + second_seg_offset, :] = sat_value
 
-    recording = NumpyRecording([data_seg_1, data_seg_2], sample_frequency)
+
+    min_ = np.min(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
+    max_ = np.max(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
+    gain =  (max_ - min_) / 65535
+    offset = min_ + 32678 * gain
+
+    seg_1_int16 = np.clip(
+        np.rint((data_seg_1 - offset) / gain),
+        -32768, 32767
+    ).astype(np.int16)
+    seg_2_int16 = np.clip(
+        np.rint((data_seg_2 - offset) / gain),
+        -32768, 32767
+    ).astype(np.int16)
+
+
+    recording = NumpyRecording([seg_1_int16, seg_2_int16], sample_frequency)
+    recording.set_channel_gains(gain)
+    recording.set_channel_offsets([offset] * num_chans)
 
     events = detect_saturation(
         recording, saturation_threshold=sat_value * 0.98, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
