@@ -271,9 +271,11 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
 
     Parameters
     ----------
-    periods : numpy.array of unit_period_dtype
+    periods : numpy.ndarray
         Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to restrict the sorting.
+        on which to restrict the sorting. Periods can be either a numpy array of unit_period_dtype
+        or an array with (num_periods, 4) shape. In the latter case, the fields are assumed to be
+        in the order: segment_index, start_sample_index, end_sample_index, unit_index.
 
     Returns
     -------
@@ -286,7 +288,25 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
 
     if periods is not None:
         if not isinstance(periods, np.ndarray):
-            periods = np.array([periods], dtype=unit_period_dtype)
+            raise ValueError("periods must be a numpy array")
+        if not periods.dtype == unit_period_dtype:
+            if periods.ndim != 2 or periods.shape[1] != 4:
+                raise ValueError(
+                    "If periods is not of dtype unit_period_dtype, it must be a 2D array with shape (num_periods, 4)"
+                )
+            warnings.warn(
+                "periods is not of dtype unit_period_dtype. Assuming fields are in order: "
+                "(segment_index, start_sample_index, end_sample_index, unit_index).",
+                UserWarning,
+            )
+            # convert to structured array
+            periods_converted = np.empty(periods.shape[0], dtype=unit_period_dtype)
+            periods_converted["segment_index"] = periods[:, 0]
+            periods_converted["start_sample_index"] = periods[:, 1]
+            periods_converted["end_sample_index"] = periods[:, 2]
+            periods_converted["unit_index"] = periods[:, 3]
+            periods = periods_converted
+
         required = set(np.dtype(unit_period_dtype).names)
         if not required.issubset(periods.dtype.names):
             raise ValueError(f"Period must have the following fields: {required}")
