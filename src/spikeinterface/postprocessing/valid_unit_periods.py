@@ -580,21 +580,17 @@ def compute_subperiods(
                 n_subperiods = min_num_periods_relative  # at least min_num_periods_relative subperiods
                 period_size_samples = n_samples // n_subperiods
                 margin_size_samples = int(relative_margin_size * period_size_samples)
-            starts_ends = np.array(
-                [
-                    [i * period_size_samples, i * period_size_samples + period_size_samples + 2 * margin_size_samples]
-                    for i in range(n_subperiods)
-                ]
-            )
+
+            # we generate periods starting from 0 up to n_samples, with and without margins, and period centers
             starts = np.arange(0, n_samples, period_size_samples)
-            periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
-            periods_for_unit_w_margins = np.zeros(len(starts_ends), dtype=unit_period_dtype)
+            periods_for_unit = np.zeros(len(starts), dtype=unit_period_dtype)
+            periods_for_unit_w_margins = np.zeros(len(starts), dtype=unit_period_dtype)
             for i, start in enumerate(starts):
                 end = start + period_size_samples
                 ext_start = max(0, start - margin_size_samples)
                 ext_end = min(n_samples, end + margin_size_samples)
                 center = start + period_size_samples // 2
-                period_centers[unit_id].append((segment_index, unit_id, center))
+                period_centers[unit_id].append(center)
                 periods_for_unit[i]["segment_index"] = segment_index
                 periods_for_unit[i]["start_sample_index"] = start
                 periods_for_unit[i]["end_sample_index"] = end
@@ -604,25 +600,6 @@ def compute_subperiods(
                 periods_for_unit_w_margins[i]["end_sample_index"] = ext_end
                 periods_for_unit_w_margins[i]["unit_index"] = unit_index
 
-            # # remove periods whose end is above the expected number of samples
-            # if len(starts_ends) > 0:
-            #     beyond_samples_mask = starts_ends[:, 1] > n_samples
-            #     if sum(beyond_samples_mask) == len(starts_ends):
-            #         # all periods end beyond n_samples: keep only first period
-            #         starts_ends = starts_ends[:1].copy()
-            #     else:
-            #         starts_ends = starts_ends[starts_ends[:, 1] <= n_subperiods * period_size_samples]
-            #     # set last period to the end of the recording
-            #     starts_ends[-1][1] = n_samples
-
-            #     periods_for_unit = np.zeros(len(starts_ends), dtype=unit_period_dtype)
-            #     for i, (start, end) in enumerate(starts_ends):
-            #         subperiod = np.zeros((1,), dtype=unit_period_dtype)
-            #         subperiod["segment_index"] = segment_index
-            #         subperiod["start_sample_index"] = start
-            #         subperiod["end_sample_index"] = end
-            #         subperiod["unit_index"] = unit_index
-            #         periods_for_unit[i] = subperiod
             all_subperiods.append(periods_for_unit)
             all_subperiods_w_margins.append(periods_for_unit_w_margins)
             all_period_centers.append(period_centers)
