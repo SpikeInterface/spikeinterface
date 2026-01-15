@@ -2445,6 +2445,7 @@ class AnalyzerExtension:
     def get_all_dependencies(cls, **params):
         """
         Return all parent extensions that the extension depends on.
+        Dependencies with "|" operator are flattened.
 
         Returns
         -------
