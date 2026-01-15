@@ -402,7 +402,6 @@ def compute_sliding_rp_violations(
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
-    correlograms_kwargs=dict(method="auto"),
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
@@ -428,8 +427,6 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
-    correlograms_kwargs : dict, default: dict("method"="auto")
-        Additional keyword arguments to pass to `correlogram_for_one_segment`.
 
     Returns
     -------
@@ -476,8 +473,7 @@ def compute_sliding_rp_violations(
             window_size_s,
             exclude_ref_period_below_ms,
             max_ref_period_ms,
-            contamination_values,
-            correlograms_kwargs=correlograms_kwargs,
+            contamination_values
         )
 
     return contamination
@@ -493,7 +489,6 @@ class SlidingRPViolation(BaseMetric):
         "exclude_ref_period_below_ms": 0.5,
         "max_ref_period_ms": 10,
         "contamination_values": None,
-        "correlograms_kwargs": dict(method="auto"),
     }
     metric_columns = {"sliding_rp_violation": float}
     metric_descriptions = {
@@ -1526,7 +1521,6 @@ def slidingRP_violations(
     max_ref_period_ms=10,
     contamination_values=None,
     return_conf_matrix=False,
-    correlograms_kwargs=dict(method="auto"),
 ):
     """
     A metric developed by IBL which determines whether the refractory period violations
@@ -1550,8 +1544,6 @@ def slidingRP_violations(
         The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
     return_conf_matrix : bool, default: False
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
-    correlograms_kwargs : dict, default: {}
-        Additional keyword arguments for correlogram computation.
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
@@ -1571,25 +1563,21 @@ def slidingRP_violations(
     n_spikes = len(sorting.to_spike_vector())
     firing_rate = n_spikes / duration
 
-    method = correlograms_kwargs.get("method", "auto")
-    if method == "auto":
-        method = "numba" if HAVE_NUMBA else "numpy"
+    method = "numba" if HAVE_NUMBA else "numpy"
 
     bin_size = max(int(bin_size_ms / 1000 * sorting.sampling_frequency), 1)
     window_size = int(window_size_s * sorting.sampling_frequency)
 
     if method == "numpy":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
-
         correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
     if method == "numba":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
-
         correlogram = _compute_correlograms_numba(sorting, window_size, bin_size)[0, 0]
 
     ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
     # the choice of the bin_size above, but I am not the author of the code...
-    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, **correlograms_kwargs)[0][0, 0]
+    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, method=method)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
 
     conf_matrix = _compute_violations(
