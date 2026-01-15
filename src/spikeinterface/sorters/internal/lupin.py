@@ -15,7 +15,7 @@ from spikeinterface.core import (
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
 
@@ -194,7 +194,8 @@ class LupinSorter(ComponentsBasedSorter):
                 if apply_cmr:
                     recording = common_reference(recording)
             else:
-                recording = apply_preprocessing_pipeline(recording, params["preprocessing_dict"])
+                recording = apply_preprocessing_pipeline(recording_raw, params["preprocessing_dict"])
+                recording = recording.astype("float32")
 
             recording = whiten(
                 recording,
