@@ -1446,7 +1446,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 # use the cache of indices
                 spike_indices = self.sorting_analyzer.sorting.get_spike_vector_to_indices()
             data_by_units = {}
-            for segment_index in range(sorting.get_num_segments()):
+            for segment_index in range(self.sorting_analyzer.get_num_segments()):
                 data_by_units[segment_index] = {}
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]
