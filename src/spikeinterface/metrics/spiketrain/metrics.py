@@ -25,11 +25,10 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, **kwargs):
 
     num_spikes = {}
 
-    _, _, slices = sorting.to_lexsorted_spike_vector(["sample_index", "segment_index", "unit_index"])
-    total_num_spikes = np.diff(slices, axis=2).sum(axis=(1, 2))
+    total_num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
+
     for unit_id in unit_ids:
-        unit_index = sorting.id_to_index(unit_id)
-        num_spikes[unit_id] = total_num_spikes[unit_index]
+        num_spikes[unit_id] = total_num_spikes[unit_id]
 
     return num_spikes
 

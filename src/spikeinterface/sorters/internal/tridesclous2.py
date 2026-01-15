@@ -18,7 +18,7 @@ from spikeinterface.core import (
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
 
