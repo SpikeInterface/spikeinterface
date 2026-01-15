@@ -1790,7 +1790,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 extensions_with_pipeline[extension_name] = extension_params
             elif any(
                 get_extension_class(d).use_nodepipeline
-                for d in extension_class.get_all_dependencies(**extension_params)
+                for d in extension_class.get_any_dependencies(**extension_params)
                 if d in sorted_extensions
             ):
                 extensions_post_pipeline[extension_name] = extension_params
@@ -2442,7 +2442,7 @@ class AnalyzerExtension:
         return []
 
     @classmethod
-    def get_all_dependencies(cls, **params):
+    def get_any_dependencies(cls, **params):
         """
         Return all parent extensions that the extension depends on.
         Dependencies with "|" operator are flattened.

@@ -708,6 +708,11 @@ def test_runtime_dependencies(dataset):
     # run fine if dependency computed
     sorting_analyzer.compute(["dummy", "dummy_pipeline"], extension_params=dict(dummy_pipeline=dict(param0=11)))
 
+    # check deletion dependency: since now dummy_pipeline depends on dummy,
+    # recomputing dummy also deletes dummy_pipeline
+    sorting_analyzer.compute("dummy")
+    assert not sorting_analyzer.has_extension("dummy_pipeline")
+
 
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
