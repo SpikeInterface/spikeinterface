@@ -115,7 +115,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
                 num_channels_per_adc = 16
             else:  # NP1.0
                 num_channels_per_adc = 12
-            sample_shifts = get_neuropixels_sample_shifts_from_probe(self.get_num_channels(), num_channels_per_adc)
+            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = {
