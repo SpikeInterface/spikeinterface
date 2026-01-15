@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional, Any
+from typing import Literal, Optional, Any, Iterable
 
 from pathlib import Path
 from itertools import chain
@@ -1135,16 +1135,8 @@ class SortingAnalyzer:
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
-        # make a copy of extensions
-        # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
-        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
-        # hack: quality metrics are computed at last
-        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
-        if qm_extension_params is not None:
-            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
-
-        for extension_name, extension in sorted_extensions.items():
+        for extension_name, extension in self.extensions.items():
             if merge_unit_groups is None and split_units is None:
                 # copy full or select
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
@@ -1721,7 +1713,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         for child in _get_children_dependencies(extension_name):
             if self.has_extension(child):
-                print(f"Deleting {child}")
+                if verbose:
+                    print(f"Deleting extension: {child}")
                 self.delete_extension(child)
 
         params, job_kwargs = split_job_kwargs(kwargs)
@@ -1731,7 +1724,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             assert (
                 self.has_recording() or self.has_temporary_recording()
             ), f"Extension {extension_name} requires the recording"
-        for dependency_name in extension_class.depend_on:
+        required_dependencies = extension_class.get_required_dependencies(**params)
+        for dependency_name in required_dependencies:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
@@ -1781,25 +1775,30 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         for extension_name in sorted_extensions.keys():
             for child in _get_children_dependencies(extension_name):
+                if verbose:
+                    print(f"Deleting extension: {child}")
                 self.delete_extension(child)
 
+        # Group extensions by pipeline usage, to run them together
+        # Extensions whose dependencies (required or optional) include pipeline extensions are run after the pipeline
         extensions_with_pipeline = {}
-        extensions_without_pipeline = {}
+        extensions_pre_pipeline = {}
         extensions_post_pipeline = {}
         for extension_name, extension_params in sorted_extensions.items():
-            if extension_name == "quality_metrics":
-                # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
-                # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
-                extensions_post_pipeline[extension_name] = extension_params
-                continue
             extension_class = get_extension_class(extension_name)
             if extension_class.use_nodepipeline:
                 extensions_with_pipeline[extension_name] = extension_params
+            elif any(
+                get_extension_class(d).use_nodepipeline
+                for d in extension_class.get_all_dependencies(**extension_params)
+                if d in sorted_extensions
+            ):
+                extensions_post_pipeline[extension_name] = extension_params
             else:
-                extensions_without_pipeline[extension_name] = extension_params
+                extensions_pre_pipeline[extension_name] = extension_params
 
         # First extensions without pipeline
-        for extension_name, extension_params in extensions_without_pipeline.items():
+        for extension_name, extension_params in extensions_pre_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
                 self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
@@ -1854,10 +1853,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 if save:
                     extension_instance.save()
 
-        # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
-        # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
-        # An alternative could be to extend the "depend_on" attribute to use optional and to check if an extension
-        # depends on the output of the pipeline nodes (e.g. depend_on=["spike_amplitudes[optional]"])
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
@@ -2033,7 +2028,7 @@ def _sort_extensions_by_dependency(extensions):
     Parameters
     ----------
     extensions : dict
-        A dict of extensions.
+        A dict of extensions and their parameters.
 
     Returns
     -------
@@ -2042,16 +2037,31 @@ def _sort_extensions_by_dependency(extensions):
     """
 
     extensions_list = list(extensions.keys())
-    extension_params = list(extensions.values())
+    extension_params_list = list(extensions.values())
 
     i = 0
     while i < len(extensions_list):
 
         extension = extensions_list[i]
-        dependencies = get_extension_class(extension).depend_on
+        extension_params = extension_params_list[i]
+
+        required_dependencies = get_extension_class(extension).get_required_dependencies(**extension_params)
+        optional_dependencies = get_extension_class(extension).get_optional_dependencies(**extension_params)
+        # TODO: If dependencies are added because of parameters, we need to add to the global _extension_children
+        for dependency in required_dependencies:
+            if "|" in dependency:
+                for dep in dependency.split("|"):
+                    if extension not in _extension_children[dep]:
+                        print(f"Adding missing dependency child link: {dep} -> {extension}")
+                        _extension_children[dep].append(extension)
+            else:
+                if extension not in _extension_children[dependency]:
+                    print(f"Adding missing dependency child link: {dependency} -> {extension}")
+                    _extension_children[dependency].append(extension)
 
         # Split cases with an "or" in them, and flatten into a list
-        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in dependencies]))
+        all_dependencies = required_dependencies + optional_dependencies
+        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in all_dependencies]))
 
         # Should only iterate if nothing has happened.
         # Otherwise, should check the dependency which has just been moved => at position i
@@ -2063,8 +2073,8 @@ def _sort_extensions_by_dependency(extensions):
 
                 dependency_arg = extensions_list.index(dependency)
 
-                extension_params.pop(dependency_arg)
-                extension_params.insert(i, extensions[dependency])
+                extension_params_list.pop(dependency_arg)
+                extension_params_list.insert(i, extensions[dependency])
 
                 extensions_list.pop(dependency_arg)
                 extensions_list.insert(i, dependency)
@@ -2074,7 +2084,7 @@ def _sort_extensions_by_dependency(extensions):
         if did_nothing:
             i += 1
 
-    return dict(zip(extensions_list, extension_params))
+    return dict(zip(extensions_list, extension_params_list))
 
 
 global _possible_extensions
@@ -2135,7 +2145,7 @@ def register_result_extension(extension_class):
 
         # create the children dpendencies to be able to delete on re-compute
         _extension_children[extension_class.extension_name] = []
-        for parent_name in extension_class.depend_on:
+        for parent_name in extension_class.get_required_dependencies():
             if "|" in parent_name:
                 for name in parent_name.split("|"):
                     _extension_children[name].append(extension_class.extension_name)
@@ -2401,6 +2411,52 @@ class AnalyzerExtension:
         # If extension run not completed, or data has gone missing,
         # return None to indicate that the extension should be (re)computed.
         return None
+
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        """
+        Return required parent extensions that the extension
+        depends on. By default, retuired extensions are the ones in the
+        ``cls.depend_on`` attribute and optional extensions are an empty list.
+        The behavior can be overridden in sub-classes.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension depends on.
+        """
+        return cls.depend_on
+
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        """
+        Return optional parent extensions that the extension
+        depends on. By default, optional extensions are an empty list.
+        The behavior can be overridden in sub-classes.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension optionally depends on.
+        """
+        return []
+
+    @classmethod
+    def get_all_dependencies(cls, **params):
+        """
+        Return all parent extensions that the extension depends on.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension depends on.
+        """
+        required = cls.get_required_dependencies(**params)
+        optional = cls.get_optional_dependencies(**params)
+        # flatten dependencies with "|"
+        all_dependencies = required + optional
+        all_dependencies = list(chain.from_iterable([dep.split("|") for dep in all_dependencies]))
+        return all_dependencies
 
     def load_run_info(self):
         run_info = None
