@@ -53,7 +53,7 @@ from spikeinterface.metrics.quality.pca_metrics import (
 )
 
 
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
@@ -239,20 +239,22 @@ def test_unit_structure_in_output(small_sorting_analyzer):
         result_all = metric_fun(sorting_analyzer=small_sorting_analyzer, **qm_param)
         result_sub = metric_fun(sorting_analyzer=small_sorting_analyzer, unit_ids=["#4", "#9"], **qm_param)
 
+        error = "Problem with metric: " + metric_name
+
         if isinstance(result_all, dict):
-            assert list(result_all.keys()) == ["#3", "#9", "#4"]
-            assert list(result_sub.keys()) == ["#4", "#9"]
-            assert result_sub["#9"] == result_all["#9"]
-            assert result_sub["#4"] == result_all["#4"]
+            assert list(result_all.keys()) == ["#3", "#9", "#4"], error
+            assert list(result_sub.keys()) == ["#4", "#9"], error
+            assert result_sub["#9"] == result_all["#9"], error
+            assert result_sub["#4"] == result_all["#4"], error
 
         else:
             for result_ind, result in enumerate(result_sub):
 
-                assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"]
-                assert result_sub[result_ind].keys() == set(["#4", "#9"])
+                assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"], error
+                assert result_sub[result_ind].keys() == set(["#4", "#9"]), error
 
-                assert result_sub[result_ind]["#9"] == result_all[result_ind]["#9"]
-                assert result_sub[result_ind]["#4"] == result_all[result_ind]["#4"]
+                assert result_sub[result_ind]["#9"] == result_all[result_ind]["#9"], error
+                assert result_sub[result_ind]["#4"] == result_all[result_ind]["#4"], error
 
 
 def test_unit_id_order_independence(small_sorting_analyzer):
@@ -297,9 +299,10 @@ def test_unit_id_order_independence(small_sorting_analyzer):
     )
 
     for metric, metric_2_data in quality_metrics_2.items():
-        assert quality_metrics_1[metric]["#3"] == metric_2_data[2]
-        assert quality_metrics_1[metric]["#9"] == metric_2_data[7]
-        assert quality_metrics_1[metric]["#4"] == metric_2_data[1]
+        error = "Problem with the metric " + metric
+        assert quality_metrics_1[metric]["#3"] == metric_2_data[2], error
+        assert quality_metrics_1[metric]["#9"] == metric_2_data[7], error
+        assert quality_metrics_1[metric]["#4"] == metric_2_data[1], error
 
 
 def _sorting_violation():
