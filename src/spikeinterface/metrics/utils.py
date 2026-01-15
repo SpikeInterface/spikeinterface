@@ -93,7 +93,7 @@ def compute_total_durations_per_unit(sorting_analyzer, periods=None):
     """
     total_samples = compute_total_samples_per_unit(sorting_analyzer, periods=periods)
     total_durations = {
-        unit_id: samples / sorting_analyzer.sorting.sampling_frequency for unit_id, samples in total_samples.items()
+        unit_id: samples / sorting_analyzer.sampling_frequency for unit_id, samples in total_samples.items()
     }
     return total_durations
 
