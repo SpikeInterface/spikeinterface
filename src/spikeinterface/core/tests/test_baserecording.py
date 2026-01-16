@@ -361,7 +361,7 @@ def test_BaseRecording(create_cache_folder):
 
     # test save to zarr
     compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressors=compressor)
     rec_zarr_loaded = load(cache_folder / "recording.zarr")
     # annotations is False because Zarr adds compression ratios
     check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
@@ -373,7 +373,7 @@ def test_BaseRecording(create_cache_folder):
         assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
     rec_zarr2 = rec2.save(
-        format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
+        format="zarr", folder=cache_folder / "recording_channel_chunk", compressors=compressor, channel_chunk_size=2
     )
     rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional, Any
+from typing import Literal, Optional, Any, Iterable
 
 from pathlib import Path
 from itertools import chain
@@ -621,6 +621,7 @@ class SortingAnalyzer:
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
 
         storage_options = self._backend_options.get("storage_options", {})
+
         zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
         return zarr_root
 
@@ -644,7 +645,12 @@ class SortingAnalyzer:
         storage_options = backend_options.get("storage_options", {})
         saving_options = backend_options.get("saving_options", {})
 
-        zarr_root = zarr.open(folder, mode="w", storage_options=storage_options)
+        if not is_path_remote(str(folder)):
+            storage_options_kwargs = {}
+        else:
+            storage_options_kwargs = storage_options
+
+        zarr_root = zarr.open(folder, mode="w", **storage_options_kwargs)
 
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
@@ -657,13 +663,8 @@ class SortingAnalyzer:
         if recording is not None:
             rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
-                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
-                zarr_rec = np.array([check_json(rec_dict)], dtype=object)
-                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
-            elif recording.check_serializability("pickle"):
-                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
-                zarr_rec = np.array([rec_dict], dtype=object)
-                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+                # In zarr v3, store JSON-serializable data in attributes instead of using object_codec
+                zarr_root.attrs["recording"] = check_json(rec_dict)
             else:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
@@ -673,11 +674,8 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
         if sorting.check_serializability("json"):
-            zarr_sort = np.array([check_json(sort_dict)], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
-        elif sorting.check_serializability("pickle"):
-            zarr_sort = np.array([sort_dict], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
+            # In zarr v3, store JSON-serializable data in attributes instead of using object_codec
+            zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
         else:
             warnings.warn(
                 "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
@@ -698,12 +696,13 @@ class SortingAnalyzer:
             recording_info.attrs["probegroup"] = check_json(probegroup.to_dict())
 
         if sparsity is not None:
-            zarr_root.create_dataset("sparsity_mask", data=sparsity.mask, **saving_options)
+            zarr_root.create_array("sparsity_mask", data=sparsity.mask, **saving_options)
 
         add_sorting_to_zarr_group(sorting, zarr_root.create_group("sorting"), **saving_options)
 
         recording_info = zarr_root.create_group("extensions")
 
+        # consolidate metadata for zarr v3
         zarr.consolidate_metadata(zarr_root.store)
 
         return cls.load_from_zarr(folder, recording=recording, backend_options=backend_options)
@@ -715,6 +714,10 @@ class SortingAnalyzer:
 
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
+        if not is_path_remote(str(folder)):
+            storage_options_kwargs = {}
+        else:
+            storage_options_kwargs = storage_options
 
         zarr_root = super_zarr_open(str(folder), mode="r", storage_options=storage_options)
 
@@ -723,7 +726,7 @@ class SortingAnalyzer:
             # v0.101.0 did not have a consolidate metadata step after computing extensions.
             # Here we try to consolidate the metadata and throw a warning if it fails.
             try:
-                zarr_root_a = zarr.open(str(folder), mode="a", storage_options=storage_options)
+                zarr_root_a = zarr.open(str(folder), mode="a", **storage_options_kwargs)
                 zarr.consolidate_metadata(zarr_root_a.store)
             except Exception as e:
                 warnings.warn(
@@ -741,9 +744,9 @@ class SortingAnalyzer:
 
         # load recording if possible
         if recording is None:
-            rec_field = zarr_root.get("recording")
-            if rec_field is not None:
-                rec_dict = rec_field[0]
+            # In zarr v3, recording is stored in attributes
+            rec_dict = zarr_root.attrs.get("recording", None)
+            if rec_dict is not None:
                 try:
                     recording = load(rec_dict, base_folder=folder)
                 except:
@@ -859,7 +862,7 @@ class SortingAnalyzer:
                     if key in zarr_root["sorting"]["properties"]:
                         zarr_root["sorting"]["properties"][key][:] = prop_values
                     else:
-                        zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
+                        zarr_root["sorting"]["properties"].create_array(name=key, data=prop_values, compressors=None)
                     # IMPORTANT: we need to re-consolidate the zarr store!
                     zarr.consolidate_metadata(zarr_root.store)
 
@@ -1531,12 +1534,13 @@ class SortingAnalyzer:
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
             sorting_provenance = None
-            if "sorting_provenance" in zarr_root.keys():
+            # In zarr v3, sorting_provenance is stored in attributes
+            sort_dict = zarr_root.attrs.get("sorting_provenance", None)
+            if sort_dict is not None:
                 # try-except here is because it's not required to be able
                 # to load the sorting provenance, as the user might have deleted
                 # the original sorting folder
                 try:
-                    sort_dict = zarr_root["sorting_provenance"][0]
                     sorting_provenance = load(sort_dict, base_folder=self.folder)
                 except:
                     pass
@@ -2479,8 +2483,9 @@ class AnalyzerExtension:
             extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
                 ext_data_ = extension_group[ext_data_name]
-                if "dict" in ext_data_.attrs:
-                    ext_data = ext_data_[0]
+                # In zarr v3, check if it's a group with dict_data attribute
+                if "dict_data" in ext_data_.attrs:
+                    ext_data = ext_data_.attrs["dict_data"]
                 elif "dataframe" in ext_data_.attrs:
                     import pandas as pd
 
@@ -2565,9 +2570,10 @@ class AnalyzerExtension:
             if self.format == "zarr":
                 import zarr
 
-                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
+                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
     def save(self):
+        self._reset_extension_folder()
         self._save_params()
         self._save_importing_provenance()
         self._save_run_info()
@@ -2576,7 +2582,7 @@ class AnalyzerExtension:
         if self.format == "zarr":
             import zarr
 
-            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
+            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
     def _save_data(self):
         if self.format == "memory":
@@ -2623,40 +2629,44 @@ class AnalyzerExtension:
             extension_group = self._get_zarr_extension_group(mode="r+")
 
             # if compression is not externally given, we use the default
-            if "compressor" not in saving_options:
-                saving_options["compressor"] = get_default_zarr_compressor()
+            if "compressors" not in saving_options and "compressor" not in saving_options:
+                saving_options["compressors"] = get_default_zarr_compressor()
+            if "compressor" in saving_options:
+                saving_options["compressors"] = [saving_options["compressor"]]
+                del saving_options["compressor"]
 
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, dict):
-                    extension_group.create_dataset(
-                        name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
-                    )
+                    # In zarr v3, store dict in a subgroup with attributes
+                    dict_group = extension_group.create_group(ext_data_name)
+                    dict_group.attrs["dict_data"] = check_json(ext_data)
                 elif isinstance(ext_data, np.ndarray):
-                    extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
+                    extension_group.create_array(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     df_group = extension_group.create_group(ext_data_name)
                     # first we save the index
                     indices = ext_data.index.to_numpy()
                     if indices.dtype.kind == "O":
                         indices = indices.astype(str)
-                    df_group.create_dataset(name="index", data=indices)
+                    df_group.create_array(name="index", data=indices)
                     for col in ext_data.columns:
                         col_data = ext_data[col].to_numpy()
                         if col_data.dtype.kind == "O":
                             col_data = col_data.astype(str)
-                        df_group.create_dataset(name=col, data=col_data)
+                        df_group.create_array(name=col, data=col_data)
                     df_group.attrs["dataframe"] = True
                 else:
                     # any object
-                    try:
-                        extension_group.create_dataset(
-                            name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.Pickle()
-                        )
-                    except:
-                        raise Exception(f"Could not save {ext_data_name} as extension data")
-                    extension_group[ext_data_name].attrs["object"] = True
+                    # try:
+                    #     extension_group.create_array(
+                    #         name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.Pickle()
+                    #     )
+                    # except:
+                    #     raise Exception(f"Could not save {ext_data_name} as extension data")
+                    # extension_group[ext_data_name].attrs["object"] = True
+                    warnings.warn(f"Data type of {ext_data_name} not supported for zarr saving, skipping.")
 
     def _reset_extension_folder(self):
         """
@@ -2733,8 +2743,6 @@ class AnalyzerExtension:
 
     def _save_params(self):
         params_to_save = self.params.copy()
-
-        self._reset_extension_folder()
 
         # TODO make sparsity local Result specific
         # if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
