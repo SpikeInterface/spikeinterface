@@ -13,7 +13,7 @@ from spikeinterface.benchmark.benchmark_plot_tools import despine
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from .benchmark_plot_tools import fit_sigmoid, sigmoid
 

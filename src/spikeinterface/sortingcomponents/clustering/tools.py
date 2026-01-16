@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 
 from spikeinterface.core import Templates, estimate_templates, fix_job_kwargs
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
 
