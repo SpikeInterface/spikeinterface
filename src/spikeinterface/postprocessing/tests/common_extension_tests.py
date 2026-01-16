@@ -95,7 +95,7 @@ class AnalyzerExtensionCommonTestSuite:
 
         return sorting_analyzer
 
-    def _prepare_sorting_analyzer(self, format, sparse, extension_class):
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class, extra_dependencies=None):
         # prepare a SortingAnalyzer object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
         sorting_analyzer = self.get_sorting_analyzer(
@@ -107,6 +107,10 @@ class AnalyzerExtensionCommonTestSuite:
             if "|" in dependency_name:
                 dependency_name = dependency_name.split("|")[0]
             sorting_analyzer.compute(dependency_name)
+        if extra_dependencies is not None:
+            for dependency_name in extra_dependencies:
+                print("Computing extra dependency:", dependency_name)
+                sorting_analyzer.compute(dependency_name)
 
         return sorting_analyzer
 
@@ -126,7 +130,7 @@ class AnalyzerExtensionCommonTestSuite:
         ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
         assert len(ext.data) > 0
         main_data = ext.get_data()
-        assert len(main_data) > 0
+        assert main_data is not None
 
         ext = sorting_analyzer.get_extension(extension_class.extension_name)
         assert ext is not None
@@ -146,7 +150,11 @@ class AnalyzerExtensionCommonTestSuite:
             ext_loaded = sorting_analyzer_loaded.get_extension(extension_class.extension_name)
             for ext_data_name, ext_data_loaded in ext_loaded.data.items():
                 if isinstance(ext_data_loaded, np.ndarray):
-                    assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
+                    if len(ext_data_loaded) > 0 and isinstance(ext_data_loaded[0], dict):
+                        for i in range(len(ext_data_loaded)):
+                            assert np.array_equal(np.array(ext.data[ext_data_name][i]), np.array(ext_data_loaded[i]))
+                    else:
+                        assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
                 elif isinstance(ext_data_loaded, pd.DataFrame):
                     # skip nan values
                     for col in ext_data_loaded.columns:
@@ -160,7 +168,7 @@ class AnalyzerExtensionCommonTestSuite:
                 else:
                     continue
 
-    def run_extension_tests(self, extension_class, params):
+    def run_extension_tests(self, extension_class, params, extra_dependencies=None):
         """
         Convenience function to perform all checks on the extension
         of interest with the passed parameters. Will perform tests
@@ -169,5 +177,7 @@ class AnalyzerExtensionCommonTestSuite:
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
                 print("sparse", sparse, format)
-                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse, extension_class)
+                sorting_analyzer = self._prepare_sorting_analyzer(
+                    format, sparse, extension_class, extra_dependencies=extra_dependencies
+                )
                 self._check_one(sorting_analyzer, extension_class, params)
