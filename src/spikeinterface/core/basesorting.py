@@ -639,6 +639,26 @@ class BaseSorting(BaseExtractor):
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
+    def select_periods(self, periods):
+        """
+        Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+        Parameters
+        ----------
+        periods : numpy.array of unit_period_dtype
+            Period (segment_index, start_sample_index, end_sample_index, unit_index)
+            on which to restrict the sorting.
+
+        Returns
+        -------
+        BaseSorting
+            A new sorting object with only samples between start_sample_index and end_sample_index
+            for the given segment_index.
+        """
+        from spikeinterface.core.sorting_tools import select_sorting_periods
+
+        return select_sorting_periods(self, periods)
+
     def split_by(self, property="group", outputs="dict"):
         """
         Splits object based on a certain property (e.g. "group")

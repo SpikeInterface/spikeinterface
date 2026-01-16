@@ -42,9 +42,9 @@ spike_peak_dtype = base_peak_dtype + [
 minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
 
 base_period_dtype = [
+    ("segment_index", "int64"),
     ("start_sample_index", "int64"),
     ("end_sample_index", "int64"),
-    ("segment_index", "int64"),
 ]
 
 unit_period_dtype = base_period_dtype + [
