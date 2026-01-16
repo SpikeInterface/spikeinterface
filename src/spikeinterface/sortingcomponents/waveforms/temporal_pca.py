@@ -96,11 +96,11 @@ class TemporalPCBaseNode(WaveformsNode):
         model_folder_path: str,
         detect_peaks_params: dict,
         peak_selection_params: dict,
-        job_kwargs: dict = None,
+        job_kwargs: dict | None = None,
         ms_before: float = 1.0,
         ms_after: float = 1.0,
         whiten: bool = True,
-        radius_um: float = None,
+        radius_um: float | None = None,
     ) -> "IncrementalPCA":
         """
         Train a pca model using the data in the recording object and the parameters provided.
