@@ -435,8 +435,9 @@ def generate_drifting_recording(
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
         if sorting._recording is not None:
-            assert sorting.get_total_duration() == duration, "Sorting should have the same duration as the generated data"
-            
+            assert (
+                sorting.get_total_duration() == duration
+            ), "Sorting should have the same duration as the generated data"
 
     # probe
     if probe is None:
