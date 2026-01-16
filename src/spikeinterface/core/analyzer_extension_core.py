@@ -1426,10 +1426,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 periods,
             )
             all_data = all_data[keep_mask]
-            sorting = self.sorting_analyzer.sorting.select_periods(periods)
         else:
             keep_mask = None
-            sorting = self.sorting_analyzer.sorting
 
         if outputs == "numpy":
             if copy:
@@ -1438,8 +1436,10 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 return all_data
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
+
             if keep_mask is not None:
-                spike_vector = sorting.to_spike_vector(concatenated=True)
+                # since we are filtering spikes, we need to recompute the spike indices
+                spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
                 spike_vector = spike_vector[keep_mask]
                 spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             else:

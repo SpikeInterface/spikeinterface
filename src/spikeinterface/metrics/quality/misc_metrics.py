@@ -349,26 +349,19 @@ def compute_refrac_period_violations(
     """
     res = namedtuple("rp_violations", ["rp_contamination", "rp_violations"])
 
-    if not HAVE_NUMBA:
-        warnings.warn("Error: numba is not installed.")
-        warnings.warn("compute_refrac_period_violations cannot run without numba.")
-        return None
-
-    sorting = sorting_analyzer.sorting
-    sorting = sorting.select_periods(periods=periods)
-
-    fs = sorting.sampling_frequency
-    num_units = len(sorting.unit_ids)
-    num_segments = sorting.get_num_segments()
-
-    spikes = sorting.to_spike_vector(concatenated=False)
-    fs = sorting_analyzer.sampling_frequency
-
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
+    if not HAVE_NUMBA:
+        warnings.warn("Error: numba is not installed.")
+        warnings.warn("compute_refrac_period_violations cannot run without numba.")
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    sorting = sorting_analyzer.sorting
+    sorting = sorting.select_periods(periods=periods)
     num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 
+    fs = sorting_analyzer.sampling_frequency
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
 
