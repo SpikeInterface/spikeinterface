@@ -1492,7 +1492,8 @@ def slidingRP_violations(
     method = "numba" if HAVE_NUMBA else "numpy"
 
     from spikeinterface.postprocessing.correlograms import compute_correlograms
-    correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, method=method)[0][0, 0]
+
+    correlogram = compute_correlograms(sorting, 2 * window_size_s * 1000, bin_size_ms, method=method)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
 
     conf_matrix = _compute_violations(
