@@ -604,8 +604,9 @@ class ComputeTemplates(AnalyzerExtension):
                             arr = np.std(wfs, axis=0)
                         elif operator == "median":
                             arr = np.median(wfs, axis=0)
-                        elif "percentile" in operator:
-                            _, percentile = operator.splot("_")
+                        # there was a spelling error "pencentile" in old versions
+                        elif "percentile" in operator or "pencentile" in operator:
+                            _, percentile = operator.split("_")
                             arr = np.percentile(wfs, float(percentile), axis=0)
                         new_array[split_unit_index, ...] = arr
                 else:
@@ -824,7 +825,7 @@ class BaseMetric:
     metric_descriptions = {}  # descriptions of each metric column
     needs_recording = False  # whether the metric needs recording
     needs_tmp_data = (
-        False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
+        False  # whether the metric needs temporary data computed with _prepare_data at the MetricExtension level
     )
     needs_job_kwargs = False
     depend_on = []  # extensions the metric depends on

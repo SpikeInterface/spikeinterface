@@ -64,6 +64,14 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if "mahalanobis" not in self.params["metric_names"]:
                 self.params["metric_names"].append("mahalanobis")
 
+        if "amplitude_cutoff" in self.params["metric_names"]:
+            if "peak_sign" in self.params["metric_params"]["amplitude_cutoff"]:
+                del self.params["metric_params"]["amplitude_cutoff"]["peak_sign"]
+
+        if "amplitude_median" in self.params["metric_names"]:
+            if "peak_sign" in self.params["metric_params"]["amplitude_median"]:
+                del self.params["metric_params"]["amplitude_median"]["peak_sign"]
+
     def _set_params(
         self,
         metric_names: list[str] | None = None,
