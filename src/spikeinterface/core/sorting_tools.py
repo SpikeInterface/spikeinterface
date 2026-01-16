@@ -246,9 +246,8 @@ def select_sorting_periods_mask(sorting: BaseSorting, periods):
         A boolean mask of the spikes in the sorting object, with True for spikes within the specified periods.
     """
     spike_vector = sorting.to_spike_vector()
-    spike_vector_list = sorting.to_spike_vector(concatenated=False)
     keep_mask = np.zeros(len(spike_vector), dtype=bool)
-    all_global_indices = spike_vector_to_indices(spike_vector_list, unit_ids=sorting.unit_ids, absolute_index=True)
+    all_global_indices = sorting.get_spike_vector_to_indices()
     for segment_index in range(sorting.get_num_segments()):
         global_indices_segment = all_global_indices[segment_index]
         # filter periods by segment
