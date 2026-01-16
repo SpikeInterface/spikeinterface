@@ -1435,8 +1435,10 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 return all_data
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
+
             if keep_mask is not None:
-                spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=True)
+                # since we are filtering spikes, we need to recompute the spike indices
+                spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
                 spike_vector = spike_vector[keep_mask]
                 spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             else:

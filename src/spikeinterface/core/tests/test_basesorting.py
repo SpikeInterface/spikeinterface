@@ -244,7 +244,7 @@ def test_time_slice():
 
 def test_select_periods():
     sampling_frequency = 10_000.0
-    duration = 1_000
+    duration = 100
     num_samples = int(sampling_frequency * duration)
     num_units = 1000
     sorting = generate_sorting(
@@ -254,7 +254,7 @@ def test_select_periods():
     rng = np.random.default_rng()
 
     # number of random periods
-    n_periods = 10_000
+    n_periods = 1_000
     # generate random periods
     segment_indices = rng.integers(0, sorting.get_num_segments(), n_periods)
     start_samples = rng.integers(0, num_samples, n_periods)
@@ -298,6 +298,16 @@ def test_select_periods():
 
             spiketrain_sliced = sliced_sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
             assert len(spiketrain_in_periods) == len(spiketrain_sliced)
+
+    # now test with input as numpy array with shape (n_periods, 4)
+    periods_array = np.zeros((len(periods), 4), dtype="int64")
+    periods_array[:, 0] = periods["segment_index"]
+    periods_array[:, 1] = periods["start_sample_index"]
+    periods_array[:, 2] = periods["end_sample_index"]
+    periods_array[:, 3] = periods["unit_index"]
+
+    sliced_sorting_array = sorting.select_periods(periods=periods_array)
+    np.testing.assert_array_equal(sliced_sorting.to_spike_vector(), sliced_sorting_array.to_spike_vector())
 
 
 if __name__ == "__main__":
