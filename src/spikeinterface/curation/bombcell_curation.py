@@ -255,48 +255,6 @@ def bombcell_label_units(
     return unit_type.astype(int), unit_type_string
 
 
-def apply_thresholds(
-    quality_metrics: pd.DataFrame,
-    thresholds: Optional[dict] = None,
-) -> pd.DataFrame:
-    """
-    Apply thresholds and return pass/fail status for each metric.
-    Useful for debugging classification results.
-    """
-    if thresholds is None:
-        thresholds = bombcell_get_default_thresholds()
-
-    results = {}
-    for metric_name, thresh in thresholds.items():
-        if metric_name not in quality_metrics.columns:
-            continue
-
-        values = quality_metrics[metric_name].values
-        n_units = len(values)
-        passes = np.ones(n_units, dtype=bool)
-        reasons = np.array([""] * n_units, dtype=object)
-
-        nan_mask = np.isnan(values)
-        passes[nan_mask] = False
-        reasons[nan_mask] = "nan"
-
-        if not _is_threshold_disabled(thresh["min"]):
-            below_min = ~nan_mask & (values < thresh["min"])
-            passes[below_min] = False
-            reasons[below_min] = "below_min"
-
-        if not _is_threshold_disabled(thresh["max"]):
-            above_max = ~nan_mask & (values > thresh["max"])
-            passes[above_max] = False
-            reasons[above_max & (reasons == "")] = "above_max"
-            reasons[above_max & (reasons == "below_min")] = "below_min_and_above_max"
-
-        results[f"{metric_name}_pass"] = passes
-        results[f"{metric_name}_fail_reason"] = reasons
-
-    return pd.DataFrame(results, index=quality_metrics.index)
-
-
 def get_labeling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
     """Get counts and percentages for each unit type."""
     n_total = len(unit_type)
