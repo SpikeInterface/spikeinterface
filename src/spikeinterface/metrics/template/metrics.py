@@ -55,9 +55,6 @@ def get_trough_and_peak_idx(
 
     assert template.ndim == 1
 
-    # Save original for plotting
-    template_original = template.copy()
-
     # Smooth template to reduce noise while preserving peaks using Savitzky-Golay filter
     if smooth:
         window_length = int(len(template) * smooth_window_frac) // 2 * 2 + 1
@@ -193,94 +190,6 @@ def get_trough_and_peak_idx(
         }
     else:
         peaks_after = empty_dict.copy()
-
-    # Quick visualization (set to True for debugging)
-    _plot = False  # QQ set to false
-    if _plot:
-        import matplotlib.pyplot as plt
-
-        # Old simple method for comparison (argmin/argmax)
-        old_trough_idx = np.nanargmin(template)
-        old_peak_idx = np.nanargmax(template[old_trough_idx:]) + old_trough_idx
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(template_original, color="lightgray", lw=1, label="original (noisy)")
-        ax.plot(template, "k-", lw=1.5, label="smoothed")
-
-        # Plot old method (simple argmin/argmax)
-        ax.axvline(old_trough_idx, color="gray", ls="--", alpha=0.5, label="old trough (argmin)")
-        ax.axvline(old_peak_idx, color="gray", ls=":", alpha=0.5, label="old peak (argmax after trough)")
-
-        # Plot all detected troughs
-        ax.scatter(troughs["indices"], troughs["values"], c="blue", s=50, marker="v", zorder=5, label="troughs")
-        if troughs["main_loc"] is not None:
-            ax.scatter(
-                troughs["main_loc"],
-                template[troughs["main_loc"]],
-                c="blue",
-                s=150,
-                marker="v",
-                edgecolors="red",
-                linewidths=2,
-                zorder=6,
-                label="main trough",
-            )
-
-        # Plot all peaks before
-        if len(peaks_before["indices"]) > 0:
-            ax.scatter(
-                peaks_before["indices"],
-                peaks_before["values"],
-                c="green",
-                s=50,
-                marker="^",
-                zorder=5,
-                label="peaks before",
-            )
-            if peaks_before["main_loc"] is not None:
-                ax.scatter(
-                    peaks_before["main_loc"],
-                    template[peaks_before["main_loc"]],
-                    c="green",
-                    s=150,
-                    marker="^",
-                    edgecolors="red",
-                    linewidths=2,
-                    zorder=6,
-                    label="main peak before",
-                )
-
-        # Plot all peaks after
-        if len(peaks_after["indices"]) > 0:
-            ax.scatter(
-                peaks_after["indices"],
-                peaks_after["values"],
-                c="orange",
-                s=50,
-                marker="^",
-                zorder=5,
-                label="peaks after",
-            )
-            if peaks_after["main_loc"] is not None:
-                ax.scatter(
-                    peaks_after["main_loc"],
-                    template[peaks_after["main_loc"]],
-                    c="orange",
-                    s=150,
-                    marker="^",
-                    edgecolors="red",
-                    linewidths=2,
-                    zorder=6,
-                    label="main peak after",
-                )
-
-        ax.axhline(0, color="gray", ls="-", alpha=0.3)
-        ax.set_xlabel("Sample")
-        ax.set_ylabel("Amplitude")
-        ax.legend(loc="best", fontsize=8)
-        ax.set_title(f"Trough/Peak Detection (prominence threshold: {min_thresh_detect_peaks_troughs})")
-        plt.tight_layout()
-        plt.show()
 
     return troughs, peaks_before, peaks_after
 
