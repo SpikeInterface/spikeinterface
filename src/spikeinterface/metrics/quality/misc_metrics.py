@@ -182,14 +182,14 @@ class SNR(BaseMetric):
     depend_on = ["noise_levels", "templates"]
 
 
-def compute_snrs_bombcell(
+def compute_snrs_versus_baseline(
     sorting_analyzer,
     unit_ids=None,
     peak_sign: str = "neg",
     baseline_window_ms: float = 0.5,
 ):
     """
-    Compute signal to noise ratio using BombCell method.
+    Compute signal to noise ratio versus baseline.
 
     This differs from the standard SNR by using:
     - Signal: Max absolute value of the median waveform on peak channel
@@ -213,15 +213,19 @@ def compute_snrs_bombcell(
 
     Notes
     -----
-    This implementation follows the BombCell methodology:
+    This implementation follows the bombcell methodology [1]:
     - Signal is the maximum absolute amplitude of the median waveform on the peak channel
     - Noise is computed as MAD of baseline samples (first N samples of each waveform)
 
     Requires the "waveforms" extension to be computed.
+
+    References
+    ----------
+    [1] https://github.com/Julie-Fabre/bombcell
     """
     if not sorting_analyzer.has_extension("waveforms"):
         raise ValueError(
-            "The 'waveforms' extension is required for compute_snrs_bombcell. "
+            "The 'waveforms' extension is required for compute_snrs_versus_baseline. "
             "Please compute it first with: analyzer.compute('waveforms')"
         )
 
@@ -280,13 +284,13 @@ def compute_snrs_bombcell(
     return snrs
 
 
-class SNRBombcell(BaseMetric):
-    metric_name = "snr_bombcell"
-    metric_function = compute_snrs_bombcell
+class SNRBaseline(BaseMetric):
+    metric_name = "snr_baseline"
+    metric_function = compute_snrs_versus_baseline
     metric_params = {"peak_sign": "neg", "baseline_window_ms": 0.5}
-    metric_columns = {"snr_bombcell": float}
+    metric_columns = {"snr_baseline": float}
     metric_descriptions = {
-        "snr_bombcell": "Signal to noise ratio using BombCell method (median waveform max / baseline MAD)."
+        "snr_baseline": "Signal to noise ratio versus baseline (median waveform max / baseline MAD). Based on bombcell."
     }
     depend_on = ["waveforms", "templates"]
 
@@ -1434,7 +1438,7 @@ misc_metrics_list = [
     FiringRate,
     PresenceRatio,
     SNR,
-    SNRBombcell,
+    SNRBaseline,
     ISIViolation,
     RPViolation,
     SlidingRPViolation,
@@ -1633,7 +1637,7 @@ def amplitude_cutoff(
         fraction_missing = np.sum(pdf[G:]) * bin_size
         fraction_missing = np.min([fraction_missing, 0.5])
 
-        # Plot details for debugging (similar to MATLAB BombCell)
+        # Plot details for debugging (similar to MATLAB bombcell)
         if plot_details:
             import matplotlib.pyplot as plt
 
@@ -1646,7 +1650,7 @@ def amplitude_cutoff(
             else:
                 created_figure = False
 
-            # Colors matching MATLAB BombCell style
+            # Colors matching MATLAB bombcell style
             main_color = [0, 0.35, 0.71]  # Blue
             cutoff_color = [0.5430, 0, 0.5430]  # Purple
             fit_color = "red"

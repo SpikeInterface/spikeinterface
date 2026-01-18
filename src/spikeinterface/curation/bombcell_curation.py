@@ -1,5 +1,5 @@
 """
-Unit labeling based on quality metrics (Bombcell).
+Unit labeling based on quality metrics (bombcell).
 
 Unit Types:
     0 (NOISE): Failed waveform quality checks
@@ -26,7 +26,7 @@ NOISE_METRICS = [
 
 SPIKE_QUALITY_METRICS = [
     "amplitude_median",
-    "snr_bombcell",
+    "snr_baseline",
     "amplitude_cutoff",
     "num_spikes",
     "rp_contamination",
@@ -45,7 +45,7 @@ NON_SOMATIC_METRICS = [
 
 def bombcell_get_default_thresholds() -> dict:
     """
-    Bombcell - Returns default thresholds for unit labeling.
+    bombcell - Returns default thresholds for unit labeling.
 
     Each metric has 'min' and 'max' values. Use None to disable a threshold (e.g. to ignore a metric completely
     or to only have a min or a max threshold)
@@ -61,7 +61,7 @@ def bombcell_get_default_thresholds() -> dict:
         "exp_decay": {"min": 0.01, "max": 0.1},
         # Spike quality (failures -> MUA)
         "amplitude_median": {"min": 40, "max": None},  # uV
-        "snr_bombcell": {"min": 5, "max": None},
+        "snr_baseline": {"min": 5, "max": None},
         "amplitude_cutoff": {"min": None, "max": 0.2},
         "num_spikes": {"min": 300, "max": None},
         "rp_contamination": {"min": None, "max": 0.1},
@@ -105,7 +105,7 @@ def bombcell_label_units(
     template_metrics=None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Bombcell - label units based on quality metrics and thresholds.
+    bombcell - label units based on quality metrics and thresholds.
 
     Parameters
     ----------

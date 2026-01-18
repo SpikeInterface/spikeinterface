@@ -240,7 +240,7 @@ class UpsetPlotWidget(BaseWidget):
     ]
     SPIKE_QUALITY_METRICS = [
         "amplitude_median",
-        "snr_bombcell",
+        "snr_baseline",
         "amplitude_cutoff",
         "num_spikes",
         "rp_contamination",

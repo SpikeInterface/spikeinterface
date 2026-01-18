@@ -27,7 +27,7 @@
         "min": 40,
         "max": null
     },
-    "snr_bombcell": {
+    "snr_baseline": {
         "min": 5,
         "max": null
     },
