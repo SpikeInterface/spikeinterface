@@ -47,32 +47,32 @@ def bombcell_get_default_thresholds() -> dict:
     """
     Bombcell - Returns default thresholds for unit labeling.
 
-    Each metric has 'min' and 'max' values. Use np.nan to disable a threshold (e.g. to ignore a metric completly
+    Each metric has 'min' and 'max' values. Use None to disable a threshold (e.g. to ignore a metric completely
     or to only have a min or a max threshold)
     """
     # bombcell
     return {
         # Waveform quality (failures -> NOISE)
-        "num_positive_peaks": {"min": np.nan, "max": 2},
-        "num_negative_peaks": {"min": np.nan, "max": 1},
+        "num_positive_peaks": {"min": None, "max": 2},
+        "num_negative_peaks": {"min": None, "max": 1},
         "peak_to_trough_duration": {"min": 0.0001, "max": 0.00115},  # seconds
-        "waveform_baseline_flatness": {"min": np.nan, "max": 0.5},
-        "peak_after_to_trough_ratio": {"min": np.nan, "max": 0.8},
+        "waveform_baseline_flatness": {"min": None, "max": 0.5},
+        "peak_after_to_trough_ratio": {"min": None, "max": 0.8},
         "exp_decay": {"min": 0.01, "max": 0.1},
         # Spike quality (failures -> MUA)
-        "amplitude_median": {"min": 40, "max": np.nan},  # uV
-        "snr_bombcell": {"min": 5, "max": np.nan},
-        "amplitude_cutoff": {"min": np.nan, "max": 0.2},
-        "num_spikes": {"min": 300, "max": np.nan},
-        "rp_contamination": {"min": np.nan, "max": 0.1},
-        "presence_ratio": {"min": 0.7, "max": np.nan},
-        "drift_ptp": {"min": np.nan, "max": 100},  # um
+        "amplitude_median": {"min": 40, "max": None},  # uV
+        "snr_bombcell": {"min": 5, "max": None},
+        "amplitude_cutoff": {"min": None, "max": 0.2},
+        "num_spikes": {"min": 300, "max": None},
+        "rp_contamination": {"min": None, "max": 0.1},
+        "presence_ratio": {"min": 0.7, "max": None},
+        "drift_ptp": {"min": None, "max": 100},  # um
         # Non-somatic detection
-        "peak_before_to_trough_ratio": {"min": np.nan, "max": 3},
-        "peak_before_width": {"min": 150, "max": np.nan},  # us
-        "trough_width": {"min": 200, "max": np.nan},  # us
-        "peak_before_to_peak_after_ratio": {"min": np.nan, "max": 3},
-        "main_peak_to_trough_ratio": {"min": np.nan, "max": 0.8},
+        "peak_before_to_trough_ratio": {"min": None, "max": 3},
+        "peak_before_width": {"min": 150, "max": None},  # us
+        "trough_width": {"min": 200, "max": None},  # us
+        "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
+        "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
     }
 
 
@@ -87,28 +87,41 @@ def _combine_metrics(quality_metrics, template_metrics):
     return quality_metrics.join(template_metrics, how="outer")
 
 
+def _is_threshold_disabled(value):
+    """Check if a threshold value is disabled (None or np.nan)."""
+    if value is None:
+        return True
+    if isinstance(value, float) and np.isnan(value):
+        return True
+    return False
+
+
 def bombcell_label_units(
-    quality_metrics=None,
-    template_metrics=None,
+    sorting_analyzer=None,
     thresholds: Optional[dict] = None,
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
+    quality_metrics=None,
+    template_metrics=None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Bombcell - label units based on quality metrics and thresholds.
 
     Parameters
     ----------
-    quality_metrics : pd.DataFrame, optional
-        DataFrame with quality metrics (index = unit_ids).
-    template_metrics : pd.DataFrame, optional
-        DataFrame with template metrics (index = unit_ids).
+    sorting_analyzer : SortingAnalyzer, optional
+        SortingAnalyzer with computed quality_metrics and/or template_metrics extensions.
+        If provided, metrics are extracted automatically using get_metrics_extension_data().
     thresholds : dict or None
-        Threshold dict: {"metric": {"min": val, "max": val}}. Use np.nan to disable.
+        Threshold dict: {"metric": {"min": val, "max": val}}. Use None to disable.
     label_non_somatic : bool
         If True, detect non-somatic (axonal) units.
     split_non_somatic_good_mua : bool
         If True, split non-somatic into NON_SOMA_GOOD (3) and NON_SOMA_MUA (4).
+    quality_metrics : pd.DataFrame, optional
+        DataFrame with quality metrics (index = unit_ids). Deprecated, use sorting_analyzer instead.
+    template_metrics : pd.DataFrame, optional
+        DataFrame with template metrics (index = unit_ids). Deprecated, use sorting_analyzer instead.
 
     Returns
     -------
@@ -117,9 +130,19 @@ def bombcell_label_units(
     unit_type_string : np.ndarray
         String labels.
     """
-    combined_metrics = _combine_metrics(quality_metrics, template_metrics)
-    if combined_metrics is None:
-        raise ValueError("At least one of quality_metrics or template_metrics must be provided")
+    if sorting_analyzer is not None:
+        combined_metrics = sorting_analyzer.get_metrics_extension_data()
+        if combined_metrics.empty:
+            raise ValueError(
+                "SortingAnalyzer has no metrics extensions computed. "
+                "Compute quality_metrics and/or template_metrics first."
+            )
+    else:
+        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+        if combined_metrics is None:
+            raise ValueError(
+                "Either sorting_analyzer or at least one of quality_metrics/template_metrics must be provided"
+            )
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
@@ -138,9 +161,9 @@ def bombcell_label_units(
             values = np.abs(values)
         thresh = thresholds[metric_name]
         noise_mask |= np.isnan(values)
-        if not np.isnan(thresh["min"]):
+        if not _is_threshold_disabled(thresh["min"]):
             noise_mask |= values < thresh["min"]
-        if not np.isnan(thresh["max"]):
+        if not _is_threshold_disabled(thresh["max"]):
             noise_mask |= values > thresh["max"]
     unit_type[noise_mask] = 0
 
@@ -154,9 +177,9 @@ def bombcell_label_units(
             values = np.abs(values)
         thresh = thresholds[metric_name]
         valid_mask = np.isnan(unit_type)
-        if not np.isnan(thresh["min"]):
+        if not _is_threshold_disabled(thresh["min"]):
             mua_mask |= valid_mask & ~np.isnan(values) & (values < thresh["min"])
-        if not np.isnan(thresh["max"]):
+        if not _is_threshold_disabled(thresh["max"]):
             mua_mask |= valid_mask & ~np.isnan(values) & (values > thresh["max"])
     unit_type[mua_mask & np.isnan(unit_type)] = 2
 
@@ -173,17 +196,17 @@ def bombcell_label_units(
 
         peak_before_width = get_metric("peak_before_width")
         trough_width = get_metric("trough_width")
-        width_thresh_peak = thresholds.get("peak_before_width", {}).get("min", np.nan)
-        width_thresh_trough = thresholds.get("trough_width", {}).get("min", np.nan)
+        width_thresh_peak = thresholds.get("peak_before_width", {}).get("min", None)
+        width_thresh_trough = thresholds.get("trough_width", {}).get("min", None)
 
         narrow_peak = (
             ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak)
-            if not np.isnan(width_thresh_peak)
+            if not _is_threshold_disabled(width_thresh_peak)
             else np.zeros(n_units, dtype=bool)
         )
         narrow_trough = (
             ~np.isnan(trough_width) & (trough_width < width_thresh_trough)
-            if not np.isnan(width_thresh_trough)
+            if not _is_threshold_disabled(width_thresh_trough)
             else np.zeros(n_units, dtype=bool)
         )
         width_conditions = narrow_peak & narrow_trough
@@ -192,23 +215,23 @@ def bombcell_label_units(
         peak_before_to_peak_after = get_metric("peak_before_to_peak_after_ratio")
         main_peak_to_trough = get_metric("main_peak_to_trough_ratio")
 
-        ratio_thresh_pbt = thresholds.get("peak_before_to_trough_ratio", {}).get("max", np.nan)
-        ratio_thresh_pbpa = thresholds.get("peak_before_to_peak_after_ratio", {}).get("max", np.nan)
-        ratio_thresh_mpt = thresholds.get("main_peak_to_trough_ratio", {}).get("max", np.nan)
+        ratio_thresh_pbt = thresholds.get("peak_before_to_trough_ratio", {}).get("max", None)
+        ratio_thresh_pbpa = thresholds.get("peak_before_to_peak_after_ratio", {}).get("max", None)
+        ratio_thresh_mpt = thresholds.get("main_peak_to_trough_ratio", {}).get("max", None)
 
         large_initial_peak = (
             ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt)
-            if not np.isnan(ratio_thresh_pbt)
+            if not _is_threshold_disabled(ratio_thresh_pbt)
             else np.zeros(n_units, dtype=bool)
         )
         large_peak_ratio = (
             ~np.isnan(peak_before_to_peak_after) & (peak_before_to_peak_after > ratio_thresh_pbpa)
-            if not np.isnan(ratio_thresh_pbpa)
+            if not _is_threshold_disabled(ratio_thresh_pbpa)
             else np.zeros(n_units, dtype=bool)
         )
         large_main_peak = (
             ~np.isnan(main_peak_to_trough) & (main_peak_to_trough > ratio_thresh_mpt)
-            if not np.isnan(ratio_thresh_mpt)
+            if not _is_threshold_disabled(ratio_thresh_mpt)
             else np.zeros(n_units, dtype=bool)
         )
 
@@ -257,12 +280,12 @@ def apply_thresholds(
         passes[nan_mask] = False
         reasons[nan_mask] = "nan"
 
-        if not np.isnan(thresh["min"]):
+        if not _is_threshold_disabled(thresh["min"]):
             below_min = ~nan_mask & (values < thresh["min"])
             passes[below_min] = False
             reasons[below_min] = "below_min"
 
-        if not np.isnan(thresh["max"]):
+        if not _is_threshold_disabled(thresh["max"]):
             above_max = ~nan_mask & (values > thresh["max"])
             passes[above_max] = False
             reasons[above_max & (reasons == "")] = "above_max"
@@ -306,8 +329,8 @@ def save_thresholds(thresholds: dict, filepath) -> None:
     json_thresholds = {}
     for metric_name, thresh in thresholds.items():
         json_thresholds[metric_name] = {
-            "min": None if (isinstance(thresh["min"], float) and np.isnan(thresh["min"])) else thresh["min"],
-            "max": None if (isinstance(thresh["max"], float) and np.isnan(thresh["max"])) else thresh["max"],
+            "min": None if (isinstance(thresh["min"], float) and _is_threshold_disabled(thresh["min"])) else thresh["min"],
+            "max": None if (isinstance(thresh["max"], float) and _is_threshold_disabled(thresh["max"])) else thresh["max"],
         }
 
     filepath = Path(filepath)
@@ -401,16 +424,16 @@ def save_labeling_results(
                     continue
                 value = quality_metrics.loc[unit_id, metric_name]
                 thresh = thresholds[metric_name]
-                thresh_min = thresh.get("min", np.nan)
-                thresh_max = thresh.get("max", np.nan)
+                thresh_min = thresh.get("min", None)
+                thresh_max = thresh.get("max", None)
 
                 # Determine pass/fail
                 passed = True
                 if np.isnan(value):
                     passed = False
-                elif not np.isnan(thresh_min) and value < thresh_min:
+                elif not _is_threshold_disabled(thresh_min) and value < thresh_min:
                     passed = False
-                elif not np.isnan(thresh_max) and value > thresh_max:
+                elif not _is_threshold_disabled(thresh_max) and value > thresh_max:
                     passed = False
 
                 rows.append(
@@ -420,8 +443,8 @@ def save_labeling_results(
                         "label_code": label_code,
                         "metric_name": metric_name,
                         "value": value,
-                        "threshold_min": None if np.isnan(thresh_min) else thresh_min,
-                        "threshold_max": None if np.isnan(thresh_max) else thresh_max,
+                        "threshold_min": thresh_min,
+                        "threshold_max": thresh_max,
                         "passed": passed,
                     }
                 )

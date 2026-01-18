@@ -19,23 +19,43 @@ def _combine_metrics(quality_metrics, template_metrics):
     return quality_metrics.join(template_metrics, how="outer")
 
 
+def _is_threshold_disabled(value):
+    """Check if a threshold value is disabled (None or np.nan)."""
+    if value is None:
+        return True
+    if isinstance(value, float) and np.isnan(value):
+        return True
+    return False
+
+
 class LabelingHistogramsWidget(BaseWidget):
     """Plot histograms of quality metrics with threshold lines."""
 
     def __init__(
         self,
-        quality_metrics=None,
-        template_metrics=None,
+        sorting_analyzer=None,
         thresholds: Optional[dict] = None,
         metrics_to_plot: Optional[list] = None,
+        quality_metrics=None,
+        template_metrics=None,
         backend=None,
         **backend_kwargs,
     ):
         from spikeinterface.curation import bombcell_get_default_thresholds
 
-        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
-        if combined_metrics is None:
-            raise ValueError("At least one of quality_metrics or template_metrics must be provided")
+        if sorting_analyzer is not None:
+            combined_metrics = sorting_analyzer.get_metrics_extension_data()
+            if combined_metrics.empty:
+                raise ValueError(
+                    "SortingAnalyzer has no metrics extensions computed. "
+                    "Compute quality_metrics and/or template_metrics first."
+                )
+        else:
+            combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+            if combined_metrics is None:
+                raise ValueError(
+                    "Either sorting_analyzer or at least one of quality_metrics/template_metrics must be provided"
+                )
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
@@ -92,10 +112,10 @@ class LabelingHistogramsWidget(BaseWidget):
 
             thresh = thresholds.get(metric_name, {})
             has_thresh = False
-            if not np.isnan(thresh.get("min", np.nan)):
+            if not _is_threshold_disabled(thresh.get("min", None)):
                 ax.axvline(thresh["min"], color="red", ls="--", lw=2, label=f"min={thresh['min']:.2g}")
                 has_thresh = True
-            if not np.isnan(thresh.get("max", np.nan)):
+            if not _is_threshold_disabled(thresh.get("max", None)):
                 ax.axvline(thresh["max"], color="blue", ls="--", lw=2, label=f"max={thresh['max']:.2g}")
                 has_thresh = True
 
@@ -239,20 +259,31 @@ class UpsetPlotWidget(BaseWidget):
         self,
         unit_type: np.ndarray,
         unit_type_string: np.ndarray,
-        quality_metrics=None,
-        template_metrics=None,
+        sorting_analyzer=None,
         thresholds: Optional[dict] = None,
         unit_types_to_plot: Optional[list] = None,
         split_non_somatic: bool = False,
         min_subset_size: int = 1,
+        quality_metrics=None,
+        template_metrics=None,
         backend=None,
         **backend_kwargs,
     ):
         from spikeinterface.curation import bombcell_get_default_thresholds
 
-        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
-        if combined_metrics is None:
-            raise ValueError("At least one of quality_metrics or template_metrics must be provided")
+        if sorting_analyzer is not None:
+            combined_metrics = sorting_analyzer.get_metrics_extension_data()
+            if combined_metrics.empty:
+                raise ValueError(
+                    "SortingAnalyzer has no metrics extensions computed. "
+                    "Compute quality_metrics and/or template_metrics first."
+                )
+        else:
+            combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+            if combined_metrics is None:
+                raise ValueError(
+                    "Either sorting_analyzer or at least one of quality_metrics/template_metrics must be provided"
+                )
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
@@ -389,9 +420,9 @@ class UpsetPlotWidget(BaseWidget):
                 values = np.abs(values)
 
             failed = np.isnan(values)
-            if not np.isnan(thresh.get("min", np.nan)):
+            if not _is_threshold_disabled(thresh.get("min", None)):
                 failed |= values < thresh["min"]
-            if not np.isnan(thresh.get("max", np.nan)):
+            if not _is_threshold_disabled(thresh.get("max", None)):
                 failed |= values > thresh["max"]
             failure_data[metric_name] = failed
 
@@ -400,14 +431,21 @@ class UpsetPlotWidget(BaseWidget):
 
 # Convenience functions
 def plot_labeling_histograms(
-    quality_metrics=None, template_metrics=None, thresholds=None, metrics_to_plot=None, backend=None, **kwargs
+    sorting_analyzer=None,
+    thresholds=None,
+    metrics_to_plot=None,
+    quality_metrics=None,
+    template_metrics=None,
+    backend=None,
+    **kwargs,
 ):
     """Plot histograms of quality metrics with threshold lines."""
     return LabelingHistogramsWidget(
-        quality_metrics=quality_metrics,
-        template_metrics=template_metrics,
+        sorting_analyzer=sorting_analyzer,
         thresholds=thresholds,
         metrics_to_plot=metrics_to_plot,
+        quality_metrics=quality_metrics,
+        template_metrics=template_metrics,
         backend=backend,
         **kwargs,
     )
@@ -425,12 +463,13 @@ def plot_waveform_overlay(
 def plot_upset(
     unit_type,
     unit_type_string,
-    quality_metrics=None,
-    template_metrics=None,
+    sorting_analyzer=None,
     thresholds=None,
     unit_types_to_plot=None,
     split_non_somatic=False,
     min_subset_size=1,
+    quality_metrics=None,
+    template_metrics=None,
     backend=None,
     **kwargs,
 ):
@@ -438,12 +477,13 @@ def plot_upset(
     return UpsetPlotWidget(
         unit_type,
         unit_type_string,
-        quality_metrics=quality_metrics,
-        template_metrics=template_metrics,
+        sorting_analyzer=sorting_analyzer,
         thresholds=thresholds,
         unit_types_to_plot=unit_types_to_plot,
         split_non_somatic=split_non_somatic,
         min_subset_size=min_subset_size,
+        quality_metrics=quality_metrics,
+        template_metrics=template_metrics,
         backend=backend,
         **kwargs,
     )
@@ -501,25 +541,36 @@ def plot_unit_labeling_all(
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
 
-    # Load metrics from sorting_analyzer if not provided
-    if quality_metrics is None and sorting_analyzer.has_extension("quality_metrics"):
-        quality_metrics = sorting_analyzer.get_extension("quality_metrics").get_data()
-    if template_metrics is None and sorting_analyzer.has_extension("template_metrics"):
-        template_metrics = sorting_analyzer.get_extension("template_metrics").get_data()
+    # Use sorting_analyzer directly if no explicit metrics provided
+    use_analyzer = quality_metrics is None and template_metrics is None
 
-    combined_metrics = _combine_metrics(quality_metrics, template_metrics)
+    # Get combined metrics for checking and saving
+    if use_analyzer:
+        combined_metrics = sorting_analyzer.get_metrics_extension_data()
+        if combined_metrics.empty:
+            combined_metrics = None
+    else:
+        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
 
     results = {}
 
     # Histograms
     if combined_metrics is not None:
-        results["histograms"] = plot_labeling_histograms(
-            quality_metrics=quality_metrics,
-            template_metrics=template_metrics,
-            thresholds=thresholds,
-            backend=backend,
-            **kwargs,
-        )
+        if use_analyzer:
+            results["histograms"] = plot_labeling_histograms(
+                sorting_analyzer=sorting_analyzer,
+                thresholds=thresholds,
+                backend=backend,
+                **kwargs,
+            )
+        else:
+            results["histograms"] = plot_labeling_histograms(
+                quality_metrics=quality_metrics,
+                template_metrics=template_metrics,
+                thresholds=thresholds,
+                backend=backend,
+                **kwargs,
+            )
 
     # Waveform overlay
     results["waveforms"] = plot_waveform_overlay(
@@ -528,16 +579,27 @@ def plot_unit_labeling_all(
 
     # UpSet plots
     if include_upset and combined_metrics is not None:
-        results["upset"] = plot_upset(
-            unit_type,
-            unit_type_string,
-            quality_metrics=quality_metrics,
-            template_metrics=template_metrics,
-            thresholds=thresholds,
-            split_non_somatic=split_non_somatic,
-            backend=backend,
-            **kwargs,
-        )
+        if use_analyzer:
+            results["upset"] = plot_upset(
+                unit_type,
+                unit_type_string,
+                sorting_analyzer=sorting_analyzer,
+                thresholds=thresholds,
+                split_non_somatic=split_non_somatic,
+                backend=backend,
+                **kwargs,
+            )
+        else:
+            results["upset"] = plot_upset(
+                unit_type,
+                unit_type_string,
+                quality_metrics=quality_metrics,
+                template_metrics=template_metrics,
+                thresholds=thresholds,
+                split_non_somatic=split_non_somatic,
+                backend=backend,
+                **kwargs,
+            )
 
     # Save to folder if requested
     if save_folder is not None:
