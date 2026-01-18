@@ -37,12 +37,22 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
+from .bombcell_curation import (
+    LabelingHistogramsWidget,
+    WaveformOverlayWidget,
+    UpsetPlotWidget,
+    plot_labeling_histograms,
+    plot_waveform_overlay,
+    plot_upset,
+    plot_unit_labeling_all,
+)
 
 widget_list = [
     AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
+    LabelingHistogramsWidget,
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
@@ -75,6 +85,8 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
+    UpsetPlotWidget,
+    WaveformOverlayWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,

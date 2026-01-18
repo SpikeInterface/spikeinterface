@@ -7,8 +7,6 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 from __future__ import annotations
 
 import numpy as np
-import warnings
-from copy import deepcopy
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
@@ -34,6 +32,8 @@ def get_template_metric_list():
 
 
 def get_template_metric_names():
+    import warnings
+
     warnings.warn(
         "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
         "Please use get_template_metric_list instead.",
@@ -46,8 +46,8 @@ def get_template_metric_names():
 class ComputeTemplateMetrics(BaseMetricExtension):
     """
     Compute template metrics including:
-        * peak_to_valley
-        * peak_trough_ratio
+        * peak_to_trough_duration
+        * peak_to_trough_ratio
         * halfwidth
         * repolarization_slope
         * recovery_slope
@@ -96,6 +96,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_list = single_channel_metrics + multi_channel_metrics
 
     def _handle_backward_compatibility_on_load(self):
+        from copy import deepcopy
+
         # For backwards compatibility - this reformats metrics_kwargs as metric_params
         if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
 
@@ -125,6 +127,16 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             self.params["metric_names"].remove("velocity_below")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
+        # peak to valley -> peak_to_trough_duration
+        if "peak_to_valley" in self.params["metric_names"]:
+            self.params["metric_names"].remove("peak_to_valley")
+            if "peak_to_trough_duration" not in self.params["metric_names"]:
+                self.params["metric_names"].append("peak_to_trough_duration")
+        # peak to trough ratio -> main peak to trough ratio
+        if "peak_to_trough_ratio" in self.params["metric_names"]:
+            self.params["metric_names"].remove("peak_to_trough_ratio")
+            if "main_peak_to_trough_ratio" not in self.params["metric_names"]:
+                self.params["metric_names"].append("main_peak_to_trough_ratio")
 
     def _set_params(
         self,
@@ -137,6 +149,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         upsampling_factor=10,
         include_multi_channel_metrics=False,
         depth_direction="y",
+        min_thresh_detect_peaks_troughs=0.4,
+        smooth=True,
+        smooth_method="savgol",
+        smooth_window_frac=0.1,
+        smooth_polyorder=3,
+        svd_n_components=3,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
         num_channels = self.sorting_analyzer.get_num_channels()
@@ -165,9 +183,15 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             upsampling_factor=upsampling_factor,
             include_multi_channel_metrics=include_multi_channel_metrics,
             depth_direction=depth_direction,
+            min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
+            smooth=smooth,
+            smooth_window_frac=smooth_window_frac,
+            smooth_polyorder=smooth_polyorder,
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
+        import warnings
+
         from scipy.signal import resample_poly
 
         # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
@@ -196,6 +220,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         templates_single = []
         troughs = {}
         peaks = {}
+        troughs_info = {}
+        peaks_before_info = {}
+        peaks_after_info = {}
         templates_multi = []
         channel_locations_multi = []
         for unit_id in unit_ids:
@@ -209,11 +236,22 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             else:
                 template_upsampled = template_single
                 sampling_frequency_up = sampling_frequency
-            trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
+            troughs_dict, peaks_before_dict, peaks_after_dict = get_trough_and_peak_idx(
+                template_upsampled,
+                min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
+                smooth=self.params["smooth"],
+                smooth_window_frac=self.params["smooth_window_frac"],
+                smooth_polyorder=self.params["smooth_polyorder"],
+            )
 
             templates_single.append(template_upsampled)
-            troughs[unit_id] = trough_idx
-            peaks[unit_id] = peak_idx
+            # Store main locations for backward compatibility
+            troughs[unit_id] = troughs_dict["main_loc"]
+            peaks[unit_id] = peaks_after_dict["main_loc"]
+            # Store full dicts for new metrics
+            troughs_info[unit_id] = troughs_dict
+            peaks_before_info[unit_id] = peaks_before_dict
+            peaks_after_info[unit_id] = peaks_after_dict
 
             if include_multi_channel_metrics:
                 if sorting_analyzer.is_sparse():
@@ -238,6 +276,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         tmp_data["troughs"] = troughs
         tmp_data["peaks"] = peaks
+        tmp_data["troughs_info"] = troughs_info
+        tmp_data["peaks_before_info"] = peaks_before_info
+        tmp_data["peaks_after_info"] = peaks_after_info
         tmp_data["templates_single"] = np.array(templates_single)
 
         if include_multi_channel_metrics:
@@ -272,6 +313,8 @@ def get_default_tm_params(metric_names=None):
     metric_params : dict
         Dictionary with default parameters for template metrics.
     """
+    import warnings
+
     warnings.warn(
         "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
         "Please use get_default_template_metrics_params instead.",
