@@ -194,9 +194,9 @@ def get_trough_and_peak_idx(
     return troughs, peaks_before, peaks_after
 
 
-def get_waveform_duration(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
+def get_main_to_next_peak_duration(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
     """
-    Calculate waveform duration from the main extremum to the next extremum.
+    Calculate duration from the main extremum to the next extremum.
 
     The duration is measured from the largest absolute feature (main trough or main peak)
     to the next extremum. For typical negative-first waveforms, this is trough-to-peak.
@@ -217,8 +217,8 @@ def get_waveform_duration(template, sampling_frequency, troughs, peaks_before, p
 
     Returns
     -------
-    waveform_duration_us : float
-        Waveform duration in microseconds
+    main_to_next_peak_duration_us : float
+        Duration in microseconds from main extremum to next extremum
     """
 
     # Get main locations and values
@@ -270,9 +270,9 @@ def get_waveform_duration(template, sampling_frequency, troughs, peaks_before, p
             return np.nan
 
     # Convert to microseconds
-    waveform_duration_us = (duration_samples / sampling_frequency) * 1e6
+    main_to_next_peak_duration_us = (duration_samples / sampling_frequency) * 1e6
 
-    return waveform_duration_us
+    return main_to_next_peak_duration_us
 
 
 def get_waveform_ratios(template, troughs, peaks_before, peaks_after, **kwargs):
@@ -1112,7 +1112,7 @@ class NumberOfPeaks(BaseMetric):
     needs_tmp_data = True
 
 
-def _waveform_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+def _main_to_next_peak_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
     result = {}
     templates_single = tmp_data["templates_single"]
     troughs_info = tmp_data["troughs_info"]
@@ -1121,7 +1121,7 @@ def _waveform_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **m
     sampling_frequency = tmp_data["sampling_frequency"]
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
-        value = get_waveform_duration(
+        value = get_main_to_next_peak_duration(
             template_single,
             sampling_frequency,
             troughs_info[unit_id],
@@ -1133,13 +1133,13 @@ def _waveform_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **m
     return result
 
 
-class WaveformDuration(BaseMetric):
-    metric_name = "waveform_duration"
-    metric_function = _waveform_duration_metric_function
+class MainToNextPeakDuration(BaseMetric):
+    metric_name = "main_to_next_peak_duration"
+    metric_function = _main_to_next_peak_duration_metric_function
     metric_params = {}
-    metric_columns = {"waveform_duration": float}
+    metric_columns = {"main_to_next_peak_duration": float}
     metric_descriptions = {
-        "waveform_duration": "Waveform duration in microseconds from main extremum to next extremum."
+        "main_to_next_peak_duration": "Duration in microseconds from main extremum to next extremum."
     }
     needs_tmp_data = True
 
@@ -1281,7 +1281,7 @@ single_channel_metrics = [
     RepolarizationSlope,
     RecoverySlope,
     NumberOfPeaks,
-    WaveformDuration,
+    MainToNextPeakDuration,
     WaveformRatios,
     WaveformWidths,
     WaveformBaselineFlatness,
