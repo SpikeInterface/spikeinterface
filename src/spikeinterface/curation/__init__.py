@@ -21,8 +21,8 @@ from .curation_format import validate_curation_dict, curation_label_to_dataframe
 from .sortingview_curation import apply_sortingview_curation
 
 # automated curation
-from .unit_labeling import (
-    WAVEFORM_METRICS,
+from .bombcell_curation import (
+    NOISE_METRICS,
     SPIKE_QUALITY_METRICS,
     NON_SOMATIC_METRICS,
     bombcell_get_default_thresholds,

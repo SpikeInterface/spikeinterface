@@ -15,7 +15,7 @@ import pandas as pd
 from typing import Optional
 
 
-WAVEFORM_METRICS = [
+NOISE_METRICS = [
     "num_positive_peaks",
     "num_negative_peaks",
     "peak_to_trough_duration",
@@ -130,7 +130,7 @@ def bombcell_label_units(
 
     # NOISE: waveform failures
     noise_mask = np.zeros(n_units, dtype=bool)
-    for metric_name in WAVEFORM_METRICS:
+    for metric_name in NOISE_METRICS:
         if metric_name not in combined_metrics.columns or metric_name not in thresholds:
             continue
         values = combined_metrics[metric_name].values

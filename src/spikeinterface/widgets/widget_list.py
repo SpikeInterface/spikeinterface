@@ -37,7 +37,7 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
-from .unit_labeling import (
+from .bombcell_curation import (
     LabelingHistogramsWidget,
     WaveformOverlayWidget,
     UpsetPlotWidget,

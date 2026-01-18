@@ -210,7 +210,7 @@ class UpsetPlotWidget(BaseWidget):
     NOISE -> waveform metrics, MUA -> spike quality metrics, NON_SOMA -> non-somatic metrics.
     """
 
-    WAVEFORM_METRICS = [
+    NOISE_METRICS = [
         "num_positive_peaks",
         "num_negative_peaks",
         "peak_to_trough_duration",
@@ -274,7 +274,7 @@ class UpsetPlotWidget(BaseWidget):
 
     def _get_metrics_for_unit_type(self, unit_type_label):
         if unit_type_label == "NOISE":
-            return self.WAVEFORM_METRICS
+            return self.NOISE_METRICS
         elif unit_type_label == "MUA":
             return self.SPIKE_QUALITY_METRICS
         elif unit_type_label in ("NON_SOMA", "NON_SOMA_GOOD", "NON_SOMA_MUA"):
