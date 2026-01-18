@@ -7,9 +7,6 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 from __future__ import annotations
 
 import numpy as np
-import warnings
-from copy import deepcopy
-from scipy.signal import find_peaks
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
@@ -35,6 +32,8 @@ def get_template_metric_list():
 
 
 def get_template_metric_names():
+    import warnings
+
     warnings.warn(
         "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
         "Please use get_template_metric_list instead.",
@@ -97,6 +96,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_list = single_channel_metrics + multi_channel_metrics
 
     def _handle_backward_compatibility_on_load(self):
+        from copy import deepcopy
+
         # For backwards compatibility - this reformats metrics_kwargs as metric_params
         if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
 
@@ -189,6 +190,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
+        import warnings
+
         from scipy.signal import resample_poly
 
         # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
@@ -310,6 +313,8 @@ def get_default_tm_params(metric_names=None):
     metric_params : dict
         Dictionary with default parameters for template metrics.
     """
+    import warnings
+
     warnings.warn(
         "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
         "Please use get_default_template_metrics_params instead.",

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-from collections import namedtuple
-from scipy.signal import find_peaks, savgol_filter
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
@@ -53,6 +51,8 @@ def get_trough_and_peak_idx(
         - "main_idx": index of the main peak (most prominent)
         - "main_loc": location (sample index) of the main peak in template
     """
+    from scipy.signal import find_peaks, savgol_filter
+
     assert template.ndim == 1
 
     # Save original for plotting
@@ -1166,6 +1166,8 @@ class RecoverySlope(BaseMetric):
 
 
 def _number_of_peaks_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    from collections import namedtuple
+
     num_peaks_result = namedtuple("NumberOfPeaksResult", ["num_positive_peaks", "num_negative_peaks"])
     num_positive_peaks_dict = {}
     num_negative_peaks_dict = {}
@@ -1234,6 +1236,8 @@ class WaveformDuration(BaseMetric):
 
 
 def _waveform_ratios_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    from collections import namedtuple
+
     waveform_ratios_result = namedtuple(
         "WaveformRatiosResult",
         [
@@ -1292,6 +1296,8 @@ class WaveformRatios(BaseMetric):
 
 
 def _waveform_widths_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    from collections import namedtuple
+
     waveform_widths_result = namedtuple(
         "WaveformWidthsResult", ["trough_width", "peak_before_width", "peak_after_width"]
     )
@@ -1374,6 +1380,8 @@ single_channel_metrics = [
 
 
 def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+    from collections import namedtuple
+
     velocity_above_result = namedtuple("Velocities", ["velocity_above", "velocity_below"])
     velocity_above_dict = {}
     velocity_below_dict = {}
