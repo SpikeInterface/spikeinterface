@@ -269,65 +269,6 @@ def get_bombcell_labeling_summary(unit_type: np.ndarray, unit_type_string: np.nd
     return summary
 
 
-def save_thresholds(thresholds: dict, filepath) -> None:
-    """
-    Save thresholds to a JSON file.
-
-    Parameters
-    ----------
-    thresholds : dict
-        Threshold dictionary from bombcell_get_default_thresholds() or modified version.
-    filepath : str or Path
-        Path to save the JSON file.
-    """
-    import json
-    from pathlib import Path
-
-    # Convert np.nan to None for JSON serialization
-    json_thresholds = {}
-    for metric_name, thresh in thresholds.items():
-        json_thresholds[metric_name] = {
-            "min": None if (isinstance(thresh["min"], float) and _is_threshold_disabled(thresh["min"])) else thresh["min"],
-            "max": None if (isinstance(thresh["max"], float) and _is_threshold_disabled(thresh["max"])) else thresh["max"],
-        }
-
-    filepath = Path(filepath)
-    with open(filepath, "w") as f:
-        json.dump(json_thresholds, f, indent=4)
-
-
-def load_thresholds(filepath) -> dict:
-    """
-    Load thresholds from a JSON file.
-
-    Parameters
-    ----------
-    filepath : str or Path
-        Path to the JSON file.
-
-    Returns
-    -------
-    thresholds : dict
-        Threshold dictionary compatible with bombcell_classify_units().
-    """
-    import json
-    from pathlib import Path
-
-    filepath = Path(filepath)
-    with open(filepath, "r") as f:
-        json_thresholds = json.load(f)
-
-    # Convert None to np.nan
-    thresholds = {}
-    for metric_name, thresh in json_thresholds.items():
-        thresholds[metric_name] = {
-            "min": np.nan if thresh["min"] is None else thresh["min"],
-            "max": np.nan if thresh["max"] is None else thresh["max"],
-        }
-
-    return thresholds
-
-
 def save_labeling_results(
     quality_metrics: pd.DataFrame,
     unit_type: np.ndarray,
