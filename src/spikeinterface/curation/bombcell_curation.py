@@ -69,8 +69,8 @@ def bombcell_get_default_thresholds() -> dict:
         "drift_ptp": {"min": None, "max": 100},  # um
         # Non-somatic detection
         "peak_before_to_trough_ratio": {"min": None, "max": 3},
-        "peak_before_width": {"min": 150, "max": None},  # us
-        "trough_width": {"min": 200, "max": None},  # us
+        "peak_before_width": {"min": 0.00015, "max": None},  # seconds
+        "trough_width": {"min": 0.0002, "max": None},  # seconds
         "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
         "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
     }

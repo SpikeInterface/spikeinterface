@@ -56,11 +56,11 @@
         "max": 3
     },
     "peak_before_width": {
-        "min": 150,
+        "min": 0.00015,
         "max": null
     },
     "trough_width": {
-        "min": 200,
+        "min": 0.0002,
         "max": null
     },
     "peak_before_to_peak_after_ratio": {

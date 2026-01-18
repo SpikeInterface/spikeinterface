@@ -217,8 +217,8 @@ def get_main_to_next_peak_duration(template, sampling_frequency, troughs, peaks_
 
     Returns
     -------
-    main_to_next_peak_duration_us : float
-        Duration in microseconds from main extremum to next extremum
+    main_to_next_peak_duration : float
+        Duration in seconds from main extremum to next extremum
     """
 
     # Get main locations and values
@@ -269,10 +269,10 @@ def get_main_to_next_peak_duration(template, sampling_frequency, troughs, peaks_
         else:
             return np.nan
 
-    # Convert to microseconds
-    main_to_next_peak_duration_us = (duration_samples / sampling_frequency) * 1e6
+    # Convert to seconds
+    main_to_next_peak_duration = duration_samples / sampling_frequency
 
-    return main_to_next_peak_duration_us
+    return main_to_next_peak_duration
 
 
 def get_waveform_ratios(template, troughs, peaks_before, peaks_after, **kwargs):
@@ -383,7 +383,7 @@ def get_waveform_baseline_flatness(template, sampling_frequency, **kwargs):
 
 def get_waveform_widths(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
     """
-    Get the widths of the main trough and peaks in microseconds.
+    Get the widths of the main trough and peaks in seconds.
 
     Parameters
     ----------
@@ -402,9 +402,9 @@ def get_waveform_widths(template, sampling_frequency, troughs, peaks_before, pea
     -------
     widths : dict
         Dictionary containing:
-        - "trough_width_us": width of main trough in microseconds
-        - "peak_before_width_us": width of main peak before trough in microseconds
-        - "peak_after_width_us": width of main peak after trough in microseconds
+        - "trough_width": width of main trough in seconds
+        - "peak_before_width": width of main peak before trough in seconds
+        - "peak_after_width": width of main peak after trough in seconds
     """
 
     def get_main_width(feature_dict):
@@ -418,17 +418,17 @@ def get_waveform_widths(template, sampling_frequency, troughs, peaks_before, pea
             return widths[main_idx]
         return np.nan
 
-    # Convert from samples to microseconds
-    samples_to_us = 1e6 / sampling_frequency
+    # Convert from samples to seconds
+    samples_to_seconds = 1.0 / sampling_frequency
 
     trough_width = get_main_width(troughs)
     peak_before_width = get_main_width(peaks_before)
     peak_after_width = get_main_width(peaks_after)
 
     widths = {
-        "trough_width_us": trough_width * samples_to_us if not np.isnan(trough_width) else np.nan,
-        "peak_before_width_us": peak_before_width * samples_to_us if not np.isnan(peak_before_width) else np.nan,
-        "peak_after_width_us": peak_after_width * samples_to_us if not np.isnan(peak_after_width) else np.nan,
+        "trough_width": trough_width * samples_to_seconds if not np.isnan(trough_width) else np.nan,
+        "peak_before_width": peak_before_width * samples_to_seconds if not np.isnan(peak_before_width) else np.nan,
+        "peak_after_width": peak_after_width * samples_to_seconds if not np.isnan(peak_after_width) else np.nan,
     }
 
     return widths
@@ -1139,7 +1139,7 @@ class MainToNextPeakDuration(BaseMetric):
     metric_params = {}
     metric_columns = {"main_to_next_peak_duration": float}
     metric_descriptions = {
-        "main_to_next_peak_duration": "Duration in microseconds from main extremum to next extremum."
+        "main_to_next_peak_duration": "Duration in seconds from main extremum to next extremum."
     }
     needs_tmp_data = True
 
@@ -1228,9 +1228,9 @@ def _waveform_widths_metric_function(sorting_analyzer, unit_ids, tmp_data, **met
             peaks_after_info[unit_id],
             **metric_params,
         )
-        trough_width_dict[unit_id] = widths["trough_width_us"]
-        peak_before_width_dict[unit_id] = widths["peak_before_width_us"]
-        peak_after_width_dict[unit_id] = widths["peak_after_width_us"]
+        trough_width_dict[unit_id] = widths["trough_width"]
+        peak_before_width_dict[unit_id] = widths["peak_before_width"]
+        peak_after_width_dict[unit_id] = widths["peak_after_width"]
     return waveform_widths_result(
         trough_width=trough_width_dict, peak_before_width=peak_before_width_dict, peak_after_width=peak_after_width_dict
     )
@@ -1246,9 +1246,9 @@ class WaveformWidths(BaseMetric):
         "peak_after_width": float,
     }
     metric_descriptions = {
-        "trough_width": "Width of the main trough in microseconds",
-        "peak_before_width": "Width of the main peak before trough in microseconds",
-        "peak_after_width": "Width of the main peak after trough in microseconds",
+        "trough_width": "Width of the main trough in seconds",
+        "peak_before_width": "Width of the main peak before trough in seconds",
+        "peak_after_width": "Width of the main peak after trough in seconds",
     }
     needs_tmp_data = True
 
