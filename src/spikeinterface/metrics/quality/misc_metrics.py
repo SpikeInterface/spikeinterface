@@ -192,7 +192,7 @@ def compute_snrs_bombcell(
     Compute signal to noise ratio using BombCell method.
 
     This differs from the standard SNR by using:
-    - Signal: Max absolute value of raw waveforms on peak channel
+    - Signal: Max absolute value of the median waveform on peak channel
     - Noise: MAD (Median Absolute Deviation) of baseline samples from waveforms
 
     Parameters
@@ -214,7 +214,7 @@ def compute_snrs_bombcell(
     Notes
     -----
     This implementation follows the BombCell methodology:
-    - Signal is the maximum absolute amplitude of raw waveforms on the peak channel
+    - Signal is the maximum absolute amplitude of the median waveform on the peak channel
     - Noise is computed as MAD of baseline samples (first N samples of each waveform)
 
     Requires the "waveforms" extension to be computed.
@@ -262,8 +262,9 @@ def compute_snrs_bombcell(
         # Extract waveforms on peak channel
         waveforms_peak = waveforms[:, :, peak_chan_idx]  # (num_spikes, num_samples)
 
-        # Signal: max absolute value across all spikes
-        signal = np.max(np.abs(waveforms_peak))
+        # Signal: max absolute value of the median waveform
+        median_waveform = np.median(waveforms_peak, axis=0)  # median across spikes
+        signal = np.max(np.abs(median_waveform))
 
         # Noise: MAD of baseline samples (first N samples of each waveform)
         baseline_samples_all = waveforms_peak[:, :baseline_samples].flatten()
@@ -285,7 +286,7 @@ class SNRBombcell(BaseMetric):
     metric_params = {"peak_sign": "neg", "baseline_window_ms": 0.5}
     metric_columns = {"snr_bombcell": float}
     metric_descriptions = {
-        "snr_bombcell": "Signal to noise ratio using BombCell method (raw waveform max / baseline MAD)."
+        "snr_bombcell": "Signal to noise ratio using BombCell method (median waveform max / baseline MAD)."
     }
     depend_on = ["waveforms", "templates"]
 

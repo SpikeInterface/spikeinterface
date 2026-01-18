@@ -1,5 +1,5 @@
 """
-Unit labelling based on quality metrics (Bombcell).
+Unit labeling based on quality metrics (Bombcell).
 
 Unit Types:
     0 (NOISE): Failed waveform quality checks
@@ -45,7 +45,7 @@ NON_SOMATIC_METRICS = [
 
 def bombcell_get_default_thresholds() -> dict:
     """
-    Bombcell - Returns default thresholds for unit labelling.
+    Bombcell - Returns default thresholds for unit labeling.
 
     Each metric has 'min' and 'max' values. Use np.nan to disable a threshold (e.g. to ignore a metric completly
     or to only have a min or a max threshold)
@@ -274,7 +274,7 @@ def apply_thresholds(
     return pd.DataFrame(results, index=quality_metrics.index)
 
 
-def get_labelling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
+def get_labeling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
     """Get counts and percentages for each unit type."""
     n_total = len(unit_type)
     unique_types, counts = np.unique(unit_type, return_counts=True)
@@ -347,7 +347,7 @@ def load_thresholds(filepath) -> dict:
     return thresholds
 
 
-def save_labelling_results(
+def save_labeling_results(
     quality_metrics: pd.DataFrame,
     unit_type: np.ndarray,
     unit_type_string: np.ndarray,
@@ -357,7 +357,7 @@ def save_labelling_results(
     save_wide: bool = True,
 ) -> None:
     """
-    Save labelling results to CSV files.
+    Save labeling results to CSV files.
 
     Parameters
     ----------
@@ -368,7 +368,7 @@ def save_labelling_results(
     unit_type_string : np.ndarray
         String labels for each unit.
     thresholds : dict
-        Threshold dictionary used for labelling.
+        Threshold dictionary used for labeling.
     folder : str or Path
         Folder to save the CSV files.
     save_narrow : bool, default: True
@@ -388,7 +388,7 @@ def save_labelling_results(
         wide_df = quality_metrics.copy()
         wide_df.insert(0, "label", unit_type_string)
         wide_df.insert(1, "label_code", unit_type)
-        wide_df.to_csv(folder / "labelling_results_wide.csv")
+        wide_df.to_csv(folder / "labeling_results_wide.csv")
 
     # Narrow format: one row per unit-metric combination
     if save_narrow:
@@ -427,4 +427,4 @@ def save_labelling_results(
                 )
 
         narrow_df = pd.DataFrame(rows)
-        narrow_df.to_csv(folder / "labelling_results_narrow.csv", index=False)
+        narrow_df.to_csv(folder / "labeling_results_narrow.csv", index=False)

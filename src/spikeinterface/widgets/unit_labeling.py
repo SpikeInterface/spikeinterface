@@ -1,4 +1,4 @@
-"""Widgets for visualizing unit labelling results."""
+"""Widgets for visualizing unit labeling results."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def _combine_metrics(quality_metrics, template_metrics):
     return quality_metrics.join(template_metrics, how="outer")
 
 
-class LabellingHistogramsWidget(BaseWidget):
+class LabelingHistogramsWidget(BaseWidget):
     """Plot histograms of quality metrics with threshold lines."""
 
     def __init__(
@@ -399,11 +399,11 @@ class UpsetPlotWidget(BaseWidget):
 
 
 # Convenience functions
-def plot_labelling_histograms(
+def plot_labeling_histograms(
     quality_metrics=None, template_metrics=None, thresholds=None, metrics_to_plot=None, backend=None, **kwargs
 ):
     """Plot histograms of quality metrics with threshold lines."""
-    return LabellingHistogramsWidget(
+    return LabelingHistogramsWidget(
         quality_metrics=quality_metrics,
         template_metrics=template_metrics,
         thresholds=thresholds,
@@ -449,7 +449,7 @@ def plot_upset(
     )
 
 
-def plot_unit_labelling_all(
+def plot_unit_labeling_all(
     sorting_analyzer,
     unit_type: np.ndarray,
     unit_type_string: np.ndarray,
@@ -463,7 +463,7 @@ def plot_unit_labelling_all(
     **kwargs,
 ):
     """
-    Generate all unit labelling plots and optionally save to folder.
+    Generate all unit labeling plots and optionally save to folder.
 
     Parameters
     ----------
@@ -496,7 +496,7 @@ def plot_unit_labelling_all(
         Dictionary with keys 'histograms', 'waveforms', 'upset' containing widget objects.
     """
     from pathlib import Path
-    from spikeinterface.curation import bombcell_get_default_thresholds, save_labelling_results
+    from spikeinterface.curation import bombcell_get_default_thresholds, save_labeling_results
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
@@ -513,7 +513,7 @@ def plot_unit_labelling_all(
 
     # Histograms
     if combined_metrics is not None:
-        results["histograms"] = plot_labelling_histograms(
+        results["histograms"] = plot_labeling_histograms(
             quality_metrics=quality_metrics,
             template_metrics=template_metrics,
             thresholds=thresholds,
@@ -546,7 +546,7 @@ def plot_unit_labelling_all(
 
         # Save plots
         if "histograms" in results and results["histograms"].figure is not None:
-            results["histograms"].figure.savefig(save_folder / "labelling_histograms.png", dpi=150, bbox_inches="tight")
+            results["histograms"].figure.savefig(save_folder / "labeling_histograms.png", dpi=150, bbox_inches="tight")
         if "waveforms" in results and results["waveforms"].figure is not None:
             results["waveforms"].figure.savefig(save_folder / "waveform_overlay.png", dpi=150, bbox_inches="tight")
         if "upset" in results and hasattr(results["upset"], "figures"):
@@ -555,6 +555,6 @@ def plot_unit_labelling_all(
 
         # Save CSV results
         if combined_metrics is not None:
-            save_labelling_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
+            save_labeling_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
 
     return results

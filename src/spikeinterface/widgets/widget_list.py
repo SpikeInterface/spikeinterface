@@ -37,14 +37,14 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
-from .unit_labelling import (
-    LabellingHistogramsWidget,
+from .unit_labeling import (
+    LabelingHistogramsWidget,
     WaveformOverlayWidget,
     UpsetPlotWidget,
-    plot_labelling_histograms,
+    plot_labeling_histograms,
     plot_waveform_overlay,
     plot_upset,
-    plot_unit_labelling_all,
+    plot_unit_labeling_all,
 )
 
 widget_list = [
@@ -52,7 +52,7 @@ widget_list = [
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
-    LabellingHistogramsWidget,
+    LabelingHistogramsWidget,
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,

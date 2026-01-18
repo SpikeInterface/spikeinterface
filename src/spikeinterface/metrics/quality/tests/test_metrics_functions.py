@@ -258,7 +258,7 @@ def test_unit_structure_in_output(small_sorting_analyzer):
 def test_unit_id_order_independence(small_sorting_analyzer):
     """
     Takes two almost-identical sorting_analyzers, whose unit_ids are in different orders and have different labels,
-    and checks that their calculated quality metrics are independent of the ordering and labelling.
+    and checks that their calculated quality metrics are independent of the ordering and labeling.
     """
 
     recording = small_sorting_analyzer.recording
