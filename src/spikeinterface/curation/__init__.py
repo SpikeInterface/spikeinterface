@@ -27,7 +27,7 @@ from .bombcell_curation import (
     NON_SOMATIC_METRICS,
     bombcell_get_default_thresholds,
     bombcell_label_units,
-    get_labeling_summary,
+    get_bombcell_labeling_summary,
     save_thresholds,
     load_thresholds,
     save_labeling_results,

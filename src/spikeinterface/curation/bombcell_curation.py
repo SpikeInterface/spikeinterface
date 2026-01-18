@@ -255,7 +255,7 @@ def bombcell_label_units(
     return unit_type.astype(int), unit_type_string
 
 
-def get_labeling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
+def get_bombcell_labeling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
     """Get counts and percentages for each unit type."""
     n_total = len(unit_type)
     unique_types, counts = np.unique(unit_type, return_counts=True)
