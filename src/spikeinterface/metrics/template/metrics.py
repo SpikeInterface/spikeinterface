@@ -1138,9 +1138,7 @@ class MainToNextPeakDuration(BaseMetric):
     metric_function = _main_to_next_peak_duration_metric_function
     metric_params = {}
     metric_columns = {"main_to_next_peak_duration": float}
-    metric_descriptions = {
-        "main_to_next_peak_duration": "Duration in seconds from main extremum to next extremum."
-    }
+    metric_descriptions = {"main_to_next_peak_duration": "Duration in seconds from main extremum to next extremum."}
     needs_tmp_data = True
 
 
