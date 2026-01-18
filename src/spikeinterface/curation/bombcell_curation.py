@@ -269,7 +269,7 @@ def get_bombcell_labeling_summary(unit_type: np.ndarray, unit_type_string: np.nd
     return summary
 
 
-def save_labeling_results(
+def save_bombcell_results(
     quality_metrics: pd.DataFrame,
     unit_type: np.ndarray,
     unit_type_string: np.ndarray,

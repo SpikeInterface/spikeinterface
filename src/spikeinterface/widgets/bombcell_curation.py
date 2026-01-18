@@ -536,7 +536,7 @@ def plot_unit_labeling_all(
         Dictionary with keys 'histograms', 'waveforms', 'upset' containing widget objects.
     """
     from pathlib import Path
-    from spikeinterface.curation import bombcell_get_default_thresholds, save_labeling_results
+    from spikeinterface.curation import bombcell_get_default_thresholds, save_bombcell_results
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
@@ -617,6 +617,6 @@ def plot_unit_labeling_all(
 
         # Save CSV results
         if combined_metrics is not None:
-            save_labeling_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
+            save_bombcell_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
 
     return results

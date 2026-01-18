@@ -28,7 +28,7 @@ from .bombcell_curation import (
     bombcell_get_default_thresholds,
     bombcell_label_units,
     get_bombcell_labeling_summary,
-    save_labeling_results,
+    save_bombcell_results,
 )
 
 from .model_based_curation import auto_label_units, load_model
