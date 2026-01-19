@@ -48,7 +48,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
         The radius to use to select neighbour channels for locally exclusive detection.
     """
     )
-    
+
     def __init__(
         self,
         recording,
