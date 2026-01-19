@@ -2047,7 +2047,6 @@ def _sort_extensions_by_dependency(extensions):
 
         required_dependencies = get_extension_class(extension).get_required_dependencies(**extension_params)
         optional_dependencies = get_extension_class(extension).get_optional_dependencies(**extension_params)
-        # TODO: If dependencies are added because of parameters, we need to add to the global _extension_children
         for dependency in required_dependencies:
             if "|" in dependency:
                 for dep in dependency.split("|"):
