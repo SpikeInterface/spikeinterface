@@ -46,9 +46,9 @@ def compute_monopolar_triangulation(
     ----------
     sorting_analyzer_or_templates : SortingAnalyzer | Templates
         A SortingAnalyzer or Templates object
-    unit_ids: str | int | None
+    unit_ids : str | int | None
         A list of unit_id to restrci the computation
-    method : "least_square" | "minimize_with_log_penality", default: "least_square"
+    optimizer : "least_square" | "minimize_with_log_penality", default: "least_square"
        The optimizer to use
     radius_um : float, default: 75
         For channel sparsity
