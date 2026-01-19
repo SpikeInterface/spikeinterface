@@ -748,7 +748,7 @@ class BaseSorting(BaseExtractor):
             sample_indices = []
             unit_indices = []
             for u, unit_id in enumerate(self.unit_ids):
-                segment = self._sorting_segments[segment_index]
+                segment = self.segments[segment_index]
                 spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
                     "int64"
                 )
