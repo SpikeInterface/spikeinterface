@@ -65,6 +65,10 @@ class BenchmarkStudy:
                 assert isinstance(key, tuple), f"Case key {key} for cases is not homogeneous"
                 num_levels = len(reference)
                 assert len(key) == num_levels, f"Case key {key} for cases is not homogeneous, tuple negth differ"
+                if levels is None:
+                    levels = [f"level{i}" for i in range(num_levels)]
+                else:
+                    levels = list(levels)
             else:
                 raise ValueError("Keys for cases must str or tuple")
         return levels
