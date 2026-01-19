@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.node_pipeline import SpikeRetriever
@@ -19,18 +16,8 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    spike_retriver_kwargs : dict
-        A dictionary to control the behavior for getting the maximum channel for each spike
-        This dictionary contains:
-
-          * channel_from_template: bool, default: True
-              For each spike is the maximum channel computed from template or re estimated at every spikes
-              channel_from_template = True is old behavior but less acurate
-              channel_from_template = False is slower but more accurate
-          * radius_um: float, default: 50
-              In case channel_from_template=False, this is the radius to get the true peak
-          * peak_sign, default: "neg"
-              In case channel_from_template=False, this is the peak sign.
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        The peak sign to consider when looking for the template extremum channel for each spike.
     method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The localization method to use
     method_kwargs : dict, default: dict()
@@ -50,21 +37,14 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         self,
         ms_before=0.5,
         ms_after=0.5,
-        spike_retriver_kwargs=None,
+        peak_sign="neg",
         method="center_of_mass",
         method_kwargs={},
     ):
-        spike_retriver_kwargs_ = dict(
-            channel_from_template=True,
-            radius_um=50,
-            peak_sign="neg",
-        )
-        if spike_retriver_kwargs is not None:
-            spike_retriver_kwargs_.update(spike_retriver_kwargs)
         return super()._set_params(
             ms_before=ms_before,
             ms_after=ms_after,
-            spike_retriver_kwargs=spike_retriver_kwargs_,
+            peak_sign=peak_sign,
             method=method,
             method_kwargs=method_kwargs,
         )
@@ -74,7 +54,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        peak_sign = self.params["spike_retriver_kwargs"]["peak_sign"]
+        peak_sign = self.params["peak_sign"]
         extremum_channels_indices = get_template_extremum_channel(
             self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
         )
