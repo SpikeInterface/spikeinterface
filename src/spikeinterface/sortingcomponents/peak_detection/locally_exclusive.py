@@ -39,6 +39,8 @@ class LocallyExclusivePeakDetector(PeakDetector):
     engine = "numba"
     need_noise_levels = True
     preferred_mp_context = None
+    # this is because numba
+    need_first_call_before_pipeline = True
     params_doc = (
         ByChannelPeakDetector.params_doc
         + """
@@ -46,7 +48,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
         The radius to use to select neighbour channels for locally exclusive detection.
     """
     )
-
+    
     def __init__(
         self,
         recording,

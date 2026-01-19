@@ -48,6 +48,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
     name = "tdc-peeler"
     need_noise_levels = True
+    # this is because numba
+    need_first_call_before_pipeline = True
     params_doc = """
         peak_sign : str
             'neg', 'pos' or 'both'

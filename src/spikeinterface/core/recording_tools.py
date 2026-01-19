@@ -902,6 +902,9 @@ def get_chunk_with_margin(
                     taper = taper[:, np.newaxis]
                     traces_chunk2[:margin] *= taper
                     traces_chunk2[-margin:] *= taper[::-1]
+                # enforce non writable when original was not
+                # (this help numba to have the same signature and not compile twice)
+                traces_chunk2.flags.writeable = traces_chunk.flags.writeable
                 traces_chunk = traces_chunk2
             elif add_reflect_padding:
                 # in this case, we don't want to taper
@@ -913,7 +916,8 @@ def get_chunk_with_margin(
             else:
                 # we need a copy to change the dtype
                 traces_chunk = np.asarray(traces_chunk, dtype=dtype)
-
+    
+    
     return traces_chunk, left_margin, right_margin
 
 
