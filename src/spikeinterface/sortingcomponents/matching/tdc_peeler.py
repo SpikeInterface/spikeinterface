@@ -19,7 +19,6 @@ from .base import BaseTemplateMatching, _base_matching_dtype
 
 from spikeinterface.generation.drift_tools import DriftingTemplates
 
-
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True

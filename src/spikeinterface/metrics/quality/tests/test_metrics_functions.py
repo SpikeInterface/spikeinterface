@@ -55,7 +55,6 @@ from spikeinterface.metrics.quality.pca_metrics import (
 
 from spikeinterface.core.base import minimum_spike_dtype
 
-
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 

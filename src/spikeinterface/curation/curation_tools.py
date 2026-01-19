@@ -3,7 +3,6 @@ from typing import Optional
 import numpy as np
 from spikeinterface import SortingAnalyzer
 
-
 try:
     import numba
 

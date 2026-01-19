@@ -6,7 +6,6 @@ from __future__ import annotations
 import numpy as np
 import importlib.util
 
-
 spike_dtype = [
     ("sample_index", "int64"),
     ("channel_index", "int64"),
