@@ -9,7 +9,9 @@ from spikeinterface.core.recording_tools import get_channel_distances
 from spikeinterface.sortingcomponents.waveforms.peak_svd import extract_peaks_svd
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
-from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd
+from spikeinterface.sortingcomponents.clustering.tools import get_templates_from_peaks_and_svd, remove_small_cluster
+from spikeinterface.sortingcomponents.tools import clean_templates
+from spikeinterface.core.recording_tools import get_noise_levels
 
 
 class IterativeHDBSCANClustering:
@@ -30,6 +32,7 @@ class IterativeHDBSCANClustering:
     _default_params = {
         "peaks_svd": {"n_components": 5, "ms_before": 0.5, "ms_after": 1.5, "radius_um": 100.0},
         "seed": None,
+        "noise_levels": None,
         "split": {
             "split_radius_um": 75.0,
             "recursive": True,
@@ -43,8 +46,18 @@ class IterativeHDBSCANClustering:
                 "n_pca_features": 3,
             },
         },
+        "clean_templates": {
+            "sparsify_threshold": 1.0,
+            "min_snr": 2.5,
+            "remove_empty": True,
+            "max_jitter_ms": 0.2,
+        },
         "merge_from_templates": dict(similarity_thresh=0.8, num_shifts=3, use_lags=True),
         "merge_from_features": None,
+        "clean_low_firing": {
+            "min_firing_rate": 0.1,
+            "subsampling_factor": None,
+        },
         "debug_folder": None,
         "verbose": True,
     }
@@ -116,7 +129,7 @@ class IterativeHDBSCANClustering:
             **split,
         )
 
-        templates, new_sparse_mask = get_templates_from_peaks_and_svd(
+        templates, new_sparse_mask, max_std_per_channel = get_templates_from_peaks_and_svd(
             recording,
             peaks,
             peak_labels,
@@ -126,8 +139,27 @@ class IterativeHDBSCANClustering:
             peaks_svd,
             sparse_mask,
             operator="median",
+            return_max_std_per_channel=True,
         )
 
+        ## Pre clean using templates (jitter, sparsify_threshold)
+        templates = templates.to_sparse(new_sparse_mask)
+        cleaning_kwargs = params["clean_templates"].copy()
+        cleaning_kwargs["verbose"] = verbose
+        cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
+        if params["noise_levels"] is not None:
+            noise_levels = params["noise_levels"]
+        else:
+            noise_levels = get_noise_levels(recording, return_in_uV=False, **job_kwargs)
+        cleaning_kwargs["noise_levels"] = noise_levels
+        cleaned_templates = clean_templates(templates, **cleaning_kwargs)
+        mask_keep_ids = np.isin(templates.unit_ids, cleaned_templates.unit_ids)
+        to_remove_ids = templates.unit_ids[~mask_keep_ids]
+        to_remove_label_mask = np.isin(peak_labels, to_remove_ids)
+        peak_labels[to_remove_label_mask] = -1
+        templates = cleaned_templates
+        new_sparse_mask = templates.sparsity.mask.copy()
+        templates = templates.to_dense()
         labels = templates.unit_ids
 
         if verbose:
@@ -153,6 +185,21 @@ class IterativeHDBSCANClustering:
                 probe=recording.get_probe(),
                 is_in_uV=False,
             )
+
+        # clean very small cluster before peeler
+        if (
+            params["clean_low_firing"]["subsampling_factor"] is not None
+            and params["clean_low_firing"]["min_firing_rate"] is not None
+        ):
+            peak_labels, to_keep = remove_small_cluster(
+                recording,
+                peaks,
+                peak_labels,
+                min_firing_rate=params["clean_low_firing"]["min_firing_rate"],
+                subsampling_factor=params["clean_low_firing"]["subsampling_factor"],
+                verbose=verbose,
+            )
+            templates = templates.select_units(to_keep)
 
         labels = templates.unit_ids
 

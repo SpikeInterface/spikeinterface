@@ -191,17 +191,17 @@ class Kilosort4Sorter(BaseSorter):
             # v4.0.16, v4.0.17, v4.0.18
             setup_logger(sorter_output_folder)
 
+        if logger_is_named:
+            # v4.0.21 and above
+            logger = logging.getLogger("kilosort")
+        else:
+            # v4.0.16, v4.0.17, v4.0.18, v4.0.19, v4.0.20
+            logger = logging.getLogger("")
+
         # if verbose is False, set the stream handler's log
         # level to logging.WARNING to preserve original
         # behavior prior to addition of setup_logger() above
         if not verbose:
-            if logger_is_named:
-                # v4.0.21 and above
-                logger = logging.getLogger("kilosort")
-            else:
-                # v4.0.16, v4.0.17, v4.0.18, v4.0.19, v4.0.20
-                logger = logging.getLogger("")
-
             # find the stream handler
             stream_handler = None
             for handler in logger.handlers:

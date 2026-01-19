@@ -7,8 +7,9 @@ import zarr
 
 from probeinterface import ProbeGroup
 
+from .base import minimum_spike_dtype
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
+from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
 from .core_tools import is_path_remote
@@ -161,7 +162,7 @@ class ZarrRecordingExtractor(BaseRecording):
                     if np.isnan(t_start):
                         t_start = None
                 time_kwargs["t_start"] = t_start
-                time_kwargs["sampling_frequency"] = sampling_frequency
+            time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
             self.add_segment(rec_segment)

@@ -431,7 +431,7 @@ Drift
 ~~~~~
 
 .. automodule:: spikeinterface.generation
-    :noindex:
+    :no-index:
 
     .. autofunction:: generate_drifting_recording
     .. autofunction:: generate_displacement_vector
@@ -446,7 +446,7 @@ Hybrid
 ~~~~~~
 
 .. automodule:: spikeinterface.generation
-    :noindex:
+    :no-index:
 
     .. autofunction:: generate_hybrid_recording
     .. autofunction:: estimate_templates_from_recording
@@ -463,6 +463,7 @@ Noise
 ~~~~~
 
 .. automodule:: spikeinterface.generation
+    :no-index:
 
     .. autofunction:: generate_noise
 

@@ -2,11 +2,24 @@ from __future__ import annotations
 
 from typing import Optional
 from pathlib import Path
+import warnings
 
 import numpy as np
 
-from spikeinterface.core import BaseSorting, BaseSortingSegment, read_python
+from spikeinterface.core import (
+    BaseSorting,
+    BaseSortingSegment,
+    read_python,
+    generate_ground_truth_recording,
+    ChannelSparsity,
+    ComputeTemplates,
+    create_sorting_analyzer,
+    SortingAnalyzer,
+)
 from spikeinterface.core.core_tools import define_function_from_class
+
+from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
+from probeinterface import read_prb, Probe
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
@@ -302,3 +315,177 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
 
 read_phy = define_function_from_class(source_class=PhySortingExtractor, name="read_phy")
 read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
+
+
+def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
+    """
+    Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
+    above are supported. The function may work on older versions of Kilosort output,
+    but these are not carefully tested. Please check your output carefully.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the output Phy folder (containing the params.py).
+    unwhiten : bool, default: True
+        Unwhiten the templates computed by kilosort.
+
+    Returns
+    -------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object.
+    """
+
+    phy_path = Path(folder_path)
+
+    sorting = read_phy(phy_path)
+    sampling_frequency = sorting.sampling_frequency
+
+    # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
+    # to errors later. To avoid this, we pad the recording with an extra second of blank time.
+    duration = sorting._sorting_segments[0]._all_spikes[-1] / sampling_frequency + 1
+
+    if (phy_path / "probe.prb").is_file():
+        probegroup = read_prb(phy_path / "probe.prb")
+        if len(probegroup.probes) > 0:
+            warnings.warn("Found more than one probe. Selecting the first probe in ProbeGroup.")
+        probe = probegroup.probes[0]
+    elif (phy_path / "channel_positions.npy").is_file():
+        probe = Probe(si_units="um")
+        channel_positions = np.load(phy_path / "channel_positions.npy")
+        probe.set_contacts(channel_positions)
+        probe.set_device_channel_indices(range(probe.get_contact_count()))
+    else:
+        AssertionError(f"Cannot read probe layout from folder {phy_path}.")
+
+    # to make the initial analyzer, we'll use a fake recording and set it to None later
+    recording, _ = generate_ground_truth_recording(
+        probe=probe,
+        sampling_frequency=sampling_frequency,
+        durations=[duration],
+        num_units=1,
+        seed=1205,
+    )
+
+    sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True, sparsity=sparsity)
+
+    # first compute random spikes. These do nothing, but are needed for si-gui to run
+    sorting_analyzer.compute("random_spikes")
+
+    _make_templates(sorting_analyzer, phy_path, sparsity.mask, sampling_frequency, unwhiten=unwhiten)
+    _make_locations(sorting_analyzer, phy_path)
+
+    sorting_analyzer._recording = None
+    return sorting_analyzer
+
+
+def _make_locations(sorting_analyzer, kilosort_output_path):
+    """Constructs a `spike_locations` extension from the amplitudes numpy array
+    in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
+
+    locations_extension = ComputeSpikeLocations(sorting_analyzer)
+
+    spike_locations_path = kilosort_output_path / "spike_positions.npy"
+    if spike_locations_path.is_file():
+        locs_np = np.load(spike_locations_path)
+    else:
+        return
+
+    # Check that the spike locations vector is the same size as the spike vector
+    num_spikes = len(sorting_analyzer.sorting.to_spike_vector())
+    num_spike_locs = len(locs_np)
+    if num_spikes != num_spike_locs:
+        warnings.warn(
+            "The number of spikes does not match the number of spike locations in `spike_positions.npy`. Skipping spike locations."
+        )
+        return
+
+    num_dims = len(locs_np[0])
+    column_names = ["x", "y", "z"][:num_dims]
+    dtype = [(name, locs_np.dtype) for name in column_names]
+
+    structured_array = np.zeros(len(locs_np), dtype=dtype)
+    for coordinate_index, column_name in enumerate(column_names):
+        structured_array[column_name] = locs_np[:, coordinate_index]
+
+    locations_extension.data = {"spike_locations": structured_array}
+    locations_extension.params = {}
+    locations_extension.run_info = {"run_completed": True}
+
+    sorting_analyzer.extensions["spike_locations"] = locations_extension
+
+
+def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
+    """Constructs the `ChannelSparsity` of from kilosort output, by seeing if the
+    templates output is zero or not on all channels."""
+
+    templates = np.load(kilosort_output_path / "templates.npy")
+
+    unit_ids = sorting.unit_ids
+    channel_ids = recording.channel_ids
+
+    # The raw templates have dense dimensions (num chan)x(num samples)x(num units)
+    # but are zero on many channels, which implicitly defines the sparsity
+    mask = np.sum(np.abs(templates), axis=1) != 0
+    return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
+
+
+def _make_templates(sorting_analyzer, kilosort_output_path, mask, sampling_frequency, unwhiten=True):
+    """Constructs a `templates` extension from the amplitudes numpy array
+    in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
+
+    template_extension = ComputeTemplates(sorting_analyzer)
+
+    whitened_templates = np.load(kilosort_output_path / "templates.npy")
+    wh_inv = np.load(kilosort_output_path / "whitening_mat_inv.npy")
+    new_templates = _compute_unwhitened_templates(whitened_templates, wh_inv) if unwhiten else whitened_templates
+
+    template_extension.data = {"average": new_templates}
+
+    ops_path = kilosort_output_path / "ops.npy"
+    if ops_path.is_file():
+        ops = np.load(ops_path, allow_pickle=True)
+
+        number_samples_before_template_peak = ops.item(0)["nt0min"]
+        total_template_samples = ops.item(0)["nt"]
+
+        number_samples_after_template_peak = total_template_samples - number_samples_before_template_peak
+
+        ms_before = number_samples_before_template_peak / (sampling_frequency // 1000)
+        ms_after = number_samples_after_template_peak / (sampling_frequency // 1000)
+
+    # Used for kilosort 2, 2.5 and 3
+    else:
+
+        warnings.warn("Can't extract `ms_before` and `ms_after` from Kilosort output. Guessing a sensible value.")
+
+        samples_in_templates = np.shape(new_templates)[1]
+        template_extent_ms = (samples_in_templates + 1) / (sampling_frequency // 1000)
+        ms_before = template_extent_ms / 3
+        ms_after = 2 * template_extent_ms / 3
+
+    params = {
+        "operators": ["average"],
+        "ms_before": ms_before,
+        "ms_after": ms_after,
+        "peak_sign": "both",
+    }
+
+    template_extension.params = params
+    template_extension.run_info = {"run_completed": True}
+
+    sorting_analyzer.extensions["templates"] = template_extension
+
+
+def _compute_unwhitened_templates(whitened_templates, wh_inv):
+    """Constructs unwhitened templates from whitened_templates, by
+    applying an inverse whitening matrix."""
+
+    # templates have dimension (num units) x (num samples) x (num channels)
+    # whitening inverse has dimension (num units) x (num channels)
+    # to undo whitening, we need do matrix multiplication on the channel index
+    unwhitened_templates = np.einsum("ij,klj->kli", wh_inv, whitened_templates)
+
+    return unwhitened_templates
