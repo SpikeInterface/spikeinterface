@@ -47,7 +47,7 @@ if HAVE_NUMBA:
     ##########################
     # isocut zone
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def jisotonic5(x, weights):
         N = x.shape[0]
 
@@ -100,7 +100,7 @@ if HAVE_NUMBA:
 
         return y, MSE
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def updown_arange(num_bins, dtype=np.int_):
         num_bins_1 = int(np.ceil(num_bins / 2))
         num_bins_2 = num_bins - num_bins_1
@@ -111,7 +111,7 @@ if HAVE_NUMBA:
             )
         )
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def compute_ks4(counts1, counts2):
         c1s = counts1.sum()
         c2s = counts2.sum()
@@ -123,7 +123,7 @@ if HAVE_NUMBA:
         ks *= np.sqrt((c1s + c2s) / 2)
         return ks
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def compute_ks5(counts1, counts2):
         best_ks = -np.inf
         length = counts1.size
@@ -138,7 +138,7 @@ if HAVE_NUMBA:
 
         return best_ks, best_length
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def up_down_isotonic_regression(x, weights=None):
         # determine switch point
         _, mse1 = jisotonic5(x, weights)
@@ -153,14 +153,14 @@ if HAVE_NUMBA:
 
         return np.hstack((y1, y2))
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def down_up_isotonic_regression(x, weights=None):
         return -up_down_isotonic_regression(-x, weights=weights)
 
     # num_bins_factor = 1
     float_0 = np.array([0.0])
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def isocut(samples):  # , sample_weights=None isosplit6 not handle weight anymore
         """
         Compute a dip-test to check if 1-d samples are unimodal or not.
@@ -464,7 +464,7 @@ def ensure_continuous_labels(labels):
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def compute_centroids_and_covmats(X, centroids, covmats, labels, label_set, to_compute_mask):
         ## manual loop with numba to be faster
 
@@ -498,7 +498,7 @@ if HAVE_NUMBA:
             if to_compute_mask[i] and count[i] > 0:
                 covmats[i, :, :] /= count[i]
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def get_pairs_to_compare(centroids, comparisons_made, active_labels_mask):
         n = centroids.shape[0]
 
@@ -526,7 +526,7 @@ if HAVE_NUMBA:
 
         return pairs
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def compute_distances(centroids, comparisons_made, active_labels_mask):
         n = centroids.shape[0]
         dists = np.zeros((n, n), dtype=centroids.dtype)
@@ -548,7 +548,7 @@ if HAVE_NUMBA:
 
         return dists
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def merge_test(X1, X2, centroid1, centroid2, covmat1, covmat2, isocut_threshold):
 
         if X1.size == 0 or X2.size == 0:
@@ -584,7 +584,7 @@ if HAVE_NUMBA:
 
         return do_merge, L12
 
-    @numba.jit(nopython=True)
+    @numba.jit(nopython=True, nogil=True)
     def compare_pairs(X, labels, pairs, centroids, covmats, min_cluster_size, isocut_threshold):
 
         clusters_changed_mask = np.zeros(centroids.shape[0], dtype="bool")
