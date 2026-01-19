@@ -145,6 +145,8 @@ class CircusOMPPeeler(BaseTemplateMatching):
         shared_memory : bool, default True
             If True, the overlaps are stored in shared memory, which is more efficient when
             using numerous cores
+        mp_context : multiprocessing context, default None
+            The multiprocessing context to use for shared memory arrays
         """
 
     _more_output_keys = [
@@ -175,6 +177,7 @@ class CircusOMPPeeler(BaseTemplateMatching):
         engine="numpy",
         shared_memory=True,
         torch_device="cpu",
+        mp_context=None,
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
@@ -217,11 +220,19 @@ class CircusOMPPeeler(BaseTemplateMatching):
                 setattr(self, key, precomputed[key])
 
         if self.shared_memory:
-            self.max_overlaps = max([len(o) for o in self.overlaps])
-            num_samples = len(self.overlaps[0][0])
+            from spikeinterface.core.globals import get_global_job_kwargs
             from spikeinterface.core.core_tools import make_shared_array
 
-            arr, shm = make_shared_array((self.num_templates, self.max_overlaps, num_samples), dtype=np.float32)
+            # if None, use global context
+            if mp_context is None:
+                mp_context = get_global_job_kwargs()["mp_context"]
+
+            self.max_overlaps = max([len(o) for o in self.overlaps])
+            num_samples = len(self.overlaps[0][0])
+
+            arr, shm = make_shared_array(
+                (self.num_templates, self.max_overlaps, num_samples), dtype=np.float32, mp_context=mp_context
+            )
             for i in range(self.num_templates):
                 n_overlaps = len(self.unit_overlaps_indices[i])
                 arr[i, :n_overlaps] = self.overlaps[i]
