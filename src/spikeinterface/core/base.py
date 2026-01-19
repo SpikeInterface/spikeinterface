@@ -16,7 +16,6 @@ import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    is_path_remote,
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
@@ -26,6 +25,31 @@ from .core_tools import (
     retrieve_importing_provenance,
 )
 from .job_tools import _shared_job_kwargs_doc
+
+
+# base dtypes used throughout spikeinterface
+base_peak_dtype = [
+    ("sample_index", "int64"),
+    ("channel_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+]
+
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+
+base_period_dtype = [
+    ("segment_index", "int64"),
+    ("start_sample_index", "int64"),
+    ("end_sample_index", "int64"),
+]
+
+unit_period_dtype = base_period_dtype + [
+    ("unit_index", "int64"),
+]
 
 
 class BaseExtractor:
@@ -47,8 +71,8 @@ class BaseExtractor:
     # these properties are skipped by default in copy_metadata
     _skip_properties = []
 
-    installation_mesg = ""
-    installed = True
+    # kwargs which can be precomputed before being used by the extractor
+    _precomputable_kwarg_names = []
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -284,7 +308,7 @@ class BaseExtractor:
                 non_unique_ids = [id for id in ids if np.count_nonzero(ids == id) > 1]
                 raise ValueError(f"IDs are not unique: {non_unique_ids}")
 
-            # Not clear where this branch is used, perhaps on aggregation of extractors?
+            # Sam: this is used because you could set all ids (like the None) but with the vector.
             if ids.size < size:
                 if key not in self._properties:
 
@@ -306,7 +330,16 @@ class BaseExtractor:
 
                     # create the property with nan or empty
                     shape = (size,) + values.shape[1:]
-                    empty_values = np.zeros(shape, dtype=dtype)
+
+                    # For string (unicode) types, make sure dtype can fit the missing value
+                    if dtype_kind == "U" and missing_value is not None:
+                        max_val_len = np.max(np.char.str_len(values)) if values.size > 0 else 0
+                        missing_val_len = len(missing_value)
+                        max_len = max(max_val_len, missing_val_len)
+                        empty_values = np.full(shape, missing_value, dtype=f"<U{max_len}")
+                    else:
+                        empty_values = np.zeros(shape, dtype=dtype)
+
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
                     if ids.size == 0:
@@ -691,7 +724,7 @@ class BaseExtractor:
         if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, folder_metadata=folder_metadata)
+            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -871,7 +904,7 @@ class BaseExtractor:
         self,
         name: str | None = None,
         folder: str | Path | None = None,
-        overwrite: str = False,
+        overwrite: bool = False,
         verbose: bool = True,
         **save_kwargs,
     ):

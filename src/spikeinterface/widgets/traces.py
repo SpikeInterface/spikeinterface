@@ -31,8 +31,11 @@ class TracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool, default: False
-        If True and the recording has scaled traces, it plots the scaled traces
+    return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: False
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     events : np.array | list[np.narray] or None, default: None
         Events to display as vertical lines.
         The numpy arrays cen either be of dtype float, with event times in seconds,
@@ -72,7 +75,8 @@ class TracesWidget(BaseWidget):
         order_channel_by_depth=False,
         time_range=None,
         mode="auto",
-        return_scaled=False,
+        return_scaled=None,
+        return_in_uV=False,
         cmap="RdBu_r",
         show_channel_ids=False,
         events=None,
@@ -90,6 +94,16 @@ class TracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warnings.warn(
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
         if isinstance(recording, BaseRecording):
             recordings = {"rec": recording}
             rec0 = recording
@@ -126,21 +140,19 @@ class TracesWidget(BaseWidget):
         else:
             channel_locations = None
 
-        if not rec0.has_time_vector(segment_index=segment_index):
-            times = None
-            t_start = 0
-            t_end = rec0.get_duration(segment_index=segment_index)
-        else:
-            times = rec0.get_times(segment_index=segment_index)
-            t_start = times[0]
-            t_end = times[-1]
-
-        layer_keys = list(recordings.keys())
-
         if segment_index is None:
             if rec0.get_num_segments() != 1:
                 raise ValueError('You must provide "segment_index" for multisegment recordings.')
             segment_index = 0
+
+        if not rec0.has_time_vector(segment_index=segment_index):
+            times = None
+        else:
+            times = rec0.get_times(segment_index=segment_index)
+        t_start = rec0.get_start_time(segment_index=segment_index)
+        t_end = rec0.get_end_time(segment_index=segment_index)
+
+        layer_keys = list(recordings.keys())
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
@@ -162,7 +174,7 @@ class TracesWidget(BaseWidget):
         cmap = cmap
 
         times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
-            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled, times=times
+            recordings, channel_ids, time_range, segment_index, return_in_uV=return_in_uV, times=times
         )
 
         list_traces = [traces * scale for traces in list_traces]
@@ -273,7 +285,7 @@ class TracesWidget(BaseWidget):
             order_channel_by_depth=order_channel_by_depth,
             tile_size=tile_size,
             num_timepoints_per_row=int(seconds_per_row * fs),
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -396,11 +408,15 @@ class TracesWidget(BaseWidget):
 
         if not self.rec0.has_time_vector(segment_index=data_plot["segment_index"]):
             times = None
+            t_starts = [
+                rec0.get_start_time(segment_index=segment_index) for segment_index in range(rec0.get_num_segments())
+            ]
         else:
             times = [
                 np.array(self.rec0.get_times(segment_index=segment_index))
                 for segment_index in range(self.rec0.get_num_segments())
             ]
+            t_starts = None
 
         # some widgets
         self.time_slider = TimeSlider(
@@ -408,6 +424,7 @@ class TracesWidget(BaseWidget):
             sampling_frequency=rec0.sampling_frequency,
             time_range=data_plot["time_range"],
             times=times,
+            t_starts=t_starts,
         )
         # handle times
         if data_plot["events"] is not None:
@@ -427,10 +444,13 @@ class TracesWidget(BaseWidget):
         _layer_keys = data_plot["layer_keys"]
         if len(_layer_keys) > 1:
             _layer_keys = ["ALL"] + _layer_keys
-        self.layer_selector = W.Dropdown(
-            options=_layer_keys,
-            layout=W.Layout(width="95%"),
-        )
+            self.layer_selector = W.Dropdown(
+                options=_layer_keys,
+                layout=W.Layout(width="95%"),
+            )
+        else:
+            self.layer_selector = None
+
         self.mode_selector = W.Dropdown(
             options=["line", "map"],
             value=data_plot["mode"],
@@ -441,9 +461,12 @@ class TracesWidget(BaseWidget):
         self.channel_selector = ChannelSelector(self.rec0.channel_ids)
         self.channel_selector.value = list(data_plot["channel_ids"])
 
-        left_sidebar_elements = [
-            W.Label(value="layer"),
-            self.layer_selector,
+        if self.layer_selector is None:
+            left_sidebar_elements = []
+        else:
+            left_sidebar_elements = [W.Label(value="layer"), self.layer_selector]
+
+        left_sidebar_elements += [
             W.Label(value="mode"),
             self.mode_selector,
             self.scaler,
@@ -461,7 +484,7 @@ class TracesWidget(BaseWidget):
                 align_items="center",
             )
 
-        self.return_scaled = data_plot["return_scaled"]
+        self.return_in_uV = data_plot["return_in_uV"]
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
@@ -477,9 +500,10 @@ class TracesWidget(BaseWidget):
         self._update_plot()
 
         # callbacks:
+        if self.layer_selector is not None:
+            self.layer_selector.observe(self._retrieve_traces, names="value", type="change")
         # some widgets generate a full retrieve  + refresh
         self.time_slider.observe(self._retrieve_traces, names="value", type="change")
-        self.layer_selector.observe(self._retrieve_traces, names="value", type="change")
         self.channel_selector.observe(self._retrieve_traces, names="value", type="change")
         # other widgets only refresh
         self.scaler.observe(self._update_plot, names="value", type="change")
@@ -496,6 +520,8 @@ class TracesWidget(BaseWidget):
             display(self.widget)
 
     def _get_layers(self):
+        if self.layer_selector is None:
+            return self.data_plot["layer_keys"]
         layer = self.layer_selector.value
         if layer == "ALL":
             layer_keys = self.data_plot["layer_keys"]
@@ -506,8 +532,11 @@ class TracesWidget(BaseWidget):
         return layer_keys
 
     def _mode_changed(self, change=None):
-        if self.mode_selector.value == "map" and self.layer_selector.value == "ALL":
-            self.layer_selector.value = self.data_plot["layer_keys"][0]
+        if self.mode_selector.value == "map":
+            if self.layer_selector is not None and self.layer_selector.value == "ALL":
+                self.layer_selector.value = self.data_plot["layer_keys"][0]
+            else:
+                self._update_plot()
         else:
             self._update_plot()
 
@@ -533,7 +562,9 @@ class TracesWidget(BaseWidget):
 
         if not self.rec0.has_time_vector(segment_index=segment_index):
             times = None
-            time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
+            time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency + self.rec0.get_start_time(
+                segment_index=segment_index
+            )
         else:
             times = self.rec0.get_times(segment_index=segment_index)
             time_range = np.array([times[start_frame], times[end_frame]])
@@ -544,7 +575,7 @@ class TracesWidget(BaseWidget):
             channel_ids,
             time_range,
             segment_index,
-            return_scaled=self.return_scaled,
+            return_in_uV=self.return_in_uV,
             times=times,
         )
 
@@ -595,7 +626,8 @@ class TracesWidget(BaseWidget):
 
         self.ax.clear()
         self.plot_matplotlib(data_plot, **backend_kwargs)
-        self.ax.set_title(layer_keys[0] if len(layer_keys) == 1 else "ALL")
+        if self.layer_selector is not None:
+            self.ax.set_title(layer_keys[0] if len(layer_keys) == 1 else "ALL")
 
         fig = self.ax.figure
         fig.canvas.draw()
@@ -604,10 +636,10 @@ class TracesWidget(BaseWidget):
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .utils_sortingview import handle_display_and_url
+        import importlib.util
 
-        try:
-            import pyvips
-        except ImportError:
+        spec = importlib.util.find_spec("pyvips")
+        if spec is None:
             raise ImportError("To use `plot_traces()` in sortingview you need the pyvips package.")
 
         dp = to_attr(data_plot)
@@ -665,26 +697,25 @@ class TracesWidget(BaseWidget):
         app.exec()
 
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False, times=None):
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_in_uV=False, times=None):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
 
     fs = rec0.get_sampling_frequency()
 
-    if return_scaled:
+    if return_in_uV:
         assert all(
             rec.has_scaleable_traces() for rec in recordings.values()
-        ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
+        ), "Some recording layers do not have scaled traces. Use `return_in_uV=False`"
     if times is not None:
         frame_range = np.searchsorted(times, time_range)
         times = times[frame_range[0] : frame_range[1]]
     else:
-        frame_range = (time_range * fs).astype("int64", copy=False)
+        frame_range = rec0.time_to_sample_index(time_range, segment_index=segment_index)
         a_max = rec0.get_num_frames(segment_index=segment_index)
         frame_range = np.clip(frame_range, 0, a_max)
-        time_range = frame_range / fs
-        times = np.arange(frame_range[0], frame_range[1]) / fs
+        times = np.arange(frame_range[0], frame_range[1]) / fs + rec0.get_start_time(segment_index=segment_index)
 
     list_traces = []
     for rec_name, rec in recordings.items():
@@ -693,7 +724,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
             channel_ids=channel_ids,
             start_frame=frame_range[0],
             end_frame=frame_range[1],
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
         )
 
         list_traces.append(traces)

@@ -9,8 +9,52 @@ from copy import deepcopy
 import importlib
 from math import prod
 from collections import namedtuple
+import inspect
 
 import numpy as np
+
+
+def define_function_handling_dict_from_class(source_class, name):
+    """
+    Depending on whether `source_class` is passed a `Recording` object or a dict of
+    `Recording` objects, this function will return `source_class` or a dict of
+    `source_class` objects to match the input.
+    """
+
+    from spikeinterface.core import BaseRecording
+
+    def source_class_or_dict_of_sources_classes(*args, **kwargs):
+
+        recording_in_kwargs = False
+        if rec_or_dict_of_recs := kwargs.get("recording"):
+            recording_in_kwargs = True
+        else:
+            rec_or_dict_of_recs = args[0]
+
+        if isinstance(rec_or_dict_of_recs, BaseRecording):
+            return source_class(*args, **kwargs)
+        elif isinstance(rec_or_dict_of_recs, dict):
+            # Edit args & kwargs to pass the dict of recordings but _not_ the original recording
+            new_kwargs = {key: kwarg for key, kwarg in kwargs.items() if key != "recording"}
+            if recording_in_kwargs:
+                new_args = args
+            else:
+                new_args = args[1:]
+
+            preprocessed_recordings_dict = {
+                property_id: source_class(recording, *new_args, **new_kwargs)
+                for property_id, recording in rec_or_dict_of_recs.items()
+            }
+
+            return preprocessed_recordings_dict
+        else:
+            raise TypeError(f"The function `{name}` only accepts a recording or a dict of recordings.")
+
+    source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
+    source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
+    source_class_or_dict_of_sources_classes.__name__ = name
+
+    return source_class_or_dict_of_sources_classes
 
 
 def define_function_from_class(source_class, name):
@@ -379,11 +423,19 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     relative_folder = Path(relative_folder).resolve().absolute()
     not_possible = []
     for p in path_list:
-        p = Path(p)
         # check path is not an URL
         if "http" in str(p):
             not_possible.append(p)
             continue
+
+        # check path is not a remote path, see
+        # https://github.com/SpikeInterface/spikeinterface/issues/4045
+        if is_path_remote(p):
+            not_possible.append(p)
+            continue
+
+        # convert to Path
+        p = Path(p)
 
         # If windows path check have same drive
         if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):

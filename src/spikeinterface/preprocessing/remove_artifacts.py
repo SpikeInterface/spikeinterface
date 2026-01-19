@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core import NumpySorting, estimate_templates
@@ -182,7 +182,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     nbefore=nbefore,
                     nafter=nafter,
                     operator=mode,
-                    return_scaled=False,
+                    return_in_uV=False,
                 )
                 artifacts = {}
                 for i, label in enumerate(sorting.unit_ids):
@@ -263,11 +263,13 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 
-        mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
+        pad = self.pad
+        if pad is None:
+            mask = (self.triggers >= start_frame) & (self.triggers < end_frame)
+        else:
+            mask = (self.triggers >= start_frame - pad[1]) & (self.triggers < end_frame + pad[0])
         triggers = self.triggers[mask] - start_frame
         labels = self.labels[mask]
-
-        pad = self.pad
 
         if self.mode == "zeros":
             for trig in triggers:
@@ -446,4 +448,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-remove_artifacts = define_function_from_class(source_class=RemoveArtifactsRecording, name="remove_artifacts")
+remove_artifacts = define_function_handling_dict_from_class(
+    source_class=RemoveArtifactsRecording, name="remove_artifacts"
+)

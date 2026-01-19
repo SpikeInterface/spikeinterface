@@ -21,7 +21,7 @@ class Kilosort4Sorter(BaseSorter):
     sorter_name: str = "kilosort4"
     requires_locations = True
     gpu_capability = "nvidia-optional"
-    requires_binary_data = False
+    requires_binary_data = True
 
     _si_default_params = {
         "do_CAR": True,
@@ -72,12 +72,13 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import kilosort as ks
-            import torch
+        import importlib.util
 
+        ks_spec = importlib.util.find_spec("kilosort")
+        torch_spec = importlib.util.find_spec("torch")
+        if ks_spec is not None and torch_spec is not None:
             HAVE_KS = True
-        except ImportError:
+        else:
             HAVE_KS = False
         return HAVE_KS
 
@@ -94,7 +95,7 @@ class Kilosort4Sorter(BaseSorter):
             # we skip some parameters that are not relevant for the user
             # n_chan_bin/sampling_frequency: retrieved from the recording
             # tmin/tmax: same ase time/frame_slice in SpikeInterface
-            skip_main = ["n_chan_bin", "sampling_frequency", "tmin", "tmax"]
+            skip_main = ["fs", "n_chan_bin", "tmin", "tmax"]
             default_params = {}
             default_params_descriptions = {}
             ks_params = ks.parameters.MAIN_PARAMETERS.copy()
@@ -137,11 +138,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
-        from probeinterface import write_prb
-
-        pg = recording.get_probegroup()
-        probe_filename = sorter_output_folder / "probe.prb"
-        write_prb(probe_filename, pg)
+        cls._setup_json_probe_map(recording, sorter_output_folder)
 
         if params["use_binary_file"]:
             if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
@@ -166,6 +163,7 @@ class Kilosort4Sorter(BaseSorter):
             cluster_spikes,
             save_sorting,
             get_run_parameters,
+            setup_logger,
         )
         from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered, save_preprocessing
         from kilosort.parameters import DEFAULT_SETTINGS
@@ -173,11 +171,7 @@ class Kilosort4Sorter(BaseSorter):
         import time
         import torch
         import numpy as np
-
-        if verbose:
-            import logging
-
-            logging.basicConfig(level=logging.INFO)
+        import logging
 
         if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
             raise RuntimeError(
@@ -186,9 +180,40 @@ class Kilosort4Sorter(BaseSorter):
                 "Please upgrade Kilosort version."
             )
 
+        # setup kilosort's console and file log handlers
+        setup_logger_takes_verbose_console = version.parse(cls.get_sorter_version()) > version.parse("4.0.18")
+        logger_is_named = version.parse(cls.get_sorter_version()) > version.parse("4.0.20")
+
+        if setup_logger_takes_verbose_console:
+            # v4.0.19 and higher
+            setup_logger(sorter_output_folder, verbose_console=False)
+        else:
+            # v4.0.16, v4.0.17, v4.0.18
+            setup_logger(sorter_output_folder)
+
+        if logger_is_named:
+            # v4.0.21 and above
+            logger = logging.getLogger("kilosort")
+        else:
+            # v4.0.16, v4.0.17, v4.0.18, v4.0.19, v4.0.20
+            logger = logging.getLogger("")
+
+        # if verbose is False, set the stream handler's log
+        # level to logging.WARNING to preserve original
+        # behavior prior to addition of setup_logger() above
+        if not verbose:
+            # find the stream handler
+            stream_handler = None
+            for handler in logger.handlers:
+                if type(handler) == logging.StreamHandler:
+                    stream_handler = handler
+                    break
+
+            stream_handler.setLevel(logging.WARNING)
+
         sorter_output_folder = sorter_output_folder.absolute()
 
-        probe_filename = sorter_output_folder / "probe.prb"
+        probe_filename = sorter_output_folder / "chanMap.json"
 
         torch_device = params["torch_device"]
         if torch_device == "auto":
@@ -209,6 +234,11 @@ class Kilosort4Sorter(BaseSorter):
             else:
                 # the recording is not binary compatible and no binary copy has been written.
                 # in this case, we use the RecordingExtractorAsArray object
+                warning_msg = (
+                    "Recording is not binary compatible with Kilosort4. This might slow down the sorting process."
+                )
+                warnings.warn(warning_msg)
+                logger.warning(warning_msg)
                 filename = ""
                 file_object = RecordingExtractorAsArray(recording_extractor=recording)
         elif params["use_binary_file"]:
@@ -238,7 +268,8 @@ class Kilosort4Sorter(BaseSorter):
         settings_ks["n_chan_bin"] = recording.get_num_channels()
         settings_ks["fs"] = recording.sampling_frequency
         if not do_CAR:
-            print("Skipping common average reference.")
+            if verbose:
+                print("Skipping common average reference.")
 
         tic0 = time.time()
 
@@ -255,7 +286,7 @@ class Kilosort4Sorter(BaseSorter):
         bad_channels = params["bad_channels"]
         clear_cache = params["clear_cache"]
 
-        filename, data_dir, results_dir, probe = set_files(
+        set_files_kwargs = dict(
             settings=settings,
             filename=filename,
             probe=probe,
@@ -264,6 +295,10 @@ class Kilosort4Sorter(BaseSorter):
             results_dir=results_dir,
             bad_channels=bad_channels,
         )
+        if version.parse(ks_version) >= version.parse("4.0.34"):
+            set_files_kwargs.update(dict(shank_idx=None))
+
+        filename, data_dir, results_dir, probe = set_files(**set_files_kwargs)
 
         ops = initialize_ops(
             settings=settings,
@@ -274,16 +309,39 @@ class Kilosort4Sorter(BaseSorter):
             device=device,
             save_preprocessed_copy=save_preprocessed_copy,
         )
+        if version.parse(ks_version) >= version.parse("4.0.34"):
+            ops = ops[0]
 
-        n_chan_bin, fs, NT, nt, twav_min, chan_map, dtype, do_CAR, invert, _, _, tmin, tmax, artifact, _, _ = (
-            get_run_parameters(ops)
-        )
+        (
+            n_chan_bin,
+            fs,
+            NT,
+            nt,
+            twav_min,
+            chan_map,
+            dtype,
+            do_CAR,
+            invert,
+            _,
+            _,
+            tmin,
+            tmax,
+            artifact,
+            _,
+            _,
+            *possibly_batch_downsampling,
+        ) = get_run_parameters(ops)
+
+        batch_downsample_dict = {}
+        if len(possibly_batch_downsampling) > 0:
+            batch_downsample_dict["batch_downsampling"] = possibly_batch_downsampling[0]
 
         # Set preprocessing and drift correction parameters
         if not params["skip_kilosort_preprocessing"]:
             ops = compute_preprocessing(ops=ops, device=device, tic0=tic0, file_object=file_object)
         else:
-            print("Skipping kilosort preprocessing.")
+            if verbose:
+                print("Skipping kilosort preprocessing.")
             bfile = BinaryFiltered(
                 filename=ops["filename"],
                 n_chan_bin=n_chan_bin,
@@ -301,6 +359,7 @@ class Kilosort4Sorter(BaseSorter):
                 tmax=tmax,
                 artifact_threshold=artifact,
                 file_object=file_object,
+                **batch_downsample_dict,
             )
             ops["preprocessing"] = dict(hp_filter=None, whiten_mat=None)
             ops["Wrot"] = torch.as_tensor(np.eye(recording.get_num_channels()))
@@ -312,7 +371,8 @@ class Kilosort4Sorter(BaseSorter):
         torch.random.manual_seed(1)
 
         if not params["do_correction"]:
-            print("Skipping drift correction.")
+            if verbose:
+                print("Skipping drift correction.")
             ops["nblocks"] = 0
 
         drift_kwargs = dict(
@@ -357,7 +417,10 @@ class Kilosort4Sorter(BaseSorter):
         )
         if version.parse(ks_version) >= version.parse("4.0.28"):
             cluster_spikes_kwargs.update(dict(verbose=verbose))
-        clu, Wall = cluster_spikes(**cluster_spikes_kwargs)
+        if version.parse(ks_version) <= version.parse("4.0.30"):
+            clu, Wall = cluster_spikes(**cluster_spikes_kwargs)
+        else:
+            clu, Wall, st, tF = cluster_spikes(**cluster_spikes_kwargs)
 
         if params["skip_kilosort_preprocessing"]:
             ops["preprocessing"] = dict(
@@ -385,3 +448,31 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         return KilosortBase._get_result_from_folder(sorter_output_folder)
+
+    @classmethod
+    def _setup_json_probe_map(cls, recording, sorter_output_folder):
+        """Create a JSON probe map file for Kilosort4."""
+        from kilosort.io import save_probe
+        import numpy as np
+
+        groups = recording.get_channel_groups()
+        positions = np.array(recording.get_channel_locations())
+        if positions.shape[1] != 2:
+            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead.")
+
+        n_chan = recording.get_num_channels()
+        chanMap = np.arange(n_chan)
+        xc = positions[:, 0]
+        yc = positions[:, 1]
+        unique_groups = set(groups)
+        group_map = {group: idx for idx, group in enumerate(unique_groups)}
+        kcoords = np.array([group_map[group] for group in groups], dtype=int)
+
+        probe = {
+            "chanMap": chanMap,
+            "xc": xc,
+            "yc": yc,
+            "kcoords": kcoords,
+            "n_chan": n_chan,
+        }
+        save_probe(probe, str(sorter_output_folder / "chanMap.json"))

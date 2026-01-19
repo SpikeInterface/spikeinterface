@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Union, Dict, Any, List, Tuple
+from typing import Optional, Union, Dict, Any, List
 import warnings
 from math import isclose
 
@@ -273,9 +273,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.set_property("offset_to_uV", offset_to_uV)
 
         # Add machinery to keep the neo units for downstream users
-        self.set_property("original_unit", channel_units)
-        self.set_property("original_gain", neo_gains)
-        self.set_property("original_offset", neo_offsets)
+        self.set_property("physical_unit", channel_units)
+        self.set_property("gain_to_physical_unit", neo_gains)
+        self.set_property("offset_to_physical_unit", neo_offsets)
 
         # Streams with mixed units are to be used with caution
         # We warn the user when this is the case
@@ -288,12 +288,12 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if has_mixed_units:
             warning_msg = (
                 "Found a mix of voltage and non-voltage units. "
-                'Proceed with caution. Check channel units with `recording.get_property("original_unit")`.'
+                'Proceed with caution. Check channel units with `recording.get_property("physical_unit")`.'
             )
             warnings.warn(warning_msg)
 
         if not use_names_as_ids:
-            self.set_property("channel_names", signal_channels["name"])
+            self.set_property("channel_name", signal_channels["name"])
 
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations["blocks"][self.block_index]
@@ -316,9 +316,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             array_annotations = sig_ann["__array_annotations__"]
             # We do not add this because is confusing for the user to have this repeated
             array_annotations.pop("channel_ids", None)
-            # This is duplicated when using channel_names as ids
+            # This is duplicated when using `use_names_as_ids`
             if use_names_as_ids:
-                array_annotations.pop("channel_names", None)
+                array_annotations.pop("channel_name", None)
 
             # vector array_annotations are channel properties
             for key, values in array_annotations.items():
@@ -665,14 +665,20 @@ _neo_event_dtype = np.dtype([("time", "float64"), ("duration", "float64"), ("lab
 class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
     handle_event_frame_directly = False
 
-    def __init__(self, block_index=None, **neo_kwargs):
+    def __init__(self, block_index=None, use_names_as_ids: bool = False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         # TODO load feature from neo array_annotations
 
         event_channels = self.neo_reader.header["event_channels"]
 
-        channel_ids = event_channels["id"]
+        if use_names_as_ids:
+            channel_ids = event_channels["name"]
+            assert (
+                event_channels.size == np.unique(channel_ids).size
+            ), "use_name_as_ids=True is not possible, channel names are not unique"
+        else:
+            channel_ids = event_channels["id"]
 
         BaseEvent.__init__(self, channel_ids, structured_dtype=_neo_event_dtype)
 
@@ -684,21 +690,23 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
             else:
                 t_start = self.neo_reader.get_signal_t_start(self.block_index, segment_index, stream_index=0)
 
-            event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index, t_start)
+            event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index, t_start, use_names_as_ids)
             self.add_event_segment(event_segment)
 
 
 class NeoEventSegment(BaseEventSegment):
-    def __init__(self, neo_reader, block_index, segment_index, t_start):
+    def __init__(self, neo_reader, block_index, segment_index, t_start, use_names_as_ids):
         BaseEventSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
         self._t_start = t_start
         self._natural_ids = None
+        self.use_names_as_ids = use_names_as_ids
 
     def get_events(self, channel_id, start_time, end_time):
-        channel_index = list(self.neo_reader.header["event_channels"]["id"]).index(channel_id)
+        id_or_name = "name" if self.use_names_as_ids else "id"
+        channel_index = list(self.neo_reader.header["event_channels"][id_or_name]).index(channel_id)
 
         event_timestamps, event_duration, event_labels = self.neo_reader.get_event_timestamps(
             block_index=self.block_index, seg_index=self.segment_index, event_channel_index=channel_index

@@ -1,5 +1,5 @@
-How to train a model to predict curation labels
-===============================================
+Train a model to predict curation labels
+========================================
 
 A full tutorial for model-based curation can be found `here <https://spikeinterface.readthedocs.io/en/latest/tutorials/curation/plot_2_train_a_model.html>`_.
 

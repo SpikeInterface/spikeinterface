@@ -43,7 +43,7 @@ import spikeinterface
 # - `preprocessing` : preprocessing
 # - `sorters` : Python wrappers of spike sorters
 # - `postprocessing` : postprocessing
-# - `qualitymetrics` : quality metrics on units found by sorters
+# - `metrics` : quality, template, and spiketrain metrics on units found by sorters
 # - `curation` : automatic curation of spike sorting output
 # - `comparison` : comparison of spike sorting outputs
 # - `widgets` : visualization
@@ -53,7 +53,7 @@ import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
 import spikeinterface.postprocessing as spost
-import spikeinterface.qualitymetrics as sqm
+import spikeinterface.metrics as sm
 import spikeinterface.comparison as sc
 import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
@@ -61,7 +61,7 @@ import spikeinterface.widgets as sw
 
 # Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
-# qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
+# metrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
 # would be `si`.
 
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
@@ -78,7 +78,7 @@ si.set_global_job_kwargs(**global_job_kwargs)
 # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data repo
 # We download the dataset using DataLad but it can also be downloaded directly.
 
-# Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated files
+# Then we can open it. Note that [MEArec](https://mearec.readthedocs.io) simulated files
 # contain both a "recording" and a "sorting" object.
 
 local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
@@ -288,7 +288,7 @@ analyzer_TDC.compute(extensions_to_compute, extension_params=extension_params)
 
 # The calculations are saved in the `extensions` subfolder of the `SortingAnalyzer` folder.
 # Similar to the waveforms we can access them using `get_extension` and `get_data`. For example,
-# here we can make a historgram of spike amplitudes
+# here we can make a histogram of spike amplitudes
 
 # +
 amplitudes = analyzer_TDC.get_extension("spike_amplitudes").get_data()
@@ -296,7 +296,7 @@ plt.hist(amplitudes, bins=50)
 plt.show()
 # -
 
-# You can check which extensions have been saved (in your local folder) and which have been loaded (in your enviroment)...
+# You can check which extensions have been saved (in your local folder) and which have been loaded (in your environment)...
 
 # +
 print(analyzer_TDC.get_saved_extension_names())
@@ -329,7 +329,7 @@ analyzer_TDC.compute("spike_amplitudes")
 # Once we have computed all of the postprocessing information, we can compute quality
 # metrics (some quality metrics require certain extensions - e.g., drift metrics require `spike_locations`):
 
-qm_params = sqm.get_default_qm_params()
+qm_params = sm.get_default_quality_metrics_params()
 pprint(qm_params)
 
 # Since the recording is very short, let's change some parameters to accommodate the duration:

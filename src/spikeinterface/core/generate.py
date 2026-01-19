@@ -5,9 +5,9 @@ import numpy as np
 from typing import Literal, Optional
 from math import ceil
 
+from .base import minimum_spike_dtype
 from .basesorting import SpikeVectorSortingSegment
 from .numpyextractors import NumpySorting
-from .basesorting import minimum_spike_dtype
 
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
@@ -33,7 +33,7 @@ def generate_recording(
     set_probe: bool | None = True,
     ndim: int | None = 2,
     seed: int | None = None,
-) -> NumpySorting:
+) -> BaseRecording:
     """
     Generate a lazy recording object.
     Useful for testing API and algos.
@@ -296,7 +296,7 @@ def generate_sorting_to_inject(
             injected_spike_train = injected_spike_train[~violations]
 
             if len(injected_spike_train) > n_injection:
-                injected_spike_train = np.sort(np.random.choice(injected_spike_train, n_injection, replace=False))
+                injected_spike_train = np.sort(rng.choice(injected_spike_train, n_injection, replace=False))
 
             injected_spike_trains[segment_index][unit_id] = injected_spike_train
 
@@ -1519,7 +1519,7 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
     return y[:-1]
 
 
-def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
+def get_ellipse(positions, center, x_factor=1, y_factor=1, x_angle=0, y_angle=0, z_angle=0):
     """
     Compute the distances to a particular ellipsoid in order to take into account
     spatial inhomogeneities while generating the template. In a carthesian, centered
@@ -1537,7 +1537,7 @@ def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
                             z - z0
 
     In this new space, we can compute the radius of the ellipsoidal shape given the same formula
-        R = X**2 + (Y/b)**2 + (Z/c)**2
+        R = (X/x_factor)**2 + (Y/y_factor)**2 + (Z/1)**2
 
     and thus obtain putative amplitudes given the ellipsoidal projections. Note that in case of a=b=1 and
     no rotation, the distance is the same as the euclidean distance
@@ -1555,7 +1555,7 @@ def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
     Rx = np.zeros((3, 3))
     Rx[0, 0] = 1
     Rx[1, 1] = np.cos(-x_angle)
-    Rx[1, 0] = -np.sin(-x_angle)
+    Rx[1, 2] = -np.sin(-x_angle)
     Rx[2, 1] = np.sin(-x_angle)
     Rx[2, 2] = np.cos(-x_angle)
 
@@ -1573,10 +1573,12 @@ def get_ellipse(positions, center, b=1, c=1, x_angle=0, y_angle=0, z_angle=0):
     Rz[1, 0] = np.sin(-z_angle)
     Rz[1, 1] = np.cos(-z_angle)
 
-    inv_matrix = np.dot(Rx, Ry, Rz)
-    P = np.dot(inv_matrix, p)
+    rot_matrix = Rx @ Ry @ Rz
+    P = rot_matrix @ p
 
-    return np.sqrt(P[0] ** 2 + (P[1] / b) ** 2 + (P[2] / c) ** 2)
+    distances = np.sqrt((P[0] / x_factor) ** 2 + (P[1] / y_factor) ** 2 + (P[2] / 1) ** 2)
+
+    return distances
 
 
 def generate_single_fake_waveform(
@@ -1632,7 +1634,10 @@ def generate_single_fake_waveform(
     smooth_kernel = np.exp(-(bins**2) / (2 * smooth_size**2))
     smooth_kernel /= np.sum(smooth_kernel)
     # smooth_kernel = smooth_kernel[4:]
+    old_max = np.max(np.abs(wf))
     wf = np.convolve(wf, smooth_kernel, mode="same")
+    new_max = np.max(np.abs(wf))
+    wf *= old_max / new_max
 
     # ensure the the peak to be extatly at nbefore (smooth can modify this)
     ind = np.argmin(wf)
@@ -1653,13 +1658,10 @@ default_unit_params_range = dict(
     recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
-    spatial_decay=(20, 40),
+    spatial_decay=(10.0, 45.0),
     propagation_speed=(250.0, 350.0),  # um  / ms
-    b=(0.1, 1),
-    c=(0.1, 1),
-    x_angle=(0, np.pi),
-    y_angle=(0, np.pi),
-    z_angle=(0, np.pi),
+    ellipse_shrink=(0.4, 1),
+    ellipse_angle=(0, np.pi * 2),
 )
 
 
@@ -1733,7 +1735,7 @@ def generate_templates(
         An optional dict containing parameters per units.
         Keys are parameter names:
 
-            * "alpha": amplitude of the action potential in a.u. (default range: (6'000-9'000))
+            * "alpha": amplitude of the action potential in a.u. (default range: (100.0 - 500.0))
             * "depolarization_ms": the depolarization interval in ms (default range: (0.09-0.14))
             * "repolarization_ms": the repolarization interval in ms (default range: (0.5-0.8))
             * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
@@ -1813,21 +1815,21 @@ def generate_templates(
             distances = get_ellipse(
                 channel_locations,
                 units_locations[u],
-                1,
-                1,
-                0,
-                0,
-                0,
+                x_factor=1,
+                y_factor=1,
+                x_angle=0,
+                y_angle=0,
+                z_angle=0,
             )
         elif mode == "ellipsoid":
             distances = get_ellipse(
                 channel_locations,
                 units_locations[u],
-                params["b"][u],
-                params["c"][u],
-                params["x_angle"][u],
-                params["y_angle"][u],
-                params["z_angle"][u],
+                x_factor=1,
+                y_factor=params["ellipse_shrink"][u],
+                x_angle=0,
+                y_angle=0,
+                z_angle=params["ellipse_angle"][u],
             )
 
         channel_factors = alpha * np.exp(-distances / spatial_decay)
@@ -2156,6 +2158,21 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
+def _generate_multimodal(rng, size, num_modes, lim0, lim1):
+    bins = np.linspace(lim0, lim1, 10000)
+    bin_step = bins[1] - bins[0]
+    prob = np.zeros(bins.size)
+    mode_step = (lim1 - lim0) / (num_modes + 1)
+    for i in range(num_modes):
+        center = mode_step * (i + 1)
+        sigma = mode_step / 5.0
+        prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
+    prob /= np.sum(prob)
+    choices = rng.choice(np.arange(bins.size), size, p=prob)
+    values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
+    return values
+
+
 def generate_unit_locations(
     num_units,
     channel_locations,
@@ -2165,6 +2182,8 @@ def generate_unit_locations(
     minimum_distance=20.0,
     max_iteration=100,
     distance_strict=False,
+    distribution="uniform",
+    num_modes=2,
     seed=None,
 ):
     """
@@ -2205,6 +2224,14 @@ def generate_unit_locations(
         If True, the function will raise an exception if a solution meeting the distance
         constraint cannot be found within the maximum number of iterations. If False, a warning
         will be issued.
+    distribution : "uniform" | "multimodal", default: "uniform"
+        How units are spread.
+        "uniform" is units everywhere
+        "multimodal" mimic the distribution of units 'by layer'  on the 'y' axis (dim=1)
+        Important note, when using multimodal in conjonction of minimum_distance not None, there is not garanty
+        of a true multimodal because units that do not respect the distance of move again and are most chance to be in between layers.
+    num_modes : int, default 2
+        In case of distribution="multimodal", this is the number of modes (layers)
     seed : int or None, optional
         Random seed for reproducibility. If None, the seed is not set
 
@@ -2221,7 +2248,12 @@ def generate_unit_locations(
     minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
 
     units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
-    units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
+    if distribution == "uniform":
+        units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
+    elif distribution == "multimodal":
+        units_locations[:, 1] = _generate_multimodal(rng, num_units, num_modes, minimum_y, maximum_y)
+    else:
+        raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or ")
     units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
 
     if minimum_distance is not None:
@@ -2242,20 +2274,27 @@ def generate_unit_locations(
                     renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
 
                 units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
-                units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+                if distribution == "uniform":
+                    units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+
+                elif distribution == "multimodal":
+                    units_locations[:, 1][renew_inds] = _generate_multimodal(
+                        rng, renew_inds.size, num_modes, minimum_y, maximum_y
+                    )
                 units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+
             else:
                 solution_found = True
                 break
 
-    if not solution_found:
-        if distance_strict:
-            raise ValueError(
-                f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
-                "You can use distance_strict=False or reduce minimum distance"
-            )
-        else:
-            warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
+        if not solution_found:
+            if distance_strict:
+                raise ValueError(
+                    f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+                    "You can use distance_strict=False or reduce minimum distance"
+                )
+            else:
+                warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 

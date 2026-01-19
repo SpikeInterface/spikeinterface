@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 from numpy.testing import assert_array_equal
-from .base import BaseExtractor
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
@@ -16,11 +16,41 @@ def check_sorted_arrays_equal(a1, a2):
 def check_recordings_equal(
     RX1: BaseRecording,
     RX2: BaseRecording,
-    return_scaled=True,
+    return_scaled=None,
+    return_in_uV=True,
     force_dtype=None,
     check_annotations: bool = False,
     check_properties: bool = False,
 ) -> None:
+    """
+    Check if two recordings are equal.
+
+    Parameters
+    ----------
+    RX1 : BaseRecording
+        First recording
+    RX2 : BaseRecording
+        Second recording
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+        If True, compare scaled traces
+    return_in_uV : bool, default: True
+        If True, compare scaled traces.
+    force_dtype : dtype, default: None
+        If not None, force the dtype of the traces before comparison
+    check_annotations : bool, default: False
+        If True, check annotations
+    check_properties : bool, default: False
+        If True, check properties
+    """
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
     assert RX1.get_num_segments() == RX2.get_num_segments()
 
     for segment_idx in range(RX1.get_num_segments()):
@@ -36,13 +66,13 @@ def check_recordings_equal(
         # get_traces
         if force_dtype is None:
             assert np.allclose(
-                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
+                RX1.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV),
+                RX2.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV),
             )
         else:
             assert np.allclose(
-                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
+                RX1.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV).astype(force_dtype),
+                RX2.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV).astype(force_dtype),
             )
         sf = 0
         ef = N
@@ -53,19 +83,19 @@ def check_recordings_equal(
         if force_dtype is None:
             assert np.allclose(
                 RX1.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ),
                 RX2.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ),
             )
         else:
             assert np.allclose(
                 RX1.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ).astype(force_dtype),
                 RX2.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ).astype(force_dtype),
             )
 

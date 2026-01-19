@@ -1,12 +1,8 @@
 import pytest
-from pathlib import Path
-
-from spikeinterface import set_global_tmp_folder
-from spikeinterface.core import generate_recording
-
-from spikeinterface.preprocessing import normalize_by_quantile, scale, center, zscore
-
 import numpy as np
+
+from spikeinterface.core import generate_recording
+from spikeinterface.preprocessing import normalize_by_quantile, scale, center, zscore
 
 
 def test_normalize_by_quantile():

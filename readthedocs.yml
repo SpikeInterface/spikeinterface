@@ -1,14 +1,18 @@
 version: 2
 
+# Specify os and python version
+build:
+  os: "ubuntu-24.04"
+  tools:
+    python: "3.10"
+  commands:
+    - asdf plugin add uv
+    - asdf install uv latest
+    - asdf global uv latest
+    - uv venv $READTHEDOCS_VIRTUALENV_PATH
+    - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv --preview pip install .[docs]
+    - python -m sphinx -T -b html -d doc/_build/doctrees -D language=en  doc $READTHEDOCS_OUTPUT/html
+
 sphinx:
   # Path to your Sphinx configuration file.
   configuration: doc/conf.py
-
-build:
-  os: ubuntu-22.04
-  tools:
-    python: "mambaforge-4.10"
-
-
-conda:
-  environment: docs_rtd.yml
