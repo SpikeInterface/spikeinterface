@@ -17,7 +17,7 @@ from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
-from .sorting_tools import random_spikes_selection
+from .sorting_tools import random_spikes_selection, select_sorting_periods_mask, spike_vector_to_indices
 from .job_tools import fix_job_kwargs, split_job_kwargs
 
 
@@ -1343,6 +1343,9 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     need_backward_compatibility_on_load = False
     nodepipeline_variables = []  # to be defined in subclass
 
+    def __init__(self, sorting_analyzer):
+        super().__init__(sorting_analyzer)
+
     def _set_params(self, **kwargs):
         params = kwargs.copy()
         return params
@@ -1381,7 +1384,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for d, name in zip(data, data_names):
             self.data[name] = d
 
-    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, copy=True):
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, periods=None, copy=True):
         """
         Return extension data. If the extension computes more than one `nodepipeline_variables`,
         the `return_data_name` is used to specify which one to return.
@@ -1395,13 +1398,15 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         return_data_name : str | None, default: None
             The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
             the first one is returned.
+        periods : array of unit_period dtype, default: None
+            Optional periods (segment_index, start_sample_index, end_sample_index, unit_index) to slice output data
         copy : bool, default: True
             Whether to return a copy of the data (only for outputs="numpy")
 
         Returns
         -------
         numpy.ndarray | dict
-            The
+            The requested data in numpy or by unit format.
         """
 
         if len(self.nodepipeline_variables) == 1:
@@ -1415,6 +1420,14 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
 
         all_data = self.data[return_data_name]
+        keep_mask = None
+        if periods is not None:
+            keep_mask = select_sorting_periods_mask(
+                self.sorting_analyzer.sorting,
+                periods,
+            )
+            all_data = all_data[keep_mask]
+
         if outputs == "numpy":
             if copy:
                 return all_data.copy()  # return a copy to avoid modification
@@ -1422,8 +1435,14 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 return all_data
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
-            # use the cache of indices
-            spike_indices = self.sorting_analyzer.sorting.get_spike_vector_to_indices()
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
+            if keep_mask is not None:
+                # since we are filtering spikes, we need to recompute the spike indices
+                spike_vector = spike_vector[keep_mask]
+                spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            else:
+                # use the cache of indices
+                spike_indices = self.sorting_analyzer.sorting.get_spike_vector_to_indices()
             data_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 data_by_units[segment_index] = {}
