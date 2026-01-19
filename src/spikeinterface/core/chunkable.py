@@ -66,6 +66,42 @@ class ChunkableMixin(ABC):
         """
         return self.__class__._preferred_mp_context
 
+    def get_memory_size(self, segment_index=None) -> int:
+        """
+        Returns the memory size of segment_index in bytes.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The index of the segment for which the memory size should be calculated.
+            For multi-segment objects, it is required, default: None
+            With single segment recording returns the memory size of the single segment
+
+        Returns
+        -------
+        int
+            The memory size of the specified segment in bytes.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        num_samples = self.get_num_samples(segment_index=segment_index)
+        sample_size_in_bytes = self.get_sample_size_in_bytes()
+
+        memory_bytes = num_samples * sample_size_in_bytes
+
+        return memory_bytes
+
+    def get_total_memory_size(self) -> int:
+        """
+        Returns the sum in bytes of all the memory sizes of the segments.
+
+        Returns
+        -------
+        int
+            The total memory size in bytes for all segments.
+        """
+        memory_per_segment = (self.get_memory_size(segment_index) for segment_index in range(self.get_num_segments()))
+        return sum(memory_per_segment)
+
     # Add time handling
     def get_time_info(self, segment_index=None) -> dict:
         """
