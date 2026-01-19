@@ -24,7 +24,7 @@ def generate_session_displacement_recordings(
     recording_amplitude_scalings=None,
     shift_units_outside_probe=False,
     sampling_frequency=30000.0,
-    probe_name="Neuropixel-128",
+    probe_name="Neuropixels1-128",
     generate_probe_kwargs=None,
     generate_unit_locations_kwargs=dict(
         margin_um=20.0,
