@@ -204,53 +204,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
     get_num_frames = get_num_samples
 
-    def get_total_samples(self) -> int:
-        """
-        Returns the sum of the number of samples in each segment.
-
-        Returns
-        -------
-        int
-            The total number of samples
-        """
-        num_segments = self.get_num_segments()
-        samples_per_segment = (self.get_num_samples(segment_index) for segment_index in range(num_segments))
-
-        return sum(samples_per_segment)
-
-    def get_duration(self, segment_index=None) -> float:
-        """
-        Returns the duration in seconds.
-
-        Parameters
-        ----------
-        segment_index : int or None, default: None
-            The sample index to retrieve the duration for.
-            For multi-segment objects, it is required, default: None
-            With single segment recording returns the duration of the single segment
-
-        Returns
-        -------
-        float
-            The duration in seconds
-        """
-        segment_duration = (
-            self.get_end_time(segment_index) - self.get_start_time(segment_index) + (1 / self.get_sampling_frequency())
-        )
-        return segment_duration
-
-    def get_total_duration(self) -> float:
-        """
-        Returns the total duration in seconds
-
-        Returns
-        -------
-        float
-            The duration in seconds
-        """
-        duration = sum([self.get_duration(segment_index) for segment_index in range(self.get_num_segments())])
-        return duration
-
     def get_memory_size(self, segment_index=None) -> int:
         """
         Returns the memory size of segment_index in bytes.

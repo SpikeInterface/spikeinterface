@@ -248,14 +248,63 @@ class ChunkableMixin(ABC):
         return rs.sample_index_to_time(sample_ind)
 
     def time_to_sample_index(self, time_s, segment_index=None):
+        """
+        Transform time in seconds into sample index
+        """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
         return rs.time_to_sample_index(time_s)
 
+    def get_total_samples(self) -> int:
+        """
+        Returns the sum of the number of samples in each segment.
+
+        Returns
+        -------
+        int
+            The total number of samples
+        """
+        num_segments = self.get_num_segments()
+        samples_per_segment = (self.get_num_samples(segment_index) for segment_index in range(num_segments))
+
+        return sum(samples_per_segment)
+
+    def get_duration(self, segment_index=None) -> float:
+        """
+        Returns the duration in seconds.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The sample index to retrieve the duration for.
+            For multi-segment objects, it is required, default: None
+            With single segment recording returns the duration of the single segment
+
+        Returns
+        -------
+        float
+            The duration in seconds
+        """
+        segment_duration = (
+            self.get_end_time(segment_index) - self.get_start_time(segment_index) + (1 / self.get_sampling_frequency())
+        )
+        return segment_duration
+
+    def get_total_duration(self) -> float:
+        """
+        Returns the total duration in seconds
+
+        Returns
+        -------
+        float
+            The duration in seconds
+        """
+        duration = sum([self.get_duration(segment_index) for segment_index in range(self.get_num_segments())])
+        return duration
+
     def _get_t_starts(self):
         # handle t_starts
         t_starts = []
-        has_time_vectors = []
         for rs in self.segments:
             d = rs.get_times_kwargs()
             t_starts.append(d["t_start"])
