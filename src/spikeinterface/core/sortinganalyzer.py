@@ -1770,7 +1770,20 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+        # Check dependencies: either already computed or in the extensions to compute
+        extensions_to_compute = list(extensions.keys())
+        for extension_name, extension_params in extensions.items():
+            required_dependencies = get_extension_class(extension_name).get_required_dependencies(**extension_params)
+            for dependency_name in required_dependencies:
+                if "|" in dependency_name:
+                    ok = any(
+                        self.has_extension(name) or name in extensions_to_compute for name in dependency_name.split("|")
+                    )
+                else:
+                    ok = self.has_extension(dependency_name) or dependency_name in extensions_to_compute
+                assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
+        # Sort extensions by dependency order
         sorted_extensions = _sort_extensions_by_dependency(extensions)
 
         for extension_name in sorted_extensions.keys():
