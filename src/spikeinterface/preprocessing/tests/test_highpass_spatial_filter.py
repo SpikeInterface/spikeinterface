@@ -3,7 +3,7 @@ import os
 import numpy as np
 from copy import deepcopy
 
-import spikeinterface as si
+import spikeinterface.core as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core import generate_recording
@@ -24,7 +24,7 @@ if DEBUG:
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("neurodsp") is None or importlib.util.find_spec("spikeglx") is None or ON_GITHUB,
+    importlib.util.find_spec("ibldsp") is None or importlib.util.find_spec("spikeglx") is None or ON_GITHUB,
     reason="Only local. Requires ibl-neuropixel install",
 )
 @pytest.mark.parametrize("lagc", [False, 1, 300])
@@ -51,32 +51,28 @@ def test_highpass_spatial_filter_real_data(lagc):
     use DEBUG = true to visualise.
 
     """
-    import spikeglx
-    import neurodsp.voltage as voltage
+    import ibldsp.voltage
+    import neuropixel
 
-    options = dict(lagc=lagc, ntr_pad=25, ntr_tap=50, butter_kwargs=None)
-    print(options)
+    local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
+    si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
+    si_recording = spre.astype(si_recording, "float")
+    recording_ps = spre.phase_shift(si_recording)
+    recording_hp = spre.highpass_filter(recording_ps, freq_min=300, filter_order=3)
+    recording_hps = spre.highpass_spatial_filter(recording_hp)
+    raw = si_recording.get_traces().astype(np.float32).T * neuropixel.S2V_AP
+    si_filtered = recording_hps.get_traces().astype(np.float32).T * neuropixel.S2V_AP
 
-    ibl_data, si_recording = get_ibl_si_data()
-
-    si_filtered, _ = run_si_highpass_filter(si_recording, **options)
-
-    ibl_filtered = run_ibl_highpass_filter(ibl_data.copy(), **options)
+    destripe = ibldsp.voltage.destripe(raw, fs=30_000, neuropixel_version=1)
 
     if DEBUG:
-        fig, axs = plt.subplots(ncols=4)
-        axs[0].imshow(si_recording.get_traces(return_in_uV=True))
-        axs[0].set_title("SI Raw")
-        axs[1].imshow(ibl_data.T)
-        axs[1].set_title("IBL Raw")
-        axs[2].imshow(si_filtered)
-        axs[2].set_title("SI Filtered ")
-        axs[3].imshow(ibl_filtered)
-        axs[3].set_title("IBL Filtered")
+        from viewephys.gui import viewephys
 
-    assert np.allclose(
-        si_filtered, ibl_filtered * 1e6, atol=1e-01, rtol=0
-    )  # the differences are entired due to scaling on data load.
+        eqc = {}
+        eqc["si_filtered"] = viewephys(si_filtered, fs=30_000, title="si_filtered")
+        eqc["ibl_filtered"] = viewephys(destripe, fs=30_000, title="ibl_filtered")
+
+    np.testing.assert_allclose(si_filtered[12:120, 300:800], destripe[12:120, 300:800], atol=1e-05, rtol=0)
 
 
 @pytest.mark.parametrize("ntr_pad", [None, 0, 31])
@@ -140,24 +136,6 @@ def test_dtype_stability(dtype):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def get_ibl_si_data():
-    """
-    Set fixture to session to ensure origional data is not changed.
-    """
-    import spikeglx
-
-    local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
-    ibl_recording = spikeglx.Reader(
-        local_path / "Noise4Sam_g0_imec0" / "Noise4Sam_g0_t0.imec0.ap.bin", ignore_warnings=True
-    )
-    ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
-
-    si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
-    si_recording = spre.astype(si_recording, dtype="float32")
-
-    return ibl_data, si_recording
-
-
 def process_args_for_si(si_recording, lagc):
     """"""
     if isinstance(lagc, bool) and not lagc:
@@ -215,9 +193,10 @@ def run_si_highpass_filter(si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, 
 
 
 def run_ibl_highpass_filter(ibl_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
-    butter_kwargs, ntr_pad, lagc = process_args_for_ibl(butter_kwargs, ntr_pad, lagc)
+    import ibldsp.voltage
 
-    ibl_filtered = voltage.kfilt(ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs).T
+    butter_kwargs, ntr_pad, lagc = process_args_for_ibl(butter_kwargs, ntr_pad, lagc)
+    ibl_filtered = ibldsp.voltage.kfilt(ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs).T
 
     return ibl_filtered
 
