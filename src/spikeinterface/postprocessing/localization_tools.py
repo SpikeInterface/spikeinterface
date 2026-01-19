@@ -90,8 +90,8 @@ def compute_monopolar_triangulation(
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
         unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        keep = [np.where(sorting_analyzer_or_templates.unit_ids == unit_id)[0][0] for unit_id in unit_ids]
+        templates = templates[np.array(keep), :, :]
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -176,8 +176,8 @@ def compute_center_of_mass(
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
         unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        keep = [np.where(sorting_analyzer_or_templates.unit_ids == unit_id)[0][0] for unit_id in unit_ids]
+        templates = templates[np.array(keep), :, :]
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -259,8 +259,8 @@ def compute_grid_convolution(
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
         unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        keep = [np.where(sorting_analyzer_or_templates.unit_ids == unit_id)[0][0] for unit_id in unit_ids]
+        templates = templates[np.array(keep), :, :]
 
     fs = sorting_analyzer_or_templates.sampling_frequency
     percentile = 100 - percentile
