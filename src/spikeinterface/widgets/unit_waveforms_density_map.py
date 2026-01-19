@@ -184,7 +184,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                 origin="lower",
                 aspect="auto",
                 extent=(0, x_max, dp.bin_min, dp.bin_max),
-                cmap="hot",
+                cmap="Grays",
             )
         else:
             for ax, unit_id in zip(self.axes.flatten(), dp.unit_ids):
@@ -196,7 +196,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                     origin="lower",
                     aspect="auto",
                     extent=(0, x_max, dp.bin_min, dp.bin_max),
-                    cmap="hot",
+                    cmap="Grays",
                 )
 
         for unit_index, unit_id in enumerate(dp.unit_ids):
@@ -220,7 +220,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                 channel_id = dp.channel_ids[chan_ind]
                 x = (i + 0.5) * dp.template_width / freq_khz
                 y = (dp.bin_max + dp.bin_min) / 2.0
-                ax.text(x, y, f"chan_id {channel_id}", color="w", ha="center", va="center")
+                ax.text(x, y, f"{channel_id}", color="k", ha="center", va="center")
 
             ax.set_xlabel("Time [ms]")
             ax.set_ylabel(f"unit_id {unit_id}")
