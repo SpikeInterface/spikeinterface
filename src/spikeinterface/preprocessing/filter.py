@@ -118,6 +118,7 @@ class FilterRecording(BasePreprocessor):
 
         assert margin_ms is not None, "margin_ms must be provided!"
         margin = int(margin_ms * fs / 1000.0)
+        self.margin_samples = margin
         for parent_segment in recording.segments:
             self.add_segment(
                 FilterRecordingSegment(
