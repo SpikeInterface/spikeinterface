@@ -37,7 +37,7 @@ def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, per
                     end_sample = seg_start + period["end_sample_index"]
                     end_sample = end_sample // bin_duration_samples * bin_duration_samples + 1  # align to bin
                     bin_edges.extend(np.arange(start_sample, end_sample, bin_duration_samples))
-            bin_edges_for_units[unit_id] = np.array(bin_edges)
+            bin_edges_for_units[unit_id] = np.unique(np.array(bin_edges))
     else:
         for unit_id in sorting.unit_ids:
             bin_edges = []

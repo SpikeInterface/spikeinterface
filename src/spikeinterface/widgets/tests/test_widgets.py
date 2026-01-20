@@ -20,7 +20,6 @@ import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 from spikeinterface.preprocessing import scale, correct_motion
 
-
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
 SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW"))

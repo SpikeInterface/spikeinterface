@@ -10,7 +10,6 @@ from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates_with_accumulator
 
-
 _sparsity_doc = """
     method : str
         * "best_channels" : N best channels with the largest amplitude. Use the "num_channels" argument to specify the

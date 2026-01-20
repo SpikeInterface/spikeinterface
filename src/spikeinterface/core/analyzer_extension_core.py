@@ -13,6 +13,7 @@ import warnings
 import numpy as np
 from collections import namedtuple
 
+from .numpyextractors import NumpySorting
 from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
@@ -823,10 +824,9 @@ class BaseMetric:
     metric_columns = {}  # column names and their dtypes of the dataframe
     metric_descriptions = {}  # descriptions of each metric column
     needs_recording = False  # whether the metric needs recording
-    needs_tmp_data = (
-        False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
-    )
-    needs_job_kwargs = False
+    needs_tmp_data = False  # whether the metric needs temporary data computed with MetricExtension._prepare_data
+    needs_job_kwargs = False  # whether the metric needs job_kwargs
+    supports_periods = False  # whether the metric function supports periods
     depend_on = []  # extensions the metric depends on
 
     # the metric function must have the signature:
@@ -839,7 +839,7 @@ class BaseMetric:
     metric_function = None  # to be defined in subclass
 
     @classmethod
-    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs):
+    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs, periods=None):
         """Compute the metric.
 
         Parameters
@@ -854,6 +854,8 @@ class BaseMetric:
             Temporary data to pass to the metric function
         job_kwargs : dict
             Job keyword arguments to control parallelization
+        periods : np.ndarray | None
+            Numpy array of unit periods of unit_period_dtype if supports_periods is True
 
         Returns
         -------
@@ -865,6 +867,8 @@ class BaseMetric:
             args += (tmp_data,)
         if cls.needs_job_kwargs:
             args += (job_kwargs,)
+        if cls.supports_periods:
+            args += (periods,)
 
         results = cls.metric_function(*args, **metric_params)
 
@@ -959,18 +963,28 @@ class BaseMetricExtension(AnalyzerExtension):
                     )
         return metric_column_descriptions
 
-    def _cast_metrics(self, metrics_df):
-        metric_dtypes = {}
-        for m in self.metric_list:
-            metric_dtypes.update(m.metric_columns)
-
-        for col in metrics_df.columns:
-            if col in metric_dtypes:
-                try:
-                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
-                except Exception as e:
-                    print(f"Error casting column {col}: {e}")
-        return metrics_df
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        metric_names = params.get("metric_names", None)
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        metric_depend_on = set()
+        for metric_name in metric_names:
+            metric = [m for m in cls.metric_list if m.metric_name == metric_name][0]
+            for dep in metric.depend_on:
+                if "|" in dep:
+                    dep_options = dep.split("|")
+                    metric_depend_on.update(dep_options)
+                else:
+                    metric_depend_on.add(dep)
+        depend_on = list(cls.depend_on) + list(metric_depend_on)
+        return depend_on
 
     def _set_params(
         self,
@@ -978,6 +992,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
         metrics_to_compute: list[str] | None = None,
+        periods: np.ndarray | None = None,
         **other_params,
     ):
         """
@@ -992,6 +1007,10 @@ class BaseMetricExtension(AnalyzerExtension):
             If None, default parameters for all metrics are used.
         delete_existing_metrics : bool, default: False
             If True, existing metrics in the extension will be deleted before computing new ones.
+        metrics_to_compute : list[str] | None
+            List of metric names to compute. If None, all metrics in `metric_names` are computed.
+        periods : np.ndarray | None
+            Numpy array of unit_period_dtype defining periods to compute metrics over.
         other_params : dict
             Additional parameters for metric computation.
 
@@ -1067,6 +1086,7 @@ class BaseMetricExtension(AnalyzerExtension):
             metrics_to_compute=metrics_to_compute,
             delete_existing_metrics=delete_existing_metrics,
             metric_params=metric_params,
+            periods=periods,
             **other_params,
         )
         return params
@@ -1117,6 +1137,8 @@ class BaseMetricExtension(AnalyzerExtension):
         if metric_names is None:
             metric_names = self.params["metric_names"]
 
+        periods = self.params.get("periods", None)
+
         column_names_dtypes = {}
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
@@ -1141,6 +1163,7 @@ class BaseMetricExtension(AnalyzerExtension):
                     metric_params=metric_params,
                     tmp_data=tmp_data,
                     job_kwargs=job_kwargs,
+                    periods=periods,
                 )
             except Exception as e:
                 warnings.warn(f"Error computing metric {metric_name}: {e}")
@@ -1167,6 +1190,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics_to_compute = self.params["metrics_to_compute"]
         delete_existing_metrics = self.params["delete_existing_metrics"]
+        periods = self.params.get("periods", None)
 
         _, job_kwargs = split_job_kwargs(job_kwargs)
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -1206,15 +1230,18 @@ class BaseMetricExtension(AnalyzerExtension):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def set_data(self, ext_data_name, data):
-        import pandas as pd
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
 
-        if ext_data_name != "metrics":
-            return
-        if not isinstance(data, pd.DataFrame):
-            return
-        metrics = self._cast_metrics(data)
-        self.data[ext_data_name] = metrics
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
 
     def _select_extension_data(self, unit_ids: list[int | str]):
         """
@@ -1329,6 +1356,16 @@ class BaseMetricExtension(AnalyzerExtension):
         new_data = dict(metrics=metrics)
         return new_data
 
+    def set_data(self, ext_data_name, data):
+        import pandas as pd
+
+        if ext_data_name != "metrics":
+            return
+        if not isinstance(data, pd.DataFrame):
+            return
+        metrics = self._cast_metrics(data)
+        self.data[ext_data_name] = metrics
+
 
 class BaseSpikeVectorExtension(AnalyzerExtension):
     """
@@ -1426,8 +1463,16 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 periods,
             )
             all_data = all_data[keep_mask]
+            # since we have the mask already, we can use it directly to avoid double computation
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=True)
+            sliced_spike_vector = spike_vector[keep_mask]
+            sorting = NumpySorting(
+                sliced_spike_vector,
+                sampling_frequency=self.sorting_analyzer.sampling_frequency,
+                unit_ids=self.sorting_analyzer.unit_ids,
+            )
         else:
-            keep_mask = None
+            sorting = self.sorting_analyzer.sorting
 
         if outputs == "numpy":
             if copy:
@@ -1439,8 +1484,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
             if keep_mask is not None:
                 # since we are filtering spikes, we need to recompute the spike indices
-                spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-                spike_vector = spike_vector[keep_mask]
+                spike_vector = sorting.to_spike_vector(concatenated=False)
                 spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             else:
                 # use the cache of indices
