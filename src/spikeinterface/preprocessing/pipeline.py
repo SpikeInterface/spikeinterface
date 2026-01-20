@@ -6,7 +6,6 @@ from spikeinterface.core.core_tools import is_dict_extractor, is_path_remote
 from spikeinterface.core.zarrextractors import super_zarr_open
 from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
 
-
 pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
 pp_names_to_classes = {pp_function.__name__: pp_class for pp_class, pp_function in _all_preprocesser_dict.items()}
 

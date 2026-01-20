@@ -961,18 +961,28 @@ class BaseMetricExtension(AnalyzerExtension):
                     )
         return metric_column_descriptions
 
-    def _cast_metrics(self, metrics_df):
-        metric_dtypes = {}
-        for m in self.metric_list:
-            metric_dtypes.update(m.metric_columns)
-
-        for col in metrics_df.columns:
-            if col in metric_dtypes:
-                try:
-                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
-                except Exception as e:
-                    print(f"Error casting column {col}: {e}")
-        return metrics_df
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        metric_names = params.get("metric_names", None)
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        metric_depend_on = set()
+        for metric_name in metric_names:
+            metric = [m for m in cls.metric_list if m.metric_name == metric_name][0]
+            for dep in metric.depend_on:
+                if "|" in dep:
+                    dep_options = dep.split("|")
+                    metric_depend_on.update(dep_options)
+                else:
+                    metric_depend_on.add(dep)
+        depend_on = list(cls.depend_on) + list(metric_depend_on)
+        return depend_on
 
     def _set_params(
         self,
@@ -994,6 +1004,8 @@ class BaseMetricExtension(AnalyzerExtension):
             If None, default parameters for all metrics are used.
         delete_existing_metrics : bool, default: False
             If True, existing metrics in the extension will be deleted before computing new ones.
+        metrics_to_compute : list[str] | None
+            List of metric names to compute. If None, all metrics in `metric_names` are computed.
         other_params : dict
             Additional parameters for metric computation.
 
@@ -1208,15 +1220,18 @@ class BaseMetricExtension(AnalyzerExtension):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def set_data(self, ext_data_name, data):
-        import pandas as pd
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
 
-        if ext_data_name != "metrics":
-            return
-        if not isinstance(data, pd.DataFrame):
-            return
-        metrics = self._cast_metrics(data)
-        self.data[ext_data_name] = metrics
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
 
     def _select_extension_data(self, unit_ids: list[int | str]):
         """
@@ -1330,6 +1345,16 @@ class BaseMetricExtension(AnalyzerExtension):
 
         new_data = dict(metrics=metrics)
         return new_data
+
+    def set_data(self, ext_data_name, data):
+        import pandas as pd
+
+        if ext_data_name != "metrics":
+            return
+        if not isinstance(data, pd.DataFrame):
+            return
+        metrics = self._cast_metrics(data)
+        self.data[ext_data_name] = metrics
 
 
 class BaseSpikeVectorExtension(AnalyzerExtension):

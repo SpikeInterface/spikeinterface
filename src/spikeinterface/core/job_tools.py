@@ -18,7 +18,6 @@ from threadpoolctl import threadpool_limits
 
 from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
-
 _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
     * chunk_duration or chunk_size or chunk_memory or total_memory
         - chunk_size : int

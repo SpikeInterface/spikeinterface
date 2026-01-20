@@ -16,7 +16,6 @@ from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core import BaseRecording
 
-
 motion_options_preset = {
     # dredge
     "dredge": {

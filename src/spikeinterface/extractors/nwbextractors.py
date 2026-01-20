@@ -10,7 +10,6 @@ from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-
 if importlib.util.find_spec("pynwb") is not None:
     HAVE_PYNWB = True
 else:

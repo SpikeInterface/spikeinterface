@@ -8,7 +8,6 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from spikeinterface.core import get_chunk_with_margin
 
-
 HIGHPASS_ERROR_THRESHOLD_HZ = 100
 MARGIN_TO_CHUNK_PERCENT_WARNING = 0.2  # 20%
 

@@ -12,7 +12,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 
-
 PathType = Union[str, Path]
 OptionalPathType = Optional[PathType]
 

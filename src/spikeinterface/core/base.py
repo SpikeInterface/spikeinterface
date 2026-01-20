@@ -27,7 +27,6 @@ from .core_tools import (
 )
 from .job_tools import _shared_job_kwargs_doc
 
-
 # base dtypes used throughout spikeinterface
 base_peak_dtype = [
     ("sample_index", "int64"),
