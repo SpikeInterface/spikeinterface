@@ -532,7 +532,7 @@ class ChunkRecordingExecutor:
 
                     if self.progress_bar:
                         results = tqdm(
-                            results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices)
+                            results, desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})", total=len(recording_slices)
                         )
 
                     for res in results:
