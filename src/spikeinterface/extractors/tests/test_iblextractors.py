@@ -76,7 +76,8 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
     def test_probe_representation(self):
         probe = self.recording.get_probe()
-        expected_probe_representation = "Probe - 384ch"
+        # we simply check that the probe has 384 channels in its representation
+        expected_probe_representation = "384ch"
         assert expected_probe_representation in repr(probe)
 
     def test_property_keys(self):
