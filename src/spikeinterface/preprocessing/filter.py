@@ -70,7 +70,7 @@ class FilterRecording(BasePreprocessor):
     display_margin_to_chunk_percent_warning : float | None, default: 0.2
         If not None, a warning is displayed if the margin size is more than this fraction of
         the chunk size during get_traces calls.
-        
+
     Returns
     -------
     filter_recording : FilterRecording
@@ -119,9 +119,9 @@ class FilterRecording(BasePreprocessor):
             self.set_channel_offsets(0)
 
         if display_margin_to_chunk_percent_warning is not None:
-            assert 0.0 < display_margin_to_chunk_percent_warning < 1.0, (
-                "display_margin_to_chunk_percent_warning must be between 0 and 1"
-            )
+            assert (
+                0.0 < display_margin_to_chunk_percent_warning < 1.0
+            ), "display_margin_to_chunk_percent_warning must be between 0 and 1"
 
         assert margin_ms is not None, "margin_ms must be provided!"
         margin = int(margin_ms * fs / 1000.0)
@@ -136,7 +136,7 @@ class FilterRecording(BasePreprocessor):
                     dtype,
                     add_reflect_padding=add_reflect_padding,
                     direction=direction,
-                    display_margin_to_chunk_percent_warning=display_margin_to_chunk_percent_warning
+                    display_margin_to_chunk_percent_warning=display_margin_to_chunk_percent_warning,
                 )
             )
 
@@ -152,7 +152,7 @@ class FilterRecording(BasePreprocessor):
             add_reflect_padding=add_reflect_padding,
             dtype=dtype.str,
             direction=direction,
-            display_margin_to_chunk_percent_warning=display_margin_to_chunk_percent_warning
+            display_margin_to_chunk_percent_warning=display_margin_to_chunk_percent_warning,
         )
 
 
@@ -166,7 +166,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         dtype,
         add_reflect_padding=False,
         direction="forward-backward",
-        display_margin_to_chunk_percent_warning=0.2
+        display_margin_to_chunk_percent_warning=0.2,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.coeff = coeff
