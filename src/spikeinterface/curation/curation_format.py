@@ -6,7 +6,7 @@ import numpy as np
 from itertools import chain
 
 from spikeinterface.core import BaseSorting, SortingAnalyzer, apply_merges_to_sorting, apply_splits_to_sorting
-from spikeinterface.curation.curation_model import CurationModel
+from spikeinterface.curation.curation_model import CurationModel, SequentialCuration
 
 
 def validate_curation_dict(curation_dict: dict):
@@ -138,7 +138,7 @@ def apply_curation_labels(
 
 def apply_curation(
     sorting_or_analyzer: BaseSorting | SortingAnalyzer,
-    curation_dict_or_model: dict | CurationModel,
+    curation_dict_or_model: dict | list | CurationModel | SequentialCuration,
     censor_ms: float | None = None,
     new_id_strategy: str = "append",
     merging_mode: str = "soft",
@@ -164,7 +164,7 @@ def apply_curation(
     ----------
     sorting_or_analyzer : Sorting | SortingAnalyzer
         The Sorting or SortingAnalyzer object to apply merges.
-    curation_dict : dict or CurationModel
+    curation_dict : dict | CurationModel | SequentialCuration
         The curation dict or model.
     censor_ms : float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
@@ -199,14 +199,32 @@ def apply_curation(
         sorting_or_analyzer, (BaseSorting, SortingAnalyzer)
     ), f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
     assert isinstance(
-        curation_dict_or_model, (dict, CurationModel)
-    ), f"`curation_dict_or_model` must be a dict or a CurationModel, not an object of type {type(curation_dict_or_model)}"
+        curation_dict_or_model, (dict, list, CurationModel, SequentialCuration)
+    ), f"`curation_dict_or_model` must be a dict, CurationModel or a SequentialCuration not an object of type {type(curation_dict_or_model)}"
     if isinstance(curation_dict_or_model, dict):
         curation_model = CurationModel(**curation_dict_or_model)
+    elif isinstance(curation_dict_or_model, list):
+        curation_model = SequentialCuration(curation_steps=curation_dict_or_model)
     else:
         curation_model = curation_dict_or_model.model_copy(deep=True)
 
-    if not np.array_equal(np.asarray(curation_model.unit_ids), sorting_or_analyzer.unit_ids):
+    if isinstance(curation_model, SequentialCuration):
+        for c, single_curation_model in enumerate(curation_model.curation_steps):
+            if verbose:
+                print(f"Applying curation step: {c + 1} / {len(curation_model.curation_steps)}")
+            sorting_or_analyzer = apply_curation(
+                sorting_or_analyzer,
+                single_curation_model,
+                censor_ms=censor_ms,
+                merging_mode=merging_mode,
+                sparsity_overlap=sparsity_overlap,
+                raise_error_if_overlap_fails=raise_error_if_overlap_fails,
+                verbose=verbose,
+                job_kwargs=job_kwargs,
+            )
+        return sorting_or_analyzer
+
+    if not set(curation_model.unit_ids) == set(sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
 
     # 1. Apply labels
@@ -228,6 +246,7 @@ def apply_curation(
             curated_sorting_or_analyzer, _, _ = apply_merges_to_sorting(
                 curated_sorting_or_analyzer,
                 merge_unit_groups=merge_unit_groups,
+                new_unit_ids=merge_new_unit_ids,
                 censor_ms=censor_ms,
                 new_id_strategy=new_id_strategy,
                 return_extra=True,
@@ -235,6 +254,7 @@ def apply_curation(
         else:
             curated_sorting_or_analyzer, _ = curated_sorting_or_analyzer.merge_units(
                 merge_unit_groups=merge_unit_groups,
+                new_unit_ids=merge_new_unit_ids,
                 censor_ms=censor_ms,
                 merging_mode=merging_mode,
                 sparsity_overlap=sparsity_overlap,
