@@ -123,12 +123,10 @@ def compute_periods(sorting_analyzer, num_periods, bin_size_s=None):
     for segment_index in range(sorting_analyzer.recording.get_num_segments()):
         samples_per_period = sorting_analyzer.get_num_samples(segment_index) // num_periods
         if bin_size_s is not None:
-            print(f"Original samples_per_period: {samples_per_period} - num_periods: {num_periods}")
             bin_size_samples = int(bin_size_s * sorting_analyzer.sampling_frequency)
             print(samples_per_period / bin_size_samples)
             samples_per_period = samples_per_period // bin_size_samples * bin_size_samples
             num_periods = int(np.round(sorting_analyzer.get_num_samples(segment_index) / samples_per_period))
-            print(f"Adjusted samples_per_period: {samples_per_period} - num_periods: {num_periods}")
         for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
             period_starts = np.arange(0, sorting_analyzer.get_num_samples(segment_index), samples_per_period)
             periods_per_unit = np.zeros(len(period_starts), dtype=unit_period_dtype)
@@ -138,7 +136,6 @@ def compute_periods(sorting_analyzer, num_periods, bin_size_s=None):
                 periods_per_unit[i]["start_sample_index"] = period_start
                 periods_per_unit[i]["end_sample_index"] = period_end
                 periods_per_unit[i]["unit_index"] = unit_index
-            print(periods_per_unit, sorting_analyzer.get_num_samples(segment_index), samples_per_period)
             all_periods.append(periods_per_unit)
     return np.concatenate(all_periods)
 
