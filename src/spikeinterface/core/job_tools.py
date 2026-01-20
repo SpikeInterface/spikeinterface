@@ -503,7 +503,7 @@ class ChunkRecordingExecutor:
             if self.pool_engine == "process":
 
                 if self.need_worker_index:
-                    
+
                     multiprocessing.set_start_method(self.mp_context, force=True)
                     lock = multiprocessing.Lock()
                     array_pid = multiprocessing.Array("i", n_jobs)

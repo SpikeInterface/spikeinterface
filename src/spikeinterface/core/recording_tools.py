@@ -916,8 +916,7 @@ def get_chunk_with_margin(
             else:
                 # we need a copy to change the dtype
                 traces_chunk = np.asarray(traces_chunk, dtype=dtype)
-    
-    
+
     return traces_chunk, left_margin, right_margin
 
 
