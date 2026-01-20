@@ -39,7 +39,7 @@ else:
 
 
 def compute_presence_ratios(
-    sorting_analyzer, unit_ids=None, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, periods=None
+    sorting_analyzer, unit_ids=None, periods=None, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0
 ):
     """
     Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
@@ -50,15 +50,15 @@ def compute_presence_ratios(
         A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the presence ratio. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value,
         presence_ratio is set to NaN.
     mean_fr_ratio_thresh : float, default: 0
         The unit is considered active in a bin if its firing rate during that bin.
         is strictly above `mean_fr_ratio_thresh` times its mean firing rate throughout the recording.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -136,6 +136,7 @@ class PresenceRatio(BaseMetric):
     metric_params = {"bin_duration_s": 60, "mean_fr_ratio_thresh": 0.0}
     metric_columns = {"presence_ratio": float}
     metric_descriptions = {"presence_ratio": "Fraction of time the unit is active."}
+    supports_periods = True
 
 
 def compute_snrs(
@@ -199,10 +200,11 @@ class SNR(BaseMetric):
     metric_params = {"peak_sign": "neg", "peak_mode": "extremum"}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
+    supports_periods = True
     depend_on = ["noise_levels", "templates"]
 
 
-def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5, min_isi_ms=0, periods=None):
+def compute_isi_violations(sorting_analyzer, unit_ids=None, periods=None, isi_threshold_ms=1.5, min_isi_ms=0):
     """
     Calculate Inter-Spike Interval (ISI) violations.
 
@@ -217,6 +219,9 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
         The SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the ISI violations. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
         This is the biophysical refractory period.
@@ -224,9 +229,6 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, isi_threshold_ms=1.5
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced.
         by the data acquisition system or post-processing algorithms.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -299,10 +301,11 @@ class ISIViolation(BaseMetric):
         "isi_violations_ratio": "Ratio of ISI violations for each unit.",
         "isi_violations_count": "Count of ISI violations for each unit.",
     }
+    supports_periods = True
 
 
 def compute_refrac_period_violations(
-    sorting_analyzer, unit_ids=None, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0, periods=None
+    sorting_analyzer, unit_ids=None, periods=None, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
 ):
     """
     Calculate the number of refractory period violations.
@@ -317,14 +320,14 @@ def compute_refrac_period_violations(
         The SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the refractory period violations. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
     censored_period_ms : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -397,18 +400,19 @@ class RPViolation(BaseMetric):
         "rp_contamination": "Refractory period contamination described in Llobet & Wyngaard 2022.",
         "rp_violations": "Number of refractory period violations.",
     }
+    supports_periods = True
 
 
 def compute_sliding_rp_violations(
     sorting_analyzer,
     unit_ids=None,
+    periods=None,
     min_spikes=0,
     bin_size_ms=0.25,
     window_size_s=1,
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
-    periods=None,
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
@@ -421,6 +425,9 @@ def compute_sliding_rp_violations(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the sliding RP violations. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     min_spikes : int, default: 0
         Contamination  is set to np.nan if the unit has less than this many
         spikes across all segments.
@@ -434,9 +441,6 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -508,9 +512,10 @@ class SlidingRPViolation(BaseMetric):
     metric_descriptions = {
         "sliding_rp_violation": "Minimum contamination at 90% confidence using sliding refractory period method."
     }
+    supports_periods = True
 
 
-def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=None, periods=None):
+def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, periods=None, synchrony_sizes=None):
     """
     Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     spikes at the exact same sample index, with synchrony sizes 2, 4 and 8.
@@ -521,6 +526,9 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
         A SortingAnalyzer object.
     unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     synchrony_sizes: None, default: None
         Deprecated argument. Please use private `_get_synchrony_counts` if you need finer control over number of synchronous spikes.
 
@@ -528,9 +536,6 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, synchrony_sizes=N
     -------
     sync_spike_{X} : dict
         The synchrony metric for synchrony size X.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     References
     ----------
@@ -583,9 +588,10 @@ class Synchrony(BaseMetric):
         "sync_spike_4": "Fraction of spikes that are synchronous with at least three other spikes.",
         "sync_spike_8": "Fraction of spikes that are synchronous with at least seven other spikes.",
     }
+    supports_periods = True
 
 
-def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percentiles=(5, 95), periods=None):
+def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_size_s=5, percentiles=(5, 95)):
     """
     Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
     computed in non-overlapping time bins.
@@ -596,13 +602,13 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, bin_size_s=5, percent
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the firing range. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     bin_size_s : float, default: 5
         The size of the bin in seconds.
     percentiles : tuple, default: (5, 95)
         The percentiles to compute.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -675,16 +681,17 @@ class FiringRange(BaseMetric):
     metric_descriptions = {
         "firing_range": "Range between the percentiles (default: 5th and 95th) of the firing rates distribution."
     }
+    supports_periods = True
 
 
 def compute_amplitude_cv_metrics(
     sorting_analyzer,
     unit_ids=None,
+    periods=None,
     average_num_spikes_per_bin=50,
     percentiles=(5, 95),
     min_num_bins=10,
     amplitude_extension="spike_amplitudes",
-    periods=None,
 ):
     """
     Calculate coefficient of variation of spike amplitudes within defined temporal bins.
@@ -697,6 +704,9 @@ def compute_amplitude_cv_metrics(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the amplitude spread. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     average_num_spikes_per_bin : int, default: 50
         The average number of spikes per bin. This is used to estimate a temporal bin size using the firing rate
         of each unit. For example, if a unit has a firing rate of 10 Hz, amd the average number of spikes per bin is
@@ -708,8 +718,6 @@ def compute_amplitude_cv_metrics(
         the median and range are set to NaN.
     amplitude_extension : str, default: "spike_amplitudes"
         The name of the extension to load the amplitudes from. "spike_amplitudes" or "amplitude_scalings".
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
 
     Returns
     -------
@@ -786,16 +794,17 @@ class AmplitudeCV(BaseMetric):
         "amplitude_cv_median": "Median of the coefficient of variation of spike amplitudes within temporal bins.",
         "amplitude_cv_range": "Range of the coefficient of variation of spike amplitudes within temporal bins.",
     }
+    supports_periods = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 def compute_amplitude_cutoffs(
     sorting_analyzer,
     unit_ids=None,
+    periods=None,
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
-    periods=None,
 ):
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes.
@@ -806,6 +815,9 @@ def compute_amplitude_cutoffs(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the amplitude cutoffs. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
@@ -814,9 +826,6 @@ def compute_amplitude_cutoffs(
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -881,6 +890,7 @@ class AmplitudeCutoff(BaseMetric):
     metric_descriptions = {
         "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
     }
+    supports_periods = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
@@ -929,11 +939,12 @@ class AmplitudeMedian(BaseMetric):
     metric_descriptions = {
         "amplitude_median": "Median of the amplitude distributions (in absolute value) for each unit in uV."
     }
+    supports_periods = True
     depend_on = ["spike_amplitudes"]
 
 
 def compute_noise_cutoffs(
-    sorting_analyzer, unit_ids=None, high_quantile=0.25, low_quantile=0.1, n_bins=100, periods=None
+    sorting_analyzer, unit_ids=None, periods=None, high_quantile=0.25, low_quantile=0.1, n_bins=100
 ):
     """
     A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
@@ -952,15 +963,15 @@ def compute_noise_cutoffs(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the amplitude cutoffs. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     high_quantile : float, default: 0.25
         Quantile of the amplitude range above which values are treated as "high" (e.g. 0.25 = top 25%), the reference region.
     low_quantile : int, default: 0.1
         Quantile of the amplitude range below which values are treated as "low" (e.g. 0.1 = lower 10%), the test region.
     n_bins: int, default: 100
         The number of bins to use to compute the amplitude histogram.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
 
     Returns
     -------
@@ -1015,19 +1026,20 @@ class NoiseCutoff(BaseMetric):
         ),
         "noise_ratio": "Ratio of counts in the lower-amplitude bins to the count in the highest bin.",
     }
+    supports_periods = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 def compute_drift_metrics(
     sorting_analyzer,
     unit_ids=None,
+    periods=None,
     interval_s=60,
     min_spikes_per_interval=100,
     direction="y",
     min_fraction_valid_intervals=0.5,
     min_num_bins=2,
     return_positions=False,
-    periods=None,
 ):
     """
     Compute drifts metrics using estimated spike locations.
@@ -1049,6 +1061,9 @@ def compute_drift_metrics(
         A SortingAnalyzer object.
     unit_ids : list or None, default: None
         List of unit ids to compute the drift metrics. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     interval_s : int, default: 60
         Interval length is seconds for computing spike depth.
     min_spikes_per_interval : int, default: 100
@@ -1062,9 +1077,6 @@ def compute_drift_metrics(
     min_num_bins : int, default: 2
         Minimum number of bins required to return a valid metric value. In case there are
         less bins, the metric values are set to NaN.
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
     return_positions : bool, default: False
         If True, median positions are returned (for debugging).
 
@@ -1198,16 +1210,17 @@ class Drift(BaseMetric):
         "drift_std": "Standard deviation of the drift signal in um.",
         "drift_mad": "Median absolute deviation of the drift signal in um.",
     }
+    supports_periods = True
     depend_on = ["spike_locations"]
 
 
 def compute_sd_ratio(
     sorting_analyzer: SortingAnalyzer,
     unit_ids=None,
+    periods=None,
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
     correct_for_template_itself: bool = True,
-    periods=None,
     **kwargs,
 ):
     """
@@ -1223,6 +1236,9 @@ def compute_sd_ratio(
         A SortingAnalyzer object.
     unit_ids : list or None, default: None
         The list of unit ids to compute this metric. If None, all units are used.
+    periods : array of unit_period_dtype | None, default: None
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to compute the metric. If None, the entire recording duration is used.
     censored_period_ms : float, default: 4.0
         The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
     correct_for_drift : bool, default: True
@@ -1230,9 +1246,6 @@ def compute_sd_ratio(
     correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
-    periods : array of unit_period_dtype | None, default: None
-        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
-        on which to compute the metric. If None, the entire recording duration is used.
     **kwargs : dict, default: {}
         Keyword arguments for computing spike amplitudes and extremum channel.
 
@@ -1346,6 +1359,7 @@ class SDRatio(BaseMetric):
         "sd_ratio": "Ratio between the standard deviation of spike amplitudes and the standard deviation of noise."
     }
     needs_recording = True
+    supports_periods = True
     depend_on = ["templates", "spike_amplitudes"]
 
 

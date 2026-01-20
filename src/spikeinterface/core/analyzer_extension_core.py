@@ -823,10 +823,9 @@ class BaseMetric:
     metric_columns = {}  # column names and their dtypes of the dataframe
     metric_descriptions = {}  # descriptions of each metric column
     needs_recording = False  # whether the metric needs recording
-    needs_tmp_data = (
-        False  # whether the metric needs temporary data comoputed with _prepare_data at the MetricExtension level
-    )
-    needs_job_kwargs = False
+    needs_tmp_data = False  # whether the metric needs temporary data computed with MetricExtension._prepare_data
+    needs_job_kwargs = False  # whether the metric needs job_kwargs
+    supports_periods = False  # whether the metric function supports periods
     depend_on = []  # extensions the metric depends on
 
     # the metric function must have the signature:
@@ -839,7 +838,7 @@ class BaseMetric:
     metric_function = None  # to be defined in subclass
 
     @classmethod
-    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs):
+    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs, periods=None):
         """Compute the metric.
 
         Parameters
@@ -854,6 +853,8 @@ class BaseMetric:
             Temporary data to pass to the metric function
         job_kwargs : dict
             Job keyword arguments to control parallelization
+        periods : np.ndarray | None
+            Numpy array of unit periods of unit_period_dtype if supports_periods is True
 
         Returns
         -------
@@ -865,6 +866,8 @@ class BaseMetric:
             args += (tmp_data,)
         if cls.needs_job_kwargs:
             args += (job_kwargs,)
+        if cls.supports_periods:
+            args += (periods,)
 
         results = cls.metric_function(*args, **metric_params)
 
@@ -988,6 +991,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
         metrics_to_compute: list[str] | None = None,
+        periods: np.ndarray | None = None,
         **other_params,
     ):
         """
@@ -1004,6 +1008,8 @@ class BaseMetricExtension(AnalyzerExtension):
             If True, existing metrics in the extension will be deleted before computing new ones.
         metrics_to_compute : list[str] | None
             List of metric names to compute. If None, all metrics in `metric_names` are computed.
+        periods : np.ndarray | None
+            Numpy array of unit_period_dtype defining periods to compute metrics over.
         other_params : dict
             Additional parameters for metric computation.
 
@@ -1079,6 +1085,7 @@ class BaseMetricExtension(AnalyzerExtension):
             metrics_to_compute=metrics_to_compute,
             delete_existing_metrics=delete_existing_metrics,
             metric_params=metric_params,
+            periods=periods,
             **other_params,
         )
         return params
@@ -1129,6 +1136,8 @@ class BaseMetricExtension(AnalyzerExtension):
         if metric_names is None:
             metric_names = self.params["metric_names"]
 
+        periods = self.params.get("periods", None)
+
         column_names_dtypes = {}
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
@@ -1153,6 +1162,7 @@ class BaseMetricExtension(AnalyzerExtension):
                     metric_params=metric_params,
                     tmp_data=tmp_data,
                     job_kwargs=job_kwargs,
+                    periods=periods,
                 )
             except Exception as e:
                 warnings.warn(f"Error computing metric {metric_name}: {e}")
@@ -1179,6 +1189,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics_to_compute = self.params["metrics_to_compute"]
         delete_existing_metrics = self.params["delete_existing_metrics"]
+        periods = self.params.get("periods", None)
 
         _, job_kwargs = split_job_kwargs(job_kwargs)
         job_kwargs = fix_job_kwargs(job_kwargs)
