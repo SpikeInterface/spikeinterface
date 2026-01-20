@@ -9,7 +9,6 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect
 from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-
 DEBUG = False
 
 if DEBUG:

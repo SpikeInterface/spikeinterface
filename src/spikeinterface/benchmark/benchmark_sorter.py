@@ -8,7 +8,6 @@ from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
-
 # TODO later integrate CollisionGTComparison optionally in this class.
 
 
