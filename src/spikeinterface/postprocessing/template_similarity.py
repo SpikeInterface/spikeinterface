@@ -9,7 +9,6 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 from spikeinterface.core.template_tools import get_dense_templates_array
 from spikeinterface.core.sparsity import ChannelSparsity
 
-
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True

@@ -28,7 +28,6 @@ from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_f
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-
 try:
     import pyopencl
 
