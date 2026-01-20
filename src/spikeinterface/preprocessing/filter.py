@@ -10,8 +10,6 @@ from spikeinterface.core import get_chunk_with_margin
 
 
 HIGHPASS_ERROR_THRESHOLD_HZ = 100
-MARGIN_TO_CHUNK_PERCENT_WARNING = 0.2  # 20%
-
 
 _common_filter_docs = """**filter_kwargs : dict
         Certain keyword arguments for `scipy.signal` filters:
@@ -69,7 +67,10 @@ class FilterRecording(BasePreprocessor):
         - "forward" - filter is applied to the timeseries in one direction, creating phase shifts
         - "backward" - the timeseries is reversed, the filter is applied and filtered timeseries reversed again. Creates phase shifts in the opposite direction to "forward"
         - "forward-backward" - Applies the filter in the forward and backward direction, resulting in zero-phase filtering. Note this doubles the effective filter order.
-
+    display_margin_to_chunk_percent_warning : float | None, default: 0.2
+        If not None, a warning is displayed if the margin size is more than this fraction of
+        the chunk size during get_traces calls.
+        
     Returns
     -------
     filter_recording : FilterRecording
@@ -89,6 +90,7 @@ class FilterRecording(BasePreprocessor):
         coeff=None,
         dtype=None,
         direction="forward-backward",
+        display_margin_to_chunk_percent_warning=0.2,
     ):
         import scipy.signal
 
@@ -116,6 +118,11 @@ class FilterRecording(BasePreprocessor):
         if "offset_to_uV" in self.get_property_keys():
             self.set_channel_offsets(0)
 
+        if display_margin_to_chunk_percent_warning is not None:
+            assert 0.0 < display_margin_to_chunk_percent_warning < 1.0, (
+                "display_margin_to_chunk_percent_warning must be between 0 and 1"
+            )
+
         assert margin_ms is not None, "margin_ms must be provided!"
         margin = int(margin_ms * fs / 1000.0)
         self.margin_samples = margin
@@ -129,6 +136,7 @@ class FilterRecording(BasePreprocessor):
                     dtype,
                     add_reflect_padding=add_reflect_padding,
                     direction=direction,
+                    display_margin_to_chunk_percent_warning=display_margin_to_chunk_percent_warning
                 )
             )
 
@@ -144,6 +152,7 @@ class FilterRecording(BasePreprocessor):
             add_reflect_padding=add_reflect_padding,
             dtype=dtype.str,
             direction=direction,
+            display_margin_to_chunk_percent_warning=display_margin_to_chunk_percent_warning
         )
 
 
@@ -157,6 +166,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         dtype,
         add_reflect_padding=False,
         direction="forward-backward",
+        display_margin_to_chunk_percent_warning=0.2
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.coeff = coeff
@@ -165,14 +175,16 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
         self.add_reflect_padding = add_reflect_padding
         self.dtype = dtype
+        self.display_margin_to_chunk_percent_warning = display_margin_to_chunk_percent_warning
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if self.margin > MARGIN_TO_CHUNK_PERCENT_WARNING * (end_frame - start_frame):
-            warnings.warn(
-                f"The margin size ({self.margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
-                f"of the chunk size {(end_frame - start_frame)} samples. This may lead to performance bottlenecks when "
-                f"chunking. Consider increasing the chunk size to minimize margin overhead."
-            )
+        if self.display_margin_to_chunk_percent_warning is not None:
+            if self.margin > self.display_margin_to_chunk_percent_warning * (end_frame - start_frame):
+                warnings.warn(
+                    f"The margin size ({self.margin} samples) is more than {int(self.display_margin_to_chunk_percent_warning * 100)}% "
+                    f"of the chunk size {(end_frame - start_frame)} samples. This may lead to performance bottlenecks when "
+                    f"chunking. Consider increasing the chunk size to minimize margin overhead."
+                )
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
