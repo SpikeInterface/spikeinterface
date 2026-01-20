@@ -13,6 +13,7 @@ import warnings
 import numpy as np
 from collections import namedtuple
 
+from .numpyextractors import NumpySorting
 from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
@@ -1463,6 +1464,16 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 periods,
             )
             all_data = all_data[keep_mask]
+            # since we have the mask already, we can use it directly to avoid double computation
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=True)
+            sliced_spike_vector = spike_vector[keep_mask]
+            sorting = NumpySorting(
+                sliced_spike_vector,
+                sampling_frequency=self.sorting_analyzer.sampling_frequency,
+                unit_ids=self.sorting_analyzer.unit_ids,
+            )
+        else:
+            sorting = self.sorting_analyzer.sorting
 
         if outputs == "numpy":
             if copy:
@@ -1474,8 +1485,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
             if keep_mask is not None:
                 # since we are filtering spikes, we need to recompute the spike indices
-                spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-                spike_vector = spike_vector[keep_mask]
+                spike_vector = sorting.to_spike_vector(concatenated=False)
                 spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
             else:
                 # use the cache of indices

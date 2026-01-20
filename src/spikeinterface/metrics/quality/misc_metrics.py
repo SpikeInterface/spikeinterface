@@ -200,7 +200,6 @@ class SNR(BaseMetric):
     metric_params = {"peak_sign": "neg", "peak_mode": "extremum"}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
-    supports_periods = True
     depend_on = ["noise_levels", "templates"]
 
 
