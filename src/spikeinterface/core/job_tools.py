@@ -419,11 +419,26 @@ class ChunkRecordingExecutor:
 
         if pool_engine == "process":
             if mp_context is None:
-                mp_context = recording.get_preferred_mp_context()
-            if mp_context is not None and platform.system() == "Windows":
-                assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-            elif mp_context == "fork" and platform.system() == "Darwin":
-                warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+                # auto choice
+                if platform.system() == "Windows":
+                    mp_context = "spawn"
+                elif platform.system() == "Linux":
+                    mp_context = "fork"
+                elif platform.system() == "Darwin":
+                    # Sam note : we used to force spawn for macos
+                    # but I think that fork should be safe enought because the unsafe situtation is when
+                    # we have multiple threads before the fork, which is not our case, and/or when using urlib.request.
+                    mp_context = "spawn"
+                    # mp_context = "fork" # Sam's proposal @ chris could you test it ?
+                else:
+                    mp_context = "spawn"
+
+            preferred_mp_context = recording.get_preferred_mp_context()
+            if preferred_mp_context is not None and preferred_mp_context != mp_context:
+                warnings.warn(
+                    f"You processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
+                    f"So use mp_context='{preferred_mp_context}' instead")
+                mp_context = preferred_mp_context
 
         self.mp_context = mp_context
 
@@ -503,6 +518,8 @@ class ChunkRecordingExecutor:
             if self.pool_engine == "process":
 
                 if self.need_worker_index:
+
+                    multiprocessing.set_start_method(self.mp_context, force=True)
                     lock = multiprocessing.Lock()
                     array_pid = multiprocessing.Array("i", n_jobs)
                     for i in range(n_jobs):
@@ -530,7 +547,7 @@ class ChunkRecordingExecutor:
 
                     if self.progress_bar:
                         results = tqdm(
-                            results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices)
+                            results, desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})", total=len(recording_slices)
                         )
 
                     for res in results:
