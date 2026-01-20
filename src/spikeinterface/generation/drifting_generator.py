@@ -43,6 +43,14 @@ _toy_probes = {
         contact_shapes="square",
         contact_shape_params={"width": 12},
     ),
+    "Neuropixels2-128": dict(
+        num_columns=2,
+        num_contact_per_column=[64] * 2,
+        xpitch=32,
+        ypitch=15,
+        contact_shapes="square",
+        contact_shape_params={"width": 12},
+    ),
     "Neuropixels1-128": dict(
         num_columns=4,
         num_contact_per_column=[32] * 4,
