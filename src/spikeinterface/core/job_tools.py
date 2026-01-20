@@ -419,11 +419,25 @@ class ChunkRecordingExecutor:
 
         if pool_engine == "process":
             if mp_context is None:
-                mp_context = recording.get_preferred_mp_context()
-            if mp_context is not None and platform.system() == "Windows":
-                assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-            elif mp_context == "fork" and platform.system() == "Darwin":
-                warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+                # auto choice
+                if platform.system() == "Windows":
+                    mp_context = "spawn"
+                elif platform.system() == "Linux":
+                    mp_context = "fork"
+                elif platform.system() == "Darwin":
+                    # Sam note : we use to force spawn for macos
+                    # But I think that fork should be safe enought because the unsafe situtation is when
+                    # we have multiple thread which is not our case (and or urlib.request)
+                    mp_context = "spawn"
+                else:
+                    mp_context = "spawn"
+
+            preferred_mp_context = recording.get_preferred_mp_context()
+            if preferred_mp_context is not None:
+                warnings.warn(
+                    f"You processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
+                    f"So use mp_context='{preferred_mp_context}' instead")
+                mp_context = preferred_mp_context
 
         self.mp_context = mp_context
 
