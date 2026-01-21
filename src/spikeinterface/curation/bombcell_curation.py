@@ -76,7 +76,7 @@ def bombcell_get_default_thresholds() -> dict:
     }
 
 
-def _combine_metrics(quality_metrics, template_metrics):
+def _combine_metrics(metrics: list[pd.DataFrame]) -> pd.DataFrame:
     """Combine quality_metrics and template_metrics into a single DataFrame."""
     if quality_metrics is None and template_metrics is None:
         return None
@@ -101,8 +101,7 @@ def bombcell_label_units(
     thresholds: Optional[dict] = None,
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
-    quality_metrics=None,
-    template_metrics=None,
+    external_metrics: Optional[pd.DataFrame | list[pd.DataFrame]] = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     bombcell - label units based on quality metrics and thresholds.
@@ -118,10 +117,8 @@ def bombcell_label_units(
         If True, detect non-somatic (axonal) units.
     split_non_somatic_good_mua : bool
         If True, split non-somatic into NON_SOMA_GOOD (3) and NON_SOMA_MUA (4).
-    quality_metrics : pd.DataFrame, optional
-        DataFrame with quality metrics (index = unit_ids). Deprecated, use sorting_analyzer instead.
-    template_metrics : pd.DataFrame, optional
-        DataFrame with template metrics (index = unit_ids). Deprecated, use sorting_analyzer instead.
+    external_metrics: Optional[pd.DataFrame | list[pd.DataFrame]] = None
+        External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
 
     Returns
     -------
@@ -138,11 +135,15 @@ def bombcell_label_units(
                 "Compute quality_metrics and/or template_metrics first."
             )
     else:
-        combined_metrics = _combine_metrics(quality_metrics, template_metrics)
-        if combined_metrics is None:
-            raise ValueError(
-                "Either sorting_analyzer or at least one of quality_metrics/template_metrics must be provided"
-            )
+        if external_metrics is None:
+            raise ValueError("Either sorting_analyzer or external_metrics must be provided")
+        if isinstance(external_metrics, list):
+            assert all(
+                isinstance(df, pd.DataFrame) for df in external_metrics
+            ), "All items in external_metrics must be DataFrames"
+            combined_metrics = pd.concat(external_metrics, axis=1)
+        else:
+            combined_metrics = external_metrics
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
