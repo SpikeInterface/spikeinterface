@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
@@ -682,8 +683,10 @@ def fit_velocity(peak_times, channel_dist):
 
     from sklearn.linear_model import TheilSenRegressor
 
-    theil = TheilSenRegressor(max_iter=1000)
-    theil.fit(peak_times.reshape(-1, 1), channel_dist)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*Maximum number of iterations.*")
+        theil = TheilSenRegressor(max_iter=1000)
+        theil.fit(peak_times.reshape(-1, 1), channel_dist)
     slope = theil.coef_[0]
     intercept = theil.intercept_
     score = theil.score(peak_times.reshape(-1, 1), channel_dist)
@@ -1370,7 +1373,7 @@ class ExpDecay(BaseMetric):
 
 class Spread(BaseMetric):
     metric_name = "spread"
-    metric_params = {"spread_threshold": 0.5, "spread_smooth_um": 20, "column_range": None}
+    metric_params = {"spread_threshold": 0.2, "spread_smooth_um": 20, "column_range": None}
     metric_columns = {"spread": float}
     metric_descriptions = {
         "spread": (

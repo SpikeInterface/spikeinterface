@@ -959,6 +959,25 @@ class BaseMetricExtension(AnalyzerExtension):
                     )
         return metric_column_descriptions
 
+    def get_computed_metric_names(self):
+        """
+        Get the list of already computed metric names.
+
+        Returns
+        -------
+        computed_metric_names : list[str]
+            List of computed metric names.
+        """
+        if self.data is None or len(self.data) == 0:
+            return []
+        else:
+            computed_metric_columns = self.data["metrics"].columns.tolist()
+            computed_metric_names = []
+            for m in self.metric_list:
+                if all(col in computed_metric_columns for col in m.metric_columns.keys()):
+                    computed_metric_names.append(m.metric_name)
+            return computed_metric_names
+
     def _cast_metrics(self, metrics_df):
         metric_dtypes = {}
         for m in self.metric_list:
@@ -1118,6 +1137,13 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names_dtypes.update(metric.metric_columns)
+
+        # drop metric that don't map to any metric names
+        possible_metric_names = [m.metric_name for m in self.metric_list]
+        wrong_metric_names = [m for m in metric_names if m not in possible_metric_names]
+        if len(wrong_metric_names) > 0:
+            warnings.warn(f"The following metric names are not recognized and will be ignored: {wrong_metric_names}")
+            metric_names = [m for m in metric_names if m in possible_metric_names]
 
         metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
 

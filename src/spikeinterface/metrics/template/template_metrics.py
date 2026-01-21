@@ -6,6 +6,7 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 
 from __future__ import annotations
 
+import warnings
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
@@ -109,34 +110,52 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             del self.params["metrics_kwargs"]
 
         # handle metric names change:
-        # num_positive_peaks/num_negative_peaks merged into number_of_peaks
         if "num_positive_peaks" in self.params["metric_names"]:
             self.params["metric_names"].remove("num_positive_peaks")
             if "number_of_peaks" not in self.params["metric_names"]:
                 self.params["metric_names"].append("number_of_peaks")
+            if "num_positive_peaks" in self.params["metric_params"]:
+                del self.params["metric_params"]["num_positive_peaks"]
         if "num_negative_peaks" in self.params["metric_names"]:
             self.params["metric_names"].remove("num_negative_peaks")
             if "number_of_peaks" not in self.params["metric_names"]:
                 self.params["metric_names"].append("number_of_peaks")
+            if "num_negative_peaks" in self.params["metric_params"]:
+                del self.params["metric_params"]["num_negative_peaks"]
         # velocity_above/velocity_below merged into velocity_fits
         if "velocity_above" in self.params["metric_names"]:
             self.params["metric_names"].remove("velocity_above")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
+            self.params["metric_params"]["velocity_fits"] = self.params["metric_params"]["velocity_above"]
+            self.params["metric_params"]["velocity_fits"]["min_channels"] = self.params["metric_params"][
+                "velocity_above"
+            ]["min_channels_for_velocity"]
+            self.params["metric_params"]["velocity_fits"]["min_r2"] = self.params["metric_params"]["velocity_above"][
+                "min_r2_velocity"
+            ]
+            del self.params["metric_params"]["velocity_above"]
         if "velocity_below" in self.params["metric_names"]:
             self.params["metric_names"].remove("velocity_below")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
+            # parameters are already updated from velocity_above
+            if "velocity_below" in self.params["metric_params"]:
+                del self.params["metric_params"]["velocity_below"]
         # peak to valley -> peak_to_trough_duration
         if "peak_to_valley" in self.params["metric_names"]:
             self.params["metric_names"].remove("peak_to_valley")
             if "peak_to_trough_duration" not in self.params["metric_names"]:
                 self.params["metric_names"].append("peak_to_trough_duration")
-        # peak to trough ratio -> main peak to trough ratio
-        if "peak_to_trough_ratio" in self.params["metric_names"]:
-            self.params["metric_names"].remove("peak_to_trough_ratio")
-            if "main_peak_to_trough_ratio" not in self.params["metric_names"]:
-                self.params["metric_names"].append("main_peak_to_trough_ratio")
+        # peak_trough ratio -> main peak to trough ratio
+        # note that the new implementation correctly uses the absolute peak values,
+        # which is different from the old implementation.
+        # we make a flag to invert the polarity of old values if needed
+        if "peak_trough_ratio" in self.params["metric_names"]:
+            self.params["metric_names"].remove("peak_trough_ratio")
+            if "waveform_ratios" not in self.params["metric_names"]:
+                self.params["metric_names"].append("waveform_ratios")
+            self.params["metric_params"]["invert_peak_to_trough"] = True
 
     def _set_params(
         self,
@@ -151,10 +170,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         depth_direction="y",
         min_thresh_detect_peaks_troughs=0.4,
         smooth=True,
-        smooth_method="savgol",
         smooth_window_frac=0.1,
         smooth_polyorder=3,
-        svd_n_components=3,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
         num_channels = self.sorting_analyzer.get_num_channels()
@@ -288,6 +305,18 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             tmp_data["depth_direction"] = self.params["depth_direction"]
 
         return tmp_data
+
+    def get_data(self, *args, **kwargs):
+        """Override to handle deprecated polarity of 'peak_trough_ratio' metric."""
+        metrics = super().get_data(*args, **kwargs)
+        if self.params["metric_params"].get("invert_peak_to_trough", False):
+            if "peak_trough_ratio" in metrics.columns:
+                warnings.warn(
+                    "The 'peak_trough_ratio' metric has been deprecated and replaced by 'main_peak_to_trough_ratio'. "
+                    "The values have been inverted to maintain consistency with previous versions."
+                )
+                metrics["peak_trough_ratio"] = -metrics["peak_trough_ratio"]
+        return metrics
 
 
 register_result_extension(ComputeTemplateMetrics)
