@@ -75,6 +75,7 @@ def compute_presence_ratios(
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
     num_segs = sorting_analyzer.get_num_segments()
+    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 
     segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(num_segs)]
     total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
@@ -104,6 +105,9 @@ def compute_presence_ratios(
     else:
 
         for unit_id in unit_ids:
+            if num_spikes[unit_id] == 0:
+                presence_ratios[unit_id] = np.nan
+                continue
             spike_train = []
             bin_edges = bin_edges_per_unit[unit_id]
             if len(bin_edges) < 2:
@@ -264,6 +268,7 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, periods=None, isi_th
         unit_ids = sorting_analyzer.unit_ids
 
     total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
+    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
     fs = sorting_analyzer.sampling_frequency
 
     isi_threshold_s = isi_threshold_ms / 1000
@@ -273,14 +278,16 @@ def compute_isi_violations(sorting_analyzer, unit_ids=None, periods=None, isi_th
     isi_violations_ratio = {}
 
     for unit_id in unit_ids:
+        if num_spikes[unit_id] == 0:
+            isi_violations_ratio[unit_id] = np.nan
+            isi_violations_count[unit_id] = -1
+            continue
+
         spike_train_list = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             if len(spike_train) > 0:
                 spike_train_list.append(spike_train / fs)
-
-        if not any([len(train) > 0 for train in spike_train_list]):
-            continue
 
         total_duration = total_durations[unit_id]
         ratio, _, count = isi_violations(spike_train_list, total_duration, isi_threshold_s, min_isi_s)
@@ -359,7 +366,7 @@ def compute_refrac_period_violations(
     if not HAVE_NUMBA:
         warnings.warn("Error: numba is not installed.")
         warnings.warn("compute_refrac_period_violations cannot run without numba.")
-        return {unit_id: np.nan for unit_id in unit_ids}
+        return res({unit_id: np.nan for unit_id in unit_ids}, {unit_id: 0 for unit_id in unit_ids})
 
     num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 
@@ -372,6 +379,11 @@ def compute_refrac_period_violations(
     nb_violations = {}
     rp_contamination = {}
     for unit_id in unit_ids:
+        if num_spikes[unit_id] == 0:
+            rp_contamination[unit_id] = np.nan
+            nb_violations[unit_id] = -1
+            continue
+
         nb_violations[unit_id] = 0
         total_samples_unit = total_samples[unit_id]
 
@@ -556,7 +568,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, periods=None, syn
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
-    spike_counts = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 
     spikes = sorting.to_spike_vector()
     all_unit_ids = sorting.unit_ids
@@ -569,10 +581,10 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, periods=None, syn
         for i, unit_id in enumerate(all_unit_ids):
             if unit_id not in unit_ids:
                 continue
-            if spike_counts[unit_id] != 0:
-                sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / spike_counts[unit_id]
+            if num_spikes[unit_id] != 0:
+                sync_id_metrics_dict[unit_id] = synchrony_counts[sync_idx][i] / num_spikes[unit_id]
             else:
-                sync_id_metrics_dict[unit_id] = 0
+                sync_id_metrics_dict[unit_id] = -1
         synchrony_metrics_dict[f"sync_spike_{synchrony_size}"] = sync_id_metrics_dict
 
     return res(**synchrony_metrics_dict)
@@ -629,6 +641,8 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
+    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+
     if all(
         [
             sorting_analyzer.get_num_samples(segment_index) < bin_size_samples
@@ -648,6 +662,8 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
     )
     cumulative_segment_samples = np.cumsum([0] + segment_samples[:-1])
     for unit_id in unit_ids:
+        if num_spikes[unit_id] == 0:
+            continue
         bin_edges = bin_edges_per_unit[unit_id]
 
         # we can concatenate spike trains across segments adding the cumulative number of samples
@@ -665,6 +681,9 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
     # finally we compute the percentiles
     firing_ranges = {}
     for unit_id in unit_ids:
+        if num_spikes[unit_id] == 0:
+            firing_ranges[unit_id] = np.nan
+            continue
         firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], percentiles[1]) - np.percentile(
             firing_rate_histograms[unit_id], percentiles[0]
         )
@@ -748,6 +767,10 @@ def compute_amplitude_cv_metrics(
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
+        if num_spikes[unit_id] == 0:
+            amplitude_cv_medians[unit_id] = np.nan
+            amplitude_cv_ranges[unit_id] = np.nan
+            continue
         total_duration = total_durations[unit_id]
         firing_rate = num_spikes[unit_id] / total_duration
         temporal_bin_size_samples = int(
@@ -1267,6 +1290,8 @@ def compute_sd_ratio(
     if unit_ids is None:
         unit_ids = sorting_analyzer.unit_ids
 
+    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+
     if not sorting_analyzer.has_recording():
         warnings.warn(
             "The `sd_ratio` metric cannot work with a recordless SortingAnalyzer object"
@@ -1297,6 +1322,9 @@ def compute_sd_ratio(
     sd_ratio = {}
 
     for unit_id in unit_ids:
+        if num_spikes[unit_id] == 0:
+            sd_ratio[unit_id] = np.nan
+            continue
         spk_amp = []
         for segment_index in range(sorting_analyzer.get_num_segments()):
             spike_train = sorting.get_unit_spike_train(unit_id, segment_index)

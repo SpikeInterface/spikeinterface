@@ -273,6 +273,10 @@ def test_calculate_firing_range(sorting_analyzer_simple):
     firing_ranges_periods = compute_firing_ranges(sorting_analyzer, periods=periods, bin_size_s=1)
     assert firing_ranges == firing_ranges_periods
 
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    firing_ranges_empty = compute_firing_ranges(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(firing_ranges_empty.values()))))
+
     with pytest.warns(UserWarning) as w:
         firing_ranges_nan = compute_firing_ranges(
             sorting_analyzer, bin_size_s=sorting_analyzer.get_total_duration() + 1
@@ -287,6 +291,10 @@ def test_calculate_amplitude_cutoff(sorting_analyzer_simple):
     periods = compute_periods(sorting_analyzer, num_periods=5)
     amp_cuts_periods = compute_amplitude_cutoffs(sorting_analyzer, periods=periods, num_histogram_bins=10)
     assert amp_cuts == amp_cuts_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    amp_cuts_empty = compute_amplitude_cutoffs(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(amp_cuts_empty.values()))))
     # print(amp_cuts)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -301,6 +309,10 @@ def test_calculate_amplitude_median(sorting_analyzer_simple):
     periods = compute_periods(sorting_analyzer, num_periods=5)
     amp_medians_periods = compute_amplitude_medians(sorting_analyzer, periods=periods)
     assert amp_medians == amp_medians_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    amp_medians_empty = compute_amplitude_medians(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(amp_medians_empty.values()))))
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
@@ -318,6 +330,15 @@ def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple, periods_simple)
     )
     assert amp_cv_median == amp_cv_median_periods
     assert amp_cv_range == amp_cv_range_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    amp_cv_median_empty, amp_cv_range_empty = compute_amplitude_cv_metrics(
+        sorting_analyzer,
+        periods=empty_periods,
+        average_num_spikes_per_bin=20,
+    )
+    assert np.all(np.isnan(np.array(list(amp_cv_median_empty.values()))))
+    assert np.all(np.isnan(np.array(list(amp_cv_range_empty.values()))))
 
     # amps_scalings = compute_amplitude_scalings(sorting_analyzer)
     sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
@@ -354,6 +375,10 @@ def test_calculate_presence_ratio(sorting_analyzer_simple, periods_simple):
     periods = periods_simple
     ratios_periods = compute_presence_ratios(sorting_analyzer, periods=periods, bin_duration_s=10)
     assert ratios == ratios_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    ratios_periods_empty = compute_presence_ratios(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(ratios_periods_empty.values()))))
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # ratios_gt = {0: 1.0, 1: 1.0, 2: 1.0}
     # np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
@@ -367,6 +392,12 @@ def test_calculate_isi_violations(sorting_analyzer_violations, periods_violation
         sorting_analyzer, isi_threshold_ms=1, min_isi_ms=0.0, periods=periods
     )
     assert isi_viol == isi_viol_periods
+    assert counts == counts_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    isi_viol_empty, isi_counts_empty = compute_isi_violations(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(isi_viol_empty.values()))))
+    assert np.array_equal(np.array(list(isi_counts_empty.values())), -1 * np.ones(len(sorting_analyzer.unit_ids)))
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # isi_viol_gt = {0: 0.0998002996004994, 1: 0.7904857139469347, 2: 1.929898371551754}
@@ -384,6 +415,12 @@ def test_calculate_sliding_rp_violations(sorting_analyzer_violations, periods_vi
     )
     assert contaminations == contaminations_periods
 
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    contaminations_periods_empty = compute_sliding_rp_violations(
+        sorting_analyzer, periods=empty_periods, bin_size_ms=0.25, window_size_s=1
+    )
+    assert np.all(np.isnan(np.array(list(contaminations_periods_empty.values()))))
+
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # contaminations_gt = {0: 0.03, 1: 0.185, 2: 0.325}
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
@@ -399,6 +436,15 @@ def test_calculate_rp_violations(sorting_analyzer_violations, periods_violations
         sorting_analyzer, refractory_period_ms=1, censored_period_ms=0.0, periods=periods
     )
     assert rp_contamination == rp_contamination_periods
+    assert counts == counts_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    rp_contamination_empty, counts_empty = compute_refrac_period_violations(
+        sorting_analyzer, refractory_period_ms=1, censored_period_ms=0.0, periods=empty_periods
+    )
+    assert np.all(np.isnan(np.array(list(rp_contamination_empty.values()))))
+    assert np.array_equal(np.array(list(counts_empty.values())), -1 * np.ones(len(sorting_analyzer.unit_ids)))
+
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # counts_gt = {0: 2, 1: 4, 2: 10}
     # rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
@@ -425,8 +471,19 @@ def test_synchrony_metrics(sorting_analyzer_simple, periods_simple):
     synchrony_metrics_periods = compute_synchrony_metrics(sorting_analyzer, periods=periods)
     assert synchrony_metrics == synchrony_metrics_periods
 
-    synchrony_sizes = np.array([2, 4, 8])
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    synchrony_metrics_empty = compute_synchrony_metrics(sorting_analyzer, periods=empty_periods)
+    assert np.array_equal(
+        np.array(list(synchrony_metrics_empty.sync_spike_2.values())), -1 * np.ones(len(sorting_analyzer.unit_ids))
+    )
+    assert np.array_equal(
+        np.array(list(synchrony_metrics_empty.sync_spike_4.values())), -1 * np.ones(len(sorting_analyzer.unit_ids))
+    )
+    assert np.array_equal(
+        np.array(list(synchrony_metrics_empty.sync_spike_8.values())), -1 * np.ones(len(sorting_analyzer.unit_ids))
+    )
 
+    synchrony_sizes = np.array([2, 4, 8])
     # check returns
     for size in synchrony_sizes:
         assert f"sync_spike_{size}" in synchrony_metrics._fields
@@ -487,6 +544,15 @@ def test_calculate_drift_metrics(sorting_analyzer_simple):
     assert drifts_stds == drifts_stds_periods
     assert drift_mads == drift_mads_periods
 
+    # calculate num spikes with empty periods
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    drifts_ptps_empty, drifts_stds_empty, drift_mads_empty = compute_drift_metrics(
+        sorting_analyzer_simple, periods=empty_periods
+    )
+    assert np.all(np.isnan(np.array(list(drifts_ptps_empty.values()))))
+    assert np.all(np.isnan(np.array(list(drifts_stds_empty.values()))))
+    assert np.all(np.isnan(np.array(list(drift_mads_empty.values()))))
+
     # print(drifts_ptps, drifts_stds, drift_mads)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -507,6 +573,11 @@ def test_calculate_sd_ratio(sorting_analyzer_simple, periods_simple):
     assert sd_ratio == sd_ratio_periods
 
     assert np.all(list(sd_ratio.keys()) == sorting_analyzer_simple.unit_ids)
+
+    # calculate num spikes with empty periods
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    sd_ratios_empty_periods = compute_sd_ratio(sorting_analyzer_simple, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(sd_ratios_empty_periods.values()))))
     # @aurelien can you check this, this is not working anymore
     # assert np.allclose(list(sd_ratio.values()), 1, atol=0.25, rtol=0)
 
