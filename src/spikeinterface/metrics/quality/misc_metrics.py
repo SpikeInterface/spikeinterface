@@ -1018,6 +1018,10 @@ def compute_noise_cutoffs(
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
+        if len(amplitudes) == 0:
+            cutoff, ratio = np.nan, np.nan
+            continue
+
         if invert_amplitudes:
             amplitudes = -amplitudes
 
