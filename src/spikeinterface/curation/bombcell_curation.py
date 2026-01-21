@@ -248,11 +248,11 @@ def bombcell_label_units(
 
     # String labels
     if split_non_somatic_good_mua:
-        labels = {0: "NOISE", 1: "GOOD", 2: "MUA", 3: "NON_SOMA_GOOD", 4: "NON_SOMA_MUA"}
+        labels = {0: "NOISE", 1: "good", 2: "mua", 3: "non_soma_good", 4: "non_soma_mua"}
     else:
-        labels = {0: "NOISE", 1: "GOOD", 2: "MUA", 3: "NON_SOMA"}
+        labels = {0: "noise", 1: "good", 2: "mua", 3: "non_soma"}
 
-    unit_type_string = np.array([labels.get(int(t), "UNKNOWN") for t in unit_type], dtype=object)
+    unit_type_string = np.array([labels.get(int(t), "unknown") for t in unit_type], dtype=object)
     return unit_type.astype(int), unit_type_string
 
 

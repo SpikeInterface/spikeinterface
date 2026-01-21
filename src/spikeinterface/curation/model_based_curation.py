@@ -3,11 +3,10 @@ from pathlib import Path
 import json
 import warnings
 import re
+from packaging.version import parse
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import (
-    try_to_get_metrics_from_analyzer,
-    _get_computed_metrics,
     _format_metric_dataframe,
 )
 from copy import deepcopy
@@ -81,11 +80,12 @@ class ModelBasedClassification:
 
         # Get metrics DataFrame for classification
         if input_data is None:
-            input_data = _get_computed_metrics(self.sorting_analyzer)
+            input_data = self.sorting_analyzer.get_metrics_extension_data()
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
 
+        input_data = self.handle_backwards_compatibility_in_metrics(input_data, model_info=model_info)
         input_data = self._check_required_metrics_are_present(input_data)
 
         if model_info is not None:
@@ -127,8 +127,23 @@ class ModelBasedClassification:
 
         return classified_units
 
-    def _check_required_metrics_are_present(self, calculated_metrics):
+    def handle_backwards_compatibility_in_metrics(self, calculated_metrics, model_info):
+        si_version = model_info["requirements"].get("spikeinterface", None)
+        if si_version is not None and parse(si_version) < parse("0.103.2"):
+            # if the model was trained with SI version < 0.103.2, we need to rename some metrics
+            calculated_metrics = calculated_metrics.copy()
+            # peak_to_trough_duration was named peak_to_valley
+            if "peak_to_trough_duration" in calculated_metrics.columns:
+                calculated_metrics = calculated_metrics.rename(columns={"peak_to_trough_duration": "peak_to_valley"})
+            # main_peak_to_trough_ratio was named peak_trough_ratio and had inverted sign
+            if "main_peak_to_trough_ratio" in calculated_metrics.columns:
+                calculated_metrics = calculated_metrics.rename(
+                    columns={"main_peak_to_trough_ratio": "peak_trough_ratio"}
+                )
+                calculated_metrics["peak_trough_ratio"] = -1 * calculated_metrics["peak_trough_ratio"]
+        return calculated_metrics
 
+    def _check_required_metrics_are_present(self, calculated_metrics):
         # Check all the required metrics have been calculated
         required_metrics = set(self.required_metrics)
         if required_metrics.issubset(set(calculated_metrics)):

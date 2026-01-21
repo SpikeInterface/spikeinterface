@@ -7,6 +7,8 @@ from typing import Optional
 
 from .base import BaseWidget, to_attr
 
+from .unit_labels import WaveformOverlayByLabelWidget
+
 
 def _is_threshold_disabled(value):
     """Check if a threshold value is disabled (None or np.nan)."""
@@ -115,94 +117,6 @@ class LabelingHistogramsWidget(BaseWidget):
         self.axes = axes
 
 
-class WaveformOverlayWidget(BaseWidget):
-    """Plot overlaid waveforms grouped by unit label type."""
-
-    def __init__(
-        self,
-        sorting_analyzer,
-        unit_type: np.ndarray,
-        unit_type_string: np.ndarray,
-        split_non_somatic: bool = False,
-        backend=None,
-        **backend_kwargs,
-    ):
-        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-        plot_data = dict(
-            sorting_analyzer=sorting_analyzer,
-            unit_type=unit_type,
-            unit_type_string=unit_type_string,
-            split_non_somatic=split_non_somatic,
-        )
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-    def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-
-        dp = to_attr(data_plot)
-        sorting_analyzer = dp.sorting_analyzer
-        unit_type = dp.unit_type
-        split_non_somatic = dp.split_non_somatic
-
-        if not sorting_analyzer.has_extension("templates"):
-            fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-            ax.text(
-                0.5,
-                0.5,
-                "Templates extension not computed.\nRun: analyzer.compute('templates')",
-                ha="center",
-                va="center",
-                fontsize=12,
-            )
-            ax.axis("off")
-            self.figure = fig
-            self.axes = ax
-            return
-
-        templates_ext = sorting_analyzer.get_extension("templates")
-        templates = templates_ext.get_templates(operator="average")
-
-        if split_non_somatic:
-            labels = {0: "NOISE", 1: "GOOD", 2: "MUA", 3: "NON_SOMA_GOOD", 4: "NON_SOMA_MUA"}
-            n_plots, nrows, ncols = 5, 2, 3
-        else:
-            labels = {0: "NOISE", 1: "GOOD", 2: "MUA", 3: "NON_SOMA"}
-            n_plots, nrows, ncols = 4, 2, 2
-
-        fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
-        axes_flat = axes.flatten()
-
-        for plot_idx in range(n_plots):
-            ax = axes_flat[plot_idx]
-            type_label = labels.get(plot_idx, "")
-            mask = unit_type == plot_idx
-            n_units = np.sum(mask)
-
-            if n_units > 0:
-                unit_indices = np.where(mask)[0]
-                alpha = max(0.05, min(0.3, 10 / n_units))
-                for unit_idx in unit_indices:
-                    template = templates[unit_idx]
-                    best_chan = np.argmax(np.max(np.abs(template), axis=0))
-                    ax.plot(template[:, best_chan], color="black", alpha=alpha, linewidth=0.5)
-                ax.set_title(f"{type_label} (n={n_units})")
-            else:
-                ax.set_title(f"{type_label} (n=0)")
-                ax.text(0.5, 0.5, "No units", ha="center", va="center", transform=ax.transAxes)
-
-            for spine in ax.spines.values():
-                spine.set_visible(False)
-            ax.set_xticks([])
-            ax.set_yticks([])
-
-        for idx in range(n_plots, nrows * ncols):
-            axes_flat[idx].set_visible(False)
-
-        plt.tight_layout()
-        self.figure = fig
-        self.axes = axes
-
-
 class UpsetPlotWidget(BaseWidget):
     """
     Plot UpSet plots showing which metrics fail together for each unit type.
@@ -210,31 +124,6 @@ class UpsetPlotWidget(BaseWidget):
     Requires `upsetplot` package. Each unit type shows relevant metrics:
     NOISE -> waveform metrics, MUA -> spike quality metrics, NON_SOMA -> non-somatic metrics.
     """
-
-    NOISE_METRICS = [
-        "num_positive_peaks",
-        "num_negative_peaks",
-        "peak_to_trough_duration",
-        "waveform_baseline_flatness",
-        "peak_after_to_trough_ratio",
-        "exp_decay",
-    ]
-    SPIKE_QUALITY_METRICS = [
-        "amplitude_median",
-        "snr_baseline",
-        "amplitude_cutoff",
-        "num_spikes",
-        "rp_contamination",
-        "presence_ratio",
-        "drift_ptp",
-    ]
-    NON_SOMATIC_METRICS = [
-        "peak_before_to_trough_ratio",
-        "peak_before_width",
-        "trough_width",
-        "peak_before_to_peak_after_ratio",
-        "main_peak_to_trough_ratio",
-    ]
 
     def __init__(
         self,
@@ -277,12 +166,18 @@ class UpsetPlotWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def _get_metrics_for_unit_type(self, unit_type_label):
+        from spikeinterface.curation.bombcell_curation import (
+            NOISE_METRICS,
+            SPIKE_QUALITY_METRICS,
+            NON_SOMATIC_METRICS,
+        )
+
         if unit_type_label == "NOISE":
-            return self.NOISE_METRICS
+            return NOISE_METRICS
         elif unit_type_label == "MUA":
-            return self.SPIKE_QUALITY_METRICS
+            return SPIKE_QUALITY_METRICS
         elif unit_type_label in ("NON_SOMA", "NON_SOMA_GOOD", "NON_SOMA_MUA"):
-            return self.NON_SOMATIC_METRICS
+            return NON_SOMATIC_METRICS
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
@@ -402,58 +297,6 @@ class UpsetPlotWidget(BaseWidget):
         return pd.DataFrame(failure_data, index=quality_metrics.index)
 
 
-# Convenience functions
-def plot_labeling_histograms(
-    sorting_analyzer,
-    thresholds=None,
-    metrics_to_plot=None,
-    backend=None,
-    **kwargs,
-):
-    """Plot histograms of quality metrics with threshold lines."""
-    return LabelingHistogramsWidget(
-        sorting_analyzer,
-        thresholds=thresholds,
-        metrics_to_plot=metrics_to_plot,
-        backend=backend,
-        **kwargs,
-    )
-
-
-def plot_waveform_overlay(
-    sorting_analyzer, unit_type, unit_type_string, split_non_somatic=False, backend=None, **kwargs
-):
-    """Plot overlaid waveforms grouped by unit label type."""
-    return WaveformOverlayWidget(
-        sorting_analyzer, unit_type, unit_type_string, split_non_somatic=split_non_somatic, backend=backend, **kwargs
-    )
-
-
-def plot_upset(
-    sorting_analyzer,
-    unit_type,
-    unit_type_string,
-    thresholds=None,
-    unit_types_to_plot=None,
-    split_non_somatic=False,
-    min_subset_size=1,
-    backend=None,
-    **kwargs,
-):
-    """Plot UpSet plots showing which metrics fail together for each unit type."""
-    return UpsetPlotWidget(
-        sorting_analyzer,
-        unit_type,
-        unit_type_string,
-        thresholds=thresholds,
-        unit_types_to_plot=unit_types_to_plot,
-        split_non_somatic=split_non_somatic,
-        min_subset_size=min_subset_size,
-        backend=backend,
-        **kwargs,
-    )
-
-
 def plot_unit_labeling_all(
     sorting_analyzer,
     unit_type: np.ndarray,
@@ -507,7 +350,7 @@ def plot_unit_labeling_all(
 
     # Histograms
     if has_metrics:
-        results["histograms"] = plot_labeling_histograms(
+        results["histograms"] = LabelingHistogramsWidget(
             sorting_analyzer,
             thresholds=thresholds,
             backend=backend,
@@ -515,13 +358,11 @@ def plot_unit_labeling_all(
         )
 
     # Waveform overlay
-    results["waveforms"] = plot_waveform_overlay(
-        sorting_analyzer, unit_type, unit_type_string, split_non_somatic=split_non_somatic, backend=backend, **kwargs
-    )
+    results["waveforms"] = WaveformOverlayByLabelWidget(sorting_analyzer, unit_type_string, backend=backend, **kwargs)
 
     # UpSet plots
     if include_upset and has_metrics:
-        results["upset"] = plot_upset(
+        results["upset"] = UpsetPlotWidget(
             sorting_analyzer,
             unit_type,
             unit_type_string,
