@@ -40,6 +40,7 @@ class NumSpikes(BaseMetric):
     metric_params = {}
     metric_descriptions = {"num_spikes": "Total number of spikes for each unit across all segments."}
     metric_columns = {"num_spikes": int}
+    supports_periods = True
 
 
 def compute_firing_rates(sorting_analyzer, unit_ids=None, periods=None):
@@ -68,7 +69,7 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None, periods=None):
     total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
 
     firing_rates = {}
-    num_spikes = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
+    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
     for unit_id in unit_ids:
         if num_spikes[unit_id] == 0:
             firing_rates[unit_id] = np.nan
@@ -83,6 +84,7 @@ class FiringRate(BaseMetric):
     metric_params = {}
     metric_descriptions = {"firing_rate": "Firing rate (spikes per second) for each unit across all segments."}
     metric_columns = {"firing_rate": float}
+    supports_periods = True
 
 
 spiketrain_metrics = [NumSpikes, FiringRate]

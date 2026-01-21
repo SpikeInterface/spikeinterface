@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from spikeinterface.core.base import unit_period_dtype
 
 
 def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, periods=None):
@@ -106,6 +107,47 @@ def compute_total_durations_per_unit(sorting_analyzer, periods=None):
         unit_id: samples / sorting_analyzer.sampling_frequency for unit_id, samples in total_samples.items()
     }
     return total_durations
+
+
+def compute_periods(sorting_analyzer, num_periods, bin_size_s=None):
+    """
+    Computes and sets periods for each unit in the sorting analyzer.
+    The periods span the total duration of the recording, but divide it into
+    smaller periods either by specifying the number of periods or the size of each bin.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer containing the units and recording information.
+    num_periods : int
+        The number of periods to divide the total duration into (used if bin_size_s is None).
+    bin_size_s : float, defaut: None
+        If given, periods will be multiple of this size in seconds.
+
+    Returns
+    -------
+    periods
+        np.ndarray of dtype unit_period_dtype containing the segment, start, end samples and unit index.
+    """
+    all_periods = []
+    for segment_index in range(sorting_analyzer.recording.get_num_segments()):
+        samples_per_period = sorting_analyzer.get_num_samples(segment_index) // num_periods
+        if bin_size_s is not None:
+            bin_size_samples = int(bin_size_s * sorting_analyzer.sampling_frequency)
+            print(samples_per_period / bin_size_samples)
+            samples_per_period = samples_per_period // bin_size_samples * bin_size_samples
+            num_periods = int(np.round(sorting_analyzer.get_num_samples(segment_index) / samples_per_period))
+        for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+            period_starts = np.arange(0, sorting_analyzer.get_num_samples(segment_index), samples_per_period)
+            periods_per_unit = np.zeros(len(period_starts), dtype=unit_period_dtype)
+            for i, period_start in enumerate(period_starts):
+                period_end = min(period_start + samples_per_period, sorting_analyzer.get_num_samples(segment_index))
+                periods_per_unit[i]["segment_index"] = segment_index
+                periods_per_unit[i]["start_sample_index"] = period_start
+                periods_per_unit[i]["end_sample_index"] = period_end
+                periods_per_unit[i]["unit_index"] = unit_index
+            all_periods.append(periods_per_unit)
+    return np.concatenate(all_periods)
 
 
 def create_ground_truth_pc_distributions(center_locations, total_points):
