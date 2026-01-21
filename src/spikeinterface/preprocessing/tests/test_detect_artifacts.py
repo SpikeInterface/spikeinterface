@@ -1,7 +1,7 @@
 from spikeinterface.core import generate_recording, NumpyRecording
 from spikeinterface.preprocessing import detect_artifact_periods, detect_saturation_periods
 import numpy as np
-import scipy.signal
+
 
 def test_detect_artifact_periods():
     # one segment only
@@ -13,6 +13,9 @@ def test_detect_artifact_periods():
 
 
 def test_detect_saturation_periods():
+
+    import scipy.signal
+    
     """
     TODO: NOTE: we have one sample before the saturation starts as we take the forward derivative for the velocity
                 we have an extra sample after due to taking the diff on the final saturation mask
