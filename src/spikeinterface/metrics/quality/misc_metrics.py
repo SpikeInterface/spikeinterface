@@ -642,15 +642,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
         unit_ids = sorting.unit_ids
 
     num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
-
-    if all(
-        [
-            sorting_analyzer.get_num_samples(segment_index) < bin_size_samples
-            for segment_index in range(sorting_analyzer.get_num_segments())
-        ]
-    ):
-        warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
-        return {unit_id: np.nan for unit_id in unit_ids}
+    total_samples = compute_total_samples_per_unit(sorting_analyzer, periods=periods)
 
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in unit_ids}
@@ -662,7 +654,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
     )
     cumulative_segment_samples = np.cumsum([0] + segment_samples[:-1])
     for unit_id in unit_ids:
-        if num_spikes[unit_id] == 0:
+        if num_spikes[unit_id] == 0 or total_samples[unit_id] < bin_size_samples:
             continue
         bin_edges = bin_edges_per_unit[unit_id]
 
@@ -681,7 +673,7 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
     # finally we compute the percentiles
     firing_ranges = {}
     for unit_id in unit_ids:
-        if num_spikes[unit_id] == 0:
+        if num_spikes[unit_id] == 0 or total_samples[unit_id] < bin_size_samples:
             firing_ranges[unit_id] = np.nan
             continue
         firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], percentiles[1]) - np.percentile(
