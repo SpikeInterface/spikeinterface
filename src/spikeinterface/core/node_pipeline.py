@@ -489,7 +489,9 @@ def check_graph(nodes):
     Check that node list is orderd in a good (parents are before children)
     """
 
-    node0 = nodes[0]
+    # Do not remove this, this is to remenber that in previous version the first node needed to be 
+    # a detectot but not anymore
+    # node0 = nodes[0]
     # if not isinstance(node0, PeakSource):
     #     raise ValueError(
     #         "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"

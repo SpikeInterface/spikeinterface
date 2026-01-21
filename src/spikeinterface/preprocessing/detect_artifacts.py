@@ -14,19 +14,14 @@ from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype, run
 import numpy as np
 
 
-# artifact_dtype = [
-#     ("start_index", "int64"),
-#     ("stop_index", "int64"),
-#     ("segment_index", "int64"),
-# ]
 
 artifact_dtype = base_period_dtype
 
 
+# this will be extend with channel boundaries if needed
 # extended_artifact_dtype = artifact_dtype + [
 #     # TODO
 # ]
-
 
 
 
@@ -37,7 +32,11 @@ def detect_artifact_periods(
     job_kwargs=None,
 ):
     """
-
+    Detect artifacts with several possible methods:
+      * 'saturation' using detect_artifact_periods_by_envelope()
+      * 'envelope' using detect_saturation_periods()
+    
+    See sub methods for more information on parameters.
     """
 
     if method_kwargs is None:
@@ -48,7 +47,7 @@ def detect_artifact_periods(
     elif method == "saturation":
         artifact_periods = detect_saturation_periods(recording, **method_kwargs, job_kwargs=job_kwargs)
     else:
-        raise ValueError("")
+        raise ValueError(f"detect_artifact_periods() method='{method}' is not valid")
     
     return artifact_periods
 
@@ -56,13 +55,10 @@ def detect_artifact_periods(
 
 ## detect_period_artifacts_saturation Zone
 
-
 def _collapse_events(events):
     """
     If events are detected at a chunk edge, they will be split in two.
-    This detects such cases and collapses them in a single record instead
-    :param events:
-    :return:
+    This detects such cases and collapses them in a single record instead.
     """
     order = np.lexsort((events["start_sample_index"], events["segment_index"]))
     events = events[order]
@@ -87,21 +83,24 @@ class _DetectSaturation(PipelineNode):
     def __init__(
         self,
         recording,
-        saturation_threshold_uV,  # 1200 uV
-        voltage_per_sec_threshold,  # 1e-8 V.s-1
+        saturation_threshold_uV,
+        voltage_per_sec_threshold,
         proportion,
-        mute_window_samples,
     ):
         PipelineNode.__init__(self, recording, return_output=True)
 
-        self.gains = recording.get_channel_gains()
-        self.offsets = recording.get_channel_offsets()
+        gains = recording.get_channel_gains()
+        offsets = recording.get_channel_offsets()
+        num_chans = recording.get_num_channels()
 
         self.voltage_per_sec_threshold = voltage_per_sec_threshold
-        self.saturation_threshold_uV = saturation_threshold_uV
+        thresh = np.full((num_chans, ), saturation_threshold_uV)
+        # 0.98 is empirically determined as the true saturating point is
+        # slightly lower than the documented saturation point of the probe        
+        self.saturation_threshold_unscaled = (thresh - offsets) / gains * 0.98
+        
         self.sampling_frequency = recording.get_sampling_frequency()
         self.proportion = proportion
-        self.mute_window_samples = mute_window_samples
         self._dtype = np.dtype(artifact_dtype)
         self.gain  = recording.get_channel_gains()
         self.offset = recording.get_channel_offsets()
@@ -114,16 +113,7 @@ class _DetectSaturation(PipelineNode):
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
 
-        # @olivier @joe we can avoid this by making 
-        traces = traces * self.gains[np.newaxis, :] + self.offsets[np.newaxis, :]
-
-
-        # first computes the saturated samples
-        max_voltage = np.atleast_1d(self.saturation_threshold_uV)[:, np.newaxis]
-
-        # 0.98 is empirically determined as the true saturating point is
-        # slightly lower than the documented saturation point of the probe
-        saturation = np.mean(np.abs(traces) > max_voltage * 0.98, axis=1)
+        saturation = np.mean(np.abs(traces) > self.saturation_threshold_unscaled, axis=1)
 
         if self.voltage_per_sec_threshold is not None:
             fs = self.sampling_frequency
@@ -138,7 +128,7 @@ class _DetectSaturation(PipelineNode):
         else:
             saturation = saturation > self.proportion
 
-        intervals = np.where(np.diff(saturation, prepend=False, append=False))[0]
+        intervals = np.flatnonzero(np.diff(saturation, prepend=False, append=False))
         n_events = len(intervals) // 2  # Number of saturation periods
         events = np.zeros(n_events, dtype=artifact_dtype)
 
@@ -146,7 +136,6 @@ class _DetectSaturation(PipelineNode):
             events[i]["start_sample_index"] = start + start_frame
             events[i]["end_sample_index"] = stop + start_frame
             events[i]["segment_index"] = segment_index
-            # events[i]["method_id"] = "saturation_detection"
 
         return (events, )
 
@@ -154,9 +143,8 @@ class _DetectSaturation(PipelineNode):
 def detect_saturation_periods(
     recording,
     saturation_threshold_uV,  # 1200 uV
-    voltage_per_sec_threshold,  # 1e-8 V.s-1
+    voltage_per_sec_threshold=None,  # 1e-8 V.s-1
     proportion=0.5,
-    mute_window_samples=7,
     job_kwargs=None,
 ):
     """
@@ -174,7 +162,7 @@ def detect_saturation_periods(
         The recording on which to detect the saturation events.
     saturation_threshold_uV : float
         The voltage saturation threshold in volts. This will depend on the recording
-        probe and amplifier gain settings. For NP1 the value of 1200 * 1e-6 is recommended (IBL).
+        probe and amplifier gain settings. For NP1 the value of 1200 uV is recommended (IBL).
         Note that NP2 probes are more difficult to saturate than NP1.
     voltage_per_sec_threshold : None | float
         The first-derivative threshold in volts per second. Periods of the data over which the change
@@ -207,10 +195,9 @@ def detect_saturation_periods(
         saturation_threshold_uV=saturation_threshold_uV,
         voltage_per_sec_threshold=voltage_per_sec_threshold,
         proportion=proportion,
-        mute_window_samples=mute_window_samples,
     )
 
-    saturation_periods = run_node_pipeline(recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation events")
+    saturation_periods = run_node_pipeline(recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts")
 
     return _collapse_events(saturation_periods)
 
@@ -218,13 +205,7 @@ def detect_saturation_periods(
 
 ## detect_artifact_periods_by_envelope Zone
 
-# _internal_dtype = [
-#     ("sample_index", "int64"),
-#     ("segment_index", "int64"),
-#     ("front", "bool")
-# ]
-
-class DetectThresholdCrossing(PeakDetector):
+class _DetectThresholdCrossing(PeakDetector):
 
     name = "threshold_crossings"
     preferred_mp_context = None
@@ -243,6 +224,7 @@ class DetectThresholdCrossing(PeakDetector):
             random_slices_kwargs["seed"] = seed
             noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
         self.abs_thresholds = noise_levels * detect_threshold
+        # internal dtype
         self._dtype = np.dtype([
                 ("sample_index", "int64"),
                 ("segment_index", "int64"),
@@ -278,7 +260,7 @@ def detect_artifact_periods_by_envelope(
     random_slices_kwargs=None,
 ):
     """
-    Docstring for detect_period_artifacts. Function to detect putative artifact periods as threshold crossings of
+    Function to detect putative artifact periods as threshold crossings of
     a global envelope of the channels.
 
     Parameters
@@ -300,8 +282,6 @@ def detect_artifact_periods_by_envelope(
     envelope = GaussianFilterRecording(envelope, freq_min=None, freq_max=freq_max)
     envelope = CommonReferenceRecording(envelope)
 
-
-    # _, job_kwargs = split_job_kwargs(noise_levels_kwargs)
     job_kwargs = fix_job_kwargs(job_kwargs)
     if random_slices_kwargs is None:
         random_slices_kwargs = {}
@@ -310,7 +290,7 @@ def detect_artifact_periods_by_envelope(
     random_slices_kwargs["seed"] = seed
     noise_levels = get_noise_levels(envelope, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
 
-    node0 = DetectThresholdCrossing(
+    node0 = _DetectThresholdCrossing(
         recording, detect_threshold=detect_threshold, noise_levels=noise_levels, seed=seed,
     )
 
@@ -318,7 +298,7 @@ def detect_artifact_periods_by_envelope(
         envelope,
         [node0],
         job_kwargs,
-        job_name="detect threshold crossings",
+        job_name="detect artifact on  envelope",
     )
 
     order = np.lexsort((threshold_crossings["sample_index"], threshold_crossings["segment_index"]))
@@ -326,11 +306,8 @@ def detect_artifact_periods_by_envelope(
 
     artifacts = _transform_internal_dtype_to_artifact_dtype(threshold_crossings, recording)
 
-    
     return artifacts, envelope
 
-
-# tools
 
 def _transform_internal_dtype_to_artifact_dtype(artifacts, recording):
 

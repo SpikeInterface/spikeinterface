@@ -26,7 +26,8 @@ def test_detect_saturation_periods():
 
     # cross a chunk boundary. Do not change without changing the below.
     sat_value = 1200
-    data = np.random.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10 * 1e-6
+    rng = np.random.default_rng()
+    data = rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10 * 1e-6
 
     # Design the Butterworth filter
     sos = scipy.signal.butter(N=3, Wn=12000 / (sample_frequency / 2), btype="low", output="sos")
