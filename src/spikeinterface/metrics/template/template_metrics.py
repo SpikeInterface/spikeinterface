@@ -16,7 +16,6 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 
 from .metrics import get_trough_and_peak_idx, single_channel_metrics, multi_channel_metrics
 
-
 MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
 MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS = 64
 

@@ -10,22 +10,10 @@ from pathlib import Path
 
 import numpy as np
 
+from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
-
-
-base_peak_dtype = [
-    ("sample_index", "int64"),
-    ("channel_index", "int64"),
-    ("amplitude", "float64"),
-    ("segment_index", "int64"),
-]
-
-
-spike_peak_dtype = base_peak_dtype + [
-    ("unit_index", "int64"),
-]
 
 
 class PipelineNode:
@@ -502,10 +490,10 @@ def check_graph(nodes):
     """
 
     node0 = nodes[0]
-    if not isinstance(node0, PeakSource):
-        raise ValueError(
-            "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
-        )
+    # if not isinstance(node0, PeakSource):
+    #     raise ValueError(
+    #         "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
+    #     )
 
     for i, node in enumerate(nodes):
         assert isinstance(node, PipelineNode), f"Node {node} is not an instance of PipelineNode"

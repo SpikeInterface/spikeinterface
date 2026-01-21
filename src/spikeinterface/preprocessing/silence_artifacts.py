@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 
+from spikeinterface.core.base import base_peak_dtype
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.node_pipeline import PeakDetector
 from spikeinterface.preprocessing.silence_periods import SilencedPeriodsRecording
 import numpy as np
 
