@@ -291,7 +291,7 @@ def detect_artifact_periods_by_envelope(
     noise_levels = get_noise_levels(envelope, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
 
     node0 = _DetectThresholdCrossing(
-        recording, detect_threshold=detect_threshold, noise_levels=noise_levels, seed=seed,
+        envelope, detect_threshold=detect_threshold, noise_levels=noise_levels, seed=seed,
     )
 
     threshold_crossings = run_node_pipeline(
