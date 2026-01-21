@@ -672,12 +672,19 @@ def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_siz
 
     # finally we compute the percentiles
     firing_ranges = {}
+    failed_units = []
     for unit_id in unit_ids:
         if num_spikes[unit_id] == 0 or total_samples[unit_id] < bin_size_samples:
+            failed_units.append(unit_id)
             firing_ranges[unit_id] = np.nan
             continue
         firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], percentiles[1]) - np.percentile(
             firing_rate_histograms[unit_id], percentiles[0]
+        )
+    if len(failed_units) > 0:
+        warnings.warn(
+            f"Firing range could not be computed for units {failed_units} "
+            f"because they have no spikes or the total duration is less than bin size."
         )
 
     return firing_ranges
@@ -1156,18 +1163,16 @@ def compute_drift_metrics(
         bin_duration_s=interval_s,
     )
 
+    failed_units = []
     median_positions_per_unit = {}
     for unit_id in unit_ids:
         bins = bin_edges_for_units[unit_id]
         num_bins = len(bins) - 1
         if num_bins < min_num_bins:
-            warnings.warn(
-                f"Unit {unit_id} has only {num_bins} bins given the specified 'interval_s' and "
-                f"'min_num_bins'. Drift metrics will be set to NaN"
-            )
             drift_ptps[unit_id] = np.nan
             drift_stds[unit_id] = np.nan
             drift_mads[unit_id] = np.nan
+            failed_units.append(unit_id)
             continue
 
         # bin_edges are global across segments, so we have to use spike_sample_indices,
@@ -1191,6 +1196,7 @@ def compute_drift_metrics(
         if np.any(np.isnan(position_diff)):
             # deal with nans: if more than 50% nans --> set to nan
             if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
+                failed_units.append(unit_id)
                 ptp_drift = np.nan
                 std_drift = np.nan
                 mad_drift = np.nan
@@ -1205,6 +1211,12 @@ def compute_drift_metrics(
         drift_ptps[unit_id] = ptp_drift
         drift_stds[unit_id] = std_drift
         drift_mads[unit_id] = mad_drift
+
+    if len(failed_units) > 0:
+        warnings.warn(
+            f"Drift metrics could not be computed for units {failed_units} because they have less than "
+            f"{min_num_bins} bins given the specified 'interval_s' and 'min_num_bins' or not enough valid intervals."
+        )
 
     if return_positions:
         outs = res(drift_ptps, drift_stds, drift_mads), median_positions_per_unit
