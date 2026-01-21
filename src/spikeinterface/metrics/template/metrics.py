@@ -6,7 +6,7 @@ from collections import namedtuple
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def get_trough_and_peak_idx(template):
+def get_trough_and_peak_idx(template, peak_sign='neg'):
     """
     Return the indices into the input template of the detected trough
     (minimum of template) and peak (maximum of template, after trough).
@@ -25,6 +25,15 @@ def get_trough_and_peak_idx(template):
         The index of the peak
     """
     assert template.ndim == 1
+
+    # If peak_sign is 'pos', invert the template
+    if peak_sign == 'pos':
+        template = -template
+    elif peak_sign == 'both':
+        max_idx = np.abs(template).argmax()
+        if template[max_idx] > 0:
+            template = -template
+
     trough_idx = np.argmin(template)
     peak_idx = trough_idx + np.argmax(template[trough_idx:])
     return trough_idx, peak_idx
@@ -107,6 +116,7 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
     if trough_idx is None or peak_idx is None:
         trough_idx, peak_idx = get_trough_and_peak_idx(template_single)
 
+    # Edge case: template is flat
     if peak_idx == 0:
         return np.nan
 
@@ -114,19 +124,19 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
     # threshold is half of peak height (assuming baseline is 0)
     threshold = 0.5 * trough_val
 
-    (cpre_idx,) = np.where(template_single[:trough_idx] < threshold)
-    (cpost_idx,) = np.where(template_single[trough_idx:] < threshold)
+    # Find where the template crosses the threshold before and after the trough
+    threshold_crossings = np.where(np.diff(template_single >= threshold))[0]
+    crossings_before_trough = threshold_crossings[threshold_crossings < trough_idx]
+    crossings_after_trough = threshold_crossings[threshold_crossings >= trough_idx]
 
-    if len(cpre_idx) == 0 or len(cpost_idx) == 0:
+    if len(crossings_before_trough) == 0 or len(crossings_after_trough) == 0:
         hw = np.nan
-
     else:
-        # last occurence of template lower than thr, before peak
-        cross_pre_pk = cpre_idx[0] - 1
-        # first occurence of template lower than peak, after peak
-        cross_post_pk = cpost_idx[-1] + 1 + trough_idx
+        last_crossing_before_trough = crossings_before_trough[-1]
+        first_crossing_after_trough = crossings_after_trough[0]
 
-        hw = (cross_post_pk - cross_pre_pk) / sampling_frequency
+        hw = (first_crossing_after_trough - last_crossing_before_trough) / sampling_frequency
+
     return hw
 
 
@@ -163,11 +173,12 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     if trough_idx == 0:
         return np.nan
 
-    (rtrn_idx,) = np.nonzero(template_single[trough_idx:] >= 0)
-    if len(rtrn_idx) == 0:
+    # Find where the template crosses the baseline (0) after the trough
+    baseline_crossings = np.where(np.diff(template_single[trough_idx:] >= 0))[0]
+    if len(baseline_crossings) == 0:
         return np.nan
     # first time after trough, where template is at baseline
-    return_to_base_idx = rtrn_idx[0] + trough_idx
+    return_to_base_idx = baseline_crossings[0] + trough_idx + 1
 
     if return_to_base_idx - trough_idx < 3:
         return np.nan
@@ -217,6 +228,9 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
         return np.nan
     max_idx = int(peak_idx + ((recovery_window_ms / 1000) * sampling_frequency))
     max_idx = np.min([max_idx, template_single.shape[0]])
+
+    if max_idx - peak_idx < 3:
+        return np.nan
 
     res = scipy.stats.linregress(times[peak_idx:max_idx], template_single[peak_idx:max_idx])
     return res.slope

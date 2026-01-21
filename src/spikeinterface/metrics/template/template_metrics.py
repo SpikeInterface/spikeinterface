@@ -70,7 +70,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
         Default parameters can be obtained with: `si.metrics.template_metrics.get_default_template_metrics_params()`
-    peak_sign : {"neg", "pos"}, default: "neg"
+    peak_sign : {"neg", "pos", "both"}, default: "neg"
         Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
@@ -209,8 +209,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
             else:
                 template_upsampled = template_single
-                sampling_frequency_up = sampling_frequency
-            trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
+            trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled, peak_sign=peak_sign)
 
             templates_single.append(template_upsampled)
             troughs[unit_id] = trough_idx
