@@ -22,9 +22,6 @@ from .sortingview_curation import apply_sortingview_curation
 
 # automated curation
 from .bombcell_curation import (
-    NOISE_METRICS,
-    SPIKE_QUALITY_METRICS,
-    NON_SOMATIC_METRICS,
     bombcell_get_default_thresholds,
     bombcell_label_units,
     get_bombcell_labeling_summary,
