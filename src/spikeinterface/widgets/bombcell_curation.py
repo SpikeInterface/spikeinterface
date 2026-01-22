@@ -151,9 +151,9 @@ class UpsetPlotWidget(BaseWidget):
             thresholds = bombcell_get_default_thresholds()
         if unit_types_to_plot is None:
             if split_non_somatic:
-                unit_types_to_plot = ["NOISE", "MUA", "NON_SOMA_GOOD", "NON_SOMA_MUA"]
+                unit_types_to_plot = ["noise", "mua", "non_soma_good", "non_soma_mua"]
             else:
-                unit_types_to_plot = ["NOISE", "MUA", "NON_SOMA"]
+                unit_types_to_plot = ["noise", "mua", "non_soma"]
 
         plot_data = dict(
             quality_metrics=combined_metrics,
@@ -172,11 +172,11 @@ class UpsetPlotWidget(BaseWidget):
             NON_SOMATIC_METRICS,
         )
 
-        if unit_type_label == "NOISE":
+        if unit_type_label == "noise":
             return NOISE_METRICS
-        elif unit_type_label == "MUA":
+        elif unit_type_label == "mua":
             return SPIKE_QUALITY_METRICS
-        elif unit_type_label in ("NON_SOMA", "NON_SOMA_GOOD", "NON_SOMA_MUA"):
+        elif unit_type_label in ("non_soma", "non_soma_good", "non_soma_mua"):
             return NON_SOMATIC_METRICS
         return None
 
@@ -316,13 +316,13 @@ def plot_unit_labeling_all(
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object with computed metrics extensions.
     unit_type : np.ndarray
-        Array of unit type codes (0=NOISE, 1=GOOD, 2=MUA, 3=NON_SOMA, etc.).
+        Array of unit type codes (0=noise, 1=good, 2=mua, 3=non_soma, etc.).
     unit_type_string : np.ndarray
         Array of unit type labels as strings.
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
     split_non_somatic : bool, default: False
-        Whether to split NON_SOMA into NON_SOMA_GOOD and NON_SOMA_MUA.
+        Whether to split "non_soma" into "non_soma_good" and "non_soma_mua".
     include_upset : bool, default: True
         Whether to include UpSet plots (requires upsetplot package).
     save_folder : str or Path, optional
