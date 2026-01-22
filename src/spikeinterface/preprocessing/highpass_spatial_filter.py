@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from .filter import fix_dtype
-from spikeinterface.core import order_channels_by_depth, get_chunk_with_margin
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
+from spikeinterface.preprocessing.filter import fix_dtype
+from spikeinterface.core import order_channels_by_depth, get_chunk_with_margin, get_noise_levels
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
@@ -48,8 +48,17 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         Order of spatial butterworth filter
     highpass_butter_wn : float, default: 0.01
         Critical frequency (with respect to Nyquist) of spatial butterworth filter
+    epsilon : float, default: 0.003
+        Value multiplied to RMS values to avoid division by zero during AGC.
+    random_slice_kwargs : dict | None, default: None
+        If not None, dictionary of arguments to be passed to `get_noise_levels` when computing
+        noise levels.
     dtype : dtype, default: None
         The dtype of the output traces. If None, the dtype is the same as the input traces
+    rms_values : np.ndarray | None, default: None
+        If not None, array of RMS values for each channel to be used during AGC. If None, RMS values are computed
+        from the recording. This is used to cache pre-computed RMS values, which are only computed once at
+        initialization.
 
     Returns
     -------
@@ -66,7 +75,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
 
     def __init__(
         self,
-        recording,
+        recording: BaseRecording,
         n_channel_pad=60,
         n_channel_taper=0,
         direction="y",
@@ -74,7 +83,10 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         agc_window_length_s=0.1,
         highpass_butter_order=3,
         highpass_butter_wn=0.01,
+        epsilon=0.003,
+        random_slice_kwargs=None,
         dtype=None,
+        rms_values=None,
     ):
         BasePreprocessor.__init__(self, recording)
 
@@ -115,6 +127,14 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         if not apply_agc:
             agc_window_length_s = None
 
+        # Compute or retrieve RMS values
+        if rms_values is None:
+            if "noise_level_rms_raw" in recording.get_property_keys():
+                rms_values = recording.get_property("noise_level_rms_raw")
+            else:
+                random_slice_kwargs = {} if random_slice_kwargs is None else random_slice_kwargs
+                rms_values = get_noise_levels(recording, method="rms", return_scaled=False, **random_slice_kwargs)
+
         # Pre-compute spatial filtering parameters
         butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
         sos_filter = scipy.signal.butter(**butter_kwargs, output="sos")
@@ -133,6 +153,8 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 order_f,
                 order_r,
                 dtype=dtype,
+                epsilon=epsilon,
+                rms_values=rms_values,
             )
             self.add_recording_segment(rec_segment)
 
@@ -145,6 +167,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             agc_window_length_s=agc_window_length_s,
             highpass_butter_order=highpass_butter_order,
             highpass_butter_wn=highpass_butter_wn,
+            rms_values=rms_values,
         )
 
 
@@ -161,6 +184,8 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         order_f,
         order_r,
         dtype,
+        epsilon,
+        rms_values,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment
@@ -185,6 +210,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         # get filter params
         self.sos_filter = sos_filter
         self.dtype = dtype
+        self.epsilon_values_for_agc = epsilon * np.array(rms_values)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -207,8 +233,9 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces.copy()
 
         # apply AGC and keep the gains
+        traces = traces.astype(np.float32)
         if self.window is not None:
-            traces, agc_gains = agc(traces, window=self.window)
+            traces, agc_gains = agc(traces, window=self.window, epsilons=self.epsilon_values_for_agc)
         else:
             agc_gains = None
         # pad the array with a mirrored version of itself and apply a cosine taper
@@ -255,26 +282,35 @@ highpass_spatial_filter = define_function_handling_dict_from_class(
 # -----------------------------------------------------------------------------------------------
 
 
-def agc(traces, window, epsilon=1e-8):
+def agc(traces, window, epsilons):
     """
     Automatic gain control
     w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
     such as w_agc * gain = w
-    :param traces: seismic array (sample last dimension)
-    :param window_length: window length (secs) (original default 0.5)
-    :param si: sampling interval (secs) (original default 0.002)
-    :param epsilon: whitening (useful mainly for synthetic data)
-    :return: AGC data array, gain applied to data
+
+    Parameters
+    ----------
+    traces : np.ndarray
+        Input traces
+    window : np.ndarray
+        Window to use for AGC (1D array)
+    epsilons : np.ndarray[float]
+        Epsilon values for each channel to avoid division by zero
+
+    Returns
+    -------
+    agc_traces : np.ndarray
+        AGC applied traces
+    gain : np.ndarray
+        Gain applied to the traces
     """
     import scipy.signal
 
     gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
 
-    gain += (np.sum(gain, axis=0) * epsilon / traces.shape[0])[np.newaxis, :]
-
     dead_channels = np.sum(gain, axis=0) == 0
 
-    traces[:, ~dead_channels] = traces[:, ~dead_channels] / gain[:, ~dead_channels]
+    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(epsilons, gain[:, ~dead_channels])
 
     return traces, gain
 
@@ -282,9 +318,20 @@ def agc(traces, window, epsilon=1e-8):
 def fcn_extrap(x, f, bounds):
     """
     Extrapolates a flat value before and after bounds
-    x: array to be filtered
-    f: function to be applied between bounds (cf. fcn_cosine below)
-    bounds: 2 elements list or np.array
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Input array
+    f : function
+        Function to be applied between bounds
+    bounds : list or np.ndarray
+        2 elements list or array defining the bounds
+
+    Returns
+    -------
+    y : np.ndarray
+        Output array
     """
     y = f(x)
     y[x < bounds[0]] = f(bounds[0])
@@ -298,8 +345,16 @@ def fcn_cosine(bounds):
     values <= bounds[0]: values
     values < bounds[0] < bounds[1] : cosine taper
     values < bounds[1]: bounds[1]
-    :param bounds:
-    :return: lambda function
+
+    Parameters
+    ----------
+    bounds : list or np.ndarray
+        2 elements list or array defining the bounds
+
+    Returns
+    -------
+    func : function
+        Lambda function implementing the soft thresholding with cosine taper
     """
 
     def _cos(x):

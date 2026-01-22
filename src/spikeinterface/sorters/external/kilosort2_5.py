@@ -8,7 +8,6 @@ from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
 from spikeinterface.sorters.utils import get_git_commit
 
-
 PathType = Union[str, Path]
 
 

@@ -9,7 +9,6 @@ from .auto_merge import (
     get_potential_auto_merge,
 )
 
-
 # manual sorting,
 from .curationsorting import CurationSorting, curation_sorting
 from .mergeunitssorting import MergeUnitsSorting, merge_units_sorting
