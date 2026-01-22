@@ -1129,13 +1129,20 @@ def compute_drift_metrics(
         unit_ids = sorting.unit_ids
 
     spike_locations_ext = sorting_analyzer.get_extension("spike_locations")
-    spike_locations_array = spike_locations_ext.get_data(periods=periods)
+    spike_locations_by_unit_and_segments = spike_locations_ext.get_data(
+        outputs="by_unit", concatenated=False, periods=periods
+    )
     spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(sorting_analyzer.get_num_segments())]
-    assert direction in spike_locations_array.dtype.names, (
-        f"Direction {direction} is invalid. Available directions: " f"{spike_locations_array.dtype.names}"
+    data = spike_locations_by_unit[unit_ids[0]]
+    assert direction in data.dtype.names, (
+        f"Direction {direction} is invalid. Available directions: " f"{data.dtype.names}"
     )
+    bin_edges_for_units = compute_bin_edges_per_unit(
+        sorting, segment_samples=segment_samples, periods=periods, bin_duration_s=interval_s, concatenated=False
+    )
+    failed_units = []
 
     # we need
     drift_ptps = {}
@@ -1144,62 +1151,43 @@ def compute_drift_metrics(
 
     # reference positions are the medians across segments
     reference_positions = {}
+    median_position_segments = {unit_id: np.array([]) for unit_id in unit_ids}
+
     for unit_id in unit_ids:
         reference_positions[unit_id] = np.median(spike_locations_by_unit[unit_id][direction])
 
-    # now compute median positions and concatenate them over segments
-    spike_vector = sorting.to_spike_vector()
-    spike_sample_indices = spike_vector["sample_index"].copy()
-    # we need to add the cumulative sum of segment samples to have global sample indices
-    cumulative_segment_samples = np.cumsum([0] + segment_samples[:-1])
     for segment_index in range(sorting_analyzer.get_num_segments()):
-        segment_slice = sorting._get_spike_vector_segment_slices()[segment_index]
-        spike_sample_indices[segment_slice[0] : segment_slice[1]] += cumulative_segment_samples[segment_index]
+        for unit_id in unit_ids:
+            bins = bin_edges_for_units[unit_id][segment_index]
+            num_bin_edges = len(bins)
+            if (num_bin_edges - 1) < min_num_bins:
+                failed_units.append(unit_id)
+                continue
+            median_positions = np.nan * np.zeros((num_bin_edges - 1))
+            spikes_in_segment_of_unit = sorting.get_unit_spike_train(unit_id, segment_index)
+            bounds = np.searchsorted(spikes_in_segment_of_unit, bins, side="left")
+            for bin_index, (i0, i1) in enumerate(zip(bounds[:-1], bounds[1:])):
+                spike_locations_in_bin = spike_locations_by_unit_and_segments[segment_index][unit_id][i0:i1][direction]
+                if (i1 - i0) >= min_spikes_per_interval:
+                    median_positions[bin_index] = np.median(spike_locations_in_bin)
+            median_position_segments[unit_id] = np.concatenate((median_position_segments[unit_id], median_positions))
 
-    bin_edges_for_units = compute_bin_edges_per_unit(
-        sorting,
-        segment_samples=segment_samples,
-        periods=periods,
-        bin_duration_s=interval_s,
-    )
-
-    failed_units = []
-    median_positions_per_unit = {}
+    # finally, compute deviations and drifts
     for unit_id in unit_ids:
-        bins = bin_edges_for_units[unit_id]
-        num_bins = len(bins) - 1
-        if num_bins < min_num_bins:
+        # Skip units that already failed because not enough bins in at least one segment
+        if unit_id in failed_units:
             drift_ptps[unit_id] = np.nan
             drift_stds[unit_id] = np.nan
             drift_mads[unit_id] = np.nan
-            failed_units.append(unit_id)
             continue
-
-        # bin_edges are global across segments, so we have to use spike_sample_indices,
-        # since we offseted them to be global
-        bin_spike_indices = np.searchsorted(spike_sample_indices, bins)
-        median_positions = np.nan * np.zeros(num_bins)
-        for bin_index, (i0, i1) in enumerate(zip(bin_spike_indices[:-1], bin_spike_indices[1:])):
-            spikes_in_bin = spike_vector[i0:i1]
-            spike_locations_in_bin = spike_locations_array[i0:i1][direction]
-
-            unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
-            mask = spikes_in_bin["unit_index"] == unit_index
-            if np.sum(mask) >= min_spikes_per_interval:
-                median_positions[bin_index] = np.median(spike_locations_in_bin[mask])
-            else:
-                median_positions[bin_index] = np.nan
-        median_positions_per_unit[unit_id] = median_positions
-
-        # now compute deviations and drifts for this unit
-        position_diff = median_positions - reference_positions[unit_id]
+        position_diff = median_position_segments[unit_id] - reference_positions[unit_id]
         if np.any(np.isnan(position_diff)):
             # deal with nans: if more than 50% nans --> set to nan
             if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
-                failed_units.append(unit_id)
                 ptp_drift = np.nan
                 std_drift = np.nan
                 mad_drift = np.nan
+                failed_units.append(unit_id)
             else:
                 ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
                 std_drift = np.nanstd(np.abs(position_diff))
@@ -1219,7 +1207,7 @@ def compute_drift_metrics(
         )
 
     if return_positions:
-        outs = res(drift_ptps, drift_stds, drift_mads), median_positions_per_unit
+        outs = res(drift_ptps, drift_stds, drift_mads), median_positions
     else:
         outs = res(drift_ptps, drift_stds, drift_mads)
     return outs
