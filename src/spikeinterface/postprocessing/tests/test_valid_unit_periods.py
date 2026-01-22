@@ -56,7 +56,7 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
         num_segments = self.sorting.get_num_segments()
 
         # unit periods of unit_period_dtypes
-        periods_array = np.zeros((len(unit_ids) * num_segments, 4), dtype=int)
+        periods_array = np.zeros((len(unit_ids) * num_segments, 4), dtype="int64")
 
         # for each unit we 1 valid period per segment
         for i, unit_id in enumerate(unit_ids):
