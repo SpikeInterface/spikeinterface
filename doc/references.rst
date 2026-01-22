@@ -92,7 +92,7 @@ If you use the default "similarity_correlograms" preset in the :code:`compute_me
 
 If you use the "slay" preset in the :code:`compute_merge_unit_groups` method, please cite [Koukuntla]_
 
-If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
+If you use :code:`unitrefine_label_units`, :code:`model_based_label_units` or :code:`train_model`, please cite [Jain]_
 
 Benchmark
 ---------

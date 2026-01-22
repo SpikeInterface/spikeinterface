@@ -119,8 +119,8 @@ class ModelBasedClassification:
         )
 
         # Set predictions and probability as sorting properties
-        self.sorting_analyzer.sorting.set_property("classifier_label", predictions)
-        self.sorting_analyzer.sorting.set_property("classifier_probability", probabilities)
+        self.sorting_analyzer.set_sorting_property("classifier_label", predictions)
+        self.sorting_analyzer.set_sorting_property("classifier_probability", probabilities)
 
         if export_to_phy:
             self._export_to_phy(classified_units)
@@ -204,7 +204,7 @@ class ModelBasedClassification:
         classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
 
 
-def auto_label_units(
+def model_based_label_units(
     sorting_analyzer: SortingAnalyzer,
     model_folder=None,
     model_name=None,
@@ -227,7 +227,7 @@ def auto_label_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    model_folder : str or Path, defualt: None
+    model_folder : str or Path, default: None
         The path to the folder containing the model
     repo_id : str | Path, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
