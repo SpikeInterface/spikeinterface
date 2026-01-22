@@ -82,7 +82,8 @@ def compute_total_samples_per_unit(sorting_analyzer, periods=None):
                 num_samples_in_period += period["end_sample_index"] - period["start_sample_index"]
             total_samples[unit_id] = num_samples_in_period
     else:
-        total_samples = {unit_id: sorting_analyzer.get_total_samples() for unit_id in sorting_analyzer.unit_ids}
+        total = sorting_analyzer.get_total_samples()
+        total_samples = {unit_id: total for unit_id in sorting_analyzer.unit_ids}
     return total_samples
 
 
