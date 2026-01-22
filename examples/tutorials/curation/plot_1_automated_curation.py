@@ -83,10 +83,10 @@ print(set(model.feature_names_in_).issubset(set(all_metric_names)))
 
 ##############################################################################
 # Great! We can now use the model to predict labels. Here, we pass the HF repo id directly
-# to the ``auto_label_units`` function. This returns a dictionary containing a label and
+# to the ``model_based_label_units`` function. This returns a dictionary containing a label and
 # a confidence for each unit contained in the ``sorting_analyzer``.
 
-labels = sc.auto_label_units(
+labels = sc.model_based_label_units(
     sorting_analyzer = sorting_analyzer,
     repo_id = "SpikeInterface/toy_tetrode_model",
     trusted = ['numpy.dtype']
@@ -220,7 +220,7 @@ plt.legend(); plt.grid(True); plt.show()
 #
 
 # Apply the noise/not-noise model
-noise_neuron_labels = sc.auto_label_units(
+noise_neuron_labels = sc.model_based_label_units(
     sorting_analyzer=sorting_analyzer,
     repo_id="SpikeInterface/UnitRefine_noise_neural_classifier",
     trust_model=True,
@@ -230,7 +230,7 @@ noise_units = noise_neuron_labels[noise_neuron_labels['prediction']=='noise']
 analyzer_neural = sorting_analyzer.remove_units(noise_units.index)
 
 # Apply the sua/mua model
-sua_mua_labels = sc.auto_label_units(
+sua_mua_labels = sc.model_based_label_units(
     sorting_analyzer=analyzer_neural,
     repo_id="SpikeInterface/UnitRefine_sua_mua_classifier",
     trust_model=True,
@@ -276,7 +276,7 @@ print(all_labels)
 #
 # .. code-block::
 #
-#    labels = sc.auto_label_units(
+#    labels = sc.model_based_label_units(
 #        sorting_analyzer = sorting_analyzer,
 #        model_folder = "path/to/model/folder",
 #    )
