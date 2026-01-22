@@ -93,15 +93,12 @@ def compute_total_samples_per_unit(sorting_analyzer, periods=None):
         Total number of samples for each unit.
     """
     if periods is not None:
-        total_samples = {}
+        total_samples_array = np.zeros(len(sorting_analyzer.unit_ids), dtype="int64")
         sorting = sorting_analyzer.sorting
-        for unit_id in sorting.unit_ids:
-            unit_index = sorting.id_to_index(unit_id)
-            periods_unit = periods[periods["unit_index"] == unit_index]
-            num_samples_in_period = 0
-            for period in periods_unit:
-                num_samples_in_period += period["end_sample_index"] - period["start_sample_index"]
-            total_samples[unit_id] = num_samples_in_period
+        for period in periods:
+            unit_index = period["unit_index"]
+            total_samples_array[unit_index] += period["end_sample_index"] - period["start_sample_index"]
+        total_samples = dict(zip(sorting.unit_ids, total_samples_array))
     else:
         total = sorting_analyzer.get_total_samples()
         total_samples = {unit_id: total for unit_id in sorting_analyzer.unit_ids}
@@ -131,7 +128,7 @@ def compute_total_durations_per_unit(sorting_analyzer, periods=None):
     return total_durations
 
 
-def compute_periods(sorting_analyzer, num_periods, bin_size_s=None):
+def create_regular_periods(sorting_analyzer, num_periods, bin_size_s=None):
     """
     Computes and sets periods for each unit in the sorting analyzer.
     The periods span the total duration of the recording, but divide it into
@@ -156,7 +153,6 @@ def compute_periods(sorting_analyzer, num_periods, bin_size_s=None):
         samples_per_period = sorting_analyzer.get_num_samples(segment_index) // num_periods
         if bin_size_s is not None:
             bin_size_samples = int(bin_size_s * sorting_analyzer.sampling_frequency)
-            print(samples_per_period / bin_size_samples)
             samples_per_period = samples_per_period // bin_size_samples * bin_size_samples
             num_periods = int(np.round(sorting_analyzer.get_num_samples(segment_index) / samples_per_period))
         for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
