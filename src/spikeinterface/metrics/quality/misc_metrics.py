@@ -121,7 +121,7 @@ class PresenceRatio(BaseMetric):
 def compute_snrs(
     sorting_analyzer,
     unit_ids=None,
-    peak_sign: str = "neg",
+    peak_sign: str = "both",
     peak_mode: str = "extremum",
 ):
     """

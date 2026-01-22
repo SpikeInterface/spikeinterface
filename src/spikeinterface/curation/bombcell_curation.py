@@ -26,7 +26,7 @@ NOISE_METRICS = [
 
 SPIKE_QUALITY_METRICS = [
     "amplitude_median",
-    "snr_baseline",
+    "snr",
     "amplitude_cutoff",
     "num_spikes",
     "rp_contamination",
