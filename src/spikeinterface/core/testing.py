@@ -112,19 +112,6 @@ def check_sortings_equal(
 
     max_spike_index = SX1.to_spike_vector()["sample_index"].max()
 
-    def _sorted_spike_vector(SX):
-        spikes = SX.to_spike_vector()
-        order = np.lexsort((spikes["sample_index"], spikes["unit_index"], spikes["segment_index"]))
-        return spikes[order]
-
-    def _slice_spikes(spikes, start_frame=None, end_frame=None):
-        mask = np.ones(spikes.size, dtype=bool)
-        if start_frame is not None:
-            mask &= spikes["sample_index"] >= start_frame
-        if end_frame is not None:
-            mask &= spikes["sample_index"] <= end_frame
-        return spikes[mask]
-
     s1 = SX1.to_spike_vector()
     s2 = SX2.to_spike_vector()
     assert_array_equal(s1, s2)
@@ -158,3 +145,12 @@ def check_extractor_properties_equal(EX1, EX2) -> None:
 
     for property_name in EX1.get_property_keys():
         assert_array_equal(EX1.get_property(property_name), EX2.get_property(property_name))
+
+
+def _slice_spikes(spikes, start_frame=None, end_frame=None):
+    mask = np.ones(spikes.size, dtype=bool)
+    if start_frame is not None:
+        mask &= spikes["sample_index"] >= start_frame
+    if end_frame is not None:
+        mask &= spikes["sample_index"] <= end_frame
+    return spikes[mask]
