@@ -329,6 +329,7 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         The sampling frequency of the template
     **kwargs: Required kwargs:
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
+        - peak_sign: whether expected peaks are negative, positive, or both ("neg", "pos", "both")
         - min_channels: the minimum number of channels above or below to compute velocity
         - min_r2: the minimum r2 to accept the velocity fit
         - column_range: the range in um in the x-direction to consider channels for velocity
@@ -341,11 +342,13 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         The velocity below the max channel
     """
     assert "depth_direction" in kwargs, "depth_direction must be given as kwarg"
+    assert "peak_sign" in kwargs, "peak_sign must be given as kwarg"
     assert "min_channels" in kwargs, "min_channels must be given as kwarg"
     assert "min_r2" in kwargs, "min_r2 must be given as kwarg"
     assert "column_range" in kwargs, "column_range must be given as kwarg"
 
     depth_direction = kwargs["depth_direction"]
+    peak_sign = kwargs["peak_sign"]
     min_channels_for_velocity = kwargs["min_channels"]
     min_r2 = kwargs["min_r2"]
     column_range = kwargs["column_range"]
@@ -353,6 +356,14 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
     depth_dim = 1 if depth_direction == "y" else 0
     template, channel_locations = transform_column_range(template, channel_locations, column_range, depth_direction)
     template, channel_locations = sort_template_and_locations(template, channel_locations, depth_direction)
+
+    # If peak_sign is 'pos', invert the template
+    if peak_sign == 'pos':
+        template = -template
+    elif peak_sign == 'both':
+        peak_value = template.flat[np.abs(template).argmax()]
+        if peak_value > 0:
+            template = -template
 
     # find location of max channel
     max_sample_idx, max_channel_idx = np.unravel_index(np.argmin(template), template.shape)
@@ -468,9 +479,10 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> flo
     sampling_frequency : float
         The sampling frequency of the template
     **kwargs: Required kwargs:
-        - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
-        - spread_threshold: the threshold to compute the spread
-        - column_range: the range in um in the x-direction to consider channels for velocity
+        - depth_direction: the direction to compute spread ("x", "y", or "z")
+        - spread_threshold: the threshold (0-1) to compute spread
+        - spread_smooth_um: the smoothing in um to apply to the amplitude profile before computing spread
+        - column_range: the range in um in the x-direction to consider channels for spread
 
     Returns
     -------
@@ -680,6 +692,7 @@ def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, **m
     channel_locations_multi = tmp_data["channel_locations_multi"]
     sampling_frequency = tmp_data["sampling_frequency"]
     metric_params["depth_direction"] = tmp_data["depth_direction"]
+    metric_params["peak_sign"] = tmp_data["peak_sign"]
     for unit_index, unit_id in enumerate(unit_ids):
         channel_locations = channel_locations_multi[unit_index]
         template = templates_multi[unit_index]
@@ -692,11 +705,7 @@ def _get_velocity_fits_metric_function(sorting_analyzer, unit_ids, tmp_data, **m
 class VelocityFits(BaseMetric):
     metric_name = "velocity_fits"
     metric_function = _get_velocity_fits_metric_function
-    metric_params = {
-        "min_channels": 3,
-        "min_r2": 0.2,
-        "column_range": None,
-    }
+    metric_params = {"min_channels": 3, "min_r2": 0.2, "column_range": None}
     metric_columns = {"velocity_above": float, "velocity_below": float}
     metric_descriptions = {
         "velocity_above": "Velocity of the spike propagation above the max channel in um/ms",

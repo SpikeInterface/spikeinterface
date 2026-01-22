@@ -245,6 +245,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             tmp_data["templates_multi"] = templates_multi
             tmp_data["channel_locations_multi"] = channel_locations_multi
             tmp_data["depth_direction"] = self.params["depth_direction"]
+            tmp_data["peak_sign"] = self.params["peak_sign"]
 
         return tmp_data
 
