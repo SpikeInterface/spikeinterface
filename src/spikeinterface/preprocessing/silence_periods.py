@@ -8,6 +8,8 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core import get_noise_levels
 from spikeinterface.core.generate import NoiseGeneratorRecording
 from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.base import base_period_dtype
+
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -48,7 +50,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
     def __init__(
         self,
         recording,
-        list_periods,
+        periods=None,
+        # this is keep for backward compatibility
+        list_periods=None,
         mode="zeros",
         noise_levels=None,
         seed=None,
@@ -56,25 +60,27 @@ class SilencedPeriodsRecording(BasePreprocessor):
     ):
         available_modes = ("zeros", "noise")
         num_seg = recording.get_num_segments()
-        if num_seg == 1:
-            if isinstance(list_periods, (list, np.ndarray)) and np.array(list_periods).ndim == 2:
-                # when unique segment accept list instead of list of list/arrays
-                list_periods = [list_periods]
+
+        # handle backward compatibility with previous version
+        if list_periods is not None:
+            assert periods is None
+            periods = _all_period_list_to_periods_vec(list_periods, num_seg)
+        else:
+            assert list_periods is None
+            if not isinstance(periods, np.ndarray):
+                raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
+
+            if periods.dtype.fields is None:
+                # this is the old format : list[list[int]]
+                periods = _all_period_list_to_periods_vec(periods, num_seg)
+
+        # force order
+        order = np.lexsort((periods["start_sample_index"], periods["segment_index"]))
+        periods = periods[order]
+        _check_periods(periods, num_seg)
+
         # some checks
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
-
-        assert isinstance(list_periods, list), "'list_periods' must be a list (one per segment)"
-        assert len(list_periods) == num_seg, "'list_periods' must have the same length as the number of segments"
-        assert all(
-            isinstance(list_periods[i], (list, np.ndarray)) for i in range(num_seg)
-        ), "Each element of 'list_periods' must be array-like"
-
-        for periods in list_periods:
-            if len(periods) > 0:
-                assert np.all(np.diff(np.array(periods), axis=1) > 0), "t_stops should be larger than t_starts"
-                assert np.all(
-                    periods[i][1] < periods[i + 1][0] for i in np.arange(len(periods) - 1)
-                ), "Intervals should not overlap"
 
         if mode in ["noise"]:
             if noise_levels is None:
@@ -98,16 +104,55 @@ class SilencedPeriodsRecording(BasePreprocessor):
             noise_generator = None
 
         BasePreprocessor.__init__(self, recording)
+        
+        seg_limits = np.searchsorted(periods["segment_index"], np.arange(num_seg + 1))
         for seg_index, parent_segment in enumerate(recording._recording_segments):
-            periods = list_periods[seg_index]
-            periods = np.asarray(periods, dtype="int64")
-            periods = np.sort(periods, axis=0)
-            rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator, seg_index)
+            i0 = seg_limits[seg_index]
+            i1 = seg_limits[seg_index+1]
+            periods_in_seg = periods[i0:i1]
+            rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods_in_seg, mode, noise_generator, seg_index)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(
-            recording=recording, list_periods=list_periods, mode=mode, seed=seed, noise_levels=noise_levels
+            recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels
         )
+
+
+def _all_period_list_to_periods_vec(list_periods, num_seg):
+    if num_seg == 1:
+        if isinstance(list_periods, (list, np.ndarray)) and np.array(list_periods).ndim == 2:
+            # when unique segment accept list instead of list of list/arrays
+            list_periods = [list_periods]
+    size = sum(len(p) for p in list_periods)
+    periods = np.zeros(size, dtype=base_period_dtype)
+    start = 0
+    for i in range(num_seg):
+        periods_in_seg = list_periods[i]
+        stop = start + periods_in_seg.shape[0]
+        periods[start:stop]["segment_index"] = i
+        periods[start:stop]["start_sample_index"] = periods_in_seg[:, 0]
+        periods[start:stop]["end_sample_index"] = periods_in_seg[:, 1]
+        start = stop
+    return periods
+
+def _check_periods(periods, num_seg):
+    # check dtype
+    if any(col not in np.dtype(base_period_dtype).fields for col in periods.dtype.fields):
+        raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
+
+    # check non overlap and non negative
+    seg_limits = np.searchsorted(periods["segment_index"], np.arange(num_seg + 1))
+    for i in range(num_seg):
+        i0 = seg_limits[i]
+        i1 = seg_limits[i+1]
+        periods_in_seg = periods[i0:i1]
+        if periods_in_seg.size == 0:
+            continue
+        if len(periods) > 0:
+            if np.any(periods_in_seg["start_sample_index"] > periods_in_seg["end_sample_index"]):
+                raise ValueError("end_sample_index should be larger than start_sample_index")
+            if np.any(periods_in_seg["start_sample_index"][1:] <  periods_in_seg["end_sample_index"][:-1]):
+                raise ValueError("Intervals should not overlap")
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
@@ -120,18 +165,20 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        traces = traces.copy()
+        
         if self.periods.size > 0:
             new_interval = np.array([start_frame, end_frame])
-            lower_index = np.searchsorted(self.periods[:, 1], new_interval[0])
-            upper_index = np.searchsorted(self.periods[:, 0], new_interval[1])
+            
+            lower_index = np.searchsorted(self.periods["end_sample_index"], new_interval[0])
+            upper_index = np.searchsorted(self.periods["start_sample_index"], new_interval[1])
 
             if upper_index > lower_index:
-                periods_in_interval = self.periods[lower_index:upper_index]
+                traces = traces.copy()
 
+                periods_in_interval = self.periods[lower_index:upper_index]
                 for period in periods_in_interval:
-                    onset = max(0, period[0] - start_frame)
-                    offset = min(period[1] - start_frame, end_frame)
+                    onset = max(0, period["start_sample_index"] - start_frame)
+                    offset = min(period["end_sample_index"] - start_frame, end_frame)
 
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
@@ -143,8 +190,52 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
         return traces
 
-
 # function for API
 silence_periods = define_function_handling_dict_from_class(
     source_class=SilencedPeriodsRecording, name="silence_periods"
 )
+
+
+
+class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
+    """
+    Class doing artifact detection and lient at the same time.
+
+    See SilencedPeriodsRecording and detect_artifact_periods for details.
+    """
+
+    _precomputable_kwarg_names = ["artifacts"]
+
+    def __init__(
+        self,
+        recording,
+        detect_artifact_method="envelope",
+        detect_artifact_kwargs=dict(),
+        periods=None,
+        mode="zeros",
+        noise_levels=None,
+        seed=None,
+        **noise_levels_kwargs,
+    ):
+
+        if artifacts is None:
+            from spikeinterface.preprocessing import detect_artifact_periods
+            artifacts = detect_artifact_periods(
+                recording,
+                method=detect_artifact_method,
+                method_kwargs=detect_artifact_kwargs,
+                job_kwargs=None,
+            )
+
+        SilencedPeriodsRecording.__init__(
+            self, recording, periods=artifacts, mode=mode, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
+        )
+        # note self._kwargs["periods"] is done by SilencedPeriodsRecording and so the computaion is done once
+
+
+
+# function for API
+detect_artifacts_and_silent_periods = define_function_handling_dict_from_class(
+    source_class=DetectArtifactAndSilentPeriodsRecording, name="silence_artifacts"
+)
+
