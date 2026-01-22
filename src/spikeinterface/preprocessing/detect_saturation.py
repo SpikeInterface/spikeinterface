@@ -20,8 +20,6 @@ def _collapse_events(events):
     """
     If events are detected at a chunk edge, they will be split in two.
     This detects such cases and collapses them in a single record instead
-    :param events:
-    :return:
     """
     order = np.lexsort((events["start_sample_index"], events["segment_index"]))
     events = events[order]
@@ -38,15 +36,20 @@ def _collapse_events(events):
 
 
 class _DetectSaturation(PeakDetector):
+    """
+    A recording node for parallelising saturation detection.
 
+    Run with `run_node_pipeline`, this computes saturation events
+    for a given chunk. See `detect_saturation()` for details.
+    """
     name = "detect_saturation"
     preferred_mp_context = None
 
     def __init__(
         self,
         recording,
-        saturation_threshold,  # 1200 uV
-        voltage_per_sec_threshold,  # 1e-8 V.s-1
+        saturation_threshold,
+        derivative_threshold,
         proportion,
         mute_window_samples,
     ):
@@ -55,7 +58,7 @@ class _DetectSaturation(PeakDetector):
         self.gains = recording.get_channel_gains()
         self.offsets = recording.get_channel_offsets()
 
-        self.voltage_per_sec_threshold = voltage_per_sec_threshold
+        self.derivative_threshold = derivative_threshold
         self.saturation_threshold = saturation_threshold
         self.sampling_frequency = recording.get_sampling_frequency()
         self.proportion = proportion
@@ -72,28 +75,11 @@ class _DetectSaturation(PeakDetector):
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         """
-        Computes
-        :param data: [nc, ns]: voltage traces array
-        :param max_voltage: maximum value of the voltage: scalar or array of size nc (same units as data)
-        :param v_per_sec: maximum derivative of the voltage in V/s (or units/s)
-        :param fs: sampling frequency Hz (defaults to 30kHz)
-        :param proportion: 0 < proportion <1  of channels above threshold to consider the sample as saturated (0.2)
-        :param mute_window_samples=7: number of samples for the cosine taper applied to the saturation
-        :return:
-            saturation [ns]: boolean array indicating the saturated samples
-            mute [ns]: float array indicating the mute function to apply to the data [0-1]
+        Compute saturation events for a given chunk of data.
+        See `detect_saturation()` for details.
         """
-        # TODO: in theory someone could have stored the scaled, float data.
-        #  Document that this will scale the data!
-
-        breakpoint()
-        if traces.dtype != np.float64:
-            traces = traces.astype(np.float64)  # TODO: CHECK
-
-        traces = traces * self.gains + self.offsets
-
         fs = self.sampling_frequency
-        if traces.dtype != np.float64:  # 32 or 64? 32 is convention in the lib? Used 64 here as we are in V for ibl
+        if traces.dtype != np.float64:
             traces = traces.astype(np.float64)
 
         traces *= np.array(self.gain)[np.newaxis, :]
@@ -106,9 +92,9 @@ class _DetectSaturation(PeakDetector):
         # slightly lower than the documented saturation point of the probe
         saturation = np.mean(np.abs(traces) > max_voltage * 0.98, axis=1)
 
-        if self.voltage_per_sec_threshold is not None:
+        if self.derivative_threshold is not None:
             # then compute the derivative of the voltage saturation
-            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) / fs >= self.voltage_per_sec_threshold, axis=1)
+            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) / fs >= self.derivative_threshold, axis=1)
             # Note this means the velocity is not checked for the last sample in the
             # check because we are taking the forward derivative
             n_diff_saturated = np.r_[n_diff_saturated, 0]
@@ -137,9 +123,9 @@ class _DetectSaturation(PeakDetector):
 
 def detect_saturation(
     recording,
-    saturation_threshold,  # 1200 uV
-    voltage_per_sec_threshold,  # 1e-8 V.s-1
-    proportion=0.5,
+    saturation_threshold,
+    derivative_threshold,
+    proportion=0.2,
     mute_window_samples=7,
     job_kwargs=None,
 ):
@@ -148,48 +134,54 @@ def detect_saturation(
     Saturation detection with this function should be applied to the raw data, before preprocessing.
     However, saturation periods detected should be zeroed out after preprocessing has been performed.
 
-    Saturation is detected by a voltage threshold, and optionally a derivative threshold that
-    flags periods of high velocity changes in the voltage. See _DetectSaturation.compute()
-    for details on the algorithm.
+    Saturation detection is applied on the scaled data. When visualising the data to empirically
+    determine thresholds, ensure the `return_scaled` TODO: check this argument is selected. For example,
+    for NP1 probes the data will be in microvolts.
+
+    Saturation is detected by a absolute threshold, and optionally a derivative threshold that
+    flags periods of high velocity changes in the signal. This is particularly useful for NP1 probes
+    or other probes sensitive to saturating; NP2 probes saturate less often. For NP probes, the
+    units should be microvolts. See _DetectSaturation.compute() for details on the algorithm.
 
     Parameters
     ----------
     recording : BaseRecording
         The recording on which to detect the saturation events.
     saturation_threshold : float
-        The voltage saturation threshold in volts. This will depend on the recording
-        probe and amplifier gain settings. For NP1 the value of 1200 * 1e-6 is recommended (IBL).
-        Note that NP2 probes are more difficult to saturate than NP1.
-    voltage_per_sec_threshold : None | float
-        The first-derivative threshold in volts per second. Periods of the data over which the change
+        The absolute saturation threshold. The value will  depend on the recording
+        probe, amplifier gain settings and units for the recording. For NP1 the value
+        of 1200 microvolts is recommended (IBL).
+    derivative_threshold : None | float
+        The first-derivative threshold in units per second. The units will depend on the probe, for
+        NP1 and NP2 the units are microvolts. Periods of the data over which the change
         in velocity is greater than this threshold will be detected as saturation events. Use `None` to
         skip this method and only use `saturation_threshold` for detection. Otherwise, the value should be
-        empirically determined (IBL use 1e-8 V.s-1) for NP1 probes.
-
-    proportion :
-    mute_window_samples :
-    job_kwargs :
-
-    most useful for NP1
-    can use ratio as a intuition for the value but dont do it in code
+        empirically determined (IBL use 0.01 uV s-1) for NP1 probes.
+    proportion : float
+        0 < proportion <1  of channels above threshold to consider the sample as saturated
+    mute_window_samples : int
+        TODO: should we scale this based on the fs?
+    job_kwargs: dict
+        The classical job_kwargs
 
     Returns
     -------
 
+    collapsed_events :
+        A numpy recarray holding information on each saturation event. Has the fields:
+        "start_sample_index", "stop_sample_index", "segment_index", "method_id"
+
+
     """
     if job_kwargs:
         job_kwargs = {}
-
-    # if saturation_threshold < 0.1:
-    #    raise ValueError(f"The `saturation_threshold` should be in microvolts. "
-    #                     f"Your value: {saturation_threshold} is almost certainly in volts.")
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     node0 = _DetectSaturation(
         recording,
         saturation_threshold=saturation_threshold,
-        voltage_per_sec_threshold=voltage_per_sec_threshold,
+        derivative_threshold=derivative_threshold,
         proportion=proportion,
         mute_window_samples=mute_window_samples,
     )

@@ -4,21 +4,50 @@ import pandas as pd
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.preprocessing.detect_saturation import detect_saturation
 
-# TODO: add pre-sets and document? or at least reccomend values in documentation probably easier
+
+def _convert_segments_to_int16(data_seg_1, data_seg_2):
+    """Convert two segments to int16 (shared gain and offset)"""
+    min_ = np.min(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
+    max_ = np.max(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
+    gain =  (max_ - min_) / 65535
+    offset = min_ + 32678 * gain
+
+    seg_1_int16 = np.clip(
+        np.rint((data_seg_1 - offset) / gain),
+        -32768, 32767
+    ).astype(np.int16)
+
+    seg_2_int16 = np.clip(
+        np.rint((data_seg_2 - offset) / gain),
+        -32768, 32767
+    ).astype(np.int16)
+
+    return seg_1_int16, seg_2_int16, gain, offset
 
 def test_saturation_detection():
     """
-    TODO: NOTE: we have one sample before the saturation starts as we take the forward derivative for the velocity
-                we have an extra sample after due to taking the diff on the final saturation mask
-                this means we always take one sample before and one sample after the diff period, which is fine.
+    This tests the saturation detection method. First a mock recording is created with
+    saturation events. Events may be single-sample or a multi-sample period. We create a multi-segment
+    recording with the stop-sample of each event offset by one, so the segments are distinguishable.
+
+    Saturation detection is performed on chunked data (we set to 30k sample chunks) and so injected
+    events are hard-coded in order to cross a chunk boundary to test this case.
+
+    The saturation detection function tests both a) saturation threshold exceeded
+    and b) first derivative (velocity) threshold exceeded. Because the forward
+    derivative is taken, the sample before the first saturated sample is also flagged.
+    Also, because of the way the mask is computed in the function, the sample after the
+    last saturated sample is flagged.
     """
+    padding = 0.98  # this is a padding used internally within the algorithm as sometimes the true saturation value is
+                   # less than the advertised value. We need to account for this here when testing exact cutoffs.
     num_chans = 384
     sample_frequency = 30000
-    chunk_size = 30000  # This value is critical to ensure hard-coded start / stops below
+    chunk_size = 30000  # This value is critical to ensure hard-coded start / stops cross a chunk boundary.
     job_kwargs = {"chunk_size": chunk_size}
 
-    # cross a chunk boundary. Do not change without changing the below.
-    sat_value = 1200 * 1e-6
+    # Generate some data in volts (mimic the IBL / NP1 pipeline)
+    sat_value_V = 1200 * 1e-6
     data = np.random.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10 * 1e-6
 
     # Design the Butterworth filter
@@ -42,35 +71,24 @@ def test_saturation_detection():
     second_seg_offset = 1
     for start, stop in zip(all_starts, all_stops):
         if start == stop:
-            data_seg_1[start] = sat_value
+            data_seg_1[start] = sat_value_V
         else:
-            data_seg_1[start : stop + 1, :] = sat_value
+            data_seg_1[start : stop + 1, :] = sat_value_V
         # differentiate the second segment for testing purposes
-        data_seg_2[start : stop + 1 + second_seg_offset, :] = sat_value
+        data_seg_2[start : stop + 1 + second_seg_offset, :] = sat_value_V
 
-
-    min_ = np.min(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
-    max_ = np.max(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
-    gain =  (max_ - min_) / 65535
-    offset = min_ + 32678 * gain
-
-    seg_1_int16 = np.clip(
-        np.rint((data_seg_1 - offset) / gain),
-        -32768, 32767
-    ).astype(np.int16)
-    seg_2_int16 = np.clip(
-        np.rint((data_seg_2 - offset) / gain),
-        -32768, 32767
-    ).astype(np.int16)
-
+    seg_1_int16, seg_2_int16, gain, offset = _convert_segments_to_int16(
+        data_seg_1, data_seg_2
+    )
 
     recording = NumpyRecording([seg_1_int16, seg_2_int16], sample_frequency)
     recording.set_channel_gains(gain)
     recording.set_channel_offsets([offset] * num_chans)
 
     events = detect_saturation(
-        recording, saturation_threshold=sat_value * 0.98, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
+        recording, saturation_threshold=sat_value_V * padding, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
     )
+    breakpoint()
 
     seg_1_events = events[np.where(events["segment_index"] == 0)]
     seg_2_events = events[np.where(events["segment_index"] == 1)]
@@ -92,7 +110,7 @@ def test_saturation_detection():
     # threshold because the derivative threshold is not easy to predict (the baseline sample is random).
     events = detect_saturation(
         recording,
-        saturation_threshold=sat_value * (1.0 / 0.98) + 1e-6,
+        saturation_threshold=sat_value_V * (1.0 / padding) + 1e-6,
         voltage_per_sec_threshold=1e-8,
         job_kwargs=job_kwargs,
     )
