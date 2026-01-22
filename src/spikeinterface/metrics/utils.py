@@ -93,15 +93,12 @@ def compute_total_samples_per_unit(sorting_analyzer, periods=None):
         Total number of samples for each unit.
     """
     if periods is not None:
-        total_samples = {}
+        total_samples_array = np.zeros(len(sorting_analyzer.unit_ids), dtype="int64")
         sorting = sorting_analyzer.sorting
-        for unit_id in sorting.unit_ids:
-            unit_index = sorting.id_to_index(unit_id)
-            periods_unit = periods[periods["unit_index"] == unit_index]
-            num_samples_in_period = 0
-            for period in periods_unit:
-                num_samples_in_period += period["end_sample_index"] - period["start_sample_index"]
-            total_samples[unit_id] = num_samples_in_period
+        for period in periods:
+            unit_index = period["unit_index"]
+            total_samples_array[unit_index] += period["end_sample_index"] - period["start_sample_index"]
+        total_samples = dict(zip(sorting.unit_ids, total_samples_array))
     else:
         total = sorting_analyzer.get_total_samples()
         total_samples = {unit_id: total for unit_id in sorting_analyzer.unit_ids}
