@@ -13,10 +13,7 @@ from spikeinterface.core import (
 
 from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, compute_periods
 
-from spikeinterface.metrics.quality import (
-    get_quality_metric_list,
-    compute_quality_metrics,
-)
+from spikeinterface.metrics.quality import get_quality_metric_list, compute_quality_metrics, ComputeQualityMetrics
 from spikeinterface.metrics.quality.misc_metrics import (
     misc_metrics_list,
     compute_amplitude_cutoffs,
@@ -657,37 +654,9 @@ def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
 
     # can't use _misc_metric_name_to_func as some functions compute several qms
     # e.g. isi_violation and synchrony
-    quality_metrics = [
-        "num_spikes",
-        "firing_rate",
-        "presence_ratio",
-        "snr",
-        "isi_violations_ratio",
-        "isi_violations_count",
-        "rp_contamination",
-        "rp_violations",
-        "sliding_rp_violation",
-        "amplitude_cutoff",
-        "amplitude_median",
-        "amplitude_cv_median",
-        "amplitude_cv_range",
-        "sync_spike_2",
-        "sync_spike_4",
-        "sync_spike_8",
-        "firing_range",
-        "drift_ptp",
-        "drift_std",
-        "drift_mad",
-        "sd_ratio",
-        "isolation_distance",
-        "l_ratio",
-        "d_prime",
-        "silhouette",
-        "nn_hit_rate",
-        "nn_miss_rate",
-    ]
-
-    small_sorting_analyzer.compute("quality_metrics")
+    quality_metric_columns = ComputeQualityMetrics.get_metric_columns()
+    all_metrics = ComputeQualityMetrics.get_available_metric_names()
+    small_sorting_analyzer.compute("quality_metrics", metric_names=all_metrics)
 
     cache_folder = create_cache_folder
     output_folder = cache_folder / "sorting_analyzer"
@@ -699,7 +668,7 @@ def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
         saved_metrics = csv.reader(metrics_file)
         metric_names = next(saved_metrics)
 
-    for metric_name in quality_metrics:
+    for metric_name in quality_metric_columns:
         assert metric_name in metric_names
 
     folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=False)
@@ -708,7 +677,7 @@ def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
         saved_metrics = csv.reader(metrics_file)
         metric_names = next(saved_metrics)
 
-    for metric_name in quality_metrics:
+    for metric_name in quality_metric_columns:
         assert metric_name in metric_names
 
     folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=True)
@@ -717,7 +686,7 @@ def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
         saved_metrics = csv.reader(metrics_file)
         metric_names = next(saved_metrics)
 
-    for metric_name in quality_metrics:
+    for metric_name in quality_metric_columns:
         if metric_name == "snr":
             assert metric_name in metric_names
         else:
