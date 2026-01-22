@@ -16,7 +16,6 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 
 from .metrics import get_trough_and_peak_idx, single_channel_metrics, multi_channel_metrics
 
-
 MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
 MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS = 64
 
@@ -132,6 +131,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
         metrics_to_compute: list[str] | None = None,
+        periods=None,
         # common extension kwargs
         peak_sign="neg",
         upsampling_factor=10,
@@ -161,6 +161,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
+            periods=periods,  # template metrics do not use periods
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
             include_multi_channel_metrics=include_multi_channel_metrics,

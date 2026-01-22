@@ -6,7 +6,6 @@ import json
 from .base import BaseExtractor
 from .core_tools import is_path_remote
 
-
 _error_msg = (
     "{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
     "folder that is the result of extractor.save(...) or sortinganalyzer.save_as(...)"

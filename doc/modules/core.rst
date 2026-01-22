@@ -157,11 +157,36 @@ with 10 units:
     # times are not set, the samples are divided by the sampling frequency
 
 
-Internally, any sorting object can construct 2 internal caches:
-  1. a list (per segment) of dict (per unit) of numpy.array. This cache is useful when accessing spike trains on a unit
-     per unit basis across segments.
-  2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
-     time, like for extracting amplitudes from a recording.
+Efficiency and caching when fetching spiketrains
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By design a Sorting object is lazy so that the constructor is fast: no data are fetched during init.
+Sortings that read data (the extractors) or modify data (select unit, remove spikes) behave
+the same: they are lazy. The spiketrain data are only fetched when the user requests them, e.g.
+using `sorting.get_unit_spike_train()`. This can lead to very slow access depending on how the
+underlying data is organized, but with the advantage that the `Sorting` object is agnostic of
+the underlying data organization.
+
+To fix the slow access problem, we can create different internal representations of the spiketrain data and
+automatically cache them. Then the next time `sorting.get_unit_spike_train()` is called, the cached
+data is instantaneously returned. Further, we can create and cache different reorganizations of
+the spiketrain, which are optimally organized for specific types of calculation.
+
+Computations involving combined recording-sorting information, such as fetching recording chunks and
+spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
+this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
+a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+
+For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
+spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
+`spike_vector` in different ways:
+  * order by unit, then segment, then sample
+  * order by segment, then unit, then sample
+
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
+reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+details, but developers should keep memory layout in mind when implementing new features.
+
 
 SortingAnalyzer
 ---------------

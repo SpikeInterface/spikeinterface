@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import numpy as np
 
-
-from spikeinterface.core.node_pipeline import (
-    PeakDetector,
-    base_peak_dtype,
-)
-
+from spikeinterface.core.base import base_peak_dtype
+from spikeinterface.core.node_pipeline import PeakDetector
 from spikeinterface.core.recording_tools import get_channel_distances, get_random_data_chunks
 from spikeinterface.postprocessing.localization_tools import get_convolution_weights
-
-import importlib.util
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -31,9 +26,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
     engine = "numba"
     need_noise_levels = False
     preferred_mp_context = None
-    params_doc = (
-        ByChannelPeakDetector.params_doc
-        + """
+    params_doc = ByChannelPeakDetector.params_doc + """
     radius_um : float
         The radius to use to select neighbour channels for locally exclusive detection.
     prototype : array
@@ -45,7 +38,6 @@ class MatchedFilteringPeakDetector(PeakDetector):
         in order to know how to estimate the positions. One argument is mode that could
         be either gaussian_2d (KS like) or exponential_3d (default)
     """
-    )
 
     def __init__(
         self,

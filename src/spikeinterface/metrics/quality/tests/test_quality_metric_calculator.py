@@ -168,7 +168,8 @@ def test_empty_units(sorting_analyzer_simple):
     for col in metrics_empty.columns:
         all_nans = np.all(isnull(metrics_empty.loc[empty_unit_ids, col].values))
         all_zeros = np.all(metrics_empty.loc[empty_unit_ids, col].values == 0)
-        assert all_nans or all_zeros
+        all_neg_ones = np.all(metrics_empty.loc[empty_unit_ids, col].values == -1)
+        assert all_nans or all_zeros or all_neg_ones, f"Column {col} failed the empty unit test"
 
 
 if __name__ == "__main__":

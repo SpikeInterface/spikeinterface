@@ -13,7 +13,6 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.extractors.alfsortingextractor import ALFSortingSegment
 
-
 if importlib.util.find_spec("one") is not None and importlib.util.find_spec("one.api") is not None:
     HAVE_ONE = True
 else:
