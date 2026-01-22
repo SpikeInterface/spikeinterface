@@ -11,7 +11,7 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, compute_periods
+from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, create_regular_periods
 
 from spikeinterface.metrics.quality import (
     get_quality_metric_list,
@@ -102,14 +102,14 @@ def sorting_analyzer_violations():
 @pytest.fixture
 def periods_simple(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
-    periods = compute_periods(sorting_analyzer, num_periods=5)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
     return periods
 
 
 @pytest.fixture
 def periods_violations(sorting_analyzer_violations):
     sorting_analyzer = sorting_analyzer_violations
-    periods = compute_periods(sorting_analyzer, num_periods=5)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
     return periods
 
 
@@ -269,7 +269,7 @@ def test_simplified_silhouette_score_metrics():
 def test_calculate_firing_range(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     firing_ranges = compute_firing_ranges(sorting_analyzer, bin_size_s=1)
-    periods = compute_periods(sorting_analyzer, num_periods=5, bin_size_s=1)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5, bin_size_s=1)
     firing_ranges_periods = compute_firing_ranges(sorting_analyzer, periods=periods, bin_size_s=1)
     assert firing_ranges == firing_ranges_periods
 
@@ -288,7 +288,7 @@ def test_calculate_amplitude_cutoff(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     amp_cuts = compute_amplitude_cutoffs(sorting_analyzer, num_histogram_bins=10)
-    periods = compute_periods(sorting_analyzer, num_periods=5)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
     amp_cuts_periods = compute_amplitude_cutoffs(sorting_analyzer, periods=periods, num_histogram_bins=10)
     assert amp_cuts == amp_cuts_periods
 
@@ -306,7 +306,7 @@ def test_calculate_amplitude_median(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     amp_medians = compute_amplitude_medians(sorting_analyzer)
-    periods = compute_periods(sorting_analyzer, num_periods=5)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
     amp_medians_periods = compute_amplitude_medians(sorting_analyzer, periods=periods)
     assert amp_medians == amp_medians_periods
 
@@ -536,7 +536,7 @@ def test_calculate_drift_metrics(sorting_analyzer_simple):
     drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(
         sorting_analyzer, interval_s=10, min_spikes_per_interval=10
     )
-    periods = compute_periods(sorting_analyzer, num_periods=5, bin_size_s=10)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5, bin_size_s=10)
     drifts_ptps_periods, drifts_stds_periods, drift_mads_periods = compute_drift_metrics(
         sorting_analyzer, periods=periods, min_spikes_per_interval=10, interval_s=10
     )

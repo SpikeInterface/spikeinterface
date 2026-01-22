@@ -109,7 +109,7 @@ def compute_total_durations_per_unit(sorting_analyzer, periods=None):
     return total_durations
 
 
-def compute_periods(sorting_analyzer, num_periods, bin_size_s=None):
+def create_regular_periods(sorting_analyzer, num_periods, bin_size_s=None):
     """
     Computes and sets periods for each unit in the sorting analyzer.
     The periods span the total duration of the recording, but divide it into
