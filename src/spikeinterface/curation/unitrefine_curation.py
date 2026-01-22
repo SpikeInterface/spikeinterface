@@ -9,8 +9,9 @@ def unitrefine_label_units(
     noise_neural_classifier: str | Path | None = "SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
     sua_mua_classifier: str | Path | None = "SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
 ):
-    """Label units using UnitRefine, which is a cascade of pre-trained classifiers for
-    noise/neural unit classification and SUA/MUA classification.
+    """Label units using a cascade of pre-trained classifiers for
+    noise/neural unit classification and SUA/MUA classification,
+    as shown in the UnitRefine paper (see References).
     The noise/neural classifier is applied first to remove noise units,
     then the SUA/MUA classifier is applied to the remaining units.
 
