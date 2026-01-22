@@ -11,9 +11,7 @@ Unit Types:
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 from typing import Optional
-
 
 NOISE_METRICS = [
     "num_positive_peaks",
@@ -76,17 +74,6 @@ def bombcell_get_default_thresholds() -> dict:
     }
 
 
-def _combine_metrics(metrics: list[pd.DataFrame]) -> pd.DataFrame:
-    """Combine quality_metrics and template_metrics into a single DataFrame."""
-    if quality_metrics is None and template_metrics is None:
-        return None
-    if quality_metrics is None:
-        return template_metrics
-    if template_metrics is None:
-        return quality_metrics
-    return quality_metrics.join(template_metrics, how="outer")
-
-
 def _is_threshold_disabled(value):
     """Check if a threshold value is disabled (None or np.nan)."""
     if value is None:
@@ -101,7 +88,7 @@ def bombcell_label_units(
     thresholds: Optional[dict] = None,
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
-    external_metrics: Optional[pd.DataFrame | list[pd.DataFrame]] = None,
+    external_metrics: Optional["pd.DataFrame | list[pd.DataFrame]"] = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     bombcell - label units based on quality metrics and thresholds.
@@ -127,6 +114,8 @@ def bombcell_label_units(
     unit_type_string : np.ndarray
         String labels.
     """
+    import pandas as pd
+
     if sorting_analyzer is not None:
         combined_metrics = sorting_analyzer.get_metrics_extension_data()
         if combined_metrics.empty:
@@ -271,7 +260,7 @@ def get_bombcell_labeling_summary(unit_type: np.ndarray, unit_type_string: np.nd
 
 
 def save_bombcell_results(
-    quality_metrics: pd.DataFrame,
+    quality_metrics: "pd.DataFrame",
     unit_type: np.ndarray,
     unit_type_string: np.ndarray,
     thresholds: dict,
@@ -300,6 +289,7 @@ def save_bombcell_results(
         Save wide format (one row per unit, metrics as columns).
     """
     from pathlib import Path
+    import pandas as pd
 
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
