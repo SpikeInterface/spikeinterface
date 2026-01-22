@@ -90,6 +90,16 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        ext_params = cls.get_default_params()
+        ext_params.update(params)
+        method = ext_params.get("method", None)
+        if method is not None and method in ("false_positives_and_negatives", "combined"):
+            return ["amplitude_scalings"]
+        else:
+            return []
+
     def _set_params(
         self,
         method: str = "false_positives_and_negatives",

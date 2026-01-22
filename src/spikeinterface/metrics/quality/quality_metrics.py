@@ -49,6 +49,13 @@ class ComputeQualityMetrics(BaseMetricExtension):
     need_backward_compatibility_on_load = True
     metric_list = misc_metrics_list + pca_metrics_list
 
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        if params.get("use_valid_periods", False):
+            return ["valid_unit_periods"]
+        else:
+            return []
+
     def _handle_backward_compatibility_on_load(self):
         # For backwards compatibility - this renames qm_params as metric_params
         if (qm_params := self.params.get("qm_params")) is not None:
@@ -70,6 +77,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
         metrics_to_compute: list[str] | None = None,
+        use_valid_periods=False,
         periods=None,
         # common extension kwargs
         peak_sign=None,
@@ -85,6 +93,11 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if skip_pc_metrics:
             pc_metric_names = [m.metric_name for m in pca_metrics_list]
             metric_names = [m for m in metric_names if m not in pc_metric_names]
+
+        if use_valid_periods:
+            if periods is not None:
+                raise ValueError("If use_valid_periods is True, periods should not be provided.")
+            periods = self.sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
 
         return super()._set_params(
             metric_names=metric_names,

@@ -75,6 +75,12 @@ class TestWidgets(unittest.TestCase):
             template_metrics=dict(),
             correlograms=dict(),
             template_similarity=dict(),
+            valid_unit_periods=dict(
+                period_mode="relative",
+                period_target_num_spikes=200,
+                relative_margin_size=0.5,
+                min_num_periods_relative=5,
+            ),
         )
         job_kwargs = dict(n_jobs=-1)
 
@@ -82,18 +88,6 @@ class TestWidgets(unittest.TestCase):
         cls.sorting_analyzer_dense = create_sorting_analyzer(cls.sorting, cls.recording, format="memory", sparse=False)
         cls.sorting_analyzer_dense.compute("random_spikes")
         cls.sorting_analyzer_dense.compute(extensions_to_compute, **job_kwargs)
-        # compute valid periods later, since it depends on amplitude_scalings
-        cls.sorting_analyzer_dense.compute(
-            dict(
-                valid_unit_periods=dict(
-                    period_mode="relative",
-                    period_target_num_spikes=200,
-                    relative_margin_size=0.5,
-                    min_num_periods_relative=5,
-                )
-            ),
-            **job_kwargs,
-        )
 
         sw.set_default_plotter_backend("matplotlib")
 

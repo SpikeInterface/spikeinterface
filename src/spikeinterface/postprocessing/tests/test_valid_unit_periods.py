@@ -16,9 +16,7 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
         ],
     )
     def test_extension(self, params):
-        self.run_extension_tests(
-            ComputeValidUnitPeriods, params, extra_dependencies=["templates", "amplitude_scalings"]
-        )
+        self.run_extension_tests(ComputeValidUnitPeriods, params)
 
     def test_user_defined_periods(self):
         unit_ids = self.sorting.unit_ids
@@ -116,20 +114,18 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
                 periods[idx]["end_sample_index"] = period_start + period_duration
                 periods[idx]["segment_index"] = segment_index
 
-        sorting_analyzer = self._prepare_sorting_analyzer(
-            "memory",
-            sparse=False,
-            extension_class=ComputeValidUnitPeriods,
-            extra_dependencies=["templates", "amplitude_scalings"],
-        )
-        ext = sorting_analyzer.compute(
-            ComputeValidUnitPeriods.extension_name,
+        unit_valid_periods_params = dict(
             method="combined",
             user_defined_periods=periods,
             period_mode="absolute",
             period_duration_s_absolute=1.0,
             minimum_valid_period_duration=1,
         )
+
+        sorting_analyzer = self._prepare_sorting_analyzer(
+            "memory", sparse=False, extension_class=ComputeValidUnitPeriods, extension_params=unit_valid_periods_params
+        )
+        ext = sorting_analyzer.compute(ComputeValidUnitPeriods.extension_name, **unit_valid_periods_params)
         # check that valid periods correspond to intersection of auto-computed and user defined periods
         ext_periods = ext.get_data(outputs="numpy")
         assert len(ext_periods) <= len(periods)  # should be less or equal than user defined ones

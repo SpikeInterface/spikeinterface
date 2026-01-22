@@ -181,8 +181,9 @@ a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), (
 For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
 spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
 `spike_vector` in different ways:
-  * order by unit, then segment, then sample
-  * order by segment, then unit, then sample
+
+* order by unit, then segment, then sample
+* order by segment, then unit, then sample
 
 This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
 reordered spiketrain is cached in memory by default. Users should rarely have to worry about these

@@ -4,9 +4,13 @@ import pytest
 import shutil
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import create_sorting_analyzer, load_sorting_analyzer
-from spikeinterface.core import estimate_sparsity
+from spikeinterface.core import (
+    generate_ground_truth_recording,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    estimate_sparsity,
+)
+from spikeinterface.core.sortinganalyzer import get_extension_class
 
 
 def get_dataset():
@@ -95,7 +99,19 @@ class AnalyzerExtensionCommonTestSuite:
 
         return sorting_analyzer
 
-    def _prepare_sorting_analyzer(self, format, sparse, extension_class, extra_dependencies=None):
+    def _compute_extensions_recursively(self, sorting_analyzer, extension_class, params):
+        # compute dependencies of the extension class with default params
+        dependencies = extension_class.get_required_dependencies(**params)
+        for dependency_name in dependencies:
+            if "|" in dependency_name:
+                dependency_name = dependency_name.split("|")[0]
+            if not sorting_analyzer.has_extension(dependency_name):
+                # compute dependencies of the dependency
+                self._compute_extensions_recursively(sorting_analyzer, get_extension_class(dependency_name), {})
+                # compute the dependency itself
+                sorting_analyzer.compute(dependency_name)
+
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class, extension_params=None):
         # prepare a SortingAnalyzer object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
         sorting_analyzer = self.get_sorting_analyzer(
@@ -103,14 +119,11 @@ class AnalyzerExtensionCommonTestSuite:
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
 
-        for dependency_name in extension_class.depend_on:
-            if "|" in dependency_name:
-                dependency_name = dependency_name.split("|")[0]
-            sorting_analyzer.compute(dependency_name)
-        if extra_dependencies is not None:
-            for dependency_name in extra_dependencies:
-                print("Computing extra dependency:", dependency_name)
-                sorting_analyzer.compute(dependency_name)
+        # default params for dependencies
+        params = sorting_analyzer.get_default_extension_params(extension_class.extension_name)
+        if extension_params is not None:
+            params.update(extension_params)
+        self._compute_extensions_recursively(sorting_analyzer, extension_class, params)
 
         return sorting_analyzer
 
@@ -168,7 +181,7 @@ class AnalyzerExtensionCommonTestSuite:
                 else:
                     continue
 
-    def run_extension_tests(self, extension_class, params, extra_dependencies=None):
+    def run_extension_tests(self, extension_class, params):
         """
         Convenience function to perform all checks on the extension
         of interest with the passed parameters. Will perform tests
@@ -178,6 +191,6 @@ class AnalyzerExtensionCommonTestSuite:
             for format in ("memory", "binary_folder", "zarr"):
                 print("sparse", sparse, format)
                 sorting_analyzer = self._prepare_sorting_analyzer(
-                    format, sparse, extension_class, extra_dependencies=extra_dependencies
+                    format, sparse, extension_class, extension_params=params
                 )
                 self._check_one(sorting_analyzer, extension_class, params)

@@ -2471,6 +2471,18 @@ class AnalyzerExtension:
         all_dependencies = list(chain.from_iterable([dep.split("|") for dep in all_dependencies]))
         return all_dependencies
 
+    @classmethod
+    def get_default_params(cls):
+        """
+        Get the default params for the extension.
+
+        Returns
+        -------
+        default_params : dict
+            The default parameters for the extension.
+        """
+        return get_default_analyzer_extension_params(cls.extension_name)
+
     def load_run_info(self):
         run_info = None
         if self.format == "binary_folder":
