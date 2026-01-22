@@ -963,7 +963,13 @@ def estimate_templates_with_accumulator(
     template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
 
     if return_std:
-        waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
+
+        waveform_squared_accumulator_per_worker = np.hstack(waveform_squared_accumulator_per_worker)
+        if len(waveform_squared_accumulator_per_worker.shape) == 4:
+            waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
+        else:
+            waveforms_squared_sum = waveform_squared_accumulator_per_worker
+        
         # standard deviation
         template_stds = np.zeros_like(template_means)
         for unit_index, count in zip(unit_indices, spike_count):
