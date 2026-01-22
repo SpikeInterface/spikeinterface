@@ -283,7 +283,7 @@ def compute_grid_convolution(
     weights_sparsity_mask = weights > 0
 
     nb_weights = weights.shape[0]
-    unit_location = np.zeros((unit_ids.size, 3), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), 3), dtype="float64")
 
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
