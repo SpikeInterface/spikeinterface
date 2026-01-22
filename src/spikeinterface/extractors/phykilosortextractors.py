@@ -225,7 +225,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
-        self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
+        self.add_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
 class PhySortingSegment(BaseSortingSegment):
@@ -343,7 +343,7 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
 
     # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
     # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-    duration = sorting._sorting_segments[0]._all_spikes[-1] / sampling_frequency + 1
+    duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")

@@ -71,7 +71,7 @@ class MClustSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.add_sorting_segment(MClustSortingSegment(unit_ids, spiketrains))
+        self.add_segment(MClustSortingSegment(unit_ids, spiketrains))
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
             "sampling_frequency": sampling_frequency,

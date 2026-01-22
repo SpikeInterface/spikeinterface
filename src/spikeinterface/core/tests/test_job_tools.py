@@ -9,10 +9,10 @@ from spikeinterface.core.job_tools import (
     divide_segment_into_chunks,
     ensure_n_jobs,
     ensure_chunk_size,
-    ChunkRecordingExecutor,
+    ChunkExecutor,
     fix_job_kwargs,
     split_job_kwargs,
-    divide_recording_into_chunks,
+    divide_extractor_into_chunks,
 )
 
 
@@ -71,7 +71,7 @@ def test_ensure_chunk_size():
 
     # Test edge case to define single chunk for n_jobs=1
     chunk_size = ensure_chunk_size(recording, n_jobs=1, chunk_size=None)
-    chunks = divide_recording_into_chunks(recording, chunk_size)
+    chunks = divide_extractor_into_chunks(recording, chunk_size)
     assert len(chunks) == recording.get_num_segments()
     for chunk in chunks:
         segment_index, start_frame, end_frame = chunk
@@ -96,13 +96,13 @@ def init_func(arg1, arg2, arg3):
     return worker_dict
 
 
-def test_ChunkRecordingExecutor():
+def test_ChunkExecutor():
     recording = generate_recording(num_channels=2)
 
     init_args = "a", 120, "yep"
 
     # no chunk
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording, func, init_func, init_args, verbose=True, progress_bar=False, n_jobs=1, chunk_size=None
     )
     processor.run()
@@ -113,7 +113,7 @@ def test_ChunkRecordingExecutor():
         pass
 
     # chunk + loop + gather_func
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -139,7 +139,7 @@ def test_ChunkRecordingExecutor():
     gathering_func2 = GatherClass()
 
     # process + gather_func
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -153,12 +153,12 @@ def test_ChunkRecordingExecutor():
         job_name="job_name",
     )
     processor.run()
-    num_chunks = len(divide_recording_into_chunks(recording, processor.chunk_size))
+    num_chunks = len(divide_extractor_into_chunks(recording, processor.chunk_size))
 
     assert gathering_func2.pos == num_chunks
 
     # process spawn
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -174,7 +174,7 @@ def test_ChunkRecordingExecutor():
     processor.run()
 
     # thread
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         func,
         init_func,
@@ -256,7 +256,7 @@ def test_worker_index():
     for i in range(2):
         # making this 2 times ensure to test that global variables are correctly reset
         for pool_engine in ("process", "thread"):
-            processor = ChunkRecordingExecutor(
+            processor = ChunkExecutor(
                 recording,
                 func2,
                 init_func2,
@@ -320,7 +320,7 @@ if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    # test_ChunkRecordingExecutor()
+    # test_ChunkExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
     # test_worker_index()

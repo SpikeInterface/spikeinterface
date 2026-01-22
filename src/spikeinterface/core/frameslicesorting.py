@@ -76,9 +76,9 @@ class FrameSliceSorting(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency=parent_sorting.get_sampling_frequency(), unit_ids=unit_ids)
 
         # link sorting segment
-        parent_segment = parent_sorting._sorting_segments[0]
+        parent_segment = parent_sorting.segments[0]
         sub_segment = FrameSliceSortingSegment(parent_segment, start_frame, end_frame)
-        self.add_sorting_segment(sub_segment)
+        self.add_segment(sub_segment)
 
         # copy properties and annotations
         parent_sorting.copy_metadata(self)

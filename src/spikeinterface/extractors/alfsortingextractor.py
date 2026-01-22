@@ -40,7 +40,7 @@ class ALFSortingExtractor(BaseSorting):
         unit_ids = np.arange(total_units)  # in alf format, spikes.clusters index directly into clusters
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"])
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
         self.extra_requirements.append("ONE-api")
         self._kwargs = {"folder_path": str(Path(folder_path).resolve()), "sampling_frequency": sampling_frequency}
 

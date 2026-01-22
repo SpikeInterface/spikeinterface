@@ -300,7 +300,7 @@ class NeuroScopeSortingExtractor(BaseSorting):
                     all_unit_shank_ids += [shank_id] * len(new_unit_ids)
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=all_unit_ids)
-        self.add_sorting_segment(NeuroScopeSortingSegment(all_unit_ids, all_spiketrains))
+        self.add_segment(NeuroScopeSortingSegment(all_unit_ids, all_spiketrains))
 
         self.extra_requirements.append("lxml")
 

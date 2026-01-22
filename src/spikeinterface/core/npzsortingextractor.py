@@ -30,7 +30,7 @@ class NpzSortingExtractor(BaseSorting):
             spike_indexes = npz[f"spike_indexes_seg{seg_index}"]
             spike_labels = npz[f"spike_labels_seg{seg_index}"]
             sorting_segment = NpzSortingSegment(spike_indexes, spike_labels)
-            self.add_sorting_segment(sorting_segment)
+            self.add_segment(sorting_segment)
 
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
 

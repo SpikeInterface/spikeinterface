@@ -12,7 +12,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
@@ -54,7 +54,7 @@ class MdaRecordingExtractor(BaseRecording):
             self, sampling_frequency=sampling_frequency, channel_ids=np.arange(num_channels), dtype=dtype
         )
         rec_segment = MdaRecordingSegment(self._diskreadmda, sampling_frequency)
-        self.add_recording_segment(rec_segment)
+        self.add_segment(rec_segment)
         self.set_dummy_probe_from_locations(geom)
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
@@ -127,7 +127,7 @@ class MdaRecordingExtractor(BaseRecording):
         header = MdaHeader(dt0=dtype, dims0=(num_channels, num_frames))
         header_size = header.header_size
 
-        write_binary_recording(
+        write_binary(
             recording,
             file_paths=save_file_path,
             dtype=dtype,
@@ -207,13 +207,13 @@ class MdaSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
 
         sorting_segment = MdaSortingSegment(firings)
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         # Store the max channel for each unit
         # Every spike assigned to a unit (label) has the same max channel
         # ref: https://github.com/SpikeInterface/spikeinterface/issues/3695#issuecomment-2663329006
         max_channels = []
-        segment = self._sorting_segments[0]
+        segment = self.segments[0]
         for unit_id in self.unit_ids:
             label_mask = segment._labels == unit_id
             # since all max channels are the same, we can just grab the first occurrence for the unit
