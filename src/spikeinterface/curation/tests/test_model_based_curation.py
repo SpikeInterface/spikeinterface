@@ -173,8 +173,8 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_cura
 def test_unitrefine_label_units(sorting_analyzer_for_curation):
     """Test the `unitrefine_label_units` function."""
 
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
+    sorting_analyzer_for_curation.compute("template_metrics", include_multi_channel_metrics=True)
+    sorting_analyzer_for_curation.compute("quality_metrics")
 
     from spikeinterface.curation import unitrefine_label_units
 

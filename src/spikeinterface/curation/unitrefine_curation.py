@@ -6,8 +6,8 @@ from spikeinterface.curation.model_based_curation import model_based_label_units
 
 def unitrefine_label_units(
     sorting_analyzer: SortingAnalyzer,
-    noise_neural_classifier: str | Path | None = "SpikeInterface/UnitRefine_noise_neural_classifier",
-    sua_mua_classifier: str | Path | None = "SpikeInterface/UnitRefine_sua_mua_classifier",
+    noise_neural_classifier: str | Path | None = "SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
+    sua_mua_classifier: str | Path | None = "SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
 ):
     """Label units using UnitRefine, which is a cascade of pre-trained classifiers for
     noise/neural unit classification and SUA/MUA classification.
@@ -18,14 +18,16 @@ def unitrefine_label_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    noise_neural_classifier : str or Path or None, default: "SpikeInterface/unitrefine-noise-neural-classifier"
+    noise_neural_classifier : str or Path or None, default: "SpikeInterface/UnitRefine_noise_neural_classifier_lightweight"
         The path to the folder containing the model or a string to a repo on HuggingFace.
         If None, the noise/neural classification step is skipped.
-        By default, it uses a pre-trained model hosted on HuggingFace.
-    sua_mua_classifier : str or Path or None, default: "SpikeInterface/unitrefine-sua-mua-classifier"
+        By default, it uses a pre-trained lightweight model hosted on HuggingFace that does not require principal
+        component analysis (PCA) features.
+    sua_mua_classifier : str or Path or None, default: "SpikeInterface/UnitRefine_sua_mua_classifier_lightweight"
         The path to the folder containing the model or a string to a repo on HuggingFace.
         If None, the SUA/MUA classification step is skipped.
-        By default, it uses a pre-trained model hosted on HuggingFace.
+        By default, it uses a pre-trained lightweight model hosted on HuggingFace that does not require principal
+        component analysis (PCA) features.
 
     Returns
     -------
