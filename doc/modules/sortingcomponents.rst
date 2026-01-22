@@ -81,7 +81,9 @@ Other variants are also implemented (but less tested or not so useful):
 * **'by_channel_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
 * **'locally_exclusive_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
 
-**NOTE**: the torch implementations give slightly different results due to a different implementation.
+.. note::
+
+    The torch implementations give slightly different results due to a different implementation.
 
 Peak detection, as many of the other sorting components, can be run in parallel.
 
