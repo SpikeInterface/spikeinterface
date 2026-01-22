@@ -86,9 +86,8 @@ def test_saturation_detection():
     recording.set_channel_offsets([offset] * num_chans)
 
     events = detect_saturation(
-        recording, saturation_threshold=sat_value_V * padding, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
+        recording, saturation_threshold=sat_value_V * padding, derivative_threshold=1e-8, job_kwargs=job_kwargs
     )
-    breakpoint()
 
     seg_1_events = events[np.where(events["segment_index"] == 0)]
     seg_2_events = events[np.where(events["segment_index"] == 1)]
@@ -111,7 +110,7 @@ def test_saturation_detection():
     events = detect_saturation(
         recording,
         saturation_threshold=sat_value_V * (1.0 / padding) + 1e-6,
-        voltage_per_sec_threshold=1e-8,
+        derivative_threshold=1e-8,
         job_kwargs=job_kwargs,
     )
     assert events["start_sample_index"][0] == 1000
