@@ -37,6 +37,8 @@ class BaseRecording(BaseRecordingSnippets):
         "noise_level_std_scaled",
         "noise_level_mad_raw",
         "noise_level_mad_scaled",
+        "noise_level_rms_raw",
+        "noise_level_rms_scaled",
     ]
 
     def __init__(self, sampling_frequency: float, channel_ids: list, dtype):

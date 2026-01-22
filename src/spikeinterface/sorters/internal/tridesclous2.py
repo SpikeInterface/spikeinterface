@@ -18,7 +18,7 @@ from spikeinterface.core import (
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
 
@@ -31,6 +31,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
+        "preprocessing_dict": None,
         "apply_motion_correction": False,
         "motion_correction_preset": "dredge_fast",
         "clustering_ms_before": 0.5,
@@ -62,7 +63,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     _params_description = {
         "apply_preprocessing": "Apply internal preprocessing or not",
-        "apply_motion_correction": "Apply motion correction or not",
+        "preprocessing_dict": "Inject customized preprocessing chain via a dict, instead of the internal one",
+        "apply_motion_correction": "Apply motion correction or not (only used when apply_preprocessing=True)",
         "motion_correction_preset": "Motion correction preset",
         "clustering_ms_before": "Milliseconds before the spike peak for clustering",
         "clustering_ms_after": "Milliseconds after the spike peak  for clustering",
@@ -104,6 +106,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
         from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
+        from spikeinterface.preprocessing import apply_preprocessing_pipeline
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -121,38 +124,43 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
+
                 rec_for_motion = recording_raw
-                if params["apply_preprocessing"]:
+                if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(
                         rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
                     )
                     if apply_cmr:
                         rec_for_motion = common_reference(rec_for_motion)
-                    if verbose:
-                        print("Start correct_motion()")
-                    _, motion_info = correct_motion(
-                        rec_for_motion,
-                        folder=sorter_output_folder / "motion",
-                        output_motion_info=True,
-                        preset=params["motion_correction_preset"],
-                        # **params["motion_correction"],
-                    )
-                    if verbose:
-                        print("Done correct_motion()")
+                else:
+                    rec_for_motion = apply_preprocessing_pipeline(rec_for_motion, params["preprocessing_dict"])
 
-            # recording = bandpass_filter(recording_raw, **params["filtering"], margin_ms=20.0, dtype="float32")
-            recording = bandpass_filter(
-                recording_raw,
-                freq_min=params["freq_min"],
-                freq_max=params["freq_max"],
-                ftype="bessel",
-                filter_order=2,
-                margin_ms=20.0,
-                dtype="float32",
-            )
+                if verbose:
+                    print("Start correct_motion()")
+                _, motion_info = correct_motion(
+                    rec_for_motion,
+                    folder=sorter_output_folder / "motion",
+                    output_motion_info=True,
+                    preset=params["motion_correction_preset"],
+                )
+                if verbose:
+                    print("Done correct_motion()")
 
-            if apply_cmr:
-                recording = common_reference(recording)
+            if params["preprocessing_dict"] is None:
+                recording = bandpass_filter(
+                    recording_raw,
+                    freq_min=params["freq_min"],
+                    freq_max=params["freq_max"],
+                    ftype="bessel",
+                    filter_order=2,
+                    dtype="float32",
+                )
+
+                if apply_cmr:
+                    recording = common_reference(recording)
+            else:
+                recording = apply_preprocessing_pipeline(recording_raw, params["preprocessing_dict"])
+                recording = recording.astype("float32")
 
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
@@ -183,7 +191,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
-            recording = recording_raw
+            recording = recording_raw.astype("float32")
             noise_levels = get_noise_levels(recording, return_in_uV=False)
             cache_info = None
 
@@ -332,6 +340,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 recording_for_peeler,
                 sorting,
                 templates,
+                amplitude_scalings=spikes["amplitude"],
+                noise_levels=noise_levels,
                 similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
                 sparsity_overlap=0.5,
                 censor_ms=3.0,

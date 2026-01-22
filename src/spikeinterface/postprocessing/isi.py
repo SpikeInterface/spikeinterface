@@ -122,7 +122,7 @@ def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
-        method = "numba" if HAVE_NUMBA else "numpy"
+        method = "numpy"  # numpy is faster for ISI computationc currently
 
     if method == "numpy":
         return compute_isi_histograms_numpy(sorting, window_ms, bin_ms)
@@ -150,10 +150,9 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
-    # TODO: There might be a better way than a double for loop?
     for i, unit_id in enumerate(sorting.unit_ids):
         for seg_index in range(sorting.get_num_segments()):
-            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
+            spike_train = sorting.get_unit_spike_train(unit_id, seg_index)
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
             ISIs[i] += ISI
 

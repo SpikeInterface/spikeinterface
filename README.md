@@ -43,16 +43,8 @@
 </tr>
 </table>
 
+
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
-
-
-> :rocket::rocket::rocket:
-> **New features!**: after months of development and testing, we are happy to announce that
-> the latest release (0.101.0) includes a major API improvement: the `SortingAnalyzer`!
-> To read more about why we did this, checkout the
-> [SpikeInterface Enhancement Proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
-> Please follow this guide to transition from the old API to the new one:
-> [Updating from legacy](https://spikeinterface.readthedocs.io/en/0.101.0/tutorials/waveform_extractor_to_sorting_analyzer.html).
 
 
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
@@ -64,14 +56,19 @@ With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
-- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
-- post-process sorted datasets.
+- run many popular, semi-automatic spike sorters (kilosort1-4, mountainsort4-5, spykingcircus,
+  tridesclous, ironclust, herdingspikes, yass, waveclus)
+- run sorters developed in house (lupin, spkykingcicus2, tridesclous2, simple) that compete with kilosort4
+- run theses polar sorters without installation using containers (Docker/Singularity).
+- post-process sorted datasets using th SortingAnalyzer
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
 - export a report and/or export to phy
-- offer a powerful Qt-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
+- curate your sorting with several strategies (ml-based, metrics based, manual, ...)
+- offer a powerful Qt-based or we-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui) for manual curation that replace phy.
 - have powerful sorting components to build your own sorter.
+- have a full motion/drift correction framework
 
 
 ## Documentation

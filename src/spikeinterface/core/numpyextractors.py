@@ -12,7 +12,7 @@ from spikeinterface.core import (
     BaseSnippets,
     BaseSnippetsSegment,
 )
-from .basesorting import minimum_spike_dtype
+from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
@@ -426,9 +426,6 @@ class NumpySorting(BaseSorting):
         spikes = np.concatenate(spikes)
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
-
-        # Trick : populate the cache with dict that already exists
-        sorting._cached_spike_trains = {seg_ind: d for seg_ind, d in enumerate(units_dict_list)}
 
         return sorting
 

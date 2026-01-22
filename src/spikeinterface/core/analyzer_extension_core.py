@@ -17,7 +17,7 @@ from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
-from .sorting_tools import random_spikes_selection
+from .sorting_tools import random_spikes_selection, select_sorting_periods_mask, spike_vector_to_indices
 from .job_tools import fix_job_kwargs, split_job_kwargs
 
 
@@ -959,18 +959,28 @@ class BaseMetricExtension(AnalyzerExtension):
                     )
         return metric_column_descriptions
 
-    def _cast_metrics(self, metrics_df):
-        metric_dtypes = {}
-        for m in self.metric_list:
-            metric_dtypes.update(m.metric_columns)
-
-        for col in metrics_df.columns:
-            if col in metric_dtypes:
-                try:
-                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
-                except Exception as e:
-                    print(f"Error casting column {col}: {e}")
-        return metrics_df
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        metric_names = params.get("metric_names", None)
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        metric_depend_on = set()
+        for metric_name in metric_names:
+            metric = [m for m in cls.metric_list if m.metric_name == metric_name][0]
+            for dep in metric.depend_on:
+                if "|" in dep:
+                    dep_options = dep.split("|")
+                    metric_depend_on.update(dep_options)
+                else:
+                    metric_depend_on.add(dep)
+        depend_on = list(cls.depend_on) + list(metric_depend_on)
+        return depend_on
 
     def _set_params(
         self,
@@ -992,6 +1002,8 @@ class BaseMetricExtension(AnalyzerExtension):
             If None, default parameters for all metrics are used.
         delete_existing_metrics : bool, default: False
             If True, existing metrics in the extension will be deleted before computing new ones.
+        metrics_to_compute : list[str] | None
+            List of metric names to compute. If None, all metrics in `metric_names` are computed.
         other_params : dict
             Additional parameters for metric computation.
 
@@ -1105,6 +1117,9 @@ class BaseMetricExtension(AnalyzerExtension):
         -------
         metrics : pd.DataFrame
             DataFrame containing the computed metrics for each unit.
+        run_times : dict
+            Dictionary containing the computation time for each metric.
+
         """
         import pandas as pd
 
@@ -1121,11 +1136,17 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
 
+        run_times = {}
+
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names = list(metric.metric_columns.keys())
+            import time
+
+            t_start = time.perf_counter()
             try:
                 metric_params = self.params["metric_params"].get(metric_name, {})
+
                 res = metric.compute(
                     sorting_analyzer,
                     unit_ids=unit_ids,
@@ -1139,6 +1160,8 @@ class BaseMetricExtension(AnalyzerExtension):
                     res = {unit_id: np.nan for unit_id in unit_ids}
                 else:
                     res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+            t_end = time.perf_counter()
+            run_times[metric_name] = t_end - t_start
 
             # res is a namedtuple with several dictionary entries (one per column)
             if isinstance(res, dict):
@@ -1150,7 +1173,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics = self._cast_metrics(metrics)
 
-        return metrics
+        return metrics, run_times
 
     def _run(self, **job_kwargs):
 
@@ -1161,7 +1184,7 @@ class BaseMetricExtension(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         # compute the metrics which have been specified by the user
-        computed_metrics = self._compute_metrics(
+        computed_metrics, run_times = self._compute_metrics(
             sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute, **job_kwargs
         )
 
@@ -1189,20 +1212,24 @@ class BaseMetricExtension(AnalyzerExtension):
                 computed_metrics[column_name] = extension.data["metrics"][column_name]
 
         self.data["metrics"] = computed_metrics
+        self.data["runtime_s"] = run_times
 
     def _get_data(self):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def set_data(self, ext_data_name, data):
-        import pandas as pd
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
 
-        if ext_data_name != "metrics":
-            return
-        if not isinstance(data, pd.DataFrame):
-            return
-        metrics = self._cast_metrics(data)
-        self.data[ext_data_name] = metrics
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
 
     def _select_extension_data(self, unit_ids: list[int | str]):
         """
@@ -1265,7 +1292,7 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :] = self._compute_metrics(
+        metrics.loc[new_unit_ids, :], _ = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
         metrics = self._cast_metrics(metrics)
@@ -1309,13 +1336,23 @@ class BaseMetricExtension(AnalyzerExtension):
         metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
 
         metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids_f, :] = self._compute_metrics(
+        metrics.loc[new_unit_ids_f, :], _ = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
         metrics = self._cast_metrics(metrics)
 
         new_data = dict(metrics=metrics)
         return new_data
+
+    def set_data(self, ext_data_name, data):
+        import pandas as pd
+
+        if ext_data_name != "metrics":
+            return
+        if not isinstance(data, pd.DataFrame):
+            return
+        metrics = self._cast_metrics(data)
+        self.data[ext_data_name] = metrics
 
 
 class BaseSpikeVectorExtension(AnalyzerExtension):
@@ -1330,6 +1367,9 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     need_job_kwargs = True
     need_backward_compatibility_on_load = False
     nodepipeline_variables = []  # to be defined in subclass
+
+    def __init__(self, sorting_analyzer):
+        super().__init__(sorting_analyzer)
 
     def _set_params(self, **kwargs):
         params = kwargs.copy()
@@ -1369,7 +1409,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for d, name in zip(data, data_names):
             self.data[name] = d
 
-    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, copy=True):
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, periods=None, copy=True):
         """
         Return extension data. If the extension computes more than one `nodepipeline_variables`,
         the `return_data_name` is used to specify which one to return.
@@ -1383,15 +1423,16 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         return_data_name : str | None, default: None
             The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
             the first one is returned.
+        periods : array of unit_period dtype, default: None
+            Optional periods (segment_index, start_sample_index, end_sample_index, unit_index) to slice output data
         copy : bool, default: True
             Whether to return a copy of the data (only for outputs="numpy")
 
         Returns
         -------
         numpy.ndarray | dict
-            The
+            The requested data in numpy or by unit format.
         """
-        from spikeinterface.core.sorting_tools import spike_vector_to_indices
 
         if len(self.nodepipeline_variables) == 1:
             return_data_name = self.nodepipeline_variables[0]
@@ -1404,6 +1445,14 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
 
         all_data = self.data[return_data_name]
+        keep_mask = None
+        if periods is not None:
+            keep_mask = select_sorting_periods_mask(
+                self.sorting_analyzer.sorting,
+                periods,
+            )
+            all_data = all_data[keep_mask]
+
         if outputs == "numpy":
             if copy:
                 return all_data.copy()  # return a copy to avoid modification
@@ -1412,7 +1461,13 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         elif outputs == "by_unit":
             unit_ids = self.sorting_analyzer.unit_ids
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            if keep_mask is not None:
+                # since we are filtering spikes, we need to recompute the spike indices
+                spike_vector = spike_vector[keep_mask]
+                spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            else:
+                # use the cache of indices
+                spike_indices = self.sorting_analyzer.sorting.get_spike_vector_to_indices()
             data_by_units = {}
             for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
                 data_by_units[segment_index] = {}

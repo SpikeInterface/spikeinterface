@@ -39,13 +39,10 @@ class LocallyExclusivePeakDetector(PeakDetector):
     engine = "numba"
     need_noise_levels = True
     preferred_mp_context = None
-    params_doc = (
-        ByChannelPeakDetector.params_doc
-        + """
+    params_doc = ByChannelPeakDetector.params_doc + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
-    )
 
     def __init__(
         self,
@@ -198,13 +195,10 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
     engine = "torch"
     need_noise_levels = True
     preferred_mp_context = "spawn"
-    params_doc = (
-        ByChannelPeakDetector.params_doc
-        + """
+    params_doc = ByChannelPeakDetector.params_doc + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
-    )
 
     def __init__(
         self,
@@ -271,13 +265,10 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
     engine = "opencl"
     preferred_mp_context = None
     need_noise_levels = True
-    params_doc = (
-        LocallyExclusiveTorchPeakDetector.params_doc
-        + """
+    params_doc = LocallyExclusiveTorchPeakDetector.params_doc + """
     opencl_context_kwargs: None or dict
        kwargs to create the opencl context
     """
-    )
 
     def __init__(
         self,

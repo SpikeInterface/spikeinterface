@@ -10,14 +10,12 @@ try:
 except:
     HAVE_PSUTIL = False
 
-from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeNoiseLevels
-from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift, get_template_extremum_channel
+from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
 
@@ -430,11 +428,11 @@ def cache_preprocessing(
 
     elif mode == "folder":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_folder(folder=folder)
+        recording = recording.save_to_folder(folder=folder, **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "zarr":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_zarr(folder=folder)
+        recording = recording.save_to_zarr(folder=folder, **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "no-cache":
         recording = recording
@@ -446,7 +444,7 @@ def cache_preprocessing(
             cache_info["mode"] = "memory"
         elif folder is not None:
             # then try folder
-            recording = recording.save_to_folder(folder=folder)
+            recording = recording.save_to_folder(folder=folder, **job_kwargs)
             cache_info["mode"] = "folder"
             cache_info["folder"] = folder
         else:
@@ -480,7 +478,14 @@ def remove_empty_templates(templates):
 
 
 def create_sorting_analyzer_with_existing_templates(
-    sorting, recording, templates, remove_empty=True, noise_levels=None
+    sorting,
+    recording,
+    templates,
+    remove_empty=True,
+    noise_levels=None,
+    amplitude_scalings=None,
+    spike_amplitudes=None,
+    spike_locations=None,
 ):
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
@@ -494,6 +499,8 @@ def create_sorting_analyzer_with_existing_templates(
         sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
     else:
         non_empty_sorting = sorting
+
+    from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
     sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
     sa.compute("random_spikes")
@@ -509,11 +516,53 @@ def create_sorting_analyzer_with_existing_templates(
     sa.extensions["templates"].run_info["runtime_s"] = 0
 
     if noise_levels is not None:
+        from spikeinterface.core.analyzer_extension_core import ComputeNoiseLevels
+
         sa.extensions["noise_levels"] = ComputeNoiseLevels(sa)
         sa.extensions["noise_levels"].params = {}
         sa.extensions["noise_levels"].data["noise_levels"] = noise_levels
         sa.extensions["noise_levels"].run_info["run_completed"] = True
         sa.extensions["noise_levels"].run_info["runtime_s"] = 0
+
+    if amplitude_scalings is not None:
+        from spikeinterface.postprocessing.amplitude_scalings import ComputeAmplitudeScalings
+
+        sa.extensions["amplitude_scalings"] = ComputeAmplitudeScalings(sa)
+        sa.extensions["amplitude_scalings"].params = dict(
+            sparsity=None,
+            max_dense_channels=16,
+            ms_before=templates.ms_before,
+            ms_after=templates.ms_after,
+            handle_collisions=False,
+            delta_collision_ms=2,
+        )
+        sa.extensions["amplitude_scalings"].data["amplitude_scalings"] = amplitude_scalings
+        sa.extensions["amplitude_scalings"].run_info["run_completed"] = True
+        sa.extensions["amplitude_scalings"].run_info["runtime_s"] = 0
+
+    if spike_amplitudes is not None:
+        from spikeinterface.postprocessing.spike_amplitudes import ComputeSpikeAmplitudes
+
+        sa.extensions["spike_amplitudes"] = ComputeSpikeAmplitudes(sa)
+        sa.extensions["spike_amplitudes"].params = dict()
+        sa.extensions["spike_amplitudes"].data["amplitudes"] = spike_amplitudes
+        sa.extensions["spike_amplitudes"].run_info["run_completed"] = True
+        sa.extensions["spike_amplitudes"].run_info["runtime_s"] = 0
+
+    if spike_locations is not None:
+        from spikeinterface.postprocessing.spike_locations import ComputeSpikeLocations
+
+        sa.extensions["spike_locations"] = ComputeSpikeLocations(sa)
+        sa.extensions["spike_locations"].params = dict(
+            ms_before=0.5,
+            ms_after=0.5,
+            spike_retriver_kwargs=None,
+            method="center_of_mass",
+            method_kwargs={},
+        )
+        sa.extensions["spike_locations"].data["spike_locations"] = spike_locations
+        sa.extensions["spike_locations"].run_info["run_completed"] = True
+        sa.extensions["spike_locations"].run_info["runtime_s"] = 0
 
     return sa
 
