@@ -134,7 +134,6 @@ def create_regular_periods(sorting_analyzer, num_periods, bin_size_s=None):
         samples_per_period = sorting_analyzer.get_num_samples(segment_index) // num_periods
         if bin_size_s is not None:
             bin_size_samples = int(bin_size_s * sorting_analyzer.sampling_frequency)
-            print(samples_per_period / bin_size_samples)
             samples_per_period = samples_per_period // bin_size_samples * bin_size_samples
             num_periods = int(np.round(sorting_analyzer.get_num_samples(segment_index) / samples_per_period))
         for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
