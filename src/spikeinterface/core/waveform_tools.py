@@ -915,12 +915,12 @@ def estimate_templates_with_accumulator(
         num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
     num_units = len(unit_ids)
 
-    shape = (num_worker, num_units, nbefore + nafter, num_chans)
+    shape = (num_units, nbefore + nafter, num_chans)
 
     dtype = np.dtype("float32")
-    waveform_accumulator_per_worker = [np.zeros((num_units, nbefore + nafter, num_chans), dtype=dtype) for _ in range(num_worker)]
+    waveform_accumulator_per_worker = [np.zeros(shape, dtype=dtype) for _ in range(num_worker)]
     if return_std:
-        waveform_squared_accumulator_per_worker = [np.zeros((num_units, nbefore + nafter, num_chans), dtype=dtype) for _ in range(num_worker)]
+        waveform_squared_accumulator_per_worker = [np.zeros(shape, dtype=dtype) for _ in range(num_worker)]
     else:
         waveform_squared_accumulator_per_worker = None
 
