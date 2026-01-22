@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 
-
 NOISE_METRICS = [
     "num_positive_peaks",
     "num_negative_peaks",
