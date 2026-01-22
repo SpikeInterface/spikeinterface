@@ -902,6 +902,17 @@ class BaseMetricExtension(AnalyzerExtension):
     metric_list: list[BaseMetric] = None  # list of BaseMetric
 
     @classmethod
+    def get_available_metric_names(cls):
+        """Get the available metric names.
+
+        Returns
+        -------
+        available_metric_names : list[str]
+            List of available metric names.
+        """
+        return [m.metric_name for m in cls.metric_list]
+
+    @classmethod
     def get_default_metric_params(cls):
         """Get the default metric parameters.
 
