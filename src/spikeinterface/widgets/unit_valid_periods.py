@@ -29,6 +29,7 @@ class ValidUnitPeriodsWidget(BaseWidget):
         segment_index: int | None = None,
         unit_ids: list | None = None,
         show_only_units_with_valid_periods: bool = True,
+        clip_amplitude_scalings: float | None = 5.0,
         backend: str | None = None,
         **backend_kwargs,
     ):
@@ -57,6 +58,7 @@ class ValidUnitPeriodsWidget(BaseWidget):
             sorting_analyzer=sorting_analyzer,
             segment_index=segment_index,
             unit_ids=valid_unit_ids,
+            clip_amplitude_scalings=clip_amplitude_scalings,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -112,7 +114,11 @@ class ValidUnitPeriodsWidget(BaseWidget):
             axs[0].axhline(fp_threshold, color="gray", ls="--")
             axs[1].plot(center_bins_s, fn, ls="", marker="o")
             axs[1].axhline(fn_threshold, color="gray", ls="--")
-            axs[2].plot(spiketrain, amp_scalings_by_unit[unit_id], ls="", marker="o", color="gray", alpha=0.5)
+            amp_scalings_data = amp_scalings_by_unit[unit_id]
+            if dp.clip_amplitude_scalings is not None:
+                amp_scalings_data = np.clip(amp_scalings_data, -dp.clip_amplitude_scalings, dp.clip_amplitude_scalings)
+            axs[2].plot(spiketrain, amp_scalings_data, ls="", marker="o", color="gray", alpha=0.5)
+            axs[2].axhline(1.0, color="k", ls="--")
             # plot valid periods
             valid_period_for_units = good_periods[good_periods["unit_index"] == unit_index]
             for valid_period in valid_period_for_units:
