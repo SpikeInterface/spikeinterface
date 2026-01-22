@@ -556,7 +556,7 @@ def create_sorting_analyzer_with_existing_templates(
         sa.extensions["spike_locations"].params = dict(
             ms_before=0.5,
             ms_after=0.5,
-            peak_sign="neg",
+            spike_retriver_kwargs=None,
             method="center_of_mass",
             method_kwargs={},
         )

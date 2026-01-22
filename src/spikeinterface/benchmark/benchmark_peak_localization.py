@@ -24,11 +24,11 @@ class PeakLocalizationBenchmark(Benchmark):
             self.params[key] = self.params.get(key, 2)
             self.templates_params[key] = self.params[key]
 
-        # if not self.channel_from_template:
-        #     self.params["spike_retriver_kwargs"] = {"channel_from_template": False}
-        # else:
-        #     ## TODO
-        #     pass
+        if not self.channel_from_template:
+            self.params["spike_retriver_kwargs"] = {"channel_from_template": False}
+        else:
+            ## TODO
+            pass
 
     def run(self, **job_kwargs):
         sorting_analyzer = create_sorting_analyzer(
