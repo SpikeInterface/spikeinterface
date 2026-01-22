@@ -125,8 +125,8 @@ def check_sortings_equal(
             mask &= spikes["sample_index"] <= end_frame
         return spikes[mask]
 
-    s1 = _sorted_spike_vector(SX1)
-    s2 = _sorted_spike_vector(SX2)
+    s1 = SX1.to_spike_vector()
+    s2 = SX2.to_spike_vector()
     assert_array_equal(s1, s2)
 
     for start_frame, end_frame in [
