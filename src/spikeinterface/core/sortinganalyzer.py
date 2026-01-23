@@ -2710,9 +2710,12 @@ class AnalyzerExtension:
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
-                if isinstance(ext_data, dict):
+                if isinstance(ext_data, (dict, list)):
+                    # These could be dicts or lists of dicts. The check_json makes sure
+                    # that everything is json serializable
+                    ext_data_ = check_json(ext_data)
                     extension_group.create_dataset(
-                        name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
+                        name=ext_data_name, data=np.array([ext_data_], dtype=object), object_codec=numcodecs.JSON()
                     )
                     extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):

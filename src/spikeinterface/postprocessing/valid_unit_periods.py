@@ -132,6 +132,8 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         if method in ["false_positives_and_negatives", "combined"]:
             if not self.sorting_analyzer.has_extension("amplitude_scalings"):
                 raise ValueError("Requires 'amplitude_scalings' extension; please compute it first.")
+            if not HAVE_NUMBA:
+                raise ImportError("Numba is required to compute RP violations (false positives).")
 
         # subperiods
         assert period_mode in ("absolute", "relative"), f"Invalid subperiod_size_mode: {period_mode}"
@@ -469,17 +471,6 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             duration_samples = valid_unit_periods["end_sample_index"] - valid_unit_periods["start_sample_index"]
             valid_mask = duration_samples >= min_valid_period_samples
             valid_unit_periods = valid_unit_periods[valid_mask]
-
-            # # Convert subperiods per unit in period_centers_s
-            # period_centers = []
-            # for segment_index in range(sorting_analyzer.sorting.get_num_segments()):
-            #     periods_segment = all_periods[all_periods["segment_index"] == segment_index]
-            #     period_centers_dict = {}
-            #     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
-            #         periods_unit = periods_segment[periods_segment["unit_index"] == unit_index]
-            #         centers = list(0.5 * (periods_unit["start_sample_index"] + periods_unit["end_sample_index"]))
-            #         period_centers_dict[unit_id] = centers
-            #     period_centers.append(period_centers_dict)
 
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
             return valid_unit_periods, period_centers, fps, fns
