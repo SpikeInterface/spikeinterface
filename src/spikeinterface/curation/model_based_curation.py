@@ -281,6 +281,18 @@ def model_based_label_units(
     return classified_units
 
 
+def auto_label_units(*args, **kwargs):
+    """
+    Deprecated function. Please use `model_based_label_units` instead.
+    """
+    warnings.warn(
+        "`auto_label_units` is deprecated and will be removed in v0.105.0. "
+        "Please use `model_based_label_units` instead.",
+        DeprecationWarning,
+    )
+    return model_based_label_units(*args, **kwargs)
+
+
 def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model and model_info from a HuggingFaceHub repo or a local folder.

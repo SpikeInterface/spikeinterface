@@ -178,7 +178,11 @@ def test_unitrefine_label_units(sorting_analyzer_for_curation):
 
     from spikeinterface.curation import unitrefine_label_units
 
-    labels = unitrefine_label_units(sorting_analyzer_for_curation)
+    labels = unitrefine_label_units(
+        sorting_analyzer_for_curation,
+        noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
+        sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
+    )
 
     assert "label" in labels.columns
     assert "probability" in labels.columns

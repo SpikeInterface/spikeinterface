@@ -6,8 +6,8 @@ from spikeinterface.curation.model_based_curation import model_based_label_units
 
 def unitrefine_label_units(
     sorting_analyzer: SortingAnalyzer,
-    noise_neural_classifier: str | Path | None = "SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
-    sua_mua_classifier: str | Path | None = "SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
+    noise_neural_classifier: str | Path | None = None,
+    sua_mua_classifier: str | Path | None = None,
 ):
     """Label units using a cascade of pre-trained classifiers for
     noise/neural unit classification and SUA/MUA classification,
@@ -19,16 +19,13 @@ def unitrefine_label_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    noise_neural_classifier : str or Path or None, default: "SpikeInterface/UnitRefine_noise_neural_classifier_lightweight"
+    noise_neural_classifier : str or Path or None, default: None
         The path to the folder containing the model or a string to a repo on HuggingFace.
         If None, the noise/neural classification step is skipped.
-        By default, it uses a pre-trained lightweight model hosted on HuggingFace that does not require principal
-        component analysis (PCA) features.
-    sua_mua_classifier : str or Path or None, default: "SpikeInterface/UnitRefine_sua_mua_classifier_lightweight"
+        Make sure to provide at least one of the two classifiers.
+    sua_mua_classifier : str or Path or None, default: None
         The path to the folder containing the model or a string to a repo on HuggingFace.
         If None, the SUA/MUA classification step is skipped.
-        By default, it uses a pre-trained lightweight model hosted on HuggingFace that does not require principal
-        component analysis (PCA) features.
 
     Returns
     -------
@@ -43,7 +40,12 @@ def unitrefine_label_units(
     import pandas as pd
 
     if noise_neural_classifier is None and sua_mua_classifier is None:
-        raise ValueError("At least one of noise_neural_classifier or sua_mua_classifier must be provided.")
+        raise ValueError(
+            "At least one of noise_neural_classifier or sua_mua_classifier must be provided. "
+            "Pre-trained models can be found at https://huggingface.co/collections/SpikeInterface/curation-models or "
+            "https://huggingface.co/AnoushkaJain3/models. You can also train models on your own data: "
+            "see https://github.com/anoushkajain/UnitRefine for more details."
+        )
 
     if noise_neural_classifier is not None:
         # 1. apply the noise/neural classification and remove noise
