@@ -8,6 +8,8 @@ from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.core import estimate_sparsity
 
+extensions_which_allow_unit_ids = ["unit_locations"]
+
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
@@ -139,6 +141,17 @@ class AnalyzerExtensionCommonTestSuite:
         num_units_after_merge = len(sorting_analyzer.unit_ids) - 1
         merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
         assert len(merged.unit_ids) == num_units_after_merge
+
+        # Test that order of units doesn't change things
+        if extension_class.extension_name in extensions_which_allow_unit_ids:
+            reversed_unit_ids = some_unit_ids[::-1]
+            sliced_reversed = sorting_analyzer.select_units(reversed_unit_ids, format="memory")
+            ext = sorting_analyzer.compute(
+                extension_class.extension_name, unit_ids=reversed_unit_ids, **params, **job_kwargs
+            )
+            recomputed_data = ext.get_data()
+            sliced_data = sliced_reversed.get_extension(extension_class.extension_name).get_data()
+            np.testing.assert_allclose(recomputed_data, sliced_data)
 
         # test roundtrip
         if sorting_analyzer.format in ("binary_folder", "zarr"):
