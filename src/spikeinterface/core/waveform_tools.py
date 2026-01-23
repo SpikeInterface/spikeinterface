@@ -640,13 +640,10 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
         in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
     )
 
-    # slice in absolut in spikes vector
-    l0 = i0 + s0
-    l1 = i1 + s0
-
-    if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+    if i1 > i0:
+        sub_spikes = in_seg_spikes[i0:i1]
+        start = sub_spikes[0]["sample_index"] - nbefore
+        end = sub_spikes[-1]["sample_index"] + nafter
 
         # load trace in memory
         traces = recording.get_traces(
@@ -655,13 +652,12 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
 
         onset = start + nbefore
         offset = nbefore + nafter
-        sample_indices = spikes[l0:l1]["sample_index"] - onset        
-        unit_indices = spikes[l0:l1]["unit_index"]
-        spike_indices = np.arange(l0, l1)
+        sample_indices = sub_spikes["sample_index"] - onset        
+        unit_indices = sub_spikes["unit_index"]
+        spike_indices = s0 + np.arange(i0, i1)
 
         for sample_index, unit_index, spike_index in zip(sample_indices, unit_indices, spike_indices):
             wf = traces[sample_index:sample_index+offset, :]
-
 
             if sparsity_mask is None:
                 all_waveforms[spike_index, :, :] = wf
@@ -1060,13 +1056,11 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
         in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
     )
 
-    # slice in absolut in spikes vector
-    l0 = i0 + s0
-    l1 = i1 + s0
+    if i1 > i0:
+        sub_spikes = in_seg_spikes[i0:i1]
 
-    if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+        start = sub_spikes[0]["sample_index"] - nbefore
+        end = sub_spikes[-1]["sample_index"] + nafter
 
         # load trace in memory
         traces = recording.get_traces(
@@ -1075,8 +1069,8 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
 
         onset = start + nbefore
         offset = nbefore + nafter
-        sample_indices = spikes[l0:l1]["sample_index"] - onset        
-        unit_indices = spikes[l0:l1]["unit_index"]
+        sample_indices = sub_spikes["sample_index"] - onset        
+        unit_indices = sub_spikes["unit_index"]
 
         for sample_index, unit_index in zip(sample_indices, unit_indices):
             
