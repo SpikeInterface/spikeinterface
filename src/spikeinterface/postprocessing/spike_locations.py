@@ -16,10 +16,10 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    peak_sign : "neg" | "pos" | "both", default: "neg" 
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak sign to use when looking for the template extremum channel.
     spike_retriever_kwargs : dict
-        Arguments to control the spike retriever behavior. See 
+        Arguments to control the spike retriever behavior. See
         `spikeinterface.sortingcomponents.peak_localization.SpikeRetriever`.
     method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The localization method to use
@@ -40,7 +40,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
     def _handle_backward_compatibility_on_load(self):
         # For backwards compatibility - this renames spike_retriver_kwargs to spike_retriever_kwargs
         if "spike_retriver_kwargs" in self.params:
-            self.params['peak_sign'] = self.params['spike_retriver_kwargs'].get('peak_sign', 'neg')
+            self.params["peak_sign"] = self.params["spike_retriver_kwargs"].get("peak_sign", "neg")
             self.params["spike_retriever_kwargs"] = self.params.pop("spike_retriver_kwargs")
 
     def _set_params(
@@ -73,9 +73,11 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
             self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
         )
 
-        retriever_kwargs = {"channel_from_template": True,
-                            "extremum_channel_inds": extremum_channels_indices,
-                            **self.params["spike_retriever_kwargs"]}
+        retriever_kwargs = {
+            "channel_from_template": True,
+            "extremum_channel_inds": extremum_channels_indices,
+            **self.params["spike_retriever_kwargs"],
+        }
         retriever = SpikeRetriever(sorting, recording, **retriever_kwargs)
         nodes = get_localization_pipeline_nodes(
             recording,
