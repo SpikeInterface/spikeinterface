@@ -653,10 +653,14 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
-        for spike_index in range(l0, l1):
-            sample_index = spikes[spike_index]["sample_index"]
-            unit_index = spikes[spike_index]["unit_index"]
-            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+        onset = start + nbefore
+        offset = nbefore + nafter
+        sample_indices = spikes[l0:l1]["sample_index"] - onset        
+        unit_indices = spikes[l0:l1]["unit_index"]
+        spike_indices = np.arange(l0, l1)
+
+        for sample_index, unit_index, spike_index in zip(sample_indices, unit_indices, spike_indices):
+            wf = traces[sample_index:sample_index+offset, :]
 
             if sparsity_mask is None:
                 all_waveforms[spike_index, :, :] = wf
@@ -1056,10 +1060,14 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
-        for spike_index in range(l0, l1):
-            sample_index = spikes[spike_index]["sample_index"]
-            unit_index = spikes[spike_index]["unit_index"]
-            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+        onset = start + nbefore
+        offset = nbefore + nafter
+        sample_indices = spikes[l0:l1]["sample_index"] - onset        
+        unit_indices = spikes[l0:l1]["unit_index"]
+
+        for sample_index, unit_index in zip(sample_indices, unit_indices):
+            
+            wf = traces[sample_index:sample_index+offset, :]
 
             if sparsity_mask is None:
                 waveform_accumulator_per_worker[worker_index][unit_index, :, :] += wf
