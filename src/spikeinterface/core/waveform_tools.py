@@ -662,6 +662,7 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
         for sample_index, unit_index, spike_index in zip(sample_indices, unit_indices, spike_indices):
             wf = traces[sample_index:sample_index+offset, :]
 
+
             if sparsity_mask is None:
                 all_waveforms[spike_index, :, :] = wf
             else:
@@ -917,14 +918,17 @@ def estimate_templates_with_accumulator(
         num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
     num_units = len(unit_ids)
 
-    shape = (num_units, nbefore + nafter, num_chans)
+    shape = (num_worker, num_units, nbefore + nafter, num_chans)
 
     dtype = np.dtype("float32")
-    waveform_accumulator_per_worker = [np.zeros(shape, dtype=dtype) for _ in range(num_worker)]
+    waveform_accumulator_per_worker, shm = make_shared_array(shape, dtype)
+    shm_name = shm.name
     if return_std:
-        waveform_squared_accumulator_per_worker = [np.zeros(shape, dtype=dtype) for _ in range(num_worker)]
+        waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype)
+        shm_squared_name = shm_squared.name
     else:
         waveform_squared_accumulator_per_worker = None
+        shm_squared_name = None
 
     func = _worker_estimate_templates
     init_func = _init_worker_estimate_templates
@@ -932,8 +936,10 @@ def estimate_templates_with_accumulator(
     init_args = (
         recording,
         spikes,
-        waveform_accumulator_per_worker,
-        waveform_squared_accumulator_per_worker,
+        shm_name,
+        shm_squared_name,
+        shape,
+        dtype,
         nbefore,
         nafter,
         return_in_uV,
@@ -943,17 +949,12 @@ def estimate_templates_with_accumulator(
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
     processor = ChunkRecordingExecutor(
-        recording, func, init_func,  init_args, job_name=job_name, verbose=verbose, need_worker_index=True, **job_kwargs
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, need_worker_index=True, **job_kwargs
     )
     processor.run()
-    waveform_accumulator_per_worker = np.hstack(waveform_accumulator_per_worker)
 
     # average
-    if len(waveform_accumulator_per_worker.shape) == 4:
-        waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
-    else:
-        waveforms_sum = waveform_accumulator_per_worker
-
+    waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
     if return_std:
         # we need a copy here because we will use the means to compute the stds
         template_means = waveforms_sum.copy()
@@ -965,13 +966,7 @@ def estimate_templates_with_accumulator(
     template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
 
     if return_std:
-
-        waveform_squared_accumulator_per_worker = np.hstack(waveform_squared_accumulator_per_worker)
-        if len(waveform_squared_accumulator_per_worker.shape) == 4:
-            waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
-        else:
-            waveforms_squared_sum = waveform_squared_accumulator_per_worker
-        
+        waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
         # standard deviation
         template_stds = np.zeros_like(template_means)
         for unit_index, count in zip(unit_indices, spike_count):
@@ -981,9 +976,13 @@ def estimate_templates_with_accumulator(
             residuals[residuals < 0] = 0
             template_stds[unit_index] = np.sqrt(residuals / count)
         del waveform_squared_accumulator_per_worker
+        shm_squared.unlink()
+        shm_squared.close()
 
     # important : release the sharedmem
     del waveform_accumulator_per_worker
+    shm.unlink()
+    shm.close()
 
     if return_std:
         return template_means, template_stds
@@ -994,8 +993,10 @@ def estimate_templates_with_accumulator(
 def _init_worker_estimate_templates(
     recording,
     spikes,
-    waveform_accumulator_per_worker,
-    waveform_squared_accumulator_per_worker,
+    shm_name,
+    shm_squared_name,
+    shape,
+    dtype,
     nbefore,
     nafter,
     return_in_uV,
@@ -1008,8 +1009,20 @@ def _init_worker_estimate_templates(
     worker_dict["nafter"] = nafter
     worker_dict["return_in_uV"] = return_in_uV
     worker_dict["sparsity_mask"] = sparsity_mask
+
+    from multiprocessing.shared_memory import SharedMemory
+    import multiprocessing
+
+    shm = SharedMemory(shm_name)
+    waveform_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+
+    worker_dict["shm"] = shm
     worker_dict["waveform_accumulator_per_worker"] = waveform_accumulator_per_worker
-    worker_dict["waveform_squared_accumulator_per_worker"] = waveform_squared_accumulator_per_worker
+    if shm_squared_name is not None:
+        shm_squared = SharedMemory(shm_squared_name)
+        waveform_squared_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm_squared.buf)
+        worker_dict["shm_squared"] = shm_squared
+        worker_dict["waveform_squared_accumulator_per_worker"] = waveform_squared_accumulator_per_worker
 
     # prepare segment slices
     segment_slices = []
@@ -1030,7 +1043,7 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
     nbefore = worker_dict["nbefore"]
     nafter = worker_dict["nafter"]
     waveform_accumulator_per_worker = worker_dict["waveform_accumulator_per_worker"]
-    waveform_squared_accumulator_per_worker = worker_dict.get("waveform_squared_accumulator_per_worker")
+    waveform_squared_accumulator_per_worker = worker_dict.get("waveform_squared_accumulator_per_worker", None)
     worker_index = worker_dict["worker_index"]
     return_in_uV = worker_dict["return_in_uV"]
     sparsity_mask = worker_dict["sparsity_mask"]
@@ -1070,13 +1083,13 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
             wf = traces[sample_index:sample_index+offset, :]
 
             if sparsity_mask is None:
-                waveform_accumulator_per_worker[worker_index][unit_index, :, :] += wf
+                waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf
                 if waveform_squared_accumulator_per_worker is not None:
-                    waveform_squared_accumulator_per_worker[worker_index][unit_index, :, :] += wf**2
+                    waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
 
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
-                waveform_accumulator_per_worker[worker_index][unit_index, :, : wf.shape[1]] += wf
+                waveform_accumulator_per_worker[worker_index, unit_index, :, : wf.shape[1]] += wf
                 if waveform_squared_accumulator_per_worker is not None:
-                    waveform_squared_accumulator_per_worker[worker_index][unit_index, :, : wf.shape[1]] += wf**2
+                    waveform_squared_accumulator_per_worker[worker_index, unit_index, :, : wf.shape[1]] += wf**2
