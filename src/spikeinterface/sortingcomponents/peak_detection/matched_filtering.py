@@ -46,7 +46,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
         ms_before,
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         radius_um=50,
         random_chunk_kwargs={"num_chunks_per_segment": 5},
         weight_method={},
