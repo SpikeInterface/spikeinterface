@@ -6,7 +6,7 @@ from collections import namedtuple
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def get_trough_and_peak_idx(template, peak_sign='neg'):
+def get_trough_and_peak_idx(template, peak_sign="neg"):
     """
     Return the indices into the input template of the detected trough
     (minimum of template) and peak (maximum of template, after trough).
@@ -27,9 +27,9 @@ def get_trough_and_peak_idx(template, peak_sign='neg'):
     assert template.ndim == 1
 
     # If peak_sign is 'pos', invert the template
-    if peak_sign == 'pos':
+    if peak_sign == "pos":
         template = -template
-    elif peak_sign == 'both':
+    elif peak_sign == "both":
         max_idx = np.abs(template).argmax()
         if template[max_idx] > 0:
             template = -template
@@ -358,9 +358,9 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
     template, channel_locations = sort_template_and_locations(template, channel_locations, depth_direction)
 
     # If peak_sign is 'pos', invert the template
-    if peak_sign == 'pos':
+    if peak_sign == "pos":
         template = -template
-    elif peak_sign == 'both':
+    elif peak_sign == "both":
         peak_value = template.flat[np.abs(template).argmax()]
         if peak_value > 0:
             template = -template
