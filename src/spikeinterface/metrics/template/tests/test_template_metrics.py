@@ -83,7 +83,7 @@ def test_metric_names_in_same_order(small_sorting_analyzer):
     """
     Computes sepecified template metrics and checks order is propagated.
     """
-    specified_metric_names = ["peak_trough_ratio", "half_width", "peak_to_valley"]
+    specified_metric_names = ["main_peak_to_trough_ratio", "half_width", "peak_to_valley"]
     small_sorting_analyzer.compute(
         "template_metrics", metric_names=specified_metric_names, delete_existing_metrics=True
     )

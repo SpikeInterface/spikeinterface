@@ -53,6 +53,7 @@ class LabelingHistogramsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
+        from .utils_matplotlib import make_mpl_figure
         import matplotlib.pyplot as plt
 
         dp = to_attr(data_plot)
@@ -67,17 +68,15 @@ class LabelingHistogramsWidget(BaseWidget):
 
         n_cols = min(4, n_metrics)
         n_rows = int(np.ceil(n_metrics / n_cols))
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
-        if n_metrics == 1:
-            axes = np.array([[axes]])
-        elif n_rows == 1:
-            axes = axes.reshape(1, -1)
-        elif n_cols == 1:
-            axes = axes.reshape(-1, 1)
+        backend_kwargs["ncols"] = n_cols
+        if "figsize" not in backend_kwargs:
+            backend_kwargs["figsize"] = (4 * n_cols, 3 * n_rows)
+        self.figure, self.ax, self.axes = make_mpl_figure(n_rows, n_cols, **backend_kwargs)
 
         colors = plt.cm.tab10(np.linspace(0, 1, 10))
         absolute_value_metrics = ["amplitude_median"]
 
+        axes = self.axes
         for idx, metric_name in enumerate(metrics_to_plot):
             row, col = idx // n_cols, idx % n_cols
             ax = axes[row, col]
@@ -111,10 +110,6 @@ class LabelingHistogramsWidget(BaseWidget):
 
         for idx in range(len(metrics_to_plot), n_rows * n_cols):
             axes[idx // n_cols, idx % n_cols].set_visible(False)
-
-        plt.tight_layout()
-        self.figure = fig
-        self.axes = axes
 
 
 class UpsetPlotWidget(BaseWidget):
@@ -181,6 +176,7 @@ class UpsetPlotWidget(BaseWidget):
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
+        from .utils_matplotlib import make_mpl_figure
         import warnings
         import matplotlib.pyplot as plt
         import pandas as pd
