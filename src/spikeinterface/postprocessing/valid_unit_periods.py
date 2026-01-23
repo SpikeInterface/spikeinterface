@@ -522,14 +522,16 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     def set_data(self, ext_data_name, ext_data):
         # cast back lists of dicts (required for dumping) back to arrays
         if ext_data_name in ("period_centers", "periods_fp_per_unit", "periods_fn_per_unit"):
-            ext_data = []
+            ext_data_ = []
             # lists of dicts to lists of dicts with arrays
             for segment_dict in ext_data:
                 segment_dict_arrays = {}
                 for unit_id, values in segment_dict.items():
                     segment_dict_arrays[unit_id] = np.array(values)
-                ext_data.append(segment_dict_arrays)
-        self.data[ext_data_name] = ext_data
+                ext_data_.append(segment_dict_arrays)
+        else:
+            ext_data_ = ext_data
+        self.data[ext_data_name] = ext_data_
 
 
 # TODO: deal with margin when returning periods
