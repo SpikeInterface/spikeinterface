@@ -425,11 +425,9 @@ class ChunkRecordingExecutor:
                 elif platform.system() == "Linux":
                     mp_context = "fork"
                 elif platform.system() == "Darwin":
-                    # Sam note : we used to force spawn for macos
-                    # but I think that fork should be safe enought because the unsafe situtation is when
-                    # we have multiple threads before the fork, which is not our case, and/or when using urlib.request.
+                    # We used to force spawn for macos, this is sad but in some cases fork in macos
+                    # is very unstable and lead to crashes.
                     mp_context = "spawn"
-                    # mp_context = "fork" # Sam's proposal @ chris could you test it ?
                 else:
                     mp_context = "spawn"
 
