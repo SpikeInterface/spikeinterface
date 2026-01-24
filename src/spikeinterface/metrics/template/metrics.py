@@ -283,6 +283,7 @@ def sort_template_and_locations(template, channel_locations, depth_direction="y"
     sort_indices = np.argsort(channel_locations[:, depth_dim])
     return template[:, sort_indices], channel_locations[sort_indices, :]
 
+
 def fit_line_robust(x, y):
     """
     Fit line using robust Theil-Sen estimator (median of pairwise slopes).
