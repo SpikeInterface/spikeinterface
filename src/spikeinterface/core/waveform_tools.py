@@ -382,13 +382,19 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
     l1 = i1 + s0
 
     if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+
+        sub_spikes = in_seg_spikes[i0:i1]
+        start = sub_spikes[0]["sample_index"] - nbefore
+        end = sub_spikes[-1]["sample_index"] + nafter
 
         # load trace in memory
         traces = recording.get_traces(
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
+
+        onset = start + nbefore
+        offset = nbefore + nafter
+        sample_indices = sub_spikes["sample_index"] - onset
 
         for unit_ind, unit_id in enumerate(unit_ids):
             # find pos
@@ -405,8 +411,8 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
                 wfs = worker_dict["waveforms_by_units"][unit_id]
 
             for pos in in_chunk_pos:
-                sample_index = spikes[inds[pos]]["sample_index"]
-                wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+                sample_index = sample_indices[inds[pos]]
+                wf = traces[sample_index:sample_index+offset, :]
 
                 if sparsity_mask is None:
                     wfs[pos, :, :] = wf

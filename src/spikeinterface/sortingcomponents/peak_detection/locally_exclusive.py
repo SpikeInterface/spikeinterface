@@ -41,9 +41,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
     preferred_mp_context = None
     # this is because numba
     need_first_call_before_pipeline = True
-    params_doc = (
-        ByChannelPeakDetector.params_doc
-        + """
+    params_doc = ByChannelPeakDetector.params_doc + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
