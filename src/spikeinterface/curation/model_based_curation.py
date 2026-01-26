@@ -128,6 +128,25 @@ class ModelBasedClassification:
         return classified_units
 
     def handle_backwards_compatibility_in_metrics(self, calculated_metrics, model_info):
+        """
+        Handles backwards compatibility in metric names for models trained with older versions of SpikeInterface.
+        In recent versions, some metric names have been changed for clarity. In addition, the sign of some metrics
+        has been inverted to maintain consistency.
+
+        Parameters
+        ----------
+        calculated_metrics : pd.DataFrame
+            The DataFrame containing the calculated metrics.
+        model_info : dict or None
+            Dictionary of model info containing provenance of the model.
+
+        Returns
+        -------
+        pd.DataFrame
+            The DataFrame with updated metric names for compatibility.
+        """
+        if model_info is None:
+            return calculated_metrics
         si_version = model_info["requirements"].get("spikeinterface", None)
         if si_version is not None and parse(si_version) < parse("0.103.2"):
             # if the model was trained with SI version < 0.103.2, we need to rename some metrics
