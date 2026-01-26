@@ -2679,8 +2679,9 @@ class AnalyzerExtension:
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
+                    ext_data_ = check_json(ext_data)
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
-                        json.dump(ext_data, f)
+                        json.dump(ext_data_, f)
                 elif isinstance(ext_data, np.ndarray):
                     data_file = extension_folder / f"{ext_data_name}.npy"
                     if isinstance(ext_data, np.memmap) and data_file.exists():
@@ -2711,8 +2712,6 @@ class AnalyzerExtension:
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, (dict, list)):
-                    # These could be dicts or lists of dicts. The check_json makes sure
-                    # that everything is json serializable
                     ext_data_ = check_json(ext_data)
                     extension_group.create_dataset(
                         name=ext_data_name, data=np.array([ext_data_], dtype=object), object_codec=numcodecs.JSON()

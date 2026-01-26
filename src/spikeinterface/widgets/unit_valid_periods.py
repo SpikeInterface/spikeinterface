@@ -39,13 +39,6 @@ class ValidUnitPeriodsWidget(BaseWidget):
         if valid_periods_ext.params["method"] == "user_defined":
             raise ValueError("UnitValidPeriodsWidget cannot be used with 'user_defined' valid periods.")
 
-        if segment_index is None:
-            nseg = sorting_analyzer.get_num_segments()
-            if nseg != 1:
-                raise ValueError("You must provide segment_index=...")
-            else:
-                segment_index = 0
-
         valid_periods = valid_periods_ext.get_data(outputs="numpy")
         if show_only_units_with_valid_periods:
             valid_unit_ids = sorting_analyzer.unit_ids[np.unique(valid_periods["unit_index"])]
@@ -68,7 +61,16 @@ class ValidUnitPeriodsWidget(BaseWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
+        sorting_analyzer = dp.sorting_analyzer
         num_units = len(dp.unit_ids)
+        segment_index = dp.segment_index
+
+        if segment_index is None:
+            nseg = sorting_analyzer.get_num_segments()
+            if nseg != 1:
+                raise ValueError("You must provide segment_index=...")
+            else:
+                segment_index = 0
 
         if backend_kwargs["axes"] is not None:
             axes = backend_kwargs["axes"]
@@ -89,18 +91,22 @@ class ValidUnitPeriodsWidget(BaseWidget):
         good_periods_ext = sorting_analyzer.get_extension("valid_unit_periods")
         fp_threshold = good_periods_ext.params["fp_threshold"]
         fn_threshold = good_periods_ext.params["fn_threshold"]
-        fp_per_unit = good_periods_ext.data["periods_fp_per_unit"][segment_index]
-        fn_per_unit = good_periods_ext.data["periods_fn_per_unit"][segment_index]
-        period_centers = good_periods_ext.data["period_centers"][segment_index]
         good_periods = good_periods_ext.get_data(outputs="numpy")
         good_periods = good_periods[good_periods["segment_index"] == segment_index]
+        fps, fns = good_periods_ext.get_fps_and_fns(unit_ids=dp.unit_ids)
+        period_centers = good_periods_ext.get_period_centers(unit_ids=dp.unit_ids)
+
+        fps_segment = fps[segment_index]
+        fns_segment = fns[segment_index]
+        period_centers_segment = period_centers[segment_index]
 
         amp_scalings_ext = sorting_analyzer.get_extension("amplitude_scalings")
         amp_scalings_by_unit = amp_scalings_ext.get_data(outputs="by_unit")[segment_index]
 
         for ui, unit_id in enumerate(dp.unit_ids):
-            fp = fp_per_unit[unit_id]
-            fn = fn_per_unit[unit_id]
+            fp = fps_segment[unit_id]
+            fn = fns_segment[unit_id]
+            period_centers = period_centers_segment[unit_id]
             unit_index = list(sorting_analyzer.unit_ids).index(unit_id)
 
             axs = self.axes[:, ui]
@@ -108,7 +114,7 @@ class ValidUnitPeriodsWidget(BaseWidget):
             spiketrain = (
                 sorting_analyzer.sorting.get_unit_spike_train(unit_id, segment_index=segment_index) / sampling_frequency
             )
-            center_bins_s = np.array(period_centers[unit_id]) / sampling_frequency
+            center_bins_s = np.array(period_centers) / sampling_frequency
 
             axs[0].plot(center_bins_s, fp, ls="", marker="o", color="r")
             axs[0].axhline(fp_threshold, color="gray", ls="--")
@@ -152,6 +158,7 @@ class ValidUnitPeriodsWidget(BaseWidget):
         check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
+        analyzer = data_plot["sorting_analyzer"]
 
         cm = 1 / 2.54
 
@@ -170,10 +177,27 @@ class ValidUnitPeriodsWidget(BaseWidget):
         self.unit_selector = UnitSelector(data_plot["unit_ids"])
         self.unit_selector.value = list(data_plot["unit_ids"])[:1]
 
+        if analyzer.get_num_segments() > 1:
+            num_segments = analyzer.get_num_segments()
+            segment_value = 0 if data_plot["segment_index"] is None else data_plot["segment_index"]
+            self.segment_selector = widgets.Dropdown(
+                description="segment",
+                options=list(range(num_segments)),
+                value=segment_value,
+                width="100px",
+                height="50px",
+            )
+            self.segment_selector.observe(self._update_plot, names="value", type="change")
+            left_sidebar = widgets.VBox([self.unit_selector, self.segment_selector])
+        else:
+            self.segment_selector = None
+            left_sidebar = self.unit_selector
+
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
             left_sidebar=self.unit_selector,
             pane_widths=ratios + [0],
+            footer=self.segment_selector,
         )
 
         # a first update
@@ -188,17 +212,19 @@ class ValidUnitPeriodsWidget(BaseWidget):
         self.figure.clear()
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = self.unit_selector.value
+        if self.segment_selector is not None:
+            data_plot["segment_index"] = self.segment_selector.value
         backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
 
     def _update_plot(self, change=None):
-        print(f"_update_plot called! change={change}", flush=True)
-
         for ax in self.axes.flatten():
             ax.clear()
 
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = self.unit_selector.value
+        if self.segment_selector is not None:
+            data_plot["segment_index"] = self.segment_selector.value
 
         backend_kwargs = dict(figure=None, axes=self.axes, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)

@@ -233,46 +233,46 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             recompute = False
 
         if recompute:
-            new_periods_centers = deepcopy(self.data.get("period_centers"))
-            new_periods_fp_per_unit = deepcopy(self.data.get("periods_fp_per_unit"))
-            new_periods_fn_per_unit = deepcopy(self.data.get("periods_fn_per_unit"))
+            new_all_periods = deepcopy(self.data.get("all_periods"))
+            new_fps = deepcopy(self.data.get("fps"))
+            new_fns = deepcopy(self.data.get("fns"))
             # remove data of merged units
             merged_unit_indices = []
             for unit_ids in merge_unit_groups:
                 unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                merged_unit_indices.append(unit_indices)
-                for unit_id in unit_ids:
-                    for segment_index in range(self.sorting_analyzer.get_num_segments()):
-                        new_periods_centers[segment_index].pop(unit_id, None)
-                        new_periods_fp_per_unit[segment_index].pop(unit_id, None)
-                        new_periods_fn_per_unit[segment_index].pop(unit_id, None)
+                merged_unit_indices.extend(unit_indices)
+
+            merged_unit_indices = np.array(merged_unit_indices)
+            keep_mask = ~np.isin(new_all_periods["unit_index"], merged_unit_indices)
+            new_all_periods = new_all_periods[keep_mask]
+            new_fps = new_fps[keep_mask]
+            new_fns = new_fns[keep_mask]
 
             # remove periods of merged units
-            good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], np.array(merged_unit_indices))]
+            good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], merged_unit_indices)]
             # recompute for merged units
-            good_periods_merged, period_centers, fps, fns = self._compute_valid_periods(
+            good_periods_merged, all_periods, fps, fns = self._compute_valid_periods(
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
             new_good_periods = np.concatenate((good_periods_valid, good_periods_merged), axis=0)
 
             # update period centers, fps, fns
-            for segment_index in range(new_sorting_analyzer.get_num_segments()):
-                new_periods_centers[segment_index].update(period_centers[segment_index])
-                new_periods_fp_per_unit[segment_index].update(fps[segment_index])
-                new_periods_fn_per_unit[segment_index].update(fns[segment_index])
+            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
+            new_fps = np.concatenate((new_fps, fps), axis=0)
+            new_fns = np.concatenate((new_fns, fns), axis=0)
 
             new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
-            new_extension_data["period_centers"] = period_centers
-            new_extension_data["periods_fp_per_unit"] = fps
-            new_extension_data["periods_fn_per_unit"] = fns
+            new_extension_data["all_periods"] = new_all_periods
+            new_extension_data["fps"] = new_fps
+            new_extension_data["fns"] = new_fns
         else:
             # just merge periods
             merged_periods = np.array([], dtype=unit_period_dtype)
             merged_unit_indices = []
             for unit_ids in merge_unit_groups:
                 unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                merged_unit_indices.append(unit_indices)
+                merged_unit_indices.extend(unit_indices)
                 # get periods of all units to be merged
                 masked_periods = good_periods[np.isin(good_periods["unit_index"], unit_indices)]
                 if len(masked_periods) == 0:
@@ -282,7 +282,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 merged_periods = np.concatenate((merged_periods, _merged_periods))
 
             # get periods of unmerged units
-            unmerged_mask = ~np.isin(good_periods["unit_index"], np.concatenate(merged_unit_indices))
+            unmerged_mask = ~np.isin(good_periods["unit_index"], np.array(merged_unit_indices))
             unmerged_periods = good_periods[unmerged_mask]
 
             new_good_periods = np.concatenate((unmerged_periods, merged_periods))
@@ -301,35 +301,33 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             recompute = False
 
         if recompute:
-            new_periods_centers = deepcopy(self.data.get("period_centers"))
-            new_periods_fp_per_unit = deepcopy(self.data.get("periods_fp_per_unit"))
-            new_periods_fn_per_unit = deepcopy(self.data.get("periods_fn_per_unit"))
+            new_all_periods = deepcopy(self.data.get("all_periods"))
+            new_fps = deepcopy(self.data.get("fps"))
+            new_fns = deepcopy(self.data.get("fns"))
             # remove data of split units
             split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_units)
-            for unit_id in split_units:
-                for segment_index in range(self.sorting_analyzer.get_num_segments()):
-                    new_periods_centers[segment_index].pop(unit_id, None)
-                    new_periods_fp_per_unit[segment_index].pop(unit_id, None)
-                    new_periods_fn_per_unit[segment_index].pop(unit_id, None)
+            keep_mask = ~np.isin(new_all_periods["unit_index"], split_unit_indices)
+            new_all_periods = new_all_periods[keep_mask]
+            new_fps = new_fps[keep_mask]
+            new_fns = new_fns[keep_mask]
 
             # remove periods of split units
             good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], split_unit_indices)]
             # recompute for split units
-            good_periods_split, period_centers, fps, fns = self._compute_valid_periods(
+            good_periods_split, all_periods, fps, fns = self._compute_valid_periods(
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
             new_good_periods = np.concatenate((good_periods_valid, good_periods_split))
             # update period centers, fps, fns
-            for segment_index in range(new_sorting_analyzer.get_num_segments()):
-                new_periods_centers[segment_index].update(period_centers[segment_index])
-                new_periods_fp_per_unit[segment_index].update(fps[segment_index])
-                new_periods_fn_per_unit[segment_index].update(fns[segment_index])
+            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
+            new_fps = np.concatenate((new_fps, fps), axis=0)
+            new_fns = np.concatenate((new_fns, fns), axis=0)
 
             new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
-            new_extension_data["period_centers"] = period_centers
-            new_extension_data["periods_fp_per_unit"] = fps
-            new_extension_data["periods_fn_per_unit"] = fns
+            new_extension_data["all_periods"] = new_all_periods
+            new_extension_data["fps"] = new_fps
+            new_extension_data["fns"] = new_fns
         else:
             # just duplicate periods to the split units
             split_periods = []
@@ -360,22 +358,20 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         return new_extension_data
 
     def _run(self, unit_ids=None, verbose=False, **job_kwargs):
-        valid_unit_periods, period_centers, fps, fns = self._compute_valid_periods(
+        valid_unit_periods, all_periods, fps, fns = self._compute_valid_periods(
             self.sorting_analyzer,
             unit_ids=unit_ids,
             **job_kwargs,
         )
         self.data["valid_unit_periods"] = valid_unit_periods
-        if period_centers is not None:
-            self.data["period_centers"] = period_centers
+        if all_periods is not None:
+            self.data["all_periods"] = all_periods
         if fps is not None:
-            self.data["periods_fp_per_unit"] = fps
+            self.data["fps"] = fps
         if fns is not None:
-            self.data["periods_fn_per_unit"] = fns
+            self.data["fns"] = fns
 
     def _compute_valid_periods(self, sorting_analyzer, unit_ids=None, **job_kwargs):
-        from spikeinterface import get_global_job_kwargs
-
         if self.params["method"] == "user_defined":
 
             # directly use user defined periods
@@ -384,7 +380,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
 
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
-            all_periods, all_periods_w_margins, period_centers = compute_subperiods(
+            all_periods, all_periods_w_margins = compute_subperiods(
                 sorting_analyzer,
                 self.params["period_duration_s_absolute"],
                 self.params["period_target_num_spikes"],
@@ -433,24 +429,6 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             all_fps[np.isnan(all_fps)] = 1.0
             all_fns[np.isnan(all_fns)] = 1.0
 
-            # split values by segment and units
-            # fps and fns are lists of segments with dicts unit_id -> array of shape (n_subperiods)
-            fps = []
-            fns = []
-            for segment_index in range(sorting_analyzer.sorting.get_num_segments()):
-                fp_in_segment = {}
-                fn_in_segment = {}
-                segment_mask = all_periods["segment_index"] == segment_index
-                periods_segment = all_periods[segment_mask]
-                fps_segment = all_fps[segment_mask]
-                fns_segment = all_fns[segment_mask]
-                for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
-                    unit_mask = periods_segment["unit_index"] == unit_index
-                    fp_in_segment[unit_id] = fps_segment[unit_mask]
-                    fn_in_segment[unit_id] = fns_segment[unit_mask]
-                fps.append(fp_in_segment)
-                fns.append(fn_in_segment)
-
             good_period_mask = (all_fps < self.params["fp_threshold"]) & (all_fns < self.params["fn_threshold"])
             good_periods = all_periods[good_period_mask]
 
@@ -472,8 +450,89 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             valid_mask = duration_samples >= min_valid_period_samples
             valid_unit_periods = valid_unit_periods[valid_mask]
 
+            # Prepare period centers, fps, fns per unit dicts
+
             # Store data: here we have to make sure every dict is JSON serializable, so everything is lists
-            return valid_unit_periods, period_centers, fps, fns
+            return valid_unit_periods, all_periods, all_fps, all_fns
+
+    def get_fps_and_fns(self, unit_ids=None):
+        """Get false positives and false negatives per segment and unit.
+
+        Parameters
+        ----------
+        unit_ids : list | None
+            List of unit IDs to get false positives and negatives for. If None, returns for all units.
+
+        Returns
+        -------
+        fps : list
+            List (per segment) of dictionaries mapping unit IDs to lists of false positive rates.
+        fns : list
+            List (per segment) of dictionaries mapping unit IDs to lists of false negative rates.
+        """
+        # split values by segment and units
+        all_periods = self.data.get("all_periods", None)
+        if all_periods is None:
+            return None, None
+        all_fps = self.data["fps"]
+        all_fns = self.data["fns"]
+
+        if unit_ids is None:
+            unit_ids = self.sorting_analyzer.unit_ids
+
+        num_segments = len(np.unique(all_periods["segment_index"]))
+        fps = []
+        fns = []
+        for segment_index in range(num_segments):
+            fp_in_segment = {}
+            fn_in_segment = {}
+            segment_mask = all_periods["segment_index"] == segment_index
+            periods_segment = all_periods[segment_mask]
+            fps_segment = all_fps[segment_mask]
+            fns_segment = all_fns[segment_mask]
+            for unit_id in unit_ids:
+                unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                unit_mask = periods_segment["unit_index"] == unit_index
+                fp_in_segment[unit_id] = fps_segment[unit_mask]
+                fn_in_segment[unit_id] = fns_segment[unit_mask]
+            fps.append(fp_in_segment)
+            fns.append(fn_in_segment)
+
+        return fps, fns
+
+    def get_period_centers(self, unit_ids=None):
+        """
+        Get period centers used for computing false positives and negatives.
+
+        Parameters
+        ----------
+        unit_ids : list | None
+            List of unit IDs to get period centers for. If None, returns for all units.
+
+        Returns
+        -------
+        period_centers : list
+            List (per segment) of dictionaries mapping unit IDs to lists of period center sample indices.
+        """
+        all_periods = self.data.get("all_periods", None)
+        if all_periods is None:
+            return None
+        if unit_ids is None:
+            unit_ids = self.sorting_analyzer.unit_ids
+
+        num_segments = len(np.unique(all_periods["segment_index"]))
+        all_period_centers = []
+        for segment_index in range(num_segments):
+            period_centers = {}
+            periods_segment = all_periods[all_periods["segment_index"] == segment_index]
+            for unit_id in unit_ids:
+                unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                periods_unit = periods_segment[periods_segment["unit_index"] == unit_index]
+                period_samples = (periods_unit["start_sample_index"] + periods_unit["end_sample_index"]) // 2
+                # period_samples are the same for all bins (per unit), so we can just take the first one
+                period_centers[unit_id] = periods_unit["start_sample_index"] + period_samples[0]
+            all_period_centers.append(period_centers)
+        return all_period_centers
 
     def _get_data(self, outputs: str = "by_unit"):
         """
@@ -519,22 +578,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         sorted_periods = periods[sort_idx]
         return sorted_periods
 
-    def set_data(self, ext_data_name, ext_data):
-        # cast back lists of dicts (required for dumping) back to arrays
-        if ext_data_name in ("period_centers", "periods_fp_per_unit", "periods_fn_per_unit"):
-            ext_data_ = []
-            # lists of dicts to lists of dicts with arrays
-            for segment_dict in ext_data:
-                segment_dict_arrays = {}
-                for unit_id, values in segment_dict.items():
-                    segment_dict_arrays[unit_id] = np.array(values)
-                ext_data_.append(segment_dict_arrays)
-        else:
-            ext_data_ = ext_data
-        self.data[ext_data_name] = ext_data_
 
-
-# TODO: deal with margin when returning periods
 def compute_subperiods(
     sorting_analyzer,
     period_duration_s_absolute: float = 10,
@@ -568,7 +612,6 @@ def compute_subperiods(
 
     all_subperiods = []
     all_subperiods_w_margins = []
-    all_period_centers = []
     for segment_index in range(sorting.get_num_segments()):
         n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
         period_centers = {}
@@ -592,8 +635,6 @@ def compute_subperiods(
                 end = start + period_size_samples
                 ext_start = max(0, start - margin_size_samples)
                 ext_end = min(n_samples, end + margin_size_samples)
-                center = start + period_size_samples // 2
-                period_centers[unit_id].append(center)
                 periods_for_unit[i]["segment_index"] = segment_index
                 periods_for_unit[i]["start_sample_index"] = start
                 periods_for_unit[i]["end_sample_index"] = end
@@ -605,8 +646,7 @@ def compute_subperiods(
 
             all_subperiods.append(periods_for_unit)
             all_subperiods_w_margins.append(periods_for_unit_w_margins)
-            all_period_centers.append(period_centers)
-    return np.concatenate(all_subperiods), np.concatenate(all_subperiods_w_margins), all_period_centers
+    return np.concatenate(all_subperiods), np.concatenate(all_subperiods_w_margins)
 
 
 def merge_overlapping_periods(subperiods):
