@@ -1136,7 +1136,11 @@ class SortingAnalyzer:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
         recompute_dict = {}
-        for extension_name, extension in self.extensions.items():
+        extensions_to_compute = _sort_extensions_by_dependency(
+            {ext.name: ext.params for ext in self.extensions.values()}
+        )
+        for extension_name in extensions_to_compute:
+            extension = self.extensions[extension_name]
             if merge_unit_groups is None and split_units is None:
                 # copy full or select
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(

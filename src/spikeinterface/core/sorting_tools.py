@@ -5,7 +5,7 @@ import importlib.util
 
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -264,6 +264,31 @@ def select_sorting_periods_mask(sorting: BaseSorting, periods):
     return keep_mask
 
 
+def cast_periods_to_unit_period_dtype(periods):
+    if not periods.dtype == unit_period_dtype:
+        if periods.ndim != 2 or periods.shape[1] != 4:
+            raise ValueError(
+                "If periods is not of dtype unit_period_dtype, it must be a 2D array with shape (num_periods, 4)"
+            )
+        warnings.warn(
+            "periods is not of dtype unit_period_dtype. Assuming fields are in order: "
+            "(segment_index, start_sample_index, end_sample_index, unit_index).",
+            UserWarning,
+        )
+        # convert to structured array
+        periods_converted = np.empty(periods.shape[0], dtype=unit_period_dtype)
+        periods_converted["segment_index"] = periods[:, 0]
+        periods_converted["start_sample_index"] = periods[:, 1]
+        periods_converted["end_sample_index"] = periods[:, 2]
+        periods_converted["unit_index"] = periods[:, 3]
+        periods = periods_converted
+    else:
+        required = set(np.dtype(unit_period_dtype).names)
+        if not required.issubset(periods.dtype.names):
+            raise ValueError(f"Period must have the following fields: {required}")
+    return periods
+
+
 def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
     """
     Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
@@ -282,33 +307,12 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
         A new sorting object with only samples between start_sample_index and end_sample_index
         for the given segment_index.
     """
-    from spikeinterface.core.base import unit_period_dtype
     from spikeinterface.core.numpyextractors import NumpySorting
 
     if periods is not None:
         if not isinstance(periods, np.ndarray):
             raise ValueError("periods must be a numpy array")
-        if not periods.dtype == unit_period_dtype:
-            if periods.ndim != 2 or periods.shape[1] != 4:
-                raise ValueError(
-                    "If periods is not of dtype unit_period_dtype, it must be a 2D array with shape (num_periods, 4)"
-                )
-            warnings.warn(
-                "periods is not of dtype unit_period_dtype. Assuming fields are in order: "
-                "(segment_index, start_sample_index, end_sample_index, unit_index).",
-                UserWarning,
-            )
-            # convert to structured array
-            periods_converted = np.empty(periods.shape[0], dtype=unit_period_dtype)
-            periods_converted["segment_index"] = periods[:, 0]
-            periods_converted["start_sample_index"] = periods[:, 1]
-            periods_converted["end_sample_index"] = periods[:, 2]
-            periods_converted["unit_index"] = periods[:, 3]
-            periods = periods_converted
-
-        required = set(np.dtype(unit_period_dtype).names)
-        if not required.issubset(periods.dtype.names):
-            raise ValueError(f"Period must have the following fields: {required}")
+        periods = cast_periods_to_unit_period_dtype(periods)
 
         spike_vector = sorting.to_spike_vector()
         keep_mask = select_sorting_periods_mask(sorting, periods)

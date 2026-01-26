@@ -14,6 +14,7 @@ from tqdm.auto import tqdm
 
 from spikeinterface.core.base import unit_period_dtype
 from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.metrics.spiketrain import compute_firing_rates
 
@@ -25,7 +26,10 @@ else:
 
 
 class ComputeValidUnitPeriods(AnalyzerExtension):
-    """Compute good time periods per unit based on quality metrics.
+    """Compute valid unit periods for units.
+    By default, the extension uses the "false_positives_and_negatives" method, which computes amplitude cutoffs
+    (false negative rate) and refractory period violations (false positive rate) over chunks of data
+    to estimate valid periods. External user-defined periods can also be provided.
 
     Paraneters
     ----------
@@ -155,32 +159,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                     )
                 )
 
-            if user_defined_periods.dtype != np.dtype(unit_period_dtype):
-                if user_defined_periods.ndim != 2 or user_defined_periods.shape[1] not in (3, 4):
-                    raise ValueError(
-                        "user_defined_periods must be of shape (n_periods, 3) [unit_index, good_period_start, good_period_end] or (n_periods, 4) [unit_index, segment_index, good_period_start, good_period_end]"
-                    )
-
-                if not np.issubdtype(user_defined_periods.dtype, np.integer):
-                    # Try converting to check if they're integer-valued floats
-                    if not np.allclose(user_defined_periods, user_defined_periods.astype(int)):
-                        raise ValueError("All values in user_defined_periods must be integers, in samples.")
-                    user_defined_periods = user_defined_periods.astype(int)
-
-                if user_defined_periods.shape[1] == 3:
-                    if self.sorting_analyzer.get_num_segments() > 1:
-                        raise ValueError(
-                            "For multi-segment recordings, user_defined_periods must include segment_index as column 1."
-                        )
-                    # add segment index 0 as column 0 if missing
-                    user_defined_periods = np.hstack(
-                        (
-                            np.zeros((user_defined_periods.shape[0], 1), dtype=int),
-                            user_defined_periods,
-                        )
-                    )
-                # Cast user defined periods to unit_period_dtype
-                user_defined_periods = np.frombuffer(user_defined_periods, dtype=unit_period_dtype)
+            user_defined_periods = cast_periods_to_unit_period_dtype(user_defined_periods)
 
             # assert that user-defined periods are not too short
             fs = self.sorting_analyzer.sampling_frequency
@@ -632,7 +611,7 @@ def compute_subperiods(
             periods_for_unit = np.zeros(len(starts), dtype=unit_period_dtype)
             periods_for_unit_w_margins = np.zeros(len(starts), dtype=unit_period_dtype)
             for i, start in enumerate(starts):
-                end = start + period_size_samples
+                end = min(start + period_size_samples, n_samples)
                 ext_start = max(0, start - margin_size_samples)
                 ext_end = min(n_samples, end + margin_size_samples)
                 periods_for_unit[i]["segment_index"] = segment_index

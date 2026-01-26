@@ -19,8 +19,10 @@ class ValidUnitPeriodsWidget(BaseWidget):
         The segment index. If None, uses first segment.
     unit_ids : list | None, default: None
         List of unit ids to plot. If None, all units are plotted.
-    show_only_units_with_valid_periods : bool, default: True
+    show_only_units_with_valid_periods : bool, default: False
         If True, only units with valid periods are shown.
+    clip_amplitude_scalings : float | None, default: 5.0
+        Clip amplitude scalings for better visualization. If None, no clipping is applied.
     """
 
     def __init__(
@@ -28,7 +30,7 @@ class ValidUnitPeriodsWidget(BaseWidget):
         sorting_analyzer: SortingAnalyzer | None = None,
         segment_index: int | None = None,
         unit_ids: list | None = None,
-        show_only_units_with_valid_periods: bool = True,
+        show_only_units_with_valid_periods: bool = False,
         clip_amplitude_scalings: float | None = 5.0,
         backend: str | None = None,
         **backend_kwargs,
@@ -138,8 +140,8 @@ class ValidUnitPeriodsWidget(BaseWidget):
             axs[0].set_xlabel("")
             axs[1].set_xlabel("")
             axs[2].set_xlabel("Time (s)")
-            axs[0].set_ylabel("FP Rate")
-            axs[1].set_ylabel("FN Rate")
+            axs[0].set_ylabel("FP Rate (RP violations)")
+            axs[1].set_ylabel("FN Rate (Amp. cutoff)")
             axs[2].set_ylabel("Amplitude Scaling")
             axs[0].set_title(f"Unit {unit_id}")
 
