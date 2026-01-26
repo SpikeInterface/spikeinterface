@@ -47,6 +47,9 @@ class ValidUnitPeriodsWidget(BaseWidget):
         if unit_ids is not None:
             valid_unit_ids = [u for u in unit_ids if u in valid_unit_ids]
 
+        if segment_index is None and sorting_analyzer.get_num_segments() == 1:
+            segment_index = 0
+
         data_plot = dict(
             sorting_analyzer=sorting_analyzer,
             segment_index=segment_index,
@@ -188,10 +191,8 @@ class ValidUnitPeriodsWidget(BaseWidget):
                 height="50px",
             )
             self.segment_selector.observe(self._update_plot, names="value", type="change")
-            left_sidebar = widgets.VBox([self.unit_selector, self.segment_selector])
         else:
             self.segment_selector = None
-            left_sidebar = self.unit_selector
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
