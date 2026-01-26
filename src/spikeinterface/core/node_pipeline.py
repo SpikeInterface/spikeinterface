@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Optional, Type
 
 import struct
+import copy
 
 from pathlib import Path
 
@@ -71,6 +72,11 @@ class PipelineNode:
 
 class PeakSource(PipelineNode):
 
+    # this is an important hack : this force a node.compute() before the machininery is started
+    # this trigger eventually some numba jit compilation and avoid compilation racing
+    # between processes or threads
+    need_first_call_before_pipeline = False
+
     def get_trace_margin(self):
         raise NotImplementedError
 
@@ -85,6 +91,12 @@ class PeakSource(PipelineNode):
     ):
         # not needed for PeakDetector
         raise NotImplementedError
+
+    def _first_call_before_pipeline(self):
+        # see need_first_call_before_pipeline = True
+        margin = self.get_trace_margin()
+        traces = self.recording.get_traces(start_frame=0, end_frame=margin * 2 + 1, segment_index=0)
+        self.compute(traces, 0, margin * 2 + 1, 0, margin)
 
 
 # this is used in sorting components
@@ -601,7 +613,16 @@ def run_node_pipeline(
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
-    init_args = (recording, nodes, skip_after_n_peaks_per_worker)
+    node0 = nodes[0]
+    if isinstance(node0, PeakSource) and node0.need_first_call_before_pipeline:
+        # See need_first_call_before_pipeline : this trigger numba compilation before the run
+        node0._first_call_before_pipeline()
+
+    if job_kwargs["n_jobs"] != 1 and job_kwargs["pool_engine"] == "thread":
+        need_shallow_copy = True
+    else:
+        need_shallow_copy = False
+    init_args = (recording, nodes, need_shallow_copy, skip_after_n_peaks_per_worker)
 
     processor = ChunkRecordingExecutor(
         recording,
@@ -620,10 +641,12 @@ def run_node_pipeline(
     return outs
 
 
-def _init_peak_pipeline(recording, nodes, skip_after_n_peaks_per_worker):
+def _init_peak_pipeline(recording, nodes, need_shallow_copy, skip_after_n_peaks_per_worker):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["recording"] = recording
+    if need_shallow_copy:
+        nodes = [copy.copy(node) for node in nodes]
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_trace_margin() for node in nodes)
     worker_ctx["skip_after_n_peaks_per_worker"] = skip_after_n_peaks_per_worker

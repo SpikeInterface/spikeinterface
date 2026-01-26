@@ -157,6 +157,8 @@ class SharedMemoryRecording(BaseRecording):
             shm = SharedMemory(shm_name, create=False)
             self.shms.append(shm)
             traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            # Force read only
+            traces.flags.writeable = False
             traces_list.append(traces)
 
         if channel_ids is None:

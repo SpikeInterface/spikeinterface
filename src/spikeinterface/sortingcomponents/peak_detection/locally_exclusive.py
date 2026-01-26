@@ -39,7 +39,11 @@ class LocallyExclusivePeakDetector(PeakDetector):
     engine = "numba"
     need_noise_levels = True
     preferred_mp_context = None
-    params_doc = ByChannelPeakDetector.params_doc + """
+    # this is because numba
+    need_first_call_before_pipeline = True
+    params_doc = (
+        ByChannelPeakDetector.params_doc
+        + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
@@ -137,7 +141,7 @@ if HAVE_NUMBA:
 
         return peak_sample_ind, peak_chan_ind
 
-    @numba.jit(nopython=True, parallel=False)
+    @numba.jit(nopython=True, parallel=False, nogil=True)
     def _numba_detect_peak_pos(
         traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
     ):
@@ -162,7 +166,7 @@ if HAVE_NUMBA:
                         break
         return peak_mask
 
-    @numba.jit(nopython=True, parallel=False)
+    @numba.jit(nopython=True, parallel=False, nogil=True)
     def _numba_detect_peak_neg(
         traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
     ):
