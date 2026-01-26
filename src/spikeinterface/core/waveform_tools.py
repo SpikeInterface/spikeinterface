@@ -109,7 +109,16 @@ def extract_waveforms_to_buffers(
     dtype = np.dtype(dtype)
 
     waveforms_by_units, arrays_info = allocate_waveforms_buffers(
-        recording, spikes, unit_ids, nbefore, nafter, mode=mode, folder=folder, dtype=dtype, sparsity_mask=sparsity_mask
+        recording,
+        spikes,
+        unit_ids,
+        nbefore,
+        nafter,
+        mode=mode,
+        folder=folder,
+        dtype=dtype,
+        sparsity_mask=sparsity_mask,
+        **job_kwargs,
     )
 
     distribute_waveforms_to_buffers(
@@ -145,7 +154,16 @@ extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.form
 
 
 def allocate_waveforms_buffers(
-    recording, spikes, unit_ids, nbefore, nafter, mode="memmap", folder=None, dtype=None, sparsity_mask=None
+    recording,
+    spikes,
+    unit_ids,
+    nbefore,
+    nafter,
+    mode="memmap",
+    folder=None,
+    dtype=None,
+    sparsity_mask=None,
+    **job_kwargs,
 ):
     """
     Allocate memmap or shared memory buffers before snippet extraction.
@@ -208,12 +226,13 @@ def allocate_waveforms_buffers(
             waveforms_by_units[unit_id] = arr
             arrays_info[unit_id] = filename
         elif mode == "shared_memory":
+            mp_context = job_kwargs.get("mp_context", None)
             if n_spikes == 0 or num_chans == 0:
                 arr = np.zeros(shape, dtype=dtype)
                 shm = None
                 shm_name = None
             else:
-                arr, shm = make_shared_array(shape, dtype)
+                arr, shm = make_shared_array(shape, dtype, mp_context=mp_context)
                 shm_name = shm.name
             waveforms_by_units[unit_id] = arr
             arrays_info[unit_id] = (shm, shm_name, dtype.str, shape)
@@ -503,6 +522,9 @@ def extract_waveforms_to_single_buffer(
         )
         return_in_uV = return_scaled
 
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    mp_context = job_kwargs.get("mp_context", None)
+
     n_samples = nbefore + nafter
 
     if dtype is None:
@@ -532,14 +554,12 @@ def extract_waveforms_to_single_buffer(
             shm = None
             shm_name = None
         else:
-            all_waveforms, shm = make_shared_array(shape, dtype)
+            all_waveforms, shm = make_shared_array(shape, dtype, mp_context=mp_context)
             shm_name = shm.name
         # wf_array_info = (shm, shm_name, dtype.str, shape)
         wf_array_info = dict(shm=shm, shm_name=shm_name, dtype=dtype.str, shape=shape)
     else:
         raise ValueError("allocate_waveforms_buffers bad mode")
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
 
     if num_spikes > 0 and num_chans > 0:
         # and run
@@ -906,6 +926,7 @@ def estimate_templates_with_accumulator(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     num_worker = job_kwargs["n_jobs"]
+    mp_context = job_kwargs["mp_context"]
 
     if sparsity_mask is None:
         num_chans = int(recording.get_num_channels())
@@ -916,10 +937,10 @@ def estimate_templates_with_accumulator(
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
 
     dtype = np.dtype("float32")
-    waveform_accumulator_per_worker, shm = make_shared_array(shape, dtype)
+    waveform_accumulator_per_worker, shm = make_shared_array(shape, dtype, mp_context=mp_context)
     shm_name = shm.name
     if return_std:
-        waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype)
+        waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype, mp_context=mp_context)
         shm_squared_name = shm_squared.name
     else:
         waveform_squared_accumulator_per_worker = None
