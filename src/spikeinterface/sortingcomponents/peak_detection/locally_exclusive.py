@@ -105,7 +105,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
 if HAVE_NUMBA:
     import numba
 
-    @numba.jit(nopython=True, parallel=False, nogil=True)
+    @numba.jit(nopython=True, parallel=False, nogil=True, fastmath=True)
     def detect_peaks_numba_locally_exclusive_on_chunk(
         traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, 
     ):
@@ -154,14 +154,16 @@ if HAVE_NUMBA:
                     next_start = j
                     continue
                 
-                #search for neighbors
+                # search for neighbors with higher amplitudes
                 if neighbours_mask[chan_inds[i], chan_inds[j]]:
-                    # if inside spatial zone
+                    # if inside spatial zone ... 
                     if abs(samples_inds[i] - samples_inds[j]) <= exclude_sweep_size:
+                        # ...and if inside tempral zone ...
                         value_i = abs(traces[samples_inds[i], chan_inds[i]]) / abs_thresholds[chan_inds[i]]
                         value_j = abs(traces[samples_inds[j], chan_inds[j]]) / abs_thresholds[chan_inds[j]]
                     
                         if ((value_j >= value_i) & (samples_inds[i] > samples_inds[j])) | ((value_j > value_i) & (samples_inds[i] <= samples_inds[j])):
+                            # ... and if smaller
                             keep_peak[i] = False
                             break
 

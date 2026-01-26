@@ -364,7 +364,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="neg",
-            detect_threshold=5,
+            detect_threshold=5.,
             exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
@@ -379,7 +379,7 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="both",
-            detect_threshold=5,
+            detect_threshold=5.,
             exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
@@ -389,13 +389,18 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
     assert len(peaks_local_mf_filtering_both) > len(peaks_local_mf_filtering)
 
     DEBUG = False
+    # DEBUG = True
     if DEBUG:
         import matplotlib.pyplot as plt
 
         peaks_local = peaks_by_channel_np
         peaks_mf_neg = peaks_local_mf_filtering
         peaks_mf_both = peaks_local_mf_filtering_both
-        labels = ["locally_exclusive", "mf_neg", "mf_both"]
+        # labels = ["locally_exclusive", "mf_neg", "mf_both"]
+        # peaks_by_method = [peaks_local, peaks_mf_neg, peaks_mf_both]
+        labels = ["locally_exclusive", "mf_neg", ]
+        peaks_by_method = [peaks_local, peaks_mf_neg,]
+
 
         fig, ax = plt.subplots()
         chan_offset = 500
@@ -403,9 +408,9 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
         ax.plot(traces, color="k")
 
-        for count, peaks in enumerate([peaks_local, peaks_mf_neg, peaks_mf_both]):
+        for count, peaks in enumerate(peaks_by_method):
             sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
-            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
+            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count], s= 50 - count * 15)
 
         ax.legend()
         plt.show()
@@ -456,20 +461,20 @@ if __name__ == "__main__":
     tmp_path = Path(tempfile.mkdtemp())
 
     job_kwargs_main = job_kwargs()
-    torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
+    # torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
     # Create a temporary directory using the standard library
-    tmp_dir_main = tempfile.mkdtemp()
-    pca_model_folder_path_main = pca_model_folder_path(recording, job_kwargs_main, tmp_dir_main)
-    peak_detector_kwargs_main = peak_detector_kwargs(recording)
+    # tmp_dir_main = tempfile.mkdtemp()
+    # pca_model_folder_path_main = pca_model_folder_path(recording, job_kwargs_main, tmp_dir_main)
+    # peak_detector_kwargs_main = peak_detector_kwargs(recording)
 
     # test_iterative_peak_detection(recording, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main)
 
     # test_peak_sign_consistency(recording, torch_job_kwargs_main, LocallyExclusiveTorchPeakDetector)
     # test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
 
-    # test_detect_peaks_locally_exclusive_matched_filtering(
-    #     recording,
-    #     job_kwargs_main,
-    # )
+    test_detect_peaks_locally_exclusive_matched_filtering(
+        recording,
+        job_kwargs_main,
+    )
 
-    test_detect_peaks_locally_exclusive(recording, job_kwargs_main, torch_job_kwargs_main)
+    # test_detect_peaks_locally_exclusive(recording, job_kwargs_main, torch_job_kwargs_main)
