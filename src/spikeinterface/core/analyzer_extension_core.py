@@ -939,9 +939,18 @@ class BaseMetricExtension(AnalyzerExtension):
             Dictionary of default metric columns and their dtypes for each metric.
         """
         default_metric_columns = []
-        for m in cls.metric_list:
-            if metric_names is not None and m.metric_name not in metric_names:
-                continue
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        for metric_name in metric_names:
+            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
+        for metric_name in metric_names:
+            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
             default_metric_columns.extend(m.metric_columns)
         return default_metric_columns
 
@@ -960,9 +969,16 @@ class BaseMetricExtension(AnalyzerExtension):
             Dictionary of metric columns and their descriptions for each metric.
         """
         metric_column_descriptions = {}
-        for m in cls.metric_list:
-            if metric_names is not None and m.metric_name not in metric_names:
-                continue
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        for metric_name in metric_names:
+            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
             if m.metric_descriptions is None:
                 metric_column_descriptions.update({col: "no description" for col in m.metric_columns.keys()})
             else:

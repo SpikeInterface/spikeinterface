@@ -83,12 +83,14 @@ def test_metric_names_in_same_order(small_sorting_analyzer):
     """
     Computes sepecified template metrics and checks order is propagated.
     """
-    specified_metric_names = ["main_peak_to_trough_ratio", "half_width", "peak_to_valley"]
+    specified_metric_names = ["waveform_ratios", "half_width", "recovery_slope"]
     small_sorting_analyzer.compute(
         "template_metrics", metric_names=specified_metric_names, delete_existing_metrics=True
     )
     tm_columns = small_sorting_analyzer.get_extension("template_metrics").get_data().columns
-    for specified_name, column in zip(specified_metric_names, tm_columns):
+    specified_metric_column_names = ComputeTemplateMetrics.get_metric_columns(specified_metric_names)
+
+    for specified_name, column in zip(specified_metric_column_names, tm_columns):
         assert specified_name == column
 
 
