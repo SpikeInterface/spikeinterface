@@ -204,13 +204,21 @@ if HAVE_NUMBA:
                         # ...and if inside tempral zone ...
                         value_i = conv_traces[z_inds[i], template_inds[i], samples_inds[i]] / abs_thresholds[z_inds[i], template_inds[i]]
                         value_j = conv_traces[z_inds[j], template_inds[j], samples_inds[j]] / abs_thresholds[z_inds[j], template_inds[j]]
-                        if ((value_j >= value_i) & (samples_inds[i] > samples_inds[j])) | ((value_j > value_i) & (samples_inds[i] <= samples_inds[j])):
+
+                        if (value_j > value_i):
                             # ... and if smaller
                             keep_peak[i] = False
                             break
+                        if (value_j == value_i) & (samples_inds[i] > samples_inds[j]):
+                            keep_peak[i] = False
+                            # ... equal but after
+                            break
+                        if (value_j == value_i) & (samples_inds[i] == samples_inds[j]) & (z_inds[i] > z_inds[j]):
+                            # ... equal + same time but not same depth (z)
+                            keep_peak[i] = False
+                            break
+
 
         z_inds, template_inds, samples_inds = z_inds[keep_peak], template_inds[keep_peak], samples_inds[keep_peak]
 
         return z_inds, template_inds, samples_inds
-
-

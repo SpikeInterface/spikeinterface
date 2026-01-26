@@ -162,10 +162,15 @@ if HAVE_NUMBA:
                         value_i = abs(traces[samples_inds[i], chan_inds[i]]) / abs_thresholds[chan_inds[i]]
                         value_j = abs(traces[samples_inds[j], chan_inds[j]]) / abs_thresholds[chan_inds[j]]
                     
-                        if ((value_j >= value_i) & (samples_inds[i] > samples_inds[j])) | ((value_j > value_i) & (samples_inds[i] <= samples_inds[j])):
+                        if (value_j > value_i):
                             # ... and if smaller
                             keep_peak[i] = False
                             break
+                        if ((value_j == value_i) & (samples_inds[i] > samples_inds[j])):
+                            # ... equal but after
+                            keep_peak[i] = False
+                            break
+
 
         samples_inds, chan_inds = samples_inds[keep_peak], chan_inds[keep_peak]
 
