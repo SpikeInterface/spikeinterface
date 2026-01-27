@@ -235,13 +235,34 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 unit_ids=new_unit_ids,
             )
             new_good_periods = np.concatenate((good_periods_valid, good_periods_merged), axis=0)
-
-            # update period centers, fps, fns
             new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
             new_fps = np.concatenate((new_fps, fps), axis=0)
             new_fns = np.concatenate((new_fns, fns), axis=0)
 
+            # remap unmerged unit indices, since they can change due to merges
+            (unit_indices_unmerged,) = np.nonzero(
+                ~np.isin(np.arange(self.sorting_analyzer.get_num_units()), merged_unit_indices)
+            )
+            # keep a map between new_unit_index and masks to apply it to. We cannot do it directly because unit indices change
+            unit_all_periods_masks = {}
+            unit_good_periods_masks = {}
+            for old_unit_index in unit_indices_unmerged:
+                old_unit_id = self.sorting_analyzer.unit_ids[old_unit_index]
+                new_unit_index = new_sorting_analyzer.sorting.id_to_index(old_unit_id)
+                old_unit_all_periods_mask = new_all_periods["unit_index"] == old_unit_index
+                unit_all_periods_masks[new_unit_index] = old_unit_all_periods_mask
+                old_unit_good_periods_mask = new_good_periods["unit_index"] == old_unit_index
+                unit_good_periods_masks[new_unit_index] = old_unit_good_periods_mask
+
+            # and apply remapping
+            for new_unit_index in unit_all_periods_masks:
+                all_periods_mask = unit_all_periods_masks[new_unit_index]
+                new_all_periods["unit_index"][all_periods_mask] = new_unit_index
+                good_periods_mask = unit_good_periods_masks[new_unit_index]
+                new_good_periods["unit_index"][good_periods_mask] = new_unit_index
+
             new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
+            # we don't need to sort these because new periods are appended at the end
             new_extension_data["all_periods"] = new_all_periods
             new_extension_data["fps"] = new_fps
             new_extension_data["fns"] = new_fns
