@@ -234,10 +234,6 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
-            new_good_periods = np.concatenate((good_periods_valid, good_periods_merged), axis=0)
-            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
-            new_fps = np.concatenate((new_fps, fps), axis=0)
-            new_fns = np.concatenate((new_fns, fns), axis=0)
 
             # remap unmerged unit indices, since they can change due to merges
             (unit_indices_unmerged,) = np.nonzero(
@@ -251,7 +247,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 new_unit_index = new_sorting_analyzer.sorting.id_to_index(old_unit_id)
                 old_unit_all_periods_mask = new_all_periods["unit_index"] == old_unit_index
                 unit_all_periods_masks[new_unit_index] = old_unit_all_periods_mask
-                old_unit_good_periods_mask = new_good_periods["unit_index"] == old_unit_index
+                old_unit_good_periods_mask = good_periods_valid["unit_index"] == old_unit_index
                 unit_good_periods_masks[new_unit_index] = old_unit_good_periods_mask
 
             # and apply remapping
@@ -259,7 +255,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 all_periods_mask = unit_all_periods_masks[new_unit_index]
                 new_all_periods["unit_index"][all_periods_mask] = new_unit_index
                 good_periods_mask = unit_good_periods_masks[new_unit_index]
-                new_good_periods["unit_index"][good_periods_mask] = new_unit_index
+                good_periods_valid["unit_index"][good_periods_mask] = new_unit_index
+
+            new_good_periods = np.concatenate((good_periods_valid, good_periods_merged), axis=0)
+            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
+            new_fps = np.concatenate((new_fps, fps), axis=0)
+            new_fns = np.concatenate((new_fns, fns), axis=0)
 
             new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
             # we don't need to sort these because new periods are appended at the end
@@ -305,11 +306,14 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             new_fps = deepcopy(self.data.get("fps"))
             new_fns = deepcopy(self.data.get("fns"))
             # remove data of split units
-            split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_units)
+            split_unit_ids = list(split_units.keys())
+            split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_unit_ids)
             keep_mask = ~np.isin(new_all_periods["unit_index"], split_unit_indices)
             new_all_periods = new_all_periods[keep_mask]
             new_fps = new_fps[keep_mask]
             new_fns = new_fns[keep_mask]
+
+            new_unit_ids = np.concatenate(new_unit_ids)
 
             # remove periods of split units
             good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], split_unit_indices)]
@@ -318,11 +322,6 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
-            new_good_periods = np.concatenate((good_periods_valid, good_periods_split))
-            # update period centers, fps, fns
-            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
-            new_fps = np.concatenate((new_fps, fps), axis=0)
-            new_fns = np.concatenate((new_fns, fns), axis=0)
 
             # remap unmerged unit indices, since they can change due to merges
             (unit_indices_unsplit,) = np.nonzero(
@@ -336,7 +335,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 new_unit_index = new_sorting_analyzer.sorting.id_to_index(old_unit_id)
                 old_unit_all_periods_mask = new_all_periods["unit_index"] == old_unit_index
                 unit_all_periods_masks[new_unit_index] = old_unit_all_periods_mask
-                old_unit_good_periods_mask = new_good_periods["unit_index"] == old_unit_index
+                old_unit_good_periods_mask = good_periods_valid["unit_index"] == old_unit_index
                 unit_good_periods_masks[new_unit_index] = old_unit_good_periods_mask
 
             # and apply remapping
@@ -344,7 +343,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 all_periods_mask = unit_all_periods_masks[new_unit_index]
                 new_all_periods["unit_index"][all_periods_mask] = new_unit_index
                 good_periods_mask = unit_good_periods_masks[new_unit_index]
-                new_good_periods["unit_index"][good_periods_mask] = new_unit_index
+                good_periods_valid["unit_index"][good_periods_mask] = new_unit_index
+
+            new_good_periods = np.concatenate((good_periods_valid, good_periods_split))
+            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
+            new_fps = np.concatenate((new_fps, fps), axis=0)
+            new_fns = np.concatenate((new_fns, fns), axis=0)
 
             new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
             new_extension_data["all_periods"] = new_all_periods
@@ -637,7 +641,8 @@ def compute_subperiods(
     for segment_index in range(sorting.get_num_segments()):
         n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
         period_centers = {}
-        for unit_index, unit_id in enumerate(unit_ids):
+        for unit_id in unit_ids:
+            unit_index = sorting.id_to_index(unit_id)
             period_centers[unit_id] = []
             period_size_samples = period_sizes_samples[unit_id]
             margin_size_samples = margin_sizes_samples[unit_id]
