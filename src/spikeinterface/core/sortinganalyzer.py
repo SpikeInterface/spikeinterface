@@ -1169,7 +1169,6 @@ class SortingAnalyzer:
                     recompute_dict[extension_name] = extension.params
 
         if len(recompute_dict) > 0:
-            recompute_dict = _sort_extensions_by_dependency(recompute_dict)
             new_sorting_analyzer.compute_several_extensions(recompute_dict, save=True, verbose=verbose, **job_kwargs)
 
         return new_sorting_analyzer
