@@ -1137,7 +1137,7 @@ class SortingAnalyzer:
 
         recompute_dict = {}
         extensions_to_compute = _sort_extensions_by_dependency(
-            {ext.name: ext.params for ext in self.extensions.values()}
+            {ext.extension_name: ext.params for ext in self.extensions.values()}
         )
         for extension_name in extensions_to_compute:
             extension = self.extensions[extension_name]
