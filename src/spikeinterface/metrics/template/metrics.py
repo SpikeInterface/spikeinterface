@@ -283,6 +283,7 @@ def sort_template_and_locations(template, channel_locations, depth_direction="y"
     sort_indices = np.argsort(channel_locations[:, depth_dim])
     return template[:, sort_indices], channel_locations[sort_indices, :]
 
+
 def fit_line_robust(x, y, eps=1e-12):
     """
     Fit line using robust Theil-Sen estimator (median of pairwise slopes).
@@ -291,7 +292,7 @@ def fit_line_robust(x, y, eps=1e-12):
 
     # Calculate slope and bias using Theil-Sen estimator
     slopes = []
-    for (xs, ys) in zip(itertools.combinations(x, 2), itertools.combinations(y, 2)):
+    for xs, ys in zip(itertools.combinations(x, 2), itertools.combinations(y, 2)):
         if np.abs(xs[0] - xs[1]) > eps:
             slopes.append((ys[1] - ys[0]) / (xs[1] - xs[0]))
     if len(slopes) == 0:  # all x are identical
@@ -301,7 +302,7 @@ def fit_line_robust(x, y, eps=1e-12):
 
     # Calculate R2 score
     y_pred = slope * x + bias
-    r2_score = 1 - ((y - y_pred)**2).sum() / (((y - y.mean())**2).sum() + eps)
+    r2_score = 1 - ((y - y_pred) ** 2).sum() / (((y - y.mean()) ** 2).sum() + eps)
 
     return slope, r2_score
 
