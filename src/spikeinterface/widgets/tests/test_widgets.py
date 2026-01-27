@@ -107,9 +107,10 @@ class TestWidgets(unittest.TestCase):
 
         cls.backend_kwargs = {
             "matplotlib": {},
-            "sortingview": {},
+            "figpack": {},
             "ipywidgets": {"display": False},
             "spikeinterface_gui": {},
+            "sortingview": {},
         }
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)

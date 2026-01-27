@@ -633,9 +633,12 @@ class TracesWidget(BaseWidget):
         fig.canvas.draw()
         fig.canvas.flush_events()
 
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        raise NotImplementedError("Waiting for Jeremy to finish figpack traces backend")
+
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
-        from .utils_sortingview import handle_display_and_url
+        from .utils_figpack import handle_display_and_url
         import importlib.util
 
         spec = importlib.util.find_spec("pyvips")
@@ -663,9 +666,9 @@ class TracesWidget(BaseWidget):
                 sampling_frequency=dp.recordings[layer_key].get_sampling_frequency(),
             )
 
-            tiled_layers.append(vv.TiledImageLayer(layer_key, img))
+            tiled_layers.append(vv_views.TiledImageLayer(layer_key, img))
 
-        self.view = vv.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
+        self.view = vv_views.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
 
         # traces currently doesn't display on the jupyter backend
         backend_kwargs["display"] = False
