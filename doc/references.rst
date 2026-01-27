@@ -118,6 +118,8 @@ References
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
+.. [Fabre] `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. 2023. <https://doi.org/10.5281/zenodo.8172822>`
+
 .. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
 
 .. [Garcia2022] `How Do Spike Collisions Affect Spike Sorting Performance? <https://doi.org/10.1523/ENEURO.0105-22.2022>`_

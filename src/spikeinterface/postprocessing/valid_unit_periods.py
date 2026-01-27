@@ -31,9 +31,9 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     (false negative rate) and refractory period violations (false positive rate) over chunks of data
     to estimate valid periods. External user-defined periods can also be provided.
 
-    Paraneters
+    Parameters
     ----------
-    method : {"false_positives_and_negatives", "user_defined", "combined"}
+    method : "false_positives_and_negatives" | "user_defined" | "combined", default: "false_positives_and_negatives"
         Strategy for identifying good periods for each unit. If "false_positives_and_negatives", uses
         amplitude cutoff (false negative spike rate) and refractory period violations (false positive spike rate)
         to estimate good periods (as periods with fn_rate<fn_threshold AND fp_rate<fp_threshold).
@@ -47,7 +47,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     period_target_num_spikes : int | None, default: 300
         Alternative to period_size_absolute, different for each unit: mean number of spikes that should be present in each estimation period.
         For neurons firing at 10 Hz, this would correspond to periods of 10s (100 spikes / 10 Hz = 10s).
-    period_mode: {"absolute", "relative"}, default: "absolute"
+    period_mode: "absolute" | "relative", default: "absolute"
         Whether to use absolute (in seconds) or relative (in target number of spikes) period sizes.
     relative_margin_size : float, default: 1.0
         The margin to the left and the right for each period, expressed as a multiple of the period size.
@@ -63,10 +63,9 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         Minimum spikes required in period for analysis.
     minimum_valid_period_duration : float, default: 180
         Minimum duration that detected good periods must have to be kept, in seconds.
-    user_defined_periods : array of unit_period_dtype or shape (num_periods, 3) or (num_periods, 4) or None, default: None
+    user_defined_periods : np.ndarray | None, default: None
         Periods of unit_period_dtype (segment_index, start_sample_index, end_sample_index, unit_index)
-        or numpy array of shape (num_periods, 3) [start_sample, end_sample, unit_index]
-        or (num_periods, 4) [segment_index, start_sample, end_sample, unit_index]
+        or numpy array of shape (num_periods, 4) [segment_index, start_sample, end_sample, unit_index]
         in samples, over which to compute the metric.
     refractory_period_ms : float, default: 0.8
         Refractory period duration for violation detection (ms).
@@ -84,7 +83,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
     Notes
     -----
-    Implementation by Maxime Beau and Alessio Buccino, inspired by NeuroPyxels and Bombcell.
+    Implementation by Maxime Beau and Alessio Buccino, inspired by [npyx]_ and [Fabre]_.
     """
 
     extension_name = "valid_unit_periods"
@@ -776,10 +775,10 @@ def fp_fn_worker_func(period, sorting, all_amplitudes_by_unit, params):
     amplitudes_unit = all_amplitudes_by_unit[segment_index][unit_id]
     spiketrain = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
 
-    mask = (spiketrain >= start_sample_index) & (spiketrain < end_sample_index)
+    start_index, end_index = np.searchsorted(spiketrain, [start_sample_index, end_sample_index])
     total_samples_in_period = end_sample_index - start_sample_index
-    spiketrain_period = spiketrain[mask]
-    amplitudes_period = amplitudes_unit[mask]
+    spiketrain_period = spiketrain[start_index:end_index]
+    amplitudes_period = amplitudes_unit[start_index:end_index]
 
     # compute fp (rp_violations). See _compute_refrac_period_violations in quality metrics
     fs = sorting.sampling_frequency
