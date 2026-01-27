@@ -366,7 +366,7 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="neg",
-            detect_threshold=5,
+            detect_threshold=5.,
             exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
@@ -381,7 +381,7 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="both",
-            detect_threshold=5,
+            detect_threshold=5.,
             exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
@@ -392,10 +392,11 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
     # assert len(peaks_mf_both) > len(peaks_mf_neg)
 
     DEBUG = False
+    # DEBUG = True
     if DEBUG:
         import matplotlib.pyplot as plt
 
-        all_peaks = [peaks_le, peaks_mf_neg, peaks_mf_both]
+        peaks_by_methods = [peaks_le, peaks_mf_neg, peaks_mf_both]
         labels = ["locally_exclusive", "mf_neg", "mf_both"]
 
         fig, ax = plt.subplots()
@@ -404,9 +405,9 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
         ax.plot(traces, color="k")
 
-        for count, peaks in enumerate(all_peaks):
+        for count, peaks in enumerate(peaks_by_methods):
             sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
-            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
+            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count], s= 50 - count * 15)
 
         ax.legend()
         plt.show()
