@@ -288,16 +288,16 @@ def fit_line_robust(x, y):
     """
     Fit line using robust Theil-Sen estimator (median of pairwise slopes).
     """
-    from sklearn.linear_model import TheilSenRegressor
+    import sklearn.linear_model as lm
 
     # Center data to improve numerical stability
     X = (x - x.mean()).reshape(-1, 1)
     y = y - y.mean()
 
-    theil = TheilSenRegressor(fit_intercept=False)
+    theil = lm.TheilSenRegressor()
     theil.fit(X, y)
     slope = theil.coef_[0]
-    score = theil.score(X, y)
+    score = theil.score(X, y)  # R^2 score
     return slope, score
 
 
@@ -355,8 +355,9 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         peak_times_ms_above = np.argmin(template_above, 0) / sampling_frequency * 1000 - max_peak_time
         distances_um_above = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_above])
         inv_velocity_above, score = fit_line_robust(distances_um_above, peak_times_ms_above)
-        velocity_above = 1 / inv_velocity_above
-        if score < min_r2:
+        if score > min_r2:
+            velocity_above = 1 / inv_velocity_above if np.abs(inv_velocity_above) > 1e-9 else np.inf
+        else:
             velocity_above = np.nan
 
     # Compute velocity below
@@ -369,8 +370,9 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         peak_times_ms_below = np.argmin(template_below, 0) / sampling_frequency * 1000 - max_peak_time
         distances_um_below = np.array([np.linalg.norm(cl - max_channel_location) for cl in channel_locations_below])
         inv_velocity_below, score = fit_line_robust(distances_um_below, peak_times_ms_below)
-        velocity_below = 1 / inv_velocity_below
-        if score < min_r2:
+        if score > min_r2:
+            velocity_below = 1 / inv_velocity_below if np.abs(inv_velocity_below) > 1e-9 else np.inf
+        else:
             velocity_below = np.nan
 
     return velocity_above, velocity_below
