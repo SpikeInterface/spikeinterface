@@ -292,9 +292,9 @@ def fit_line_robust(x, y, eps=1e-12):
 
     # Calculate slope and bias using Theil-Sen estimator
     slopes = []
-    for xs, ys in zip(itertools.combinations(x, 2), itertools.combinations(y, 2)):
-        if np.abs(xs[0] - xs[1]) > eps:
-            slopes.append((ys[1] - ys[0]) / (xs[1] - xs[0]))
+    for (x0, y0), (x1, y1) in itertools.combinations(zip(x, y), 2):
+        if np.abs(x1 - x0) > eps:
+            slopes.append((y1 - y0) / (x1 - x0))
     if len(slopes) == 0:  # all x are identical
         return np.nan, -np.inf
     slope = np.median(slopes)
