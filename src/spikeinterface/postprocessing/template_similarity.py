@@ -90,6 +90,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids, new_sorting_analyzer.channel_ids
             )
 
+        # TODO: soft merge template similarity
         new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
