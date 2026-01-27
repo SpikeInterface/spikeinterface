@@ -633,12 +633,18 @@ class TracesWidget(BaseWidget):
         fig.canvas.draw()
         fig.canvas.flush_events()
 
-    def plot_figpack(self, data_plot, **backend_kwargs):
-        raise NotImplementedError("Waiting for Jeremy to finish figpack traces backend")
-
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_figpack import handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
+
         import importlib.util
 
         spec = importlib.util.find_spec("pyvips")
