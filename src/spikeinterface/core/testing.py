@@ -149,11 +149,12 @@ def check_extractor_properties_equal(EX1, EX2) -> None:
 
 def _slice_spikes(spikes, start_frame=None, end_frame=None):
     sample_indices = spikes["sample_index"]
-    if len(sample_indices) == 0: return spikes[:0]
+    if len(sample_indices) == 0:
+        return spikes[:0]
     if start_frame is None:
         start_frame = sample_indices[0]
     if end_frame is None:
         end_frame = sample_indices[-1] + 1
-    start_idx, end_idx = np.searchsorted(sample_indices, [start_frame, end_frame + 1], side='left')
+    start_idx, end_idx = np.searchsorted(sample_indices, [start_frame, end_frame + 1], side="left")
 
-    return spikes[start_idx: end_idx]
+    return spikes[start_idx:end_idx]
