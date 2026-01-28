@@ -71,7 +71,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
-        return dict(similarity=new_similarity)
+        new_lags = self.data["lags"][unit_indices][:, unit_indices]
+        return dict(similarity=new_similarity, lags=new_lags)
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -90,7 +91,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity, _ = compute_similarity_with_templates_array(
+        new_similarity, new_lags = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -101,10 +102,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         )
 
         old_similarity = self.data["similarity"]
+        old_lags = self.data["lags"]
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
+        lags = np.zeros((n, n), dtype=old_lags.dtype)
 
         local_mask = ~np.isin(all_new_unit_ids, new_unit_ids)
         sub_units_ids = all_new_unit_ids[local_mask]
@@ -117,12 +120,19 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
 
+            l = self.data["lags"][old_ind1, old_units_inds]
+            lags[unit_ind1, sub_units_inds] = l
+            lags[sub_units_inds, unit_ind1] = l
+
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id in new_unit_ids:
                 new_index = list(new_unit_ids).index(unit_id)
                 similarity[unit_ind, :] = new_similarity[new_index, :]
                 similarity[:, unit_ind] = new_similarity[new_index, :]
+
+                lags[unit_ind, :] = new_lags[new_index, :]
+                lags[:, unit_ind] = new_lags[new_index, :]
 
         return dict(similarity=similarity)
 
@@ -142,7 +152,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids_f, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity, _ = compute_similarity_with_templates_array(
+        new_similarity, new_lags = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -153,10 +163,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         )
 
         old_similarity = self.data["similarity"]
+        old_lags = self.data["lags"]
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
+        lags = np.zeros((n, n), dtype=old_lags.dtype)
 
         local_mask = ~np.isin(all_new_unit_ids, new_unit_ids_f)
         sub_units_ids = all_new_unit_ids[local_mask]
@@ -168,6 +180,10 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             s = self.data["similarity"][old_ind1, old_units_inds]
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
+            
+            l = self.data["lags"][old_ind1, old_units_inds]
+            lags[unit_ind1, sub_units_inds] = l
+            lags[sub_units_inds, unit_ind1] = l
 
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
@@ -175,6 +191,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_index = list(new_unit_ids_f).index(unit_id)
                 similarity[unit_ind, :] = new_similarity[new_index, :]
                 similarity[:, unit_ind] = new_similarity[new_index, :]
+
+                lags[unit_ind, :] = new_lags[new_index, :]
+                lags[:, unit_ind] = new_lags[new_index, :]
 
         return dict(similarity=similarity)
 
@@ -184,7 +203,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
         sparsity = self.sorting_analyzer.sparsity
-        similarity, _ = compute_similarity_with_templates_array(
+        similarity, lags = compute_similarity_with_templates_array(
             templates_array,
             templates_array,
             method=self.params["method"],
@@ -194,9 +213,13 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             other_sparsity=sparsity,
         )
         self.data["similarity"] = similarity
+        self.data["lags"] = lags
 
     def _get_data(self):
         return self.data["similarity"]
+
+    def get_lags(self):
+        return self.data["lags"]
 
 
 # @alessio:  compute_template_similarity() is now one inner SortingAnalyzer only
@@ -235,13 +258,9 @@ def _compute_similarity_matrix_numpy(
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
                 # symmetric values are handled later
-                if same_array and j < i:
+                #if same_array and j < i:
                     # no need exhaustive looping when same template
-<<<<<<< Updated upstream
-                    continue
-=======
                 #   continue
->>>>>>> Stashed changes
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
 
@@ -263,15 +282,8 @@ def _compute_similarity_matrix_numpy(
                     distances[count, i, j] = 1 - distances[count, i, j]
 
                 if same_array:
-<<<<<<< Updated upstream
-                    distances[count, j, i] = distances[count, i, j]
-
-        if same_array and num_shifts != 0:
-            distances[num_shifts_both_sides - count - 1] = distances[count].T
-=======
                     distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
         
->>>>>>> Stashed changes
     return distances
 
 
@@ -451,12 +463,12 @@ def compute_similarity_with_templates_array(
     distances = _compute_similarity_matrix(
         templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support
     )
-    np.save("distances.npy", distances)
+
     lags = np.argmin(distances, axis=0) - num_shifts
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
 
-    return similarity, lags
+    return similarity, lags.astype(np.int32)
 
 
 def compute_template_similarity_by_pair(
