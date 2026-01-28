@@ -116,7 +116,6 @@ class MatchedFilteringPeakDetector(PeakDetector):
             self.abs_thresholds,
             self.neighbours_mask,
             self.num_channels,
-
         )
         if z_inds.size == 0:
             return (np.zeros(0, dtype=self._dtype),)
@@ -139,7 +138,6 @@ class MatchedFilteringPeakDetector(PeakDetector):
 
         # return is always a tuple
         return (local_peaks,)
-
 
     def get_convolved_traces(self, traces):
         from scipy.signal import oaconvolve
@@ -166,25 +164,32 @@ if HAVE_NUMBA:
             for temp_ind in range(num_templates):
                 for s in range(1, num_samples - 1):
                     value = conv_traces[z_ind, temp_ind, s]
-                    if (value >= abs_thresholds[z_ind, temp_ind]) and \
-                            (value > conv_traces[z_ind, temp_ind, s-1]) and \
-                            (value >= conv_traces[z_ind, temp_ind, s+1]):
+                    if (
+                        (value >= abs_thresholds[z_ind, temp_ind])
+                        and (value > conv_traces[z_ind, temp_ind, s - 1])
+                        and (value >= conv_traces[z_ind, temp_ind, s + 1])
+                    ):
                         peak_mask[z_ind, temp_ind, s] = True
-        
-        z_inds, template_inds, samples_inds, = np.nonzero(peak_mask)
+
+        (
+            z_inds,
+            template_inds,
+            samples_inds,
+        ) = np.nonzero(peak_mask)
         # order = np.lexsort((z_inds, template_inds, samples_inds))
         order = np.argsort(samples_inds)
         z_inds, template_inds, samples_inds = z_inds[order], template_inds[order], samples_inds[order]
-
 
         npeaks = samples_inds.size
         keep_peak = np.ones(npeaks, dtype="bool")
         next_start = 0
         for i in range(npeaks):
-            if (samples_inds[i] < exclude_sweep_size + 1) or (samples_inds[i]>= (num_samples - exclude_sweep_size - 1)):
+            if (samples_inds[i] < exclude_sweep_size + 1) or (
+                samples_inds[i] >= (num_samples - exclude_sweep_size - 1)
+            ):
                 keep_peak[i] = False
                 continue
-            
+
             for j in range(next_start, npeaks):
                 if i == j:
                     continue
@@ -195,17 +200,23 @@ if HAVE_NUMBA:
                 if samples_inds[i] - exclude_sweep_size > samples_inds[j]:
                     next_start = j
                     continue
-                
+
                 # search for neighbors with higher amplitudes
                 # note : % num_channels is because when 'both' is used because templates are twice
                 if neighbours_mask[template_inds[i] % num_channels, template_inds[j] % num_channels]:
-                    # if inside spatial zone ... 
+                    # if inside spatial zone ...
                     if abs(samples_inds[i] - samples_inds[j]) <= exclude_sweep_size:
                         # ...and if inside tempral zone ...
-                        value_i = conv_traces[z_inds[i], template_inds[i], samples_inds[i]] / abs_thresholds[z_inds[i], template_inds[i]]
-                        value_j = conv_traces[z_inds[j], template_inds[j], samples_inds[j]] / abs_thresholds[z_inds[j], template_inds[j]]
+                        value_i = (
+                            conv_traces[z_inds[i], template_inds[i], samples_inds[i]]
+                            / abs_thresholds[z_inds[i], template_inds[i]]
+                        )
+                        value_j = (
+                            conv_traces[z_inds[j], template_inds[j], samples_inds[j]]
+                            / abs_thresholds[z_inds[j], template_inds[j]]
+                        )
 
-                        if (value_j > value_i):
+                        if value_j > value_i:
                             # ... and if smaller
                             keep_peak[i] = False
                             break
@@ -217,7 +228,6 @@ if HAVE_NUMBA:
                             # ... equal + same time but not same depth (z)
                             keep_peak[i] = False
                             break
-
 
         z_inds, template_inds, samples_inds = z_inds[keep_peak], template_inds[keep_peak], samples_inds[keep_peak]
 

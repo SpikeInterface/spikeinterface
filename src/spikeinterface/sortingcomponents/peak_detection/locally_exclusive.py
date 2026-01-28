@@ -107,12 +107,15 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=False, nogil=True, fastmath=True)
     def detect_peaks_numba_locally_exclusive_on_chunk(
-        traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask, 
+        traces,
+        peak_sign,
+        abs_thresholds,
+        exclude_sweep_size,
+        neighbours_mask,
     ):
         num_chans = traces.shape[1]
         num_samples = traces.shape[0]
 
-        
         do_pos = peak_sign in ("pos", "both")
         do_neg = peak_sign in ("neg", "both")
 
@@ -121,15 +124,19 @@ if HAVE_NUMBA:
         for s in range(1, num_samples - 1):
             for chan_ind in range(num_chans):
                 if do_neg:
-                    if (traces[s, chan_ind] <= -abs_thresholds[chan_ind]) and \
-                            (traces[s, chan_ind] < traces[s-1, chan_ind]) and \
-                            (traces[s, chan_ind] <= traces[s+1, chan_ind]):
+                    if (
+                        (traces[s, chan_ind] <= -abs_thresholds[chan_ind])
+                        and (traces[s, chan_ind] < traces[s - 1, chan_ind])
+                        and (traces[s, chan_ind] <= traces[s + 1, chan_ind])
+                    ):
                         peak_mask[s, chan_ind] = True
 
-                if do_pos :
-                    if (traces[s, chan_ind] >= abs_thresholds[chan_ind]) and \
-                            (traces[s, chan_ind] > traces[s-1, chan_ind]) and \
-                            (traces[s, chan_ind] >= traces[s+1, chan_ind]):
+                if do_pos:
+                    if (
+                        (traces[s, chan_ind] >= abs_thresholds[chan_ind])
+                        and (traces[s, chan_ind] > traces[s - 1, chan_ind])
+                        and (traces[s, chan_ind] >= traces[s + 1, chan_ind])
+                    ):
                         peak_mask[s, chan_ind] = True
 
         samples_inds, chan_inds = np.nonzero(peak_mask)
@@ -139,10 +146,12 @@ if HAVE_NUMBA:
         next_start = 0
         for i in range(npeaks):
 
-            if (samples_inds[i] < exclude_sweep_size + 1) or (samples_inds[i]>= (num_samples - exclude_sweep_size - 1)):
+            if (samples_inds[i] < exclude_sweep_size + 1) or (
+                samples_inds[i] >= (num_samples - exclude_sweep_size - 1)
+            ):
                 keep_peak[i] = False
                 continue
-            
+
             for j in range(next_start, npeaks):
                 if i == j:
                     continue
@@ -153,30 +162,27 @@ if HAVE_NUMBA:
                 if samples_inds[i] - exclude_sweep_size > samples_inds[j]:
                     next_start = j
                     continue
-                
+
                 # search for neighbors with higher amplitudes
                 if neighbours_mask[chan_inds[i], chan_inds[j]]:
-                    # if inside spatial zone ... 
+                    # if inside spatial zone ...
                     if abs(samples_inds[i] - samples_inds[j]) <= exclude_sweep_size:
                         # ...and if inside tempral zone ...
                         value_i = abs(traces[samples_inds[i], chan_inds[i]]) / abs_thresholds[chan_inds[i]]
                         value_j = abs(traces[samples_inds[j], chan_inds[j]]) / abs_thresholds[chan_inds[j]]
-                    
-                        if (value_j > value_i):
+
+                        if value_j > value_i:
                             # ... and if smaller
                             keep_peak[i] = False
                             break
-                        if ((value_j == value_i) & (samples_inds[i] > samples_inds[j])):
+                        if (value_j == value_i) & (samples_inds[i] > samples_inds[j]):
                             # ... equal but after
                             keep_peak[i] = False
                             break
 
-
         samples_inds, chan_inds = samples_inds[keep_peak], chan_inds[keep_peak]
 
         return samples_inds, chan_inds
-
-
 
 
 class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):

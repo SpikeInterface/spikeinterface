@@ -303,7 +303,9 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
         import matplotlib.pyplot as plt
 
         peaks = peaks_local_numba
-        labels = ["locally_exclusive numba",  ]
+        labels = [
+            "locally_exclusive numba",
+        ]
 
         fig, ax = plt.subplots()
         chan_offset = 500
@@ -311,13 +313,16 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
         ax.plot(traces, color="k")
 
-        for count, peaks in enumerate([peaks_local_numba, ]):
+        for count, peaks in enumerate(
+            [
+                peaks_local_numba,
+            ]
+        ):
             sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
             ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
 
         ax.legend()
         plt.show()
-
 
     if HAVE_TORCH:
         peaks_local_torch = detect_peaks(
@@ -366,7 +371,7 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="neg",
-            detect_threshold=5.,
+            detect_threshold=5.0,
             exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
@@ -381,7 +386,7 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="both",
-            detect_threshold=5.,
+            detect_threshold=5.0,
             exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
@@ -407,7 +412,7 @@ def test_detect_peaks_matched_filtering(recording, job_kwargs):
 
         for count, peaks in enumerate(peaks_by_methods):
             sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
-            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count], s= 50 - count * 15)
+            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count], s=50 - count * 15)
 
         ax.legend()
         plt.show()
@@ -450,7 +455,6 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
     # Original case that prompted this test
     if negative_peaks.size > 0 or positive_peaks.size > 0:
         assert all_peaks.size > 0
-
 
 
 if __name__ == "__main__":
