@@ -12,7 +12,7 @@ from .utils import make_units_table_from_sorting, make_units_table_from_analyzer
 
 def import_figpack_or_sortingview(use_sortingview: bool):
     """
-    Import
+    Import figpack or sortingview (deprecated) base and views modules.
 
     Parameters
     ----------
