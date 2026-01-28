@@ -83,6 +83,11 @@ jobs:
 
       - name: Install packages
         run: |
+          # On macOS with Python 3.14, numcodecs wheels are only available for native arch (not universal2)
+          # Force pip to use pre-built wheels to avoid build failures from source
+          if [[ "${{ runner.os }}" == "macOS" && "${{ matrix.python-version }}" == "3.14" ]]; then
+            pip install numcodecs --only-binary :all:
+          fi
           pip install -e .[test_core]
         shell: bash
 
