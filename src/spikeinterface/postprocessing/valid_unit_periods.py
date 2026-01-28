@@ -418,8 +418,8 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             all_fps[np.isnan(all_fps)] = 1.0
             all_fns[np.isnan(all_fns)] = 1.0
 
-            good_period_mask = (all_fps < self.params["fp_threshold"]) & (all_fns < self.params["fn_threshold"])
-            good_periods = all_periods[good_period_mask]
+            valid_period_mask = (all_fps < self.params["fp_threshold"]) & (all_fns < self.params["fn_threshold"])
+            valid_unit_periods = all_periods[valid_period_mask]
 
             # Combine with user-defined periods if provided
             if self.params["method"] == "combined":
@@ -427,7 +427,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 valid_unit_periods = np.concatenate((valid_unit_periods, user_defined_periods), axis=0)
 
             # Sort good periods on segment_index, unit_index, start_sample_index
-            valid_unit_periods, _ = self._sort_periods(good_periods)
+            valid_unit_periods, _ = self._sort_periods(valid_unit_periods)
             valid_unit_periods = merge_overlapping_periods_across_units_and_segments(valid_unit_periods)
 
             # Remove good periods that are too short

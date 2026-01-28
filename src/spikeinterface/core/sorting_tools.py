@@ -940,10 +940,9 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
             continue
         if old_unit_id in all_new_unit_ids:
             new_unit_index = all_new_unit_ids.index(old_unit_id)
-            if new_unit_index[new_unit_index]:
-                mapping[old_unit_ind] = new_unit_index
-                keep[old_unit_ind] = True
-    keep_mask = vector["unit_index"][keep]
+            mapping[old_unit_ind] = new_unit_index
+            keep[old_unit_ind] = True
+    keep_mask = keep[vector["unit_index"]]
     new_vector = vector[keep_mask]
     new_vector["unit_index"] = mapping[new_vector["unit_index"]]
 
