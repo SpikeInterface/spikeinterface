@@ -213,11 +213,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         new_extension_data = {}
         # remove data of merged units
         merged_unit_ids = np.concatenate(merge_unit_groups)
+        untouched_unit_ids = [u for u in self.sorting_analyzer.unit_ids if u not in merged_unit_ids]
         new_valid_periods, _ = remap_unit_indices_in_vector(
             vector=self.data["valid_unit_periods"],
             all_old_unit_ids=self.sorting_analyzer.unit_ids,
             all_new_unit_ids=new_sorting_analyzer.unit_ids,
-            keep_old_unit_ids=merged_unit_ids,
+            keep_old_unit_ids=untouched_unit_ids,
         )
 
         if self.params["method"] in ("false_positives_and_negatives", "combined"):
@@ -232,7 +233,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 vector=self.data["all_periods"],
                 all_old_unit_ids=self.sorting_analyzer.unit_ids,
                 all_new_unit_ids=new_sorting_analyzer.unit_ids,
-                keep_old_unit_ids=merged_unit_ids,
+                keep_old_unit_ids=untouched_unit_ids,
             )
             new_fps = self.data["fps"][keep_all_periods_mask]
             new_fns = self.data["fns"][keep_all_periods_mask]
@@ -279,11 +280,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         new_extension_data = {}
         # remove data of split units
         split_unit_ids = list(split_units.keys())
+        untouched_unit_ids = [u for u in self.sorting_analyzer.unit_ids if u not in split_unit_ids]
         new_valid_periods, _ = remap_unit_indices_in_vector(
             vector=self.data["valid_unit_periods"],
             all_old_unit_ids=self.sorting_analyzer.unit_ids,
             all_new_unit_ids=new_sorting_analyzer.unit_ids,
-            keep_old_unit_ids=split_unit_ids,
+            keep_old_unit_ids=untouched_unit_ids,
         )
         if self.params["method"] in ("false_positives_and_negatives", "combined"):
             # need to recompute for split units
@@ -297,7 +299,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
                 vector=self.data["all_periods"],
                 all_old_unit_ids=self.sorting_analyzer.unit_ids,
                 all_new_unit_ids=new_sorting_analyzer.unit_ids,
-                keep_old_unit_ids=split_unit_ids,
+                keep_old_unit_ids=untouched_unit_ids,
             )
             new_fps = self.data["fps"][keep_all_periods_mask]
             new_fns = self.data["fns"][keep_all_periods_mask]
