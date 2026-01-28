@@ -391,10 +391,9 @@ def apply_merges_to_sorting(
     all_unit_ids = list(all_unit_ids)
 
     num_seg = sorting.get_num_segments()
-    seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
-    segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
+    segment_slices = sorting._get_spike_vector_segment_slices()
 
-    # using this function vaoid to use the mask approach and simplify a lot the algo
+    # using this function avoids to use the mask approach and simplify a lot the algo
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
 
