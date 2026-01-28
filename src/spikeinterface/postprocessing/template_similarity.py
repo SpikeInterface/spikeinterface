@@ -237,7 +237,11 @@ def _compute_similarity_matrix_numpy(
                 # symmetric values are handled later
                 if same_array and j < i:
                     # no need exhaustive looping when same template
+<<<<<<< Updated upstream
                     continue
+=======
+                #   continue
+>>>>>>> Stashed changes
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
 
@@ -259,10 +263,15 @@ def _compute_similarity_matrix_numpy(
                     distances[count, i, j] = 1 - distances[count, i, j]
 
                 if same_array:
+<<<<<<< Updated upstream
                     distances[count, j, i] = distances[count, i, j]
 
         if same_array and num_shifts != 0:
             distances[num_shifts_both_sides - count - 1] = distances[count].T
+=======
+                    distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
+        
+>>>>>>> Stashed changes
     return distances
 
 
@@ -332,9 +341,9 @@ if HAVE_NUMBA:
 
                     j = overlapping_templates[gcount]
                     # symmetric values are handled later
-                    if same_array and j < i:
+                    #if same_array and j < i:
                         # no need exhaustive looping when same template
-                        continue
+                    #    continue
                     src = src_template[:, local_mask[j]].flatten()
                     tgt = (tgt_templates[gcount][:, local_mask[j]]).flatten()
 
@@ -370,10 +379,10 @@ if HAVE_NUMBA:
                         distances[count, i, j] = 1 - distances[count, i, j]
 
                     if same_array:
-                        distances[count, j, i] = distances[count, i, j]
+                        distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
 
-            if same_array and num_shifts != 0:
-                distances[num_shifts_both_sides - count - 1] = distances[count].T
+            #if same_array and num_shifts != 0:
+            #    distances[num_shifts_both_sides - count - 1] = distances[count].T
 
         return distances
 
@@ -442,7 +451,7 @@ def compute_similarity_with_templates_array(
     distances = _compute_similarity_matrix(
         templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support=support
     )
-
+    np.save("distances.npy", distances)
     lags = np.argmin(distances, axis=0) - num_shifts
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
