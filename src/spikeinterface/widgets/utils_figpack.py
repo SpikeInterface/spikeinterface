@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from readline import backend
 from warnings import warn
 
 import numpy as np
