@@ -911,7 +911,12 @@ def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
 
 def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, keep_old_unit_ids=None):
     """
-    Remap the "unit_index" field in a spike vector according to new unit ids.
+    Remap the "unit_index" field in a spike vector (or period vector) according to new unit ids.
+
+    This is usefull for instance when:
+      * select unit and recompute quickly the "unit_index" in the spike vector
+      * merging/spliting periods or spikes and update the "unit_index" in the vector
+
 
     Parameters
     ----------
@@ -927,23 +932,31 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
         since we don't want to keep them in the remapping
     return
     """
+    all_old_unit_ids = np.asarray(all_old_unit_ids)
+    all_new_unit_ids = np.asarray(all_new_unit_ids)
+    assert all_old_unit_ids.size == np.unique(all_old_unit_ids).size, "remap_unit_indices_in_vector: all_old_unit_ids not unique"
+    assert all_new_unit_ids.size == np.unique(all_new_unit_ids).size, "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+
     if keep_old_unit_ids is None:
         keep_old_unit_ids = all_old_unit_ids
 
-    mask_keep_old = np.isin(all_old_unit_ids, keep_old_unit_ids)
+    # this mask has shape all_old_unit_ids.shape
+    mask_keep_unit = np.isin(all_old_unit_ids, keep_old_unit_ids) & np.isin(all_old_unit_ids, all_new_unit_ids)
+
     all_new_unit_ids = list(all_new_unit_ids)
     mapping = np.zeros(all_old_unit_ids.size, dtype=int)
     mapping[:] = -1
-    keep = np.zeros(all_old_unit_ids.size, dtype=bool)
+    # keep = np.zeros(all_old_unit_ids.size, dtype=bool)
     for old_unit_ind, old_unit_id in enumerate(all_old_unit_ids):
-        if not mask_keep_old[old_unit_ind]:
+        if not mask_keep_unit[old_unit_ind]:
             continue
-        if old_unit_id in all_new_unit_ids:
-            new_unit_index = all_new_unit_ids.index(old_unit_id)
-            mapping[old_unit_ind] = new_unit_index
-            keep[old_unit_ind] = True
-    keep_mask = keep[vector["unit_index"]]
-    new_vector = vector[keep_mask]
+        new_unit_index = all_new_unit_ids.index(old_unit_id)
+        mapping[old_unit_ind] = new_unit_index
+        # keep[old_unit_ind] = True
+    
+    # this mask has shape vector.shape
+    keep_mask_vector = mask_keep_unit[vector["unit_index"]]
+    new_vector = vector[keep_mask_vector]
     new_vector["unit_index"] = mapping[new_vector["unit_index"]]
 
-    return new_vector, keep_mask
+    return new_vector, keep_mask_vector
