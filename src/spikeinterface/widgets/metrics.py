@@ -318,7 +318,7 @@ class MetricsBaseWidget(BaseWidget):
                 v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
             self.view = vv_base.Splitter(
-                direction="horizontal", item1=vv_views.LayoutItem(v_units_table), item2=vv_views.LayoutItem(v_metrics)
+                direction="horizontal", item1=vv_base.LayoutItem(v_units_table), item2=vv_base.LayoutItem(v_metrics)
             )
         else:
             self.view = v_metrics

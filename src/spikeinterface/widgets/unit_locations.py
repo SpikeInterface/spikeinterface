@@ -288,9 +288,9 @@ class UnitLocationsWidget(BaseWidget):
         if not dp.hide_unit_selector:
             v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv_views.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
-                items=[vv_views.LayoutItem(v_units_table, max_size=150), vv_views.LayoutItem(v_unit_locations)],
+                items=[vv_base.LayoutItem(v_units_table, max_size=150), vv_base.LayoutItem(v_unit_locations)],
             )
         else:
             self.view = v_unit_locations
