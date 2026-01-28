@@ -12,7 +12,7 @@ from spikeinterface.core.sorting_tools import (
     apply_merges_to_sorting,
     _get_ids_after_merging,
     generate_unit_ids_for_merge_group,
-    remap_unit_indices_in_vector
+    remap_unit_indices_in_vector,
 )
 from spikeinterface.core.base import minimum_spike_dtype
 
@@ -170,7 +170,6 @@ def test_remap_unit_indices_in_vector():
     unit_ids = ["a", "b", "c", "d", "e"]
     n_spikes = 20
     n_units = len(unit_ids)
-    
 
     spikes = np.zeros(n_spikes, dtype=minimum_spike_dtype)
     spikes["unit_index"] = np.arange(n_spikes) % n_units
@@ -182,7 +181,7 @@ def test_remap_unit_indices_in_vector():
     # so 0->0, 2->1, 4->2
     new_unit_ids = ["a", "c", "e"]
     new_spikes, mask = remap_unit_indices_in_vector(spikes, unit_ids, new_unit_ids, keep_old_unit_ids=None)
-    assert np.all(np.isin(new_spikes["unit_index"], [0,1, 2]))
+    assert np.all(np.isin(new_spikes["unit_index"], [0, 1, 2]))
     assert new_spikes.size == n_spikes * len(new_unit_ids) // n_units
     # print(new_spikes)
 
@@ -193,7 +192,7 @@ def test_remap_unit_indices_in_vector():
     assert new_spikes.size == spikes.size
     assert np.all(new_spikes["unit_index"] == 4 - new_spikes["sample_index"])
     # print(new_spikes)
-    
+
     # add some new units
     # vector unchanged
     new_unit_ids = ["a", "b", "c", "d", "e", "f", "g"]
@@ -203,9 +202,9 @@ def test_remap_unit_indices_in_vector():
 
     # add some + remove some
     # so 0->0, 2->1, 4->2
-    new_unit_ids = ["a",  "c", "e", "f", "g"]
+    new_unit_ids = ["a", "c", "e", "f", "g"]
     new_spikes, mask = remap_unit_indices_in_vector(spikes, unit_ids, new_unit_ids, keep_old_unit_ids=None)
-    assert np.all(np.isin(new_spikes["unit_index"], [0,1, 2]))
+    assert np.all(np.isin(new_spikes["unit_index"], [0, 1, 2]))
     assert new_spikes.size == n_spikes * 3 // n_units
     # print(new_spikes)
 
@@ -214,12 +213,11 @@ def test_remap_unit_indices_in_vector():
     new_unit_ids = ["a", "b", "c", "d", "e"]
     keep_old_unit_ids = ["a", "b", "c", "d"]
     new_spikes, mask = remap_unit_indices_in_vector(spikes, unit_ids, new_unit_ids, keep_old_unit_ids=keep_old_unit_ids)
-    assert np.all(np.isin(new_spikes["unit_index"], [0,1, 2, 3]))
+    assert np.all(np.isin(new_spikes["unit_index"], [0, 1, 2, 3]))
     assert new_spikes.size == n_spikes * 4 // n_units
     target_mask = np.ones(spikes.size, dtype=bool)
     target_mask[4::5] = False
     assert np.array_equal(mask, target_mask)
-
 
 
 if __name__ == "__main__":
@@ -232,4 +230,3 @@ if __name__ == "__main__":
     # test_generate_unit_ids_for_merge_group()
 
     test_remap_unit_indices_in_vector()
-

@@ -934,8 +934,12 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     """
     all_old_unit_ids = np.asarray(all_old_unit_ids)
     all_new_unit_ids = np.asarray(all_new_unit_ids)
-    assert all_old_unit_ids.size == np.unique(all_old_unit_ids).size, "remap_unit_indices_in_vector: all_old_unit_ids not unique"
-    assert all_new_unit_ids.size == np.unique(all_new_unit_ids).size, "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+    assert (
+        all_old_unit_ids.size == np.unique(all_old_unit_ids).size
+    ), "remap_unit_indices_in_vector: all_old_unit_ids not unique"
+    assert (
+        all_new_unit_ids.size == np.unique(all_new_unit_ids).size
+    ), "remap_unit_indices_in_vector: all_new_unit_ids not unique"
 
     if keep_old_unit_ids is None:
         keep_old_unit_ids = all_old_unit_ids
@@ -953,7 +957,7 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
         new_unit_index = all_new_unit_ids.index(old_unit_id)
         mapping[old_unit_ind] = new_unit_index
         # keep[old_unit_ind] = True
-    
+
     # this mask has shape vector.shape
     keep_mask_vector = mask_keep_unit[vector["unit_index"]]
     new_vector = vector[keep_mask_vector]
