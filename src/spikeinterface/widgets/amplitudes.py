@@ -36,7 +36,7 @@ class AmplitudesWidget(BaseRasterWidget):
         If equal to n, each nth spike is kept for plotting.
     hide_unit_selector : bool, default: False
         If True the unit selector is not displayed
-        (sortingview backend)
+        (figpack backend)
     plot_histogram : bool, default: False
         If True, an histogram of the amplitudes is plotted on the right axis
         (matplotlib backend)
@@ -94,10 +94,10 @@ class AmplitudesWidget(BaseRasterWidget):
         segment_indices = validate_segment_indices(segment_indices, sorting)
 
         # Check for SortingView backend
-        is_sortingview = backend == "sortingview"
+        is_figpack = backend in ("figpack", "sortingview")
 
         # For SortingView, ensure we're only using a single segment
-        if is_sortingview and len(segment_indices) > 1:
+        if is_figpack and len(segment_indices) > 1:
             warn("SortingView backend currently supports only single segment. Using first segment.")
             segment_indices = [segment_indices[0]]
 
@@ -158,8 +158,8 @@ class AmplitudesWidget(BaseRasterWidget):
             scatter_decimate=scatter_decimate,
         )
 
-        # If using SortingView, extract just the first segment's data as flat dicts
-        if is_sortingview:
+        # If using Figpack, extract just the first segment's data as flat dicts
+        if is_figpack:
             first_segment = segment_indices[0]
             plot_data["spike_train_data"] = {first_segment: spiketrains_by_segment[first_segment]}
             plot_data["y_axis_data"] = {first_segment: amplitudes_by_segment[first_segment]}
@@ -172,15 +172,27 @@ class AmplitudesWidget(BaseRasterWidget):
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
 
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
+
+        if not use_sortingview:
+            data_plot["hide_unit_selector"] = True  # force hide unit selector for figpack
         dp = to_attr(data_plot)
 
         unit_ids = make_serializable(dp.unit_ids)
 
         sa_items = [
-            vv.SpikeAmplitudesItem(
+            vv_views.SpikeAmplitudesItem(
                 unit_id=u,
                 spike_times_sec=dp.spike_train_data[u].astype("float32"),
                 spike_amplitudes=dp.y_axis_data[u].astype("float32"),
@@ -188,11 +200,11 @@ class AmplitudesWidget(BaseRasterWidget):
             for u in unit_ids
         ]
 
-        self.view = vv.SpikeAmplitudes(
+        self.view = vv_views.SpikeAmplitudes(
             start_time_sec=0,
             end_time_sec=np.sum(dp.durations),
             plots=sa_items,
-            hide_unit_selector=dp.hide_unit_selector,
+            # hide_unit_selector=dp.hide_unit_selector,
         )
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
