@@ -14,7 +14,7 @@ from tqdm.auto import tqdm
 
 from spikeinterface.core.base import unit_period_dtype
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype
+from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype, remap_unit_indices_in_vector
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.metrics.spiketrain import compute_firing_rates
 
@@ -192,17 +192,34 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
     def _select_extension_data(self, unit_ids):
         new_extension_data = {}
-        good_periods = self.data["valid_unit_periods"]
-        unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        mask = np.isin(good_periods["unit_index"], unit_indices)
-        new_extension_data["valid_unit_periods"] = good_periods[mask]
+        new_valid_periods, _ = remap_unit_indices_in_vector(
+            self.data["valid_unit_periods"], self.sorting_analyzer.unit_ids, unit_ids
+        )
+        new_extension_data["valid_unit_periods"] = new_valid_periods
+        all_periods = self.data.get("all_periods", None)
+        if all_periods is not None:
+            new_all_periods, keep_mask = remap_unit_indices_in_vector(
+                vector=all_periods, all_old_unit_ids=self.sorting_analyzer.unit_ids, all_new_unit_ids=unit_ids
+            )
+            new_extension_data["all_periods"] = new_all_periods
+            new_extension_data["fps"] = self.data["fps"][keep_mask]
+            new_extension_data["fns"] = self.data["fns"][keep_mask]
+
         return new_extension_data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
         new_extension_data = {}
-        good_periods = self.data["valid_unit_periods"]
+        # remove data of merged units
+        merged_unit_ids = np.concatenate(merge_unit_groups)
+        new_valid_periods, _ = remap_unit_indices_in_vector(
+            vector=self.data["valid_unit_periods"],
+            all_old_unit_ids=self.sorting_analyzer.unit_ids,
+            all_new_unit_ids=new_sorting_analyzer.unit_ids,
+            keep_old_unit_ids=merged_unit_ids,
+        )
+
         if self.params["method"] in ("false_positives_and_negatives", "combined"):
             # need to recompute for merged units
             recompute = True
@@ -211,88 +228,63 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             recompute = False
 
         if recompute:
-            new_all_periods = deepcopy(self.data.get("all_periods"))
-            new_fps = deepcopy(self.data.get("fps"))
-            new_fns = deepcopy(self.data.get("fns"))
-            # remove data of merged units
-            merged_unit_indices = []
-            for unit_ids in merge_unit_groups:
-                unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                merged_unit_indices.extend(unit_indices)
+            new_all_periods, keep_all_periods_mask = remap_unit_indices_in_vector(
+                vector=self.data["all_periods"],
+                all_old_unit_ids=self.sorting_analyzer.unit_ids,
+                all_new_unit_ids=new_sorting_analyzer.unit_ids,
+                keep_old_unit_ids=merged_unit_ids,
+            )
+            new_fps = self.data["fps"][keep_all_periods_mask]
+            new_fns = self.data["fns"][keep_all_periods_mask]
 
-            merged_unit_indices = np.array(merged_unit_indices)
-            keep_mask = ~np.isin(new_all_periods["unit_index"], merged_unit_indices)
-            new_all_periods = new_all_periods[keep_mask]
-            new_fps = new_fps[keep_mask]
-            new_fns = new_fns[keep_mask]
-
-            # remove periods of merged units
-            good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], merged_unit_indices)]
             # recompute for merged units
-            good_periods_merged, all_periods, fps, fns = self._compute_valid_periods(
+            valid_periods_merged, all_periods_merged, fps_merged, fns_merged = self._compute_valid_periods(
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
 
-            # remap unmerged unit indices, since they can change due to merges
-            (unit_indices_unmerged,) = np.nonzero(
-                ~np.isin(np.arange(self.sorting_analyzer.get_num_units()), merged_unit_indices)
-            )
-            # keep a map between new_unit_index and masks to apply it to. We cannot do it directly because unit indices change
-            unit_all_periods_masks = {}
-            unit_good_periods_masks = {}
-            for old_unit_index in unit_indices_unmerged:
-                old_unit_id = self.sorting_analyzer.unit_ids[old_unit_index]
-                new_unit_index = new_sorting_analyzer.sorting.id_to_index(old_unit_id)
-                old_unit_all_periods_mask = new_all_periods["unit_index"] == old_unit_index
-                unit_all_periods_masks[new_unit_index] = old_unit_all_periods_mask
-                old_unit_good_periods_mask = good_periods_valid["unit_index"] == old_unit_index
-                unit_good_periods_masks[new_unit_index] = old_unit_good_periods_mask
+            new_valid_periods = np.concatenate((new_valid_periods, valid_periods_merged), axis=0)
+            new_all_periods = np.concatenate((new_all_periods, all_periods_merged), axis=0)
+            new_fps = np.concatenate((new_fps, fps_merged), axis=0)
+            new_fns = np.concatenate((new_fns, fns_merged), axis=0)
 
-            # and apply remapping
-            for new_unit_index in unit_all_periods_masks:
-                all_periods_mask = unit_all_periods_masks[new_unit_index]
-                new_all_periods["unit_index"][all_periods_mask] = new_unit_index
-                good_periods_mask = unit_good_periods_masks[new_unit_index]
-                good_periods_valid["unit_index"][good_periods_mask] = new_unit_index
-
-            new_good_periods = np.concatenate((good_periods_valid, good_periods_merged), axis=0)
-            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
-            new_fps = np.concatenate((new_fps, fps), axis=0)
-            new_fns = np.concatenate((new_fns, fns), axis=0)
-
-            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
-            # we don't need to sort these because new periods are appended at the end
-            new_extension_data["all_periods"] = new_all_periods
-            new_extension_data["fps"] = new_fps
-            new_extension_data["fns"] = new_fns
+            new_extension_data["valid_unit_periods"], _ = self._sort_periods(new_valid_periods)
+            new_extension_data["all_periods"], sort_indices = self._sort_periods(new_all_periods)
+            new_extension_data["fps"] = new_fps[sort_indices]
+            new_extension_data["fns"] = new_fns[sort_indices]
         else:
             # just merge periods
-            merged_periods = np.array([], dtype=unit_period_dtype)
-            merged_unit_indices = []
-            for unit_ids in merge_unit_groups:
+            valid_periods_merged = []
+            original_valid_periods = self.data["valid_unit_periods"]
+            for unit_ids, new_unit_id in zip(merge_unit_groups, new_unit_ids):
                 unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-                merged_unit_indices.extend(unit_indices)
+                new_unit_index = new_sorting_analyzer.sorting.id_to_index(new_unit_id)
                 # get periods of all units to be merged
-                masked_periods = good_periods[np.isin(good_periods["unit_index"], unit_indices)]
-                if len(masked_periods) == 0:
-                    continue
-                # merge periods
-                _merged_periods = merge_overlapping_periods_across_units_and_segments(masked_periods)
-                merged_periods = np.concatenate((merged_periods, _merged_periods))
+                merge_mask = np.isin(original_valid_periods["unit_index"], unit_indices)
+                masked_periods = original_valid_periods[merge_mask]
+                masked_periods["unit_index"] = new_unit_index
+                valid_periods_merged.append(masked_periods)
 
-            # get periods of unmerged units
-            unmerged_mask = ~np.isin(good_periods["unit_index"], np.array(merged_unit_indices))
-            unmerged_periods = good_periods[unmerged_mask]
-
-            new_good_periods = np.concatenate((unmerged_periods, merged_periods))
-            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
+            valid_periods_merged = np.concatenate(valid_periods_merged, axis=0)
+            # now merge with unsplit periods
+            new_valid_periods = np.concatenate((new_valid_periods, valid_periods_merged), axis=0)
+            # sort and merge
+            new_valid_periods = merge_overlapping_periods_across_units_and_segments(new_valid_periods)
+            new_valid_periods, _ = self._sort_periods(new_valid_periods)
+            new_extension_data["valid_unit_periods"] = new_valid_periods
 
         return new_extension_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_extension_data = {}
-        good_periods = self.data["valid_unit_periods"]
+        # remove data of split units
+        split_unit_ids = list(split_units.keys())
+        new_valid_periods, _ = remap_unit_indices_in_vector(
+            vector=self.data["valid_unit_periods"],
+            all_old_unit_ids=self.sorting_analyzer.unit_ids,
+            all_new_unit_ids=new_sorting_analyzer.unit_ids,
+            keep_old_unit_ids=split_unit_ids,
+        )
         if self.params["method"] in ("false_positives_and_negatives", "combined"):
             # need to recompute for split units
             recompute = True
@@ -301,84 +293,56 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             recompute = False
 
         if recompute:
-            new_all_periods = deepcopy(self.data.get("all_periods"))
-            new_fps = deepcopy(self.data.get("fps"))
-            new_fns = deepcopy(self.data.get("fns"))
-            # remove data of split units
-            split_unit_ids = list(split_units.keys())
-            split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_unit_ids)
-            keep_mask = ~np.isin(new_all_periods["unit_index"], split_unit_indices)
-            new_all_periods = new_all_periods[keep_mask]
-            new_fps = new_fps[keep_mask]
-            new_fns = new_fns[keep_mask]
+            new_all_periods, keep_all_periods_mask = remap_unit_indices_in_vector(
+                vector=self.data["all_periods"],
+                all_old_unit_ids=self.sorting_analyzer.unit_ids,
+                all_new_unit_ids=new_sorting_analyzer.unit_ids,
+                keep_old_unit_ids=split_unit_ids,
+            )
+            new_fps = self.data["fps"][keep_all_periods_mask]
+            new_fns = self.data["fns"][keep_all_periods_mask]
 
+            # recompute for split units
             new_unit_ids = np.concatenate(new_unit_ids)
 
-            # remove periods of split units
-            good_periods_valid = good_periods[~np.isin(good_periods["unit_index"], split_unit_indices)]
-            # recompute for split units
-            good_periods_split, all_periods, fps, fns = self._compute_valid_periods(
+            valid_periods_split, all_periods_split, fps_split, fns_split = self._compute_valid_periods(
                 new_sorting_analyzer,
                 unit_ids=new_unit_ids,
             )
 
-            # remap unmerged unit indices, since they can change due to merges
-            (unit_indices_unsplit,) = np.nonzero(
-                ~np.isin(np.arange(self.sorting_analyzer.get_num_units()), split_unit_indices)
-            )
-            # keep a map between new_unit_index and masks to apply it to. We cannot do it directly because unit indices change
-            unit_all_periods_masks = {}
-            unit_good_periods_masks = {}
-            for old_unit_index in unit_indices_unsplit:
-                old_unit_id = self.sorting_analyzer.unit_ids[old_unit_index]
-                new_unit_index = new_sorting_analyzer.sorting.id_to_index(old_unit_id)
-                old_unit_all_periods_mask = new_all_periods["unit_index"] == old_unit_index
-                unit_all_periods_masks[new_unit_index] = old_unit_all_periods_mask
-                old_unit_good_periods_mask = good_periods_valid["unit_index"] == old_unit_index
-                unit_good_periods_masks[new_unit_index] = old_unit_good_periods_mask
+            new_valid_periods = np.concatenate((new_valid_periods, valid_periods_split), axis=0)
+            new_all_periods = np.concatenate((new_all_periods, all_periods_split), axis=0)
+            new_fps = np.concatenate((new_fps, fps_split), axis=0)
+            new_fns = np.concatenate((new_fns, fns_split), axis=0)
 
-            # and apply remapping
-            for new_unit_index in unit_all_periods_masks:
-                all_periods_mask = unit_all_periods_masks[new_unit_index]
-                new_all_periods["unit_index"][all_periods_mask] = new_unit_index
-                good_periods_mask = unit_good_periods_masks[new_unit_index]
-                good_periods_valid["unit_index"][good_periods_mask] = new_unit_index
-
-            new_good_periods = np.concatenate((good_periods_valid, good_periods_split))
-            new_all_periods = np.concatenate((new_all_periods, all_periods), axis=0)
-            new_fps = np.concatenate((new_fps, fps), axis=0)
-            new_fns = np.concatenate((new_fns, fns), axis=0)
-
-            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
-            new_extension_data["all_periods"] = new_all_periods
-            new_extension_data["fps"] = new_fps
-            new_extension_data["fns"] = new_fns
+            new_extension_data["valid_unit_periods"], _ = self._sort_periods(new_valid_periods)
+            new_extension_data["all_periods"], sort_indices = self._sort_periods(new_all_periods)
+            new_extension_data["fps"] = new_fps[sort_indices]
+            new_extension_data["fns"] = new_fns[sort_indices]
         else:
             # just duplicate periods to the split units
-            split_periods = []
+            valid_periods_split = []
+            original_valid_periods = self.data["valid_unit_periods"]
             split_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(split_units)
             for split_unit_id, new_unit_ids in zip(split_units, new_unit_ids):
                 unit_index = self.sorting_analyzer.sorting.id_to_index(split_unit_id)
                 new_unit_indices = new_sorting_analyzer.sorting.ids_to_indices(new_unit_ids)
                 split_unit_indices.append(unit_index)
                 # get periods of all units to be merged
-                masked_periods = good_periods[good_periods["unit_index"] == unit_index]
+                masked_periods = original_valid_periods[original_valid_periods["unit_index"] == unit_index]
                 for new_unit_index in new_unit_indices:
                     _split_periods = masked_periods.copy()
                     _split_periods["unit_index"] = new_unit_index
-                    split_periods = np.concatenate((split_periods, _split_periods), axis=0)
+                    valid_periods_split.append(_split_periods)
                 if len(masked_periods) == 0:
                     continue
-                # merge periods
-                _split_periods = merge_overlapping_periods_across_units_and_segments(masked_periods)
-                split_periods.append(_split_periods)
-            split_periods = np.concatenate(split_periods, axis=0)
-            # get periods of unmerged units
-            unsplit_mask = ~np.isin(good_periods["unit_index"], np.array(split_unit_indices))
-            unsplit_periods = good_periods[unsplit_mask]
-
-            new_good_periods = np.concatenate((unsplit_periods, split_periods), axis=0)
-            new_extension_data["valid_unit_periods"] = self._sort_periods(new_good_periods)
+            valid_periods_split = np.concatenate(valid_periods_split, axis=0)
+            # now merge with unsplit periods
+            new_valid_periods = np.concatenate((new_valid_periods, valid_periods_split), axis=0)
+            # sort and merge
+            new_valid_periods = merge_overlapping_periods_across_units_and_segments(new_valid_periods)
+            new_valid_periods, _ = self._sort_periods(new_valid_periods)
+            new_extension_data["valid_unit_periods"] = new_valid_periods
 
         return new_extension_data
 
@@ -457,15 +421,13 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             good_period_mask = (all_fps < self.params["fp_threshold"]) & (all_fns < self.params["fn_threshold"])
             good_periods = all_periods[good_period_mask]
 
-            # Sort good periods on segment_index, unit_index, start_sample_index
-            valid_unit_periods = self._sort_periods(good_periods)
-
             # Combine with user-defined periods if provided
             if self.params["method"] == "combined":
                 user_defined_periods = self.user_defined_periods
-                valid_unit_periods = self._sort_periods(
-                    np.concatenate((valid_unit_periods, user_defined_periods), axis=0)
-                )
+                valid_unit_periods = np.concatenate((valid_unit_periods, user_defined_periods), axis=0)
+
+            # Sort good periods on segment_index, unit_index, start_sample_index
+            valid_unit_periods, _ = self._sort_periods(good_periods)
             valid_unit_periods = merge_overlapping_periods_across_units_and_segments(valid_unit_periods)
 
             # Remove good periods that are too short
@@ -601,7 +563,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     def _sort_periods(self, periods):
         sort_idx = np.lexsort((periods["start_sample_index"], periods["unit_index"], periods["segment_index"]))
         sorted_periods = periods[sort_idx]
-        return sorted_periods
+        return sorted_periods, sort_idx
 
 
 def compute_subperiods(
@@ -639,10 +601,8 @@ def compute_subperiods(
     all_subperiods_w_margins = []
     for segment_index in range(sorting.get_num_segments()):
         n_samples = sorting_analyzer.get_num_samples(segment_index)  # int: samples
-        period_centers = {}
         for unit_id in unit_ids:
             unit_index = sorting.id_to_index(unit_id)
-            period_centers[unit_id] = []
             period_size_samples = period_sizes_samples[unit_id]
             margin_size_samples = margin_sizes_samples[unit_id]
             # We round the number of subperiods to ensure coverage of the entire recording
@@ -675,8 +635,20 @@ def compute_subperiods(
     return np.concatenate(all_subperiods), np.concatenate(all_subperiods_w_margins)
 
 
-def merge_overlapping_periods(subperiods):
+def merge_overlapping_periods_for_unit(subperiods):
+    """
+    Merges overlapping periods for a single unit and segment.
 
+    Parameters
+    ----------
+    subperiods : np.ndarray
+        Array of dtype unit_period_dtype containing periods to be merged.
+
+    Returns
+    -------
+    merged_periods : np.ndarray
+        Array of dtype unit_period_dtype containing merged periods.
+    """
     segment_indices = np.unique(subperiods["segment_index"])
     assert len(segment_indices) == 1, "Subperiods must belong to the same segment to be merged."
     segment_index = segment_indices[0]
@@ -715,6 +687,19 @@ def merge_overlapping_periods(subperiods):
 
 
 def merge_overlapping_periods_across_units_and_segments(periods):
+    """
+    Merges overlapping periods across all units and segments.
+
+    Parameters
+    ----------
+    periods : np.ndarray
+        Array of dtype unit_period_dtype containing periods to be merged.
+
+    Returns
+    -------
+    merged_periods : np.ndarray
+        Array of dtype unit_period_dtype containing merged periods.
+    """
     segments = np.unique(periods["segment_index"])
     units = np.unique(periods["unit_index"])
     merged_periods = []
@@ -724,7 +709,7 @@ def merge_overlapping_periods_across_units_and_segments(periods):
             masked_periods = periods_per_segment[(periods_per_segment["unit_index"] == unit_index)]
             if len(masked_periods) == 0:
                 continue
-            _merged_periods = merge_overlapping_periods(masked_periods)
+            _merged_periods = merge_overlapping_periods_for_unit(masked_periods)
             merged_periods.append(_merged_periods)
     if len(merged_periods) == 0:
         merged_periods = np.array([], dtype=unit_period_dtype)

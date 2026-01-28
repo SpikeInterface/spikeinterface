@@ -907,3 +907,44 @@ def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
         all_unit_ids.remove(split_unit)
         all_unit_ids.extend(split_new_units)
     return np.array(all_unit_ids, dtype=dtype)
+
+
+def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, keep_old_unit_ids=None):
+    """
+    Remap the "unit_index" field in a spike vector according to new unit ids.
+
+    Parameters
+    ----------
+    vector : numpy.array
+        The spike vector with a "unit_index" field.
+    all_old_unit_ids : numpy.array
+        The array of all old unit ids.
+    all_new_unit_ids : list
+        The list of all new unit ids.
+    keep_old_unit_ids : list | None, default: None
+        The list of old unit ids to keep. If None, all old unit ids are kept.
+        This is useful when some units are merged or split during curation,
+        since we don't want to keep them in the remapping
+    return
+    """
+    if keep_old_unit_ids is None:
+        keep_old_unit_ids = all_old_unit_ids
+
+    mask_keep_old = np.isin(all_old_unit_ids, keep_old_unit_ids)
+    all_new_unit_ids = list(all_new_unit_ids)
+    mapping = np.zeros(all_old_unit_ids.size, dtype=int)
+    mapping[:] = -1
+    keep = np.zeros(all_old_unit_ids.size, dtype=bool)
+    for old_unit_ind, old_unit_id in enumerate(all_old_unit_ids):
+        if not mask_keep_old[old_unit_ind]:
+            continue
+        if old_unit_id in all_new_unit_ids:
+            new_unit_index = all_new_unit_ids.index(old_unit_id)
+            if new_unit_index[new_unit_index]:
+                mapping[old_unit_ind] = new_unit_index
+                keep[old_unit_ind] = True
+    keep_mask = vector["unit_index"][keep]
+    new_vector = vector[keep_mask]
+    new_vector["unit_index"] = mapping[new_vector["unit_index"]]
+
+    return new_vector, keep_mask
