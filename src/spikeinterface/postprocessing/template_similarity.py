@@ -72,7 +72,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
         new_lags = self.data["lags"][unit_indices][:, unit_indices]
-        return dict(similarity=new_similarity, lags=new_lags)
+        return dict(similarity=new_similarity)
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -185,7 +185,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.sorting_analyzer, return_in_uV=self.sorting_analyzer.return_in_uV
         )
         sparsity = self.sorting_analyzer.sparsity
-        similarity, lags = compute_similarity_with_templates_array(
+        similarity, _ = compute_similarity_with_templates_array(
             templates_array,
             templates_array,
             method=self.params["method"],
@@ -235,8 +235,8 @@ def _compute_similarity_matrix_numpy(
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
                 # symmetric values are handled later
-                #if same_array and j < i:
-                    # no need exhaustive looping when same template
+                # if same_array and j < i:
+                # no need exhaustive looping when same template
                 #   continue
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
@@ -260,7 +260,7 @@ def _compute_similarity_matrix_numpy(
 
                 if same_array:
                     distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
-        
+
     return distances
 
 
@@ -330,8 +330,8 @@ if HAVE_NUMBA:
 
                     j = overlapping_templates[gcount]
                     # symmetric values are handled later
-                    #if same_array and j < i:
-                        # no need exhaustive looping when same template
+                    # if same_array and j < i:
+                    # no need exhaustive looping when same template
                     #    continue
                     src = src_template[:, local_mask[j]].flatten()
                     tgt = (tgt_templates[gcount][:, local_mask[j]]).flatten()
@@ -370,7 +370,7 @@ if HAVE_NUMBA:
                     if same_array:
                         distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
 
-            #if same_array and num_shifts != 0:
+            # if same_array and num_shifts != 0:
             #    distances[num_shifts_both_sides - count - 1] = distances[count].T
 
         return distances
