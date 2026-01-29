@@ -6,8 +6,6 @@ from spikeinterface.core.base import base_period_dtype
 from spikeinterface.preprocessing import silence_periods
 
 
-
-
 import numpy as np
 
 from pathlib import Path

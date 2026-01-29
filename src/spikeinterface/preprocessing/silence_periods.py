@@ -11,7 +11,6 @@ from spikeinterface.core.job_tools import split_job_kwargs
 from spikeinterface.core.base import base_period_dtype
 
 
-
 class SilencedPeriodsRecording(BasePreprocessor):
     """
     Silence user-defined periods from recording extractor traces. By default,
@@ -104,18 +103,18 @@ class SilencedPeriodsRecording(BasePreprocessor):
             noise_generator = None
 
         BasePreprocessor.__init__(self, recording)
-        
+
         seg_limits = np.searchsorted(periods["segment_index"], np.arange(num_seg + 1))
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             i0 = seg_limits[seg_index]
-            i1 = seg_limits[seg_index+1]
+            i1 = seg_limits[seg_index + 1]
             periods_in_seg = periods[i0:i1]
-            rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods_in_seg, mode, noise_generator, seg_index)
+            rec_segment = SilencedPeriodsRecordingSegment(
+                parent_segment, periods_in_seg, mode, noise_generator, seg_index
+            )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(
-            recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels
-        )
+        self._kwargs = dict(recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels)
 
 
 def _all_period_list_to_periods_vec(list_periods, num_seg):
@@ -135,6 +134,7 @@ def _all_period_list_to_periods_vec(list_periods, num_seg):
         start = stop
     return periods
 
+
 def _check_periods(periods, num_seg):
     # check dtype
     if any(col not in np.dtype(base_period_dtype).fields for col in periods.dtype.fields):
@@ -144,14 +144,14 @@ def _check_periods(periods, num_seg):
     seg_limits = np.searchsorted(periods["segment_index"], np.arange(num_seg + 1))
     for i in range(num_seg):
         i0 = seg_limits[i]
-        i1 = seg_limits[i+1]
+        i1 = seg_limits[i + 1]
         periods_in_seg = periods[i0:i1]
         if periods_in_seg.size == 0:
             continue
         if len(periods) > 0:
             if np.any(periods_in_seg["start_sample_index"] > periods_in_seg["end_sample_index"]):
                 raise ValueError("end_sample_index should be larger than start_sample_index")
-            if np.any(periods_in_seg["start_sample_index"][1:] <  periods_in_seg["end_sample_index"][:-1]):
+            if np.any(periods_in_seg["start_sample_index"][1:] < periods_in_seg["end_sample_index"][:-1]):
                 raise ValueError("Intervals should not overlap")
 
 
@@ -165,10 +165,10 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        
+
         if self.periods.size > 0:
             new_interval = np.array([start_frame, end_frame])
-            
+
             lower_index = np.searchsorted(self.periods["end_sample_index"], new_interval[0])
             upper_index = np.searchsorted(self.periods["start_sample_index"], new_interval[1])
 
@@ -190,11 +190,11 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
         return traces
 
+
 # function for API
 silence_periods = define_function_handling_dict_from_class(
     source_class=SilencedPeriodsRecording, name="silence_periods"
 )
-
 
 
 class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
@@ -220,6 +220,7 @@ class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
 
         if artifacts is None:
             from spikeinterface.preprocessing import detect_artifact_periods
+
             artifacts = detect_artifact_periods(
                 recording,
                 method=detect_artifact_method,
@@ -233,9 +234,7 @@ class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
         # note self._kwargs["periods"] is done by SilencedPeriodsRecording and so the computaion is done once
 
 
-
 # function for API
 detect_artifacts_and_silent_periods = define_function_handling_dict_from_class(
     source_class=DetectArtifactAndSilentPeriodsRecording, name="silence_artifacts"
 )
-

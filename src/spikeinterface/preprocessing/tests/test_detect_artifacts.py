@@ -6,10 +6,11 @@ import numpy as np
 def test_detect_artifact_periods():
     # one segment only
     rec = generate_recording(durations=[10.0, 10])
-    artifacts = detect_artifact_periods(rec, method="envelope", 
-                                        method_kwargs=dict(detect_threshold=5, freq_max=5.0),
-                                        )
-
+    artifacts = detect_artifact_periods(
+        rec,
+        method="envelope",
+        method_kwargs=dict(detect_threshold=5, freq_max=5.0),
+    )
 
 
 def test_detect_saturation_periods():
@@ -53,35 +54,32 @@ def test_detect_saturation_periods():
     # exactly on the border, as it makes testing complex
     # This was checked manually and any future breaking change
     # on this function would be extremely unlikely only to break this case.
-    all_starts = np.array([0,    29950,  45123, 90005,  149500])
-    all_stops =  np.array([1001, 30011,  45126, 90006,  149999])
+    all_starts = np.array([0, 29950, 45123, 90005, 149500])
+    all_stops = np.array([1001, 30011, 45126, 90006, 149999])
 
     second_seg_offset = 1
     for start, stop in zip(all_starts, all_stops):
-        data_seg_1[start : stop, :] = sat_value
+        data_seg_1[start:stop, :] = sat_value
         # differentiate the second segment for testing purposes
         data_seg_2[start : stop + second_seg_offset, :] = sat_value
 
     # this center the int16 around 0 and saturate on positive
     max_ = np.max(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
-    gain =  max_ / 2**15
+    gain = max_ / 2**15
     offset = 50
 
-    seg_1_int16 = np.clip(
-        np.rint((data_seg_1 - offset) / gain),
-        -32768, 32767
-    ).astype(np.int16)
-    seg_2_int16 = np.clip(
-        np.rint((data_seg_2 - offset) / gain),
-        -32768, 32767
-    ).astype(np.int16)
+    seg_1_int16 = np.clip(np.rint((data_seg_1 - offset) / gain), -32768, 32767).astype(np.int16)
+    seg_2_int16 = np.clip(np.rint((data_seg_2 - offset) / gain), -32768, 32767).astype(np.int16)
 
     recording = NumpyRecording([seg_1_int16, seg_2_int16], sample_frequency)
     recording.set_channel_gains(gain)
     recording.set_channel_offsets([offset] * num_chans)
 
     periods = detect_saturation_periods(
-        recording, saturation_threshold_uV=sat_value * 0.98, uV_per_sec_threshold=uV_per_sec_threshold, job_kwargs=job_kwargs
+        recording,
+        saturation_threshold_uV=sat_value * 0.98,
+        uV_per_sec_threshold=uV_per_sec_threshold,
+        job_kwargs=job_kwargs,
     )
 
     seg_1_periods = periods[np.where(periods["segment_index"] == 0)]
@@ -115,13 +113,14 @@ def test_detect_saturation_periods():
         recording,
         method="saturation",
         method_kwargs=dict(
-                saturation_threshold_uV=sat_value * (1 / 0.98),
-                uV_per_sec_threshold=uV_per_sec_threshold,
-            ),
+            saturation_threshold_uV=sat_value * (1 / 0.98),
+            uV_per_sec_threshold=uV_per_sec_threshold,
+        ),
         job_kwargs=job_kwargs,
     )
 
     assert np.array_equal(periods, periods_entry_function)
+
 
 if __name__ == "__main__":
     test_detect_artifact_periods()
