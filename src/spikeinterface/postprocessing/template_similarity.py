@@ -198,6 +198,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def _get_data(self):
         return self.data["similarity"]
 
+
 # @alessio:  compute_template_similarity() is now one inner SortingAnalyzer only
 register_result_extension(ComputeTemplateSimilarity)
 compute_template_similarity = ComputeTemplateSimilarity.function_factory()
