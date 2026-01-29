@@ -903,7 +903,7 @@ class AmplitudeCutoff(BaseMetric):
     metric_name = "amplitude_cutoff"
     metric_function = compute_amplitude_cutoffs
     metric_params = {
-        "num_histogram_bins": 100,
+        "num_histogram_bins": 200,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
     }
@@ -1518,7 +1518,7 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
 
 def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3, amplitudes_bins_min_ratio=5):
     """
-    Calculate approximate fraction of spikes missing from a distribution of amplitudes.
+    Calculate approximate fraction of spikes missing from the right tail of a distribution of amplitudes.
 
     See compute_amplitude_cutoffs for additional documentation
 
@@ -1544,27 +1544,20 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
         return np.nan
     else:
-        h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
-
-        # TODO : use something better than scipy.ndimage.gaussian_filter1d
         from scipy.ndimage import gaussian_filter1d
 
-        pdf = gaussian_filter1d(h, histogram_smoothing_value)
-        support = b[:-1]
-        bin_size = np.mean(np.diff(support))
-        peak_index = np.argmax(pdf)
+        # Approximate amplitude pdf with np.histogram
+        h = np.histogram(amplitudes, num_histogram_bins)[0]
+        pdf = gaussian_filter1d(h, histogram_smoothing_value, mode='nearest')
 
-        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
+        # Find number of missed spikes
+        cutoff_point = pdf[-1]  # >> pdf[0] if spikes were cutoff (at higher amplitudes)
+        G = np.argmax(pdf >= cutoff_point)  # first occurence where the pdf was greater than cutoff
+        num_missed_spikes = np.sum(pdf[:G])  # theoretically missing spikes on the right side
 
-        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
-            warnings.warn(
-                "Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
-                "amplitude_cutoff computation!"
-            )
-
-        G = np.argmin(pdf_above) + peak_index
-        fraction_missing = np.sum(pdf[G:]) * bin_size
-        fraction_missing = np.min([fraction_missing, 0.5])
+        # Compute fraction of missed spikes
+        fraction_missing = num_missed_spikes / (len(amplitudes) + num_missed_spikes)
+        fraction_missing = min(fraction_missing, 0.5)
 
         return fraction_missing
 
