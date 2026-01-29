@@ -260,8 +260,6 @@ class SpikeLocationsWidget(BaseWidget):
         )
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)
-        if not use_sortingview:
-            raise NotImplementedError("SpikeLocationsWidget: figpack backend is not available yet.")
         vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
         dp = to_attr(data_plot)
         spike_locations = dp.spike_locations
@@ -298,11 +296,11 @@ class SpikeLocationsWidget(BaseWidget):
         if not dp.hide_unit_selector:
             v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv_views.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
                 items=[
-                    vv_views.LayoutItem(v_units_table, max_size=150),
-                    vv_views.LayoutItem(v_spike_locations),
+                    vv_base.LayoutItem(v_units_table, max_size=150),
+                    vv_base.LayoutItem(v_spike_locations),
                 ],
             )
         else:

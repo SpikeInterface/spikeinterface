@@ -475,8 +475,6 @@ class TestWidgets(unittest.TestCase):
     def test_plot_spike_locations(self):
         possible_backends = list(sw.SpikeLocationsWidget.get_possible_backends())
         for backend in possible_backends:
-            if backend == "figpack":
-                continue
             if backend not in self.skip_backends:
                 sw.plot_spike_locations(
                     self.sorting_analyzer_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
@@ -512,9 +510,6 @@ class TestWidgets(unittest.TestCase):
     def test_plot_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.get_possible_backends())
         for backend in possible_backends:
-            # Not available yet in figpack
-            if backend == "figpack":
-                continue
             if backend not in self.skip_backends:
                 sw.plot_template_similarity(
                     self.sorting_analyzer_dense, backend=backend, **self.backend_kwargs[backend]

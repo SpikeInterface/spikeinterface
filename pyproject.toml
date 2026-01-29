@@ -94,7 +94,7 @@ preprocessing = [
 
 full = [
     "h5py",
-    "pandas",
+    "pandas<3",
     "scipy",
     "scikit-learn<1.8",
     "networkx",
@@ -117,7 +117,7 @@ widgets = [
 metrics = [
     "scikit-learn<1.8",
     "scipy",
-    "pandas",
+    "pandas<3",
     "numba",
 ]
 
@@ -208,7 +208,7 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
-    "pandas", # in the modules gallery comparison tutorial
+    "pandas<3", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",

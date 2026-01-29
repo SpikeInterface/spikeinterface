@@ -97,8 +97,6 @@ class TemplateSimilarityWidget(BaseWidget):
         )
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)
-        if not use_sortingview:
-            raise NotImplementedError("TemplateSimilarityWidget: figpack backend is not available yet.")
         vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
