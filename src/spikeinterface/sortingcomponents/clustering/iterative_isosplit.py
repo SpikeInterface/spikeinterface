@@ -107,6 +107,9 @@ class IterativeISOSPLITClustering:
 
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
+        nbefore = = int(ms_before * recording.sampling_frequency / 1000.)
+        nafter= int(ms_after * recording.sampling_frequency / 1000.)
+
         # radius_um = params["waveforms"]["radius_um"]
         verbose = params["verbose"]
 
@@ -286,13 +289,17 @@ class IterativeISOSPLITClustering:
             post_merge_label1 = post_split_label.copy()
 
         if params["merge_from_templates"] is not None:
+            params_merge_from_templates = params["merge_from_templates"].copy()
+            num_shifts = params_merge_from_templates["num_shifts"]
+            num_shifts = min((num_shifts, nbefore, nafter))
+            params_merge_from_templates["num_shifts"] = num_shifts
             post_merge_label2, templates_array, template_sparse_mask, unit_ids = merge_peak_labels_from_templates(
                 peaks,
                 post_merge_label1,
                 unit_ids,
                 templates_array,
                 template_sparse_mask,
-                **params["merge_from_templates"],
+                **params_merge_from_templates,
             )
         else:
             post_merge_label2 = post_merge_label1.copy()
