@@ -75,7 +75,12 @@ def _collapse_events(events):
 
 
 class _DetectSaturation(PipelineNode):
+    """
+    A recording node for parallelising saturation detection.
 
+    Run with `run_node_pipeline`, this computes saturation events
+    for a given chunk. See `detect_saturation()` for details.
+    """
     name = "detect_saturation"
     preferred_mp_context = None
     _compute_has_extended_signature = True
@@ -98,7 +103,8 @@ class _DetectSaturation(PipelineNode):
         # 0.98 is empirically determined as the true saturating point is
         # slightly lower than the documented saturation point of the probe        
         self.saturation_threshold_unscaled = (thresh - offsets) / gains * 0.98
-        
+        self.voltage_per_sec_threshold = (voltage_per_sec_threshold - offsets) / gains
+
         self.sampling_frequency = recording.get_sampling_frequency()
         self.proportion = proportion
         self._dtype = np.dtype(artifact_dtype)
@@ -112,7 +118,10 @@ class _DetectSaturation(PipelineNode):
         return self._dtype
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-
+        """
+        Compute saturation events for a given chunk of data.
+        See `detect_saturation()` for details.
+        """
         saturation = np.mean(np.abs(traces) > self.saturation_threshold_unscaled, axis=1)
 
         if self.voltage_per_sec_threshold is not None:
@@ -144,7 +153,7 @@ def detect_saturation_periods(
     recording,
     saturation_threshold_uV,  # 1200 uV
     voltage_per_sec_threshold=None,  # 1e-8 V.s-1
-    proportion=0.5,
+    proportion=0.2,
     job_kwargs=None,
 ):
     """
@@ -170,23 +179,24 @@ def detect_saturation_periods(
         skip this method and only use `saturation_threshold_uV` for detection. Otherwise, the value should be
         empirically determined (IBL use 1e-8 V.s-1) for NP1 probes.
 
-    proportion :
-    mute_window_samples :
-    job_kwargs :
+    proportion : float
+        0 < proportion <1  of channels above threshold to consider the sample as saturated
+    mute_window_samples : int
+        TODO: should we scale this based on the fs?
+    job_kwargs: dict
+        The classical job_kwargs
 
     most useful for NP1
     can use ratio as a intuition for the value but dont do it in code
 
     Returns
-    -------
-
+-------
+    collapsed_events : np.recarray
+        A numpy recarray holding information on each saturation event. Has the fields:
+        "start_sample_index", "stop_sample_index", "segment_index", "method_id"
     """
     if job_kwargs:
         job_kwargs = {}
-
-    # if saturation_threshold_uV < 0.1:
-    #    raise ValueError(f"The `saturation_threshold_uV` should be in microvolts. "
-    #                     f"Your value: {saturation_threshold_uV} is almost certainly in volts.")
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 

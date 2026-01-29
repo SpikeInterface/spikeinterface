@@ -13,24 +13,32 @@ def test_detect_artifact_periods():
 
 
 def test_detect_saturation_periods():
+    """
+    This tests the saturation detection method. First a mock recording is created with
+    saturation events. Events may be single-sample or a multi-sample period. We create a multi-segment
+    recording with the stop-sample of each event offset by one, so the segments are distinguishable.
 
+    Saturation detection is performed on chunked data (we set to 30k sample chunks) and so injected
+    events are hard-coded in order to cross a chunk boundary to test this case.
+
+    The saturation detection function tests both a) saturation threshold exceeded
+    and b) first derivative (velocity) threshold exceeded. Because the forward
+    derivative is taken, the sample before the first saturated sample is also flagged.
+    Also, because of the way the mask is computed in the function, the sample after the
+    last saturated sample is flagged.
+    """
     import scipy.signal
-    
-    """
-    TODO: NOTE: we have one sample before the saturation starts as we take the forward derivative for the velocity
-                we have an extra sample after due to taking the diff on the final saturation mask
-                this means we always take one sample before and one sample after the diff period, which is fine.
-    """
-    # num_chans = 384
+
     num_chans = 32
     sample_frequency = 30000
     chunk_size = 30000  # This value is critical to ensure hard-coded start / stops below
     job_kwargs = {"chunk_size": chunk_size}
 
-    # cross a chunk boundary. Do not change without changing the below.
+    # Generate some data in uV
     sat_value = 1200
+    voltage_per_sec_threshold = 12 / sample_frequency
     rng = np.random.default_rng()
-    data = rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10 * 1e-6
+    data = rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10
 
     # Design the Butterworth filter
     sos = scipy.signal.butter(N=3, Wn=12000 / (sample_frequency / 2), btype="low", output="sos")
@@ -57,7 +65,7 @@ def test_detect_saturation_periods():
     # this center the int16 around 0 and saturate on positive
     max_ = np.max(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
     gain =  max_ / 2**15
-    offset = 0
+    offset = 50
 
     seg_1_int16 = np.clip(
         np.rint((data_seg_1 - offset) / gain),
@@ -68,17 +76,12 @@ def test_detect_saturation_periods():
         -32768, 32767
     ).astype(np.int16)
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.plot(seg_1_int16[:, 0])
-    # plt.show()
-
     recording = NumpyRecording([seg_1_int16, seg_2_int16], sample_frequency)
     recording.set_channel_gains(gain)
     recording.set_channel_offsets([offset] * num_chans)
 
     periods = detect_saturation_periods(
-        recording, saturation_threshold_uV=sat_value * 0.98, voltage_per_sec_threshold=1e-8, job_kwargs=job_kwargs
+        recording, saturation_threshold_uV=sat_value * 0.98, voltage_per_sec_threshold=voltage_per_sec_threshold, job_kwargs=job_kwargs
     )
 
     seg_1_periods = periods[np.where(periods["segment_index"] == 0)]
@@ -102,23 +105,23 @@ def test_detect_saturation_periods():
     periods = detect_saturation_periods(
         recording,
         saturation_threshold_uV=sat_value * (1 / 0.98),
-        voltage_per_sec_threshold=1e-8,
+        voltage_per_sec_threshold=voltage_per_sec_threshold,
         job_kwargs=job_kwargs,
     )
     assert periods["start_sample_index"][0] == 1000
     assert periods["end_sample_index"][0] == 1001
 
-    periods = detect_artifact_periods(
+    periods_entry_function = detect_artifact_periods(
         recording,
         method="saturation",
         method_kwargs=dict(
                 saturation_threshold_uV=sat_value * (1 / 0.98),
-                voltage_per_sec_threshold=1e-8,
+                voltage_per_sec_threshold=voltage_per_sec_threshold,
             ),
-            job_kwargs=job_kwargs,
-        )
+        job_kwargs=job_kwargs,
+    )
 
-
+    assert np.array_equal(periods, periods_entry_function)
 
 if __name__ == "__main__":
     test_detect_artifact_periods()
