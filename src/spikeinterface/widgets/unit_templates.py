@@ -61,15 +61,8 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
             for u, t in templates_dict.items()
         ]
 
-        if use_sortingview:
-            kwargs = dict(
-                channel_locations={
-                    str(ch): dp.channel_locations[i_ch].astype(float) for i_ch, ch in enumerate(channel_ids)
-                }
-            )
-        else:
-            kwargs = {}
-        v_average_waveforms = vv_views.AverageWaveforms(average_waveforms=aw_items, **kwargs)
+        channel_locations = {str(ch): dp.channel_locations[i_ch].astype(float) for i_ch, ch in enumerate(channel_ids)}
+        v_average_waveforms = vv_views.AverageWaveforms(average_waveforms=aw_items, channel_locations=channel_locations)
 
         if not dp.hide_unit_selector:
             v_units_table = generate_unit_table_view(sorting_analyzer.sorting, use_sortingview=use_sortingview)
