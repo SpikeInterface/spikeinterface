@@ -165,7 +165,9 @@ def fix_job_kwargs(runtime_job_kwargs):
         n_jobs = int(n_jobs)
 
     n_jobs = max(n_jobs, 1)
-    job_kwargs["n_jobs"] = min(n_jobs, os.cpu_count())
+    if job_kwargs["pool_engine"] in ("thread", "process"):
+        job_kwargs["n_jobs"] = min(n_jobs, os.cpu_count())
+
 
     # if "n_jobs" not in runtime_job_kwargs and job_kwargs["n_jobs"] == 1 and not is_set_global_job_kwargs_set():
     #     warnings.warn(
@@ -579,6 +581,45 @@ class ChunkRecordingExecutor:
                             returns.append(res)
                         if self.gather_func is not None:
                             self.gather_func(res)
+                if self.progress_bar:
+                    pbar.close()
+                    del pbar
+            
+            elif self.pool_engine == "dask":
+                from dask.distributed import Client
+                from dask_jobqueue import SLURMCluster
+
+                if self.progress_bar:
+                    pbar = tqdm(desc=f"{self.job_name} (workers: {n_jobs} dask)", total=len(recording_slices))
+
+
+                cluster = SLURMCluster(
+                    queue='CPU',
+                    cores=40,
+                    processes=20,
+                    memory="64 GB",
+                    # job_cpu=32,
+                    # job_mem="64G",
+                )
+                cluster.scale(jobs=n_jobs)
+                client = Client(cluster)
+
+                worker_dict = self.init_func(*self.init_args)
+
+                # dask_func = WorkerFuncWrapper(self.func, worker_dict, self.max_threads_per_worker)
+                dask_func = WorkerFuncWrapper(self.func, worker_dict, None)
+
+
+                results = client.map(dask_func, recording_slices)
+
+                for fut in results:
+                    res = fut.result()
+                    if self.progress_bar:
+                        pbar.update(1)
+                    if self.handle_returns:
+                        returns.append(res)
+                    if self.gather_func is not None:
+                        self.gather_func(res)
                 if self.progress_bar:
                     pbar.close()
                     del pbar
