@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
 from typing import List, Dict, Union, Optional, Literal, Tuple
 from itertools import chain, combinations
 import numpy as np
@@ -77,7 +77,7 @@ class Split(BaseModel):
 
 class CurationModel(BaseModel):
     supported_versions: Tuple[Literal["1"], Literal["2"]] = Field(
-        default=["1", "2"], description="Supported versions of the curation format"
+        default=("1", "2"), description="Supported versions of the curation format"
     )
     format_version: str = Field(description="Version of the curation format")
     unit_ids: List[Union[int, str]] = Field(description="List of unit IDs")
