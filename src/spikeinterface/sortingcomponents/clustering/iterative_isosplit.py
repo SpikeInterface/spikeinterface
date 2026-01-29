@@ -116,7 +116,7 @@ class IterativeISOSPLITClustering:
         debug_folder = params["debug_folder"]
 
         params_peak_svd = params["peaks_svd"].copy()
-
+        params_peak_svd["seed"] = params["seed"]
         motion = params_peak_svd["motion"]
         motion_aware = motion is not None
 

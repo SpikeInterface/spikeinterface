@@ -208,6 +208,7 @@ class LupinSorter(ComponentsBasedSorter):
                 dtype="float32",
                 mode="local",
                 radius_um=params["whitening_radius_um"],
+                seed=seed,
             )
 
             if params["apply_motion_correction"]:
@@ -233,11 +234,12 @@ class LupinSorter(ComponentsBasedSorter):
                 job_kwargs=job_kwargs,
             )
 
-            noise_levels = get_noise_levels(recording, return_in_uV=False)
+            
         else:
             recording = recording_raw.astype("float32")
-            noise_levels = get_noise_levels(recording, return_in_uV=False)
             cache_info = None
+        
+        noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed))
 
         # detection
         ms_before = params["ms_before"]
@@ -291,6 +293,7 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["noise_levels"] = noise_levels
         clustering_kwargs["clean_low_firing"]["min_firing_rate"] = params["min_firing_rate"]
         clustering_kwargs["clean_low_firing"]["subsampling_factor"] = all_peaks.size / peaks.size
+        clustering_kwargs["seed"] = seed
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
