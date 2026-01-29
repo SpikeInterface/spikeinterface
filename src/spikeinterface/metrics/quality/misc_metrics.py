@@ -1548,7 +1548,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
 
         # Approximate amplitude pdf with np.histogram
         h = np.histogram(amplitudes, num_histogram_bins)[0]
-        pdf = gaussian_filter1d(h, histogram_smoothing_value, mode='nearest')
+        pdf = gaussian_filter1d(h, histogram_smoothing_value, mode="nearest")
 
         # Find number of missed spikes
         cutoff_point = pdf[-1]  # >> pdf[0] if spikes were cutoff (at higher amplitudes)
