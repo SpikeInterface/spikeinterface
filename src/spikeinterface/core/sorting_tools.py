@@ -913,7 +913,7 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     """
     Remap the "unit_index" field in a spike vector (or period vector) according to new unit ids.
 
-    This is usefull for instance when:
+    This is useful for instance when you:
       * select unit and recompute quickly the "unit_index" in the spike vector
       * merging/spliting periods or spikes and update the "unit_index" in the vector
 
