@@ -71,7 +71,7 @@ class LabelingHistogramsWidget(BaseWidget):
         backend_kwargs["ncols"] = n_cols
         if "figsize" not in backend_kwargs:
             backend_kwargs["figsize"] = (4 * n_cols, 3 * n_rows)
-        self.figure, self.ax, self.axes = make_mpl_figure(n_rows, n_cols, **backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(n_rows, n_cols, **backend_kwargs)
 
         colors = plt.cm.tab10(np.linspace(0, 1, 10))
         absolute_value_metrics = ["amplitude_median"]
@@ -123,10 +123,9 @@ class UpsetPlotWidget(BaseWidget):
     def __init__(
         self,
         sorting_analyzer,
-        unit_type: np.ndarray,
-        unit_type_string: np.ndarray,
+        unit_labels: np.ndarray,
         thresholds: Optional[dict] = None,
-        unit_types_to_plot: Optional[list] = None,
+        unit_labels_to_plot: Optional[list] = None,
         split_non_somatic: bool = False,
         min_subset_size: int = 1,
         backend=None,
@@ -144,18 +143,16 @@ class UpsetPlotWidget(BaseWidget):
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
-        if unit_types_to_plot is None:
+        if unit_labels_to_plot is None:
             if split_non_somatic:
-                unit_types_to_plot = ["noise", "mua", "non_soma_good", "non_soma_mua"]
+                unit_labels_to_plot = ["noise", "mua", "non_soma_good", "non_soma_mua"]
             else:
-                unit_types_to_plot = ["noise", "mua", "non_soma"]
-
+                unit_labels_to_plot = ["noise", "mua", "non_soma"]
         plot_data = dict(
             quality_metrics=combined_metrics,
-            unit_type=unit_type,
-            unit_type_string=unit_type_string,
+            unit_labels=unit_labels,
             thresholds=thresholds,
-            unit_types_to_plot=unit_types_to_plot,
+            unit_labels_to_plot=unit_labels_to_plot,
             min_subset_size=min_subset_size,
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -183,9 +180,9 @@ class UpsetPlotWidget(BaseWidget):
 
         dp = to_attr(data_plot)
         quality_metrics = dp.quality_metrics
-        unit_type_string = dp.unit_type_string
+        unit_labels = dp.unit_labels
         thresholds = dp.thresholds
-        unit_types_to_plot = dp.unit_types_to_plot
+        unit_labels_to_plot = dp.unit_labels_to_plot
         min_subset_size = dp.min_subset_size
 
         try:
@@ -215,13 +212,13 @@ class UpsetPlotWidget(BaseWidget):
         figures = []
         axes_list = []
 
-        for unit_type_label in unit_types_to_plot:
-            mask = unit_type_string == unit_type_label
+        for unit_label in unit_labels_to_plot:
+            mask = unit_labels == unit_label
             n_units = np.sum(mask)
             if n_units == 0:
                 continue
 
-            relevant_metrics = self._get_metrics_for_unit_type(unit_type_label)
+            relevant_metrics = self._get_metrics_for_unit_type(unit_label)
             if relevant_metrics is not None:
                 available_metrics = [m for m in relevant_metrics if m in failure_table.columns]
                 if len(available_metrics) == 0:
@@ -255,7 +252,7 @@ class UpsetPlotWidget(BaseWidget):
                     sort_by="cardinality",
                     sort_categories_by="cardinality",
                 ).plot(fig=fig)
-            fig.suptitle(f"{unit_type_label} (n={n_units})", fontsize=14, y=1.02)
+            fig.suptitle(f"{unit_label} (n={n_units})", fontsize=14, y=1.02)
             figures.append(fig)
             axes_list.append(fig.axes)
 
@@ -295,12 +292,10 @@ class UpsetPlotWidget(BaseWidget):
 
 def plot_unit_labeling_all(
     sorting_analyzer,
-    unit_type: np.ndarray,
-    unit_type_string: np.ndarray,
+    unit_labels: np.ndarray,
     thresholds: Optional[dict] = None,
     split_non_somatic: bool = False,
     include_upset: bool = True,
-    save_folder=None,
     backend=None,
     **kwargs,
 ):
@@ -311,9 +306,7 @@ def plot_unit_labeling_all(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object with computed metrics extensions.
-    unit_type : np.ndarray
-        Array of unit type codes (0=noise, 1=good, 2=mua, 3=non_soma, etc.).
-    unit_type_string : np.ndarray
+    unit_labels : np.ndarray
         Array of unit type labels as strings.
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
@@ -321,10 +314,6 @@ def plot_unit_labeling_all(
         Whether to split "non_soma" into "non_soma_good" and "non_soma_mua".
     include_upset : bool, default: True
         Whether to include UpSet plots (requires upsetplot package).
-    save_folder : str or Path, optional
-        If provided, saves all plots and CSV results to this folder.
-    backend : str, optional
-        Plotting backend.
     **kwargs
         Additional arguments passed to plot functions.
 
@@ -354,36 +343,17 @@ def plot_unit_labeling_all(
         )
 
     # Waveform overlay
-    results["waveforms"] = WaveformOverlayByLabelWidget(sorting_analyzer, unit_type_string, backend=backend, **kwargs)
+    results["waveforms"] = WaveformOverlayByLabelWidget(sorting_analyzer, unit_labels, backend=backend, **kwargs)
 
     # UpSet plots
     if include_upset and has_metrics:
         results["upset"] = UpsetPlotWidget(
             sorting_analyzer,
-            unit_type,
-            unit_type_string,
+            unit_labels,
             thresholds=thresholds,
             split_non_somatic=split_non_somatic,
             backend=backend,
             **kwargs,
         )
-
-    # Save to folder if requested
-    if save_folder is not None:
-        save_folder = Path(save_folder)
-        save_folder.mkdir(parents=True, exist_ok=True)
-
-        # Save plots
-        if "histograms" in results and results["histograms"].figure is not None:
-            results["histograms"].figure.savefig(save_folder / "labeling_histograms.png", dpi=150, bbox_inches="tight")
-        if "waveforms" in results and results["waveforms"].figure is not None:
-            results["waveforms"].figure.savefig(save_folder / "waveform_overlay.png", dpi=150, bbox_inches="tight")
-        if "upset" in results and hasattr(results["upset"], "figures"):
-            for i, fig in enumerate(results["upset"].figures):
-                fig.savefig(save_folder / f"upset_plot_{i}.png", dpi=150, bbox_inches="tight")
-
-        # Save CSV results
-        if has_metrics:
-            save_bombcell_results(combined_metrics, unit_type, unit_type_string, thresholds, save_folder)
 
     return results

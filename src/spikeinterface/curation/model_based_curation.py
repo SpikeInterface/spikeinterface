@@ -154,10 +154,10 @@ class ModelBasedClassification:
             # peak_to_trough_duration was named peak_to_valley
             if "peak_to_trough_duration" in calculated_metrics.columns:
                 calculated_metrics = calculated_metrics.rename(columns={"peak_to_trough_duration": "peak_to_valley"})
-            # main_peak_to_trough_ratio was named peak_trough_ratio and had inverted sign
-            if "main_peak_to_trough_ratio" in calculated_metrics.columns:
+            # peak_after_to_trough_ratio was named peak_trough_ratio and had inverted sign
+            if "peak_after_to_trough_ratio" in calculated_metrics.columns:
                 calculated_metrics = calculated_metrics.rename(
-                    columns={"main_peak_to_trough_ratio": "peak_trough_ratio"}
+                    columns={"peak_after_to_trough_ratio": "peak_trough_ratio"}
                 )
                 calculated_metrics["peak_trough_ratio"] = -1 * calculated_metrics["peak_trough_ratio"]
         return calculated_metrics
