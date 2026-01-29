@@ -72,6 +72,7 @@ class IterativeISOSPLITClustering:
             "similarity_metric": "l1",
             "num_shifts": 3,
             "similarity_thresh": 0.8,
+            "use_lags": True,
         },
         "merge_from_features": None,
         # "merge_from_features": {"merge_radius_um": 60.0},
