@@ -939,9 +939,18 @@ class BaseMetricExtension(AnalyzerExtension):
             Dictionary of default metric columns and their dtypes for each metric.
         """
         default_metric_columns = []
-        for m in cls.metric_list:
-            if metric_names is not None and m.metric_name not in metric_names:
-                continue
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        for metric_name in metric_names:
+            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
+        for metric_name in metric_names:
+            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
             default_metric_columns.extend(m.metric_columns)
         return default_metric_columns
 
@@ -960,9 +969,16 @@ class BaseMetricExtension(AnalyzerExtension):
             Dictionary of metric columns and their descriptions for each metric.
         """
         metric_column_descriptions = {}
-        for m in cls.metric_list:
-            if metric_names is not None and m.metric_name not in metric_names:
-                continue
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                    )
+        for metric_name in metric_names:
+            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
             if m.metric_descriptions is None:
                 metric_column_descriptions.update({col: "no description" for col in m.metric_columns.keys()})
             else:
@@ -996,6 +1012,38 @@ class BaseMetricExtension(AnalyzerExtension):
                     metric_depend_on.add(dep)
         depend_on = list(cls.depend_on) + list(metric_depend_on)
         return depend_on
+
+    def get_computed_metric_names(self):
+        """
+        Get the list of already computed metric names.
+
+        Returns
+        -------
+        computed_metric_names : list[str]
+            List of computed metric names.
+        """
+        if self.data is None or len(self.data) == 0:
+            return []
+        else:
+            computed_metric_columns = self.data["metrics"].columns.tolist()
+            computed_metric_names = []
+            for m in self.metric_list:
+                if all(col in computed_metric_columns for col in m.metric_columns.keys()):
+                    computed_metric_names.append(m.metric_name)
+            return computed_metric_names
+
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
+
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
 
     def _set_params(
         self,
@@ -1154,6 +1202,13 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in metric_names:
             metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
             column_names_dtypes.update(metric.metric_columns)
+
+        # drop metric that don't map to any metric names
+        possible_metric_names = [m.metric_name for m in self.metric_list]
+        wrong_metric_names = [m for m in metric_names if m not in possible_metric_names]
+        if len(wrong_metric_names) > 0:
+            warnings.warn(f"The following metric names are not recognized and will be ignored: {wrong_metric_names}")
+            metric_names = [m for m in metric_names if m in possible_metric_names]
 
         metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
 

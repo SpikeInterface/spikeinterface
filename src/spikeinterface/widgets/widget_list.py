@@ -37,13 +37,20 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
+from .unit_labels import WaveformOverlayByLabelWidget
 from .unit_valid_periods import ValidUnitPeriodsWidget
+from .bombcell_curation import (
+    LabelingHistogramsWidget,
+    UpsetPlotWidget,
+    plot_unit_labeling_all,
+)
 
 widget_list = [
     AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
+    LabelingHistogramsWidget,
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
@@ -77,6 +84,8 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
+    UpsetPlotWidget,
+    WaveformOverlayByLabelWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
@@ -151,6 +160,9 @@ plot_template_metrics = TemplateMetricsWidget
 plot_template_similarity = TemplateSimilarityWidget
 plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
+plot_unit_labels = WaveformOverlayByLabelWidget
+plot_unit_labeling_upset = UpsetPlotWidget
+plot_unit_labeling_histograms = LabelingHistogramsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_unit_presence = UnitPresenceWidget
 plot_unit_probe_map = UnitProbeMapWidget
