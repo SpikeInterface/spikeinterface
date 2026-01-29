@@ -66,6 +66,7 @@ class TestWidgets(unittest.TestCase):
             templates=dict(),
             noise_levels=dict(),
             spike_amplitudes=dict(),
+            amplitude_scalings=dict(max_dense_channels=None),  # required by valid unit periods
             unit_locations=dict(),
             spike_locations=dict(),
             quality_metrics=dict(
@@ -74,6 +75,12 @@ class TestWidgets(unittest.TestCase):
             template_metrics=dict(),
             correlograms=dict(),
             template_similarity=dict(),
+            valid_unit_periods=dict(
+                period_mode="relative",
+                period_target_num_spikes=200,
+                relative_margin_size=0.5,
+                min_num_periods_relative=5,
+            ),
         )
         job_kwargs = dict(n_jobs=-1)
 
@@ -686,6 +693,14 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_motion_info(motion_info, recording=self.recording, backend=backend)
+
+    def test_plot_valid_unit_periods(self):
+        possible_backends = list(sw.ValidUnitPeriodsWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_valid_unit_periods(
+                    self.sorting_analyzer_dense, backend=backend, show_only_units_with_valid_periods=False
+                )
 
 
 if __name__ == "__main__":
