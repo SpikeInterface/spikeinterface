@@ -233,10 +233,6 @@ def _compute_similarity_matrix_numpy(
             overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
-                # symmetric values are handled later
-                # if same_array and j < i:
-                # no need exhaustive looping when same template
-                #   continue
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
 
@@ -328,10 +324,6 @@ if HAVE_NUMBA:
                 for gcount in range(len(overlapping_templates)):
 
                     j = overlapping_templates[gcount]
-                    # symmetric values are handled later
-                    # if same_array and j < i:
-                    # no need exhaustive looping when same template
-                    #    continue
                     src = src_template[:, local_mask[j]].flatten()
                     tgt = (tgt_templates[gcount][:, local_mask[j]]).flatten()
 
@@ -368,9 +360,6 @@ if HAVE_NUMBA:
 
                     if same_array:
                         distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
-
-            # if same_array and num_shifts != 0:
-            #    distances[num_shifts_both_sides - count - 1] = distances[count].T
 
         return distances
 
