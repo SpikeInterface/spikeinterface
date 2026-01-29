@@ -71,7 +71,6 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
-        new_lags = self.data["lags"][unit_indices][:, unit_indices]
         return dict(similarity=new_similarity)
 
     def _merge_extension_data(
@@ -169,7 +168,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             s = self.data["similarity"][old_ind1, old_units_inds]
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
-            
+
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id in new_unit_ids_f:
@@ -445,7 +444,7 @@ def compute_similarity_with_templates_array(
     distances = np.min(distances, axis=0)
     similarity = 1 - distances
 
-    return similarity, lags.astype(np.int32)
+    return similarity, lags
 
 
 def compute_template_similarity_by_pair(
