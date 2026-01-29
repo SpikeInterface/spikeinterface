@@ -69,9 +69,10 @@ class LabelingHistogramsWidget(BaseWidget):
         n_cols = min(4, n_metrics)
         n_rows = int(np.ceil(n_metrics / n_cols))
         backend_kwargs["ncols"] = n_cols
+        backend_kwargs["num_axes"] = n_cols * n_rows
         if "figsize" not in backend_kwargs:
             backend_kwargs["figsize"] = (4 * n_cols, 3 * n_rows)
-        self.figure, self.axes, self.ax = make_mpl_figure(n_rows, n_cols, **backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         colors = plt.cm.tab10(np.linspace(0, 1, 10))
         absolute_value_metrics = ["amplitude_median"]
