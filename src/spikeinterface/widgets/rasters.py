@@ -53,7 +53,7 @@ class BaseRasterWidget(BaseWidget):
     y_ticks : dict | None, default: None
         Ticks on y-axis, passed to `set_yticks`. If None, default ticks are used.
     hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
+        For figpack backend, if True the unit selector is not displayed
     segment_boundary_kwargs : dict | None, default: None
         Additional arguments for the segment boundary lines, passed to `matplotlib.axvline`
     backend : str | None, default None

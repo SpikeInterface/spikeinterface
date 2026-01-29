@@ -22,7 +22,7 @@ class SortingSummaryWidget(BaseWidget):
     """
     Plots spike sorting summary.
     This is the main viewer to visualize the final result with several sub view.
-    This use sortingview (in a web browser) or spikeinterface-gui (with Qt).
+    This use figpack (in a web browser) or spikeinterface-gui (with Qt/Panel).
 
     Parameters
     ----------
@@ -39,13 +39,13 @@ class SortingSummaryWidget(BaseWidget):
     min_similarity_for_correlograms : float, default: 0.2
         Threshold for computing pair-wise cross-correlograms. If template similarity between two units
         is below this threshold, the cross-correlogram is not computed
-        (sortingview backend)
+        (figpack backend)
     curation : bool, default: False
         If True, manual curation is enabled
-        (sortingview backend)
+        (figpack backend)
     label_choices : list or None, default: None
         List of labels to be added to the curation table
-        (sortingview backend)
+        (figpack backend)
     displayed_unit_properties : list or None, default: None
         List of properties to be added to the unit table.
         These may be drawn from the sorting extractor, and, if available,
@@ -127,8 +127,18 @@ class SortingSummaryWidget(BaseWidget):
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
         sorting_analyzer = dp.sorting_analyzer
@@ -145,7 +155,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="sortingview",
+            backend="figpack",
         ).view
         v_average_waveforms = UnitTemplatesWidget(
             sorting_analyzer,
@@ -154,7 +164,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="sortingview",
+            backend="figpack",
         ).view
         v_cross_correlograms = CrossCorrelogramsWidget(
             sorting_analyzer,
@@ -163,7 +173,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="sortingview",
+            backend="figpack",
         ).view
 
         v_unit_locations = UnitLocationsWidget(
@@ -172,7 +182,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="sortingview",
+            backend="figpack",
         ).view
 
         w = TemplateSimilarityWidget(
@@ -181,7 +191,7 @@ class SortingSummaryWidget(BaseWidget):
             immediate_plot=False,
             generate_url=False,
             display=False,
-            backend="sortingview",
+            backend="figpack",
         )
         similarity = w.data_plot["similarity"]
 
@@ -190,7 +200,7 @@ class SortingSummaryWidget(BaseWidget):
         for i1, u1 in enumerate(unit_ids):
             for i2, u2 in enumerate(unit_ids):
                 similarity_scores.append(
-                    vv.UnitSimilarityScore(unit_id1=u1, unit_id2=u2, similarity=similarity[i1, i2].astype("float32"))
+                    vv_views.UnitSimilarityScore(unit_id1=u1, unit_id2=u2, similarity=float(similarity[i1, i2]))
                 )
 
         # unit ids
@@ -199,25 +209,32 @@ class SortingSummaryWidget(BaseWidget):
             dp.displayed_unit_properties,
             similarity_scores=similarity_scores,
             extra_unit_properties=dp.extra_unit_properties,
+            use_sortingview=use_sortingview,
         )
 
         if dp.curation:
-            v_curation = vv.SortingCuration2(label_choices=dp.label_choices)
-            v1 = vv.Splitter(direction="vertical", item1=vv.LayoutItem(v_units_table), item2=vv.LayoutItem(v_curation))
+            if use_sortingview:
+                curation_class = vv_views.SortingCuration2
+            else:
+                curation_class = vv_views.SortingCuration
+            v_curation = curation_class(label_choices=dp.label_choices)
+            v1 = vv_base.Splitter(
+                direction="vertical", item1=vv_views.LayoutItem(v_units_table), item2=vv_views.LayoutItem(v_curation)
+            )
         else:
             v1 = v_units_table
-        v2 = vv.Splitter(
+        v2 = vv_base.Splitter(
             direction="horizontal",
-            item1=vv.LayoutItem(v_unit_locations, stretch=0.2),
-            item2=vv.LayoutItem(
-                vv.Splitter(
+            item1=vv_base.LayoutItem(v_unit_locations, stretch=0.2),
+            item2=vv_base.LayoutItem(
+                vv_base.Splitter(
                     direction="horizontal",
-                    item1=vv.LayoutItem(v_average_waveforms),
-                    item2=vv.LayoutItem(
-                        vv.Splitter(
+                    item1=vv_base.LayoutItem(v_average_waveforms),
+                    item2=vv_base.LayoutItem(
+                        vv_base.Splitter(
                             direction="vertical",
-                            item1=vv.LayoutItem(v_spike_amplitudes),
-                            item2=vv.LayoutItem(v_cross_correlograms),
+                            item1=vv_base.LayoutItem(v_spike_amplitudes),
+                            item2=vv_base.LayoutItem(v_cross_correlograms),
                         )
                     ),
                 )
@@ -225,7 +242,7 @@ class SortingSummaryWidget(BaseWidget):
         )
 
         # assemble layout
-        self.view = vv.Splitter(direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2))
+        self.view = vv_base.Splitter(direction="horizontal", item1=vv_base.LayoutItem(v1), item2=vv_base.LayoutItem(v2))
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
