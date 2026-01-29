@@ -89,7 +89,7 @@ class _DetectSaturation(PipelineNode):
         self,
         recording,
         saturation_threshold_uV,
-        voltage_per_sec_threshold,
+        uV_per_sec_threshold,
         proportion,
     ):
         PipelineNode.__init__(self, recording, return_output=True)
@@ -98,12 +98,12 @@ class _DetectSaturation(PipelineNode):
         offsets = recording.get_channel_offsets()
         num_chans = recording.get_num_channels()
 
-        self.voltage_per_sec_threshold = voltage_per_sec_threshold
+        self.uV_per_sec_threshold = uV_per_sec_threshold
         thresh = np.full((num_chans, ), saturation_threshold_uV)
         # 0.98 is empirically determined as the true saturating point is
         # slightly lower than the documented saturation point of the probe        
         self.saturation_threshold_unscaled = (thresh - offsets) / gains * 0.98
-        self.voltage_per_sec_threshold = (voltage_per_sec_threshold - offsets) / gains
+        self.uV_per_sec_threshold = (uV_per_sec_threshold - offsets) / gains
 
         self.sampling_frequency = recording.get_sampling_frequency()
         self.proportion = proportion
@@ -124,10 +124,10 @@ class _DetectSaturation(PipelineNode):
         """
         saturation = np.mean(np.abs(traces) > self.saturation_threshold_unscaled, axis=1)
 
-        if self.voltage_per_sec_threshold is not None:
+        if self.uV_per_sec_threshold is not None:
             fs = self.sampling_frequency
             # then compute the derivative of the voltage saturation
-            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) / fs >= self.voltage_per_sec_threshold, axis=1)
+            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) / fs >= self.uV_per_sec_threshold, axis=1)
             # Note this means the velocity is not checked for the last sample in the
             # check because we are taking the forward derivative
             n_diff_saturated = np.r_[n_diff_saturated, 0]
@@ -152,7 +152,7 @@ class _DetectSaturation(PipelineNode):
 def detect_saturation_periods(
     recording,
     saturation_threshold_uV,  # 1200 uV
-    voltage_per_sec_threshold=None,  # 1e-8 V.s-1
+    uV_per_sec_threshold=None,  # 1e-8 V.s-1
     proportion=0.2,
     job_kwargs=None,
 ):
@@ -173,7 +173,7 @@ def detect_saturation_periods(
         The voltage saturation threshold in volts. This will depend on the recording
         probe and amplifier gain settings. For NP1 the value of 1200 uV is recommended (IBL).
         Note that NP2 probes are more difficult to saturate than NP1.
-    voltage_per_sec_threshold : None | float
+    uV_per_sec_threshold : None | float
         The first-derivative threshold in volts per second. Periods of the data over which the change
         in velocity is greater than this threshold will be detected as saturation events. Use `None` to
         skip this method and only use `saturation_threshold_uV` for detection. Otherwise, the value should be
@@ -203,7 +203,7 @@ def detect_saturation_periods(
     node0 = _DetectSaturation(
         recording,
         saturation_threshold_uV=saturation_threshold_uV,
-        voltage_per_sec_threshold=voltage_per_sec_threshold,
+        uV_per_sec_threshold=uV_per_sec_threshold,
         proportion=proportion,
     )
 

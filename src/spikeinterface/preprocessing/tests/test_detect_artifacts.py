@@ -36,7 +36,7 @@ def test_detect_saturation_periods():
 
     # Generate some data in uV
     sat_value = 1200
-    voltage_per_sec_threshold = 12 / sample_frequency
+    uV_per_sec_threshold = 12 / sample_frequency
     rng = np.random.default_rng()
     data = rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10
 
@@ -81,7 +81,7 @@ def test_detect_saturation_periods():
     recording.set_channel_offsets([offset] * num_chans)
 
     periods = detect_saturation_periods(
-        recording, saturation_threshold_uV=sat_value * 0.98, voltage_per_sec_threshold=voltage_per_sec_threshold, job_kwargs=job_kwargs
+        recording, saturation_threshold_uV=sat_value * 0.98, uV_per_sec_threshold=uV_per_sec_threshold, job_kwargs=job_kwargs
     )
 
     seg_1_periods = periods[np.where(periods["segment_index"] == 0)]
@@ -105,7 +105,7 @@ def test_detect_saturation_periods():
     periods = detect_saturation_periods(
         recording,
         saturation_threshold_uV=sat_value * (1 / 0.98),
-        voltage_per_sec_threshold=voltage_per_sec_threshold,
+        uV_per_sec_threshold=uV_per_sec_threshold,
         job_kwargs=job_kwargs,
     )
     assert periods["start_sample_index"][0] == 1000
@@ -116,7 +116,7 @@ def test_detect_saturation_periods():
         method="saturation",
         method_kwargs=dict(
                 saturation_threshold_uV=sat_value * (1 / 0.98),
-                voltage_per_sec_threshold=voltage_per_sec_threshold,
+                uV_per_sec_threshold=uV_per_sec_threshold,
             ),
         job_kwargs=job_kwargs,
     )
