@@ -55,8 +55,6 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             # make compatible analyzer created between february 24 and july 24
             self.params["max_lag_ms"] = 0.0
             self.params["support"] = "union"
-        if "lags" not in self.data:
-            self.data["lags"] = np.zeros_like(self.data["similarity"], dtype=np.int32)
 
     def _set_params(self, method="cosine", max_lag_ms=0, support="union"):
         if method == "cosine_similarity":
@@ -93,7 +91,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity, new_lags = compute_similarity_with_templates_array(
+        new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -104,12 +102,10 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         )
 
         old_similarity = self.data["similarity"]
-        old_lags = self.data["lags"]
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
-        lags = np.zeros((n, n), dtype=old_lags.dtype)
 
         local_mask = ~np.isin(all_new_unit_ids, new_unit_ids)
         sub_units_ids = all_new_unit_ids[local_mask]
@@ -122,19 +118,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
 
-            l = self.data["lags"][old_ind1, old_units_inds]
-            lags[unit_ind1, sub_units_inds] = l
-            lags[sub_units_inds, unit_ind1] = l
-
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id in new_unit_ids:
                 new_index = list(new_unit_ids).index(unit_id)
                 similarity[unit_ind, :] = new_similarity[new_index, :]
                 similarity[:, unit_ind] = new_similarity[new_index, :]
-
-                lags[unit_ind, :] = new_lags[new_index, :]
-                lags[:, unit_ind] = new_lags[new_index, :]
 
         return dict(similarity=similarity)
 
@@ -154,7 +143,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids_f, new_sorting_analyzer.channel_ids
             )
 
-        new_similarity, new_lags = compute_similarity_with_templates_array(
+        new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
             method=self.params["method"],
@@ -165,12 +154,10 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         )
 
         old_similarity = self.data["similarity"]
-        old_lags = self.data["lags"]
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
-        lags = np.zeros((n, n), dtype=old_lags.dtype)
 
         local_mask = ~np.isin(all_new_unit_ids, new_unit_ids_f)
         sub_units_ids = all_new_unit_ids[local_mask]
@@ -183,19 +170,12 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
             
-            l = self.data["lags"][old_ind1, old_units_inds]
-            lags[unit_ind1, sub_units_inds] = l
-            lags[sub_units_inds, unit_ind1] = l
-
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
             if unit_id in new_unit_ids_f:
                 new_index = list(new_unit_ids_f).index(unit_id)
                 similarity[unit_ind, :] = new_similarity[new_index, :]
                 similarity[:, unit_ind] = new_similarity[new_index, :]
-
-                lags[unit_ind, :] = new_lags[new_index, :]
-                lags[:, unit_ind] = new_lags[new_index, :]
 
         return dict(similarity=similarity)
 
@@ -215,14 +195,9 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             other_sparsity=sparsity,
         )
         self.data["similarity"] = similarity
-        self.data["lags"] = lags
 
     def _get_data(self):
         return self.data["similarity"]
-
-    def get_lags(self):
-        return self.data["lags"]
-
 
 # @alessio:  compute_template_similarity() is now one inner SortingAnalyzer only
 register_result_extension(ComputeTemplateSimilarity)
