@@ -37,7 +37,6 @@ def unitrefine_label_units(
     The approach is described in [Jain]_.
     """
     import pandas as pd
-    import pandas as pd
 
     if noise_neural_classifier is None and sua_mua_classifier is None:
         raise ValueError(
