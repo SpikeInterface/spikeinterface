@@ -136,11 +136,11 @@ def test_amplitude_cutoff():
     Generate two artificial gaussians, one truncated and one not. Check the metrics are higher for the truncated one.
     """
     np.random.seed(1)
-    amplitudes = np.random.normal(-3, 1, 2000)
-    amplitudes_trunc = amplitudes[amplitudes < -4]
+    amps = np.random.normal(0, 1, 1000)
+    amps_trunc = amps[amps > -1]
 
-    fraction_missing_1 = amplitude_cutoff(amplitudes=amplitudes, num_histogram_bins=20)
-    fraction_missing_2 = amplitude_cutoff(amplitudes=amplitudes_trunc, num_histogram_bins=20)
+    fraction_missing_1 = amplitude_cutoff(amplitudes=amps, num_histogram_bins=20)
+    fraction_missing_2 = amplitude_cutoff(amplitudes=amps_trunc, num_histogram_bins=20)
 
     assert fraction_missing_1 < fraction_missing_2
 

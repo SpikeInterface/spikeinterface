@@ -1520,6 +1520,9 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     """
     Calculate approximate fraction of spikes missing from the right tail of a distribution of amplitudes.
 
+    Find the missing spikes from the left tail of the distribution. Assumes cutoff happens at spikes
+    with lower amplitudes.
+
     See compute_amplitude_cutoffs for additional documentation
 
     Parameters
@@ -1551,9 +1554,9 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         pdf = gaussian_filter1d(h, histogram_smoothing_value, mode="nearest")
 
         # Find number of missed spikes
-        cutoff_point = pdf[-1]  # >> pdf[0] if spikes were cutoff (at higher amplitudes)
-        G = np.argmax(pdf >= cutoff_point)  # first occurence where the pdf was greater than cutoff
-        num_missed_spikes = np.sum(pdf[:G])  # theoretically missing spikes on the right side
+        cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
+        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
+        num_missed_spikes = np.sum(pdf[G + 1:])  # theoretically missing spikes on the left side
 
         # Compute fraction of missed spikes
         fraction_missing = num_missed_spikes / (len(amplitudes) + num_missed_spikes)
