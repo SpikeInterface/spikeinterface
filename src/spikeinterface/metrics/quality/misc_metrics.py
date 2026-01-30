@@ -873,8 +873,9 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    available_extension = ("spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes")
-                           else "amplitude_scalings")
+    available_extension = (
+        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+    )
     extension = sorting_analyzer.get_extension(available_extension)
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
@@ -1006,8 +1007,9 @@ def compute_noise_cutoffs(
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
 
-    available_extension = ("spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes")
-                           else "amplitude_scalings")
+    available_extension = (
+        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+    )
     extension = sorting_analyzer.get_extension(available_extension)
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
@@ -1544,7 +1546,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         # Find number of missed spikes
         cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
         G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
-        num_missed_spikes = np.sum(pdf[G + 1:])  # theoretically missing spikes on the left side
+        num_missed_spikes = np.sum(pdf[G + 1 :])  # theoretically missing spikes on the left side
 
         # Compute fraction of missed spikes
         fraction_missing = num_missed_spikes / (len(amplitudes) + num_missed_spikes)
