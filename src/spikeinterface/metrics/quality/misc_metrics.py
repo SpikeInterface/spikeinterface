@@ -873,21 +873,15 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        extension = sorting_analyzer.get_extension("spike_amplitudes")
-        all_amplitudes = extension.get_data()
-        invert_amplitudes = np.median(all_amplitudes) > 0
-    elif sorting_analyzer.has_extension("amplitude_scalings"):
-        # amplitude scalings are positive, we need to invert them
-        invert_amplitudes = True
-        extension = sorting_analyzer.get_extension("amplitude_scalings")
-
+    available_extension = ("spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes")
+                           else "amplitude_scalings")
+    extension = sorting_analyzer.get_extension(available_extension)
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
 
-        if invert_amplitudes:
+        if np.median(amplitudes) < 0:  # amplitude_cutoff expects positive amplitudes
             amplitudes = -amplitudes
         all_fraction_missing[unit_id] = amplitude_cutoff(
             amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
@@ -1012,15 +1006,9 @@ def compute_noise_cutoffs(
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
 
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        extension = sorting_analyzer.get_extension("spike_amplitudes")
-        all_amplitudes = extension.get_data()
-        invert_amplitudes = np.median(all_amplitudes) > 0
-    elif sorting_analyzer.has_extension("amplitude_scalings"):
-        # amplitude scalings are positive, we need to invert them
-        invert_amplitudes = True
-        extension = sorting_analyzer.get_extension("amplitude_scalings")
-
+    available_extension = ("spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes")
+                           else "amplitude_scalings")
+    extension = sorting_analyzer.get_extension(available_extension)
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
@@ -1029,7 +1017,7 @@ def compute_noise_cutoffs(
             cutoff, ratio = np.nan, np.nan
             continue
 
-        if invert_amplitudes:
+        if np.median(amplitudes) < 0:  # _noise_cutoff expects positive amplitudes
             amplitudes = -amplitudes
 
         cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
