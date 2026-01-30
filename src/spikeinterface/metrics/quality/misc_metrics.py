@@ -1508,7 +1508,7 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
 
 def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3, amplitudes_bins_min_ratio=5):
     """
-    Calculate approximate fraction of spikes missing from the right tail of a distribution of amplitudes.
+    Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Find the missing spikes from the left tail of the distribution. Assumes cutoff happens at spikes
     with lower amplitudes.
