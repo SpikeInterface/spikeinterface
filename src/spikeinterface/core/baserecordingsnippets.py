@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import warnings
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
@@ -67,7 +68,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         Parameters
         ----------
-        probe_or_probegroup: Probe, list of Probe, or ProbeGroup
+        probe: a Probe object
             The probe(s) to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
             How to add the "group" property.
@@ -81,6 +82,7 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording: BaseRecording
             A view of the recording (ChannelSlice or clone or itself)
         """
+
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
@@ -177,7 +179,15 @@ class BaseRecordingSnippets(BaseExtractor):
         probe_as_numpy_array = probe_as_numpy_array[order]
         probe_as_numpy_array["device_channel_indices"] = np.arange(probe_as_numpy_array.size, dtype="int64")
 
-        # create recording : channel slice or clone or self
+        deprecation_msg = (
+            "in_place will change its default to True in version 0.103 and stop returning a recording"
+            " use recording.create_with_probes(probe_or_probegroup) instead to replicate the old functionality"
+        )
+        warnings.warn(
+            deprecation_msg,
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if in_place:
             if not np.array_equal(new_channel_ids, self.get_channel_ids()):
                 raise Exception("set_probe(inplace=True) must have all channel indices")
@@ -240,6 +250,27 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording.annotate(probes_info=probes_info)
 
         return sub_recording
+
+    def create_with_probes(self, probe_or_probegroup, group_mode="by_probe"):
+        """
+        Creates a new recording with a probe attached.
+
+        Parameters
+        ----------
+        probe_or_probegroup: Probe, list of Probes, or ProbeGroup
+            The probe(s) to be attached to the recording
+        group_mode: "by_probe" | "by_shank", default: "by_probe"
+            "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
+            or  shanks ("by_shank")
+
+        Returns
+        -------
+        new_recording: BaseRecording
+            A new recording object with the probe attached
+        """
+
+        # TODO: Once in_place is True by default in set_probes, we might re-organize the code
+        return self.set_probegroup(probe_or_probegroup, in_place=False)
 
     def get_probe(self):
         probes = self.get_probes()
