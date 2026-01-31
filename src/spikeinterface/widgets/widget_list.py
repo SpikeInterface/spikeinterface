@@ -30,6 +30,7 @@ from .unit_depths import UnitDepthsWidget
 from .unit_locations import UnitLocationsWidget
 from .unit_presence import UnitPresenceWidget
 from .unit_probe_map import UnitProbeMapWidget
+from .unit_spatial import UnitSpatialDistributionsWidget
 from .unit_summary import UnitSummaryWidget
 from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
@@ -73,6 +74,7 @@ widget_list = [
     UnitLocationsWidget,
     UnitPresenceWidget,
     UnitProbeMapWidget,
+    UnitSpatialDistributionsWidget,
     UnitSummaryWidget,
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
@@ -154,6 +156,7 @@ plot_unit_depths = UnitDepthsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_unit_presence = UnitPresenceWidget
 plot_unit_probe_map = UnitProbeMapWidget
+plot_unit_spatial_distribution = UnitSpatialDistributionsWidget
 plot_unit_summary = UnitSummaryWidget
 plot_unit_templates = UnitTemplatesWidget
 plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
