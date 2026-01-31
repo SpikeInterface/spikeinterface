@@ -329,7 +329,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             rec_segment = NeoRecordingSegment(
                 self.neo_reader, self.block_index, segment_index, self.stream_index, self.inverted_gain
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs.update(kwargs)
 
@@ -434,7 +434,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 neo_returns_frames=self.neo_returns_frames,
             )
 
-            self.add_sorting_segment(sorting_segment)
+            self.add_segment(sorting_segment)
 
     def _infer_sampling_frequency_from_analog_signal(self, stream_id: Optional[str] = None) -> float:
         """

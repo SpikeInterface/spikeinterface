@@ -35,9 +35,9 @@ class UnitsSelectionSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, self._renamed_unit_ids)
 
-        for parent_segment in self._parent_sorting._sorting_segments:
+        for parent_segment in self._parent_sorting.segments:
             sub_segment = UnitsSelectionSortingSegment(parent_segment, ids_conversion)
-            self.add_sorting_segment(sub_segment)
+            self.add_segment(sub_segment)
 
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
         self._parent = parent_sorting

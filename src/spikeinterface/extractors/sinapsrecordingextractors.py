@@ -133,7 +133,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
             num_bits=sinaps_info["num_bits"],
             stream_name=stream_name,
         )
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         if stream_name == "aux":
             self.set_channel_gains(sinaps_info["gain_aux"])

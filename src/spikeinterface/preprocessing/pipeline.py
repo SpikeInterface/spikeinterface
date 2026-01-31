@@ -186,7 +186,10 @@ def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend
         analyzer_folder = Path(analyzer_folder)
 
     if format == "auto":
-        if str(analyzer_folder).endswith(".zarr"):
+        analyzer_folder_str = str(analyzer_folder)
+        if analyzer_folder_str.endswith("/"):
+            analyzer_folder_str = analyzer_folder_str[:-1]
+        if analyzer_folder_str.endswith(".zarr"):
             format = "zarr"
         else:
             format = "binary_folder"

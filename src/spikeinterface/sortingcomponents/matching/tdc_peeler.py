@@ -203,7 +203,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             # interpolation bins edges
             self.interpolation_time_bins_s = []
             self.interpolation_time_bin_edges_s = []
-            for segment_index, parent_segment in enumerate(recording._recording_segments):
+            for segment_index, parent_segment in enumerate(recording.segments):
                 # in this case, interpolation_time_bin_size_s is set.
                 s_end = parent_segment.get_num_samples()
                 t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]))

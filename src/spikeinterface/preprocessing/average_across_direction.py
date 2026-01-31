@@ -77,7 +77,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
 
         self.parent_recording = parent_recording
         self.num_channels = n_pos_unique
-        for segment in parent_recording._recording_segments:
+        for segment in parent_recording.segments:
             recording_segment = AverageAcrossDirectionRecordingSegment(
                 segment,
                 self.num_channels,
@@ -85,7 +85,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
                 n_chans_each_pos,
                 dtype_,
             )
-            self.add_recording_segment(recording_segment)
+            self.add_segment(recording_segment)
 
         self._kwargs = dict(
             parent_recording=parent_recording,

@@ -135,11 +135,11 @@ class CommonReferenceRecording(BasePreprocessor):
         else:
             ref_channel_indices = None
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = CommonReferenceRecordingSegment(
                 parent_segment, reference, operator, group_indices, ref_channel_indices, local_radius, neighbors, dtype_
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs = dict(
             recording=recording,
