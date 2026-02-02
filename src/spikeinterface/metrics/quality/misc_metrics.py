@@ -1171,21 +1171,16 @@ def compute_drift_metrics(
             drift_mads[unit_id] = np.nan
             continue
         position_diff = median_position_segments[unit_id] - reference_positions[unit_id]
-        if np.any(np.isnan(position_diff)):
-            # deal with nans: if more than 50% nans --> set to nan
-            if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
-                ptp_drift = np.nan
-                std_drift = np.nan
-                mad_drift = np.nan
-                failed_units.append(unit_id)
-            else:
-                ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
-                std_drift = np.nanstd(np.abs(position_diff))
-                mad_drift = np.nanmedian(np.abs(position_diff - np.nanmean(position_diff)))
+        # deal with nans: if more than 50% nans (default) --> set to nan
+        if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
+            ptp_drift = np.nan
+            std_drift = np.nan
+            mad_drift = np.nan
+            failed_units.append(unit_id)
         else:
-            ptp_drift = np.ptp(position_diff)
-            std_drift = np.std(position_diff)
-            mad_drift = np.median(np.abs(position_diff - np.mean(position_diff)))
+            ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
+            std_drift = np.nanstd(position_diff)
+            mad_drift = np.nanmedian(np.abs(position_diff - np.nanmedian(position_diff)))
         drift_ptps[unit_id] = ptp_drift
         drift_stds[unit_id] = std_drift
         drift_mads[unit_id] = mad_drift
