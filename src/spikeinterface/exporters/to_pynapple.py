@@ -84,15 +84,15 @@ def to_pynapple_tsgroup(
 
     # get the underlying sorting
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
-        sorting = sorting_analyzer_or_sorting.sorting # use the sorting of SortingAnalyzer
+        sorting = sorting_analyzer_or_sorting.sorting  # use the sorting of SortingAnalyzer
     elif isinstance(sorting_analyzer_or_sorting, BaseSorting):
-        sorting = sorting_analyzer_or_sorting # already a Sorting instance
-    
+        sorting = sorting_analyzer_or_sorting  # already a Sorting instance
+
     # attach unit properties from sorting
     if attach_unit_properties:
         property_df = pd.DataFrame(index=unit_ids)
         property_keys = sorting.get_property_keys()
-        for property_key in property_keys: # loop through sorting's properties
+        for property_key in property_keys:  # loop through sorting's properties
             property_data = sorting.get_property(property_key)
             property_df[property_key] = property_data
         metadata_list.append(property_df)
