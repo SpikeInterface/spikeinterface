@@ -264,7 +264,7 @@ print(all_labels)
 #
 # .. dropdown:: More about security
 #
-#   Sharing models, with are Python objects, is complicated.
+#   Sharing models, which are Python objects, is complicated.
 #   We have chosen to use the `skops format <https://skops.readthedocs.io/en/stable/>`_, instead
 #   of the common but insecure ``.pkl`` format (read about ``pickle`` security issues
 #   `here <https://lwn.net/Articles/964392/>`_). While unpacking the ``.skops`` file, each function
