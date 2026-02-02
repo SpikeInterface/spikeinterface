@@ -170,7 +170,6 @@ class NearestNeighbor(BaseMetric):
     depend_on = ["principal_components"]
     needs_tmp_data = True
     needs_job_kwargs = True
-    deprecated_names = ["nn_hit_rate", "nn_miss_rate"]
 
 
 def _nn_advanced_one_unit(args):
@@ -355,7 +354,6 @@ class Silhouette(BaseMetric):
     metric_descriptions = {"silhouette": "Silhouette score metric based on PCA space."}
     depend_on = ["principal_components"]
     needs_tmp_data = True
-    deprecated_names = ["silhouette_full"]
 
 
 pca_metrics_list = [
