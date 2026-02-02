@@ -172,12 +172,12 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_cura
 
 def test_unitrefine_label_units(sorting_analyzer_for_curation):
     """Test the `unitrefine_label_units` function."""
+    from spikeinterface.curation import unitrefine_label_units
 
     sorting_analyzer_for_curation.compute("template_metrics", include_multi_channel_metrics=True)
     sorting_analyzer_for_curation.compute("quality_metrics")
 
-    from spikeinterface.curation import unitrefine_label_units
-
+    # test passing both classifiers
     labels = unitrefine_label_units(
         sorting_analyzer_for_curation,
         noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
@@ -186,4 +186,34 @@ def test_unitrefine_label_units(sorting_analyzer_for_curation):
 
     assert "label" in labels.columns
     assert "probability" in labels.columns
-    assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.get_unit_ids())
+    assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.unit_ids)
+
+    # test only noise neural classifier
+    labels = unitrefine_label_units(
+        sorting_analyzer_for_curation,
+        noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
+        sua_mua_classifier=None,
+    )
+
+    assert "label" in labels.columns
+    assert "probability" in labels.columns
+    assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.unit_ids)
+
+    # test only sua mua classifier
+    labels = unitrefine_label_units(
+        sorting_analyzer_for_curation,
+        noise_neural_classifier=None,
+        sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
+    )
+
+    assert "label" in labels.columns
+    assert "probability" in labels.columns
+    assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.unit_ids)
+
+    # test passing none
+    with pytest.raises(ValueError):
+        labels = unitrefine_label_units(
+            sorting_analyzer_for_curation,
+            noise_neural_classifier=None,
+            sua_mua_classifier=None,
+        )
