@@ -289,6 +289,7 @@ def auto_label_units(*args, **kwargs):
         "`auto_label_units` is deprecated and will be removed in v0.105.0. "
         "Please use `model_based_label_units` instead.",
         DeprecationWarning,
+        stacklevel=2,
     )
     return model_based_label_units(*args, **kwargs)
 
