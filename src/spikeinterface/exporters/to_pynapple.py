@@ -8,7 +8,7 @@ from warnings import warn
 def to_pynapple_tsgroup(
     sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
     attach_unit_metadata=True,
-    attach_unit_properties=False,
+    attach_unit_properties=True,
     segment_index=None,
 ):
     """
@@ -82,19 +82,13 @@ def to_pynapple_tsgroup(
         if (template_metrics := sorting_analyzer_or_sorting.get_extension("template_metrics")) is not None:
             metadata_list.append(template_metrics.get_data())
 
-    # get the underlying sorting
-    if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
-        sorting = sorting_analyzer_or_sorting.sorting  # use the sorting of SortingAnalyzer
-    elif isinstance(sorting_analyzer_or_sorting, BaseSorting):
-        sorting = sorting_analyzer_or_sorting  # already a Sorting instance
-
     # attach unit properties from sorting
     if attach_unit_properties:
         property_df = pd.DataFrame(index=unit_ids)
         property_keys = sorting.get_property_keys()
         for property_key in property_keys:  # loop through sorting's properties
             property_data = sorting.get_property(property_key)
-            property_df[property_key] = property_data
+            property_df[property_key] = list(property_data)
         metadata_list.append(property_df)
 
     if len(metadata_list) > 0:
