@@ -168,9 +168,8 @@ def test_detect_bad_channels_ibl(num_channels):
     recording.set_channel_offsets(0)
 
     # Generate random channels to be dead / noisy
-    is_bad = np.random.choice(
-        np.arange(num_channels - 3), size=np.random.randint(5, int(num_channels * 0.25)), replace=False
-    )
+    rng = np.random.default_rng(seed=None)
+    is_bad = rng.choice(np.arange(num_channels - 3), size=np.random.randint(5, int(num_channels * 0.25)), replace=False)
     is_noisy, is_dead = np.array_split(is_bad, 2)
     not_noisy = np.delete(np.arange(num_channels), is_noisy)
 
@@ -230,8 +229,9 @@ def test_detect_bad_channels_ibl(num_channels):
     assert np.array_equal(recording.ids_to_indices(bad_channel_ids), np.where(bad_channel_labels_ibl != 0)[0])
 
     # Test on randomly sorted channels
-    recording_scrambled = recording.channel_slice(
-        np.random.choice(recording.channel_ids, len(recording.channel_ids), replace=False)
+    rng = np.random.default_rng(seed=None)
+    recording_scrambled = recording.select_channels(
+        rng.choice(recording.channel_ids, len(recording.channel_ids), replace=False)
     )
     bad_channel_ids_scrambled, bad_channel_label_scrambled = detect_bad_channels(
         recording_scrambled,

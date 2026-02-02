@@ -30,6 +30,7 @@ import spikeinterface.full as si
 from spikeinterface.core.testing import check_sortings_equal
 from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
 from probeinterface.io import write_prb
+from spikeinterface.extractors import read_kilosort_as_analyzer
 
 import kilosort
 from kilosort.parameters import DEFAULT_SETTINGS
@@ -76,7 +77,7 @@ PARAMS_TO_TEST_DICT = {
     "x_centers": 5,
     "binning_depth": 1,
     "drift_smoothing": [250, 250, 250],
-    "artifact_threshold": 200,
+    "artifact_threshold": 500,
     "ccg_threshold": 1e12,
     "acg_threshold": 1e12,
     "cluster_downsampling": 2,
@@ -115,6 +116,13 @@ if parse(kilosort.__version__) >= parse("4.0.33"):
 if parse(kilosort.__version__) >= parse("4.0.37"):
     PARAMS_TO_TEST_DICT.update({"max_cluster_subset": 20})
     PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
+
+if parse(kilosort.__version__) >= parse("4.1.2"):
+    PARAMS_TO_TEST_DICT.update({"batch_downsampling": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("batch_downsampling")
+
+    PARAMS_TO_TEST_DICT.update({"cluster_init_seed": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_init_seed")
 
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
@@ -328,6 +336,8 @@ class TestKilosort4Long:
             "scale",
             "file_object",
         ]
+        if parse(kilosort.__version__) >= parse("4.1.2"):
+            expected_arguments += ["batch_downsampling"]
 
         self._check_arguments(BinaryFiltered, expected_arguments)
 
@@ -351,6 +361,12 @@ class TestKilosort4Long:
         """
         recording, paths = recording_and_paths
         param_key = parameter
+
+        # Non-default batch_downsampling fails for short recordings, as there aren't
+        # enough batches. Since we test on a 5s recording, we skip it.
+        if param_key == "batch_downsampling":
+            return
+
         param_value = PARAMS_TO_TEST_DICT[param_key]
 
         # Setup parameters for KS4 and run it natively
@@ -390,11 +406,14 @@ class TestKilosort4Long:
         ops = ops.tolist()  # strangely this makes a dict
         assert ops[param_key] == param_value
 
-        # Finally, check out test parameters actually change the output of
-        # KS4, ensuring our tests are actually doing something (exxcept for some params).
+        # Check our test parameters actually change the output of
+        # KS4, ensuring our tests are actually doing something (except for some params).
         if param_key not in PARAMETERS_NOT_AFFECTING_RESULTS:
             with pytest.raises(AssertionError):
                 check_sortings_equal(default_kilosort_sorting, sorting_si)
+
+        # Check that the kilosort -> analyzer tool doesn't error
+        analyzer = read_kilosort_as_analyzer(kilosort_output_dir)
 
     def test_clear_cache(self,recording_and_paths, tmp_path):
         """

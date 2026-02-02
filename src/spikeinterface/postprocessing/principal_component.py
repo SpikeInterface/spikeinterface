@@ -27,8 +27,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     n_components : int, default: 5
         Number of components fo PCA
     mode : "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
@@ -70,9 +68,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,

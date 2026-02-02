@@ -17,7 +17,6 @@ import multiprocessing
 import threading
 from threadpoolctl import threadpool_limits
 
-
 _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
     * chunk_duration or chunk_size or chunk_memory or total_memory
         - chunk_size : int
@@ -116,6 +115,10 @@ def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs, is_set_global_job_kwargs_set
 
     job_kwargs = get_global_job_kwargs()
+
+    if runtime_job_kwargs is None:
+        # in this case this will be the global job_kwargs
+        runtime_job_kwargs = dict()
 
     # deprecation with backward compatibility
     # this can be removed in 0.104.0

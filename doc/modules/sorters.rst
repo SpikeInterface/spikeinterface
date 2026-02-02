@@ -4,13 +4,14 @@ Sorters module
 The :py:mod:`spikeinterface.sorters` module is where spike sorting happens!
 
 On one hand, SpikeInterface provides wrapper classes to many commonly used spike sorters like
-Kilosort, Spyking-circus, etc. (see :ref:`compatible-sorters`). All these sorter classes inherit
+Kilosort, Mountainsort, etc. (see :ref:`compatible-sorters`). All these sorter classes inherit
 from the :py:class:`~spikeinterface.sorters.BaseSorter` class, which provides the common tools to
 run spike sorters.
 
-On the other hand SpikeInterface directly implements some internal sorters (**spykingcircus2**)
+On the other hand SpikeInterface directly implements some internal sorters
 that do not depend on external tools, but depend on the :py:mod:`spikeinterface.sortingcomponents`
-module. **Note that internal sorters are currently experimental and under development**.
+module. Check the :ref:`internal_sorters` page for more details on internal sorters and their
+strategies.
 
 A drawback of using external sorters is the separate installation of these tools. Sometimes they need MATLAB,
 specific versions of CUDA, specific gcc versions or outdated versions of
@@ -56,17 +57,18 @@ to easily run spike sorters:
 
     # run Tridesclous
     sorting_TDC = run_sorter(sorter_name="tridesclous", recording=recording, folder="/folder_TDC")
-    # run Kilosort2.5
-    sorting_KS2_5 = run_sorter(sorter_name="kilosort2_5", recording=recording, folder="/folder_KS2_5")
+    # run Kilosort4
+    sorting_KS2_5 = run_sorter(sorter_name="kilosort4", recording=recording, folder="/folder_KS4")
     # run IronClust
     sorting_IC = run_sorter(sorter_name="ironclust", recording=recording, folder="/folder_IC")
     # run pyKilosort
     sorting_pyKS = run_sorter(sorter_name="pykilosort", recording=recording, folder="/folder_pyKS")
-    # run SpykingCircus
-    sorting_SC = run_sorter(sorter_name="spykingcircus", recording=recording, folder="/folder_SC")
+    # run SpykingCircus2
+    sorting_SC2 = run_sorter(sorter_name="spykingcircus2", recording=recording, folder="/folder_SC2")
 
 
-Then the output, which is a :py:class:`~spikeinterface.core.BaseSorting` object, can be easily
+Whatever the sorter would usually save is saved in the ``folder`` you specify. In addition, each function
+return a :py:class:`~spikeinterface.core.BaseSorting` object, which can be easily
 saved or directly post-processed:
 
 .. code-block:: python
@@ -76,7 +78,7 @@ saved or directly post-processed:
 
 The :py:func:`~spikeinterface.sorters.run_sorter` function has several options:
 
-  * to remove or not the sorter working folder (:code:`output_folder/sorter_output`)
+  * to remove or not the sorter working folder (:code:`folder/sorter_output`)
     with: :code:`remove_existing_folder=True/False` (this can save lot of space because some sorters
     need data duplication!)
   * to control their verbosity: :code:`verbose=False/True`
@@ -97,6 +99,8 @@ Spike-sorter-specific parameters can be controlled directly from the
 Parameters from all sorters can be retrieved with these functions:
 
 .. code-block:: python
+
+    from spikeinterface.sorters import get_default_sorter_params, get_sorter_params_description
 
     params = get_default_sorter_params(sorter_name_or_class='spykingcircus')
     print("Parameters:\n", params)
@@ -147,13 +151,13 @@ The containerized approach has several advantages:
 * Installation is much easier.
 * Different spike sorters with conflicting dependencies can be easily run side-by-side.
 * The results of the analysis are more reproducible and not dependant on the operating system
-* MATLAB-based sorters can be run **without a MATLAB licence**.
+* MATLAB-based sorters can be run **without a MATLAB license**.
 
 The containers can be run in Docker or Singularity, so having Docker or Singularity installed
 is a prerequisite.
 
 
-Running spike sorting in a Docker container just requires:
+Running spike sorting in a Docker container requires:
 
 1) have docker installed
 2) have docker Python SDK installed (:code:`pip install docker`)
@@ -183,7 +187,9 @@ The following code creates a test recording and runs a containerized spike sorte
 
 .. code-block:: python
 
-    test_recording, _ = toy_example(
+    import spikeinterface.extractors as se
+
+    test_recording, _ = se.toy_example(
         duration=30,
         seed=0,
         num_channels=64,
@@ -273,7 +279,7 @@ Then you can build and tag the docker image with:
     docker build -t my-user/ks3-with-spikeinterface-test:0.1.0 .
 
 
-And use the custom image whith the :code:`run_sorter` function:
+And use the custom image with the :code:`run_sorter` function:
 
 .. code-block:: python
 
@@ -296,6 +302,8 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
 
 .. code-block:: python
 
+    from spikeinterface.sorters import run_sorter_jobs
+
     # here we run 2 sorters on 2 different recordings = 4 jobs
     recording = ...
     another_recording = ...
@@ -315,14 +323,11 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
 :py:func:`~spikeinterface.sorters.run_sorters` has several "engines" available to launch the computation:
 
 * "loop": sequential
-* "joblib": in parallel
 * "slurm": in parallel, using the SLURM job manager
 
 .. code-block:: python
 
   run_sorter_jobs(job_list=job_list, engine='loop')
-
-  run_sorter_jobs(job_list=job_list, engine='joblib', engine_kwargs={'n_jobs': 2})
 
   run_sorter_jobs(job_list=job_list, engine='slurm', engine_kwargs={'cpus_per_task': 10, 'mem': '5G'})
 
@@ -335,6 +340,7 @@ probes, or if the recording has data from different probes.
 Alternatively, for long silicon probes, such as Neuropixels, one could think of spike sorting different areas
 separately, for example using a different sorter for the hippocampus, the thalamus, or the cerebellum.
 Running spike sorting by group is indeed a very common need.
+
 
 A :py:class:`~spikeinterface.core.BaseRecording` object has the ability to split itself into a dictionary of
 sub-recordings given a certain property (see :py:meth:`~spikeinterface.core.BaseRecording.split_by`).
@@ -398,14 +404,15 @@ In this example, we create a 16-channel recording with 4 tetrodes:
         sortings[group] = sorting
 
 
-Note: you can feed the dict of sortings and dict of recordings directly to :code:`create_sorting_analyzer` to make
-a SortingAnalyzer from the split data: :ref:`read more <process_by_group>`.
+.. note::
+
+    Read more about preprocessing and sorting by group in our How To, :ref:`process_by_group`.
 
 
 Handling multi-segment recordings
 ---------------------------------
 
-In several experiments, several acquisitions are performed in sequence, for example a
+In some experiments, several acquisitions are performed in sequence, for example a
 baseline/intervention. In these cases, since the underlying spiking activity can be assumed to be
 the same (or at least very similar), the recordings can be concatenated. This example shows how
 to concatenate the recordings before spike sorting and how to split the sorted output based
@@ -419,20 +426,18 @@ do not handle multi-segment, and in that case we will use the
 
 .. code-block:: python
 
+    import spikeinterface.core as si
 
     # Let's create 4 recordings
     recordings_list = []
     for i in range(4):
-      rec, _ = si.toy_example(duration=10., num_channels=4, seed=0, num_segments=1)
+      rec, _ = se.toy_example(duration=10., num_channels=4, seed=0, num_segments=1)
       recordings_list.append(rec)
 
 
     # Case 1: the sorter handles multi-segment objects
 
     multirecording = si.append_recordings(recordings_list)
-    # let's set a probe
-    multirecording = multirecording.set_probe(recording_single.get_probe())
-    print(multirecording)
     # multirecording has 4 segments of 10s each
 
     # run tridesclous in multi-segment mode
@@ -441,14 +446,14 @@ do not handle multi-segment, and in that case we will use the
 
     # Case 2: the sorter DOES NOT handle multi-segment objects
     # The `concatenate_recordings()` mimics a mono-segment object that concatenates all segments
-    multirecording = si.concatenate_recordings(recordings_list)
-    # let's set a probe
-    multirecording = multirecording.set_probe(recording_single.get_probe())
-    print(multirecording)
-    # multirecording has 1 segment of 40s each
+    recording_concat = si.concatenate_recordings(recordings_list)
+    # recording_concat has 1 segment of 40s each
 
     # run mountainsort4 in mono-segment mode
-    multisorting = si.run_sorter(sorter_name='mountainsort4', recording=multirecording)
+    sorting_concat = si.run_sorter(sorter_name='mountainsort4', recording=recording_concat)
+
+    # split sorting back to multi-segment using concatenation info
+    multisorting = si.split_sorting(sorting_concat, recording_concat)
 
 See also the :ref:`multi_seg` section.
 
@@ -471,6 +476,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Kilosort2** :code:`run_sorter(sorter_name='kilosort2')`
 * **Kilosort2.5** :code:`run_sorter(sorter_name='kilosort2_5')`
 * **Kilosort3** :code:`run_sorter(sorter_name='kilosort3')`
+* **Kilosort4** :code:`run_sorter(sorter_name='kilosort4')`
 * **PyKilosort** :code:`run_sorter(sorter_name='pykilosort')`
 * **Mountainsort4** :code:`run_sorter(sorter_name='mountainsort4')`
 * **Mountainsort5** :code:`run_sorter(sorter_name='mountainsort5')`
@@ -481,12 +487,12 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
 
-Here is a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
-experimental for now:
+Here is a list of internal sorter based on :py:mod:`spikeinterface.sortingcomponents`:
 
+* **Lupin** :code:`run_sorter(sorter_name='lupin')`
 * **Spyking Circus2** :code:`run_sorter(sorter_name='spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter(sorter_name='tridesclous2')`
-
+* **Simple** :code:`run_sorter(sorter_name='simple')`
 
 Here is the list of legacy sorters that are no longer supported, but can still be run
 with an older version of SpikeInterface:
@@ -495,24 +501,18 @@ with an older version of SpikeInterface:
 * **YASS** :code:`run_sorter(sorter_name='yass')`
 
 
-In 2024, we expect to add many more sorters to this list.
-
-
 Installed Sorters
 -----------------
 
 To check which sorters are useable in a given Python environment, one can print the installed
-sorters list. An example is shown in a pre-defined miniconda3 environment.
-
-
-Then you can check the installed Sorter list,
+sorters list:
 
 .. code:: python
 
   from spikeinterface.sorters import installed_sorters
   installed_sorters()
 
-which outputs,
+which, in our case, outputs
 
 .. parsed-literal::
   ['herdingspikes',
@@ -549,8 +549,10 @@ Internal sorters
 In 2022, we started the :py:mod:`spikeinterface.sortingcomponents` module to break into components a sorting pipeline.
 These components can be gathered to create a new sorter. We already have 2 sorters to showcase this new module:
 
-* :code:`spykingcircus2` (experimental, but ready to be tested)
-* :code:`tridesclous2` (experimental, not ready to be used)
+* :code:`spykingcircus2`
+* :code:`tridesclous2`
+* :code:`lupin`
+* :code:`simple`
 
 There are some benefits of using these sorters:
   * they directly handle SpikeInterface objects, so they do not need any data copy.
@@ -562,6 +564,13 @@ From the user's perspective, they behave exactly like the external sorters:
 .. code-block:: python
 
     sorting = run_sorter(sorter_name="spykingcircus2", recording=recording, folder="/tmp/folder")
+
+These sorters are based on the :py:mod:`spikeinterface.sortingcomponents`, allowing fast and modular implementations
+of various algorithms often encountered in spike-sorting.
+
+Please go to :ref:`internal_sorters` for more details on how they work.
+
+Read more in the :ref:`sorting-components-module` docs for more low level details on components.
 
 
 Contributing

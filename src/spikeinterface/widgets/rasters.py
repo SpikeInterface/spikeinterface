@@ -327,7 +327,6 @@ class BaseRasterWidget(BaseWidget):
 
         backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
-        self._update_plot()
 
     def _update_plot(self, change=None):
         for ax in self.axes.flatten():
@@ -344,9 +343,6 @@ class BaseRasterWidget(BaseWidget):
 
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
-
-
-import numpy as np
 
 
 class RasterWidget(BaseRasterWidget):

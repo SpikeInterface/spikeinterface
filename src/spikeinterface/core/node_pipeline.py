@@ -10,22 +10,10 @@ from pathlib import Path
 
 import numpy as np
 
+from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
-
-
-base_peak_dtype = [
-    ("sample_index", "int64"),
-    ("channel_index", "int64"),
-    ("amplitude", "float64"),
-    ("segment_index", "int64"),
-]
-
-
-spike_peak_dtype = base_peak_dtype + [
-    ("unit_index", "int64"),
-]
 
 
 class PipelineNode:
@@ -317,6 +305,7 @@ class WaveformsNode(PipelineNode):
         self.ms_after = ms_after
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
+        self.neighbours_mask = None
 
 
 class ExtractDenseWaveforms(WaveformsNode):
@@ -356,8 +345,6 @@ class ExtractDenseWaveforms(WaveformsNode):
             ms_after=ms_after,
             return_output=return_output,
         )
-        # this is a bad hack to differentiate in the child if the parents is dense or not.
-        self.neighbours_mask = None
 
     def get_trace_margin(self):
         return max(self.nbefore, self.nafter)
@@ -526,7 +513,6 @@ def run_node_pipeline(
     nodes,
     job_kwargs,
     job_name="pipeline",
-    # mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
     squeeze_output=True,
@@ -574,7 +560,7 @@ def run_node_pipeline(
     gather_mode : "memory" | "npy"
         How to gather the output of the nodes.
     gather_kwargs : dict
-        OPtions to control the "gather engine". See GatherToMemory or GatherToNpy.
+        Options to control the "gather engine". See GatherToMemory or GatherToNpy.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
     folder : str | Path | None
@@ -785,7 +771,7 @@ class GatherToMemory:
 
 class GatherToNpy:
     """
-    Gather output of nodes into npy file and then open then as memmap.
+    Gather output of nodes into npy file and then open them as memmap.
 
 
     The trick is:
@@ -892,6 +878,6 @@ class GatherToNpy:
             return np.load(filename, mmap_mode="r")
 
 
-class GatherToHdf5:
+class GatherToZarr:
     pass
     # Fot me (sam) this is not necessary unless someone realy really want to use

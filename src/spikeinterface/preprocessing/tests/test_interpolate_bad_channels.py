@@ -75,7 +75,8 @@ def test_compare_real_data_with_ibl():
     )
 
     num_channels = si_recording.get_num_channels()
-    bad_channel_indexes = np.random.choice(num_channels, 10, replace=False)
+    rng = np.random.default_rng(seed=None)
+    bad_channel_indexes = rng.choice(num_channels, 10, replace=False)
     bad_channel_ids = si_recording.channel_ids[bad_channel_indexes]
     si_recording = spre.scale(si_recording, dtype="float32")
 
@@ -123,12 +124,13 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     recording = generate_recording(num_channels=num_channels, durations=[1])
 
     # distribute default probe locations across 4 shanks if set
-    x = np.random.choice(shanks, num_channels)
+    rng = np.random.default_rng(seed=None)
+    x = rng.choice(shanks, num_channels)
     for idx, __ in enumerate(recording._properties["contact_vector"]):
         recording._properties["contact_vector"][idx][1] = x[idx]
 
     # generate random bad channel locations
-    bad_channel_indexes = np.random.choice(num_channels, np.random.randint(1, int(num_channels / 5)), replace=False)
+    bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
     bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
     # Run SI and IBL interpolation and check against eachother

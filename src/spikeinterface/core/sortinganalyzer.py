@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Literal, Optional, Any
+from typing import Literal, Optional, Any, Iterable
 
 from pathlib import Path
 from itertools import chain
@@ -22,6 +22,7 @@ import probeinterface
 import spikeinterface
 
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
+from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
@@ -371,6 +372,15 @@ class SortingAnalyzer:
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
+
+        if has_exceeding_spikes(sorting=sorting, recording=recording):
+            warnings.warn(
+                "Your sorting has spikes with samples times greater than your recording length. These spikes have been removed."
+            )
+            # import here to avoid circular import
+            from spikeinterface.curation.remove_excess_spikes import RemoveExcessSpikesSorting
+
+            sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
 
         if format == "memory":
             sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
@@ -1013,7 +1023,7 @@ class SortingAnalyzer:
                 # merge units
                 all_unit_ids = unit_ids
                 sparsity_mask = np.zeros((len(all_unit_ids), self.sparsity.mask.shape[1]), dtype=bool)
-                mergeable, masks = self.are_units_mergeable(
+                _, masks = self.are_units_mergeable(
                     merge_unit_groups,
                     sparsity_overlap=sparsity_overlap,
                     merging_mode=merging_mode,
@@ -1023,14 +1033,7 @@ class SortingAnalyzer:
                 for unit_index, unit_id in enumerate(all_unit_ids):
                     if unit_id in merge_new_unit_ids:
                         merge_unit_group = tuple(merge_unit_groups[merge_new_unit_ids.index(unit_id)])
-                        if not mergeable[merge_unit_group]:
-                            raise Exception(
-                                f"The sparsity of {merge_unit_group} do not overlap enough for a soft merge using "
-                                f"a sparsity threshold of {sparsity_overlap}. You can either lower the threshold or use "
-                                "a hard merge."
-                            )
-                        else:
-                            sparsity_mask[unit_index] = masks[merge_unit_group]
+                        sparsity_mask[unit_index] = masks[merge_unit_group]
                     else:
                         # This means that the unit is already in the previous sorting
                         index = self.sorting.id_to_index(unit_id)
@@ -1062,6 +1065,10 @@ class SortingAnalyzer:
         if sorting_provenance is None:
             # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
             sorting_provenance = self.sorting
+        # add in-memory properties added to the analyzer
+        for key in self.sorting.get_property_keys():
+            if key not in sorting_provenance.get_property_keys():
+                sorting_provenance.set_property(key, self.sorting.get_property(key))
 
         if merge_unit_groups is None and split_units is None:
             # when only some unit_ids then the sorting must be sliced
@@ -1128,16 +1135,12 @@ class SortingAnalyzer:
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
-        # make a copy of extensions
-        # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
-        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
-        # hack: quality metrics are computed at last
-        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
-        if qm_extension_params is not None:
-            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
-
-        for extension_name, extension in sorted_extensions.items():
+        extensions_to_compute = _sort_extensions_by_dependency(
+            {ext.extension_name: ext.params for ext in self.extensions.values()}
+        )
+        for extension_name in extensions_to_compute:
+            extension = self.extensions[extension_name]
             if merge_unit_groups is None and split_units is None:
                 # copy full or select
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
@@ -1257,6 +1260,7 @@ class SortingAnalyzer:
         censor_ms: float | None = None,
         merging_mode: str = "soft",
         sparsity_overlap: float = 0.75,
+        raise_error_if_overlap_fails: bool = True,
         new_id_strategy: str = "append",
         return_new_unit_ids: bool = False,
         format: str = "memory",
@@ -1286,7 +1290,10 @@ class SortingAnalyzer:
             reloading waveforms if needed
         sparsity_overlap : float, default 0.75
             The percentage of overlap that units should share in order to accept merges. If this criteria is not
-            achieved, soft merging will not be possible and an error will be raised
+            achieved for a pair of units, soft merging will not be applied to them.
+        raise_error_if_overlap_fails : bool, default: True
+            If True and `sparsity_overlap` fails for any unit merges, this will raise an error. If False, units which fail the
+            `sparsity_overlap` threshold will be skipped in the merge.
         new_id_strategy : "append" | "take_first", default: "append"
             The strategy that should be used, if `new_unit_ids` is None, to create new unit_ids.
 
@@ -1319,15 +1326,43 @@ class SortingAnalyzer:
             if len(units) < 2:
                 raise ValueError("Merging requires at least two units to merge")
 
+        # remove units which do not pass the sparsity threshold
+        if self.sparsity is not None and merging_mode == "soft":
+
+            mergeable = self.are_units_mergeable(
+                merge_unit_groups,
+                sparsity_overlap=sparsity_overlap,
+                merging_mode=merging_mode,
+                return_masks=False,
+            )
+
+            mergeable_unit_groups = []
+            unmergeable_unit_groups = []
+            for merge_unit_group, mergeable in zip(merge_unit_groups, mergeable.values()):
+                if mergeable:
+                    mergeable_unit_groups.append(merge_unit_group)
+                else:
+                    unmergeable_unit_groups.append(merge_unit_group)
+
+            if len(unmergeable_unit_groups) > 0:
+                if raise_error_if_overlap_fails:
+                    error_message = f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. Either lower your `sparsity_overlap` or use the flag `raise_error_if_overlap_fails = False` to skip these units in your merge."
+                    raise Exception(error_message)
+                else:
+                    warning_message = f"The sparsity of the units in the merge groups {unmergeable_unit_groups} do not overlap enough for a soft merge using a sparsity threshold of {sparsity_overlap}. They will not be merged."
+                    warnings.warn(warning_message)
+        else:
+            mergeable_unit_groups = merge_unit_groups
+
         new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, merge_unit_groups, new_unit_ids, new_id_strategy
+            self.unit_ids, mergeable_unit_groups, new_unit_ids, new_id_strategy
         )
-        all_unit_ids = _get_ids_after_merging(self.unit_ids, merge_unit_groups, new_unit_ids=new_unit_ids)
+        all_unit_ids = _get_ids_after_merging(self.unit_ids, mergeable_unit_groups, new_unit_ids=new_unit_ids)
 
         new_analyzer = self._save_or_select_or_merge_or_split(
             format=format,
             folder=folder,
-            merge_unit_groups=merge_unit_groups,
+            merge_unit_groups=mergeable_unit_groups,
             unit_ids=all_unit_ids,
             censor_ms=censor_ms,
             merging_mode=merging_mode,
@@ -1620,11 +1655,17 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"please remove the arguments {set(params_)} from the compute function."
+            )
             self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
         elif isinstance(input, list):
             params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, "Too many arguments for SortingAnalyzer.compute_several_extensions()"
+            assert len(params_) == 0, (
+                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                f"please remove the arguments {set(params_)} from the compute function."
+            )
             extensions = {k: {} for k in input}
             if extension_params is not None:
                 for ext_name, ext_params in extension_params.items():
@@ -1676,7 +1717,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         for child in _get_children_dependencies(extension_name):
             if self.has_extension(child):
-                print(f"Deleting {child}")
+                if verbose:
+                    print(f"Deleting extension: {child}")
                 self.delete_extension(child)
 
         params, job_kwargs = split_job_kwargs(kwargs)
@@ -1686,7 +1728,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             assert (
                 self.has_recording() or self.has_temporary_recording()
             ), f"Extension {extension_name} requires the recording"
-        for dependency_name in extension_class.depend_on:
+        required_dependencies = extension_class.get_required_dependencies(**params)
+        for dependency_name in required_dependencies:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
@@ -1731,30 +1774,48 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+        # Check dependencies: either already computed or in the extensions to compute
+        extensions_to_compute = list(extensions.keys())
+        for extension_name, extension_params in extensions.items():
+            required_dependencies = get_extension_class(extension_name).get_required_dependencies(**extension_params)
+            for dependency_name in required_dependencies:
+                if "|" in dependency_name:
+                    ok = any(
+                        self.has_extension(name) or name in extensions_to_compute for name in dependency_name.split("|")
+                    )
+                else:
+                    ok = self.has_extension(dependency_name) or dependency_name in extensions_to_compute
+                assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
+        # Sort extensions by dependency order
         sorted_extensions = _sort_extensions_by_dependency(extensions)
 
         for extension_name in sorted_extensions.keys():
             for child in _get_children_dependencies(extension_name):
+                if verbose:
+                    print(f"Deleting extension: {child}")
                 self.delete_extension(child)
 
+        # Group extensions by pipeline usage, to run them together
+        # Extensions whose dependencies (required or optional) include pipeline extensions are run after the pipeline
         extensions_with_pipeline = {}
-        extensions_without_pipeline = {}
+        extensions_pre_pipeline = {}
         extensions_post_pipeline = {}
         for extension_name, extension_params in sorted_extensions.items():
-            if extension_name == "quality_metrics":
-                # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
-                # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
-                extensions_post_pipeline[extension_name] = extension_params
-                continue
             extension_class = get_extension_class(extension_name)
             if extension_class.use_nodepipeline:
                 extensions_with_pipeline[extension_name] = extension_params
+            elif any(
+                get_extension_class(d).use_nodepipeline
+                for d in extension_class.get_any_dependencies(**extension_params)
+                if d in sorted_extensions
+            ):
+                extensions_post_pipeline[extension_name] = extension_params
             else:
-                extensions_without_pipeline[extension_name] = extension_params
+                extensions_pre_pipeline[extension_name] = extension_params
 
         # First extensions without pipeline
-        for extension_name, extension_params in extensions_without_pipeline.items():
+        for extension_name, extension_params in extensions_pre_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
                 self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
@@ -1809,10 +1870,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 if save:
                     extension_instance.save()
 
-        # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
-        # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
-        # An alternative could be to extend the "depend_on" attribute to use optional and to check if an extension
-        # depends on the output of the pipeline nodes (e.g. depend_on=["spike_amplitudes[optional]"])
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
@@ -1955,6 +2012,30 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
         return get_default_analyzer_extension_params(extension_name)
 
+    def get_metrics_extension_data(self):
+        """
+        Get all metrics data into a single dataframe.
+
+        Returns
+        -------
+        metrics_df : pandas.DataFrame
+            A concatenated dataframe with all available metrics.
+        """
+        import pandas as pd
+        from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
+
+        all_metrics_data = []
+        for extension_name, ext in self.extensions.items():
+            if isinstance(ext, BaseMetricExtension):
+                metric_data = ext.get_data()
+                all_metrics_data.append(metric_data)
+
+        if len(all_metrics_data) > 0:
+            metrics_df = pd.concat(all_metrics_data, axis=1)
+        else:
+            metrics_df = pd.DataFrame(index=self.unit_ids)
+        return metrics_df
+
 
 def _sort_extensions_by_dependency(extensions):
     """
@@ -1964,7 +2045,7 @@ def _sort_extensions_by_dependency(extensions):
     Parameters
     ----------
     extensions : dict
-        A dict of extensions.
+        A dict of extensions and their parameters.
 
     Returns
     -------
@@ -1973,16 +2054,30 @@ def _sort_extensions_by_dependency(extensions):
     """
 
     extensions_list = list(extensions.keys())
-    extension_params = list(extensions.values())
+    extension_params_list = list(extensions.values())
 
     i = 0
     while i < len(extensions_list):
 
         extension = extensions_list[i]
-        dependencies = get_extension_class(extension).depend_on
+        extension_params = extension_params_list[i]
+
+        required_dependencies = get_extension_class(extension).get_required_dependencies(**extension_params)
+        optional_dependencies = get_extension_class(extension).get_optional_dependencies(**extension_params)
+        for dependency in required_dependencies:
+            if "|" in dependency:
+                for dep in dependency.split("|"):
+                    if extension not in _extension_children[dep]:
+                        print(f"Adding missing dependency child link: {dep} -> {extension}")
+                        _extension_children[dep].append(extension)
+            else:
+                if extension not in _extension_children[dependency]:
+                    print(f"Adding missing dependency child link: {dependency} -> {extension}")
+                    _extension_children[dependency].append(extension)
 
         # Split cases with an "or" in them, and flatten into a list
-        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in dependencies]))
+        all_dependencies = required_dependencies + optional_dependencies
+        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in all_dependencies]))
 
         # Should only iterate if nothing has happened.
         # Otherwise, should check the dependency which has just been moved => at position i
@@ -1994,8 +2089,8 @@ def _sort_extensions_by_dependency(extensions):
 
                 dependency_arg = extensions_list.index(dependency)
 
-                extension_params.pop(dependency_arg)
-                extension_params.insert(i, extensions[dependency])
+                extension_params_list.pop(dependency_arg)
+                extension_params_list.insert(i, extensions[dependency])
 
                 extensions_list.pop(dependency_arg)
                 extensions_list.insert(i, dependency)
@@ -2005,7 +2100,7 @@ def _sort_extensions_by_dependency(extensions):
         if did_nothing:
             i += 1
 
-    return dict(zip(extensions_list, extension_params))
+    return dict(zip(extensions_list, extension_params_list))
 
 
 global _possible_extensions
@@ -2066,7 +2161,7 @@ def register_result_extension(extension_class):
 
         # create the children dpendencies to be able to delete on re-compute
         _extension_children[extension_class.extension_name] = []
-        for parent_name in extension_class.depend_on:
+        for parent_name in extension_class.get_required_dependencies():
             if "|" in parent_name:
                 for name in parent_name.split("|"):
                     _extension_children[name].append(extension_class.extension_name)
@@ -2333,6 +2428,65 @@ class AnalyzerExtension:
         # return None to indicate that the extension should be (re)computed.
         return None
 
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        """
+        Return required parent extensions that the extension
+        depends on. By default, retuired extensions are the ones in the
+        ``cls.depend_on`` attribute and optional extensions are an empty list.
+        The behavior can be overridden in sub-classes.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension depends on.
+        """
+        return cls.depend_on
+
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        """
+        Return optional parent extensions that the extension
+        depends on. By default, optional extensions are an empty list.
+        The behavior can be overridden in sub-classes.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension optionally depends on.
+        """
+        return []
+
+    @classmethod
+    def get_any_dependencies(cls, **params):
+        """
+        Return all parent extensions that the extension depends on.
+        Dependencies with "|" operator are flattened.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension depends on.
+        """
+        required = cls.get_required_dependencies(**params)
+        optional = cls.get_optional_dependencies(**params)
+        # flatten dependencies with "|"
+        all_dependencies = required + optional
+        all_dependencies = list(chain.from_iterable([dep.split("|") for dep in all_dependencies]))
+        return all_dependencies
+
+    @classmethod
+    def get_default_params(cls):
+        """
+        Get the default params for the extension.
+
+        Returns
+        -------
+        default_params : dict
+            The default parameters for the extension.
+        """
+        return get_default_analyzer_extension_params(cls.extension_name)
+
     def load_run_info(self):
         run_info = None
         if self.format == "binary_folder":
@@ -2405,8 +2559,7 @@ class AnalyzerExtension:
                         ext_data = pickle.load(f)
                 else:
                     continue
-                self.data[ext_data_name] = ext_data
-
+                self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
@@ -2427,7 +2580,7 @@ class AnalyzerExtension:
                 else:
                     # this load in memmory
                     ext_data = np.array(ext_data_)
-                self.data[ext_data_name] = ext_data
+                self.set_data(ext_data_name, ext_data)
 
         if len(self.data) == 0:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
@@ -2530,8 +2683,9 @@ class AnalyzerExtension:
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
+                    ext_data_ = check_json(ext_data)
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
-                        json.dump(ext_data, f)
+                        json.dump(ext_data_, f)
                 elif isinstance(ext_data, np.ndarray):
                     data_file = extension_folder / f"{ext_data_name}.npy"
                     if isinstance(ext_data, np.memmap) and data_file.exists():
@@ -2561,10 +2715,12 @@ class AnalyzerExtension:
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
-                if isinstance(ext_data, dict):
+                if isinstance(ext_data, (dict, list)):
+                    ext_data_ = check_json(ext_data)
                     extension_group.create_dataset(
-                        name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
+                        name=ext_data_name, data=np.array([ext_data_], dtype=object), object_codec=numcodecs.JSON()
                     )
+                    extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
@@ -2725,6 +2881,9 @@ class AnalyzerExtension:
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 
+    def set_data(self, ext_data_name, ext_data):
+        self.data[ext_data_name] = ext_data
+
 
 # this is a hardcoded list to to improve error message and auto_import mechanism
 # this is important because extension are registered when the submodule is imported
@@ -2742,9 +2901,11 @@ _builtin_extensions = {
     "principal_components": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",
     "spike_locations": "spikeinterface.postprocessing",
-    "template_metrics": "spikeinterface.postprocessing",
     "template_similarity": "spikeinterface.postprocessing",
     "unit_locations": "spikeinterface.postprocessing",
-    # from quality metrics
-    "quality_metrics": "spikeinterface.qualitymetrics",
+    "valid_unit_periods": "spikeinterface.postprocessing",
+    # from metrics
+    "quality_metrics": "spikeinterface.metrics",
+    "template_metrics": "spikeinterface.metrics",
+    "spiketrain_metrics": "spikeinterface.metrics",
 }

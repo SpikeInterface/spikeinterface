@@ -26,11 +26,14 @@ def test_BaseRecording(create_cache_folder):
     num_samples = 30
     sampling_frequency = 10000
     dtype = "int16"
+    seed = None
+    rng = np.random.default_rng(seed=seed)
 
     file_paths = [cache_folder / f"test_base_recording_{i}.raw" for i in range(num_seg)]
     for i in range(num_seg):
         a = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
-        a[:] = np.random.randn(*a.shape).astype(dtype)
+        a[:] = rng.normal(scale=5000, size=a.shape).astype(dtype)
+
     rec = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_chan, dtype=dtype
     )
@@ -176,11 +179,23 @@ def test_BaseRecording(create_cache_folder):
 
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
-    positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0]]
-    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
-    probe.set_device_channel_indices([2, -1, 0])
+    positions = [
+        [0.0, 0.0],
+        [0.0, 15.0],
+        [0, 30.0],
+        [100.0, 0.0],
+        [100.0, 15.0],
+        [100.0, 30.0],
+    ]
+    probe.set_contacts(
+        positions=positions, shapes="circle", shape_params={"radius": 5}, shank_ids=["a"] * 3 + ["b"] * 3
+    )
+    probe.set_device_channel_indices(
+        [2, -1, 0, -1, -1, -1],
+    )
     probe.create_auto_shape()
 
+    rec_p = rec.set_probe(probe, group_mode="auto")
     rec_p = rec.set_probe(probe, group_mode="by_shank")
     rec_p = rec.set_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
@@ -201,6 +216,7 @@ def test_BaseRecording(create_cache_folder):
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
     traces2 = rec2.get_traces(segment_index=0)
+
     assert np.array_equal(traces2, rec_p.get_traces(segment_index=0))
 
     # from probeinterface.plotting import plot_probe_group, plot_probe
@@ -209,10 +225,35 @@ def test_BaseRecording(create_cache_folder):
     # plot_probe(probe2)
     # plt.show()
 
+    # test different group mode
+    probe = Probe(ndim=2)
+    positions_two_side = positions + positions
+    shank_ids = ["a", "a", "a", "b", "b", "b"] * 2
+    contact_sides = ["front"] * 6 + ["back"] * 6
+    probe.set_contacts(
+        positions=positions_two_side,
+        shapes="circle",
+        shape_params={"radius": 5},
+        shank_ids=shank_ids,
+        contact_sides=contact_sides,
+    )
+    probe.set_device_channel_indices(np.arange(12))
+    probe.create_auto_shape()
+    traces = np.zeros((1000, 12), dtype="int16")
+    rec = NumpyRecording([traces], 30000.0)
+    rec1 = rec.set_probe(probe, group_mode="auto")
+    assert np.unique(rec1.get_property("group")).size == 4
+    rec2 = rec.set_probe(probe, group_mode="by_probe")
+    assert np.unique(rec2.get_property("group")).size == 1
+    rec3 = rec.set_probe(probe, group_mode="by_shank")
+    assert np.unique(rec3.get_property("group")).size == 2
+    rec4 = rec.set_probe(probe, group_mode="by_side")
+    assert np.unique(rec4.get_property("group")).size == 4
+
     # set unconnected probe
     probe = Probe(ndim=2)
     positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0]]
-    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
+    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5}, shank_ids=["a", "a", "a"])
     probe.set_device_channel_indices([-1, -1, -1])
     probe.create_auto_shape()
 
@@ -468,5 +509,9 @@ def test_time_slice_with_time_vector():
 
 
 if __name__ == "__main__":
-    # test_BaseRecording()
-    test_interleaved_probegroups()
+    import tempfile
+
+    tmp_path = Path(tempfile.mkdtemp())
+
+    test_BaseRecording(tmp_path)
+    # test_interleaved_probegroups()

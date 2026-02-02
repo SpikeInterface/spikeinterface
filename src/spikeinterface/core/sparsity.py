@@ -10,7 +10,6 @@ from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates_with_accumulator
 
-
 _sparsity_doc = """
     method : str
         * "best_channels" : N best channels with the largest amplitude. Use the "num_channels" argument to specify the
@@ -246,6 +245,18 @@ class ChannelSparsity:
             sparse_templates[unit_index, :, : sparse_template.shape[2]] = sparse_template
 
         return sparse_templates
+
+    def densify_templates(self, templates_array: np.ndarray) -> np.ndarray:
+        assert templates_array.shape[0] == self.num_units
+
+        densified_shape = (self.num_units, templates_array.shape[1], self.num_channels)
+        dense_templates = np.zeros(shape=densified_shape, dtype=templates_array.dtype)
+        for unit_index, unit_id in enumerate(self.unit_ids):
+            sparse_template = templates_array[unit_index, ...]
+            dense_template = self.densify_waveforms(waveforms=sparse_template[np.newaxis, :, :], unit_id=unit_id)
+            dense_templates[unit_index, :, :] = dense_template
+
+        return dense_templates
 
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):

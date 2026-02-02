@@ -4,10 +4,8 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 
-from spikeinterface.core.template import Templates
-from spikeinterface.core.basesorting import minimum_spike_dtype
-from spikeinterface.core.waveform_tools import estimate_templates
-
+from spikeinterface.core import Templates, estimate_templates, fix_job_kwargs
+from spikeinterface.core.base import minimum_spike_dtype
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
 
@@ -52,7 +50,7 @@ class FeaturesLoader:
             return FeaturesLoader(features_dict_or_folder)
 
 
-def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, target_channels):
+def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_target_mask, target_channels):
     """
     Aggregate sparse features that have unaligned channels and realigned then on target_channels.
 
@@ -67,7 +65,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
 
     sparse_feature
 
-    sparse_mask
+    sparse_target_mask
 
     target_channels
 
@@ -87,7 +85,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     dont_have_channels = np.zeros(peak_indices.size, dtype=bool)
 
     for chan in np.unique(local_peaks["channel_index"]):
-        sparse_chans = np.flatnonzero(sparse_mask[chan, :])
+        sparse_chans = np.flatnonzero(sparse_target_mask[chan, :])
         peak_inds = np.flatnonzero(local_peaks["channel_index"] == chan)
         if np.all(np.isin(target_channels, sparse_chans)):
             # peaks feature channel have all target_channels
@@ -98,55 +96,6 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
             dont_have_channels[peak_inds] = True
 
     return aligned_features, dont_have_channels
-
-
-def compute_template_from_sparse(
-    peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, peak_shifts=None
-):
-    """
-    Compute template average from single sparse waveforms buffer.
-
-    Parameters
-    ----------
-    peaks
-
-    labels
-
-    labels_set
-
-    sparse_waveforms
-
-    sparse_mask
-
-    total_channels
-
-    peak_shifts
-
-    Returns
-    -------
-    templates: numpy.array
-        Templates shape : (len(labels_set), num_samples, total_channels)
-    """
-    n = len(labels_set)
-
-    templates = np.zeros((n, sparse_waveforms.shape[1], total_channels), dtype=sparse_waveforms.dtype)
-
-    for i, label in enumerate(labels_set):
-        peak_indices = np.flatnonzero(labels == label)
-
-        local_chans = np.unique(peaks["channel_index"][peak_indices])
-        target_channels = np.flatnonzero(np.all(sparse_mask[local_chans, :], axis=0))
-
-        aligned_wfs, dont_have_channels = aggregate_sparse_features(
-            peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels
-        )
-
-        if peak_shifts is not None:
-            apply_waveforms_shift(aligned_wfs, peak_shifts[peak_indices], inplace=True)
-
-        templates[i, :, :][:, target_channels] = np.mean(aligned_wfs[~dont_have_channels], axis=0)
-
-    return templates
 
 
 def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
@@ -205,7 +154,7 @@ def get_templates_from_peaks_and_recording(
     ms_before,
     ms_after,
     operator="average",
-    **job_kwargs,
+    job_kwargs=None,
 ):
     """
     Get templates from recording using the estimate_templates function.
@@ -234,6 +183,8 @@ def get_templates_from_peaks_and_recording(
     templates : Templates
         The estimated templates object.
     """
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     mask = peak_labels > -1
     valid_peaks = peaks[mask]
@@ -285,6 +236,7 @@ def get_templates_from_peaks_and_svd(
     svd_features,
     sparsity_mask,
     operator="average",
+    return_max_std_per_channel=False,
 ):
     """
     Get templates from recording using the SVD components
@@ -309,6 +261,8 @@ def get_templates_from_peaks_and_svd(
         The sparsity mask array.
     operator : str
         The operator to use for template estimation. Can be 'average' or 'median'.
+    return_max_std_per_channel : bool
+        Whether to return the max standard deviation at the channels.
 
     Returns
     -------
@@ -316,6 +270,8 @@ def get_templates_from_peaks_and_svd(
         The estimated templates object as a dense template (but internanally contain sparse channels).
     final_sparsity_mask: np.array
         The final sparsity mask. Note that the template object is dense but with zeros.
+    max_std_per_channel: np.array
+        The maximal standard deviation of the templates per channel (only if return_max_std_per_channel is True).
     """
 
     assert operator in ["average", "median"], "operator should be either 'average' or 'median'"
@@ -331,6 +287,9 @@ def get_templates_from_peaks_and_svd(
     num_channels = recording.get_num_channels()
 
     templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)
+    if return_max_std_per_channel:
+        max_std_per_channel = np.zeros((len(labels), num_channels), dtype=np.float32)
+
     final_sparsity_mask = np.zeros((len(labels), num_channels), dtype="bool")
     for unit_ind, label in enumerate(labels):
         mask = valid_labels == label
@@ -347,6 +306,11 @@ def get_templates_from_peaks_and_svd(
                 data = np.median(local_svd[sub_mask, :, count], 0)
             templates_array[unit_ind, :, i] = svd_model.inverse_transform(data.reshape(1, -1))
 
+            if return_max_std_per_channel:
+                data = svd_model.inverse_transform(local_svd[sub_mask, :, count])
+                if len(data) > 1:
+                    max_std_per_channel[unit_ind, i] = np.std(data, 0).max()
+
     dense_templates = Templates(
         templates_array=templates_array,
         sampling_frequency=fs,
@@ -358,4 +322,37 @@ def get_templates_from_peaks_and_svd(
         is_in_uV=False,
     )
 
-    return dense_templates, final_sparsity_mask
+    if return_max_std_per_channel:
+        return dense_templates, final_sparsity_mask, max_std_per_channel
+    else:
+        return dense_templates, final_sparsity_mask
+
+
+def remove_small_cluster(recording, peaks, peak_labels, min_firing_rate=0.1, subsampling_factor=None, verbose=False):
+    """
+    Remove clusters too small in size (spike count) given a min firing rate and a subsampling factor.
+    """
+
+    if subsampling_factor is None:
+        if verbose:
+            print("remove_small_cluster(): subsampling_factor is not set, assuming 1")
+        subsampling_factor = 1
+
+    min_spike_count = int(recording.get_total_duration() * min_firing_rate / subsampling_factor)
+
+    peak_labels = peak_labels.copy()
+    labels_set, count = np.unique(peak_labels, return_counts=True)
+    cluster_mask = count < min_spike_count
+    to_remove = labels_set[cluster_mask]
+    to_keep = labels_set[~cluster_mask]
+    peak_mask = np.isin(peak_labels, to_remove)
+    peak_labels[peak_mask] = -1
+
+    to_keep = to_keep[to_keep >= 0]
+
+    if verbose:
+        print(
+            f"remove_small_cluster: kept  {to_keep.size} removed {to_remove.size} (min_spike_count {min_spike_count})"
+        )
+
+    return peak_labels, to_keep

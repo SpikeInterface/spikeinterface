@@ -13,7 +13,7 @@ from spikeinterface.benchmark.benchmark_plot_tools import despine
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from .benchmark_plot_tools import fit_sigmoid, sigmoid
 
@@ -33,7 +33,7 @@ class PeakDetectionBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
+        peaks = detect_peaks(self.recording, self.method, method_kwargs=self.params, job_kwargs=job_kwargs)
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
@@ -116,6 +116,13 @@ class PeakDetectionBenchmark(Benchmark):
 
 
 class PeakDetectionStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peak detection methods.
+
+    The ground truth sorting must be given.
+    Peak detected by methods will be compared to the ground truth to estimate the
+    recall.
+    """
 
     benchmark_class = PeakDetectionBenchmark
 
@@ -126,12 +133,11 @@ class PeakDetectionStudy(BenchmarkStudy):
         init_kwargs = self.cases[key]["init_kwargs"]
         benchmark = PeakDetectionBenchmark(recording, gt_sorting, params, **init_kwargs)
         return benchmark
-    
+
     def plot_performances_vs_snr(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
-
 
     def plot_agreements_by_channels(self, case_keys=None, figsize=(15, 15)):
         if case_keys is None:
@@ -157,17 +163,18 @@ class PeakDetectionStudy(BenchmarkStudy):
             ax.set_title(self.cases[key]["label"])
             plot_agreement_matrix(self.get_result(key)["gt_comparison"], ax=ax)
 
-    def plot_detected_amplitude_distributions(self, case_keys=None, show_legend=True,  detect_threshold=None, figsize=(15, 5),ax=None):
+    def plot_detected_amplitude_distributions(
+        self, case_keys=None, show_legend=True, detect_threshold=None, figsize=(15, 5), ax=None
+    ):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
         if ax is None:
-            fig, ax = plt.subplots(figsize=figsize, squeeze=False)
+            fig, ax = plt.subplots(figsize=figsize)
         else:
             fig = ax.get_figure()
-
 
         # plot only the first key for gt amplitude
         # TODO make a loop for all of then
@@ -179,12 +186,12 @@ class PeakDetectionStudy(BenchmarkStudy):
         for count, key in enumerate(case_keys):
             despine(ax)
             data1 = self.get_result(key)["peaks"]["amplitude"]
-            
+
             color = self.get_colors()[key]
-            
+
             label = self.cases[key]["label"]
             ax.hist(data1, bins=bins, label=label, histtype="step", color=color, linewidth=2)
-            
+
             # ax.set_title(self.cases[key]["label"])
 
         ax.set_yscale("log")

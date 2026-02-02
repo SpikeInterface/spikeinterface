@@ -280,8 +280,9 @@ def plot_unit_counts(
     ncol = len(columns)
     width = 1 / (ncol + 2)
 
-    colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-    colors["num_well_detected"] = "green"
+    if colors is None:
+        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
+        colors["num_well_detected"] = "green"
 
     case_colors = study.get_colors(levels_to_group_by=levels_to_group_by)
 
@@ -320,6 +321,8 @@ def plot_unit_counts(
                 ymax = max(ymax, y + yerr[0])
 
     if with_rectangle:
+        if revert_bad:
+            ymin = 0
         spacing = width * 0.3
         for i, key in enumerate(keys_mapping):
             rect = plt.Rectangle(
@@ -373,7 +376,8 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
 
     num_axes = len(case_keys)
     if axs is None:
-        fig, axs = plt.subplots(ncols=num_axes, squeeze=True)
+        fig, axs = plt.subplots(ncols=num_axes, squeeze=False)
+        axs = axs[0, :]
     else:
         assert len(axs) == num_axes, "axs should have the same number of axes as case_keys"
         fig = axs[0].get_figure()
@@ -399,58 +403,23 @@ def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     return fig
 
 
-def plot_performances_vs_snr(
+def _plot_performances_vs_metric(
     study,
+    metric_name,
     case_keys=None,
     figsize=None,
     performance_names=("accuracy", "recall", "precision"),
-    snr_dataset_reference=None,
+    metric_dataset_reference=None,
     levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
-    with_sigmoid_fit=True,
-    show_average_by_bin=False,
+    with_sigmoid_fit=False,
+    show_average_by_bin=True,
     scatter_size=4,
+    scatter_alpha=1.0,
     num_bin_average=20,
     axs=None,
 ):
-    """
-    Plots performance metrics against signal-to-noise ratio (SNR) for different cases in a study.
-
-    Parameters
-    ----------
-    study : object
-        The study object containing the cases and results.
-    case_keys : list | None, default: None
-        List of case keys to include in the plot. If None, all cases in the study are included.
-    figsize : tuple | None, default: None
-        Size of the figure.
-    performance_names : tuple, default: ("accuracy", "recall", "precision")
-        Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
-    snr_dataset_reference : str | None, default: None
-        Reference dataset key to use for SNR. If None, the SNR of each dataset is used.
-    levels_to_group_by : list | None, default: None
-        Levels to group by when mapping case keys.
-    orientation : "vertical" | "horizontal", default: "vertical"
-        The orientation of the plot.
-    show_legend : bool, default True
-        Show legend or not
-    show_sigmoid_fit : bool, default True
-        Show sigmoid that fit the performances.
-    show_average_by_bin : bool, default False
-        Instead of the sigmoid an average by bins can be plotted.
-    scatter_size : int, default 4
-        scatter size
-    num_bin_average : int, default 2
-        Num bin for average
-    axs : matplotlib.axes.Axes | None, default: None
-        The axs to use for plotting. Should be the same size as len(performance_names).
-
-    Returns
-    -------
-    fig : matplotlib.figure.Figure
-        The resulting figure containing the plots.
-    """
     import matplotlib.pyplot as plt
 
     if case_keys is None:
@@ -499,22 +468,23 @@ def plot_performances_vs_snr(
             all_xs = []
             all_ys = []
             for sub_key in key_list:
-                if snr_dataset_reference is None:
+                if metric_dataset_reference is None:
                     # use the SNR of each dataset
                     analyzer = study.get_sorting_analyzer(sub_key)
                 else:
                     # use the same SNR from a reference dataset
-                    analyzer = study.get_sorting_analyzer(dataset_key=snr_dataset_reference)
+                    analyzer = study.get_sorting_analyzer(dataset_key=metric_dataset_reference)
 
                 quality_metrics = analyzer.get_extension("quality_metrics").get_data()
-                x = quality_metrics["snr"].to_numpy(dtype="float64")
+                x = quality_metrics[metric_name].to_numpy(dtype="float64")
                 y = (
                     study.get_result(sub_key)["gt_comparison"]
                     .get_performance()[performance_name]
                     .to_numpy(dtype="float64")
                 )
-                all_xs.append(x)
-                all_ys.append(y)
+                mask = ~np.isnan(x) & ~np.isnan(y)
+                all_xs.append(x[mask])
+                all_ys.append(y[mask])
 
             if with_sigmoid_fit:
                 max_snr = max(np.max(x) for x in all_xs)
@@ -551,7 +521,7 @@ def plot_performances_vs_snr(
             all_xs = np.concatenate(all_xs)
             all_ys = np.concatenate(all_ys)
 
-            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size)
+            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size, alpha=scatter_alpha)
             ax.set_ylabel(performance_name)
 
         ax.set_ylim(-0.05, 1.05)
@@ -562,6 +532,156 @@ def plot_performances_vs_snr(
     despine(axs)
 
     return fig
+
+
+def plot_performances_vs_snr(
+    study,
+    case_keys=None,
+    figsize=None,
+    performance_names=("accuracy", "recall", "precision"),
+    metric_dataset_reference=None,
+    levels_to_group_by=None,
+    orientation="vertical",
+    show_legend=True,
+    with_sigmoid_fit=False,
+    show_average_by_bin=True,
+    scatter_size=4,
+    scatter_alpha=1.0,
+    num_bin_average=20,
+    axs=None,
+):
+    """
+    Plots performance metrics against signal-to-noise ratio (SNR) for different cases in a study.
+
+    Parameters
+    ----------
+    study : object
+        The study object containing the cases and results.
+    case_keys : list | None, default: None
+        List of case keys to include in the plot. If None, all cases in the study are included.
+    figsize : tuple | None, default: None
+        Size of the figure.
+    performance_names : tuple, default: ("accuracy", "recall", "precision")
+        Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
+    metric_dataset_reference : str | None, default: None
+        Reference dataset metric key to use. If None, the SNR of each dataset is used.
+    levels_to_group_by : list | None, default: None
+        Levels to group by when mapping case keys.
+    orientation : "vertical" | "horizontal", default: "vertical"
+        The orientation of the plot.
+    show_legend : bool, default True
+        Show legend or not
+    show_sigmoid_fit : bool, default True
+        Show sigmoid that fit the performances.
+    show_average_by_bin : bool, default False
+        Instead of the sigmoid an average by bins can be plotted.
+    scatter_size : int, default 4
+        scatter size
+    scatter_alpha : float, default 1.0
+        scatter alpha
+    num_bin_average : int, default 2
+        Num bin for average
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The resulting figure containing the plots.
+    """
+
+    return _plot_performances_vs_metric(
+        study,
+        "snr",
+        case_keys=case_keys,
+        figsize=figsize,
+        performance_names=performance_names,
+        metric_dataset_reference=metric_dataset_reference,
+        levels_to_group_by=levels_to_group_by,
+        orientation=orientation,
+        show_legend=show_legend,
+        with_sigmoid_fit=with_sigmoid_fit,
+        show_average_by_bin=show_average_by_bin,
+        scatter_size=scatter_size,
+        scatter_alpha=scatter_alpha,
+        num_bin_average=num_bin_average,
+        axs=axs,
+    )
+
+
+def plot_performances_vs_firing_rate(
+    study,
+    case_keys=None,
+    figsize=None,
+    performance_names=("accuracy", "recall", "precision"),
+    metric_dataset_reference=None,
+    levels_to_group_by=None,
+    orientation="vertical",
+    show_legend=True,
+    with_sigmoid_fit=False,
+    show_average_by_bin=True,
+    scatter_size=4,
+    scatter_alpha=1.0,
+    num_bin_average=20,
+    axs=None,
+):
+    """
+    Plots performance metrics against firing rate for different cases in a study.
+
+    Parameters
+    ----------
+    study : object
+        The study object containing the cases and results.
+    case_keys : list | None, default: None
+        List of case keys to include in the plot. If None, all cases in the study are included.
+    figsize : tuple | None, default: None
+        Size of the figure.
+    performance_names : tuple, default: ("accuracy", "recall", "precision")
+        Names of the performance metrics to plot. Default is ("accuracy", "recall", "precision").
+    metric_dataset_reference : str | None, default: None
+        Reference dataset metric key to use. If None, the SNR of each dataset is used.
+    levels_to_group_by : list | None, default: None
+        Levels to group by when mapping case keys.
+    orientation : "vertical" | "horizontal", default: "vertical"
+        The orientation of the plot.
+    show_legend : bool, default True
+        Show legend or not
+    show_sigmoid_fit : bool, default True
+        Show sigmoid that fit the performances.
+    show_average_by_bin : bool, default False
+        Instead of the sigmoid an average by bins can be plotted.
+    scatter_size : int, default 4
+        scatter size
+    scatter_alpha : float, default 1.0
+        scatter alpha
+    num_bin_average : int, default 2
+        Num bin for average
+    axs : matplotlib.axes.Axes | None, default: None
+        The axs to use for plotting. Should be the same size as len(performance_names).
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The resulting figure containing the plots.
+    """
+
+    return _plot_performances_vs_metric(
+        study,
+        "firing_rate",
+        case_keys=case_keys,
+        figsize=figsize,
+        performance_names=performance_names,
+        metric_dataset_reference=metric_dataset_reference,
+        levels_to_group_by=levels_to_group_by,
+        orientation=orientation,
+        show_legend=show_legend,
+        with_sigmoid_fit=with_sigmoid_fit,
+        show_average_by_bin=show_average_by_bin,
+        scatter_size=scatter_size,
+        scatter_alpha=scatter_alpha,
+        num_bin_average=num_bin_average,
+        axs=axs,
+    )
 
 
 def plot_performances_ordered(
@@ -614,9 +734,11 @@ def plot_performances_ordered(
 
     if axs is None:
         if orientation == "vertical":
-            fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=True)
+            fig, axs = plt.subplots(nrows=num_axes, figsize=figsize, squeeze=False)
+            axs = axs[:, 0]
         elif orientation == "horizontal":
-            fig, axs = plt.subplots(ncols=num_axes, figsize=figsize, squeeze=True)
+            fig, axs = plt.subplots(ncols=num_axes, figsize=figsize, squeeze=False)
+            axs = axs[0, :]
         else:
             raise ValueError("orientation must be 'vertical' or 'horizontal'")
     else:
@@ -819,6 +941,7 @@ def plot_performances_vs_depth_and_snr(
 ):
     """
     Plot performances vs depth and snr for a study.
+
     Parameters
     ----------
     study : BenchmarkStudy
@@ -849,7 +972,8 @@ def plot_performances_vs_depth_and_snr(
     case_keys, labels = study.get_grouped_keys_mapping(levels_to_group_by=levels_to_group_by, case_keys=case_keys)
 
     if axs is None:
-        fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=True)
+        fig, axs = plt.subplots(ncols=len(case_keys), figsize=figsize, squeeze=False)
+        axs = axs[0, :]
     else:
         assert len(axs) == len(case_keys), "axs should have the same number of axes as case_keys"
         fig = axs[0].get_figure()
@@ -926,7 +1050,8 @@ def plot_performance_losses(
     import matplotlib.pyplot as plt
 
     if axs is None:
-        fig, axs = plt.subplots(nrows=len(performance_names), figsize=figsize, squeeze=True)
+        fig, axs = plt.subplots(nrows=len(performance_names), figsize=figsize, squeeze=False)
+        axs = axs[:, 0]
     else:
         assert len(axs) == len(performance_names), "axs should have the same number of axes as performance_names"
         fig = axs[0].get_figure()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+import json
 import numpy as np
 from itertools import chain
 
@@ -125,59 +127,13 @@ def apply_curation_labels(
     # Please note that manual_labels is done on the unit_ids before the merge!!!
     manual_labels = curation_label_to_vectors(curation_model)
 
-    # apply on non merged / split
-    merge_new_unit_ids = [m.new_unit_id for m in curation_model.merges]
-    split_new_unit_ids = [m.new_unit_ids for m in curation_model.splits]
-    split_new_unit_ids = list(chain(*split_new_unit_ids))
-
-    merged_split_units = merge_new_unit_ids + split_new_unit_ids
     for key, values in manual_labels.items():
         all_values = np.zeros(sorting.unit_ids.size, dtype=values.dtype)
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
-            if unit_id not in merged_split_units:
-                ind = list(curation_model.unit_ids).index(unit_id)
-                all_values[unit_ind] = values[ind]
+            # if unit_id not in merged_split_units:
+            ind = list(curation_model.unit_ids).index(unit_id)
+            all_values[unit_ind] = values[ind]
         sorting.set_property(key, all_values)
-
-    for new_unit_id, merge in zip(merge_new_unit_ids, curation_model.merges):
-        old_group_ids = merge.unit_ids
-        for label_key, label_def in curation_model.label_definitions.items():
-            if label_def.exclusive:
-                group_values = []
-                for unit_id in old_group_ids:
-                    ind = list(curation_model.unit_ids).index(unit_id)
-                    value = manual_labels[label_key][ind]
-                    if value != "":
-                        group_values.append(value)
-                if len(set(group_values)) == 1:
-                    # all group has the same label or empty
-                    sorting.set_property(key, values=group_values[:1], ids=[new_unit_id])
-            else:
-                for key in label_def.label_options:
-                    group_values = []
-                    for unit_id in old_group_ids:
-                        ind = list(curation_model.unit_ids).index(unit_id)
-                        value = manual_labels[key][ind]
-                        group_values.append(value)
-                    new_value = np.any(group_values)
-                    sorting.set_property(key, values=[new_value], ids=[new_unit_id])
-
-    # splits
-    for split in curation_model.splits:
-        # propagate property of splut unit to new units
-        old_unit = split.unit_id
-        new_unit_ids = split.new_unit_ids
-        for label_key, label_def in curation_model.label_definitions.items():
-            if label_def.exclusive:
-                ind = list(curation_model.unit_ids).index(old_unit)
-                value = manual_labels[label_key][ind]
-                if value != "":
-                    sorting.set_property(label_key, values=[value] * len(new_unit_ids), ids=new_unit_ids)
-            else:
-                for key in label_def.label_options:
-                    ind = list(curation_model.unit_ids).index(old_unit)
-                    value = manual_labels[key][ind]
-                    sorting.set_property(key, values=[value] * len(new_unit_ids), ids=new_unit_ids)
 
 
 def apply_curation(
@@ -187,6 +143,7 @@ def apply_curation(
     new_id_strategy: str = "append",
     merging_mode: str = "soft",
     sparsity_overlap: float = 0.75,
+    raise_error_if_overlap_fails: bool = True,
     verbose: bool = False,
     **job_kwargs,
 ):
@@ -194,10 +151,11 @@ def apply_curation(
     Apply curation dict to a Sorting or a SortingAnalyzer.
 
     Steps are done in this order:
-      1. Apply removal using curation_dict["removed"]
-      2. Apply merges using curation_dict["merges"]
-      3. Apply splits using curation_dict["splits"]
-      4. Set labels using curation_dict["manual_labels"]
+
+      1. Apply labels using curation_dict["manual_labels"]
+      2. Apply removal using curation_dict["removed"]
+      3. Apply merges using curation_dict["merges"]
+      4. Apply splits using curation_dict["splits"]
 
     A new Sorting or SortingAnalyzer (in memory) is returned.
     The user (an adult) has the responsability to save it somewhere (or not).
@@ -224,6 +182,9 @@ def apply_curation(
     sparsity_overlap : float, default 0.75
         The percentage of overlap that units should share in order to accept merges. If this criteria is not
         achieved, soft merging will not be possible and an error will be raised. This is for use with a SortingAnalyzer input.
+    raise_error_if_overlap_fails : bool, default: True
+        If True and `sparsity_overlap` fails for any unit merges, this will raise an error. If False, units which fail the
+        `sparsity_overlap` threshold will be skipped in the merge.
     verbose : bool, default: False
         If True, output is verbose
     **job_kwargs : dict
@@ -243,25 +204,28 @@ def apply_curation(
     if isinstance(curation_dict_or_model, dict):
         curation_model = CurationModel(**curation_dict_or_model)
     else:
-        curation_model = curation_dict_or_model
+        curation_model = curation_dict_or_model.model_copy(deep=True)
 
     if not np.array_equal(np.asarray(curation_model.unit_ids), sorting_or_analyzer.unit_ids):
         raise ValueError("unit_ids from the curation_dict do not match the one from Sorting or SortingAnalyzer")
 
-    # 1. Remove units
+    # 1. Apply labels
+    apply_curation_labels(sorting_or_analyzer, curation_model)
+
+    # 2. Remove units
     if len(curation_model.removed) > 0:
         curated_sorting_or_analyzer = sorting_or_analyzer.remove_units(curation_model.removed)
     else:
         curated_sorting_or_analyzer = sorting_or_analyzer
 
-    # 2. Merge units
+    # 3. Merge units
     if len(curation_model.merges) > 0:
         merge_unit_groups = [m.unit_ids for m in curation_model.merges]
         merge_new_unit_ids = [m.new_unit_id for m in curation_model.merges if m.new_unit_id is not None]
         if len(merge_new_unit_ids) == 0:
             merge_new_unit_ids = None
         if isinstance(sorting_or_analyzer, BaseSorting):
-            curated_sorting_or_analyzer, _, new_unit_ids = apply_merges_to_sorting(
+            curated_sorting_or_analyzer, _, _ = apply_merges_to_sorting(
                 curated_sorting_or_analyzer,
                 merge_unit_groups=merge_unit_groups,
                 censor_ms=censor_ms,
@@ -269,21 +233,20 @@ def apply_curation(
                 return_extra=True,
             )
         else:
-            curated_sorting_or_analyzer, new_unit_ids = curated_sorting_or_analyzer.merge_units(
+            curated_sorting_or_analyzer, _ = curated_sorting_or_analyzer.merge_units(
                 merge_unit_groups=merge_unit_groups,
                 censor_ms=censor_ms,
                 merging_mode=merging_mode,
                 sparsity_overlap=sparsity_overlap,
+                raise_error_if_overlap_fails=raise_error_if_overlap_fails,
                 new_id_strategy=new_id_strategy,
                 return_new_unit_ids=True,
                 format="memory",
                 verbose=verbose,
                 **job_kwargs,
             )
-        for i, merge_unit_id in enumerate(new_unit_ids):
-            curation_model.merges[i].new_unit_id = merge_unit_id
 
-    # 3. Split units
+    # 4. Split units
     if len(curation_model.splits) > 0:
         split_units = {}
         for split in curation_model.splits:
@@ -297,7 +260,7 @@ def apply_curation(
         if len(split_new_unit_ids) == 0:
             split_new_unit_ids = None
         if isinstance(sorting_or_analyzer, BaseSorting):
-            curated_sorting_or_analyzer, new_unit_ids = apply_splits_to_sorting(
+            curated_sorting_or_analyzer, _ = apply_splits_to_sorting(
                 curated_sorting_or_analyzer,
                 split_units,
                 new_unit_ids=split_new_unit_ids,
@@ -305,7 +268,7 @@ def apply_curation(
                 return_extra=True,
             )
         else:
-            curated_sorting_or_analyzer, new_unit_ids = curated_sorting_or_analyzer.split_units(
+            curated_sorting_or_analyzer, _ = curated_sorting_or_analyzer.split_units(
                 split_units,
                 new_id_strategy=new_id_strategy,
                 return_new_unit_ids=True,
@@ -313,10 +276,24 @@ def apply_curation(
                 format="memory",
                 verbose=verbose,
             )
-        for i, split_unit_ids in enumerate(new_unit_ids):
-            curation_model.splits[i].new_unit_ids = split_unit_ids
-
-    # 4. Apply labels
-    apply_curation_labels(curated_sorting_or_analyzer, curation_model)
 
     return curated_sorting_or_analyzer
+
+
+def load_curation(curation_path: str | Path) -> CurationModel:
+    """
+    Loads a curation from a local json file.
+
+    Parameters
+    ----------
+    curation_path : str or Path
+        The path to the curation json file
+
+    Returns
+    -------
+    curation_model : CurationModel
+        A CurationModel object
+    """
+    with open(curation_path) as f:
+        curation_dict = json.load(f)
+    return CurationModel(**curation_dict)

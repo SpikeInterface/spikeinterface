@@ -80,6 +80,9 @@ def test_pipeline_equiv_to_step():
             elif pp_name == "decimate":
                 pp_dict[pp_name] = {"decimation_factor": 2}
                 pp_rec_from_class = pp_class(rec, decimation_factor=2)
+            elif pp_name == "filter":
+                pp_dict[pp_name] = {"margin_ms": 5.0}
+                pp_rec_from_class = pp_class(rec, margin_ms=5.0)
             else:
                 pp_rec_from_class = pp_class(rec)
 
@@ -156,14 +159,20 @@ def test_loading_provenance(create_cache_folder):
 
     rec, _ = generate_ground_truth_recording(seed=0, num_channels=6)
     pp_rec = detect_and_remove_bad_channels(
-        bandpass_filter(common_reference(rec, operator="average")), noisy_channel_threshold=0.3
+        bandpass_filter(common_reference(rec, operator="average")),
+        noisy_channel_threshold=0.3,
+        # this seed is for detect_bad_channels_kwargs this ensure the same random_chunk_kwargs
+        # when several run
+        seed=2205,
     )
     pp_rec.save_to_folder(folder=cache_folder)
 
     loaded_pp_dict = get_preprocessing_dict_from_file(cache_folder / "provenance.pkl")
 
     pipeline_rec_applying_precomputed_kwargs = apply_preprocessing_pipeline(
-        rec, loaded_pp_dict, apply_precomputed_kwargs=True
+        rec,
+        loaded_pp_dict,
+        apply_precomputed_kwargs=True,
     )
     pipeline_rec_ignoring_precomputed_kwargs = apply_preprocessing_pipeline(
         rec, loaded_pp_dict, apply_precomputed_kwargs=False
@@ -201,3 +210,11 @@ def test_loading_from_analyzer(create_cache_folder):
     pp_dict_from_zarr = get_preprocessing_dict_from_analyzer(analyzer_zarr_folder)
     pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_dict_from_zarr)
     check_recordings_equal(pp_recording, pp_recording_from_zarr)
+
+
+if __name__ == "__main__":
+    import tempfile
+    from pathlib import Path
+
+    tmp_folder = Path(tempfile.mkdtemp())
+    test_loading_provenance(tmp_folder)

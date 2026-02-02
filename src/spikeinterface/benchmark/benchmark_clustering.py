@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import (
@@ -29,9 +29,14 @@ class ClusteringBenchmark(Benchmark):
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
-    def run(self, **job_kwargs):
-        labels, peak_labels = find_cluster_from_peaks(
-            self.recording, self.peaks, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
+    def run(self, verbose=True, **job_kwargs):
+        labels, peak_labels = find_clusters_from_peaks(
+            self.recording,
+            self.peaks,
+            method=self.method,
+            method_kwargs=self.method_kwargs,
+            verbose=verbose,
+            job_kwargs=job_kwargs,
         )
         self.result["peak_labels"] = peak_labels
 
@@ -95,6 +100,16 @@ class ClusteringBenchmark(Benchmark):
 
 
 class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare clustering methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    The input of methods are the detected peaks. Because the clustering
+    can be performed on only a subset of the detected peaks, then selected peak
+    must be also given as index of all spikes.
+    """
 
     benchmark_class = ClusteringBenchmark
 
@@ -181,6 +196,11 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performances_vs_snr
 
         return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
 
     def plot_performances_comparison(self, *args, **kwargs):
         from .benchmark_plot_tools import plot_performances_comparison

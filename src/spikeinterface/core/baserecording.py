@@ -37,6 +37,8 @@ class BaseRecording(BaseRecordingSnippets):
         "noise_level_std_scaled",
         "noise_level_mad_raw",
         "noise_level_mad_scaled",
+        "noise_level_rms_raw",
+        "noise_level_rms_scaled",
     ]
 
     def __init__(self, sampling_frequency: float, channel_ids: list, dtype):
@@ -160,6 +162,16 @@ class BaseRecording(BaseRecordingSnippets):
         html_extra = self._get_common_repr_html(common_style)
         html_repr = html_header + html_segments + html_channel_ids + html_extra
         return html_repr
+
+    def __add__(self, other):
+        from .operatorrecordings import AddRecordings
+
+        return AddRecordings(self, other)
+
+    def __sub__(self, other):
+        from .operatorrecordings import SubtractRecordings
+
+        return SubtractRecordings(self, other)
 
     def get_num_segments(self) -> int:
         """

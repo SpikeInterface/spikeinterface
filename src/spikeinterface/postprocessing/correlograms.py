@@ -36,8 +36,6 @@ class ComputeCorrelograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer_or_sorting : SortingAnalyzer | Sorting
-        A SortingAnalyzer or Sorting object
     window_ms : float, default: 50.0
         The window around the spike to compute the correlation in ms. For example,
          if 50 ms, the correlations will be computed at lags -25 ms ... 25 ms.
@@ -89,9 +87,6 @@ class ComputeCorrelograms(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -158,7 +153,7 @@ class ComputeCorrelograms(AnalyzerExtension):
                         # check if it is mapped to itself
                         if old_unit == new_unit_id:
                             old_to_new_unit_index_map[old_unit_index] = new_unit_index
-                        # or to a unit_id outwith the old ones
+                        # or to a unit_id without the old ones
                         elif new_unit_id not in self.sorting_analyzer.unit_ids:
                             if new_unit_index not in old_to_new_unit_index_map.values():
                                 old_to_new_unit_index_map[old_unit_index] = new_unit_index
@@ -197,7 +192,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        # TODO: for now we just copy
+        # for splits, we need to recompute correlograms
         new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
@@ -668,9 +663,6 @@ class ComputeACG3D(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,
