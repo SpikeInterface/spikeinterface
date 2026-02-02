@@ -20,12 +20,12 @@ from .curation_format import validate_curation_dict, curation_label_to_dataframe
 from .sortingview_curation import apply_sortingview_curation
 
 # automated curation
+from .model_based_curation import model_based_label_units, load_model, auto_label_units
+from .train_manual_curation import train_model, get_default_classifier_search_spaces
+from .unitrefine_curation import unitrefine_label_units
 from .bombcell_curation import (
     bombcell_get_default_thresholds,
     bombcell_label_units,
     get_bombcell_labeling_summary,
     save_bombcell_results,
 )
-
-from .model_based_curation import auto_label_units, load_model
-from .train_manual_curation import train_model, get_default_classifier_search_spaces
