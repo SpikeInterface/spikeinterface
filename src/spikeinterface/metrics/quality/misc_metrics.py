@@ -308,6 +308,7 @@ class ISIViolation(BaseMetric):
         "isi_violations_count": "Count of ISI violations for each unit.",
     }
     supports_periods = True
+    deprecated_names = ["isi_violations_ratio", "isi_violations_count"]
 
 
 def compute_refrac_period_violations(
@@ -412,6 +413,7 @@ class RPViolation(BaseMetric):
         "rp_violations": "Number of refractory period violations.",
     }
     supports_periods = True
+    deprecated_names = ["rp_contamination", "rp_violations"]
 
 
 def compute_sliding_rp_violations(
@@ -600,6 +602,7 @@ class Synchrony(BaseMetric):
         "sync_spike_8": "Fraction of spikes that are synchronous with at least seven other spikes.",
     }
     supports_periods = True
+    deprecated_names = ["sync_spike_2", "sync_spike_4", "sync_spike_8"]
 
 
 def compute_firing_ranges(sorting_analyzer, unit_ids=None, periods=None, bin_size_s=5, percentiles=(5, 95)):
@@ -817,6 +820,7 @@ class AmplitudeCV(BaseMetric):
     }
     supports_periods = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
+    deprecated_names = ["amplitude_cv_median", "amplitude_cv_range"]
 
 
 def compute_amplitude_cutoffs(
@@ -1215,6 +1219,7 @@ class Drift(BaseMetric):
     }
     supports_periods = True
     depend_on = ["spike_locations"]
+    deprecated_names = ["drift_ptp", "drift_std", "drift_mad"]
 
 
 def compute_sd_ratio(
