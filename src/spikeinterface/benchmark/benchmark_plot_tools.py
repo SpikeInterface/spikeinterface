@@ -1095,7 +1095,6 @@ def plot_some_over_merged(study, case_keys=None, overmerged_score=0.05, max_unit
     Plot some waveforms of overmerged units.
     """
 
-
     if case_keys is None:
         case_keys = list(study.cases.keys())
     import matplotlib.pyplot as plt
@@ -1135,6 +1134,7 @@ def plot_some_over_merged(study, case_keys=None, overmerged_score=0.05, max_unit
 
     return figs
 
+
 def plot_some_over_splited(study, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):
     """
     Plot some waveforms of over-splitted units.
@@ -1172,7 +1172,6 @@ def plot_some_over_splited(study, case_keys=None, oversplit_score=0.05, max_unit
                     templates = results["sorter_analyzer"].get_extension("templates").get_data(outputs="Templates")
                 else:
                     raise ValueError("This benchmark do not have templates computed")
-
 
                 template_arrays = templates.get_dense_templates()[unit_indices, :, :]
                 if templates.sparsity is not None:

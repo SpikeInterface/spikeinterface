@@ -8,7 +8,6 @@ from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
-
 # TODO later integrate CollisionGTComparison optionally in this class.
 
 
@@ -36,14 +35,10 @@ class SorterBenchmark(Benchmark):
 
         if with_analyzer:
             # optionally computes analyzer to have templates for oversplited/overmerged
-            analyzer = create_sorting_analyzer(
-                sorting, self.recording, format="memory", sparse=True, **job_kwargs
-            )
+            analyzer = create_sorting_analyzer(sorting, self.recording, format="memory", sparse=True, **job_kwargs)
             analyzer.compute("random_spikes")
             analyzer.compute("templates", **job_kwargs)
             self.result["sorter_analyzer"] = analyzer
-            
-
 
     _run_key_saved = [
         ("sorting", "sorting"),
