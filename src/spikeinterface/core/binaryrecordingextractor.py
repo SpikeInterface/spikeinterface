@@ -39,8 +39,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The offset to apply to the traces
     is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
-    num_chan : int or None, default: None
-        Deprecated, use num_channels instead. Kept for backward compatibility.
 
     Notes
     -----
