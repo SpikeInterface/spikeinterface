@@ -28,10 +28,10 @@ class ByChannelPeakDetector(PeakDetector):
         Sign of the peak
     detect_threshold: float, default: 5
         Threshold, in median absolute deviations (MAD), to use to detect peaks
-    exclude_sweep_ms: float, default: 0.1
+    exclude_sweep_ms: float, default: 1.0
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
-        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
-        and no larger peaks are located during the 0.1ms preceding and following the peak
+        For example, if `exclude_sweep_ms` is 1.0, a peak is detected if a sample crosses the threshold,
+        and no larger peaks are located during the 1.0ms preceding and following the peak
     noise_levels: array or None, default: None
         Estimated noise levels to use, if already computed
         If not provide then it is estimated from a random snippet of the data
@@ -42,7 +42,7 @@ class ByChannelPeakDetector(PeakDetector):
         recording,
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         noise_levels=None,
         return_output=True,
     ):
@@ -116,10 +116,10 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
         Sign of the peak
     detect_threshold: float, default: 5
         Threshold, in median absolute deviations (MAD), to use to detect peaks
-    exclude_sweep_ms: float, default: 0.1
+    exclude_sweep_ms: float, default: 1.0
         Time, in ms, during which the peak is isolated. Exclusive param with exclude_sweep_size
-        For example, if `exclude_sweep_ms` is 0.1, a peak is detected if a sample crosses the threshold,
-        and no larger peaks are located during the 0.1ms preceding and following the peak
+        For example, if `exclude_sweep_ms` is 1.0, a peak is detected if a sample crosses the threshold,
+        and no larger peaks are located during the 1.0ms preceding and following the peak
     noise_levels: array or None, default: None
         Estimated noise levels to use, if already computed.
         If not provide then it is estimated from a random snippet of the data
@@ -134,7 +134,7 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
         recording,
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         noise_levels=None,
         device=None,
         return_tensor=False,

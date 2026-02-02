@@ -16,7 +16,7 @@ def test_localize_peaks():
     peaks = detect_peaks(
         recording,
         method="locally_exclusive",
-        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0),
         job_kwargs=job_kwargs,
     )
 
