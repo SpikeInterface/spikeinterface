@@ -207,8 +207,8 @@ class ModelBasedClassification:
 def model_based_label_units(
     sorting_analyzer: SortingAnalyzer,
     model_folder=None,
-    model_name=None,
     repo_id=None,
+    model_name=None,
     label_conversion=None,
     trust_model=False,
     trusted=None,
@@ -229,9 +229,9 @@ def model_based_label_units(
         The sorting analyzer object containing the spike sorting results.
     model_folder : str or Path, default: None
         The path to the folder containing the model
-    repo_id : str | Path, default: None
+    repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
-    model_name: str | Path, default: None
+    model_name: str, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     label_conversion : dic | None, default: None
         A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
@@ -301,9 +301,9 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=Fal
     ----------
     model_folder : str or Path, defualt: None
         The path to the folder containing the model
-    repo_id : str | Path, default: None
+    repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
-    model_name: str | Path, default: None
+    model_name: str, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     trust_model : bool, default: False
         Whether to trust the model. If True, the `trusted` parameter that is passed to `skops.load` to load the model will be

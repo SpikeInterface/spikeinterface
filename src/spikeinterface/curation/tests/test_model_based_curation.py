@@ -1,9 +1,12 @@
 import pytest
 from pathlib import Path
+
 from spikeinterface.curation.tests.common import sorting_analyzer_for_curation, trained_pipeline_path
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 from spikeinterface.curation import model_based_label_units, load_model
 from spikeinterface.curation.train_manual_curation import _get_computed_metrics
+from spikeinterface.curation import unitrefine_label_units
+
 
 import numpy as np
 
@@ -170,10 +173,8 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_cura
     model_based_classification._check_params_for_classification(enforce_metric_params=True, model_info=model_info)
 
 
-def test_unitrefine_label_units(sorting_analyzer_for_curation):
+def test_unitrefine_label_units_hf(sorting_analyzer_for_curation):
     """Test the `unitrefine_label_units` function."""
-    from spikeinterface.curation import unitrefine_label_units
-
     sorting_analyzer_for_curation.compute("template_metrics", include_multi_channel_metrics=True)
     sorting_analyzer_for_curation.compute("quality_metrics")
 
@@ -217,3 +218,36 @@ def test_unitrefine_label_units(sorting_analyzer_for_curation):
             noise_neural_classifier=None,
             sua_mua_classifier=None,
         )
+
+    # test warnings when unexpected labels are returned
+    with pytest.warns(UserWarning):
+        labels = unitrefine_label_units(
+            sorting_analyzer_for_curation,
+            noise_neural_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
+            sua_mua_classifier=None,
+        )
+
+    with pytest.warns(UserWarning):
+        labels = unitrefine_label_units(
+            sorting_analyzer_for_curation,
+            noise_neural_classifier=None,
+            sua_mua_classifier="SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
+        )
+
+
+def test_unitrefine_label_units_with_local_models(sorting_analyzer_for_curation, trained_pipeline_path):
+    # test with trained local models
+    sorting_analyzer_for_curation.compute("template_metrics", include_multi_channel_metrics=True)
+    sorting_analyzer_for_curation.compute("quality_metrics")
+
+    # test passing model folder
+    labels = unitrefine_label_units(
+        sorting_analyzer_for_curation,
+        noise_neural_classifier=trained_pipeline_path,
+    )
+
+    # test passing model folder
+    labels = unitrefine_label_units(
+        sorting_analyzer_for_curation,
+        noise_neural_classifier=trained_pipeline_path / "best_model.skops",
+    )
