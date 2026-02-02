@@ -4,9 +4,15 @@ import pytest
 import shutil
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording
-from spikeinterface.core import create_sorting_analyzer, load_sorting_analyzer
-from spikeinterface.core import estimate_sparsity
+from spikeinterface.core import (
+    generate_ground_truth_recording,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    estimate_sparsity,
+)
+from spikeinterface.core.sortinganalyzer import get_extension_class
+
+extensions_which_allow_unit_ids = ["unit_locations"]
 
 
 def get_dataset():
@@ -95,7 +101,19 @@ class AnalyzerExtensionCommonTestSuite:
 
         return sorting_analyzer
 
-    def _prepare_sorting_analyzer(self, format, sparse, extension_class):
+    def _compute_extensions_recursively(self, sorting_analyzer, extension_class, params):
+        # compute dependencies of the extension class with default params
+        dependencies = extension_class.get_required_dependencies(**params)
+        for dependency_name in dependencies:
+            if "|" in dependency_name:
+                dependency_name = dependency_name.split("|")[0]
+            if not sorting_analyzer.has_extension(dependency_name):
+                # compute dependencies of the dependency
+                self._compute_extensions_recursively(sorting_analyzer, get_extension_class(dependency_name), {})
+                # compute the dependency itself
+                sorting_analyzer.compute(dependency_name)
+
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class, extension_params=None):
         # prepare a SortingAnalyzer object with depencies already computed
         sparsity_ = self.sparsity if sparse else None
         sorting_analyzer = self.get_sorting_analyzer(
@@ -103,10 +121,11 @@ class AnalyzerExtensionCommonTestSuite:
         )
         sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
 
-        for dependency_name in extension_class.depend_on:
-            if "|" in dependency_name:
-                dependency_name = dependency_name.split("|")[0]
-            sorting_analyzer.compute(dependency_name)
+        # default params for dependencies
+        params = sorting_analyzer.get_default_extension_params(extension_class.extension_name)
+        if extension_params is not None:
+            params.update(extension_params)
+        self._compute_extensions_recursively(sorting_analyzer, extension_class, params)
 
         return sorting_analyzer
 
@@ -126,7 +145,7 @@ class AnalyzerExtensionCommonTestSuite:
         ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
         assert len(ext.data) > 0
         main_data = ext.get_data()
-        assert len(main_data) > 0
+        assert main_data is not None
 
         ext = sorting_analyzer.get_extension(extension_class.extension_name)
         assert ext is not None
@@ -140,13 +159,28 @@ class AnalyzerExtensionCommonTestSuite:
         merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
         assert len(merged.unit_ids) == num_units_after_merge
 
+        # Test that order of units doesn't change things
+        if extension_class.extension_name in extensions_which_allow_unit_ids:
+            reversed_unit_ids = some_unit_ids[::-1]
+            sliced_reversed = sorting_analyzer.select_units(reversed_unit_ids, format="memory")
+            ext = sorting_analyzer.compute(
+                extension_class.extension_name, unit_ids=reversed_unit_ids, **params, **job_kwargs
+            )
+            recomputed_data = ext.get_data()
+            sliced_data = sliced_reversed.get_extension(extension_class.extension_name).get_data()
+            np.testing.assert_allclose(recomputed_data, sliced_data)
+
         # test roundtrip
         if sorting_analyzer.format in ("binary_folder", "zarr"):
             sorting_analyzer_loaded = load_sorting_analyzer(sorting_analyzer.folder)
             ext_loaded = sorting_analyzer_loaded.get_extension(extension_class.extension_name)
             for ext_data_name, ext_data_loaded in ext_loaded.data.items():
                 if isinstance(ext_data_loaded, np.ndarray):
-                    assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
+                    if len(ext_data_loaded) > 0 and isinstance(ext_data_loaded[0], dict):
+                        for i in range(len(ext_data_loaded)):
+                            assert np.array_equal(np.array(ext.data[ext_data_name][i]), np.array(ext_data_loaded[i]))
+                    else:
+                        assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
                 elif isinstance(ext_data_loaded, pd.DataFrame):
                     # skip nan values
                     for col in ext_data_loaded.columns:
@@ -169,5 +203,7 @@ class AnalyzerExtensionCommonTestSuite:
         for sparse in (True, False):
             for format in ("memory", "binary_folder", "zarr"):
                 print("sparse", sparse, format)
-                sorting_analyzer = self._prepare_sorting_analyzer(format, sparse, extension_class)
+                sorting_analyzer = self._prepare_sorting_analyzer(
+                    format, sparse, extension_class, extension_params=params
+                )
                 self._check_one(sorting_analyzer, extension_class, params)

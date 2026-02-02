@@ -16,7 +16,6 @@ from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core import BaseRecording
 
-
 motion_options_preset = {
     # dredge
     "dredge": {
@@ -122,7 +121,7 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.1,
+            exclude_sweep_ms=0.8,
             radius_um=75.0,
         ),
         "select_kwargs": dict(),
@@ -140,7 +139,7 @@ motion_options_preset = {
             method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
-            exclude_sweep_ms=0.1,
+            exclude_sweep_ms=0.8,
             radius_um=50,
         ),
         "select_kwargs": dict(),

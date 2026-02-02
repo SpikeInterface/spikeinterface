@@ -21,7 +21,6 @@ except:
     pass
 from .tools import aggregate_sparse_features, FeaturesLoader
 
-
 DEBUG = False
 
 

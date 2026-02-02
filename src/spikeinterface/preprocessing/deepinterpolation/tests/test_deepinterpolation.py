@@ -11,7 +11,6 @@ from spikeinterface.preprocessing import depth_order, zscore
 from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
 from spikeinterface.preprocessing.deepinterpolation.train import train_deepinterpolation_process
 
-
 try:
     import tensorflow
     import deepinterpolation
