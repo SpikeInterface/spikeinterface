@@ -842,6 +842,7 @@ def plot_performances_comparison(
     performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
     levels_to_group_by=None,
     ylim=(-0.1, 1.1),
+    axs=None,
 ):
     """
     Plot performances comparison for a study.
@@ -881,7 +882,8 @@ def plot_performances_comparison(
         [key in performance_colors for key in performance_names]
     ), f"performance_colors must have a color for each performance name: {performance_names}"
 
-    fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=figsize, squeeze=False)
     for i, key1 in enumerate(case_keys):
         for j, key2 in enumerate(case_keys):
             if i < j:
@@ -897,7 +899,8 @@ def plot_performances_comparison(
                         comp1 = study.get_result(sub_key1)["gt_comparison"]
                         comp2 = study.get_result(sub_key2)["gt_comparison"]
 
-                        for performance_name, color in performance_colors.items():
+                        for performance_name in performance_names:
+                            color = performance_colors[performance_name]
                             perf1 = comp1.get_performance()[performance_name]
                             perf2 = comp2.get_performance()[performance_name]
                             ax.scatter(perf2, perf1, marker=".", label=performance_name, color=color)
@@ -923,9 +926,12 @@ def plot_performances_comparison(
     patches = []
     from matplotlib.patches import Patch
 
-    for name, color in performance_colors.items():
-        patches.append(Patch(color=color, label=name))
+
+    for performance_name in performance_names:
+        color = performance_colors[performance_name]
+        patches.append(Patch(color=color, label=performance_name))
     ax.legend(handles=patches)
+    fig = ax.figure
     fig.subplots_adjust(hspace=0.1, wspace=0.1)
     return fig
 
