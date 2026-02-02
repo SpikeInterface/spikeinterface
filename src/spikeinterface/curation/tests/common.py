@@ -91,7 +91,7 @@ def trained_pipeline_path():
     If the model already exists, this function does nothing.
     """
     trained_model_folder = Path(__file__).parent / Path("trained_pipeline")
-    if trained_model_folder.exists():
+    if trained_model_folder.is_dir():
         yield trained_model_folder
     else:
         analyzer = make_sorting_analyzer(sparse=True)
