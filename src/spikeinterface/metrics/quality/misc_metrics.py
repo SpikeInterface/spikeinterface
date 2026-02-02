@@ -873,21 +873,16 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        extension = sorting_analyzer.get_extension("spike_amplitudes")
-        all_amplitudes = extension.get_data()
-        invert_amplitudes = np.median(all_amplitudes) > 0
-    elif sorting_analyzer.has_extension("amplitude_scalings"):
-        # amplitude scalings are positive, we need to invert them
-        invert_amplitudes = True
-        extension = sorting_analyzer.get_extension("amplitude_scalings")
-
+    available_extension = (
+        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+    )
+    extension = sorting_analyzer.get_extension(available_extension)
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
 
-        if invert_amplitudes:
+        if np.median(amplitudes) < 0:  # amplitude_cutoff expects positive amplitudes
             amplitudes = -amplitudes
         all_fraction_missing[unit_id] = amplitude_cutoff(
             amplitudes, num_histogram_bins, histogram_smoothing_value, amplitudes_bins_min_ratio
@@ -903,7 +898,7 @@ class AmplitudeCutoff(BaseMetric):
     metric_name = "amplitude_cutoff"
     metric_function = compute_amplitude_cutoffs
     metric_params = {
-        "num_histogram_bins": 100,
+        "num_histogram_bins": 200,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
     }
@@ -1012,15 +1007,10 @@ def compute_noise_cutoffs(
     noise_cutoff_dict = {}
     noise_ratio_dict = {}
 
-    if sorting_analyzer.has_extension("spike_amplitudes"):
-        extension = sorting_analyzer.get_extension("spike_amplitudes")
-        all_amplitudes = extension.get_data()
-        invert_amplitudes = np.median(all_amplitudes) > 0
-    elif sorting_analyzer.has_extension("amplitude_scalings"):
-        # amplitude scalings are positive, we need to invert them
-        invert_amplitudes = True
-        extension = sorting_analyzer.get_extension("amplitude_scalings")
-
+    available_extension = (
+        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+    )
+    extension = sorting_analyzer.get_extension(available_extension)
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
@@ -1029,7 +1019,7 @@ def compute_noise_cutoffs(
             cutoff, ratio = np.nan, np.nan
             continue
 
-        if invert_amplitudes:
+        if np.median(amplitudes) < 0:  # _noise_cutoff expects positive amplitudes
             amplitudes = -amplitudes
 
         cutoff, ratio = _noise_cutoff(amplitudes, high_quantile=high_quantile, low_quantile=low_quantile, n_bins=n_bins)
@@ -1181,21 +1171,16 @@ def compute_drift_metrics(
             drift_mads[unit_id] = np.nan
             continue
         position_diff = median_position_segments[unit_id] - reference_positions[unit_id]
-        if np.any(np.isnan(position_diff)):
-            # deal with nans: if more than 50% nans --> set to nan
-            if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
-                ptp_drift = np.nan
-                std_drift = np.nan
-                mad_drift = np.nan
-                failed_units.append(unit_id)
-            else:
-                ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
-                std_drift = np.nanstd(np.abs(position_diff))
-                mad_drift = np.nanmedian(np.abs(position_diff - np.nanmean(position_diff)))
+        # deal with nans: if more than 50% nans (default) --> set to nan
+        if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
+            ptp_drift = np.nan
+            std_drift = np.nan
+            mad_drift = np.nan
+            failed_units.append(unit_id)
         else:
-            ptp_drift = np.ptp(position_diff)
-            std_drift = np.std(position_diff)
-            mad_drift = np.median(np.abs(position_diff - np.mean(position_diff)))
+            ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
+            std_drift = np.nanstd(position_diff)
+            mad_drift = np.nanmedian(np.abs(position_diff - np.nanmedian(position_diff)))
         drift_ptps[unit_id] = ptp_drift
         drift_stds[unit_id] = std_drift
         drift_mads[unit_id] = mad_drift
@@ -1520,6 +1505,9 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     """
     Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
+    Find the missing spikes from the left tail of the distribution. Assumes cutoff happens at spikes
+    with lower amplitudes.
+
     See compute_amplitude_cutoffs for additional documentation
 
     Parameters
@@ -1544,27 +1532,20 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
         return np.nan
     else:
-        h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
-
-        # TODO : use something better than scipy.ndimage.gaussian_filter1d
         from scipy.ndimage import gaussian_filter1d
 
-        pdf = gaussian_filter1d(h, histogram_smoothing_value)
-        support = b[:-1]
-        bin_size = np.mean(np.diff(support))
-        peak_index = np.argmax(pdf)
+        # Approximate amplitude pdf with np.histogram
+        h = np.histogram(amplitudes, num_histogram_bins)[0]
+        pdf = gaussian_filter1d(h, histogram_smoothing_value, mode="nearest")
 
-        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
+        # Find number of missed spikes
+        cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
+        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
+        num_missed_spikes = np.sum(pdf[G + 1 :])  # theoretically missing spikes on the left side
 
-        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
-            warnings.warn(
-                "Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
-                "amplitude_cutoff computation!"
-            )
-
-        G = np.argmin(pdf_above) + peak_index
-        fraction_missing = np.sum(pdf[G:]) * bin_size
-        fraction_missing = np.min([fraction_missing, 0.5])
+        # Compute fraction of missed spikes
+        fraction_missing = num_missed_spikes / (len(amplitudes) + num_missed_spikes)
+        fraction_missing = min(fraction_missing, 0.5)
 
         return fraction_missing
 
