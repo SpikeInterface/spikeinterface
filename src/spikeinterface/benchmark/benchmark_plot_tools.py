@@ -926,7 +926,6 @@ def plot_performances_comparison(
     patches = []
     from matplotlib.patches import Patch
 
-
     for performance_name in performance_names:
         color = performance_colors[performance_name]
         patches.append(Patch(color=color, label=performance_name))
