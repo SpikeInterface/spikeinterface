@@ -10,8 +10,9 @@ Unit Types:
 
 from __future__ import annotations
 
+from pathlib import Path
+import json
 import numpy as np
-from typing import Optional
 
 NOISE_METRICS = [
     "num_positive_peaks",
@@ -85,10 +86,10 @@ def _is_threshold_disabled(value):
 
 def bombcell_label_units(
     sorting_analyzer=None,
-    thresholds: Optional[dict] = None,
+    thresholds: dict | str | Path | None = None,
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
-    external_metrics: Optional["pd.DataFrame | list[pd.DataFrame]"] = None,
+    external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     bombcell - label units based on quality metrics and thresholds.
@@ -98,13 +99,14 @@ def bombcell_label_units(
     sorting_analyzer : SortingAnalyzer, optional
         SortingAnalyzer with computed quality_metrics and/or template_metrics extensions.
         If provided, metrics are extracted automatically using get_metrics_extension_data().
-    thresholds : dict or None
-        Threshold dict: {"metric": {"min": val, "max": val}}. Use None to disable.
+    thresholds : dict | str | Path | None
+        Threshold dict or JSON file, including a set of {"metric": {"min": val, "max": val}}.
+        If None, default bombcell thresholds are used.
     label_non_somatic : bool
         If True, detect non-somatic (axonal) units.
     split_non_somatic_good_mua : bool
         If True, split non-somatic into NON_SOMA_GOOD (3) and NON_SOMA_MUA (4).
-    external_metrics: Optional[pd.DataFrame | list[pd.DataFrame]] = None
+    external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
 
     Returns
@@ -136,6 +138,11 @@ def bombcell_label_units(
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
+    elif isinstance(thresholds, (str, Path)):
+        with open(thresholds, "r") as f:
+            thresholds = json.load(f)
+    elif not isinstance(thresholds, dict):
+        raise ValueError("thresholds must be a dict, a JSON file path, or None")
 
     n_units = len(combined_metrics)
     unit_type = np.full(n_units, np.nan)
