@@ -21,6 +21,8 @@ class WaveformOverlayByLabelWidget(BaseWidget):
         used in the order they appear.
     max_columns : int, default: 3
         Maximum number of columns in the plot grid.
+    ylims : tuple, optional
+        Y-axis limits for the plots. If None, automatic scaling is used.
     """
 
     def __init__(
@@ -29,6 +31,7 @@ class WaveformOverlayByLabelWidget(BaseWidget):
         unit_labels: np.ndarray,
         labels_order=None,
         max_columns: int = 3,
+        ylims=None,
         backend=None,
         **backend_kwargs,
     ):
@@ -46,6 +49,7 @@ class WaveformOverlayByLabelWidget(BaseWidget):
             labels_order=labels_order,
             unit_labels=unit_labels,
             max_columns=max_columns,
+            ylims=ylims,
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
@@ -57,6 +61,7 @@ class WaveformOverlayByLabelWidget(BaseWidget):
         sorting_analyzer = dp.sorting_analyzer
         unit_labels = dp.unit_labels
         labels_order = dp.labels_order
+        ylims = dp.ylims
 
         if not sorting_analyzer.has_extension("templates"):
             fig, ax = plt.subplots(1, 1, figsize=(8, 6))
@@ -88,8 +93,11 @@ class WaveformOverlayByLabelWidget(BaseWidget):
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         axes_flat = self.axes.flatten()
+        ax0 = axes_flat[0]
         for index, label in enumerate(labels_order):
             ax = axes_flat[index]
+            if index > 0:
+                ax.sharey(ax0)
             mask = unit_labels == label
             n_units = np.sum(mask)
 
@@ -109,6 +117,9 @@ class WaveformOverlayByLabelWidget(BaseWidget):
                 spine.set_visible(False)
             ax.set_xticks([])
             ax.set_yticks([])
+
+            if ylims is not None:
+                ax.set_ylim(ylims)
 
         for idx in range(len(labels_order), len(axes_flat)):
             axes_flat[idx].set_visible(False)

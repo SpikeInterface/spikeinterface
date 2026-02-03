@@ -2,21 +2,15 @@
 
 from __future__ import annotations
 
-import numpy as np
+import warnings
 from typing import Optional
 
+import numpy as np
+
+from spikeinterface.curation.curation_tools import is_threshold_disabled
+
 from .base import BaseWidget, to_attr
-
 from .unit_labels import WaveformOverlayByLabelWidget
-
-
-def _is_threshold_disabled(value):
-    """Check if a threshold value is disabled (None or np.nan)."""
-    if value is None:
-        return True
-    if isinstance(value, float) and np.isnan(value):
-        return True
-    return False
 
 
 class LabelingHistogramsWidget(BaseWidget):
@@ -95,10 +89,10 @@ class LabelingHistogramsWidget(BaseWidget):
 
             thresh = thresholds.get(metric_name, {})
             has_thresh = False
-            if not _is_threshold_disabled(thresh.get("min", None)):
+            if not is_threshold_disabled(thresh.get("min", None)):
                 ax.axvline(thresh["min"], color="red", ls="--", lw=2, label=f"min={thresh['min']:.2g}")
                 has_thresh = True
-            if not _is_threshold_disabled(thresh.get("max", None)):
+            if not is_threshold_disabled(thresh.get("max", None)):
                 ax.axvline(thresh["max"], color="blue", ls="--", lw=2, label=f"max={thresh['max']:.2g}")
                 has_thresh = True
 
@@ -174,8 +168,6 @@ class UpsetPlotWidget(BaseWidget):
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        from .utils_matplotlib import make_mpl_figure
-        import warnings
         import matplotlib.pyplot as plt
         import pandas as pd
 
@@ -282,9 +274,9 @@ class UpsetPlotWidget(BaseWidget):
                 values = np.abs(values)
 
             failed = np.isnan(values)
-            if not _is_threshold_disabled(thresh.get("min", None)):
+            if not is_threshold_disabled(thresh.get("min", None)):
                 failed |= values < thresh["min"]
-            if not _is_threshold_disabled(thresh.get("max", None)):
+            if not is_threshold_disabled(thresh.get("max", None)):
                 failed |= values > thresh["max"]
             failure_data[metric_name] = failed
 

@@ -24,18 +24,109 @@
 # 3. UnitRefine: pre-trained classifiers to label units as noise or SUA/MUA [Jain]_
 
 # %%
+import numpy as np
+
 import spikeinterface as si
 import spikeinterface.curation as sc
 import spikeinterface.widgets as sw
 
-# %%
-analyzer_path = "/ssd980/working/analyzer_np2_shank1.zarr"
+from pprint import pprint
 
 # %%
-analyzer = si.load(analyzer_path)
+# %matplotlib inline
 
 # %%
-qm = analyzer_zarr.compute("quality_metrics", delete_existing_metrics=True)
-qm.get_data()
+analyzer_path = "/ssd980/working/analyzer_np2_single_shank.zarr"
 
 # %%
+sorting_analyzer = si.load(analyzer_path)
+
+# %%
+sorting_analyzer
+
+# %% [markdown]
+# The `SortingAnalyzer` includes several metrics that we can use for curation:
+
+# %%
+sorting_analyzer.get_metrics_extension_data().columns
+
+# %% [markdown]
+# ### 1. Quality-metrics based curation
+#
+# A simple solution is to use a filter based on quality metrics. To do so, we can use the `spikeinterface.curation.qualitymetrics_label_units` function and provide a set of thresholds.
+
+# %%
+qm_thresholds = {
+    "snr": {"min": 5},
+    "firing_rate": {"min": 0.1, "max": 200},
+    "rp_contamination": {"max": 0.5}
+}
+
+# %%
+qm_labels = sc.qualitymetrics_label_units(sorting_analyzer, thresholds=qm_thresholds)
+
+# %%
+qm_labels["label"].value_counts()
+
+# %%
+w = sw.plot_unit_labels(sorting_analyzer, qm_labels["label"], ylims=(-300, 100))
+w.figure.suptitle("Quality-metrics labeling")
+
+# %% [markdown]
+# Only 27 units are labeled as *good*, and we can see from the plots that some "noisy" waveforms are not properly flagged and some visually good waveforms are labeled as noise. Let's take a look at more powerful methods.
+
+# %% [markdown]
+# ## 2. Bombcell
+#
+# **Bombcell** ([Fabre]_) is another threshold-based method that also uses quality metrics and template metrics, but in a much more refined way! It can label units as `noise`, `mua`, and `good` and further detect `non-soma` units.
+# It comes with some default thresholds, but user-defined thresholds can be provided from a dictionary or a JSON file.
+
+# %%
+bombcell_default_thresholds = sc.bombcell_get_default_thresholds()
+pprint(bombcell_default_thresholds)
+
+# %%
+bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds)
+
+# %%
+bombcell_labels["label"].value_counts()
+
+# %%
+w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["label"], ylims=(-300, 100))
+w.figure.suptitle("Bombcell labeling")
+
+# %% [markdown]
+# ## UnitRefine
+#
+# **UnitRefine** ([Jain]_) also uses quality and template metrics, but in a different way. It uses pre-trained classifiers to trained on hand-curated data.
+# By default, the classification is performed in two steps: first a *noise*/*neural* classifier is applied, followed by a *sua*/*mua* classifier.
+# Several models are available on the [SpikeInterface HuggingFace page](https://huggingface.co/SpikeInterface).
+
+# %%
+unitrefine_labels = sc.unitrefine_label_units(
+    sorting_analyzer,
+    noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier",
+    sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier",
+)
+
+# %%
+unitrefine_labels["label"].value_counts()
+
+# %%
+w = sw.plot_unit_labels(sorting_analyzer, unitrefine_labels["label"], ylims=(-300, 100))
+w.figure.suptitle("UnitRefine labeling")
+
+# %% [markdown]
+# > **_NOTE:_** If you want to train your own models, see  the [UnitRefine repo](`https://github.com/anoushkajain/UnitRefine`) for instructions!
+
+# %% [markdown]
+# This "How To" demonstrated how to automatically label units after spike sorting with different strategies. We recommend running **Bombcell** and **UnitRefine** as part of your pipeline. These methods will facilitate further curation and make downstream analysis cleaner.
+#
+# To remove units from your `SortingAnalyzer`, you can simply use the `select_units` function:
+
+# %%
+non_noisy_units = bombcell_labels["label"] != "noise"
+sorting_analyzer_clean = sorting_analyzer.select_units(sorting_analyzer.unit_ids[non_noisy_units])
+
+# %%
+sorting_analyzer_clean

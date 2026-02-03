@@ -83,7 +83,7 @@ def bombcell_label_units(
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> "pd.DataFrame":
     """
     bombcell - label units based on quality metrics and thresholds.
 
@@ -104,10 +104,8 @@ def bombcell_label_units(
 
     Returns
     -------
-    unit_type : np.ndarray
-        Numeric: 0=NOISE, 1=GOOD, 2=MUA, 3=NON_SOMA
-    unit_type_string : np.ndarray
-        String labels.
+    labels : pd.DataFrame
+        A DataFrame with unit ids as index and "label"/"label_type" as column
     """
     import pandas as pd
 
@@ -242,7 +240,9 @@ def bombcell_label_units(
         labels = {0: "noise", 1: "good", 2: "mua", 3: "non_soma"}
 
     unit_type_string = np.array([labels.get(int(t), "unknown") for t in unit_type], dtype=object)
-    return unit_type.astype(int), unit_type_string
+    labels = pd.DataFrame(data={"label": unit_type_string, "label_type": unit_type}, index=combined_metrics.index)
+
+    return labels
 
 
 def get_bombcell_labeling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:

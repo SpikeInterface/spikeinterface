@@ -19,10 +19,10 @@ def test_bombcell_label_units(sorting_analyzer_with_metrics):
 
     sorting_analyzer = sorting_analyzer_with_metrics
 
-    unit_type, unit_type_string = bombcell_label_units(sorting_analyzer=sorting_analyzer)
+    labels = bombcell_label_units(sorting_analyzer=sorting_analyzer)
 
-    assert len(unit_type) == sorting_analyzer.unit_ids.size
-    assert set(unit_type_string).issubset({"somatic", "non-somatic", "good", "mua", "noise"})
+    assert len(labels) == sorting_analyzer.unit_ids.size
+    assert set(labels["label"]).issubset({"somatic", "non-somatic", "good", "mua", "noise"})
 
 
 def test_bombcell_label_units_with_external_metrics(sorting_analyzer_with_metrics):
@@ -35,18 +35,18 @@ def test_bombcell_label_units_with_external_metrics(sorting_analyzer_with_metric
 
     metrics_df = sorting_analyzer.get_metrics_extension_data()
 
-    unit_type, unit_type_string = bombcell_label_units(
+    labels = bombcell_label_units(
         sorting_analyzer=None,
         external_metrics=metrics_df,
     )
 
     # run default metrics in analyzer
-    unit_type2, unit_type_string2 = bombcell_label_units(
+    labels2 = bombcell_label_units(
         sorting_analyzer=sorting_analyzer,
     )
 
-    assert (unit_type == unit_type2).all()
-    assert (unit_type_string == unit_type_string2).all()
+    assert (labels["label_type"] == labels2["label_type"]).all()
+    assert (labels["label"] == labels2["label"]).all()
 
 
 def test_bombcell_label_units_with_threshold_file(sorting_analyzer_with_metrics, tmp_path):
@@ -67,9 +67,9 @@ def test_bombcell_label_units_with_threshold_file(sorting_analyzer_with_metrics,
     with open(threshold_file, "w") as f:
         json.dump(custom_thresholds, f)
 
-    unit_type, unit_type_string = bombcell_label_units(
+    labels = bombcell_label_units(
         sorting_analyzer=sorting_analyzer,
         thresholds=threshold_file,
     )
 
-    assert len(unit_type) == sorting_analyzer.unit_ids.size
+    assert len(labels) == sorting_analyzer.unit_ids.size
