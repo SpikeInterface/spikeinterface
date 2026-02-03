@@ -80,7 +80,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         use_valid_periods=False,
         periods=None,
         # common extension kwargs
-        peak_sign=None,
+        peak_sign="neg",
         seed=None,
         skip_pc_metrics=False,
     ):
@@ -137,7 +137,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         all_labels = sorting_analyzer.sorting.unit_ids[spike_unit_indices]
 
         # Get extremum channels for neighbor selection in sparse mode
-        extremum_channels = get_template_extremum_channel(sorting_analyzer)
+        extremum_channels = get_template_extremum_channel(sorting_analyzer, peak_sign=self.params["peak_sign"])
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric
