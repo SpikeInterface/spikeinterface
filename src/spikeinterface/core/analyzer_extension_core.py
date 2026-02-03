@@ -945,13 +945,11 @@ class BaseMetricExtension(AnalyzerExtension):
             for metric_name in metric_names:
                 if metric_name not in [m.metric_name for m in cls.metric_list]:
                     raise ValueError(
-                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                        f"Metric {metric_name} not in available metrics {cls.get_available_metric_names()}"
                     )
         for metric_name in metric_names:
-            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
-        for metric_name in metric_names:
-            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
-            default_metric_columns.extend(m.metric_columns)
+            metric_class = cls.get_metric_by_name(metric_name)
+            default_metric_columns.extend(metric_class.metric_columns)
         return default_metric_columns
 
     @classmethod
@@ -970,15 +968,15 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         metric_column_descriptions = {}
         if metric_names is None:
-            metric_names = [m.metric_name for m in cls.metric_list]
+            metric_names = cls.get_available_metric_names()
         else:
             for metric_name in metric_names:
-                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                if metric_name not in cls.get_available_metric_names():
                     raise ValueError(
-                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                        f"Metric {metric_name} not in available metrics {cls.get_available_metric_names()}"
                     )
         for metric_name in metric_names:
-            m = [m for m in cls.metric_list if m.metric_name == metric_name][0]
+            m = cls.get_metric_by_name(metric_name)
             if m.metric_descriptions is None:
                 metric_column_descriptions.update({col: "no description" for col in m.metric_columns.keys()})
             else:
@@ -997,14 +995,14 @@ class BaseMetricExtension(AnalyzerExtension):
             metric_names = [m.metric_name for m in cls.metric_list]
         else:
             for metric_name in metric_names:
-                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                if metric_name not in cls.get_available_metric_names():
                     raise ValueError(
-                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in cls.metric_list]}"
+                        f"Metric {metric_name} not in available metrics {cls.get_available_metric_names()}"
                     )
         metric_depend_on = set()
         for metric_name in metric_names:
-            metric = [m for m in cls.metric_list if m.metric_name == metric_name][0]
-            for dep in metric.depend_on:
+            metric_class = cls.get_metric_by_name(metric_name)
+            for dep in metric_class.depend_on:
                 if "|" in dep:
                     dep_options = dep.split("|")
                     metric_depend_on.update(dep_options)
@@ -1031,6 +1029,26 @@ class BaseMetricExtension(AnalyzerExtension):
                 if all(col in computed_metric_columns for col in m.metric_columns.keys()):
                     computed_metric_names.append(m.metric_name)
             return computed_metric_names
+
+    @classmethod
+    def get_metric_by_name(cls, metric_name):
+        """
+        Get the metric class by name.
+
+        Parameters
+        ----------
+        metric_name : str
+            The name of the metric.
+
+        Returns
+        -------
+        metric_class : BaseMetric
+            The metric class.
+        """
+        for m in cls.metric_list:
+            if m.metric_name == metric_name:
+                return m
+        raise ValueError(f"Metric {metric_name} not found in available metrics {cls.get_available_metric_names()}")
 
     def _cast_metrics(self, metrics_df):
         metric_dtypes = {}
@@ -1085,17 +1103,17 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         # check metric names
         if metric_names is None:
-            metric_names = [m.metric_name for m in self.metric_list]
+            metric_names = self.get_available_metric_names()
         else:
             for metric_name in metric_names:
-                if metric_name not in [m.metric_name for m in self.metric_list]:
+                if metric_name not in self.get_available_metric_names():
                     raise ValueError(
-                        f"Metric {metric_name} not in available metrics {[m.metric_name for m in self.metric_list]}"
+                        f"Metric {metric_name} not in available metrics {self.get_available_metric_names()}"
                     )
         # check dependencies
         metrics_to_remove = []
         for metric_name in metric_names:
-            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            metric = self.get_metric_by_name(metric_name)
             depend_on = metric.depend_on
             for dep in depend_on:
                 if "|" in dep:
@@ -1122,7 +1140,7 @@ class BaseMetricExtension(AnalyzerExtension):
         for metric_name in metrics_to_remove:
             metric_names.remove(metric_name)
 
-        default_metric_params = {m.metric_name: m.metric_params for m in self.metric_list}
+        default_metric_params = self.get_default_metric_params()
         if metric_params is None:
             metric_params = default_metric_params
         else:
@@ -1200,7 +1218,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         column_names_dtypes = {}
         for metric_name in metric_names:
-            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            metric = self.get_metric_by_name(metric_name)
             column_names_dtypes.update(metric.metric_columns)
 
         # drop metric that don't map to any metric names
@@ -1215,7 +1233,7 @@ class BaseMetricExtension(AnalyzerExtension):
         run_times = {}
 
         for metric_name in metric_names:
-            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            metric = self.get_metric_by_name(metric_name)
             column_names = list(metric.metric_columns.keys())
             import time
 
@@ -1284,7 +1302,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         # append the metrics which were previously computed
         for metric_name in set(existing_metrics).difference(metrics_to_compute):
-            metric = [m for m in self.metric_list if m.metric_name == metric_name][0]
+            metric = self.get_metric_by_name(metric_name)
             # some metrics names produce data columns with other names. This deals with that.
             for column_name in metric.metric_columns:
                 computed_metrics[column_name] = extension.data["metrics"][column_name]
@@ -1295,19 +1313,6 @@ class BaseMetricExtension(AnalyzerExtension):
     def _get_data(self):
         # convert to correct dtype
         return self.data["metrics"]
-
-    def _cast_metrics(self, metrics_df):
-        metric_dtypes = {}
-        for m in self.metric_list:
-            metric_dtypes.update(m.metric_columns)
-
-        for col in metrics_df.columns:
-            if col in metric_dtypes:
-                try:
-                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
-                except Exception as e:
-                    print(f"Error casting column {col}: {e}")
-        return metrics_df
 
     def _select_extension_data(self, unit_ids: list[int | str]):
         """
@@ -1360,7 +1365,7 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         import pandas as pd
 
-        available_metric_names = [m.metric_name for m in self.metric_list]
+        available_metric_names = self.get_available_metric_names()
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
         old_metrics = self.data["metrics"]
 
