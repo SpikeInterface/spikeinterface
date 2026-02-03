@@ -160,6 +160,9 @@ class ModelBasedClassification:
                     columns={"peak_after_to_trough_ratio": "peak_trough_ratio"}
                 )
                 calculated_metrics["peak_trough_ratio"] = -1 * calculated_metrics["peak_trough_ratio"]
+            # trough_half_width was named half_width
+            if "trough_half_width" in calculated_metrics.columns:
+                calculated_metrics = calculated_metrics.rename(columns={"trough_half_width": "half_width"})
         return calculated_metrics
 
     def _check_required_metrics_are_present(self, calculated_metrics):

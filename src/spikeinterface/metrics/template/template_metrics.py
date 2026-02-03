@@ -170,7 +170,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         depth_direction="y",
         min_thresh_detect_peaks_troughs=0.4,
         smooth=True,
-        smooth_window_frac=0.1,
+        smooth_window_ms=0.3,
         smooth_polyorder=3,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
@@ -203,13 +203,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             depth_direction=depth_direction,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
             smooth=smooth,
-            smooth_window_frac=smooth_window_frac,
+            smooth_window_ms=smooth_window_ms,
             smooth_polyorder=smooth_polyorder,
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
         import warnings
-
         from scipy.signal import resample_poly
 
         # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
@@ -236,8 +235,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         channel_locations = sorting_analyzer.get_channel_locations()
 
         templates_single = []
-        troughs = {}
-        peaks = {}
+        trough_indices = {}
+        peaks_after_trough_indices = {}
+        main_peak_indices = {}
         troughs_info = {}
         peaks_before_info = {}
         peaks_after_info = {}
@@ -258,14 +258,19 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 template_upsampled,
                 min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
                 smooth=self.params["smooth"],
-                smooth_window_frac=self.params["smooth_window_frac"],
+                sampling_frequency=sampling_frequency_up,
+                smooth_window_ms=self.params["smooth_window_ms"],
                 smooth_polyorder=self.params["smooth_polyorder"],
             )
 
             templates_single.append(template_upsampled)
             # Store main locations for backward compatibility
-            troughs[unit_id] = troughs_dict["main_loc"]
-            peaks[unit_id] = peaks_after_dict["main_loc"]
+            trough_indices[unit_id] = troughs_dict["main_loc"]
+            peaks_after_trough_indices[unit_id] = peaks_after_dict["main_loc"]
+            if template_upsampled[peaks_before_dict["main_loc"]] >= template_upsampled[peaks_after_dict["main_loc"]]:
+                main_peak_indices[unit_id] = peaks_before_dict["main_loc"]
+            else:
+                main_peak_indices[unit_id] = peaks_after_dict["main_loc"]
             # Store full dicts for new metrics
             troughs_info[unit_id] = troughs_dict
             peaks_before_info[unit_id] = peaks_before_dict
@@ -292,8 +297,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 templates_multi.append(template_multi_upsampled)
                 channel_locations_multi.append(channel_location_multi)
 
-        tmp_data["troughs"] = troughs
-        tmp_data["peaks"] = peaks
+        tmp_data["trough_indices"] = trough_indices
+        tmp_data["peaks_after_trough_indices"] = peaks_after_trough_indices
+        tmp_data["main_peak_indices"] = main_peak_indices
         tmp_data["troughs_info"] = troughs_info
         tmp_data["peaks_before_info"] = peaks_before_info
         tmp_data["peaks_after_info"] = peaks_after_info

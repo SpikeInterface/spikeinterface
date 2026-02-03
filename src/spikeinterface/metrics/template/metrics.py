@@ -6,11 +6,18 @@ from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
 def get_trough_and_peak_idx(
-    template, min_thresh_detect_peaks_troughs=0.4, smooth=True, smooth_window_frac=0.1, smooth_polyorder=3
+    template,
+    min_thresh_detect_peaks_troughs=0.4,
+    smooth=True,
+    sampling_frequency=None,
+    smooth_window_ms=0.3,
+    smooth_polyorder=3,
 ):
     """
     Detect troughs and peaks in a template waveform and return detailed information
     about each detected feature.
+
+    Trough are defined as "minimum" points (negative peaks) and peaks as "maximum" points (positive peaks).
 
     Parameters
     ----------
@@ -20,8 +27,10 @@ def get_trough_and_peak_idx(
         Minimum prominence threshold as a fraction of the template's absolute max value
     smooth : bool, default: True
         Whether to apply smoothing before peak detection
-    smooth_window_frac : float, default: 0.1
-        Smoothing window length as a fraction of template length (0.05-0.2 recommended)
+    sampling_frequency : float, optional
+        Sampling frequency in Hz (required if smooth is True and smooth_window_ms is used)
+    smooth_window_ms : float, default: 0.3
+        Smoothing window in ms for Savitzky-Golay filter
     smooth_polyorder : int, default: 3
         Polynomial order for Savitzky-Golay filter (must be < window_length)
 
@@ -58,7 +67,8 @@ def get_trough_and_peak_idx(
 
     # Smooth template to reduce noise while preserving peaks using Savitzky-Golay filter
     if smooth:
-        window_length = int(len(template) * smooth_window_frac) // 2 * 2 + 1
+        assert sampling_frequency is not None, "sampling_frequency must be provided when smoothing is enabled"
+        window_length = int(sampling_frequency * smooth_window_ms / 1000)
         window_length = max(smooth_polyorder + 2, window_length)  # Must be > polyorder
         template = savgol_filter(template, window_length=window_length, polyorder=smooth_polyorder)
 
@@ -437,9 +447,13 @@ def get_waveform_widths(template, sampling_frequency, troughs, peaks_before, pea
 
 #########################################################################################
 # Single-channel metrics
-def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
+def get_peak_to_trough_duration(
+    template_single, sampling_frequency, trough_idx, peak_after_trough_idx, **kwargs
+) -> float:
     """
-    Return the peak to valley duration in seconds of input waveforms.
+    Return the duration in seconds between the main trough and the main peak after the trough of input waveforms.
+
+    The function assumes that the trough comes before the peak.
 
     Parameters
     ----------
@@ -447,77 +461,98 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
         The 1D template waveform
     sampling_frequency : float
         The sampling frequency of the template
-    trough_idx: int, default: None
+    trough_idx: int
         The index of the trough
-    peak_idx: int, default: None
-        The index of the peak
+    peak_after_trough_idx: int
+        The index of the peak after the trough
 
     Returns
     -------
-    ptv: float
-        The peak to valley duration in seconds
+    pt_duration: float
+        The duration in seconds between the main trough and the main peak after the trough
     """
-    if trough_idx is None or peak_idx is None:
-        troughs, _, peaks_after = get_trough_and_peak_idx(template_single)
-        trough_idx = troughs["main_loc"]
-        peak_idx = peaks_after["main_loc"]
-    if trough_idx is None or peak_idx is None:
+    if trough_idx is None or peak_after_trough_idx is None:
         return np.nan
-    ptv = (peak_idx - trough_idx) / sampling_frequency
-    return ptv
+    pt_duration = (peak_after_trough_idx - trough_idx) / sampling_frequency
+    return pt_duration
 
 
-def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_idx=None, **kwargs) -> float:
-    """
-    Return the half width of input waveforms in seconds.
+def _compute_halfwidth(template, extremum_index, sampling_frequency):
+    """Compute the halfwidth of a positive peak.
 
     Parameters
     ----------
-    template_single: numpy.ndarray
+    template : numpy.ndarray
         The 1D template waveform
+    extremum_index: int
+        The index of the extremum
     sampling_frequency : float
         The sampling frequency of the template
-    trough_idx: int, default: None
-        The index of the trough
-    peak_idx: int, default: None
-        The index of the peak
 
     Returns
     -------
     hw: float
         The half width in seconds
     """
-    if trough_idx is None or peak_idx is None:
-        troughs, _, peaks_after = get_trough_and_peak_idx(template_single)
-        trough_idx = troughs["main_loc"]
-        peak_idx = peaks_after["main_loc"]
-
-    if peak_idx is None or peak_idx == 0:
-        return np.nan
-
-    trough_val = template_single[trough_idx]
+    extremum_val = template[extremum_index]
     # threshold is half of peak height (assuming baseline is 0)
-    threshold = 0.5 * trough_val
+    threshold = 0.5 * extremum_val
 
-    (cpre_idx,) = np.where(template_single[:trough_idx] < threshold)
-    (cpost_idx,) = np.where(template_single[trough_idx:] < threshold)
+    (cpre_idx,) = np.where(template[:extremum_index] > threshold)
+    (cpost_idx,) = np.where(template[extremum_index:] > threshold)
 
     if len(cpre_idx) == 0 or len(cpost_idx) == 0:
         hw = np.nan
-
     else:
         # last occurence of template lower than thr, before peak
         cross_pre_pk = cpre_idx[0] - 1
         # first occurence of template lower than peak, after peak
-        cross_post_pk = cpost_idx[-1] + 1 + trough_idx
+        cross_post_pk = cpost_idx[-1] + 1 + extremum_index
 
         hw = (cross_post_pk - cross_pre_pk) / sampling_frequency
+
     return hw
 
 
-def get_repolarization_slope(template_single, sampling_frequency, trough_idx=None, **kwargs):
+def get_half_widths(template_single, sampling_frequency, trough_idx, main_peak_idx, **kwargs) -> float:
     """
-    Return slope of repolarization period between trough and baseline
+    Return the half width of the main trough and main peak in seconds.
+
+    Parameters
+    ----------
+    template_single: numpy.ndarray
+        The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
+    trough_idx: int
+        The index of the trough
+    main_peak_idx: int
+        The index of the main peak
+
+    Returns
+    -------
+    hw: float
+        The half width in seconds
+    """
+    # Compute the trough half width
+    if trough_idx is None:
+        trough_hw = np.nan
+    else:
+        # for the trough, we invert the waveform to compute halfwidth as for a peak
+        trough_hw = _compute_halfwidth(-template_single, trough_idx, sampling_frequency)
+
+    # Compute the peak half width
+    if main_peak_idx is None:
+        peak_hw = np.nan
+    else:
+        peak_hw = _compute_halfwidth(template_single, main_peak_idx, sampling_frequency)
+
+    return trough_hw, peak_hw
+
+
+def get_repolarization_slope(template_single, sampling_frequency, trough_idx, **kwargs):
+    """
+    Return slope of repolarization period between trough and baseline.
 
     After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
@@ -532,7 +567,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
         The 1D template waveform
     sampling_frequency : float
         The sampling frequency of the template
-    trough_idx: int, default: None
+    trough_idx: int
         The index of the trough
 
     Returns
@@ -540,9 +575,7 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     slope: float
         The repolarization slope
     """
-    if trough_idx is None:
-        troughs, _, _ = get_trough_and_peak_idx(template_single)
-        trough_idx = troughs["main_loc"]
+    import scipy.stats
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
@@ -558,16 +591,15 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     if return_to_base_idx - trough_idx < 3:
         return np.nan
 
-    import scipy.stats
-
     res = scipy.stats.linregress(times[trough_idx:return_to_base_idx], template_single[trough_idx:return_to_base_idx])
     return res.slope
 
 
-def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwargs):
+def get_recovery_slope(template_single, sampling_frequency, peak_after_trough_idx, **kwargs):
     """
-    Return the recovery slope of input waveforms. After repolarization,
-    the neuron hyperpolarizes until it peaks. The recovery slope is the
+    Return the recovery slope between the main peak after the trough and baseline.
+
+    After repolarization, the neuron hyperpolarizes until it peaks. The recovery slope is the
     slope of the action potential after the peak, returning to the baseline
     in dV/dT. The returned slope is in units of (unit of template)
     per second. By default traces are scaled to units of uV, controlled
@@ -580,8 +612,8 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
         The 1D template waveform
     sampling_frequency : float
         The sampling frequency of the template
-    peak_idx: int, default: None
-        The index of the peak
+    peak_after_trough_idx: int
+        The index of the peak after the trough
     **kwargs: Required kwargs:
         - recovery_window_ms: the window in ms after the peak to compute the recovery_slope
 
@@ -594,18 +626,15 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
 
     assert "recovery_window_ms" in kwargs, "recovery_window_ms must be given as kwarg"
     recovery_window_ms = kwargs["recovery_window_ms"]
-    if peak_idx is None:
-        _, _, peaks_after = get_trough_and_peak_idx(template_single)
-        peak_idx = peaks_after["main_loc"]
 
     times = np.arange(template_single.shape[0]) / sampling_frequency
 
-    if peak_idx is None or peak_idx == 0:
+    if peak_after_trough_idx is None or peak_after_trough_idx == 0:
         return np.nan
-    max_idx = int(peak_idx + ((recovery_window_ms / 1000) * sampling_frequency))
+    max_idx = int(peak_after_trough_idx + ((recovery_window_ms / 1000) * sampling_frequency))
     max_idx = np.min([max_idx, template_single.shape[0]])
 
-    res = scipy.stats.linregress(times[peak_idx:max_idx], template_single[peak_idx:max_idx])
+    res = scipy.stats.linregress(times[peak_after_trough_idx:max_idx], template_single[peak_after_trough_idx:max_idx])
     return res.slope
 
 
@@ -975,15 +1004,18 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> flo
 def single_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **metric_params):
     result = {}
     templates_single = tmp_data["templates_single"]
-    troughs = tmp_data.get("troughs", None)
-    peaks = tmp_data.get("peaks", None)
+    trough_indices = tmp_data["trough_indices"]
+    peaks_after_trough_indices = tmp_data["peaks_after_trough_indices"]
+    main_peak_indices = tmp_data["main_peak_indices"]
     sampling_frequency = tmp_data["sampling_frequency"]
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
-        trough_idx = troughs[unit_id] if troughs is not None else None
-        peak_idx = peaks[unit_id] if peaks is not None else None
+        trough_idx = trough_indices[unit_id] if trough_indices is not None else None
+        peak_after_trough_idx = peaks_after_trough_indices[unit_id] if peaks_after_trough_indices is not None else None
+        main_peak_idx = main_peak_indices[unit_id] if main_peak_indices is not None else None
         metric_params["trough_idx"] = trough_idx
-        metric_params["peak_idx"] = peak_idx
+        metric_params["peak_after_trough_idx"] = peak_after_trough_idx
+        metric_params["main_peak_idx"] = main_peak_idx
         value = unit_function(template_single, sampling_frequency, **metric_params)
         result[unit_id] = value
     return result
@@ -1001,7 +1033,7 @@ class PeakToTroughDuration(BaseMetric):
     @staticmethod
     def _peak_to_trough_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
         return single_channel_metric(
-            unit_function=get_peak_to_valley,
+            unit_function=get_peak_to_trough_duration,
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             tmp_data=tmp_data,
@@ -1014,21 +1046,30 @@ class PeakToTroughDuration(BaseMetric):
 class HalfWidth(BaseMetric):
     metric_name = "half_width"
     metric_params = {}
-    metric_columns = {"half_width": float}
+    metric_columns = {"trough_half_width": float, "peak_half_width": float}
     metric_descriptions = {
-        "half_width": "Duration in s at half the amplitude of the trough (minimum) of the spike waveform."
+        "trough_half_width": "Duration in s at half the amplitude of the trough (minimum) of the spike waveform."
     }
     needs_tmp_data = True
 
     @staticmethod
     def _half_width_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
-        return single_channel_metric(
-            unit_function=get_half_width,
+        from collections import namedtuple
+
+        half_width_result = namedtuple("HalfWidthResult", ["trough_half_width", "peak_half_width"])
+        trough_half_widths = {}
+        peak_half_widths = {}
+        result = single_channel_metric(
+            unit_function=get_half_widths,
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             tmp_data=tmp_data,
             **metric_params,
         )
+        for unit_id, halfwidths in result.items():
+            trough_half_widths[unit_id] = halfwidths[0]
+            peak_half_widths[unit_id] = halfwidths[1]
+        return half_width_result(trough_half_width=trough_half_widths, peak_half_width=peak_half_widths)
 
     metric_function = _half_width_metric_function
 

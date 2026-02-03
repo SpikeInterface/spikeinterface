@@ -62,7 +62,7 @@ def bombcell_get_default_thresholds() -> dict:
         "exp_decay": {"min": 0.01, "max": 0.1},
         # Spike quality (failures -> MUA)
         "amplitude_median": {"min": 40, "max": None},  # uV
-        "snr_baseline": {"min": 5, "max": None},
+        "snr": {"min": 5, "max": None},
         "amplitude_cutoff": {"min": None, "max": 0.2},
         "num_spikes": {"min": 300, "max": None},
         "rp_contamination": {"min": None, "max": 0.1},
@@ -71,7 +71,7 @@ def bombcell_get_default_thresholds() -> dict:
         # Non-somatic detection
         "peak_before_to_trough_ratio": {"min": None, "max": 3},
         "peak_before_width": {"min": 0.00015, "max": None},  # seconds
-        "trough_width": {"min": 0.0002, "max": None},  # seconds
+        "trough_half_width": {"min": 0.0002, "max": None},  # seconds
         "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
         "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
     }
