@@ -31,7 +31,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         sorting_analyzer = dp.sorting_analyzer_or_templates
         assert isinstance(sorting_analyzer, SortingAnalyzer), "This widget requires a SortingAnalyzer as input"
 
-        assert len(dp.templates_shading) <= 4, "Only 2 ans 4 templates shading are supported in sortingview"
+        assert len(dp.templates_shading) in (2, 4), "Only 2 ans 4 templates shading are supported in sortingview"
 
         # ensure serializable for sortingview
         unit_id_to_channel_ids = dp.final_sparsity.unit_id_to_channel_ids

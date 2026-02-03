@@ -223,7 +223,7 @@ jobs:
         run: |
           pip install -e .[full,widgets]
           pip list
-          ./.github/run_tests.sh widgets --no-virtual-env
+          ./.github/run_tests.sh widgets --no-virtual-env -s
 
       - name: Test exporters
         shell: bash

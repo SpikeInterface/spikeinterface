@@ -28,6 +28,10 @@ ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
 SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW")) or not HAS_SORTINGVIEW
 SKIP_FIGPACK = bool(os.getenv("SKIP_FIGPACK")) or not HAS_FIGPACK
+FIGPACK_UPLOAD = bool(os.getenv("FIGPACK_API_KEY"))
+
+
+os.environ["FIGPACK_UPLOAD"] = "1" if FIGPACK_UPLOAD else "0"
 
 
 class TestWidgets(unittest.TestCase):
