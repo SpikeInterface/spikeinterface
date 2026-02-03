@@ -8,7 +8,7 @@ from spikeinterface.core.analyzer_extension_core import SortingAnalyzer
 from .curation_tools import is_threshold_disabled
 
 
-def qualitymetrics_label_units(
+def threshold_metrics_label_units(
     analyzer: SortingAnalyzer,
     thresholds: dict | str | Path,
 ):
