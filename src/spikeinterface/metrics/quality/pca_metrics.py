@@ -146,13 +146,13 @@ def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, job_
 
         with ProcessPoolExecutor(
             max_workers=n_jobs,
-            mp_context=mp.get_context(mp_context) if mp_context else None,
+            mp_context=mp.get_context(mp_context or "spawn"),
         ) as executor:
             results = executor.map(_nn_one_unit, args_list)
 
-            for unit_id, nn_hit_rate, nn_miss_rate in results:
-                nn_hit_rate_dict[unit_id] = nn_hit_rate
-                nn_miss_rate_dict[unit_id] = nn_miss_rate
+        for unit_id, nn_hit_rate, nn_miss_rate in results:
+            nn_hit_rate_dict[unit_id] = nn_hit_rate
+            nn_miss_rate_dict[unit_id] = nn_miss_rate
 
     return nn_result(nn_hit_rate=nn_hit_rate_dict, nn_miss_rate=nn_miss_rate_dict)
 
