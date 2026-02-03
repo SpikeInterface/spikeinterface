@@ -449,7 +449,7 @@ def d_prime_metric(all_pcs, all_labels, this_unit_id) -> float:
 
     X = all_pcs
 
-    y = (all_labels == this_unit_id)
+    y = all_labels == this_unit_id
 
     lda = LinearDiscriminantAnalysis(n_components=1)
 
@@ -459,7 +459,8 @@ def d_prime_metric(all_pcs, all_labels, this_unit_id) -> float:
     flda_other_cluster = X_flda[~y]
 
     d_prime = (np.mean(flda_this_cluster) - np.mean(flda_other_cluster)) / np.sqrt(
-        (np.var(flda_this_cluster) + np.var(flda_other_cluster)) / 2)
+        (np.var(flda_this_cluster) + np.var(flda_other_cluster)) / 2
+    )
 
     return d_prime
 
