@@ -62,8 +62,8 @@ def to_pynapple_tsgroup(
         for unit_id_int, unit_id in zip(unit_ids_ints, unit_ids)
     }
 
-    metadata_list = [] # init list to collect metadata dataframes
-    
+    metadata_list = []  # init list to collect metadata dataframes
+
     if not unit_ids_castable:
         metadata_list.append(pd.DataFrame(unit_ids, columns=["unit_id"]))
 
@@ -84,7 +84,7 @@ def to_pynapple_tsgroup(
     # attach unit properties from sorting
     if attach_unit_properties:
         property_df = pd.DataFrame(index=unit_ids)
-        property_keys = sorting.get_property_keys() # get property keys of sorting
+        property_keys = sorting.get_property_keys()  # get property keys of sorting
         if len(property_keys):
             for property_key in property_keys:  # loop through sorting's properties
                 property_data = sorting.get_property(property_key)
