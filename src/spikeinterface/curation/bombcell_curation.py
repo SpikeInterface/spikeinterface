@@ -14,7 +14,7 @@ from pathlib import Path
 import json
 import numpy as np
 
-from .curation_tools import _is_threshold_disabled
+from .curation_tools import is_threshold_disabled
 
 NOISE_METRICS = [
     "num_positive_peaks",
@@ -151,9 +151,9 @@ def bombcell_label_units(
             values = np.abs(values)
         thresh = thresholds[metric_name]
         noise_mask |= np.isnan(values)
-        if not _is_threshold_disabled(thresh["min"]):
+        if not is_threshold_disabled(thresh["min"]):
             noise_mask |= values < thresh["min"]
-        if not _is_threshold_disabled(thresh["max"]):
+        if not is_threshold_disabled(thresh["max"]):
             noise_mask |= values > thresh["max"]
     unit_type[noise_mask] = 0
 
@@ -167,9 +167,9 @@ def bombcell_label_units(
             values = np.abs(values)
         thresh = thresholds[metric_name]
         valid_mask = np.isnan(unit_type)
-        if not _is_threshold_disabled(thresh["min"]):
+        if not is_threshold_disabled(thresh["min"]):
             mua_mask |= valid_mask & ~np.isnan(values) & (values < thresh["min"])
-        if not _is_threshold_disabled(thresh["max"]):
+        if not is_threshold_disabled(thresh["max"]):
             mua_mask |= valid_mask & ~np.isnan(values) & (values > thresh["max"])
     unit_type[mua_mask & np.isnan(unit_type)] = 2
 
@@ -191,12 +191,12 @@ def bombcell_label_units(
 
         narrow_peak = (
             ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak)
-            if not _is_threshold_disabled(width_thresh_peak)
+            if not is_threshold_disabled(width_thresh_peak)
             else np.zeros(n_units, dtype=bool)
         )
         narrow_trough = (
             ~np.isnan(trough_width) & (trough_width < width_thresh_trough)
-            if not _is_threshold_disabled(width_thresh_trough)
+            if not is_threshold_disabled(width_thresh_trough)
             else np.zeros(n_units, dtype=bool)
         )
         width_conditions = narrow_peak & narrow_trough
@@ -211,17 +211,17 @@ def bombcell_label_units(
 
         large_initial_peak = (
             ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt)
-            if not _is_threshold_disabled(ratio_thresh_pbt)
+            if not is_threshold_disabled(ratio_thresh_pbt)
             else np.zeros(n_units, dtype=bool)
         )
         large_peak_ratio = (
             ~np.isnan(peak_before_to_peak_after) & (peak_before_to_peak_after > ratio_thresh_pbpa)
-            if not _is_threshold_disabled(ratio_thresh_pbpa)
+            if not is_threshold_disabled(ratio_thresh_pbpa)
             else np.zeros(n_units, dtype=bool)
         )
         large_main_peak = (
             ~np.isnan(main_peak_to_trough) & (main_peak_to_trough > ratio_thresh_mpt)
-            if not _is_threshold_disabled(ratio_thresh_mpt)
+            if not is_threshold_disabled(ratio_thresh_mpt)
             else np.zeros(n_units, dtype=bool)
         )
 
@@ -321,9 +321,9 @@ def save_bombcell_results(
                 passed = True
                 if np.isnan(value):
                     passed = False
-                elif not _is_threshold_disabled(thresh_min) and value < thresh_min:
+                elif not is_threshold_disabled(thresh_min) and value < thresh_min:
                     passed = False
-                elif not _is_threshold_disabled(thresh_max) and value > thresh_max:
+                elif not is_threshold_disabled(thresh_max) and value > thresh_max:
                     passed = False
 
                 rows.append(

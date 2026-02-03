@@ -5,7 +5,7 @@ import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import SortingAnalyzer
 
-from .curation_tools import _is_threshold_disabled
+from .curation_tools import is_threshold_disabled
 
 
 def qualitymetrics_label_units(
@@ -70,9 +70,9 @@ def qualitymetrics_label_units(
     for metric_name, threshold in thresholds_dict.items():
         min_value = threshold.get("min", None)
         max_value = threshold.get("max", None)
-        if not _is_threshold_disabled(min_value):
+        if not is_threshold_disabled(min_value):
             good_mask &= qm[metric_name] >= min_value
-        if not _is_threshold_disabled(max_value):
+        if not is_threshold_disabled(max_value):
             good_mask &= qm[metric_name] <= max_value
 
     labels.loc[good_mask, "label"] = "good"
