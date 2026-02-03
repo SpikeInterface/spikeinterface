@@ -343,7 +343,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
-        auto_merge = True
+        # auto_merge = True
+        auto_merge = False
         analyzer_final = None
         if auto_merge:
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
