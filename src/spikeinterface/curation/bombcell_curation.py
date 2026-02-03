@@ -14,6 +14,8 @@ from pathlib import Path
 import json
 import numpy as np
 
+from .curation_tools import _is_threshold_disabled
+
 NOISE_METRICS = [
     "num_positive_peaks",
     "num_negative_peaks",
@@ -73,15 +75,6 @@ def bombcell_get_default_thresholds() -> dict:
         "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
         "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
     }
-
-
-def _is_threshold_disabled(value):
-    """Check if a threshold value is disabled (None or np.nan)."""
-    if value is None:
-        return True
-    if isinstance(value, float) and np.isnan(value):
-        return True
-    return False
 
 
 def bombcell_label_units(

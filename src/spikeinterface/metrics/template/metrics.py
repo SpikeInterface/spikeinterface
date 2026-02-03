@@ -195,7 +195,7 @@ def get_trough_and_peak_idx(
     return troughs, peaks_before, peaks_after
 
 
-def get_main_to_next_peak_duration(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
+def get_main_to_next_extremum_duration(template, sampling_frequency, troughs, peaks_before, peaks_after, **kwargs):
     """
     Calculate duration from the main extremum to the next extremum.
 
@@ -218,7 +218,7 @@ def get_main_to_next_peak_duration(template, sampling_frequency, troughs, peaks_
 
     Returns
     -------
-    main_to_next_peak_duration : float
+    main_to_next_extremum_duration : float
         Duration in seconds from main extremum to next extremum
     """
 
@@ -271,9 +271,9 @@ def get_main_to_next_peak_duration(template, sampling_frequency, troughs, peaks_
             return np.nan
 
     # Convert to seconds
-    main_to_next_peak_duration = duration_samples / sampling_frequency
+    main_to_next_extremum_duration = duration_samples / sampling_frequency
 
-    return main_to_next_peak_duration
+    return main_to_next_extremum_duration
 
 
 def get_waveform_ratios(template, troughs, peaks_before, peaks_after, **kwargs):
@@ -1115,7 +1115,7 @@ class NumberOfPeaks(BaseMetric):
     needs_tmp_data = True
 
 
-def _main_to_next_peak_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
+def _main_to_next_extremum_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
     result = {}
     templates_single = tmp_data["templates_single"]
     troughs_info = tmp_data["troughs_info"]
@@ -1124,7 +1124,7 @@ def _main_to_next_peak_duration_metric_function(sorting_analyzer, unit_ids, tmp_
     sampling_frequency = tmp_data["sampling_frequency"]
     for unit_index, unit_id in enumerate(unit_ids):
         template_single = templates_single[unit_index]
-        value = get_main_to_next_peak_duration(
+        value = get_main_to_next_extremum_duration(
             template_single,
             sampling_frequency,
             troughs_info[unit_id],
@@ -1136,12 +1136,12 @@ def _main_to_next_peak_duration_metric_function(sorting_analyzer, unit_ids, tmp_
     return result
 
 
-class MainToNextPeakDuration(BaseMetric):
-    metric_name = "main_to_next_peak_duration"
-    metric_function = _main_to_next_peak_duration_metric_function
+class MainToNextExtremumDuration(BaseMetric):
+    metric_name = "main_to_next_extremum_duration"
+    metric_function = _main_to_next_extremum_duration_metric_function
     metric_params = {}
-    metric_columns = {"main_to_next_peak_duration": float}
-    metric_descriptions = {"main_to_next_peak_duration": "Duration in seconds from main extremum to next extremum."}
+    metric_columns = {"main_to_next_extremum_duration": float}
+    metric_descriptions = {"main_to_next_extremum_duration": "Duration in seconds from main extremum to next extremum."}
     needs_tmp_data = True
 
 
@@ -1282,7 +1282,7 @@ single_channel_metrics = [
     RepolarizationSlope,
     RecoverySlope,
     NumberOfPeaks,
-    MainToNextPeakDuration,
+    MainToNextExtremumDuration,
     WaveformRatios,
     WaveformWidths,
     WaveformBaselineFlatness,

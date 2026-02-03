@@ -22,6 +22,7 @@ from .sortingview_curation import apply_sortingview_curation
 # automated curation
 from .model_based_curation import model_based_label_units, load_model, auto_label_units
 from .train_manual_curation import train_model, get_default_classifier_search_spaces
+from .qualitymetrics_curation import qualitymetrics_label_units
 from .unitrefine_curation import unitrefine_label_units
 from .bombcell_curation import (
     bombcell_get_default_thresholds,
