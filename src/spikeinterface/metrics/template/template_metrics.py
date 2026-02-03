@@ -47,16 +47,15 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     """
     Compute template metrics including:
         * peak_to_trough_duration
-        * peak_to_trough_ratio
-        * halfwidth
+        * main_to_next_extremum_duration
+        * half_width
         * repolarization_slope
         * recovery_slope
-        * num_positive_peaks
-        * num_negative_peaks
+        * number_of_peaks
+        * waveform_ratios
 
     Optionally, the following multi-channel metrics can be computed (when include_multi_channel_metrics=True):
-        * velocity_above
-        * velocity_below
+        * velocity_fits
         * exp_decay
         * spread
 
