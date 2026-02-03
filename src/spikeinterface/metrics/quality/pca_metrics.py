@@ -102,57 +102,27 @@ def _nn_one_unit(args):
     return unit_id, nn_hit_rate, nn_miss_rate
 
 
-def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwargs, **metric_params):
+def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
     nn_result = namedtuple("NearestNeighborResult", ["nn_hit_rate", "nn_miss_rate"])
 
     # Use pre-computed PCA data
     pca_data_per_unit = tmp_data["pca_data_per_unit"]
 
-    # Extract job parameters
-    n_jobs = job_kwargs.get("n_jobs", 1)
-    mp_context = job_kwargs.get("mp_context", None)
-
     nn_hit_rate_dict = {}
     nn_miss_rate_dict = {}
 
-    if n_jobs == 1:
-        # Sequential processing
-        units_loop = unit_ids
+    for unit_id in unit_ids:
+        pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
+        labels = pca_data_per_unit[unit_id]["labels"]
 
-        for unit_id in units_loop:
-            pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
-            labels = pca_data_per_unit[unit_id]["labels"]
+        try:
+            nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
+        except:
+            nn_hit_rate = np.nan
+            nn_miss_rate = np.nan
 
-            try:
-                nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
-            except:
-                nn_hit_rate = np.nan
-                nn_miss_rate = np.nan
-
-            nn_hit_rate_dict[unit_id] = nn_hit_rate
-            nn_miss_rate_dict[unit_id] = nn_miss_rate
-    else:
-        if mp_context is not None and platform.system() == "Windows":
-            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-        elif mp_context == "fork" and platform.system() == "Darwin":
-            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
-
-        # Prepare arguments - only pass pickle-able data
-        args_list = []
-        for unit_id in unit_ids:
-            pcs_flat = pca_data_per_unit[unit_id]["pcs_flat"]
-            labels = pca_data_per_unit[unit_id]["labels"]
-            args_list.append((unit_id, pcs_flat, labels, metric_params))
-
-        with ProcessPoolExecutor(
-            max_workers=n_jobs,
-            mp_context=mp.get_context(mp_context or "spawn"),
-        ) as executor:
-            results = executor.map(_nn_one_unit, args_list)
-
-        for unit_id, nn_hit_rate, nn_miss_rate in results:
-            nn_hit_rate_dict[unit_id] = nn_hit_rate
-            nn_miss_rate_dict[unit_id] = nn_miss_rate
+        nn_hit_rate_dict[unit_id] = nn_hit_rate
+        nn_miss_rate_dict[unit_id] = nn_miss_rate
 
     return nn_result(nn_hit_rate=nn_hit_rate_dict, nn_miss_rate=nn_miss_rate_dict)
 
@@ -168,7 +138,6 @@ class NearestNeighbor(BaseMetric):
     }
     depend_on = ["principal_components"]
     needs_tmp_data = True
-    needs_job_kwargs = True
 
 
 def _nn_advanced_one_unit(args):
