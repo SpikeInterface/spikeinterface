@@ -656,6 +656,7 @@ class NumberOfPeaks(BaseMetric):
         "num_negative_peaks": "Number of negative peaks in the template",
     }
     needs_tmp_data = True
+    deprecated_names = ["num_positive_peaks", "num_negative_peaks"]
 
 
 single_channel_metrics = [
@@ -699,6 +700,7 @@ class VelocityFits(BaseMetric):
         "velocity_below": "Velocity of the spike propagation below the max channel in um/ms",
     }
     needs_tmp_data = True
+    deprecated_names = ["velocity_above", "velocity_below"]
 
 
 def multi_channel_metric(unit_function, sorting_analyzer, unit_ids, tmp_data, **metric_params):
