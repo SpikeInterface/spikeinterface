@@ -941,7 +941,7 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         default_metric_columns = []
         if metric_names is None:
-            metric_names = [m.metric_name for m in cls.metric_list]
+            metric_names = cls.get_available_metric_names()
         else:
             for metric_name in metric_names:
                 if metric_name not in [m.metric_name for m in cls.metric_list]:

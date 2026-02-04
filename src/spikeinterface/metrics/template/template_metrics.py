@@ -234,12 +234,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         channel_locations = sorting_analyzer.get_channel_locations()
 
         templates_single = []
-        trough_indices = {}
-        peaks_after_trough_indices = {}
-        main_peak_indices = {}
-        troughs_info = {}
-        peaks_before_info = {}
-        peaks_after_info = {}
+        peaks_info = []
         templates_multi = []
         channel_locations_multi = []
         for unit_id in unit_ids:
@@ -253,7 +248,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             else:
                 template_upsampled = template_single
                 sampling_frequency_up = sampling_frequency
-            troughs_dict, peaks_before_dict, peaks_after_dict = get_trough_and_peak_idx(
+            peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
                 min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
                 smooth=self.params["smooth"],
@@ -263,17 +258,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             )
 
             templates_single.append(template_upsampled)
-            # Store main locations for backward compatibility
-            trough_indices[unit_id] = troughs_dict["main_loc"]
-            peaks_after_trough_indices[unit_id] = peaks_after_dict["main_loc"]
-            if template_upsampled[peaks_before_dict["main_loc"]] >= template_upsampled[peaks_after_dict["main_loc"]]:
-                main_peak_indices[unit_id] = peaks_before_dict["main_loc"]
-            else:
-                main_peak_indices[unit_id] = peaks_after_dict["main_loc"]
-            # Store full dicts for new metrics
-            troughs_info[unit_id] = troughs_dict
-            peaks_before_info[unit_id] = peaks_before_dict
-            peaks_after_info[unit_id] = peaks_after_dict
+            peaks_info.append(peaks_info_unit)
 
             if include_multi_channel_metrics:
                 if sorting_analyzer.is_sparse():
@@ -296,12 +281,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 templates_multi.append(template_multi_upsampled)
                 channel_locations_multi.append(channel_location_multi)
 
-        tmp_data["trough_indices"] = trough_indices
-        tmp_data["peaks_after_trough_indices"] = peaks_after_trough_indices
-        tmp_data["main_peak_indices"] = main_peak_indices
-        tmp_data["troughs_info"] = troughs_info
-        tmp_data["peaks_before_info"] = peaks_before_info
-        tmp_data["peaks_after_info"] = peaks_after_info
+        tmp_data["peaks_info"] = peaks_info
         tmp_data["templates_single"] = np.array(templates_single)
 
         if include_multi_channel_metrics:
