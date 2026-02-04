@@ -109,9 +109,9 @@ class LabelingHistogramsWidget(BaseWidget):
 
 class UpsetPlotWidget(BaseWidget):
     """
-    Plot UpSet plots showing which metrics fail together for each unit type.
+    Plot UpSet plots showing which metrics fail together for each unit label.
 
-    Requires `upsetplot` package. Each unit type shows relevant metrics:
+    Requires `upsetplot` package. Each unit label shows relevant metrics:
     NOISE -> waveform metrics, MUA -> spike quality metrics, NON_SOMA -> non-somatic metrics.
     """
 
@@ -152,18 +152,18 @@ class UpsetPlotWidget(BaseWidget):
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-    def _get_metrics_for_unit_type(self, unit_type_label):
+    def _get_metrics_for_unit_label(self, unit_label):
         from spikeinterface.curation.bombcell_curation import (
             NOISE_METRICS,
             SPIKE_QUALITY_METRICS,
             NON_SOMATIC_METRICS,
         )
 
-        if unit_type_label == "noise":
+        if unit_label == "noise":
             return NOISE_METRICS
-        elif unit_type_label == "mua":
+        elif unit_label == "mua":
             return SPIKE_QUALITY_METRICS
-        elif unit_type_label in ("non_soma", "non_soma_good", "non_soma_mua"):
+        elif unit_label in ("non_soma", "non_soma_good", "non_soma_mua"):
             return NON_SOMATIC_METRICS
         return None
 
@@ -211,7 +211,7 @@ class UpsetPlotWidget(BaseWidget):
             if n_units == 0:
                 continue
 
-            relevant_metrics = self._get_metrics_for_unit_type(unit_label)
+            relevant_metrics = self._get_metrics_for_unit_label(unit_label)
             if relevant_metrics is not None:
                 available_metrics = [m for m in relevant_metrics if m in failure_table.columns]
                 if len(available_metrics) == 0:
@@ -300,7 +300,7 @@ def plot_unit_labeling_all(
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object with computed metrics extensions.
     unit_labels : np.ndarray
-        Array of unit type labels as strings.
+        Array of unit labels as strings.
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
     split_non_somatic : bool, default: False
