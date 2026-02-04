@@ -828,6 +828,7 @@ class BaseMetric:
     needs_job_kwargs = False  # whether the metric needs job_kwargs
     supports_periods = False  # whether the metric function supports periods
     depend_on = []  # extensions the metric depends on
+    deprecated_names = []  # list of metric names used by previous versions of spikeinterface
 
     # the metric function must have the signature:
     # def metric_function(sorting_analyzer, unit_ids, **metric_params)
@@ -1035,15 +1036,25 @@ class BaseMetricExtension(AnalyzerExtension):
         ValueError
             If any of the metric names are not in the available metrics.
         """
-        # check metric names
         if metric_names is None:
             metric_names = [m.metric_name for m in self.metric_list]
         else:
+            # check if any given names are from previous versions of spikeinterface
+            deprecated_name_error_message = ""
+            for metric in self.metric_list:
+                for deprecated_name in metric.deprecated_names:
+                    if deprecated_name in metric_names:
+                        deprecated_name_error_message += f"The metric '{deprecated_name}' has been re-named or re-organized. You can now compute it using the metric name '{metric.metric_name}'.\n"
+            if len(deprecated_name_error_message) > 0:
+                raise ValueError(deprecated_name_error_message)
+
+            # check metric names
             for metric_name in metric_names:
                 if metric_name not in [m.metric_name for m in self.metric_list]:
                     raise ValueError(
                         f"Metric {metric_name} not in available metrics {[m.metric_name for m in self.metric_list]}"
                     )
+
         # check dependencies
         metrics_to_remove = []
         for metric_name in metric_names:
