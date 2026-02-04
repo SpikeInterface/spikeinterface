@@ -130,7 +130,7 @@ def test_save_template_metrics(small_sorting_analyzer, create_cache_folder):
     saved_metrics = pd.read_csv(template_metrics_filename)
     metric_names = saved_metrics.columns
     for metric_name in column_names:
-        if metric_name == "half_width":
+        if "half_width" in metric_name:
             assert metric_name in metric_names
         else:
             assert metric_name not in metric_names
