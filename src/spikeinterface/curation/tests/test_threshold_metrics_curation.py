@@ -2,7 +2,6 @@ import pytest
 import json
 
 import numpy as np
-import pandas as pd
 
 from spikeinterface.curation.tests.common import sorting_analyzer_for_curation
 from spikeinterface.curation import threshold_metrics_label_units
@@ -131,6 +130,8 @@ def test_threshold_metrics_label_external_labels(sorting_analyzer_with_metrics):
 
 
 def test_threshold_metrics_label_units_operator_or_with_dataframe():
+    import pandas as pd
+
     metrics = pd.DataFrame(
         {
             "m1": [1.0, 1.0, -1.0, -1.0],
@@ -158,6 +159,8 @@ def test_threshold_metrics_label_units_operator_or_with_dataframe():
 
 
 def test_threshold_metrics_label_units_nan_policy_fail_vs_ignore_and():
+    import pandas as pd
+
     metrics = pd.DataFrame(
         {
             "m1": [np.nan, 1.0, np.nan],
@@ -188,6 +191,8 @@ def test_threshold_metrics_label_units_nan_policy_fail_vs_ignore_and():
 
 
 def test_threshold_metrics_label_units_nan_policy_ignore_with_or():
+    import pandas as pd
+
     metrics = pd.DataFrame(
         {
             "m1": [np.nan, -1.0],
@@ -209,6 +214,8 @@ def test_threshold_metrics_label_units_nan_policy_ignore_with_or():
 
 
 def test_threshold_metrics_label_units_invalid_operator_raises():
+    import pandas as pd
+
     metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
     thresholds = {"m1": {"min": 0.0}}
     with pytest.raises(ValueError, match="operator must be 'and' or 'or'"):
@@ -216,6 +223,8 @@ def test_threshold_metrics_label_units_invalid_operator_raises():
 
 
 def test_threshold_metrics_label_units_invalid_nan_policy_raises():
+    import pandas as pd
+
     metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
     thresholds = {"m1": {"min": 0.0}}
     with pytest.raises(ValueError, match="nan_policy must be 'fail' or 'ignore'"):
@@ -223,6 +232,8 @@ def test_threshold_metrics_label_units_invalid_nan_policy_raises():
 
 
 def test_threshold_metrics_label_units_missing_metric_raises():
+    import pandas as pd
+
     metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
     thresholds = {"does_not_exist": {"min": 0.0}}
     with pytest.raises(ValueError, match="specified in thresholds are not present"):
