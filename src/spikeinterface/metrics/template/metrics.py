@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from collections import namedtuple
-from tempfile import template
 
 import numpy as np
+
 from spikeinterface.core.analyzer_extension_core import BaseMetric
-from src.spikeinterface.core.node_pipeline import PeakSource
 
 
 def get_trough_and_peak_idx(
