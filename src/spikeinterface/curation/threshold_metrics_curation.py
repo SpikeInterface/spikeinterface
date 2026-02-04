@@ -13,6 +13,8 @@ def threshold_metrics_label_units(
     thresholds: dict | str | Path,
     pass_label: str = "good",
     fail_label: str = "noise",
+    operator: str = "and",
+    nan_policy: str = "fail",
 ):
     """Label units based on metrics and thresholds.
 
@@ -29,6 +31,12 @@ def threshold_metrics_label_units(
         The label to assign to units that pass all thresholds.
     fail_label : str, default: "noise"
         The label to assign to units that fail any threshold.
+    operator : "and" | "or", default: "and"
+        The logical operator to combine multiple metric thresholds. "and" means a unit must pass all thresholds to be
+        labeled as pass_label, while "or" means a unit must pass at least one threshold to be labeled as pass_label.
+    nan_policy : "fail" | "ignore", default: "fail"
+        Policy for handling NaN values in metrics. If "fail", units with NaN values in any metric will be labeled as
+        fail_label. If "ignore", NaN values will be ignored
 
     Returns
     -------
@@ -65,19 +73,57 @@ def threshold_metrics_label_units(
             f"Available metrics are: {metrics.columns.tolist()}"
         )
 
-    # Initialize an empty DataFrame to store labels
+    if operator not in ("and", "or"):
+        raise ValueError("operator must be 'and' or 'or'")
+
+    if nan_policy not in ("fail", "ignore"):
+        raise ValueError("nan_policy must be 'fail' or 'ignore'")
+
     labels = pd.DataFrame(index=metrics.index, dtype=str)
     labels["label"] = fail_label
 
-    # Apply thresholds to label units
-    pass_mask = np.ones(len(metrics), dtype=bool)
+    # Key change: init depends on operator
+    pass_mask = np.ones(len(metrics), dtype=bool) if operator == "and" else np.zeros(len(metrics), dtype=bool)
+    any_threshold_applied = False
+
     for metric_name, threshold in thresholds_dict.items():
         min_value = threshold.get("min", None)
         max_value = threshold.get("max", None)
+
+        # If both disabled, ignore this metric
+        if is_threshold_disabled(min_value) and is_threshold_disabled(max_value):
+            continue
+
+        values = metrics[metric_name].to_numpy()
+        is_nan = np.isnan(values)
+
+        metric_ok = np.ones(len(values), dtype=bool)
         if not is_threshold_disabled(min_value):
-            pass_mask &= metrics[metric_name] >= min_value
+            metric_ok &= values >= min_value
         if not is_threshold_disabled(max_value):
-            pass_mask &= metrics[metric_name] <= max_value
+            metric_ok &= values <= max_value
+
+        metric_pass = np.ones(len(metrics), dtype=bool)
+        if not is_threshold_disabled(min_value):
+            metric_pass &= values >= min_value
+        if not is_threshold_disabled(max_value):
+            metric_pass &= values <= max_value
+
+        # Handle NaNs
+        if nan_policy == "fail":
+            metric_ok &= ~is_nan
+        else:  # "ignore"
+            metric_ok |= is_nan
+
+        any_threshold_applied = True
+
+        if operator == "and":
+            pass_mask &= metric_ok
+        else:
+            pass_mask |= metric_ok
+
+    if not any_threshold_applied:
+        pass_mask[:] = True
 
     labels.loc[pass_mask, "label"] = pass_label
     return labels
