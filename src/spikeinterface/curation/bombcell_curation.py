@@ -1,11 +1,11 @@
 """
 Unit labeling based on quality metrics (bombcell).
 
-Unit Types:
-    0 (NOISE): Failed waveform quality checks
-    1 (GOOD): Passed all thresholds
-    2 (MUA): Failed spike quality checks
-    3 (NON_SOMA): Non-somatic units (axonal)
+Unit Labels:
+    noise: Failed waveform quality checks
+    good: Passed all thresholds
+    mua: Failed spike quality checks
+    non_soma: Non-somatic units (axonal)
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import json
 import numpy as np
 
 from .curation_tools import is_threshold_disabled
+from .threshold_metrics_curation import threshold_metrics_label_units
 
 NOISE_METRICS = [
     "num_positive_peaks",
@@ -105,7 +106,7 @@ def bombcell_label_units(
     Returns
     -------
     labels : pd.DataFrame
-        A DataFrame with unit ids as index and "label"/"label_type" as column
+        A DataFrame with unit ids as index and "label" as column
     """
     import pandas as pd
 
@@ -136,7 +137,7 @@ def bombcell_label_units(
         raise ValueError("thresholds must be a dict, a JSON file path, or None")
 
     n_units = len(combined_metrics)
-    unit_type = np.full(n_units, np.nan)
+    unit_labels = np.zeros(n_units, dtype="U10")
     absolute_value_metrics = ["amplitude_median"]
 
     # NOISE: waveform failures
@@ -153,7 +154,7 @@ def bombcell_label_units(
             noise_mask |= values < thresh["min"]
         if not is_threshold_disabled(thresh["max"]):
             noise_mask |= values > thresh["max"]
-    unit_type[noise_mask] = 0
+    unit_labels[noise_mask] = "noise"
 
     # MUA: spike quality failures
     mua_mask = np.zeros(n_units, dtype=bool)
@@ -164,15 +165,15 @@ def bombcell_label_units(
         if metric_name in absolute_value_metrics:
             values = np.abs(values)
         thresh = thresholds[metric_name]
-        valid_mask = np.isnan(unit_type)
+        valid_mask = unit_labels == ""
         if not is_threshold_disabled(thresh["min"]):
             mua_mask |= valid_mask & ~np.isnan(values) & (values < thresh["min"])
         if not is_threshold_disabled(thresh["max"]):
             mua_mask |= valid_mask & ~np.isnan(values) & (values > thresh["max"])
-    unit_type[mua_mask & np.isnan(unit_type)] = 2
+    unit_labels[mua_mask & (unit_labels == "")] = "mua"
 
     # GOOD: passed all checks
-    unit_type[np.isnan(unit_type)] = 1
+    unit_labels[unit_labels == ""] = "good"
 
     # NON-SOMATIC
     if label_non_somatic:
@@ -228,41 +229,19 @@ def bombcell_label_units(
         is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
 
         if split_non_somatic_good_mua:
-            unit_type[(unit_type == 1) & is_non_somatic] = 3
-            unit_type[(unit_type == 2) & is_non_somatic] = 4
+            unit_labels[(unit_labels == "good") & is_non_somatic] = "non_soma_good"
+            unit_labels[(unit_labels == "mua") & is_non_somatic] = "non_soma_mua"
         else:
-            unit_type[(unit_type != 0) & is_non_somatic] = 3
+            unit_labels[(unit_labels != "noise") & is_non_somatic] = "non_soma"
 
-    # String labels
-    if split_non_somatic_good_mua:
-        labels = {0: "NOISE", 1: "good", 2: "mua", 3: "non_soma_good", 4: "non_soma_mua"}
-    else:
-        labels = {0: "noise", 1: "good", 2: "mua", 3: "non_soma"}
-
-    unit_type_string = np.array([labels.get(int(t), "unknown") for t in unit_type], dtype=object)
-    labels = pd.DataFrame(data={"label": unit_type_string, "label_type": unit_type}, index=combined_metrics.index)
+    labels = pd.DataFrame(data={"label": unit_labels}, index=combined_metrics.index)
 
     return labels
 
 
-def get_bombcell_labeling_summary(unit_type: np.ndarray, unit_type_string: np.ndarray) -> dict:
-    """Get counts and percentages for each unit type."""
-    n_total = len(unit_type)
-    unique_types, counts = np.unique(unit_type, return_counts=True)
-
-    summary = {"total_units": n_total, "counts": {}, "percentages": {}}
-    for utype, count in zip(unique_types, counts):
-        label = unit_type_string[unit_type == utype][0]
-        summary["counts"][label] = int(count)
-        summary["percentages"][label] = round(100 * count / n_total, 1)
-
-    return summary
-
-
 def save_bombcell_results(
-    quality_metrics: "pd.DataFrame",
-    unit_type: np.ndarray,
-    unit_type_string: np.ndarray,
+    metrics: "pd.DataFrame",
+    unit_label: np.ndarray,
     thresholds: dict,
     folder,
     save_narrow: bool = True,
@@ -273,11 +252,9 @@ def save_bombcell_results(
 
     Parameters
     ----------
-    quality_metrics : pd.DataFrame
-        DataFrame with quality metrics (index = unit_ids).
-    unit_type : np.ndarray
-        Numeric unit type codes.
-    unit_type_string : np.ndarray
+    metrics : pd.DataFrame
+        DataFrame with metrics (index = unit_ids).
+    unit_label : np.ndarray
         String labels for each unit.
     thresholds : dict
         Threshold dictionary used for labeling.
@@ -294,25 +271,23 @@ def save_bombcell_results(
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
 
-    unit_ids = quality_metrics.index.values
+    unit_ids = metrics.index.values
 
     # Wide format: one row per unit
     if save_wide:
-        wide_df = quality_metrics.copy()
-        wide_df.insert(0, "label", unit_type_string)
-        wide_df.insert(1, "label_code", unit_type)
+        wide_df = metrics.copy()
+        wide_df.insert(0, "label", unit_label)
         wide_df.to_csv(folder / "labeling_results_wide.csv")
 
     # Narrow format: one row per unit-metric combination
     if save_narrow:
         rows = []
         for i, unit_id in enumerate(unit_ids):
-            label = unit_type_string[i]
-            label_code = unit_type[i]
-            for metric_name in quality_metrics.columns:
+            label = unit_label[i]
+            for metric_name in metrics.columns:
                 if metric_name not in thresholds:
                     continue
-                value = quality_metrics.loc[unit_id, metric_name]
+                value = metrics.loc[unit_id, metric_name]
                 thresh = thresholds[metric_name]
                 thresh_min = thresh.get("min", None)
                 thresh_max = thresh.get("max", None)
@@ -330,7 +305,6 @@ def save_bombcell_results(
                     {
                         "unit_id": unit_id,
                         "label": label,
-                        "label_code": label_code,
                         "metric_name": metric_name,
                         "value": value,
                         "threshold_min": thresh_min,

@@ -2,11 +2,11 @@ import pytest
 import json
 
 from spikeinterface.curation.tests.common import sorting_analyzer_for_curation
-from spikeinterface.curation import qualitymetrics_label_units
+from spikeinterface.curation import threshold_metrics_label_units
 
 
-def test_qualitymetrics_label_units(sorting_analyzer_for_curation):
-    """Test the `qualitymetrics_label_units` function."""
+def test_threshold_metrics_label_units(sorting_analyzer_for_curation):
+    """Test the `threshold_metrics_label_units` function."""
     sorting_analyzer_for_curation.compute("quality_metrics")
 
     thresholds = {
@@ -14,7 +14,7 @@ def test_qualitymetrics_label_units(sorting_analyzer_for_curation):
         "firing_rate": {"min": 0.1, "max": 20.0},
     }
 
-    labels = qualitymetrics_label_units(
+    labels = threshold_metrics_label_units(
         sorting_analyzer_for_curation,
         thresholds,
     )
@@ -36,8 +36,8 @@ def test_qualitymetrics_label_units(sorting_analyzer_for_curation):
             assert labels.loc[unit_id, "label"] == "noise"
 
 
-def test_qualitymetrics_label_units_with_file(sorting_analyzer_for_curation, tmp_path):
-    """Test the `qualitymetrics_label_units` function with thresholds from a JSON file."""
+def test_threshold_metrics_label_units_with_file(sorting_analyzer_for_curation, tmp_path):
+    """Test the `threshold_metrics_label_units` function with thresholds from a JSON file."""
     sorting_analyzer_for_curation.compute("quality_metrics")
 
     thresholds = {
@@ -49,7 +49,7 @@ def test_qualitymetrics_label_units_with_file(sorting_analyzer_for_curation, tmp
     with open(thresholds_file, "w") as f:
         json.dump(thresholds, f)
 
-    labels = qualitymetrics_label_units(
+    labels = threshold_metrics_label_units(
         sorting_analyzer_for_curation,
         thresholds_file,
     )

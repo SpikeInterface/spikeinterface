@@ -80,7 +80,7 @@ curation:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A simple solution is to use a filter based on quality metrics. To do so,
-we can use the ``spikeinterface.curation.qualitymetrics_label_units``
+we can use the ``spikeinterface.curation.threshold_metrics_label_units``
 function and provide a set of thresholds.
 
 .. code:: ipython3
@@ -93,7 +93,7 @@ function and provide a set of thresholds.
 
 .. code:: ipython3
 
-    qm_labels = sc.qualitymetrics_label_units(sorting_analyzer, thresholds=qm_thresholds)
+    qm_labels = sc.threshold_metrics_label_units(sorting_analyzer, thresholds=qm_thresholds)
 
 .. code:: ipython3
 
