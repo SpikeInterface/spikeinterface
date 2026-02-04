@@ -9,21 +9,26 @@ from .curation_tools import is_threshold_disabled
 
 
 def threshold_metrics_label_units(
-    sorting_analyzer: SortingAnalyzer,
+    sorting_analyzer_or_metrics: "SortingAnalyzer | pd.DataFrame",
     thresholds: dict | str | Path,
+    pass_label: str = "good",
+    fail_label: str = "noise",
 ):
     """Label units based on metrics and thresholds.
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        The SortingAnalyzer object containing the some metrics extensions (e.g., quality metrics).
+    sorting_analyzer_or_metrics : SortingAnalyzer | pd.DataFrame
+        The SortingAnalyzer object containing the some metrics extensions (e.g., quality metrics) or a DataFrame
+        containing unit metrics with unit IDs as index.
     thresholds : dict | str | Path
         A dictionary or JSON file path where keys are metric names and values are threshold values for labeling units.
         Each key should correspond to a quality metric present in the analyzer's quality metrics DataFrame. Values
         should contain at least "min" and/or "max" keys to specify threshold ranges.
-        Units that do not meet the threshold for a given metric will be labeled as 'noise', while those that do will
-        be labeled as 'good'.
+    pass_label : str, default: "good"
+        The label to assign to units that pass all thresholds.
+    fail_label : str, default: "noise"
+        The label to assign to units that fail any threshold.
 
     Returns
     -------
@@ -32,7 +37,13 @@ def threshold_metrics_label_units(
     """
     import pandas as pd
 
-    metrics = sorting_analyzer.get_metrics_extension_data()
+    if not isinstance(sorting_analyzer_or_metrics, (SortingAnalyzer, pd.DataFrame)):
+        raise ValueError("Only SortingAnalyzer or pd.DataFrame are supported for sorting_analyzer_or_metrics.")
+
+    if isinstance(sorting_analyzer_or_metrics, SortingAnalyzer):
+        metrics = sorting_analyzer_or_metrics.get_metrics_extension_data()
+    else:
+        metrics = sorting_analyzer_or_metrics
 
     # Load thresholds from file if a path is provided
     if isinstance(thresholds, (str, Path)):
@@ -56,18 +67,17 @@ def threshold_metrics_label_units(
 
     # Initialize an empty DataFrame to store labels
     labels = pd.DataFrame(index=metrics.index, dtype=str)
-    labels["label"] = "noise"  # Default label is 'noise'
+    labels["label"] = fail_label
 
     # Apply thresholds to label units
-    good_mask = np.ones(len(metrics), dtype=bool)
+    pass_mask = np.ones(len(metrics), dtype=bool)
     for metric_name, threshold in thresholds_dict.items():
         min_value = threshold.get("min", None)
         max_value = threshold.get("max", None)
         if not is_threshold_disabled(min_value):
-            good_mask &= metrics[metric_name] >= min_value
+            pass_mask &= metrics[metric_name] >= min_value
         if not is_threshold_disabled(max_value):
-            good_mask &= metrics[metric_name] <= max_value
+            pass_mask &= metrics[metric_name] <= max_value
 
-    labels.loc[good_mask, "label"] = "good"
-
+    labels.loc[pass_mask, "label"] = pass_label
     return labels
