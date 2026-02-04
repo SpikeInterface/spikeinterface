@@ -791,11 +791,7 @@ if HAVE_NUMBA:
 
 
 def compute_auto_correlograms(
-    sorting_analyzer_or_sorting,
-    window_ms: float = 50.0,
-    bin_ms: float = 1.0,
-    method: str = "auto",
-    fast_mode=False
+    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode=False
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -1044,7 +1040,7 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
             window_size,
             bin_size,
             num_half_bins,
-            num_threads
+            num_threads,
         )
 
     return correlograms
