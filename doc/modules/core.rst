@@ -93,10 +93,11 @@ with 16 channels:
     timestamps = np.arange(num_samples) / sampling_frequency + 300
     recording.set_times(times=timestamps, segment_index=0)
 
-**Note**:
-Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
-Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
-is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`physical_units`.
+.. note::
+
+    Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
+    Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
+    is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`physical_units`.
 
 
 Sorting
@@ -157,11 +158,37 @@ with 10 units:
     # times are not set, the samples are divided by the sampling frequency
 
 
-Internally, any sorting object can construct 2 internal caches:
-  1. a list (per segment) of dict (per unit) of numpy.array. This cache is useful when accessing spike trains on a unit
-     per unit basis across segments.
-  2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
-     time, like for extracting amplitudes from a recording.
+Efficiency and caching when fetching spiketrains
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By design a Sorting object is lazy so that the constructor is fast: no data are fetched during init.
+Sortings that read data (the extractors) or modify data (select unit, remove spikes) behave
+the same: they are lazy. The spiketrain data are only fetched when the user requests them, e.g.
+using `sorting.get_unit_spike_train()`. This can lead to very slow access depending on how the
+underlying data is organized, but with the advantage that the `Sorting` object is agnostic of
+the underlying data organization.
+
+To fix the slow access problem, we can create different internal representations of the spiketrain data and
+automatically cache them. Then the next time `sorting.get_unit_spike_train()` is called, the cached
+data is instantaneously returned. Further, we can create and cache different reorganizations of
+the spiketrain, which are optimally organized for specific types of calculation.
+
+Computations involving combined recording-sorting information, such as fetching recording chunks and
+spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
+this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
+a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+
+For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
+spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
+`spike_vector` in different ways:
+
+* order by unit, then segment, then sample
+* order by segment, then unit, then sample
+
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
+reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+details, but developers should keep memory layout in mind when implementing new features.
+
 
 SortingAnalyzer
 ---------------
@@ -433,9 +460,11 @@ It represents unsorted waveform cutouts. Some acquisition systems, in fact, allo
 threshold and only record the times at which a peak was detected and the waveform cut out around
 the peak.
 
-**NOTE**: while we support this class (mainly for legacy formats), this approach is a bad practice
-and is highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
-template matching to recover spikes!
+.. note::
+
+    While we support this class (mainly for legacy formats), this approach is a bad practice
+    and is highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
+    template matching to recover spikes!
 
 Here we assume :code:`snippets` is a :py:class:`~spikeinterface.core.BaseSnippets` object
 with 16 channels:
@@ -523,9 +552,11 @@ Sparsity is defined as the subset of channels on which waveforms (and related in
 sparsity is not global, but it is unit-specific. Importantly, saving sparse waveforms, especially for high-density probes,
 dramatically reduces the size of the waveforms extension if computed.
 
-**NOTE** As of :code:`0.101.0` all :code:`SortingAnalyzer`'s have a default of :code:`sparse=True`. This was first
-introduced in :code:`0.99.0` for :code:`WaveformExtractor`'s and will be the default going forward. To obtain dense
-waveforms you will need to set :code:`sparse=False` at the creation of the :code:`SortingAnalyzer`.
+.. note::
+
+    As of :code:`0.101.0` all :code:`SortingAnalyzer`'s have a default of :code:`sparse=True`. This was first
+    introduced in :code:`0.99.0` for :code:`WaveformExtractor`'s and will be the default going forward. To obtain dense
+    waveforms you will need to set :code:`sparse=False` at the creation of the :code:`SortingAnalyzer`.
 
 
 Sparsity can be computed from a :py:class:`~spikeinterface.core.SortingAnalyzer` object with the
@@ -829,10 +860,12 @@ The same functions are also available for
 :py:func:`~spikeinterface.core.select_segment_sorting`).
 
 
-**Note** :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`
-have the same goal, aggregate recording pieces on the time axis but with 2 different strategies! One is keeping the
-multi segments concept, the other one is breaking it!
-See this example for more detail :ref:`example_segments`.
+.. note::
+
+    :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`
+    have the same goal, aggregate recording pieces on the time axis but with 2 different strategies! One is keeping the
+    multi segments concept, the other one is breaking it!
+    See this example for more detail :ref:`example_segments`.
 
 
 

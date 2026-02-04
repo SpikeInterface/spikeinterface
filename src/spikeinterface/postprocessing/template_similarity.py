@@ -9,7 +9,6 @@ from spikeinterface.core.sortinganalyzer import register_result_extension, Analy
 from spikeinterface.core.template_tools import get_dense_templates_array
 from spikeinterface.core.sparsity import ChannelSparsity
 
-
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
@@ -159,16 +158,16 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
 
+        local_mask = ~np.isin(all_new_unit_ids, new_unit_ids_f)
+        sub_units_ids = all_new_unit_ids[local_mask]
+        sub_units_inds = np.flatnonzero(local_mask)
+        old_units_inds = self.sorting_analyzer.sorting.ids_to_indices(sub_units_ids)
+
         # copy old similarity
-        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
-            if unit_id1 not in new_unit_ids_f:
-                old_ind1 = self.sorting_analyzer.sorting.id_to_index(unit_id1)
-                for unit_ind2, unit_id2 in enumerate(all_new_unit_ids):
-                    if unit_id2 not in new_unit_ids_f:
-                        old_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
-                        s = self.data["similarity"][old_ind1, old_ind2]
-                        similarity[unit_ind1, unit_ind2] = s
-                        similarity[unit_ind2, unit_ind1] = s
+        for old_ind1, unit_ind1 in zip(old_units_inds, sub_units_inds):
+            s = self.data["similarity"][old_ind1, old_units_inds]
+            similarity[unit_ind1, sub_units_inds] = s
+            similarity[sub_units_inds, unit_ind1] = s
 
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
@@ -235,10 +234,6 @@ def _compute_similarity_matrix_numpy(
             overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
-                # symmetric values are handled later
-                if same_array and j < i:
-                    # no need exhaustive looping when same template
-                    continue
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
 
@@ -260,10 +255,8 @@ def _compute_similarity_matrix_numpy(
                     distances[count, i, j] = 1 - distances[count, i, j]
 
                 if same_array:
-                    distances[count, j, i] = distances[count, i, j]
+                    distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
 
-        if same_array and num_shifts != 0:
-            distances[num_shifts_both_sides - count - 1] = distances[count].T
     return distances
 
 
@@ -332,10 +325,6 @@ if HAVE_NUMBA:
                 for gcount in range(len(overlapping_templates)):
 
                     j = overlapping_templates[gcount]
-                    # symmetric values are handled later
-                    if same_array and j < i:
-                        # no need exhaustive looping when same template
-                        continue
                     src = src_template[:, local_mask[j]].flatten()
                     tgt = (tgt_templates[gcount][:, local_mask[j]]).flatten()
 
@@ -371,10 +360,7 @@ if HAVE_NUMBA:
                         distances[count, i, j] = 1 - distances[count, i, j]
 
                     if same_array:
-                        distances[count, j, i] = distances[count, i, j]
-
-            if same_array and num_shifts != 0:
-                distances[num_shifts_both_sides - count - 1] = distances[count].T
+                        distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
 
         return distances
 

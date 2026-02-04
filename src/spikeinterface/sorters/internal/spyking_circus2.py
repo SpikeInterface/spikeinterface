@@ -15,7 +15,7 @@ from spikeinterface.sortingcomponents.tools import (
     get_shuffled_recording_slices,
     _set_optimal_chunk_size,
 )
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core import compute_sparsity
 
 

@@ -7,7 +7,7 @@ import numpy as np
 import probeinterface
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
 from spikeinterface.core.core_tools import define_function_from_class
 
 
@@ -44,22 +44,13 @@ class CompressedBinaryIblExtractor(BaseRecording):
 
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
 
-    def __init__(
-        self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file_path=None, cbin_file=None
-    ):
+    def __init__(self, folder_path=None, load_sync_channel=False, stream_name="ap", cbin_file_path=None):
         from neo.rawio.spikeglxrawio import read_meta_file
 
         try:
             import mtscomp
         except ImportError:
             raise ImportError(self.installation_mesg)
-        if cbin_file is not None:
-            warnings.warn(
-                "The `cbin_file` argument is deprecated and will be removed in version 0.104.0, please use `cbin_file_path` instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            cbin_file_path = cbin_file
         if cbin_file_path is None:
             folder_path = Path(folder_path)
             # check bands
@@ -124,8 +115,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
                 num_channels_per_adc = 16
             else:  # NP1.0
                 num_channels_per_adc = 12
-
-            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
+            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = {

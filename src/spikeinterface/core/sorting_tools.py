@@ -5,7 +5,7 @@ import importlib.util
 
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -228,6 +228,106 @@ def random_spikes_selection(
     return random_spikes_indices
 
 
+def select_sorting_periods_mask(sorting: BaseSorting, periods):
+    """
+    Returns a boolean mask for the spikes in the sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object.
+    periods : numpy.array of unit_period_dtype
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to restrict the sorting.
+
+    Returns
+    -------
+    numpy.array
+        A boolean mask of the spikes in the sorting object, with True for spikes within the specified periods.
+    """
+    spike_vector = sorting.to_spike_vector()
+    keep_mask = np.zeros(len(spike_vector), dtype=bool)
+    all_global_indices = sorting.get_spike_vector_to_indices()
+    for segment_index in range(sorting.get_num_segments()):
+        global_indices_segment = all_global_indices[segment_index]
+        # filter periods by segment
+        periods_in_segment = periods[periods["segment_index"] == segment_index]
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            # filter by unit index
+            periods_for_unit = periods_in_segment[periods_in_segment["unit_index"] == unit_index]
+            global_indices = global_indices_segment[unit_id]
+            spiketrains = spike_vector[global_indices]["sample_index"]
+            if len(periods_for_unit) > 0:
+                for period in periods_for_unit:
+                    mask = (spiketrains >= period["start_sample_index"]) & (spiketrains < period["end_sample_index"])
+                    keep_mask[global_indices[mask]] = True
+    return keep_mask
+
+
+def cast_periods_to_unit_period_dtype(periods):
+    if not periods.dtype == unit_period_dtype:
+        if periods.ndim != 2 or periods.shape[1] != 4:
+            raise ValueError(
+                "If periods is not of dtype unit_period_dtype, it must be a 2D array with shape (num_periods, 4)"
+            )
+        warnings.warn(
+            "periods is not of dtype unit_period_dtype. Assuming fields are in order: "
+            "(segment_index, start_sample_index, end_sample_index, unit_index).",
+            UserWarning,
+        )
+        # convert to structured array
+        periods_converted = np.empty(periods.shape[0], dtype=unit_period_dtype)
+        periods_converted["segment_index"] = periods[:, 0]
+        periods_converted["start_sample_index"] = periods[:, 1]
+        periods_converted["end_sample_index"] = periods[:, 2]
+        periods_converted["unit_index"] = periods[:, 3]
+        periods = periods_converted
+    else:
+        required = set(np.dtype(unit_period_dtype).names)
+        if not required.issubset(periods.dtype.names):
+            raise ValueError(f"Period must have the following fields: {required}")
+    return periods
+
+
+def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
+    """
+    Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+    Parameters
+    ----------
+    periods : numpy.ndarray
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to restrict the sorting. Periods can be either a numpy array of unit_period_dtype
+        or an array with (num_periods, 4) shape. In the latter case, the fields are assumed to be
+        in the order: segment_index, start_sample_index, end_sample_index, unit_index.
+
+    Returns
+    -------
+    BaseSorting
+        A new sorting object with only samples between start_sample_index and end_sample_index
+        for the given segment_index.
+    """
+    from spikeinterface.core.numpyextractors import NumpySorting
+
+    if periods is not None:
+        if not isinstance(periods, np.ndarray):
+            raise ValueError("periods must be a numpy array")
+        periods = cast_periods_to_unit_period_dtype(periods)
+
+        spike_vector = sorting.to_spike_vector()
+        keep_mask = select_sorting_periods_mask(sorting, periods)
+        sliced_spike_vector = spike_vector[keep_mask]
+
+        # important: we keep the original unit ids so the unit_index field in spike vector is still valid
+        sorting = NumpySorting(
+            sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
+        )
+        sorting.copy_metadata(sorting)
+        return sorting
+    else:
+        return sorting
+
+
 ### MERGING ZONE ###
 def apply_merges_to_sorting(
     sorting: BaseSorting,
@@ -291,10 +391,9 @@ def apply_merges_to_sorting(
     all_unit_ids = list(all_unit_ids)
 
     num_seg = sorting.get_num_segments()
-    seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
-    segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
+    segment_slices = sorting._get_spike_vector_segment_slices()
 
-    # using this function vaoid to use the mask approach and simplify a lot the algo
+    # using this function avoids to use the mask approach and simplify a lot the algo
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
 
@@ -808,3 +907,60 @@ def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
         all_unit_ids.remove(split_unit)
         all_unit_ids.extend(split_new_units)
     return np.array(all_unit_ids, dtype=dtype)
+
+
+def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, keep_old_unit_ids=None):
+    """
+    Remap the "unit_index" field in a spike vector (or period vector) according to new unit ids.
+
+    This is useful for instance when you:
+      * select unit and recompute quickly the "unit_index" in the spike vector
+      * merging/spliting periods or spikes and update the "unit_index" in the vector
+
+
+    Parameters
+    ----------
+    vector : numpy.array
+        The spike vector with a "unit_index" field.
+    all_old_unit_ids : numpy.array
+        The array of all old unit ids.
+    all_new_unit_ids : list
+        The list of all new unit ids.
+    keep_old_unit_ids : list | None, default: None
+        The list of old unit ids to keep. If None, all old unit ids are kept.
+        This is useful when some units are merged or split during curation,
+        since we don't want to keep them in the remapping
+    return
+    """
+    all_old_unit_ids = np.asarray(all_old_unit_ids)
+    all_new_unit_ids = np.asarray(all_new_unit_ids)
+    assert (
+        all_old_unit_ids.size == np.unique(all_old_unit_ids).size
+    ), "remap_unit_indices_in_vector: all_old_unit_ids not unique"
+    assert (
+        all_new_unit_ids.size == np.unique(all_new_unit_ids).size
+    ), "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+
+    if keep_old_unit_ids is None:
+        keep_old_unit_ids = all_old_unit_ids
+
+    # this mask has shape all_old_unit_ids.shape
+    mask_keep_unit = np.isin(all_old_unit_ids, keep_old_unit_ids) & np.isin(all_old_unit_ids, all_new_unit_ids)
+
+    all_new_unit_ids = list(all_new_unit_ids)
+    mapping = np.zeros(all_old_unit_ids.size, dtype=int)
+    mapping[:] = -1
+    # keep = np.zeros(all_old_unit_ids.size, dtype=bool)
+    for old_unit_ind, old_unit_id in enumerate(all_old_unit_ids):
+        if not mask_keep_unit[old_unit_ind]:
+            continue
+        new_unit_index = all_new_unit_ids.index(old_unit_id)
+        mapping[old_unit_ind] = new_unit_index
+        # keep[old_unit_ind] = True
+
+    # this mask has shape vector.shape
+    keep_mask_vector = mask_keep_unit[vector["unit_index"]]
+    new_vector = vector[keep_mask_vector]
+    new_vector["unit_index"] = mapping[new_vector["unit_index"]]
+
+    return new_vector, keep_mask_vector

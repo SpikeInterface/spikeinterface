@@ -6,7 +6,6 @@ from __future__ import annotations
 import numpy as np
 import importlib.util
 
-
 spike_dtype = [
     ("sample_index", "int64"),
     ("channel_index", "int64"),
@@ -627,7 +626,7 @@ class CircusPeeler(BaseTemplateMatching):
         return_output=True,
         templates=None,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         jitter_ms=0.1,
         detect_threshold=5,
         noise_levels=None,
