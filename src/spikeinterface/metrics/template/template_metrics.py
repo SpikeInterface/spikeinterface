@@ -163,7 +163,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         metrics_to_compute: list[str] | None = None,
         periods=None,
         # common extension kwargs
-        peak_sign="neg",
+        peak_sign="both",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
         depth_direction="y",
@@ -208,6 +208,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
         import warnings
+        import pandas as pd
         from scipy.signal import resample_poly
 
         # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
@@ -289,6 +290,23 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             tmp_data["templates_multi"] = templates_multi
             tmp_data["channel_locations_multi"] = channel_locations_multi
             tmp_data["depth_direction"] = self.params["depth_direction"]
+
+        # add main peaks info to self.data, so it's stored in the extension
+        self.data["peaks_info"] = pd.DataFrame(
+            index=unit_ids,
+            data=peaks_info,
+            columns=[
+                "trough_sample_index",
+                "trough_width_left",
+                "trough_width_right",
+                "peak_before_sample_index",
+                "peak_before_width_left",
+                "peak_before_width_right",
+                "peak_after_sample_index",
+                "peak_after_width_left",
+                "peak_after_width_right",
+            ],
+        )
 
         return tmp_data
 
