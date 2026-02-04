@@ -10,7 +10,6 @@ import multiprocessing as mp
 from .tf_utils import import_tf
 from spikeinterface.core import BaseRecording
 
-
 global train_func
 
 

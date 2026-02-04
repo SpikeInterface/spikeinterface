@@ -37,6 +37,7 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
+from .unit_valid_periods import ValidUnitPeriodsWidget
 
 widget_list = [
     AgreementMatrixWidget,
@@ -48,6 +49,7 @@ widget_list = [
     CrossCorrelogramsWidget,
     DriftingTemplatesWidget,
     DriftRasterMapWidget,
+    ValidUnitPeriodsWidget,
     ISIDistributionWidget,
     LocationsWidget,
     MotionWidget,
@@ -128,6 +130,7 @@ plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_drifting_templates = DriftingTemplatesWidget
 plot_drift_raster_map = DriftRasterMapWidget
+plot_valid_unit_periods = ValidUnitPeriodsWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_locations = LocationsWidget
 plot_motion = MotionWidget

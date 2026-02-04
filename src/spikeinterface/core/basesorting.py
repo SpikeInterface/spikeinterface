@@ -639,6 +639,26 @@ class BaseSorting(BaseExtractor):
 
         return self.frame_slice(start_frame=start_frame, end_frame=end_frame)
 
+    def select_periods(self, periods):
+        """
+        Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+        Parameters
+        ----------
+        periods : numpy.array of unit_period_dtype
+            Period (segment_index, start_sample_index, end_sample_index, unit_index)
+            on which to restrict the sorting.
+
+        Returns
+        -------
+        BaseSorting
+            A new sorting object with only samples between start_sample_index and end_sample_index
+            for the given segment_index.
+        """
+        from spikeinterface.core.sorting_tools import select_sorting_periods
+
+        return select_sorting_periods(self, periods)
+
     def split_by(self, property="group", outputs="dict"):
         """
         Splits object based on a certain property (e.g. "group")
@@ -746,10 +766,6 @@ class BaseSorting(BaseExtractor):
             if len(sample_indices) > 0:
                 sample_indices = np.concatenate(sample_indices, dtype="int64")
                 unit_indices = np.concatenate(unit_indices, dtype="int64")
-                order = np.argsort(sample_indices)
-                sample_indices = sample_indices[order]
-                unit_indices = unit_indices[order]
-
                 n = sample_indices.size
                 segment_slices[segment_index, 0] = seg_pos
                 segment_slices[segment_index, 1] = seg_pos + n
@@ -763,7 +779,9 @@ class BaseSorting(BaseExtractor):
             spikes_in_seg["unit_index"] = unit_indices
             spikes_in_seg["segment_index"] = segment_index
             spikes.append(spikes_in_seg)
+
         spikes = np.concatenate(spikes)
+        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
