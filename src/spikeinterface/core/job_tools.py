@@ -17,7 +17,6 @@ import multiprocessing
 import threading
 from threadpoolctl import threadpool_limits
 
-
 _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
     * chunk_duration or chunk_size or chunk_memory or total_memory
         - chunk_size : int
