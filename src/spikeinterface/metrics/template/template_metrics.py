@@ -140,7 +140,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             # parameters are already updated from velocity_above
             if "velocity_below" in self.params["metric_params"]:
                 del self.params["metric_params"]["velocity_below"]
-        # peak to valley -> peak_to_trough_duration
+        # peak_to_valley -> peak_to_trough_duration
         if "peak_to_valley" in self.params["metric_names"]:
             self.params["metric_names"].remove("peak_to_valley")
             if "peak_to_trough_duration" not in self.params["metric_names"]:
@@ -148,12 +148,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         # peak_trough ratio -> main peak to trough ratio
         # note that the new implementation correctly uses the absolute peak values,
         # which is different from the old implementation.
-        # we make a flag to invert the polarity of old values if needed
         if "peak_trough_ratio" in self.params["metric_names"]:
             self.params["metric_names"].remove("peak_trough_ratio")
             if "waveform_ratios" not in self.params["metric_names"]:
                 self.params["metric_names"].append("waveform_ratios")
-            self.params["metric_params"]["invert_peak_to_trough"] = True
 
     def _set_params(
         self,
@@ -209,7 +207,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     def _prepare_data(self, sorting_analyzer, unit_ids):
         import warnings
         import pandas as pd
-        from scipy.signal import resample_poly
+        from scipy.signal import resample_poly, savgol_filter
 
         # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
         tmp_data = {}
@@ -218,6 +216,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             unit_ids = sorting_analyzer.unit_ids
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
+        smooth = self.params["smooth"]
+        smooth_window_ms = self.params["smooth_window_ms"]
+        smooth_polyorder = self.params["smooth_polyorder"]
+
         sampling_frequency = sorting_analyzer.sampling_frequency
         if self.params["upsampling_factor"] > 1:
             sampling_frequency_up = upsampling_factor * sampling_frequency
@@ -238,6 +240,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         peaks_info = []
         templates_multi = []
         channel_locations_multi = []
+        templates_upsampled = []
+        templates_smoothed = []
         for unit_id in unit_ids:
             unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
             template_all_chans = all_templates[unit_index]
@@ -246,9 +250,19 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             # compute single_channel metrics
             if upsampling_factor > 1:
                 template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
+                templates_upsampled.append(template_upsampled)
             else:
                 template_upsampled = template_single
-                sampling_frequency_up = sampling_frequency
+
+            # Smooth template to reduce noise while preserving peaks using Savitzky-Golay filter
+            if smooth:
+                window_length = int(sampling_frequency_up * smooth_window_ms / 1000)
+                window_length = max(smooth_polyorder + 2, window_length)  # Must be > polyorder
+                template_upsampled = savgol_filter(
+                    template_upsampled, window_length=window_length, polyorder=smooth_polyorder
+                )
+                templates_smoothed.append(template_upsampled)
+
             peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
                 min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
@@ -291,7 +305,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             tmp_data["channel_locations_multi"] = channel_locations_multi
             tmp_data["depth_direction"] = self.params["depth_direction"]
 
-        # add main peaks info to self.data, so it's stored in the extension
+        # Add peaks_info and preprocessed templates to self.data for storage in extension
         self.data["peaks_info"] = pd.DataFrame(
             index=unit_ids,
             data=peaks_info,
@@ -308,20 +322,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             ],
             dtype=int,
         )
+        if len(templates_upsampled) > 0:
+            self.data["templates_upsampled"] = np.array(templates_upsampled)
+        if len(templates_smoothed) > 0:
+            self.data["templates_smoothed"] = np.array(templates_smoothed)
 
         return tmp_data
-
-    def get_data(self, *args, **kwargs):
-        """Override to handle deprecated polarity of 'peak_trough_ratio' metric."""
-        metrics = super().get_data(*args, **kwargs)
-        if self.params["metric_params"].get("invert_peak_to_trough", False):
-            if "peak_trough_ratio" in metrics.columns:
-                warnings.warn(
-                    "The 'peak_trough_ratio' metric has been deprecated and replaced by 'main_peak_to_trough_ratio'. "
-                    "The values have been inverted to maintain consistency with previous versions."
-                )
-                metrics["peak_trough_ratio"] = -metrics["peak_trough_ratio"]
-        return metrics
 
 
 register_result_extension(ComputeTemplateMetrics)

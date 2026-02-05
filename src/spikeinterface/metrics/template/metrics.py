@@ -10,10 +10,6 @@ from spikeinterface.core.analyzer_extension_core import BaseMetric
 def get_trough_and_peak_idx(
     template,
     min_thresh_detect_peaks_troughs=0.4,
-    smooth=True,
-    sampling_frequency=None,
-    smooth_window_ms=0.3,
-    smooth_polyorder=3,
 ):
     """
     Detect troughs and peaks in a template waveform and return detailed information
@@ -27,14 +23,6 @@ def get_trough_and_peak_idx(
         The 1D template waveform
     min_thresh_detect_peaks_troughs : float, default: 0.4
         Minimum prominence threshold as a fraction of the template's absolute max value
-    smooth : bool, default: True
-        Whether to apply smoothing before peak detection
-    sampling_frequency : float, optional
-        Sampling frequency in Hz (required if smooth is True and smooth_window_ms is used)
-    smooth_window_ms : float, default: 0.3
-        Smoothing window in ms for Savitzky-Golay filter
-    smooth_polyorder : int, default: 3
-        Polynomial order for Savitzky-Golay filter (must be < window_length)
 
     Returns
     -------
@@ -62,16 +50,9 @@ def get_trough_and_peak_idx(
         - "peak_after_width_left": left intersection point of the main peak with its prominence level
         - "peak_after_width_right": right intersection point of the main peak with its prominence level
     """
-    from scipy.signal import find_peaks, savgol_filter
+    from scipy.signal import find_peaks
 
     assert template.ndim == 1
-
-    # Smooth template to reduce noise while preserving peaks using Savitzky-Golay filter
-    if smooth:
-        assert sampling_frequency is not None, "sampling_frequency must be provided when smoothing is enabled"
-        window_length = int(sampling_frequency * smooth_window_ms / 1000)
-        window_length = max(smooth_polyorder + 2, window_length)  # Must be > polyorder
-        template = savgol_filter(template, window_length=window_length, polyorder=smooth_polyorder)
 
     peaks_info = {}
     # Get min prominence to detect peaks and troughs relative to template abs max value

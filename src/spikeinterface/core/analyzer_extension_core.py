@@ -902,6 +902,9 @@ class BaseMetricExtension(AnalyzerExtension):
     need_backward_compatibility_on_load = False
     metric_list: list[BaseMetric] = None  # list of BaseMetric
 
+    def __init__(self, sorting_analyzer):
+        super().__init__(sorting_analyzer)
+
     @classmethod
     def get_available_metric_names(cls):
         """Get the available metric names.
@@ -1285,7 +1288,6 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics_to_compute = self.params["metrics_to_compute"]
         delete_existing_metrics = self.params["delete_existing_metrics"]
-        periods = self.params.get("periods", None)
 
         _, job_kwargs = split_job_kwargs(job_kwargs)
         job_kwargs = fix_job_kwargs(job_kwargs)
