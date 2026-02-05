@@ -266,10 +266,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
                 min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
-                smooth=self.params["smooth"],
-                sampling_frequency=sampling_frequency_up,
-                smooth_window_ms=self.params["smooth_window_ms"],
-                smooth_polyorder=self.params["smooth_polyorder"],
             )
 
             templates_single.append(template_upsampled)
