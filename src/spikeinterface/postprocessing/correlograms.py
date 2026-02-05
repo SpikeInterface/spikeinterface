@@ -340,7 +340,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
 
     if method == "numpy":
-        correlograms = _compute_correlograms_numpy(sorting, window_size, bin_size, fast_mode=fast_mode)
+        correlograms = _compute_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
         correlograms = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode=fast_mode)
 
