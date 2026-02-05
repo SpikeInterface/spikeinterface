@@ -224,7 +224,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
     fast_mode : "auto" | "never" | "always", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300. 
+        if the number of units is greater than 300.
 
     Returns
     -------
@@ -298,7 +298,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        
+
         arr = self.data["acgs"]
         num_dims = len(self.data["bins"])
         all_new_units = new_sorting_analyzer.unit_ids
@@ -843,7 +843,7 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
         otherwise numpy.
     fast_mode : "auto" | "never" | "always", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300. 
+        if the number of units is greater than 300.
 
     Returns
     -------
