@@ -5,7 +5,6 @@ from spikeinterface.core import NumpyRecording, load_extractor, normal_pdf, set_
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.preprocessing import generate_RC_filter, MergeNeuropixels1Recording
 
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "preprocessing" / "merge_ap_lfp"
 else:
