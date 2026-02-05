@@ -286,7 +286,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         all_new_units = new_sorting_analyzer.unit_ids
         arr = self.data["acgs"]
 
-        # compute all new isi at once
+        # compute all new acgs at once
         new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
         only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
         new_acgs = np.zeros((len(all_new_units), only_new_acgs.shape[1]), dtype=np.int64)
