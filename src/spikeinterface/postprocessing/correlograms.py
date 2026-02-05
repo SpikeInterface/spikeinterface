@@ -382,7 +382,7 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
     return correlograms
 
 
-def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, fast_mode=False):
+def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
     """
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
