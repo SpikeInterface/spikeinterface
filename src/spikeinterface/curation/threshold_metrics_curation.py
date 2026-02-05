@@ -43,7 +43,7 @@ def threshold_metrics_label_units(
     Returns
     -------
     labels : pd.DataFrame
-        A DataFrame with unit IDs as index and a column 'label' containing the assigned labels ('noise' or 'good').
+        A DataFrame with unit IDs as index and a column 'label' containing the assigned labels (`fail_label` or `pass_label`)
     """
     import pandas as pd
 
