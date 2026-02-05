@@ -994,7 +994,7 @@ class PeakToTroughDuration(BaseMetric):
     metric_params = {}
     metric_columns = {"peak_to_trough_duration": float}
     metric_descriptions = {
-        "peak_to_trough_duration": "Duration in seconds between the trough (minimum) and the peak (maximum) of the spike waveform."
+        "peak_to_trough_duration": "Duration in seconds between the trough (minimum) and the next peak (maximum) of the template."
     }
     needs_tmp_data = True
 
@@ -1015,7 +1015,8 @@ class HalfWidth(BaseMetric):
     metric_params = {}
     metric_columns = {"trough_half_width": float, "peak_half_width": float}
     metric_descriptions = {
-        "trough_half_width": "Duration in s at half the amplitude of the trough (minimum) of the spike waveform."
+        "trough_half_width": "Duration in s at half the amplitude of the trough (minimum) of the template.",
+        "peak_half_width": "Duration in s at half the amplitude of the peak (maximum) of the template.",
     }
     needs_tmp_data = True
 
@@ -1041,7 +1042,7 @@ class RepolarizationSlope(BaseMetric):
     metric_params = {}
     metric_columns = {"repolarization_slope": float}
     metric_descriptions = {
-        "repolarization_slope": "Slope of the repolarization phase of the spike waveform, between the trough (minimum) and return to baseline in uV/s."
+        "repolarization_slope": "Slope of the repolarization phase of the template, between the trough (minimum) and return to baseline in uV/s."
     }
     needs_tmp_data = True
 
@@ -1065,7 +1066,7 @@ class RecoverySlope(BaseMetric):
     metric_params = {"recovery_window_ms": 0.7}
     metric_columns = {"recovery_slope": float}
     metric_descriptions = {
-        "recovery_slope": "Slope of the recovery phase of the spike waveform, after the peak (maximum) returning to baseline in uV/s."
+        "recovery_slope": "Slope of the recovery phase of the template, after the peak (maximum) returning to baseline in uV/s."
     }
     needs_tmp_data = True
 

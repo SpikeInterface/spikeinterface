@@ -9,8 +9,11 @@ resolution for more precise metric computation. Then they are (optionally) smoot
 (using a Savitzky-Golay filter) to reduce high-frequency noise that could interfere
 with peak/trough detection.
 
-Then the negative and positive peaks are detected on the channel with the largest
-absolute peak (the "main channel"). From these peaks, several metrics are computed.
+We compute the channel where the extremal value of your template occurs.
+Many single channel metrics only depend on the template on this channel,
+while multi-channel metrics will depend on the templates from many channels of
+your probe. On the extremal channel, we compute the troughs (minima) and peaks
+(maxima) of the template.
 
 Peaks are divided into "peaks before trough" and "peaks after trough", depending on
 their temporal location with respect to the main trough.
@@ -42,14 +45,24 @@ If no next extremum is found, it returns NaN.
 repolarization_slope
 --------------------
 
-Slope of the repolarization phase of the template, between the trough (minimum) and return to baseline in uV/s.
-If there is no trough,it returns NaN. If the absolute maximum is a peak, it still uses largest trough to compute.
+Slope of the repolarization phase of the template, between the trough (minimum) and return to baseline in µV/s.
+If there is no trough, it returns NaN. If the absolute maximum is a peak, it still uses largest trough to compute.
 
 recovery_slope
 --------------
 
-Slope of the recovery phase of the template, from the first peak following the largest trough, returning to baseline in uV/s.
-If there is no trough, it returns NaN. If there is no peak after the main trough, it returns NaN.
+Slope of the recovery phase of the template, from the first peak following the largest trough, returning to baseline
+in µV/s. If there is no trough, it returns NaN. If there is no peak after the main trough, it returns NaN.
+
+.. note::
+
+    The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
+    input. Voltages are based on the units of the template. By default this is µV
+    but can be the raw output from the recording device (this depends on the
+    :code:`return_in_uV` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
+    Distances are in µm and times are in seconds. So, for example, if the
+    templates are in units of µV then :code:`recovery_slope` :code:`repolarization_slope` is in
+    µV/s.
 
 waveform_ratios
 ---------------
@@ -101,17 +114,6 @@ number_of_peaks
 
 This metric includes the number of positive and negative peaks in the waveform:
 :code:`num_positive_peaks` and :code:`num_negative_peaks`.
-
-
-.. note::
-
-    The units of :code:`recovery_slope` and :code:`repolarization_slope` depend on the
-    input. Voltages are based on the units of the template. By default this is µV
-    but can be the raw output from the recording device (this depends on the
-    :code:`return_in_uV` parameter, read more here: :ref:`modules/core:SortingAnalyzer`).
-    Distances are in µm and times are in seconds. So, for example, if the
-    templates are in units of µV then :code:`recovery_slope` :code:`repolarization_slope` is in
-    µV/s.
 
 
 For recordings with a large number of channels, it can be useful to compute

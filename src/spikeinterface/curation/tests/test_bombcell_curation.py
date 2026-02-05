@@ -10,7 +10,7 @@ def sorting_analyzer_with_metrics(sorting_analyzer_for_curation):
 
     sorting_analyzer = sorting_analyzer_for_curation
     sorting_analyzer.compute("quality_metrics")
-    sorting_analyzer.compute("template_metrics")
+    sorting_analyzer.compute("template_metrics", include_multi_channel_metrics=True)
     return sorting_analyzer
 
 
