@@ -348,7 +348,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
 
 
 # LOW-LEVEL IMPLEMENTATIONS
-def _compute_correlograms_numpy(sorting, window_size, bin_size, fast_mode):
+def _compute_correlograms_numpy(sorting, window_size, bin_size):
     """
     Computes correlograms for all units in a sorting object.
 
