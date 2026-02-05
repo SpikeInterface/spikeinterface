@@ -115,7 +115,7 @@ def test_equal_results_fast_correlograms(window_and_bin_ms):
     window_ms, bin_ms = window_and_bin_ms
     sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
-    result_numba_fast, bins_numpy = _compute_correlograms_on_sorting(
+    result_numba_fast, bins_numba_fast = _compute_correlograms_on_sorting(
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True
     )
     result_numba, bins_numba = _compute_correlograms_on_sorting(
