@@ -18,23 +18,32 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    stream_id: str, default: None
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    block_index: int, default: None
+    block_index : int, default: None
         If there are several blocks, specify the block index you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "RawMCSRawIO"
-    name = "mcsraw"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        block_index=None,
+        all_annotations=False,
+        use_names_as_ids: bool = False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -42,6 +51,7 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             block_index=block_index,
             all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))

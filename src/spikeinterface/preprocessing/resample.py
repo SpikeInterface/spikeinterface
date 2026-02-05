@@ -4,13 +4,13 @@ import numpy as np
 import warnings
 
 from spikeinterface.core.core_tools import (
-    define_function_from_class,
+    define_function_handling_dict_from_class,
     recursive_key_finder,
 )
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ..core import get_chunk_with_margin, BaseRecordingSegment
+from spikeinterface.core import get_chunk_with_margin, BaseRecordingSegment
 
 
 class ResampleRecording(BasePreprocessor):
@@ -28,7 +28,7 @@ class ResampleRecording(BasePreprocessor):
         The recording extractor to be re-referenced
     resample_rate : int
         The resampling frequency
-    margin : float, default: 100.0
+    margin_ms : float, default: 100.0
         Margin in ms for computations, will be used to decrease edge effects.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
@@ -37,12 +37,10 @@ class ResampleRecording(BasePreprocessor):
 
     Returns
     -------
-    resample_recording: ResampleRecording
+    resample_recording : ResampleRecording
         The resampled recording extractor object.
 
     """
-
-    name = "resample"
 
     def __init__(
         self,
@@ -115,11 +113,6 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         return int(self._parent_segment.get_num_samples() / self._parent_rate * self.sampling_frequency)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         # get parent traces with margin
         parent_start_frame, parent_end_frame = [
             int((frame / self.sampling_frequency) * self._parent_rate) for frame in [start_frame, end_frame]
@@ -161,7 +154,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         return resampled_traces.astype(self._dtype)
 
 
-resample = define_function_from_class(source_class=ResampleRecording, name="resample")
+resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")
 
 
 # Some helpers to do checks

@@ -1,7 +1,7 @@
 import pytest
 import shutil
 from pathlib import Path
-from spikeinterface.core import extract_waveforms, load_waveforms, load_extractor
+from spikeinterface.core import extract_waveforms, load_waveforms, load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.comparison import (
     create_hybrid_units_recording,
@@ -11,13 +11,9 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.preprocessing import bandpass_filter
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "comparison" / "hybrid"
-else:
-    cache_folder = Path("cache_folder") / "comparison" / "hybrid"
-
-
-def setup_module():
+@pytest.fixture(scope="module")
+def setup_module(tmp_path_factory):
+    cache_folder = tmp_path_factory.mktemp("cache_folder")
     if cache_folder.is_dir():
         shutil.rmtree(cache_folder)
     cache_folder.mkdir(parents=True, exist_ok=True)
@@ -31,9 +27,11 @@ def setup_module():
     wvf_extractor = extract_waveforms(
         recording, sorting, folder=cache_folder / "wvf_extractor", ms_before=10.0, ms_after=10.0
     )
+    return cache_folder
 
 
-def test_hybrid_units_recording():
+def test_hybrid_units_recording(setup_module):
+    cache_folder = setup_module
     wvf_extractor = load_waveforms(cache_folder / "wvf_extractor")
     print(wvf_extractor)
     print(wvf_extractor.sorting_analyzer)
@@ -54,16 +52,17 @@ def test_hybrid_units_recording():
     )
 
     # Check dumpability
-    saved_loaded = load_extractor(hybrid_units_recording.to_dict())
-    check_recordings_equal(hybrid_units_recording, saved_loaded, return_scaled=False)
+    saved_loaded = load(hybrid_units_recording.to_dict())
+    check_recordings_equal(hybrid_units_recording, saved_loaded, return_in_uV=False)
 
     saved_1job = hybrid_units_recording.save(folder=cache_folder / "units_1job")
     saved_2job = hybrid_units_recording.save(folder=cache_folder / "units_2job", n_jobs=2, chunk_duration="1s")
-    check_recordings_equal(hybrid_units_recording, saved_1job, return_scaled=False)
-    check_recordings_equal(hybrid_units_recording, saved_2job, return_scaled=False)
+    check_recordings_equal(hybrid_units_recording, saved_1job, return_in_uV=False)
+    check_recordings_equal(hybrid_units_recording, saved_2job, return_in_uV=False)
 
 
-def test_hybrid_spikes_recording():
+def test_hybrid_spikes_recording(setup_module):
+    cache_folder = setup_module
     wvf_extractor = load_waveforms(cache_folder / "wvf_extractor")
     recording = wvf_extractor.recording
     sorting = wvf_extractor.sorting
@@ -82,13 +81,13 @@ def test_hybrid_spikes_recording():
     )
 
     # Check dumpability
-    saved_loaded = load_extractor(hybrid_spikes_recording.to_dict())
-    check_recordings_equal(hybrid_spikes_recording, saved_loaded, return_scaled=False)
+    saved_loaded = load(hybrid_spikes_recording.to_dict())
+    check_recordings_equal(hybrid_spikes_recording, saved_loaded, return_in_uV=False)
 
     saved_1job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_1job")
     saved_2job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_2job", n_jobs=2, chunk_duration="1s")
-    check_recordings_equal(hybrid_spikes_recording, saved_1job, return_scaled=False)
-    check_recordings_equal(hybrid_spikes_recording, saved_2job, return_scaled=False)
+    check_recordings_equal(hybrid_spikes_recording, saved_1job, return_in_uV=False)
+    check_recordings_equal(hybrid_spikes_recording, saved_2job, return_in_uV=False)
 
 
 if __name__ == "__main__":

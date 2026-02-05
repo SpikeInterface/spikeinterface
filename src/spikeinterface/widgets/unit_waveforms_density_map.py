@@ -5,7 +5,7 @@ import numpy as np
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from ..core import ChannelSparsity, get_template_extremum_channel
+from spikeinterface.core import ChannelSparsity, get_template_extremum_channel
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):
@@ -27,9 +27,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         Use only the max channel
     peak_sign : "neg" | "pos" | "both", default: "neg"
         Used to detect max channel only when use_max_channel=True
-    unit_colors : None or dict, default: None
-        A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     same_axis : bool, default: False
         If True then all density are plot on the same axis and then channels is the union
         all channel per units
@@ -57,7 +57,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_ids = sorting_analyzer.unit_ids
 
         if unit_colors is None:
-            unit_colors = get_unit_colors(sorting_analyzer.sorting)
+            unit_colors = get_unit_colors(sorting_analyzer)
 
         if use_max_channel:
             assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"

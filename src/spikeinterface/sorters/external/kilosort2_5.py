@@ -4,10 +4,9 @@ from pathlib import Path
 import os
 from typing import Union
 
-from ..basesorter import BaseSorter
+from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
-from ..utils import get_git_commit
-
+from spikeinterface.sorters.utils import get_git_commit
 
 PathType = Union[str, Path]
 
@@ -41,6 +40,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "detect_threshold": 6,
         "projection_threshold": [10, 4],
         "preclust_threshold": 8,
+        "whiteningRange": 32.0,
         "momentum": [20.0, 400.0],
         "car": True,
         "minFR": 0.1,
@@ -69,6 +69,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "detect_threshold": "Threshold for spike detection",
         "projection_threshold": "Threshold on projections",
         "preclust_threshold": "Threshold crossings for pre-clustering (in PCA projection space)",
+        "whiteningRange": "Number of channels to use for whitening each channel",
         "momentum": "Number of samples to average over (annealed from first to second value)",
         "car": "Enable or disable common reference",
         "minFR": "Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
@@ -156,20 +157,20 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         return p
 
     @classmethod
-    def _get_specific_options(cls, ops, params):
+    def _get_specific_options(cls, ops, params) -> dict:
         """
         Adds specific options for Kilosort2_5 in the ops dict and returns the final dict
 
         Parameters
         ----------
-        ops: dict
+        ops : dict
             options data
-        params: dict
+        params : dict
             Custom parameters dictionary for kilosort3
 
         Returns
         ----------
-        ops: dict
+        ops : dict
             Final ops data
         """
         # frequency for high pass filtering (300)
@@ -220,7 +221,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops["NT"] = params[
             "NT"
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
-        ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
+        ops["whiteningRange"] = params["whiteningRange"]  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into
         ops["useRAM"] = 0.0  # not yet available

@@ -42,9 +42,9 @@ def set_global_tmp_folder(folder):
     temp_folder_set = True
 
 
-def is_set_global_tmp_folder():
+def is_set_global_tmp_folder() -> bool:
     """
-    Check is the global path temporary folder have been manually set.
+    Check if the global path temporary folder have been manually set.
     """
     global temp_folder_set
     return temp_folder_set
@@ -88,17 +88,21 @@ def set_global_dataset_folder(folder):
     dataset_folder_set = True
 
 
-def is_set_global_dataset_folder():
+def is_set_global_dataset_folder() -> bool:
     """
-    Check is the global path dataset folder have been manually set.
+    Check if the global path dataset folder has been manually set.
     """
     global dataset_folder_set
     return dataset_folder_set
 
 
 ########################################
+_default_job_kwargs = dict(
+    pool_engine="process", n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_worker=1
+)
+
 global global_job_kwargs
-global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True, mp_context=None, max_threads_per_process=1)
+global_job_kwargs = _default_job_kwargs.copy()
 global global_job_kwargs_set
 global_job_kwargs_set = False
 
@@ -135,10 +139,13 @@ def reset_global_job_kwargs():
     Reset the global job kwargs.
     """
     global global_job_kwargs
-    global_job_kwargs = dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
+    global_job_kwargs = _default_job_kwargs.copy()
 
 
-def is_set_global_job_kwargs_set():
+def is_set_global_job_kwargs_set() -> bool:
+    """
+    Check if the global job kwargs have been manually set.
+    """
     global global_job_kwargs_set
     return global_job_kwargs_set
 

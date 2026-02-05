@@ -1,20 +1,11 @@
 import pytest
-from pathlib import Path
 import numpy as np
 
-from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
 from spikeinterface.core.numpyextractors import NumpyRecording
 
 from spikeinterface.preprocessing import zero_channel_pad, bandpass_filter, phase_shift
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
 
 
 def test_zero_padding_channel():
@@ -53,7 +44,7 @@ def test_trace_padded_recording_full_trace(recording, padding_start, padding_end
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -81,7 +72,7 @@ def test_trace_padded_recording_full_trace_with_channel_indices(recording, paddi
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -110,7 +101,7 @@ def test_trace_padded_recording_retrieve_original_trace(recording, padding_start
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -129,7 +120,7 @@ def test_trace_padded_recording_retrieve_partial_original_trace(recording, paddi
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -156,7 +147,7 @@ def test_trace_padded_recording_retrieve_start_padding_and_partial_original_trac
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -188,7 +179,7 @@ def test_trace_padded_recording_retrieve_end_padding_and_partial_original_trace(
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -222,7 +213,7 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -264,7 +255,7 @@ def test_trace_padded_recording_retrieve_only_start_padding(recording, padding_s
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -281,7 +272,7 @@ def test_trace_padded_recording_retrieve_only_end_padding(recording, padding_sta
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )
@@ -314,7 +305,7 @@ def test_trace_padded_recording_retrieve_only_end_padding_with_preprocessing(
         recording = phase_shift(recording)
 
     padded_recording = TracePaddedRecording(
-        parent_recording=recording,
+        recording=recording,
         padding_start=padding_start,
         padding_end=padding_end,
     )

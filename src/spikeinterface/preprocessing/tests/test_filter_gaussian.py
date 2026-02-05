@@ -1,29 +1,17 @@
 import numpy as np
 import pytest
-from pathlib import Path
-from spikeinterface.core import load_extractor, set_global_tmp_folder
+from spikeinterface.core import load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.generate import generate_recording
 from spikeinterface.preprocessing import gaussian_filter
 from numpy.testing import assert_allclose
-import scipy
-import matplotlib.pyplot as plt
 from spikeinterface.core import NumpyRecording
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing" / "gaussian_bandpass_filter"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing" / "gaussian_bandpass_filter"
-
-set_global_tmp_folder(cache_folder)
-cache_folder.mkdir(parents=True, exist_ok=True)
-
-
-def test_filter_gaussian():
+def test_filter_gaussian(tmp_path):
     recording = generate_recording(num_channels=3)
     recording.annotate(is_filtered=True)
-    recording = recording.save(folder=cache_folder / "recording")
+    recording = recording.save(folder=tmp_path / "recording")
 
     rec_filtered = gaussian_filter(recording)
 
@@ -34,11 +22,11 @@ def test_filter_gaussian():
     assert rec_filtered.get_traces(segment_index=1, start_frame=rec_filtered.get_num_frames(1) - 200).shape == (200, 3)
 
     # Check dumpability
-    saved_loaded = load_extractor(rec_filtered.to_dict())
-    check_recordings_equal(rec_filtered, saved_loaded, return_scaled=False)
+    saved_loaded = load(rec_filtered.to_dict())
+    check_recordings_equal(rec_filtered, saved_loaded, return_in_uV=False)
 
-    saved_1job = rec_filtered.save(folder=cache_folder / "1job")
-    saved_2job = rec_filtered.save(folder=cache_folder / "2job", n_jobs=2, chunk_duration="1s")
+    saved_1job = rec_filtered.save(folder=tmp_path / "1job")
+    saved_2job = rec_filtered.save(folder=tmp_path / "2job", n_jobs=2, chunk_duration="1s")
 
     for seg_idx in range(rec_filtered.get_num_segments()):
         original_trace = rec_filtered.get_traces(seg_idx)
@@ -47,6 +35,14 @@ def test_filter_gaussian():
 
         assert np.allclose(original_trace[60:-60], saved1_trace[60:-60], rtol=1e-3, atol=1e-3)
         assert np.allclose(original_trace[60:-60], saved2_trace[60:-60], rtol=1e-3, atol=1e-3)
+
+    # test filter gaussian with time_Vector
+    for segment_index in range(recording.get_num_segments()):
+        times = recording.get_times(segment_index) + (segment_index + 1) * 10.0
+        recording.set_times(times, segment_index=segment_index)
+
+    rec_filtered_tv = gaussian_filter(recording)
+    assert rec_filtered_tv.get_traces(segment_index=0, end_frame=100).shape == (100, 3)
 
 
 @pytest.mark.parametrize("freq_min", [None, 10, 50, 100])
@@ -71,10 +67,14 @@ def test_bandpower(freq_min, freq_max, debug=False):
     # Welch power density
     trace = rec.get_traces()[:, 0]
     trace_filt = rec_filt.get_traces(0)[:, 0]
+    import scipy
+
     f, Pxx = scipy.signal.welch(trace, fs=fs)
     _, Pxx_filt = scipy.signal.welch(trace_filt, fs=fs)
 
     if debug:
+        import matplotlib.pyplot as plt
+
         plt.plot(f, Pxx, label="Welch original")
         plt.plot(f, Pxx_filt, label="Welch gaussian filter")
         plt.plot(f, Pxx - Pxx_filt, label="difference")

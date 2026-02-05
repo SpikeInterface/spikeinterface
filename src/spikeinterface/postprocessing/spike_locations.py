@@ -2,28 +2,24 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.template_tools import get_template_extremum_channel
-
-from spikeinterface.core.sorting_tools import spike_vector_to_indices
-
-from spikeinterface.core.node_pipeline import SpikeRetriever, run_node_pipeline
+from spikeinterface.core.node_pipeline import SpikeRetriever
+from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
 
-class ComputeSpikeLocations(AnalyzerExtension):
+class ComputeSpikeLocations(BaseSpikeVectorExtension):
     """
     Localize spikes in 2D or 3D with several methods given the template.
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
     ms_before : float, default: 0.5
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    spike_retriver_kwargs: dict
+    spike_retriver_kwargs : dict
         A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
 
@@ -39,9 +35,6 @@ class ComputeSpikeLocations(AnalyzerExtension):
         The localization method to use
     method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
-    outputs : "concatenated" | "by_unit", default: "concatenated"
-        The output format
-    {}
 
     Returns
     -------
@@ -51,16 +44,7 @@ class ComputeSpikeLocations(AnalyzerExtension):
 
     extension_name = "spike_locations"
     depend_on = ["templates"]
-    need_recording = True
-    use_nodepipeline = True
     nodepipeline_variables = ["spike_locations"]
-    need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
-
-        extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
-        self.spikes = self.sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
     def _set_params(
         self,
@@ -77,22 +61,13 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
         if spike_retriver_kwargs is not None:
             spike_retriver_kwargs_.update(spike_retriver_kwargs)
-        params = dict(
+        return super()._set_params(
             ms_before=ms_before,
             ms_after=ms_after,
             spike_retriver_kwargs=spike_retriver_kwargs_,
             method=method,
             method_kwargs=method_kwargs,
         )
-        return params
-
-    def _select_extension_data(self, unit_ids):
-        old_unit_ids = self.sorting_analyzer.unit_ids
-        unit_inds = np.flatnonzero(np.isin(old_unit_ids, unit_ids))
-
-        spike_mask = np.isin(self.spikes["unit_index"], unit_inds)
-        new_spike_locations = self.data["spike_locations"][spike_mask]
-        return dict(spike_locations=new_spike_locations)
 
     def _get_pipeline_nodes(self):
         from spikeinterface.sortingcomponents.peak_localization import get_localization_pipeline_nodes
@@ -105,8 +80,8 @@ class ComputeSpikeLocations(AnalyzerExtension):
         )
 
         retriever = SpikeRetriever(
-            recording,
             sorting,
+            recording,
             channel_from_template=True,
             extremum_channel_inds=extremum_channels_indices,
         )
@@ -114,44 +89,12 @@ class ComputeSpikeLocations(AnalyzerExtension):
             recording,
             retriever,
             method=self.params["method"],
+            method_kwargs=self.params["method_kwargs"],
             ms_before=self.params["ms_before"],
             ms_after=self.params["ms_after"],
-            **self.params["method_kwargs"],
         )
         return nodes
 
-    def _run(self, **job_kwargs):
-        job_kwargs = fix_job_kwargs(job_kwargs)
-        nodes = self.get_pipeline_nodes()
-        spike_locations = run_node_pipeline(
-            self.sorting_analyzer.recording,
-            nodes,
-            job_kwargs=job_kwargs,
-            job_name="spike_locations",
-            gather_mode="memory",
-        )
-        self.data["spike_locations"] = spike_locations
-
-    def _get_data(self, outputs="numpy"):
-        all_spike_locations = self.data["spike_locations"]
-        if outputs == "numpy":
-            return all_spike_locations
-        elif outputs == "by_unit":
-            unit_ids = self.sorting_analyzer.unit_ids
-            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=False)
-            spike_indices = spike_vector_to_indices(spike_vector, unit_ids)
-            spike_locations_by_units = {}
-            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
-                spike_locations_by_units[segment_index] = {}
-                for unit_id in unit_ids:
-                    inds = spike_indices[segment_index][unit_id]
-                    spike_locations_by_units[segment_index][unit_id] = all_spike_locations[inds]
-            return spike_locations_by_units
-        else:
-            raise ValueError(f"Wrong .get_data(outputs={outputs})")
-
-
-ComputeSpikeLocations.__doc__.format(_shared_job_kwargs_doc)
 
 register_result_extension(ComputeSpikeLocations)
 compute_spike_locations = ComputeSpikeLocations.function_factory()

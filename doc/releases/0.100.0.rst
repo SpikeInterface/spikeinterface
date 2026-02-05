@@ -24,8 +24,7 @@ Main changes:
 core:
 
 * Add `Templates` class (#1982)
-* Use python methods instead of parsing and eleminate try-except in to_dict
-(#2157)
+* Use python methods instead of parsing and eleminate try-except in to_dict (#2157)
 * `WaveformExtractor.is_extension` --> `has_extension` (#2158)
 * Speed improvement to `get_empty_units()` (#2173)
 * Allow precomputing spike trains (#2175)

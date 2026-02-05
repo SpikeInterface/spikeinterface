@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path, WindowsPath
-from typing import Union
+from typing import Union, Generator
 import os
 import sys
 import datetime
@@ -8,18 +8,53 @@ import json
 from copy import deepcopy
 import importlib
 from math import prod
+from collections import namedtuple
+import inspect
 
 import numpy as np
-from tqdm import tqdm
 
-from .job_tools import (
-    ensure_chunk_size,
-    ensure_n_jobs,
-    divide_segment_into_chunks,
-    fix_job_kwargs,
-    ChunkRecordingExecutor,
-    _shared_job_kwargs_doc,
-)
+
+def define_function_handling_dict_from_class(source_class, name):
+    """
+    Depending on whether `source_class` is passed a `Recording` object or a dict of
+    `Recording` objects, this function will return `source_class` or a dict of
+    `source_class` objects to match the input.
+    """
+
+    from spikeinterface.core import BaseRecording
+
+    def source_class_or_dict_of_sources_classes(*args, **kwargs):
+
+        recording_in_kwargs = False
+        if rec_or_dict_of_recs := kwargs.get("recording"):
+            recording_in_kwargs = True
+        else:
+            rec_or_dict_of_recs = args[0]
+
+        if isinstance(rec_or_dict_of_recs, BaseRecording):
+            return source_class(*args, **kwargs)
+        elif isinstance(rec_or_dict_of_recs, dict):
+            # Edit args & kwargs to pass the dict of recordings but _not_ the original recording
+            new_kwargs = {key: kwarg for key, kwarg in kwargs.items() if key != "recording"}
+            if recording_in_kwargs:
+                new_args = args
+            else:
+                new_args = args[1:]
+
+            preprocessed_recordings_dict = {
+                property_id: source_class(recording, *new_args, **new_kwargs)
+                for property_id, recording in rec_or_dict_of_recs.items()
+            }
+
+            return preprocessed_recordings_dict
+        else:
+            raise TypeError(f"The function `{name}` only accepts a recording or a dict of recordings.")
+
+    source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
+    source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
+    source_class_or_dict_of_sources_classes.__name__ = name
+
+    return source_class_or_dict_of_sources_classes
 
 
 def define_function_from_class(source_class, name):
@@ -84,6 +119,7 @@ class SIJsonEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from spikeinterface.core.base import BaseExtractor
+        from spikeinterface.core.motion import Motion
 
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
@@ -93,13 +129,24 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, np.generic):
             return obj.item()
 
-        if np.issctype(obj):  # Cast numpy datatypes to their names
+        # Standard numpy dtypes like np.dtype('int32") are transformed this way
+        if isinstance(obj, np.dtype):
+            return np.dtype(obj).name
+
+        # This will transform to a string canonical representation of the dtype (e.g. np.int32 -> 'int32')
+        if isinstance(obj, type) and issubclass(obj, np.generic):
             return np.dtype(obj).name
 
         if isinstance(obj, np.ndarray):
             return obj.tolist()
 
         if isinstance(obj, BaseExtractor):
+            return obj.to_dict()
+
+        if isinstance(obj, Path):
+            return str(obj)
+
+        if isinstance(obj, Motion):
             return obj.to_dict()
 
         # The base-class handles the assertion
@@ -150,13 +197,20 @@ def check_json(dictionary: dict) -> dict:
     return json.loads(json_string)
 
 
+def clean_zarr_folder_name(folder):
+    folder = Path(folder)
+    if folder.suffix != ".zarr":
+        folder = folder.parent / f"{folder.stem}.zarr"
+    return folder
+
+
 def add_suffix(file_path, possible_suffix):
     file_path = Path(file_path)
     if isinstance(possible_suffix, str):
         possible_suffix = [possible_suffix]
     possible_suffix = [s if s.startswith(".") else "." + s for s in possible_suffix]
     if file_path.suffix not in possible_suffix:
-        file_path = file_path.parent / (file_path.name + "." + possible_suffix[0])
+        file_path = file_path.parent / (file_path.name + possible_suffix[0])
     return file_path
 
 
@@ -173,14 +227,87 @@ def make_shared_array(shape, dtype):
     return arr, shm
 
 
-def is_dict_extractor(d):
+def is_dict_extractor(d: dict) -> bool:
     """
-    Check if a dict describe an extractor.
+    Check if a dict describes an extractor.
+
+    Returns
+    -------
+    is_extractor : bool
+        Whether the dict describes an extractor
     """
     if not isinstance(d, dict):
         return False
     is_extractor = ("module" in d) and ("class" in d) and ("version" in d) and ("annotations" in d)
     return is_extractor
+
+
+extractor_dict_element = namedtuple(typename="extractor_dict_element", field_names=["value", "name", "access_path"])
+
+
+def extractor_dict_iterator(extractor_dict: dict) -> Generator[extractor_dict_element, None, None]:
+    """
+    Iterator for recursive traversal of a dictionary.
+    This function explores the dictionary recursively and yields the path to each value along with the value itself.
+
+    By path here we mean the keys that lead to the value in the dictionary:
+    e.g. for the dictionary {'a': {'b': 1}}, the path to the value 1 is ('a', 'b').
+
+    See `BaseExtractor.to_dict()` for a description of `extractor_dict` structure.
+
+    Parameters
+    ----------
+    extractor_dict : dict
+        Input dictionary
+
+    Yields
+    ------
+    extractor_dict_element
+        Named tuple containing the value, the name, and the access_path to the value in the dictionary.
+
+    """
+
+    def _extractor_dict_iterator(dict_list_or_value, access_path=(), name=""):
+        if isinstance(dict_list_or_value, dict):
+            for k, v in dict_list_or_value.items():
+                yield from _extractor_dict_iterator(v, access_path + (k,), name=k)
+        elif isinstance(dict_list_or_value, list):
+            for i, v in enumerate(dict_list_or_value):
+                yield from _extractor_dict_iterator(
+                    v, access_path + (i,), name=name
+                )  # Propagate name of list to children
+        else:
+            yield extractor_dict_element(
+                value=dict_list_or_value,
+                name=name,
+                access_path=access_path,
+            )
+
+    yield from _extractor_dict_iterator(extractor_dict)
+
+
+def set_value_in_extractor_dict(extractor_dict: dict, access_path: tuple, new_value):
+    """
+    In place modification of a value in a nested dictionary given its access path.
+
+    Parameters
+    ----------
+    extractor_dict : dict
+        The dictionary to modify
+    access_path : tuple
+        The path to the value in the dictionary
+    new_value : object
+        The new value to set
+
+    Returns
+    -------
+    None
+    """
+
+    current = extractor_dict
+    for key in access_path[:-1]:
+        current = current[key]
+    current[access_path[-1]] = new_value
 
 
 def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
@@ -250,15 +377,17 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
-def _get_paths_list(d):
-    # this explore a dict and get all paths flatten in a list
-    # the trick is to use a closure func called by recursive_path_modifier()
-    path_list = []
+# This is the current definition that an element in a extractor_dict is a path
+# This is shared across a couple of definition so it is here for DNRY
+element_is_path = lambda element: isinstance(element.value, (str, Path)) and "path" in element.name
 
-    def append_to_path(p):
-        path_list.append(p)
 
-    recursive_path_modifier(d, append_to_path, target="path", copy=True)
+def _get_paths_list(d: dict) -> list[str | Path]:
+    path_list = [e.value for e in extractor_dict_iterator(d) if element_is_path(e)]
+
+    # if check_if_exists: TODO: Enable this once container_tools test uses proper mocks
+    #     path_list = [p for p in path_list if Path(p).exists()]
+
     return path_list
 
 
@@ -288,16 +417,25 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     Returns
     -------
     relative_possible: bool
+        Whether the given input can be made relative to the relative_folder
     """
     path_list = _get_paths_list(input_dict)
     relative_folder = Path(relative_folder).resolve().absolute()
     not_possible = []
     for p in path_list:
-        p = Path(p)
         # check path is not an URL
         if "http" in str(p):
             not_possible.append(p)
             continue
+
+        # check path is not a remote path, see
+        # https://github.com/SpikeInterface/spikeinterface/issues/4045
+        if is_path_remote(p):
+            not_possible.append(p)
+            continue
+
+        # convert to Path
+        p = Path(p)
 
         # If windows path check have same drive
         if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
@@ -317,7 +455,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     return len(not_possible) == 0
 
 
-def make_paths_relative(input_dict, relative_folder) -> dict:
+def make_paths_relative(input_dict: dict, relative_folder: str | Path) -> dict:
     """
     Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
 
@@ -333,13 +471,26 @@ def make_paths_relative(input_dict, relative_folder) -> dict:
     output_dict: dict
         A copy of the input dict with modified paths.
     """
+
     relative_folder = Path(relative_folder).resolve().absolute()
-    func = lambda p: _relative_to(p, relative_folder)
-    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+
+    path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
+    # Only paths that exist are made relative
+    path_elements_in_dict = [e for e in path_elements_in_dict if Path(e.value).exists()]
+
+    output_dict = deepcopy(input_dict)
+    for element in path_elements_in_dict:
+        new_value = _relative_to(element.value, relative_folder)
+        set_value_in_extractor_dict(
+            extractor_dict=output_dict,
+            access_path=element.access_path,
+            new_value=new_value,
+        )
+
     return output_dict
 
 
-def make_paths_absolute(input_dict, base_folder):
+def make_paths_absolute(input_dict, base_folder) -> dict:
     """
     Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
 
@@ -358,12 +509,27 @@ def make_paths_absolute(input_dict, base_folder):
     base_folder = Path(base_folder)
     # use as_posix instead of str to make the path unix like even on window
     func = lambda p: (base_folder / p).resolve().absolute().as_posix()
-    output_dict = recursive_path_modifier(input_dict, func, target="path", copy=True)
+
+    path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
+    output_dict = deepcopy(input_dict)
+
+    for element in path_elements_in_dict:
+        absolute_path = (base_folder / element.value).resolve()
+        if Path(absolute_path).exists():
+            new_value = absolute_path.as_posix()  # Not so sure about this, Sam
+            set_value_in_extractor_dict(
+                extractor_dict=output_dict,
+                access_path=element.access_path,
+                new_value=new_value,
+            )
+
     return output_dict
 
 
 def recursive_key_finder(d, key):
     # Find all values for a key on a dictionary, even if nested
+    # TODO refactor to use extractor_dict_iterator
+
     for k, v in d.items():
         if isinstance(v, dict):
             yield from recursive_key_finder(v, key)
@@ -447,6 +613,42 @@ def convert_bytes_to_str(byte_value: int) -> str:
     return f"{byte_value:.2f} {suffixes[i]}"
 
 
+_exponents = {
+    "k": 1e3,
+    "M": 1e6,
+    "G": 1e9,
+    "T": 1e12,
+    "P": 1e15,  # Decimal (SI) prefixes
+    "Ki": 1024**1,
+    "Mi": 1024**2,
+    "Gi": 1024**3,
+    "Ti": 1024**4,
+    "Pi": 1024**5,  # Binary (IEC) prefixes
+}
+
+
+def convert_string_to_bytes(memory_string: str) -> int:
+    """
+    Convert a memory size string to the corresponding number of bytes.
+
+    Parameters:
+    mem (str): Memory size string (e.g., "1G", "512Mi", "2T").
+
+    Returns:
+    int: Number of bytes.
+    """
+    if memory_string[-2:] in _exponents:
+        suffix = memory_string[-2:]
+        mem_value = memory_string[:-2]
+    else:
+        suffix = memory_string[-1]
+        mem_value = memory_string[:-1]
+
+    assert suffix in _exponents, f"Unknown suffix: {suffix}"
+    bytes_value = int(float(mem_value) * _exponents[suffix])
+    return bytes_value
+
+
 def is_editable_mode() -> bool:
     """
     Check if spikeinterface is installed in editable mode
@@ -480,9 +682,10 @@ def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
     return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
 
 
-def retrieve_importing_provenance(a_class):
+def retrieve_importing_provenance(a_class) -> dict:
     """
-    Retrieve the import provenance of a class, including its import name (that consists of the class name and the module), the top-level module, and the module version.
+    Retrieve the import provenance of a class, including its import name (that consists of the class name and the module),
+    the top-level module, and the module version.
 
     Parameters
     ----------
@@ -513,3 +716,45 @@ def retrieve_importing_provenance(a_class):
     }
 
     return info
+
+
+def measure_memory_allocation(measure_in_process: bool = True) -> float:
+    """
+    A local utility to measure memory allocation at a specific point in time.
+    Can measure either the process resident memory or system wide memory available
+
+    Uses psutil package.
+
+    Parameters
+    ----------
+    measure_in_process : bool, True by default
+        Mesure memory allocation in the current process only, if false then measures at the system
+        level.
+    """
+    import psutil
+
+    if measure_in_process:
+        process = psutil.Process()
+        memory = process.memory_info().rss
+    else:
+        mem_info = psutil.virtual_memory()
+        memory = mem_info.total - mem_info.available
+
+    return memory
+
+
+def is_path_remote(path: str | Path) -> bool:
+    """
+    Returns True if the path is a remote path (e.g., s3:// or gcs://).
+
+    Parameters
+    ----------
+    path : str or Path
+        The path to check.
+
+    Returns
+    -------
+    bool
+        Whether the path is a remote path.
+    """
+    return "s3://" in str(path) or "gcs://" in str(path)

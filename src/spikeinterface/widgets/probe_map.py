@@ -13,18 +13,18 @@ class ProbeMapWidget(BaseWidget):
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object
-    channel_ids: list
-        The channel ids to display
-    with_channel_ids: bool False default
+    color_channels : list or matplotlib color
+        List of colors to be associated with each channel_id, if only one color is present all channels will take the specified color
+    with_channel_ids : bool False default
         Add channel ids text on the probe
-    **plot_probe_kwargs: keyword arguments for probeinterface.plotting.plot_probe_group() function
+    **plot_probe_kwargs : keyword arguments for probeinterface.plotting.plot_probe_group() function
 
     """
 
     def __init__(
-        self, recording, channel_ids=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
+        self, recording, color_channels=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
     ):
         # split backend_or_plot_probe_kwargs
         backend_kwargs = dict()
@@ -38,7 +38,7 @@ class ProbeMapWidget(BaseWidget):
 
         plot_data = dict(
             recording=recording,
-            channel_ids=channel_ids,
+            color_channels=color_channels,
             with_channel_ids=with_channel_ids,
             plot_probe_kwargs=plot_probe_kwargs,
         )
@@ -70,8 +70,18 @@ class ProbeMapWidget(BaseWidget):
             n = probe.get_contact_count()
             if dp.with_channel_ids:
                 text_on_contact = dp.recording.channel_ids[pos : pos + n]
+            if dp.color_channels is not None:
+                if (
+                    isinstance(dp.color_channels, (list, np.ndarray))
+                    and len(dp.color_channels) == dp.recording.get_num_channels()
+                ):
+                    color = dp.color_channels[pos : pos + n]
+                else:
+                    color = dp.color_channels
+            else:
+                color = None
             pos += n
-            plot_probe(probe, ax=self.ax, text_on_contact=text_on_contact, **plot_probe_kwargs)
+            plot_probe(probe, ax=self.ax, text_on_contact=text_on_contact, contacts_colors=color, **plot_probe_kwargs)
 
         self.ax.set_xlim(*xlims)
         self.ax.set_ylim(*ylims)

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from .filter import fix_dtype
 
 
 class UnsignedToSignedRecording(BasePreprocessor):
@@ -13,15 +12,13 @@ class UnsignedToSignedRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: Recording
+    recording : Recording
         The recording to be signed.
-    bit_depth: int or None, default: None
+    bit_depth : int or None, default: None
         In case the bit depth of the ADC does not match that of the data type,
         it specifies the bit depth of the ADC to estimate the offset.
         For example, a `bit_depth` of 12 will correct for an offset of `2**11`
     """
-
-    name = "unsigned_to_signed"
 
     def __init__(
         self,
@@ -42,6 +39,7 @@ class UnsignedToSignedRecording(BasePreprocessor):
 
         self._kwargs = dict(
             recording=recording,
+            bit_depth=bit_depth,
         )
 
 
@@ -69,4 +67,6 @@ class UnsignedToSignedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-unsigned_to_signed = define_function_from_class(source_class=UnsignedToSignedRecording, name="unsigned_to_signed")
+unsigned_to_signed = define_function_handling_dict_from_class(
+    source_class=UnsignedToSignedRecording, name="unsigned_to_signed"
+)

@@ -13,6 +13,7 @@ from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
 from .external.mountainsort5 import Mountainsort5Sorter
+from .external.rt_sort import RTSortSorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
 from .external.waveclus import WaveClusSorter
@@ -23,6 +24,7 @@ from .external.yass import YassSorter
 from .internal.spyking_circus2 import Spykingcircus2Sorter
 from .internal.tridesclous2 import Tridesclous2Sorter
 from .internal.simplesorter import SimpleSorter
+from .internal.lupin import LupinSorter
 
 sorter_full_list = [
     # external
@@ -36,9 +38,9 @@ sorter_full_list = [
     Kilosort3Sorter,
     Kilosort4Sorter,
     PyKilosortSorter,
-    KlustaSorter,
     Mountainsort4Sorter,
     Mountainsort5Sorter,
+    RTSortSorter,
     SpykingcircusSorter,
     TridesclousSorter,
     WaveClusSorter,
@@ -48,7 +50,20 @@ sorter_full_list = [
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
     SimpleSorter,
+    LupinSorter,
 ]
+
+# archived
+archived_sorter_list = [KlustaSorter, YassSorter]
+
+try:
+    # if the spikeinterface_kilosort_components source are installed on the machine
+    # then an extra sorter is added, this is expermimental at the moment.
+    from spikeinterface_kilosort_components.kilosort_like_sorter import Kilosort4LikeSorter
+
+    sorter_full_list.append(Kilosort4LikeSorter)
+except ImportError:
+    pass
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
 
@@ -57,6 +72,12 @@ def available_sorters():
     """Lists available sorters."""
 
     return sorted(list(sorter_dict.keys()))
+
+
+def archived_sorters():
+    """Lists archived sorters."""
+
+    return sorted([s.sorter_name for s in archived_sorter_list])
 
 
 def installed_sorters():
@@ -76,17 +97,17 @@ def print_sorter_versions():
     print(txt)
 
 
-def get_default_sorter_params(sorter_name_or_class):
+def get_default_sorter_params(sorter_name_or_class) -> dict:
     """Returns default parameters for the specified sorter.
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve default parameters from.
 
     Returns
     -------
-    default_params: dict
+    default_params : dict
         Dictionary with default params for the specified sorter.
     """
 
@@ -100,17 +121,17 @@ def get_default_sorter_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
-def get_sorter_params_description(sorter_name_or_class):
+def get_sorter_params_description(sorter_name_or_class) -> dict:
     """Returns a description of the parameters for the specified sorter.
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve parameters description from.
 
     Returns
     -------
-    params_description: dict
+    params_description : dict
         Dictionary with parameter description
     """
 
@@ -124,17 +145,17 @@ def get_sorter_params_description(sorter_name_or_class):
     return SorterClass.params_description()
 
 
-def get_sorter_description(sorter_name_or_class):
+def get_sorter_description(sorter_name_or_class) -> dict:
     """Returns a brief description for the specified sorter.
 
     Parameters
     ----------
-    sorter_name_or_class: str or SorterClass
+    sorter_name_or_class : str or SorterClass
         The sorter to retrieve description from.
 
     Returns
     -------
-    params_description: dict
+    params_description : dict
         Dictionary with parameter description.
     """
 

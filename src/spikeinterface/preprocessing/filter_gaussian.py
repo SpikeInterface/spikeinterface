@@ -5,7 +5,7 @@ from typing import Iterable, Union
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin, normal_pdf
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
@@ -23,24 +23,22 @@ class GaussianFilterRecording(BasePreprocessor):
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The recording extractor to be filtered.
-    freq_min: float or None
+    freq_min : float or None
         The lower frequency cutoff for the bandpass filter.
         If None, the resulting object is a lowpass filter.
-    freq_max: float or None
+    freq_max : float or None
         The higher frequency cutoff for the bandpass filter.
         If None, the resulting object is a highpass filter.
-    margin_sd: float, default: 5.0
+    margin_sd : float, default: 5.0
         The number of standard deviation to take for margins.
 
     Returns
     -------
-    gaussian_filtered_recording: GaussianFilterRecording
+    gaussian_filtered_recording : GaussianFilterRecording
         The filtered recording extractor object.
     """
-
-    name = "gaussian_filter"
 
     def __init__(
         self, recording: BaseRecording, freq_min: float = 300.0, freq_max: float = 5000.0, margin_sd: float = 5.0
@@ -52,14 +50,22 @@ class GaussianFilterRecording(BasePreprocessor):
             raise ValueError("At least one of `freq_min`,`freq_max` should be specified.")
 
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd))
+            # Sampling frequency is taken from recording since segments may not have it set (in case of time_vector)
+            self.add_recording_segment(
+                GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd, self.sampling_frequency)
+            )
 
         self._kwargs = {"recording": recording, "freq_min": freq_min, "freq_max": freq_max}
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
     def __init__(
-        self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float, margin_sd: float = 5.0
+        self,
+        parent_recording_segment: BaseRecordingSegment,
+        freq_min: float,
+        freq_max: float,
+        margin_sd: float = 5.0,
+        parent_sampling_frequency: float = None,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
@@ -67,14 +73,14 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         self.freq_max = freq_max
         self.cached_gaussian = dict()
 
-        sf = parent_recording_segment.sampling_frequency
+        self.parent_sampling_frequency = parent_sampling_frequency
 
         # Margin from widest gaussian
         sigmas = []
         if freq_min is not None:
-            sigmas.append(sf / (2 * np.pi * freq_min))
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_min))
         if freq_max is not None:
-            sigmas.append(sf / (2 * np.pi * freq_max))
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_max))
         self.margin = 1 + int(max(sigmas) * margin_sd)
 
     def get_traces(
@@ -119,11 +125,12 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         if cutoff_f in self.cached_gaussian and N in self.cached_gaussian[cutoff_f]:
             return self.cached_gaussian[cutoff_f][N]
 
-        sf = self.parent_recording_segment.sampling_frequency
-        faxis = np.fft.fftfreq(N, d=1 / sf)
+        faxis = np.fft.fftfreq(N, d=1 / self.parent_sampling_frequency)
 
-        if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
-            sigma = sf / (2 * np.pi * cutoff_f)
+        if (
+            cutoff_f > self.parent_sampling_frequency / 8
+        ):  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
+            sigma = self.parent_sampling_frequency / (2 * np.pi * cutoff_f)
             limit = int(round(5 * sigma)) + 1
             xaxis = np.arange(-limit, limit + 1) / sigma
             gaussian = normal_pdf(xaxis) / sigma
@@ -138,4 +145,4 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         return gaussian
 
 
-gaussian_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
+gaussian_filter = define_function_handling_dict_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")

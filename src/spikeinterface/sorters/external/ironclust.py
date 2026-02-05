@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Union
 import sys
 
-from ..utils import ShellScript
-from ..basesorter import BaseSorter, get_job_kwargs
+from spikeinterface.sorters.utils import ShellScript
+from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 
-from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
+from spikeinterface.extractors.extractor_classes import MdaRecordingExtractor, MdaSortingExtractor
 
 PathType = Union[str, Path]
 
@@ -72,6 +72,7 @@ class IronClustSorter(BaseSorter):
         "merge_thresh_cc": 1,  # cross-correlogram merging threshold, set to 1 to disable
         "nRepeat_merge": 3,  # number of repeats for merge
         "merge_overlap_thresh": 0.95,  # knn-overlap merge threshold
+        "version": 2,
     }
 
     _params_description = {
@@ -108,6 +109,7 @@ class IronClustSorter(BaseSorter):
         "merge_thresh_cc": "Cross-correlogram merging threshold, set to 1 to disable",
         "nRepeat_merge": "Number of repeats for merge",
         "merge_overlap_thresh": "Knn-overlap merge threshold",
+        "version": "The irc command version. Can be 1 or 2 (default)",
     }
 
     sorter_descrpition = """Ironclust is a density-based spike sorter designed for high-density probes
@@ -209,9 +211,7 @@ class IronClustSorter(BaseSorter):
             shell_cmd = """
                 #!/bin/bash
                 p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt
-            """.format(
-                tmpdir=str(tmpdir), dataset_dir=str(dataset_dir)
-            )
+            """.format(tmpdir=str(tmpdir), dataset_dir=str(dataset_dir))
         else:
             cmd = """
                 addpath('{source_dir}');
@@ -240,17 +240,13 @@ class IronClustSorter(BaseSorter):
                     {disk_move}
                     cd {tmpdir}
                     matlab -nosplash -wait -log -r run_ironclust
-                """.format(
-                    disk_move=str(tmpdir)[:2], tmpdir=tmpdir
-                )
+                """.format(disk_move=str(tmpdir)[:2], tmpdir=tmpdir)
             else:
                 shell_cmd = """
                     #!/bin/bash
                     cd "{tmpdir}"
                     matlab -nosplash -nodisplay -log -r run_ironclust
-                """.format(
-                    tmpdir=tmpdir
-                )
+                """.format(tmpdir=tmpdir)
 
         shell_script = ShellScript(
             shell_cmd,

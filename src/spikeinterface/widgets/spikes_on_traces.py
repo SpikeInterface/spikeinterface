@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 from .traces import TracesWidget
-from ..core import ChannelSparsity
-from ..core.template_tools import get_template_extremum_channel
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.baserecording import BaseRecording
-from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_unit_locations
+from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.baserecording import BaseRecording
+from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.postprocessing import compute_unit_locations
 
 
 class SpikesOnTracesWidget(BaseWidget):
@@ -27,20 +29,23 @@ class SpikesOnTracesWidget(BaseWidget):
         List of unit ids
     order_channel_by_depth : bool, default: False
         If true orders channel by depth
-    time_range: list or None, default: None
+    time_range : list or None, default: None
         List with start time and end time in seconds
     sparsity : ChannelSparsity or None, default: None
         Optional ChannelSparsity to apply
         If SortingAnalyzer is already sparse, the argument is ignored
-    unit_colors : dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
-        If None, then the get_unit_colors() is internally used. (matplotlib backend)
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     mode : "line" | "map" | "auto", default: "auto"
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool, default: False
-        If True and the recording has scaled traces, it plots the scaled traces
+    return_scaled : bool | None, default: None
+            DEPRECATED. Use return_in_uV instead.
+    return_in_uV : bool, default: False
+        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
+        traces are scaled to uV
     cmap : str, default: "RdBu"
         matplotlib colormap used in mode "map"
     show_channel_ids : bool, default: False
@@ -73,7 +78,8 @@ class SpikesOnTracesWidget(BaseWidget):
         unit_colors=None,
         sparsity=None,
         mode="auto",
-        return_scaled=False,
+        return_scaled=None,
+        return_in_uV=False,
         cmap="RdBu",
         show_channel_ids=False,
         color_groups=False,
@@ -88,11 +94,20 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+
+        # Handle deprecated return_scaled parameter
+        if return_scaled is not None:
+            warnings.warn(
+                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            return_in_uV = return_scaled
+
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(sorting_analyzer, "unit_locations")
 
         sorting: BaseSorting = sorting_analyzer.sorting
-        recording: BaseRecording = sorting_analyzer.recording
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -124,7 +139,7 @@ class SpikesOnTracesWidget(BaseWidget):
             order_channel_by_depth=order_channel_by_depth,
             time_range=time_range,
             mode=mode,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             cmap=cmap,
             show_channel_ids=show_channel_ids,
             color_groups=color_groups,
@@ -219,9 +234,9 @@ class SpikesOnTracesWidget(BaseWidget):
 
                     nbefore = nafter = int(dp.spike_width_ms / 2 * sorting_analyzer.sampling_frequency / 1000)
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
-                    waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times"]) - 1)
+                    waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times_in_range"]) - 1)
 
-                    times = traces_widget.data_plot["times"][waveform_idxs]
+                    times = traces_widget.data_plot["times_in_range"][waveform_idxs]
 
                     # discontinuity
                     times[:, -1] = np.nan

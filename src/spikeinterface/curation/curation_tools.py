@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 import numpy as np
-
+from spikeinterface import SortingAnalyzer
 
 try:
     import numba
@@ -45,7 +45,7 @@ def _find_duplicated_spikes_numpy(
 
 def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int, seed: int) -> np.ndarray:
     # random seed
-    rng = np.random.RandomState(seed=seed)
+    rng = np.random.default_rng(seed=seed)
 
     indices_of_duplicates = []
     while not np.all(np.diff(np.delete(spike_train, indices_of_duplicates)) > censored_period):
@@ -105,18 +105,18 @@ def find_duplicated_spikes(
 
     Parameters
     ----------
-    spike_train: np.ndarray
+    spike_train : np.ndarray
         The spike train on which to look for duplicated spikes.
-    censored_period: int
+    censored_period : int
         The censored period for duplicates (in sample time).
-    method: "keep_first" |"keep_last" | "keep_first_iterative" | "keep_last_iterative" |random", default: "random"
+    method : "keep_first" |"keep_last" | "keep_first_iterative" | "keep_last_iterative" |random", default: "random"
         Method used to remove the duplicated spikes.
-    seed: int | None
+    seed : int | None
         The seed to use if method="random".
 
     Returns
     -------
-    indices_of_duplicates: np.ndarray
+    indices_of_duplicates : np.ndarray
         The indices of spikes considered to be duplicates.
     """
 
@@ -126,10 +126,33 @@ def find_duplicated_spikes(
         assert seed is not None, "The 'seed' has to be provided if method=='random'"
         return _find_duplicated_spikes_random(spike_train, censored_period, seed)
     elif method == "keep_first_iterative":
-        assert HAVE_NUMBA, "'keep_first' method requires numba. Install it with >>> pip install numba"
+        assert HAVE_NUMBA, "'keep_first_iterative' method requires numba. Install it with >>> pip install numba"
         return _find_duplicated_spikes_keep_first_iterative(spike_train.astype(np.int64), censored_period)
     elif method == "keep_last_iterative":
-        assert HAVE_NUMBA, "'keep_last' method requires numba. Install it with >>> pip install numba"
+        assert HAVE_NUMBA, "'keep_last_iterative' method requires numba. Install it with >>> pip install numba"
         return _find_duplicated_spikes_keep_last_iterative(spike_train.astype(np.int64), censored_period)
     else:
         raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes. Use one of {_methods}")
+
+
+def resolve_merging_graph(sorting, potential_merges):
+    """
+    Function to provide, given a list of potential_merges, a resolved merging
+    graph based on the connected components.
+    """
+    from scipy.sparse.csgraph import connected_components
+    from scipy.sparse import lil_matrix
+
+    n = len(sorting.unit_ids)
+    graph = lil_matrix((n, n))
+    for i, j in potential_merges:
+        graph[sorting.id_to_index(i), sorting.id_to_index(j)] = 1
+
+    n_components, labels = connected_components(graph, directed=False, return_labels=True)
+    final_merges = []
+    for i in range(n_components):
+        merges = labels == i
+        if merges.sum() > 1:
+            final_merges += [list(sorting.unit_ids[np.flatnonzero(merges)])]
+
+    return final_merges

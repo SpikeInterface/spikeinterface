@@ -10,23 +10,37 @@ def check_ipywidget_backend():
     import matplotlib
 
     mpl_backend = matplotlib.get_backend()
-    assert "ipympl" in mpl_backend, "To use the 'ipywidgets' backend, you have to set %matplotlib widget"
+    assert (
+        "ipympl" in mpl_backend or "widget" in mpl_backend
+    ), "To use the 'ipywidgets' backend, you have to set %matplotlib widget"
 
 
 class TimeSlider(W.HBox):
     value = traitlets.Tuple(traitlets.Int(), traitlets.Int(), traitlets.Int())
 
-    def __init__(self, durations, sampling_frequency, time_range=(0, 1.0), **kwargs):
+    def __init__(self, durations, sampling_frequency, time_range, times=None, t_starts=None, **kwargs):
         self.num_segments = len(durations)
         self.frame_limits = [int(sampling_frequency * d) for d in durations]
         self.sampling_frequency = sampling_frequency
-        start_frame = int(time_range[0] * sampling_frequency)
-        end_frame = int(time_range[1] * sampling_frequency)
+        self.segment_index = 0
+
+        if times is not None:
+            assert len(times) == len(durations), "times should be a list of arrays with one array per segment"
+            times_segment = times[self.segment_index]
+            start_frame, end_frame = np.searchsorted(times_segment, time_range)
+            self.times = times
+            self.t_starts = None
+        else:
+            assert t_starts is not None
+            t_start_segment = t_starts[self.segment_index]
+            start_frame = int((time_range[0] - t_start_segment) * sampling_frequency)
+            end_frame = int((time_range[1] - t_start_segment) * sampling_frequency)
+            self.times = None
+            self.t_starts = t_starts
 
         self.frame_range = (start_frame, end_frame)
 
-        self.segment_index = 0
-        self.value = (start_frame, end_frame, self.segment_index)
+        self.value = (int(start_frame), int(end_frame), self.segment_index)
 
         layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
         but_left = W.Button(description="", disabled=False, button_style="", icon="arrow-left", layout=layout)
@@ -126,7 +140,10 @@ class TimeSlider(W.HBox):
         if new_frame is None and new_time is None:
             start_frame = self.slider.value
         elif new_frame is None:
-            start_frame = int(new_time * self.sampling_frequency)
+            if self.times is not None:
+                start_frame = int(np.searchsorted(self.times[self.segment_index], [new_time])[0])
+            else:
+                start_frame = int((new_time - self.t_starts[self.segment_index]) * self.sampling_frequency)
         else:
             start_frame = new_frame
         delta_s = self.window_sizer.value
@@ -139,7 +156,10 @@ class TimeSlider(W.HBox):
 
         end_frame = min(self.frame_limits[self.segment_index], end_frame)
 
-        start_time = start_frame / self.sampling_frequency
+        if self.times is not None:
+            start_time = self.times[self.segment_index][start_frame]
+        else:
+            start_time = start_frame / self.sampling_frequency + self.t_starts[self.segment_index]
 
         if update_label:
             self.time_label.unobserve(self.time_label_changed, names="value", type="change")
@@ -329,6 +349,51 @@ class ScaleWidget(W.VBox):
         self.update_label()
 
 
+class WidenNarrowWidget(W.VBox):
+    value = traitlets.Float()
+
+    def __init__(self, value=1.0, factor=1.2, **kwargs):
+        assert factor > 1.0
+        self.factor = factor
+
+        self.scale_label = W.Label("Widen/Narrow", layout=W.Layout(width="95%", justify_content="center"))
+
+        self.right_selector = W.Button(
+            description="",
+            disabled=False,
+            button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+            tooltip="Increase horizontal scale",
+            icon="arrow-right",
+            # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
+            layout=W.Layout(width="60%", align_self="center"),
+        )
+
+        self.left_selector = W.Button(
+            description="",
+            disabled=False,
+            button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+            tooltip="Decrease horizontal scale",
+            icon="arrow-left",
+            # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
+            layout=W.Layout(width="60%", align_self="center"),
+        )
+
+        self.right_selector.on_click(self.left_clicked)
+        self.left_selector.on_click(self.right_clicked)
+
+        self.value = value
+        super(W.VBox, self).__init__(
+            children=[self.scale_label, W.HBox([self.left_selector, self.right_selector])],
+            **kwargs,
+        )
+
+    def left_clicked(self, change=None):
+        self.value = self.value / self.factor
+
+    def right_clicked(self, change=None):
+        self.value = self.value * self.factor
+
+
 class UnitSelector(W.VBox):
     value = traitlets.List()
 
@@ -342,7 +407,7 @@ class UnitSelector(W.VBox):
             options=self.unit_ids,
             value=self.unit_ids,
             disabled=False,
-            layout=W.Layout(height="100%", width="80%", align="center"),
+            layout=W.Layout(height="100%", width="3cm", align="center"),
         )
 
         super(W.VBox, self).__init__(children=[label, self.selector], **kwargs)
@@ -358,4 +423,113 @@ class UnitSelector(W.VBox):
     def value_changed(self, change=None):
         self.selector.unobserve(self.on_selector_changed, names=["value"], type="change")
         self.selector.value = change["new"]
+        self.selector.observe(self.on_selector_changed, names=["value"], type="change")
+
+
+class EventSelector(W.VBox):
+    value = traitlets.Int()
+
+    def __init__(self, events, **kwargs):
+        layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
+        self.previous_evt = W.Button(description="", disabled=False, button_style="", icon="arrow-left", layout=layout)
+        self.next_evt = W.Button(description="", disabled=False, button_style="", icon="arrow-right", layout=layout)
+
+        self.previous_evt.on_click(self.move_left)
+        self.next_evt.on_click(self.move_right)
+
+        self.events_title = W.Label("Events", layout=W.Layout(justify_content="center"))
+        self.event_options = [f"{i}" for i in range(len(events))]
+        self.events_list = W.Dropdown(
+            options=self.event_options, value=self.event_options[0], disable=False, layout=W.Layout(width="90%")
+        )
+        self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
+        self.set_events(events)
+
+        if "label" in events.dtype.names:
+            self.events_label = W.Label("Evt. index (label)", layout=W.Layout(width="95%"))
+        else:
+            self.events_label = W.Label("Evt. index", layout=W.Layout(width="95%"))
+
+        self.skip_events = W.IntText(
+            value=1,
+            description="",
+            layout=W.Layout(width="1.5cm"),
+        )
+
+        super(W.VBox, self).__init__(
+            children=[
+                self.events_title,
+                self.events_label,
+                self.events_list,
+                W.HBox([self.previous_evt, self.skip_events, self.next_evt]),
+            ],
+            **kwargs,
+        )
+
+        self.observe(self.value_changed, names=["value"], type="change")
+
+    def set_events(self, events):
+        self.events_list.unobserve(self.on_selector_changed, names=["value"], type="change")
+        self.events = events
+        if "label" in self.events.dtype.names:
+            self.event_options = [f"{i} ({self.events['label'][i]})" for i in range(len(self.events))]
+        else:
+            self.event_options = [f"{i}" for i in range(len(self.events))]
+        self.events_list.options = self.event_options
+        self.value = 0
+        self.events_list.observe(self.on_selector_changed, names=["value"], type="change")
+
+    def value_changed(self, change=None):
+        pass
+
+    def on_selector_changed(self, change=None):
+        events_index = self.event_options.index(self.events_list.value)
+        self.value = events_index
+
+    def move_left(self, change=None):
+        events_index = self.value - self.skip_events.value
+        events_index = events_index if events_index >= 0 else 0
+        self.value = events_index
+        self.events_list.value = self.event_options[events_index]
+
+    def move_right(self, change=None):
+        events_index = self.value + self.skip_events.value
+        events_index = events_index if events_index < len(self.events) else len(self.events["time"]) - 1
+        self.value = events_index
+        self.events_list.value = self.event_options[events_index]
+
+
+# Widget for selecting multiple metrics
+class MetricsSelector(W.VBox):
+    value = traitlets.List()
+
+    def __init__(self, metric_names, initial_metrics=None, **kwargs):
+        self.metric_names = list(metric_names)
+        if initial_metrics is None:
+            # Default: first 2 metrics if available
+            self.value = self.metric_names[:2]
+        else:
+            self.value = initial_metrics
+
+        label = W.Label("Metrics", layout=W.Layout(justify_content="center"))
+
+        self.selector = W.SelectMultiple(
+            options=self.metric_names,
+            value=tuple(self.value),
+            disabled=False,
+            layout=W.Layout(height="100%", width="3cm", align="center"),
+        )
+
+        super(W.VBox, self).__init__(children=[label, self.selector], **kwargs)
+
+        self.selector.observe(self.on_selector_changed, names=["value"], type="change")
+        self.observe(self.value_changed, names=["value"], type="change")
+
+    def on_selector_changed(self, change=None):
+        metrics = list(self.selector.value)
+        self.value = metrics
+
+    def value_changed(self, change=None):
+        self.selector.unobserve(self.on_selector_changed, names=["value"], type="change")
+        self.selector.value = tuple(change["new"])
         self.selector.observe(self.on_selector_changed, names=["value"], type="change")

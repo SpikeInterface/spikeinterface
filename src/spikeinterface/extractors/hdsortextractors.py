@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 
@@ -24,10 +24,6 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
     extractor : HDSortSortingExtractor
         The loaded data.
     """
-
-    extractor_name = "HDSortSortingExtractor"
-    mode = "file"
-    name = "hdsort"
 
     def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)

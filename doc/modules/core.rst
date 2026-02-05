@@ -61,7 +61,7 @@ with 16 channels:
     # retrieve traces after scaling to uV
     # (requires 'gain_to_uV' and 'offset_to_uV' properties)
     traces_uV = recording.get_traces(start_frame=100, end_frame=200, segment_index=0,
-                                     return_scaled=True)
+                                     return_in_uV=True)
     # set/get a new channel property (e.g. "quality")
     recording.set_property(key="quality", values=["good"] * num_channels)
     quality_values = recording.get_property("quality")
@@ -76,9 +76,9 @@ with 16 channels:
     recording_slice_frames = recording.frame_slice(start_frame=0,
                                                    end_frame=int(10*sampling_frequency))
     # get new recording with the first 4 channels
-    recording_slice_chans = recording.channel_slice(channel_ids=channel_ids[:4])
+    recording_slice_chans = recording.select_channels(channel_ids=channel_ids[:4])
     # remove last two channels
-    recording_rm_chans = recording.remove_channels(channel_ids=channel_ids[-2:])
+    recording_rm_chans = recording.remove_channels(remove_channel_ids=channel_ids[-2:])
 
     # set channel grouping (assume we have 4 groups of 4 channels, e.g. tetrodes)
     groups = [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4
@@ -89,13 +89,15 @@ with 16 channels:
     # sliced recordings as values
 
     # set times (for synchronization) - assume our times start at 300 seconds
+    num_samples = recording.get_num_samples()
     timestamps = np.arange(num_samples) / sampling_frequency + 300
     recording.set_times(times=timestamps, segment_index=0)
 
-**Note**:
-Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
-Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
-is triggered by the :code:`return_scaled` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV.
+.. note::
+
+    Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
+    Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
+    is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`physical_units`.
 
 
 Sorting
@@ -118,7 +120,7 @@ with 10 units:
 .. code-block:: python
 
     unit_ids = sorting.unit_ids
-    num_channels = sorting.get_num_units()
+    num_units = sorting.get_num_units()
     sampling_frequency = sorting.sampling_frequency
 
     # retrieve spike trains for a unit (returned as sample indices)
@@ -156,11 +158,36 @@ with 10 units:
     # times are not set, the samples are divided by the sampling frequency
 
 
-Internally, any sorting object can construct 2 internal caches:
-  1. a list (per segment) of dict (per unit) of numpy.array. This cache is useful when accessing spike trains on a unit
-     per unit basis across segments.
-  2. a unique numpy.array with structured dtype aka "spikes vector". This is useful for processing by small chunks of
-     time, like for extracting amplitudes from a recording.
+Efficiency and caching when fetching spiketrains
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By design a Sorting object is lazy so that the constructor is fast: no data are fetched during init.
+Sortings that read data (the extractors) or modify data (select unit, remove spikes) behave
+the same: they are lazy. The spiketrain data are only fetched when the user requests them, e.g.
+using `sorting.get_unit_spike_train()`. This can lead to very slow access depending on how the
+underlying data is organized, but with the advantage that the `Sorting` object is agnostic of
+the underlying data organization.
+
+To fix the slow access problem, we can create different internal representations of the spiketrain data and
+automatically cache them. Then the next time `sorting.get_unit_spike_train()` is called, the cached
+data is instantaneously returned. Further, we can create and cache different reorganizations of
+the spiketrain, which are optimally organized for specific types of calculation.
+
+Computations involving combined recording-sorting information, such as fetching recording chunks and
+spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
+this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
+a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+
+For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
+spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
+`spike_vector` in different ways:
+
+* order by unit, then segment, then sample
+* order by segment, then unit, then sample
+
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
+reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+details, but developers should keep memory layout in mind when implementing new features.
 
 
 SortingAnalyzer
@@ -178,10 +205,9 @@ to perform further analysis, such as calculating :code:`waveforms` and :code:`te
 
 Importantly, the :py:class:`~spikeinterface.core.SortingAnalyzer` handles the *sparsity* and the physical *scaling*.
 Sparsity defines the channels on which waveforms and templates are calculated using, for example,  a
-physical distance from the channel with the largest peak amplitude (see the :ref:`Sparsity` section). Scaling, set by
-the :code:`return_scaled` argument, says whether the data has been converted from integer values to physical units such as
-Voltage (see the end of the :ref:`Recording` section).
-
+physical distance from the channel with the largest peak amplitude (see the :ref:`modules/core:Sparsity` section). Scaling, set by
+the :code:`return_in_uV` argument, determines whether the data is converted from integer values to µV or not.
+By default, :code:`return_in_uV` is true and all processed data voltage values are in µV (e.g., waveforms, templates, spike amplitudes, etc.).
 
 Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 
@@ -208,7 +234,7 @@ Now we will create a :code:`SortingAnalyzer` called :code:`sorting_analyzer`.
 The :py:class:`~spikeinterface.core.SortingAnalyzer` by default is defined *in memory*, but it can be saved at any time
 (or upon instantiation) to one of the following backends:
 
-* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`_  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
+* | :code:`zarr`: the sorting analyzer is saved to a `Zarr <https://zarr.dev/>`__  folder, and each extension is a Zarr group. This is the recommended backend, since Zarr files can be written to/read from the cloud and compression is applied.
 * | :code:`binary_folder`: the sorting analyzer is saved to a folder, and each extension creates a sub-folder. The extension data are saved to either :code:`npy` (for arrays), :code:`csv` (for dataframes), or :code:`pickle` (for everything else).
 
 If the sorting analyzer is in memory, the :code:`SortingAnalyzer.save_as` function can be used to save it
@@ -219,6 +245,7 @@ is run again with one of the backends supplied.
 
 .. code-block:: python
 
+    from pathlib import Path
     # create a "processed" folder
     processed_folder = Path("processed")
 
@@ -268,8 +295,7 @@ The :code:`sorting_analyzer` object implements convenient functions to access th
 
     num_channels = sorting_analyzer.get_num_channels()
     num_units = sorting_analyzer.get_num_units()
-    sampling_frequency = sorting_analyzer.get_sampling_frequency()
-    # or: sampling_frequency = sorting_analyzer.sampling_frequency
+    sampling_frequency = sorting_analyzer.sampling_frequency
     total_num_samples = sorting_analyzer.get_total_samples()
     total_duration = sorting_analyzer.get_total_duration()
 
@@ -312,12 +338,13 @@ Since these core extensions are important for all other extensions it is importa
   and the time after (:code:`ms_after`) to ensure that you have a full waveform. Because waveforms occur on multiple channels with multiple
   samples this can be a big data structure.
 * :code:`templates` are calculated from the raw waveform data and are used for downstream analyses
-  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are what are used,
-  then why save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
-  :code:`random_spikes`) or 2) from the :code:`waveforms`. When getting :code:`templates` from the raw data we are limited to obtaining averages
-  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the templates as medians or percentiles
+  (e.g. :code:`spike_amplitudes` are calculated based on the templates). This raises the question: if the :code:`templates` are all we need,
+  then why compute and save the :code:`waveforms`? Well, there are two ways to obtain :code:`templates` data: 1) directly from the raw data (based on the
+  :code:`random_spikes`) or 2) from the :code:`waveforms` extension. When getting :code:`templates` from the raw data we are limited to obtaining averages
+  and standard deviations. If we calculate the templates from the waveforms, however, we can also calculate the template medians or percentiles
   in addition to the average or standard deviations of the :code:`waveforms`. So it is important to think about the type of downstream analyses that
-  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`.
+  you may want to do in deciding whether to calculate :code:`templates` with :code:`random_spikes` or using :code:`waveforms`. Note that if the :code:`waveforms`
+  extension is available, :code:`templates` will be calculated from it (the :code:`ms_before` and :code:`ms_after` parameters are also inherited from the :code:`waveforms`).
 * :code:`noise_levels` compute noise-levels in a channel-wise fashion. This provides important information about the specific recording session
   and is important for some downstream quality analyses.
 
@@ -361,6 +388,15 @@ examples is seen below:
         ["random_spikes", "waveforms", "templates", "noise_levels"]
     )
 
+Note that any extension entered into the :code:`compute` function will be computed. Thus, even if an extension has already been computed
+it will be recomputed when :code:`compute` is called even if the parameters are the same.
+To check if an extension has already been computed and reload it, you can simply do:
+
+.. code-block:: python
+
+    if sorting_analyzer.has_extension("templates"):
+        templates_extension = sorting_analyzer.get_extension("templates")
+
 It is important when calculating extensions to remember which backend you are using. :code:`compute` accepts an argument
 :code:`save` which will write results to disk if using the :code:`zarr` or :code:`binary_folder` backends. If your :code:`SortingAnalyzer`
 is in memory using :code:`save=True` **will not** write to disk since spikeinterface does not know where to save it.
@@ -369,6 +405,20 @@ The reason to use :code:`save=False` is it allows you to test parameters with th
 backends without writing to disk. So, you can compute an extension *in-memory* with different parameters and then when
 you have decided on your desired parameters you can either use :code:`compute` with :code:`save=True` or use :code:`save_as`
 to write everything out to disk.
+
+
+Finally, the :code:`SortingAnalyzer` object can be used directly to curate a spike sorting output by selecting/removing units
+and merging unit groups.
+
+.. code-block:: python
+
+    sorting_analyzer_select = sorting_analyzer.select_units(unit_ids=[0, 1, 2, 3])
+    sorting_analyzer_remove = sorting_analyzer.remove_units(remove_unit_ids=[0])
+    sorting_analyzer_merge = sorting_analyzer.merge_units([[0, 1], [2, 3]])
+
+All computed extensions will be automatically propagated or merged when curating. Please refer to the
+:ref:`modules/curation:Curation module` documentation for more information.
+
 
 Event
 -----
@@ -410,9 +460,11 @@ It represents unsorted waveform cutouts. Some acquisition systems, in fact, allo
 threshold and only record the times at which a peak was detected and the waveform cut out around
 the peak.
 
-**NOTE**: while we support this class (mainly for legacy formats), this approach is a bad practice
-and is highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
-template matching to recover spikes!
+.. note::
+
+    While we support this class (mainly for legacy formats), this approach is a bad practice
+    and is highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
+    template matching to recover spikes!
 
 Here we assume :code:`snippets` is a :py:class:`~spikeinterface.core.BaseSnippets` object
 with 16 channels:
@@ -497,19 +549,23 @@ Sparsity
 In several cases, it is not necessary to have waveforms on all channels. This is especially true for high-density
 probes, such as Neuropixels, because the waveforms of a unit will only appear on a small set of channels.
 Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course,
-sparsity is not global, but it is unit-specific.
+sparsity is not global, but it is unit-specific. Importantly, saving sparse waveforms, especially for high-density probes,
+dramatically reduces the size of the waveforms extension if computed.
 
-**NOTE** As of version :code:`0.99.0` the default for a :code:`extract_waveforms()` has :code:`sparse=True`, i.e. every :code:`waveform_extractor`
-will be sparse by default. Thus for users that wish to have dense waveforms they must set :code:`sparse=False`. Keyword arguments
-can still be input into the :code:`extract_wavforms()` to generate the desired sparsity as explained below.
+.. note::
 
-Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the
-:py:func:`~spikeinterface.core.compute_sparsity` function:
+    As of :code:`0.101.0` all :code:`SortingAnalyzer`'s have a default of :code:`sparse=True`. This was first
+    introduced in :code:`0.99.0` for :code:`WaveformExtractor`'s and will be the default going forward. To obtain dense
+    waveforms you will need to set :code:`sparse=False` at the creation of the :code:`SortingAnalyzer`.
+
+
+Sparsity can be computed from a :py:class:`~spikeinterface.core.SortingAnalyzer` object with the
+:py:func:`~spikeinterface.core.estimate_sparsity` function:
 
 .. code-block:: python
 
-    # in this case 'we' should be a dense waveform_extractor
-    sparsity = compute_sparsity(we, method="radius", radius_um=40)
+    # in this case 'analyzer' should be a dense SortingAnalyzer
+    sparsity = compute_sparsity(analyzer, method="radius", radius_um=40)
 
 The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient
 methods to access the sparsity information in several ways:
@@ -530,17 +586,19 @@ There are several methods to compute sparsity, including:
 * | :code:`method="by_property"`: selects channels based on a property, such as :code:`group`. This method is recommended
   | when working with tetrodes.
 
-The computed sparsity can be used in several postprocessing and visualization functions. In addition, a "dense"
-:py:class:`~spikeinterface.core.WaveformExtractor` can be saved as "sparse" as follows:
+The computed sparsity can be used in several postprocessing and visualization functions. In addition, this sparsity can be
+used when creating a :py:class:`~spikeinterface.core.SortingAnalyzer` which cause the :code:`sparse` boolean to be ignored.
 
 .. code-block:: python
 
-    we_sparse = we.save(sparsity=sparsity, folder="waveforms_sparse")
+    analyzer_sparse = si.create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        sparsity=sparsity,
+        format='binary_folder',
+        folder="sparse_analyzer"
+    )
 
-The :code:`we_sparse` object will now have an associated sparsity (:code:`we.sparsity`), which is automatically taken
-into consideration for downstream analysis (with the :py:meth:`~spikeinterface.core.WaveformExtractor.is_sparse`
-method). Importantly, saving sparse waveforms, especially for high-density probes, dramatically reduces the size of the
-waveforms folder.
 
 .. _save_load:
 
@@ -556,7 +614,7 @@ re-instantiate the object from scratch (this is true for all objects except in-m
 
 The :code:`save()` function allows to easily store SI objects to a folder on disk.
 :py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) or
-`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_ (.zarr) format and
+`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__ (.zarr) format and
 :py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseSnippets` object in numpy (.npz)
 format. With the actual data, the :code:`save()` function also stores the provenance dictionary and all the properties
 and annotations associated to the object.
@@ -663,6 +721,7 @@ In this example, we create a recording and a sorting object from numpy objects:
 .. code-block:: python
 
     import numpy as np
+    from spikeinterface.core import NumpyRecording, NumpySorting
 
     # in-memory recording
     sampling_frequency = 30_000.
@@ -671,7 +730,10 @@ In this example, we create a recording and a sorting object from numpy objects:
     num_channels = 16
     random_traces = np.random.randn(num_samples, num_channels)
 
-    recording_memory = NumpyRecording(traces_list=[random_traces])
+    recording_memory = NumpyRecording(
+        traces_list=[random_traces]
+        sampling_frequency=sampling_frequency,
+    )
     # with more elements in `traces_list` we can make multi-segment objects
 
     # in-memory sorting
@@ -680,13 +742,18 @@ In this example, we create a recording and a sorting object from numpy objects:
     spike_trains = []
     labels = []
     for i in range(num_units):
-        spike_trains_i = np.random.randint(low=0, high=num_samples, size=num_spikes_unit)
+        spike_trains_i = list(np.random.randint(low=0, high=num_samples, size=num_spikes_unit))
         labels_i = [i] * num_spikes_unit
         spike_trains += spike_trains_i
         labels += labels_i
 
-    sorting_memory = NumpySorting.from_times_labels(times=spike_trains, labels=labels,
-                                                    sampling_frequency=sampling_frequency)
+    # construct a mono-segment
+    samples_list = [np.array(spike_trains)]
+    labels_list = [np.array(labels)]
+
+    sorting_memory = NumpySorting.from_samples_and_labels(
+        samples_list=samples_list, labels_list=labels_list, sampling_frequency=sampling_frequency
+    )
 
 
 Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or
@@ -720,7 +787,7 @@ the new objects will be *views* of the original ones.
 
     # keep one channel of every tenth channel
     keep_ids = recording.channel_ids[::10]
-    sub_recording = recording.channel_slice(channel_ids=keep_ids)
+    sub_recording = recording.select_channels(channel_ids=keep_ids)
 
     # keep between 5min and 12min
     fs = recording.sampling_frequency
@@ -793,10 +860,12 @@ The same functions are also available for
 :py:func:`~spikeinterface.core.select_segment_sorting`).
 
 
-**Note** :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`
-have the same goal, aggregate recording pieces on the time axis but with 2 different strategies! One is keeping the
-multi segments concept, the other one is breaking it!
-See this example for more detail :ref:`example_segments`.
+.. note::
+
+    :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`
+    have the same goal, aggregate recording pieces on the time axis but with 2 different strategies! One is keeping the
+    multi segments concept, the other one is breaking it!
+    See this example for more detail :ref:`example_segments`.
 
 
 
@@ -839,13 +908,15 @@ They are useful to make examples, tests, and small demos:
 
 .. code-block:: python
 
+    from spikeinterface.core import generate_recording, generate_sorting, generate_snippets
+
     # recording with 2 segments and 4 channels
     recording = generate_recording(num_channels=4, sampling_frequency=30000.,
                                    durations=[10.325, 3.5], set_probe=True)
 
     # sorting with 2 segments and 5 units
     sorting = generate_sorting(num_units=5, sampling_frequency=30000., durations=[10.325, 3.5],
-                               firing_rate=15, refractory_period=1.5)
+                               firing_rates=15, refractory_period_ms=1.5)
 
     # snippets of 60 samples on 2 channels from 5 units
     snippets = generate_snippets(nbefore=20, nafter=40, num_channels=2,
@@ -898,7 +969,8 @@ WaveformExtractor
 ^^^^^^^^^^^^^^^^^
 
 This is now a legacy object that can still be accessed through the :py:class:`MockWaveformExtractor`. It is kept
-for backward compatibility.
+for backward compatibility. You can convert a ``WaveformExtractor`` to a ``SortingAnalyzer``
+easily, :ref:`using this guide <tutorials/waveform_extractor_to_sorting_analyzer:From WaveformExtractor to SortingAnalyzer>`.
 
 The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a
 :py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object.
@@ -910,7 +982,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
 * extract waveforms
 * sub-sample spikes for waveform extraction
 * compute templates (i.e. average extracellular waveforms) with different modes
-* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
+* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__) for easy retrieval
 * save sparse waveforms or *sparsify* dense waveforms
 * select units and associated waveforms
 

@@ -38,11 +38,11 @@ def test_remove_excess_spikes():
         times.append(times_segment)
         labels.append(labels_segment)
 
-    sorting = NumpySorting.from_times_labels(times, labels, sampling_frequency=sampling_frequency)
-    assert has_exceeding_spikes(recording, sorting)
+    sorting = NumpySorting.from_samples_and_labels(times, labels, sampling_frequency=sampling_frequency)
+    assert has_exceeding_spikes(sorting, recording)
 
     sorting_corrected = remove_excess_spikes(sorting, recording)
-    assert not has_exceeding_spikes(recording, sorting_corrected)
+    assert not has_exceeding_spikes(sorting_corrected, recording)
 
     for u in sorting.unit_ids:
         for segment_index in range(sorting.get_num_segments()):

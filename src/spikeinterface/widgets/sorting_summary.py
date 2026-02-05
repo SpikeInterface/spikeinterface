@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+import warnings
+
 from .base import BaseWidget, to_attr
 
 from .amplitudes import AmplitudesWidget
@@ -11,7 +13,9 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import SortingAnalyzer
+from spikeinterface.core import SortingAnalyzer
+
+_default_displayed_unit_properties = ["firing_rate", "num_spikes", "x", "y", "amplitude_median", "snr", "rp_violations"]
 
 
 class SortingSummaryWidget(BaseWidget):
@@ -42,9 +46,25 @@ class SortingSummaryWidget(BaseWidget):
     label_choices : list or None, default: None
         List of labels to be added to the curation table
         (sortingview backend)
-    unit_table_properties : list or None, default: None
-        List of properties to be added to the unit table
-        (sortingview backend)
+    displayed_unit_properties : list or None, default: None
+        List of properties to be added to the unit table.
+        These may be drawn from the sorting extractor, and, if available,
+        the quality_metrics/template_metrics/unit_locations extensions of the SortingAnalyzer.
+        See all properties available with sorting.get_property_keys(), and, if available,
+        analyzer.get_extension("quality_metrics").get_data().columns and
+        analyzer.get_extension("template_metrics").get_data().columns.
+    extra_unit_properties : dict or None, default: None
+        A dict with extra units properties to display.
+        The key is the property name and the value must be a numpy.array.
+    curation_dict : dict or None, default: None
+        When curation is True, optionaly the viewer can get a previous 'curation_dict'
+        to continue/check  previous curations on this analyzer.
+        In this case label_definitions must be None beacuse it is already included in the curation_dict.
+        (spikeinterface_gui backend)
+    label_definitions : dict or None, default: None
+        When curation is True, optionaly the user can provide a label_definitions dict.
+        This replaces the label_choices in the curation_format.
+        (spikeinterface_gui backend)
     """
 
     def __init__(
@@ -55,11 +75,24 @@ class SortingSummaryWidget(BaseWidget):
         max_amplitudes_per_unit=None,
         min_similarity_for_correlograms=0.2,
         curation=False,
-        unit_table_properties=None,
+        displayed_unit_properties=None,
+        extra_unit_properties=None,
         label_choices=None,
+        curation_dict=None,
+        label_definitions=None,
         backend=None,
+        unit_table_properties=None,
         **backend_kwargs,
     ):
+
+        if unit_table_properties is not None:
+            warnings.warn(
+                "plot_sorting_summary() : `unit_table_properties` is deprecated and will be removed in version 0.104.0, use `displayed_unit_properties` instead",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            displayed_unit_properties = unit_table_properties
+
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(
             sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"]
@@ -69,18 +102,29 @@ class SortingSummaryWidget(BaseWidget):
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
 
-        plot_data = dict(
+        if curation_dict is not None and label_definitions is not None:
+            raise ValueError("curation_dict and label_definitions are mutualy exclusive, they cannot be not None both")
+
+        if displayed_unit_properties is None:
+            displayed_unit_properties = list(_default_displayed_unit_properties)
+        if extra_unit_properties is not None:
+            displayed_unit_properties = displayed_unit_properties + list(extra_unit_properties.keys())
+
+        data_plot = dict(
             sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             sparsity=sparsity,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
-            unit_table_properties=unit_table_properties,
+            displayed_unit_properties=displayed_unit_properties,
+            extra_unit_properties=extra_unit_properties,
             curation=curation,
             label_choices=label_choices,
             max_amplitudes_per_unit=max_amplitudes_per_unit,
+            curation_dict=curation_dict,
+            label_definitions=label_definitions,
         )
 
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+        BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
@@ -151,7 +195,10 @@ class SortingSummaryWidget(BaseWidget):
 
         # unit ids
         v_units_table = generate_unit_table_view(
-            dp.sorting_analyzer.sorting, dp.unit_table_properties, similarity_scores=similarity_scores
+            dp.sorting_analyzer,
+            dp.displayed_unit_properties,
+            similarity_scores=similarity_scores,
+            extra_unit_properties=dp.extra_unit_properties,
         )
 
         if dp.curation:
@@ -185,9 +232,14 @@ class SortingSummaryWidget(BaseWidget):
     def plot_spikeinterface_gui(self, data_plot, **backend_kwargs):
         sorting_analyzer = data_plot["sorting_analyzer"]
 
-        import spikeinterface_gui
+        from spikeinterface_gui import run_mainwindow
 
-        app = spikeinterface_gui.mkQApp()
-        win = spikeinterface_gui.MainWindow(sorting_analyzer)
-        win.show()
-        app.exec_()
+        run_mainwindow(
+            sorting_analyzer,
+            with_traces=True,
+            curation=data_plot["curation"],
+            curation_dict=data_plot["curation_dict"],
+            label_definitions=data_plot["label_definitions"],
+            extra_unit_properties=data_plot["extra_unit_properties"],
+            displayed_unit_properties=data_plot["displayed_unit_properties"],
+        )

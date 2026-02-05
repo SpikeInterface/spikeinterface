@@ -7,13 +7,6 @@ import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import h5py
-
-    HAVE_H5PY = True
-except ImportError:
-    HAVE_H5PY = False
-
 
 class SpykingCircusSortingExtractor(BaseSorting):
     """Load SpykingCircus format data as a recording extractor.
@@ -29,14 +22,13 @@ class SpykingCircusSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "SpykingCircusSortingExtractor"
-    installed = HAVE_H5PY  # check at class level if installed or not
-    mode = "folder"
     installation_mesg = "To use the SpykingCircusSortingExtractor install h5py: \n\n pip install h5py\n\n"
-    name = "spykingcircus"
 
     def __init__(self, folder_path):
-        assert HAVE_H5PY, self.installation_mesg
+        try:
+            import h5py
+        except ImportError:
+            raise ImportError(self.installation_mesg)
 
         spykingcircus_folder = Path(folder_path)
         listfiles = spykingcircus_folder.iterdir()

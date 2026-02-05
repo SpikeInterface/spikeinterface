@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import Optional
 import numpy as np
 
-from ..core import BaseSorting, BaseSortingSegment, BaseRecording
-from ..core.waveform_tools import has_exceeding_spikes
+from spikeinterface.core import BaseSorting, BaseSortingSegment, BaseRecording
+from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
 
 class RemoveExcessSpikesSorting(BaseSorting):
@@ -13,14 +13,14 @@ class RemoveExcessSpikesSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to use to get the number of samples.
 
     Returns
     -------
-    sorting_without_excess_spikes: RemoveExcessSpikesSorting
+    sorting_without_excess_spikes : RemoveExcessSpikesSorting
         The sorting without any excess spikes.
     """
 
@@ -47,9 +47,9 @@ class RemoveExcessSpikesSorting(BaseSorting):
 
         self._kwargs = {"sorting": sorting, "recording": recording}
 
-    def _custom_cache_spike_vector(self) -> None:
+    def _compute_and_cache_spike_vector(self) -> None:
         if self._parent_sorting._cached_spike_vector is None:
-            self._parent_sorting._custom_cache_spike_vector()
+            self._parent_sorting._compute_and_cache_spike_vector()
 
             if self._parent_sorting._cached_spike_vector is None:
                 return
@@ -85,24 +85,24 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
         return spike_train[min_spike:max_spike]
 
 
-def remove_excess_spikes(sorting, recording):
+def remove_excess_spikes(sorting: BaseSorting, recording: BaseRecording):
     """
     Remove excess spikes from the spike trains.
     Excess spikes are the ones exceeding a recording number of samples, for each segment.
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    recording: BaseRecording
+    recording : BaseRecording
         The recording to use to get the number of samples.
 
     Returns
     -------
-    sorting_without_excess_spikes: Sorting
+    sorting_without_excess_spikes : Sorting
         The sorting without any excess spikes.
     """
-    if has_exceeding_spikes(recording=recording, sorting=sorting):
+    if has_exceeding_spikes(sorting=sorting, recording=recording):
         return RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
     else:
         return sorting

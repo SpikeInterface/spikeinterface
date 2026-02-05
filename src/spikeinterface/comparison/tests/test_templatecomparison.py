@@ -1,21 +1,9 @@
 import shutil
 import pytest
-from pathlib import Path
 import numpy as np
 
-from spikeinterface.core import create_sorting_analyzer
-from spikeinterface.extractors import toy_example
+from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
-
-
-# if hasattr(pytest, "global_test_folder"):
-#     cache_folder = pytest.global_test_folder / "comparison"
-# else:
-#     cache_folder = Path("cache_folder") / "comparison"
-
-
-# test_dir = cache_folder / "temp_comp_test"
-
 
 # def setup_module():
 #     if test_dir.is_dir():
@@ -27,9 +15,12 @@ def test_compare_multiple_templates():
     duration = 60
     num_channels = 8
 
-    rec, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
-    # rec = rec.save(folder=test_dir / "rec")
-    # sort = sort.save(folder=test_dir / "sort")
+    seed = 0
+    rec, sort = generate_ground_truth_recording(
+        durations=[duration],
+        num_channels=num_channels,
+        seed=seed,
+    )
 
     # split recording in 3 equal slices
     fs = rec.get_sampling_frequency()
@@ -53,7 +44,7 @@ def test_compare_multiple_templates():
 
     for u1 in temp_cmp.hungarian_match_12.index.values:
         u2 = temp_cmp.hungarian_match_12[u1]
-        if u2 != -1:
+        if u2 != -1 and u2 != "":
             assert u1 == u2
 
     # multi-comparison

@@ -5,7 +5,7 @@ import scipy.signal
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 try:
     import pyopencl
@@ -38,8 +38,6 @@ class FilterOpenCLRecording(BasePreprocessor):
     margin: margin in second on border to avoid border effect
 
     """
-
-    name = "filter"
 
     def __init__(
         self,

@@ -7,11 +7,7 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.generate import generate_recording, generate_sorting
 
-
-@pytest.fixture(scope="module")
-def numpy_generated_recording():
-    recording = generate_recording()
-    return recording
+from pathlib import Path
 
 
 @pytest.fixture(scope="module")
@@ -122,11 +118,27 @@ def test_numpy_dtype_alises_encoding():
     # People tend to use this a dtype instead of the proper classes
     json.dumps(np.int32, cls=SIJsonEncoder)
     json.dumps(np.float32, cls=SIJsonEncoder)
-    json.dumps(np.bool_, cls=SIJsonEncoder)  # Note that np.bool was deperecated in numpy 1.20.0
 
 
-def test_recording_encoding(numpy_generated_recording):
-    recording = numpy_generated_recording
+def test_path_encoding(tmp_path):
+
+    temporary_path = tmp_path / "a_path_for_this_test"
+
+    json.dumps(temporary_path, cls=SIJsonEncoder)
+
+
+def test_path_as_annotation(tmp_path):
+    temporary_path = tmp_path / "a_path_for_this_test"
+
+    recording = generate_recording()
+    recording.annotate(path=temporary_path)
+
+    json.dumps(recording, cls=SIJsonEncoder)
+
+
+def test_recording_encoding():
+    recording = generate_recording()
+
     json.dumps(recording, cls=SIJsonEncoder)
 
 
@@ -201,4 +213,4 @@ def test_encoding_numpy_scalars_within_nested_extractors_dict(nested_extractor_d
 
 if __name__ == "__main__":
     nested_extractor = nested_extractor()
-    test_encoding_numpy_scalars_within_nested_extractors(nested_extractor_)
+    test_encoding_numpy_scalars_within_nested_extractors(nested_extractor)

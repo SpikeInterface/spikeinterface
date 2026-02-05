@@ -24,14 +24,12 @@ class ALFSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "ALFSorting"
     installation_mesg = "To use the ALF extractors, install ONE-api: \n\n pip install ONE-api\n\n"
-    name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
         try:
             import one.alf.io as alfio
-        except ImportError as e:
+        except ImportError:
             raise ImportError(self.installation_mesg)
 
         self._folder_path = Path(folder_path)

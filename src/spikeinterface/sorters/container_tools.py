@@ -5,28 +5,19 @@ import platform
 import os
 import random
 import string
+import warnings
 
 # TODO move this inside functions
-try:
-    HAS_DOCKER = True
-    import docker
-except ModuleNotFoundError:
-    HAS_DOCKER = False
 
 
-from spikeinterface.core.core_tools import recursive_path_modifier
+from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list
 
 
 def find_recording_folders(d):
     """Finds all recording folders 'paths' in a dict"""
-    folders_to_mount = []
 
-    def append_parent_folder(p):
-        p = Path(p)
-        folders_to_mount.append(p.resolve().absolute().parent)
-        return p
-
-    _ = recursive_path_modifier(d, append_parent_folder, target="path", copy=True)
+    path_list = _get_paths_list(d=d)
+    folders_to_mount = [Path(p).resolve().parent for p in path_list]
 
     try:  # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
@@ -65,16 +56,16 @@ class ContainerClient:
         """
         Parameters
         ----------
-        mode: "docker" | "singularity"
+        mode : "docker" | "singularity"
             The container mode
-        container_image: str
+        container_image : str
             container image name and tag
-        volumes: dict
+        volumes : dict
             dict of volumes to bind
-        py_user_base: str
+        py_user_base : str
             Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
             Prevents from overwriting user's packages when running pip install
-        extra_kwargs: dict
+        extra_kwargs : dict
             Extra kwargs to start container
         """
         assert mode in ("docker", "singularity")
@@ -83,8 +74,8 @@ class ContainerClient:
         container_requires_gpu = extra_kwargs.get("container_requires_gpu", None)
 
         if mode == "docker":
-            if not HAS_DOCKER:
-                raise ModuleNotFoundError("No module named 'docker'")
+            import docker
+
             client = docker.from_env()
             if container_requires_gpu is not None:
                 extra_kwargs.pop("container_requires_gpu")
@@ -108,14 +99,14 @@ class ContainerClient:
             elif Path(sif_file).exists():
                 singularity_image = sif_file
             else:
-                if HAS_DOCKER:
-                    docker_image = self._get_docker_image(container_image)
-                    if docker_image and len(docker_image.tags) > 0:
-                        tag = docker_image.tags[0]
-                        print(f"Building singularity image from local docker image: {tag}")
-                        singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
+
+                docker_image = Client.load("docker://" + container_image)
+                if docker_image and len(docker_image.tags) > 0:
+                    tag = docker_image.tags[0]
+                    warnings.warn(f"Building singularity image from local docker image: {tag}")
+                    singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
                 if not singularity_image:
-                    print(f"Singularity: pulling image {container_image}")
+                    warnings.warn(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f"docker://{container_image}")
 
             if not Path(singularity_image).exists():
@@ -134,6 +125,8 @@ class ContainerClient:
 
     @staticmethod
     def _get_docker_image(container_image):
+        import docker
+
         docker_client = docker.from_env(timeout=300)
         try:
             docker_image = docker_client.images.get(container_image)
@@ -188,28 +181,28 @@ def install_package_in_container(
 
     Parameters
     ----------
-    container_client: ContainerClient
+    container_client : ContainerClient
         The container client
-    package_name: str
+    package_name : str
         The package name
-    installation_mode: str
+    installation_mode : str
         The installation mode
-    extra: str
+    extra : str
         Extra pip install arguments, e.g. [full]
-    version: str
+    version : str
         The package version to install
-    tag: str
+    tag : str
         The github tag to install
-    github_url: str
+    github_url : str
         The github url to install (needed for github mode)
-    container_folder_source: str
+    container_folder_source : str
         The container folder source (needed for folder mode)
-    verbose: bool
+    verbose : bool
         If True, print output of pip install command
 
     Returns
     -------
-    res_output: str
+    res_output : str
         The output of the pip install command
     """
     assert installation_mode in ("pypi", "github", "folder")
@@ -270,7 +263,6 @@ def install_package_in_container(
         if extra is not None:
             cmd += f"{extra}"
         res_output = container_client.run_command(cmd)
-
     else:
         raise ValueError(f"install_package_incontainer, wrong installation_mode={installation_mode}")
 

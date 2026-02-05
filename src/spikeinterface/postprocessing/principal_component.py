@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-import shutil
-import pickle
 import warnings
-import tempfile
+import platform
 from pathlib import Path
 from tqdm.auto import tqdm
+
+from concurrent.futures import ProcessPoolExecutor
+import multiprocessing as mp
+from threadpoolctl import threadpool_limits
 
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
+
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -23,22 +27,21 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-        A SortingAnalyzer object
-    n_components: int, default: 5
+    n_components : int, default: 5
         Number of components fo PCA
-    mode: "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
+    mode : "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
         The PCA mode:
             - "by_channel_local": a local PCA is fitted for each channel (projection by channel)
             - "by_channel_global": a global PCA is fitted for all channels (projection by channel)
             - "concatenated": channels are concatenated and a global PCA is fitted
-    sparsity: ChannelSparsity or None, default: None
+    sparsity : ChannelSparsity or None, default: None
         The sparsity to apply to waveforms.
         If sorting_analyzer is already sparse, the default sparsity will be used
-    whiten: bool, default: True
+    whiten : bool, default: True
         If True, waveforms are pre-whitened
-    dtype: dtype, default: "float32"
+    dtype : dtype, default: "float32"
         Dtype of the pc scores
+    {}
 
     Examples
     --------
@@ -65,9 +68,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,
@@ -100,6 +100,54 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+
+        pca_projections = self.data["pca_projection"]
+        some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+        if keep_mask is not None:
+            spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
+            valid = keep_mask[spike_indices]
+            some_spikes = some_spikes[valid]
+            pca_projections = pca_projections[valid]
+        else:
+            pca_projections = pca_projections.copy()
+
+        old_sparsity = self.sorting_analyzer.sparsity
+        if old_sparsity is not None:
+
+            # we need a realignement inside each group because we take the channel intersection sparsity
+            # the story is same as in "waveforms" extension
+            for group_ids in merge_unit_groups:
+                group_indices = self.sorting_analyzer.sorting.ids_to_indices(group_ids)
+                group_sparsity_mask = old_sparsity.mask[group_indices, :]
+                group_selection = []
+                for unit_id in group_ids:
+                    unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                    selection = np.flatnonzero(some_spikes["unit_index"] == unit_index)
+                    group_selection.append(selection)
+
+                _inplace_sparse_realign_waveforms(pca_projections, group_selection, group_sparsity_mask)
+
+            old_num_chans = int(np.max(np.sum(old_sparsity.mask, axis=1)))
+            new_num_chans = int(np.max(np.sum(new_sorting_analyzer.sparsity.mask, axis=1)))
+            if new_num_chans < old_num_chans:
+                pca_projections = pca_projections[:, :, :new_num_chans]
+
+        new_data = dict(pca_projection=pca_projections)
+
+        # one or several model
+        for k, v in self.data.items():
+            if "model" in k:
+                new_data[k] = v
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        return self.data.copy()
 
     def get_pca_model(self):
         """
@@ -212,7 +260,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         spike_unit_indices = some_spikes["unit_index"][selected_inds]
 
         if sparsity is None:
-            some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+            if self.params["mode"] == "concatenated":
+                some_projections = all_projections[selected_inds, :]
+            else:
+                some_projections = all_projections[selected_inds, :, :][:, :, channel_indices]
+
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
@@ -256,7 +308,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         new_projections = self._transform_waveforms(new_spikes, new_waveforms, pca_model, progress_bar=progress_bar)
         return new_projections
 
-    def _run(self, **job_kwargs):
+    def _run(self, verbose=False, **job_kwargs):
         """
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.
@@ -268,11 +320,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
         n_jobs = job_kwargs["n_jobs"]
         progress_bar = job_kwargs["progress_bar"]
+        max_threads_per_worker = job_kwargs["max_threads_per_worker"]
+        mp_context = job_kwargs["mp_context"]
 
         # fit model/models
         # TODO : make parralel  for by_channel_global and concatenated
         if mode == "by_channel_local":
-            pca_models = self._fit_by_channel_local(n_jobs, progress_bar)
+            pca_models = self._fit_by_channel_local(n_jobs, progress_bar, max_threads_per_worker, mp_context)
             for chan_ind, chan_id in enumerate(self.sorting_analyzer.channel_ids):
                 self.data[f"pca_model_{mode}_{chan_id}"] = pca_models[chan_ind]
             pca_model = pca_models
@@ -295,7 +349,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
     def _get_data(self):
         return self.data["pca_projection"]
 
-    def run_for_all_spikes(self, file_path=None, **job_kwargs):
+    def run_for_all_spikes(self, file_path=None, verbose=False, **job_kwargs):
         """
         Project all spikes from the sorting on the PCA model.
         This is a long computation because waveform need to be extracted from each spikes.
@@ -313,12 +367,12 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         job_kwargs = fix_job_kwargs(job_kwargs)
         p = self.params
-        we = self.sorting_analyzer
-        sorting = we.sorting
+        sorting_analyzer = self.sorting_analyzer
+        sorting = sorting_analyzer.sorting
         assert (
-            we.has_recording()
-        ), "To compute PCA projections for all spikes, the waveform extractor needs the recording"
-        recording = we.recording
+            sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording()
+        ), "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+        recording = sorting_analyzer.recording
 
         # assert sorting.get_num_segments() == 1
         assert p["mode"] in ("by_channel_local", "by_channel_global")
@@ -328,8 +382,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         sparsity = self.sorting_analyzer.sparsity
         if sparsity is None:
-            sparse_channels_indices = {unit_id: np.arange(we.get_num_channels()) for unit_id in we.unit_ids}
-            max_channels_per_template = we.get_num_channels()
+            num_channels = recording.get_num_channels()
+            sparse_channels_indices = {unit_id: np.arange(num_channels) for unit_id in sorting_analyzer.unit_ids}
+            max_channels_per_template = num_channels
         else:
             sparse_channels_indices = sparsity.unit_id_to_channel_indices
             max_channels_per_template = max([chan_inds.size for chan_inds in sparse_channels_indices.values()])
@@ -359,14 +414,20 @@ class ComputePrincipalComponents(AnalyzerExtension):
             unit_channels,
             pca_model,
         )
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="extract PCs", **job_kwargs)
+        processor = ChunkRecordingExecutor(
+            recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
+        )
         processor.run()
 
-    def _fit_by_channel_local(self, n_jobs, progress_bar):
+    def _fit_by_channel_local(self, n_jobs, progress_bar, max_threads_per_worker, mp_context):
         from sklearn.decomposition import IncrementalPCA
-        from concurrent.futures import ProcessPoolExecutor
 
         p = self.params
+
+        if mp_context is not None and platform.system() == "Windows":
+            assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context == "fork" and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
         unit_ids = self.sorting_analyzer.unit_ids
         channel_ids = self.sorting_analyzer.channel_ids
@@ -387,13 +448,18 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     pca = pca_models[chan_ind]
                     pca.partial_fit(wfs[:, :, wf_ind])
             else:
-                # parallel
+                # create list of args to parallelize. For convenience, the max_threads_per_worker is passed
+                # as last argument
                 items = [
-                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind]) for wf_ind, chan_ind in enumerate(channel_inds)
+                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind], max_threads_per_worker)
+                    for wf_ind, chan_ind in enumerate(channel_inds)
                 ]
                 n_jobs = min(n_jobs, len(items))
 
-                with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                with ProcessPoolExecutor(
+                    max_workers=n_jobs,
+                    mp_context=mp.get_context(mp_context),
+                ) as executor:
                     results = executor.map(_partial_fit_one_channel, items)
                     for chan_ind, pca_model_updated in results:
                         pca_models[chan_ind] = pca_model_updated
@@ -401,9 +467,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         return pca_models
 
     def _fit_by_channel_global(self, progress_bar):
-        # we = self.sorting_analyzer
         p = self.params
-        # unit_ids = we.unit_ids
         unit_ids = self.sorting_analyzer.unit_ids
 
         # there is one unique PCA accross channels
@@ -458,8 +522,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         # transform a waveforms buffer
         # used by _run() and project_new()
 
-        from sklearn.exceptions import NotFittedError
-
         mode = self.params["mode"]
 
         # prepare buffer
@@ -491,7 +553,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     try:
                         proj = pca_model.transform(wfs[:, :, wf_ind])
                         pca_projection[:, :, wf_ind][spike_mask, :] = proj
-                    except NotFittedError as e:
+                    except:
                         # this could happen if len(wfs) is less then n_comp for a channel
                         project_on_non_fitted = True
             if project_on_non_fitted:
@@ -589,15 +651,15 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
             w = wf[:, chan_ind]
             if w.size > 0:
                 w = w[None, :]
-                all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
+                try:
+                    all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
+                except:
+                    # this could happen if len(wfs) is less then n_comp for a channel
+                    pass
 
 
 def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        recording = load_extractor(recording)
     worker_ctx["recording"] = recording
     worker_ctx["sorting"] = sorting
 
@@ -618,11 +680,18 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
+ComputePrincipalComponents.__doc__.format(_shared_job_kwargs_doc)
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
 
 
 def _partial_fit_one_channel(args):
-    chan_ind, pca_model, wf_chan = args
-    pca_model.partial_fit(wf_chan)
-    return chan_ind, pca_model
+    chan_ind, pca_model, wf_chan, max_threads_per_worker = args
+
+    if max_threads_per_worker is None:
+        pca_model.partial_fit(wf_chan)
+        return chan_ind, pca_model
+    else:
+        with threadpool_limits(limits=int(max_threads_per_worker)):
+            pca_model.partial_fit(wf_chan)
+            return chan_ind, pca_model

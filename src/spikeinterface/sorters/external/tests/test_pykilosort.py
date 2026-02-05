@@ -1,7 +1,6 @@
 import unittest
 
 import pytest
-from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import PyKilosortSorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 

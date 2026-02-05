@@ -13,30 +13,67 @@ class Plexon2RecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
-        The file path to load the recordings from.
-    stream_id: str, default: None
+    file_path : str | Path
+        The file path of the plexon2 file. It should have the .pl2 extension.
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, default: None
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    use_names_as_ids : bool, default: True
+        If True, the names of the signals are used as channel ids. If False, the channel ids are a combination of the
+        source id and the channel index.
+
+        Example for wideband signals:
+            names: ["WB01", "WB02", "WB03", "WB04"]
+            ids: ["source3.1" , "source3.2", "source3.3", "source3.4"]
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    reading_attempts : int, default: 25
+        Number of attempts to read the file before raising an error
+        This opening process is somewhat unreliable and might fail occasionally. Adjust this higher
+        if you encounter problems in opening the file.
+
+    Examples
+    --------
+    >>> from spikeinterface.extractors import read_plexon2
+    >>> recording = read_plexon2(file_path=r'my_data.pl2')
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
-    name = "plexon2"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        use_names_as_ids=True,
+        all_annotations=False,
+        reading_attempts: int = 25,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(file_path, reading_attempts=reading_attempts)
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         self._kwargs.update({"file_path": str(file_path)})
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
+    def map_to_neo_kwargs(cls, file_path, reading_attempts: int = 25):
+
         neo_kwargs = {"filename": str(file_path)}
+
+        from packaging.version import Version
+        import neo
+
+        neo_version = Version(neo.__version__)
+
+        if neo_version > Version("0.13.3"):
+            neo_kwargs["reading_attempts"] = reading_attempts
+
         return neo_kwargs
 
 
@@ -48,16 +85,14 @@ class Plexon2SortingExtractor(NeoBaseSortingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    sampling_frequency: float, default: None
+    sampling_frequency : float, default: None
         The sampling frequency of the sorting (required for multiple streams with different sampling frequencies).
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
     neo_returns_frames = True
-    name = "plexon2"
 
     def __init__(self, file_path, sampling_frequency=None):
         from neo.rawio import Plexon2RawIO
@@ -82,17 +117,21 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
 
     Parameters
     ----------
-    folder_path: str
+    folder_path : str
+        Path to the .pl2 file.
+    block_index : int, default: None
+        Block index to read from, by default None.
+    use_names_as_ids : bool, default: False
+        If True, use channel names as identifiers instead of channel IDs.
+        Channel names must be unique when this option is enabled.
 
     """
 
-    mode = "file"
     NeoRawIOClass = "Plexon2RawIO"
-    name = "plexon2"
 
-    def __init__(self, folder_path, block_index=None):
+    def __init__(self, folder_path, block_index=None, use_names_as_ids=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index, use_names_as_ids=use_names_as_ids, **neo_kwargs)
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):

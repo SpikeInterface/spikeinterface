@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-import json
+
 from typing import List, Optional
-import scipy.signal
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
@@ -56,6 +54,8 @@ class SavGolDenoiser(WaveformsNode):
 
     def compute(self, traces, peaks, waveforms):
         # Denoise
+        import scipy.signal
+
         denoised_waveforms = scipy.signal.savgol_filter(waveforms, self.window_length, self.order, axis=1)
 
         return denoised_waveforms

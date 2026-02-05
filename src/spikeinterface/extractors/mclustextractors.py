@@ -29,9 +29,6 @@ class MClustSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "MClustSortingExtractor"
-    name = "mclust"
-
     def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw=None):
         end_header_str = "%%ENDHEADER"
         ext_list = ["t64", "t32", "t", "raw64", "raw32"]

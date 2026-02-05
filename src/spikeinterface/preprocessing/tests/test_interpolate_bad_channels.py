@@ -6,17 +6,11 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
 from spikeinterface.core.generate import generate_recording
-
-try:
-    import spikeglx
-    import neurodsp.voltage as voltage
-
-    HAVE_IBL_NPIX = True
-except ImportError:
-    HAVE_IBL_NPIX = False
+import importlib.util
+from spikeinterface.preprocessing.interpolate_bad_channels import detect_and_interpolate_bad_channels
+from spikeinterface.preprocessing.detect_bad_channels import detect_bad_channels
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
-
 DEBUG = False
 if DEBUG:
     import matplotlib.pyplot as plt
@@ -30,7 +24,35 @@ if DEBUG:
 # -------------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
+def test_detect_and_interpolate_bad_channel():
+    """
+    Generate a recording, then remove bad channels with a low noise threshold, so that
+    some units are removed. Then check that the new recording is an interpolated
+    recording and that kwargs are successfully propogated to the new recording.
+    """
+
+    recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    # find the bad channels directly
+    bad_channel_ids, _ = detect_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+
+    # set noisy_channel_threshold so that we do detect some bad channels
+    new_rec = detect_and_interpolate_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+
+    # make sure they are in the new recording kwargs
+    bad_channel_ids_from_rec = new_rec._kwargs["bad_channel_ids"]
+    assert set(bad_channel_ids) == set(bad_channel_ids_from_rec)
+
+    # and that the kwarg is propogatged to the kwargs of new_rec.
+    assert new_rec._kwargs["noisy_channel_threshold"] == 0
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    reason="Only local. Requires ibl-neuropixel install",
+)
 def test_compare_real_data_with_ibl():
     """
     Test SI implementation of bad channel interpolation against native IBL.
@@ -43,6 +65,9 @@ def test_compare_real_data_with_ibl():
     si_scaled_recordin.get_traces(0) is also close to 1e-2.
     """
     # Download and load data
+    import spikeglx
+    import neurodsp.voltage as voltage
+
     local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
     ibl_recording = spikeglx.Reader(
@@ -50,7 +75,8 @@ def test_compare_real_data_with_ibl():
     )
 
     num_channels = si_recording.get_num_channels()
-    bad_channel_indexes = np.random.choice(num_channels, 10, replace=False)
+    rng = np.random.default_rng(seed=None)
+    bad_channel_indexes = rng.choice(num_channels, 10, replace=False)
     bad_channel_ids = si_recording.channel_ids[bad_channel_indexes]
     si_recording = spre.scale(si_recording, dtype="float32")
 
@@ -61,7 +87,7 @@ def test_compare_real_data_with_ibl():
     ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels, bad_channel_indexes)
 
     ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
-    si_interpolated = si_interpolated_recording.get_traces(return_scaled=True)
+    si_interpolated = si_interpolated_recording.get_traces(return_in_uV=True)
     ibl_interpolated = voltage.interpolate_bad_channels(
         ibl_data, ibl_bad_channel_labels, x=ibl_recording.geometry["x"], y=ibl_recording.geometry["y"]
     ).T
@@ -80,7 +106,10 @@ def test_compare_real_data_with_ibl():
     assert np.mean(is_close) > 0.999
 
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
+@pytest.mark.skipif(
+    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") is not None,
+    reason="Requires ibl-neuropixel install",
+)
 @pytest.mark.parametrize("num_channels", [32, 64])
 @pytest.mark.parametrize("sigma_um", [1.25, 40])
 @pytest.mark.parametrize("p", [0, -0.5, 1, 5])
@@ -90,15 +119,18 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     Perform an extended test across a range of function inputs to check
     IBL and SI interpolation results match.
     """
+    import neurodsp.voltage as voltage
+
     recording = generate_recording(num_channels=num_channels, durations=[1])
 
     # distribute default probe locations across 4 shanks if set
-    x = np.random.choice(shanks, num_channels)
+    rng = np.random.default_rng(seed=None)
+    x = rng.choice(shanks, num_channels)
     for idx, __ in enumerate(recording._properties["contact_vector"]):
         recording._properties["contact_vector"][idx][1] = x[idx]
 
     # generate random bad channel locations
-    bad_channel_indexes = np.random.choice(num_channels, np.random.randint(1, int(num_channels / 5)), replace=False)
+    bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
     bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
     # Run SI and IBL interpolation and check against eachother
@@ -159,7 +191,9 @@ def test_output_values():
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)
 
-    si_interpolated_recording = spre.interpolate_bad_channels(recording, bad_channel_indexes, sigma_um=1, p=1)
+    si_interpolated_recording = spre.interpolate_bad_channels(
+        recording, bad_channel_ids=bad_channel_ids, sigma_um=1, p=1
+    )
     si_interpolated = si_interpolated_recording.get_traces()
 
     expected_ts = si_interpolated[:, 1:] @ expected_weights

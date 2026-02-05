@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Union
 
 # from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
 
 # from .utils import get_unit_colors
-from ..core.sortinganalyzer import SortingAnalyzer
-from ..core.template_tools import get_dense_templates_array
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 
 class UnitProbeMapWidget(BaseWidget):
@@ -20,14 +19,14 @@ class UnitProbeMapWidget(BaseWidget):
 
     Parameters
     ----------
-    sorting_analyzer: SortingAnalyzer
-    unit_ids: list
+    sorting_analyzer : SortingAnalyzer
+    unit_ids : list
         List of unit ids.
-    channel_ids: list
+    channel_ids : list
         The channel ids to display
-    animated: bool, default: False
+    animated : bool, default: False
         Animation for amplitude on time
-    with_channel_ids: bool, default: False
+    with_channel_ids : bool, default: False
         add channel ids text on the probe
     """
 
@@ -81,7 +80,7 @@ class UnitProbeMapWidget(BaseWidget):
 
         probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
 
-        templates = get_dense_templates_array(sorting_analyzer, return_scaled=True)
+        templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
         templates = templates[sorting_analyzer.sorting.ids_to_indices(dp.unit_ids), :, :]
 
         all_poly_contact = []

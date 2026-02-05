@@ -80,7 +80,7 @@ def get_spatial_interpolation_kernel(
 
     elif method == "idw":
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[:, c])
             chan_closest = ind_sorted[:num_closest]
@@ -97,7 +97,7 @@ def get_spatial_interpolation_kernel(
 
     elif method == "nearest":
         distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_closest = np.argmin(distances[:, c])
             interpolation_kernel[ind_closest, c] = 1.0

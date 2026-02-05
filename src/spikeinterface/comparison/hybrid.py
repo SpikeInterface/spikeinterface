@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from pathlib import Path
 from typing import List, Union
 import numpy as np
@@ -21,37 +23,41 @@ from spikeinterface.core.generate import (
 
 class HybridUnitsRecording(InjectTemplatesRecording):
     """
+    DEPRECATED, will be removed in 0.104.0
+
     Class for creating a hybrid recording where additional units are added
     to an existing recording.
 
     Parameters
     ----------
-    parent_recording: BaseRecording
+    parent_recording : BaseRecording
         Existing recording to add on top of.
-    templates: np.ndarray[n_units, n_samples, n_channels]
+    templates : np.ndarray[n_units, n_samples, n_channels]
         Array containing the templates to inject for all the units.
-    injected_sorting: BaseSorting | None:
+    injected_sorting : BaseSorting | None:
         The sorting for the injected units.
         If None, will be generated using the following parameters.
-    nbefore: list[int] | int | None
+    nbefore : list[int] | int | None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
-    firing_rate: float
+    firing_rate : float
         The firing rate of the injected units (in Hz).
-    amplitude_factor: np.ndarray | None:
+    amplitude_factor : np.ndarray | None:
         The amplitude factor for each spike.
         If None, will be generated as a gaussian centered at 1.0 and with an std of amplitude_std.
-    amplitude_std: float
+    amplitude_std : float
         The standard deviation of the amplitude (centered at 1.0).
-    refractory_period_ms: float
+    refractory_period_ms : float
         The refractory period of the injected spike train (in ms).
-    injected_sorting_folder: str | Path | None
+    injected_sorting_folder : str | Path | None
         If given, the injected sorting is saved to this folder.
         It must be specified if injected_sorting is None or not serialisable to file.
+    seed : int, default: None
+        Random seed for amplitude_factor
 
     Returns
     -------
-    hybrid_units_recording: HybridUnitsRecording
+    hybrid_units_recording : HybridUnitsRecording
         The recording containing real and hybrid units.
     """
 
@@ -68,6 +74,13 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         injected_sorting_folder: Union[str, Path, None] = None,
         seed=None,
     ):
+
+        warnings.warn(
+            "create_hybrid_units_recording() will be removed in 0.104.0 please use `spikeinterface.generation.hybrid_tools` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         num_samples = [
             parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())
         ]
@@ -123,34 +136,36 @@ class HybridUnitsRecording(InjectTemplatesRecording):
 
 class HybridSpikesRecording(InjectTemplatesRecording):
     """
+    DEPRECATED, will be removed in 0.104.0
+
     Class for creating a hybrid recording where additional spikes are added
     to already existing units.
 
     Parameters
     ----------
-    wvf_extractor: WaveformExtractor
+    wvf_extractor : WaveformExtractor
         The waveform extractor object of the existing recording.
-    injected_sorting: BaseSorting | None
+    injected_sorting : BaseSorting | None
         Additional spikes to inject.
         If None, will generate it.
-    max_injected_per_unit: int
+    max_injected_per_unit : int
         If injected_sorting=None, the max number of spikes per unit
         that is allowed to be injected.
-    unit_ids: list[int] | None
+    unit_ids : list[int] | None
         unit_ids to take in the wvf_extractor for spikes injection.
-    injected_rate: float
+    injected_rate : float
         If injected_sorting=None, the max fraction of spikes per
         unit that is allowed to be injected.
-    refractory_period_ms: float
+    refractory_period_ms : float
         If injected_sorting=None, the injected spikes need to respect
         this refractory period.
-    injected_sorting_folder: str | Path | None
+    injected_sorting_folder : str | Path | None
         If given, the injected sorting is saved to this folder.
         It must be specified if injected_sorting is None or not serializable to file.
 
     Returns
     -------
-    hybrid_spikes_recording: HybridSpikesRecording:
+    hybrid_spikes_recording : HybridSpikesRecording:
         The recording containing units with real and hybrid spikes.
     """
 
@@ -164,6 +179,13 @@ class HybridSpikesRecording(InjectTemplatesRecording):
         refractory_period_ms: float = 1.5,
         injected_sorting_folder: Union[str, Path, None] = None,
     ) -> None:
+
+        warnings.warn(
+            "create_hybrid_spikes_recording() will be removed in 0.104.0 please use `spikeinterface.generation.hybrid_tools`  instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if isinstance(wvf_extractor, (Path, str)):
             wvf_extractor = load_waveforms(wvf_extractor)
 

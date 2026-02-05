@@ -2,8 +2,6 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-import numpy as np
-
 from .npysnippetsextractor import NpySnippetsExtractor
 from .core_tools import define_function_from_class, make_paths_absolute
 
@@ -17,16 +15,15 @@ class NpyFolderSnippets(NpySnippetsExtractor):
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         The path to the folder
 
     Returns
     -------
-    snippets: NpyFolderSnippets
+    snippets : NpyFolderSnippets
         The snippets
     """
 
-    extractor_name = "NpyFolderSnippets"
     mode = "folder"
     name = "npyfolder"
 

@@ -5,8 +5,8 @@ import inspect
 global default_backend_
 default_backend_ = "matplotlib"
 
-from ..core import SortingAnalyzer, BaseSorting
-from ..core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
 
 def get_default_plotter_backend():
@@ -109,17 +109,17 @@ class BaseWidget:
 
     @classmethod
     def ensure_sorting_analyzer(cls, input):
-        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a ploter
+        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a plotter
         if isinstance(input, SortingAnalyzer):
             return input
         elif isinstance(input, MockWaveformExtractor):
             return input.sorting_analyzer
         else:
-            return input
+            raise TypeError("input must be a SortingAnalyzer or MockWaveformExtractor")
 
     @classmethod
     def ensure_sorting(cls, input):
-        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a ploter
+        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a plotter
         if isinstance(input, BaseSorting):
             return input
         elif isinstance(input, SortingAnalyzer):
@@ -127,7 +127,7 @@ class BaseWidget:
         elif isinstance(input, MockWaveformExtractor):
             return input.sorting_analyzer.sorting
         else:
-            return input
+            raise TypeError("input must be a SortingAnalyzer, MockWaveformExtractor, or of type BaseSorting")
 
     @staticmethod
     def check_extensions(sorting_analyzer, extensions):
@@ -139,7 +139,7 @@ class BaseWidget:
             if not sorting_analyzer.has_extension(extension):
                 raise_error = True
                 error_msg += (
-                    f"The {extension} waveform extension is required for this widget. "
+                    f"The {extension} sorting analyzer extension is required for this widget. "
                     f"Run the `sorting_analyzer.compute('{extension}', ...)` to compute it.\n"
                 )
         if raise_error:

@@ -1,26 +1,19 @@
-import unittest
-import numpy as np
-
 from spikeinterface.postprocessing import ComputeSpikeLocations
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
+import pytest
 
 
-class SpikeLocationsExtensionTest(AnalyzerExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = ComputeSpikeLocations
-    extension_function_params_list = [
-        dict(
-            method="center_of_mass", spike_retriver_kwargs=dict(channel_from_template=True)
-        ),  # chunk_size=10000, n_jobs=1,
-        dict(method="center_of_mass", spike_retriver_kwargs=dict(channel_from_template=False)),
-        dict(
-            method="center_of_mass",
-        ),
-        dict(method="monopolar_triangulation"),  # , chunk_size=10000, n_jobs=1
-        dict(method="grid_convolution"),  # , chunk_size=10000, n_jobs=1
-    ]
+class TestSpikeLocationsExtension(AnalyzerExtensionCommonTestSuite):
 
-
-if __name__ == "__main__":
-    test = SpikeLocationsExtensionTest()
-    test.setUpClass()
-    test.test_extension()
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(method="center_of_mass", spike_retriver_kwargs=dict(channel_from_template=True)),
+            dict(method="center_of_mass", spike_retriver_kwargs=dict(channel_from_template=False)),
+            dict(method="center_of_mass"),
+            dict(method="monopolar_triangulation"),
+            dict(method="grid_convolution"),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeSpikeLocations, params)

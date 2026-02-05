@@ -11,7 +11,7 @@ from tqdm import trange
 
 def _generate_test_recording():
     recording = generate_recording(durations=[1.0], num_channels=4)
-    recording = recording.channel_slice(recording.channel_ids, np.array(["a", "b", "c", "d"]))
+    recording = recording.rename_channels(np.array(["a", "b", "c", "d"]))
     return recording
 
 
@@ -23,12 +23,14 @@ def recording():
 def test_common_reference(recording):
     # Test simple case
     rec_cmr = common_reference(recording, reference="global", operator="median")
+    rec_cmr_ref = common_reference(recording, reference="global", operator="median", ref_channel_ids=["a", "b", "c"])
     rec_car = common_reference(recording, reference="global", operator="average")
     rec_sin = common_reference(recording, reference="single", ref_channel_ids=["a"])
     rec_local_car = common_reference(recording, reference="local", local_radius=(20, 65), operator="median")
 
     traces = recording.get_traces()
     assert np.allclose(traces, rec_cmr.get_traces() + np.median(traces, axis=1, keepdims=True), atol=0.01)
+    assert np.allclose(traces, rec_cmr_ref.get_traces() + np.median(traces[:, :3], axis=1, keepdims=True), atol=0.01)
     assert np.allclose(traces, rec_car.get_traces() + np.mean(traces, axis=1, keepdims=True), atol=0.01)
     assert not np.all(rec_sin.get_traces()[0])
     assert np.allclose(rec_sin.get_traces()[:, 1], traces[:, 1] - traces[:, 0])

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 import json
-from dataclasses import dataclass, field, astuple
+from dataclasses import dataclass, field, astuple, replace
 from probeinterface import Probe
 from pathlib import Path
+
 from .sparsity import ChannelSparsity
 
 
@@ -30,9 +31,11 @@ class Templates:
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
     probe: Probe, default: None
         A `probeinterface.Probe` object
+    is_in_uV : bool, optional default: True
+        If True, it means that the templates are in uV, otherwise they are in raw ADC values.
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
-        structure fo the sparsity_masl.
+        structure of the sparsity_mask. If False, this check is skipped.
 
     The following attributes are available after construction:
 
@@ -58,6 +61,7 @@ class Templates:
     templates_array: np.ndarray
     sampling_frequency: float
     nbefore: int
+    is_in_uV: bool = True
 
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
@@ -94,8 +98,20 @@ class Templates:
         # Initialize sparsity object
         if self.channel_ids is None:
             self.channel_ids = np.arange(self.num_channels)
+        else:
+            self.channel_ids = np.asarray(self.channel_ids)
+            assert (
+                len(self.channel_ids) == self.num_channels
+            ), f"length of channel ids {len(self.channel_ids)} must be equal to the number of channels {self.num_channels}"
+
         if self.unit_ids is None:
             self.unit_ids = np.arange(self.num_units)
+        else:
+            self.unit_ids = np.asarray(self.unit_ids)
+            assert (
+                self.unit_ids.size == self.num_units
+            ), f"length of units ids {self.unit_ids.size} must be equal to the number of units {self.num_units}"
+
         if self.sparsity_mask is not None:
             self.sparsity = ChannelSparsity(
                 mask=self.sparsity_mask,
@@ -125,10 +141,65 @@ class Templates:
 
         return repr_str
 
+    def select_units(self, unit_ids) -> Templates:
+        """
+        Return a new Templates object with only the selected units.
+
+        Parameters
+        ----------
+        unit_ids : list
+            List of unit IDs to select.
+        """
+        unit_ids_list = list(self.unit_ids)
+        unit_indices = np.array([unit_ids_list.index(unit_id) for unit_id in unit_ids], dtype=int)
+        sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[unit_indices]
+
+        # Data class method to only change selected fields
+        return replace(
+            self,
+            templates_array=self.templates_array[unit_indices],
+            sparsity_mask=sliced_sparsity_mask,
+            unit_ids=unit_ids,
+            check_for_consistent_sparsity=False,
+        )
+
+    def select_channels(self, channel_ids) -> Templates:
+        """
+        Return a new Templates object with only the selected channels.
+        This operation can be useful to remove bad channels for hybrid recording
+        generation.
+
+        Parameters
+        ----------
+        channel_ids : list
+            List of channel IDs to select.
+        """
+        assert not self.are_templates_sparse(), "Cannot select channels on sparse templates"
+        channel_ids_list = list(self.channel_ids)
+        channel_indices = np.array([channel_ids_list.index(channel_id) for channel_id in channel_ids])
+        sliced_sparsity_mask = None if self.sparsity_mask is None else self.sparsity_mask[:, channel_indices]
+
+        # Data class method to only change selected fields
+        return replace(
+            self,
+            templates_array=self.templates_array[:, :, channel_indices],
+            sparsity_mask=sliced_sparsity_mask,
+            channel_ids=channel_ids,
+            check_for_consistent_sparsity=False,
+        )
+
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
         # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
+        if isinstance(sparsity, np.ndarray):
+            sparsity = ChannelSparsity(
+                mask=sparsity,
+                unit_ids=self.unit_ids,
+                channel_ids=self.channel_ids,
+            )
+
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
+
         assert self.sparsity_mask is None, "Templates should be dense"
 
         # if np.any(sparsity.mask.sum(axis=1) == 0):
@@ -143,7 +214,24 @@ class Templates:
             unit_ids=self.unit_ids,
             probe=self.probe,
             check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+            is_in_uV=self.is_in_uV,
         )
+
+    def to_dense(self):
+        if not self.are_templates_sparse():
+            return self
+        else:
+            return Templates(
+                templates_array=self.get_dense_templates(),
+                sampling_frequency=self.sampling_frequency,
+                nbefore=self.nbefore,
+                sparsity_mask=None,
+                channel_ids=self.channel_ids,
+                unit_ids=self.unit_ids,
+                probe=self.probe,
+                check_for_consistent_sparsity=False,
+                is_in_uV=self.is_in_uV,
+            )
 
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:
@@ -193,6 +281,7 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
+            "is_in_uV": self.is_in_uV,
             "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
@@ -205,6 +294,7 @@ class Templates:
             unit_ids=np.asarray(data["unit_ids"]),
             sampling_frequency=data["sampling_frequency"],
             nbefore=data["nbefore"],
+            is_in_uV=data["is_in_uV"],
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
@@ -238,6 +328,7 @@ class Templates:
 
         zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
         zarr_group.attrs["nbefore"] = self.nbefore
+        zarr_group.attrs["is_in_uV"] = self.is_in_uV
 
         if self.sparsity_mask is not None:
             zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
@@ -288,15 +379,22 @@ class Templates:
         the `add_templates_to_zarr_group` method.
 
         """
-        templates_array = zarr_group["templates_array"]
-        channel_ids = zarr_group["channel_ids"]
-        unit_ids = zarr_group["unit_ids"]
+        templates_array = zarr_group["templates_array"][:]
+        channel_ids = zarr_group["channel_ids"][:]
+        unit_ids = zarr_group["unit_ids"][:]
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
+        if "is_scaled" in zarr_group.attrs:
+            # prior to 0.103.0 "is_in_uV" was named "is_scaled", so for backward compatibility:
+            is_in_uV = zarr_group.attrs["is_scaled"]
+        else:
+            # TODO: Consider eliminating the True and make it required
+            is_in_uV = zarr_group.attrs.get("is_in_uV", True)
+
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
-            sparsity_mask = zarr_group["sparsity_mask"]
+            sparsity_mask = zarr_group["sparsity_mask"][:]
 
         probe = None
         if "probe" in zarr_group:
@@ -310,6 +408,7 @@ class Templates:
             channel_ids=channel_ids,
             unit_ids=unit_ids,
             probe=probe,
+            is_in_uV=is_in_uV,
         )
 
     @staticmethod
@@ -380,7 +479,7 @@ class Templates:
 
         return True
 
-    def get_channel_locations(self):
+    def get_channel_locations(self) -> np.ndarray:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations

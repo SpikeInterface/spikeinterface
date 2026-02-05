@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Union, Dict, Any, List, Tuple
+from typing import Optional, Union, Dict, Any, List
 import warnings
 from math import isclose
 
@@ -73,8 +73,8 @@ class _NeoBaseExtractor:
         neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
         stream_channels = neo_reader.header["signal_streams"]
-        stream_names = list(stream_channels["name"])
-        stream_ids = list(stream_channels["id"])
+        stream_names = stream_channels["name"].tolist()
+        stream_ids = stream_channels["id"].tolist()
         return stream_names, stream_ids
 
     def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
@@ -179,6 +179,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             If True, include all annotations in the extracted data.
         use_names_as_ids : Optional[bool], default: None
             If True, use channel names as IDs. Otherwise, use default IDs.
+            In NEO the ids are guaranteed to be unique. Names are user defined and can be duplicated.
         neo_kwargs : Dict[str, Any]
             Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
 
@@ -199,14 +200,14 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             use_names_as_ids = False
 
         stream_channels = self.neo_reader.header["signal_streams"]
-        stream_names = list(stream_channels["name"])
-        stream_ids = list(stream_channels["id"])
+        stream_names = stream_channels["name"].tolist()
+        stream_ids = stream_channels["id"].tolist()
 
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(
-                    f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. "
-                    f"Specify it with the 'stream_name' or 'stream_id' arguments"
+                    f"This reader have several streams: \n`stream_names`: {stream_names}\n`stream_ids`: {stream_ids}. \n"
+                    f"Specify it from the options above with the 'stream_name' or 'stream_id' arguments"
                 )
             else:
                 stream_id = stream_ids[0]
@@ -245,36 +246,52 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self.extra_requirements.append("neo")
 
         # find the gain to uV
-        gains = signal_channels["gain"]
-        offsets = signal_channels["offset"]
-
-        if dtype.kind == "i" and np.all(gains < 0) and np.all(offsets == 0):
+        neo_gains = signal_channels["gain"]
+        neo_offsets = signal_channels["offset"]
+        if dtype.kind == "i" and np.all(neo_gains < 0) and np.all(neo_offsets == 0):
             # special hack when all channel have negative gain: we put back the gain positive
             # this help the end user experience
             self.inverted_gain = True
-            gains = -gains
+            neo_gains = -neo_gains
         else:
             self.inverted_gain = False
 
-        units = signal_channels["units"]
+        # Define standard voltage units and their conversion factors to uV
+        voltage_units_to_gains = {"V": 1e6, "Volt": 1e6, "Volts": 1e6, "mV": 1e3, "uV": 1.0}
 
-        # mark that units are V, mV or uV
-        self.has_non_standard_units = False
-        if not np.all(np.isin(units, ["V", "Volt", "mV", "uV"])):
-            self.has_non_standard_units = True
+        channel_units = signal_channels["units"]
+        fill_value = 1.0  # This should be np.nan but will break a lot of tests
+        gain_correction = np.full(shape=channel_units.size, fill_value=fill_value)
+        for unit, gain in voltage_units_to_gains.items():
+            gain_correction[channel_units == unit] = gain
 
-        additional_gain = np.ones(units.size, dtype="float")
-        additional_gain[units == "V"] = 1e6
-        additional_gain[units == "Volt"] = 1e6
-        additional_gain[units == "mV"] = 1e3
-        additional_gain[units == "uV"] = 1.0
-        additional_gain = additional_gain
+        # Note that gain_to_uV should be undefined (np.nan) for non-voltage units
+        gain_to_uV = neo_gains * gain_correction
+        offset_to_uV = neo_offsets * gain_correction
 
-        final_gains = gains * additional_gain
-        final_offsets = offsets * additional_gain
+        self.set_property("gain_to_uV", gain_to_uV)
+        self.set_property("offset_to_uV", offset_to_uV)
 
-        self.set_property("gain_to_uV", final_gains)
-        self.set_property("offset_to_uV", final_offsets)
+        # Add machinery to keep the neo units for downstream users
+        self.set_property("physical_unit", channel_units)
+        self.set_property("gain_to_physical_unit", neo_gains)
+        self.set_property("offset_to_physical_unit", neo_offsets)
+
+        # Streams with mixed units are to be used with caution
+        # We warn the user when this is the case
+        # Eventually, this should not be allowed as streams should have the same units
+        supported_voltage_units = list(voltage_units_to_gains.keys())
+        is_channel_in_voltage = np.isin(channel_units, supported_voltage_units)
+        self.has_voltage_channels = np.any(is_channel_in_voltage)
+        self.has_non_voltage_channels = not np.all(is_channel_in_voltage)
+        has_mixed_units = self.has_non_voltage_channels and self.has_voltage_channels
+        if has_mixed_units:
+            warning_msg = (
+                "Found a mix of voltage and non-voltage units. "
+                'Proceed with caution. Check channel units with `recording.get_property("physical_unit")`.'
+            )
+            warnings.warn(warning_msg)
+
         if not use_names_as_ids:
             self.set_property("channel_name", signal_channels["name"])
 
@@ -286,13 +303,26 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             seg_ann = block_ann["segments"][0]
             sig_ann = seg_ann["signals"][self.stream_index]
 
-            # scalar annotations
-            for k, v in sig_ann.items():
-                if not k.startswith("__"):
-                    self.set_annotation(k, v)
+            scalar_annotations = {name: value for name, value in sig_ann.items() if not name.startswith("__")}
+
+            # name in neo corresponds to stream name
+            # We don't propagate the name as an annotation because that has a differnt meaning on spikeinterface
+            stream_name = scalar_annotations.pop("name", None)
+            if stream_name:
+                self.set_annotation(annotation_key="stream_name", value=stream_name)
+            for annotation_key, value in scalar_annotations.items():
+                self.set_annotation(annotation_key=annotation_key, value=value)
+
+            array_annotations = sig_ann["__array_annotations__"]
+            # We do not add this because is confusing for the user to have this repeated
+            array_annotations.pop("channel_ids", None)
+            # This is duplicated when using `use_names_as_ids`
+            if use_names_as_ids:
+                array_annotations.pop("channel_name", None)
+
             # vector array_annotations are channel properties
-            for k, values in sig_ann["__array_annotations__"].items():
-                self.set_property(k, values)
+            for key, values in array_annotations.items():
+                self.set_property(key=key, values=values)
 
         nseg = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(nseg):
@@ -635,14 +665,20 @@ _neo_event_dtype = np.dtype([("time", "float64"), ("duration", "float64"), ("lab
 class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
     handle_event_frame_directly = False
 
-    def __init__(self, block_index=None, **neo_kwargs):
+    def __init__(self, block_index=None, use_names_as_ids: bool = False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         # TODO load feature from neo array_annotations
 
         event_channels = self.neo_reader.header["event_channels"]
 
-        channel_ids = event_channels["id"]
+        if use_names_as_ids:
+            channel_ids = event_channels["name"]
+            assert (
+                event_channels.size == np.unique(channel_ids).size
+            ), "use_name_as_ids=True is not possible, channel names are not unique"
+        else:
+            channel_ids = event_channels["id"]
 
         BaseEvent.__init__(self, channel_ids, structured_dtype=_neo_event_dtype)
 
@@ -654,21 +690,23 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
             else:
                 t_start = self.neo_reader.get_signal_t_start(self.block_index, segment_index, stream_index=0)
 
-            event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index, t_start)
+            event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index, t_start, use_names_as_ids)
             self.add_event_segment(event_segment)
 
 
 class NeoEventSegment(BaseEventSegment):
-    def __init__(self, neo_reader, block_index, segment_index, t_start):
+    def __init__(self, neo_reader, block_index, segment_index, t_start, use_names_as_ids):
         BaseEventSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
         self._t_start = t_start
         self._natural_ids = None
+        self.use_names_as_ids = use_names_as_ids
 
     def get_events(self, channel_id, start_time, end_time):
-        channel_index = list(self.neo_reader.header["event_channels"]["id"]).index(channel_id)
+        id_or_name = "name" if self.use_names_as_ids else "id"
+        channel_index = list(self.neo_reader.header["event_channels"][id_or_name]).index(channel_id)
 
         event_timestamps, event_duration, event_labels = self.neo_reader.get_event_timestamps(
             block_index=self.block_index, seg_index=self.segment_index, event_channel_index=channel_index

@@ -1,10 +1,13 @@
 from __future__ import annotations
+
+import math
 import warnings
 import numpy as np
 
-from .core_tools import define_function_from_class
-from .base import BaseExtractor
-from .basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
+from spikeinterface.core.segmentutils import _check_sampling_frequencies
 
 
 class UnitsAggregationSorting(BaseSorting):
@@ -13,10 +16,12 @@ class UnitsAggregationSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting_list: list
+    sorting_list: list | dict
         List of BaseSorting objects to aggregate
     renamed_unit_ids: array-like
         If given, unit ids are renamed as provided. If None, unit ids are sequential integers.
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across recordings
 
     Returns
     -------
@@ -24,8 +29,13 @@ class UnitsAggregationSorting(BaseSorting):
         The aggregated sorting object
     """
 
-    def __init__(self, sorting_list, renamed_unit_ids=None):
+    def __init__(self, sorting_list, renamed_unit_ids=None, sampling_frequency_max_diff=0):
         unit_map = {}
+
+        sorting_keys = []
+        if isinstance(sorting_list, dict):
+            sorting_keys = list(sorting_list.keys())
+            sorting_list = list(sorting_list.values())
 
         num_all_units = sum([sort.get_num_units() for sort in sorting_list])
         if renamed_unit_ids is not None:
@@ -34,7 +44,21 @@ class UnitsAggregationSorting(BaseSorting):
             )
             unit_ids = list(renamed_unit_ids)
         else:
-            unit_ids = list(np.arange(num_all_units))
+            unit_ids_dtypes = [sort.get_unit_ids().dtype for sort in sorting_list]
+            all_ids_are_same_type = np.unique(unit_ids_dtypes).size == 1
+            all_units_ids_are_unique = False
+            if all_ids_are_same_type:
+                combined_ids = np.concatenate([sort.get_unit_ids() for sort in sorting_list])
+                all_units_ids_are_unique = np.unique(combined_ids).size == num_all_units
+
+            if all_ids_are_same_type and all_units_ids_are_unique:
+                unit_ids = combined_ids
+            else:
+                default_unit_ids = [str(i) for i in range(num_all_units)]
+                if all_ids_are_same_type and np.issubdtype(unit_ids_dtypes[0], np.integer):
+                    unit_ids = np.arange(num_all_units, dtype=np.uint64)
+                else:
+                    unit_ids = default_unit_ids
 
         # unit map maps unit ids that are used to get spike trains
         u_id = 0
@@ -44,13 +68,14 @@ class UnitsAggregationSorting(BaseSorting):
                 unit_map[unit_ids[u_id]] = {"sorting_id": s_i, "unit_id": unit_id}
                 u_id += 1
 
-        sampling_frequency = sorting_list[0].get_sampling_frequency()
+        sampling_frequencies = [sort.sampling_frequency for sort in sorting_list]
         num_segments = sorting_list[0].get_num_segments()
 
-        ok1 = all(sampling_frequency == sort.get_sampling_frequency() for sort in sorting_list)
-        ok2 = all(num_segments == sort.get_num_segments() for sort in sorting_list)
-        if not (ok1 and ok2):
-            raise ValueError("Sortings don't have the same sampling_frequency/num_segments")
+        _check_sampling_frequencies(sampling_frequencies, sampling_frequency_max_diff)
+        sampling_frequency = sampling_frequencies[0]
+        num_segments_ok = all(num_segments == sort.get_num_segments() for sort in sorting_list)
+        if not num_segments_ok:
+            raise ValueError("Sortings don't have the same num_segments")
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -63,43 +88,51 @@ class UnitsAggregationSorting(BaseSorting):
             if np.all(annotations == annotations[0]):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
-        property_keys = {}
-        property_dict = {}
-        deleted_keys = []
-        for sort in sorting_list:
-            for prop_name in sort.get_property_keys():
-                if prop_name in deleted_keys:
-                    continue
-                if prop_name in property_keys:
-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
-                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
-                        del property_keys[prop_name]
-                        deleted_keys.append(prop_name)
-                else:
-                    property_keys[prop_name] = sort.get_property(prop_name).dtype
-        for prop_name in property_keys:
-            dtype = property_keys[prop_name]
-            property_dict[prop_name] = np.array([], dtype=dtype)
+        # Check if all the sortings have the same properties
+        properties_set = set(np.concatenate([sorting.get_property_keys() for sorting in sorting_list]))
+        for prop_name in properties_set:
 
+            dtypes_per_sorting = []
             for sort in sorting_list:
                 if prop_name in sort.get_property_keys():
-                    values = sort.get_property(prop_name)
-                else:
-                    if dtype.kind not in BaseExtractor.default_missing_property_values:
-                        del property_dict[prop_name]
-                        break
-                    values = np.full(
-                        sort.get_num_units(), BaseExtractor.default_missing_property_values[dtype.kind], dtype=dtype
-                    )
+                    dtypes_per_sorting.append(sort.get_property(prop_name).dtype.kind)
 
-                try:
-                    property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
-                except Exception as e:
-                    print(f"Skipping property '{prop_name}' due to shape inconsistency")
-                    del property_dict[prop_name]
-                    break
-        for prop_name, prop_values in property_dict.items():
-            self.set_property(key=prop_name, values=prop_values)
+            if len(set(dtypes_per_sorting)) != 1:
+                warnings.warn(
+                    f"Skipping property '{prop_name}'. Difference in dtype.kind between sortings: {dtypes_per_sorting}"
+                )
+                continue
+
+            all_property_values = []
+            for sort in sorting_list:
+
+                # If one of the sortings doesn't have the property, use the default missing property value
+                if prop_name not in sort.get_property_keys():
+                    try:
+                        values = np.full(
+                            sort.get_num_units(),
+                            BaseExtractor.default_missing_property_values[dtypes_per_sorting[0]],
+                        )
+                    except:
+                        warnings.warn(f"Skipping property '{prop_name}: cannot inpute missing property values.'")
+                        break
+                else:
+                    values = sort.get_property(prop_name)
+
+                all_property_values.append(values)
+
+            try:
+                prop_values = np.concatenate(all_property_values)
+                self.set_property(key=prop_name, values=prop_values)
+            except Exception as ext:
+                warnings.warn(f"Skipping property '{prop_name}' as numpy cannot concatente. Numpy error: {ext}")
+
+        # add a label to each unit, with which sorting it came from
+        if len(sorting_keys) > 0:
+            aggregation_keys = []
+            for sort_key, sort in zip(sorting_keys, sorting_list):
+                aggregation_keys += [sort_key] * sort.get_num_units()
+            self.set_property(key="aggregation_key", values=aggregation_keys)
 
         # add segments
         for i_seg in range(num_segments):

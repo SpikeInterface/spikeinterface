@@ -94,12 +94,34 @@ def test_curation():
     parent_sort = NumpySorting.from_unit_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
     parent_sort.set_property("some_names", ["unit_{}".format(k) for k in spikestimes[0].keys()])  # float
     cs = CurationSorting(parent_sort, properties_policy="remove")
-    cs.merge(["a", "c"])
+
+    # merge a-c
+    cs.merge(["a", "c"], new_unit_id="a-c")
     assert cs.sorting.get_num_units() == len(spikestimes[0]) - 1
+    cs.undo()
+
+    # split b in 2
     split_index = [v["b"] < 6 for v in spikestimes]  # split class 4 in even and odds
-    cs.split("b", split_index)
+    cs.split("b", split_index, new_unit_ids=["b1", "b2"])
     after_split = cs.sorting
-    assert cs.sorting.get_num_units() == len(spikestimes[0])
+    assert cs.sorting.get_num_units() == len(spikestimes[0]) + 1
+    cs.undo()
+
+    # split one unit in 3
+    split_index3 = [v["b"] % 3 + 100 for v in spikestimes]  # split class in 3
+    cs.split("b", split_index3, new_unit_ids=["b1", "b2", "b3"])
+    after_split = cs.sorting
+    for segment_index in range(len(spikestimes)):
+        _, split_counts = np.unique(split_index3[segment_index], return_counts=True)
+        for unit_id, count in zip(["b1", "b2", "b3"], split_counts):
+            assert len(after_split.get_unit_spike_train(unit_id, segment_index=segment_index)) == count
+    assert after_split.get_num_units() == len(spikestimes[0]) + 2
+    cs.undo()
+
+    # split with renaming
+    cs.split("b", split_index3)
+    after_split = cs.sorting
+    assert after_split.get_num_units() == len(spikestimes[0]) + 2
 
     all_units = cs.sorting.get_unit_ids()
     cs.merge(all_units, new_unit_id=all_units[0])

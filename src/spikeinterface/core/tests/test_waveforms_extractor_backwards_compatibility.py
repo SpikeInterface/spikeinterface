@@ -11,15 +11,8 @@ from spikeinterface.core.waveforms_extractor_backwards_compatibility import Mock
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import extract_waveforms as mock_extract_waveforms
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import load_waveforms as load_waveforms_backwards
 
-
 # remove this when WaveformsExtractor will be removed
 from spikeinterface.core import extract_waveforms as old_extract_waveforms
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
 
 
 def get_dataset():
@@ -45,7 +38,8 @@ def get_dataset():
     return recording, sorting
 
 
-def test_extract_waveforms():
+def test_extract_waveforms(create_cache_folder):
+    cache_folder = create_cache_folder
     recording, sorting = get_dataset()
 
     folder = cache_folder / "old_waveforms_extractor"

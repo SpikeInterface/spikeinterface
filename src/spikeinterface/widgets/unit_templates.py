@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from spikeinterface.core import SortingAnalyzer
 from .unit_waveforms import UnitWaveformsWidget
 from .base import to_attr
 
@@ -17,13 +18,16 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
 
         dp = to_attr(data_plot)
 
+        sorting_analyzer = dp.sorting_analyzer_or_templates
+        assert isinstance(sorting_analyzer, SortingAnalyzer), "This widget requires a SortingAnalyzer as input"
+
         assert len(dp.templates_shading) <= 4, "Only 2 ans 4 templates shading are supported in sortingview"
 
         # ensure serializable for sortingview
-        unit_id_to_channel_ids = dp.sparsity.unit_id_to_channel_ids
-        unit_id_to_channel_indices = dp.sparsity.unit_id_to_channel_indices
+        unit_id_to_channel_ids = dp.final_sparsity.unit_id_to_channel_ids
+        unit_id_to_channel_indices = dp.final_sparsity.unit_id_to_channel_indices
 
-        unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
+        unit_ids, channel_ids = make_serializable(dp.unit_ids, sorting_analyzer.channel_ids)
 
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
@@ -50,7 +54,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         v_average_waveforms = vv.AverageWaveforms(average_waveforms=aw_items, channel_locations=locations)
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting_analyzer.sorting)
+            v_units_table = generate_unit_table_view(sorting_analyzer.sorting)
 
             self.view = vv.Box(
                 direction="horizontal",

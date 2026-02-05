@@ -4,12 +4,14 @@ from pathlib import Path
 import os
 import numpy as np
 import sys
+import importlib.util
+from importlib.metadata import version
 
-from ..basesorter import BaseSorter, get_job_kwargs
-from ..utils import ShellScript
+from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
+from spikeinterface.sorters.utils import ShellScript
 
 from spikeinterface.core import write_binary_recording
-from spikeinterface.extractors import YassSortingExtractor
+from spikeinterface.extractors.extractor_classes import YassSortingExtractor
 
 
 class YassSorter(BaseSorter):
@@ -96,7 +98,7 @@ class YassSorter(BaseSorter):
 
                             1.  Retraining Neural Networks (Default)
 
-                            rec, sort = se.toy_example(duration=300)
+                            rec, sort = generate_ground_truth_recording(durations=[300])
                             sorting_yass = ss.run_yass(rec, '/home/cat/Downloads/test2')
 
 
@@ -110,20 +112,16 @@ class YassSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import yaml
-            import yass
-
+        yass_spec = importlib.util.find_spec("yass")
+        if yass_spec is not None:
             HAVE_YASS = True
-        except ImportError:
+        else:
             HAVE_YASS = False
         return HAVE_YASS
 
     @classmethod
     def get_sorter_version(cls):
-        import yass
-
-        return yass.__version__
+        return version("yass")
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):

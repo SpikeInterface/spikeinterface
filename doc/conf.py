@@ -29,17 +29,16 @@ if not os.path.isdir('sources'):
 
 # clean some folder
 folders =  [
-    '../examples/modules_gallery/core/my_recording',
-    '../examples/modules_gallery/core/my_sorting',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/core/waveform_folder_parallel',
-    '../examples/modules_gallery/core/waveform_folder_sparse',
-    '../examples/modules_gallery/core/waveform_folder_sparse_direct',
-    '../examples/modules_gallery/core/waveform_folder2',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/qualitymetrics/waveforms_mearec',
-    '../examples/modules_gallery/qualitymetrics/wfs_mearec',
-    '../examples/modules_gallery/widgets/waveforms_mearec',
+    '../examples/tutorials/core/my_recording',
+    '../examples/tutorials/core/my_sorting',
+    '../examples/tutorials/core/analyzer_folder',
+    '../examples/tutorials/core/analyzer_some_units',
+    '../examples/tutorials/core/analyzer.zarr',
+    '../examples/tutorials/curation/my_folder',
+    '../examples/tutorials/metrics/curated_sorting',
+    '../examples/tutorials/metrics/clean_analyzer.zarr',
+    '../examples/tutorials/widgets/waveforms_mearec',
+    '../examples/forhowto/cached'
 
 ]
 
@@ -51,8 +50,8 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
-author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+copyright = '2022-2025, SpikeInterface Team'
+author = 'SpikeInterface Team'
 
 
 # -- General configuration ---------------------------------------------------
@@ -63,18 +62,24 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.autosectionlabel',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinxcontrib.autodoc_pydantic',
+    'sphinx.ext.autosectionlabel',
     'sphinx_design',
+    'sphinxcontrib.jquery',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting"
 ]
 
+autosectionlabel_prefix_document = True
+
 numpydoc_show_class_members = False
 
+autodoc_pydantic_model_show_json = True
+autodoc_pydantic_model_show_config_summary = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -98,7 +103,6 @@ try:
     import sphinx_rtd_theme
 
     html_theme = "sphinx_rtd_theme"
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 except ImportError:
     print("RTD theme not installed, using default")
     html_theme = 'alabaster'
@@ -107,8 +111,9 @@ except ImportError:
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
-
-html_favicon = "images/favicon-32x32.png"
+# html_css_files = ['custom.css']
+html_favicon = "images/logo.png"
+html_logo = "images/logo.png"
 
 
 from sphinx_gallery.sorting import ExplicitOrder
@@ -116,19 +121,24 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/modules_gallery'],
-    'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
+    # This is the default but including here explicitly. Should build all docs and fail on gallery failures only.
+    # other option would be abort_on_example_error, but this fails on first failure. So we decided against this.
+    'only_warn_on_example_error': False,
+    'examples_dirs': ['../examples/tutorials', '../examples/forhowto'],
+    'gallery_dirs': ['tutorials', 'forhowto'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
-                                       '../examples/modules_gallery/core',
-                                       '../examples/modules_gallery/extractors',
-                                       '../examples/modules_gallery/qualitymetrics',
-                                       '../examples/modules_gallery/comparison',
-                                       '../examples/modules_gallery/widgets',
+                                       '../examples/tutorials/core',
+                                       '../examples/tutorials/extractors',
+                                       '../examples/tutorials/curation',
+                                       '../examples/tutorials/metrics',
+                                       '../examples/tutorials/comparison',
+                                       '../examples/tutorials/widgets',
+                                       '../examples/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
-    'ignore_pattern': '/generate_',
+    'ignore_pattern': '/generate_*',
     'nested_sections': False,
+    'copyfile_regex': r'.*\.rst|.*\.png|.*\.svg'
 }
 
 intersphinx_mapping = {

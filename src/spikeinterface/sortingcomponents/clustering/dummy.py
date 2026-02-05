@@ -11,9 +11,12 @@ class DummyClustering:
     """
 
     _default_params = {}
+    name = "dummy"
+    params_doc = """
+    """
 
     @classmethod
-    def main_function(cls, recording, peaks, params):
+    def main_function(cls, recording, peaks, params, job_kwargs=dict()):
         labels = np.arange(recording.get_num_channels(), dtype="int64")
         peak_labels = peaks["channel_index"]
         return labels, peak_labels
