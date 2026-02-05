@@ -41,11 +41,11 @@ class MergeApLfpRecording(BaseRecording):
         BaseRecording.__init__(self, ap_recording.sampling_frequency, ap_recording.channel_ids, ap_recording.dtype)
         ap_recording.copy_metadata(self)
 
-        if ap_recording.has_scaled():
+        if ap_recording.has_scaleable_traces():
             ap_gain = ap_recording.get_property("gain_to_uV")
         else:
             ap_gain = np.ones(ap_recording.get_num_channels(), dtype=np.float32)
-        if lfp_recording.has_scaled():
+        if lfp_recording.has_scaleable_traces():
             lfp_gain = lfp_recording.get_property("gain_to_uV")
         else:
             lfp_gain = np.ones(lfp_recording.get_num_channels(), dtype=np.float32)
