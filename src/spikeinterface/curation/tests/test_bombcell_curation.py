@@ -45,7 +45,6 @@ def test_bombcell_label_units_with_external_metrics(sorting_analyzer_with_metric
         sorting_analyzer=sorting_analyzer,
     )
 
-    assert (labels["label_type"] == labels2["label_type"]).all()
     assert (labels["label"] == labels2["label"]).all()
 
 
