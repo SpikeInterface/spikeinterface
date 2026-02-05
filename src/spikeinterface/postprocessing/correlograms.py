@@ -9,6 +9,7 @@ from tqdm.auto import tqdm
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import multiprocessing as mp
 from threadpoolctl import threadpool_limits
+from itertools import chain
 
 import numpy as np
 
@@ -221,6 +222,9 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
     method : "auto" | "numpy" | "numba", default: "auto"
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
+    fast_mode : "auto" | "never" | "always", default: "auto"
+        If "auto", a faster multithreaded implementations is used if method is "numba" and
+        if the number of units is greater than 300. 
 
     Returns
     -------
@@ -258,7 +262,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: bool = False):
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
         return params
 
@@ -273,15 +277,6 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
-        """
-        When two units are merged, their cross-correlograms with other units become the sum
-        of the previous cross-correlograms. More precisely, if units i and j get merged into
-        unit k, then the new unit's cross-correlogram with any other unit l is:
-            C_{k,l} = C_{i,l} + C_{j,l}
-            C_{l,k} = C_{l,k} + C_{l,j}
-        Here, we apply this formula to quickly compute correlograms for merged units.
-        """
-
         new_bins = self.data["bins"]
         all_new_units = new_sorting_analyzer.unit_ids
         arr = self.data["acgs"]
@@ -303,10 +298,27 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        # TODO: for now we just copy
-        new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
-        new_data = dict(acgs=new_acgs, bins=new_bins)
-        return new_data
+        
+        arr = self.data["acgs"]
+        num_dims = len(self.data["bins"])
+        all_new_units = new_sorting_analyzer.unit_ids
+        new_acgs = np.zeros((len(all_new_units), num_dims), dtype=arr.dtype)
+
+        # compute all new isi at once
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids_f)
+        only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
+
+        for unit_ind, unit_id in enumerate(all_new_units):
+            if unit_id not in new_unit_ids_f:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_acgs[unit_ind, :] = arr[keep_unit_index, :]
+            else:
+                new_unit_index = new_sorting.id_to_index(unit_id)
+                new_acgs[unit_ind, :] = only_new_acgs[new_unit_index, :]
+
+        new_extension_data = dict(acgs=new_acgs, bins=new_bins)
+        return new_extension_data
 
     def _run(self, verbose=False):
         acgs, bins = _compute_auto_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
@@ -791,7 +803,7 @@ if HAVE_NUMBA:
 
 
 def compute_auto_correlograms(
-    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode=False
+    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode="auto"
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -829,6 +841,9 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
     method : str
         To use "numpy" or "numba". "auto" will use numba if available,
         otherwise numpy.
+    fast_mode : "auto" | "never" | "always", default: "auto"
+        If "auto", a faster multithreaded implementations is used if method is "numba" and
+        if the number of units is greater than 300. 
 
     Returns
     -------
@@ -843,11 +858,18 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
+    if method == "numba" and fast_mode == "auto":
+        num_units = len(sorting.unit_ids)
+        fast_mode = num_units > 300
+    elif fast_mode == "never":
+        fast_mode = False
+    elif fast_mode == "always":
+        fast_mode = True
 
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
 
     if method == "numpy":
-        correlograms = _compute_auto_correlograms_numpy(sorting, window_size, bin_size, fast_mode)
+        correlograms = _compute_auto_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
         correlograms = _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode)
 
@@ -855,7 +877,7 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
 
 
 # LOW-LEVEL IMPLEMENTATIONS
-def _compute_auto_correlograms_numpy(sorting, window_size, bin_size, fast_mode=False):
+def _compute_auto_correlograms_numpy(sorting, window_size, bin_size):
     """
     Computes auto-correlograms for all units in a sorting object.
 
