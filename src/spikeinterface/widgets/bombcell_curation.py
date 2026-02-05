@@ -40,7 +40,7 @@ class LabelingHistogramsWidget(BaseWidget):
             metrics_to_plot = [m for m in thresholds.keys() if m in combined_metrics.columns]
 
         plot_data = dict(
-            quality_metrics=combined_metrics,
+            metrics=combined_metrics,
             thresholds=thresholds,
             metrics_to_plot=metrics_to_plot,
         )
@@ -51,7 +51,7 @@ class LabelingHistogramsWidget(BaseWidget):
         import matplotlib.pyplot as plt
 
         dp = to_attr(data_plot)
-        quality_metrics = dp.quality_metrics
+        metrics = dp.metrics
         thresholds = dp.thresholds
         metrics_to_plot = dp.metrics_to_plot
 
@@ -76,7 +76,7 @@ class LabelingHistogramsWidget(BaseWidget):
             row, col = idx // n_cols, idx % n_cols
             ax = axes[row, col]
 
-            values = quality_metrics[metric_name].values
+            values = metrics[metric_name].values
             if metric_name in absolute_value_metrics:
                 values = np.abs(values)
             values = values[~np.isnan(values) & ~np.isinf(values)]
@@ -144,7 +144,7 @@ class UpsetPlotWidget(BaseWidget):
             else:
                 unit_labels_to_plot = ["noise", "mua", "non_soma"]
         plot_data = dict(
-            quality_metrics=combined_metrics,
+            metrics=combined_metrics,
             unit_labels=unit_labels,
             thresholds=thresholds,
             unit_labels_to_plot=unit_labels_to_plot,
@@ -172,7 +172,7 @@ class UpsetPlotWidget(BaseWidget):
         import pandas as pd
 
         dp = to_attr(data_plot)
-        quality_metrics = dp.quality_metrics
+        metrics = dp.metrics
         unit_labels = dp.unit_labels
         thresholds = dp.thresholds
         unit_labels_to_plot = dp.unit_labels_to_plot
@@ -201,7 +201,7 @@ class UpsetPlotWidget(BaseWidget):
             self.figures = [fig]
             return
 
-        failure_table = self._build_failure_table(quality_metrics, thresholds)
+        failure_table = self._build_failure_table(metrics, thresholds)
         figures = []
         axes_list = []
 
@@ -260,16 +260,16 @@ class UpsetPlotWidget(BaseWidget):
         self.figure = figures[0] if figures else None
         self.axes = axes_list
 
-    def _build_failure_table(self, quality_metrics, thresholds):
+    def _build_failure_table(self, metrics, thresholds):
         import pandas as pd
 
         absolute_value_metrics = ["amplitude_median"]
         failure_data = {}
 
         for metric_name, thresh in thresholds.items():
-            if metric_name not in quality_metrics.columns:
+            if metric_name not in metrics.columns:
                 continue
-            values = quality_metrics[metric_name].values.copy()
+            values = metrics[metric_name].values.copy()
             if metric_name in absolute_value_metrics:
                 values = np.abs(values)
 
@@ -280,7 +280,7 @@ class UpsetPlotWidget(BaseWidget):
                 failed |= values > thresh["max"]
             failure_data[metric_name] = failed
 
-        return pd.DataFrame(failure_data, index=quality_metrics.index)
+        return pd.DataFrame(failure_data, index=metrics.index)
 
 
 def plot_unit_labeling_all(
@@ -293,7 +293,7 @@ def plot_unit_labeling_all(
     **kwargs,
 ):
     """
-    Generate all unit labeling plots and optionally save to folder.
+    Generate all unit labeling plots.
 
     Parameters
     ----------
