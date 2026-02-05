@@ -100,12 +100,6 @@ def threshold_metrics_label_units(
         if not is_threshold_disabled(max_value):
             metric_ok &= values <= max_value
 
-        metric_pass = np.ones(len(metrics), dtype=bool)
-        if not is_threshold_disabled(min_value):
-            metric_pass &= values >= min_value
-        if not is_threshold_disabled(max_value):
-            metric_pass &= values <= max_value
-
         # Handle NaNs
         nan_mask = slice(None)
         if nan_policy == "fail":
