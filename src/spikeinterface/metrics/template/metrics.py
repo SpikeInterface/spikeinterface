@@ -99,8 +99,8 @@ def get_trough_and_peak_idx(
     peaks_info["trough_widths"] = trough_props.get("widths", np.full(len(trough_locs), np.nan))
     peaks_info["trough_sample_index"] = trough_locs[main_trough_idx]
     peaks_info["trough_width"] = trough_props.get("widths", np.array([np.nan]))[main_trough_idx]
-    peaks_info["trough_width_left"] = trough_props.get("left_ips", np.array([-1], dtype=int))[main_trough_idx]
-    peaks_info["trough_width_right"] = trough_props.get("right_ips", np.array([-1], dtype=int))[main_trough_idx]
+    peaks_info["trough_width_left"] = int(np.round(trough_props.get("left_ips", np.array([-1]))[main_trough_idx]))
+    peaks_info["trough_width_right"] = int(np.round(trough_props.get("right_ips", np.array([-1]))[main_trough_idx]))
 
     # --- Find peaks before the main trough ---
     if main_trough_loc > 3:
@@ -142,12 +142,12 @@ def get_trough_and_peak_idx(
         peaks_info["peak_before_widths"] = peak_props_before.get("widths", np.full(len(peak_locs_before), np.nan))
         peaks_info["peak_before_sample_index"] = peak_locs_before[main_peak_before_idx]
         peaks_info["peak_before_width"] = peak_props_before.get("widths", np.array([np.nan]))[main_peak_before_idx]
-        peaks_info["peak_before_width_left"] = peak_props_before.get("left_ips", np.array([-1], dtype=int))[
-            main_peak_before_idx
-        ]
-        peaks_info["peak_before_width_right"] = peak_props_before.get("right_ips", np.array([-1], dtype=int))[
-            main_peak_before_idx
-        ]
+        peaks_info["peak_before_width_left"] = int(
+            np.round(peak_props_before.get("left_ips", np.array([-1]))[main_peak_before_idx])
+        )
+        peaks_info["peak_before_width_right"] = int(
+            np.round(peak_props_before.get("right_ips", np.array([-1]))[main_peak_before_idx])
+        )
     else:
         peaks_info["peak_before_sample_indices"] = np.array([], dtype=int)
         peaks_info["peak_before_prominences"] = np.array([], dtype=float)
@@ -200,11 +200,11 @@ def get_trough_and_peak_idx(
         peaks_info["peak_after_widths"] = peak_props_after.get("widths", np.full(len(peak_locs_after), np.nan))
         peaks_info["peak_after_sample_index"] = peak_locs_after_abs[main_peak_after_idx]
         peaks_info["peak_after_width"] = peak_props_after.get("widths", np.array([np.nan]))[main_peak_after_idx]
-        peaks_info["peak_after_width_left"] = (
-            peak_props_after.get("left_ips", np.array([-1], dtype=int))[main_peak_after_idx] + main_trough_loc
+        peaks_info["peak_after_width_left"] = int(
+            np.round(peak_props_after.get("left_ips", np.array([-1]))[main_peak_after_idx] + main_trough_loc)
         )
-        peaks_info["peak_after_width_right"] = (
-            peak_props_after.get("right_ips", np.array([-1], dtype=int))[main_peak_after_idx] + main_trough_loc
+        peaks_info["peak_after_width_right"] = int(
+            np.round(peak_props_after.get("right_ips", np.array([-1]))[main_peak_after_idx] + main_trough_loc)
         )
     else:
         peaks_info["peak_after_sample_indices"] = np.array([], dtype=int)
