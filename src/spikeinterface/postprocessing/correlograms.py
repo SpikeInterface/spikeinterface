@@ -399,9 +399,6 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
-    fast_mode : bool, default: False
-        If True, use faster implementations (currently only if method is 'numba'),
-        at the cost of possible minor numerical differences.
 
     Returns
     -------
