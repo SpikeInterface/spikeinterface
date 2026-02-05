@@ -1,4 +1,5 @@
 import numpy as np
+from pathlib import Path
 import pytest
 
 from spikeinterface.core import NumpyRecording, load_extractor, normal_pdf, set_global_tmp_folder
