@@ -47,7 +47,7 @@ class ComputeCorrelograms(AnalyzerExtension):
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
     fast_mode : "auto" | "never" | "always", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300. 
+        if the number of units is greater than 300.
 
     Returns
     -------
@@ -324,7 +324,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
         otherwise numpy.
     fast_mode : "auto" | "never" | "always", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300. 
+        if the number of units is greater than 300.
 
     Returns
     -------
@@ -339,7 +339,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
-    
+
     if method == "numba" and fast_mode == "auto":
         num_units = len(sorting.unit_ids)
         fast_mode = num_units > 300
