@@ -375,7 +375,7 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, fast_mode)
+        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
 
         correlograms += c0
 
