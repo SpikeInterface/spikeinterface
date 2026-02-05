@@ -45,6 +45,9 @@ class ComputeCorrelograms(AnalyzerExtension):
         bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
     method : "auto" | "numpy" | "numba", default: "auto"
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
+    fast_mode : "auto" | "never" | "always", default: "auto"
+        If "auto", a faster multithreaded implementations is used if method is "numba" and
+        if the number of units is greater than 300. 
 
     Returns
     -------
@@ -88,7 +91,7 @@ class ComputeCorrelograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: bool = False):
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
 
         return params
@@ -215,7 +218,7 @@ def compute_correlograms(
     window_ms: float = 50.0,
     bin_ms: float = 1.0,
     method: str = "auto",
-    fast_mode: bool = False,
+    fast_mode: str = "auto",
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -300,7 +303,7 @@ def _compute_num_bins(window_size, bin_size):
     return num_bins, num_half_bins
 
 
-def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode=False):
+def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode="auto"):
     """
     Computes cross-correlograms from multiple units.
 
@@ -319,9 +322,9 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     method : str
         To use "numpy" or "numba". "auto" will use numba if available,
         otherwise numpy.
-    fast_mode : bool
-        If True, use faster implementations (currently only if method is 'numba'),
-        at the cost of possible minor numerical differences.
+    fast_mode : "auto" | "never" | "always", default: "auto"
+        If "auto", a faster multithreaded implementations is used if method is "numba" and
+        if the number of units is greater than 300. 
 
     Returns
     -------
@@ -336,6 +339,14 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
+    
+    if method == "numba" and fast_mode == "auto":
+        num_units = len(sorting.unit_ids)
+        fast_mode = num_units > 300
+    elif fast_mode == "never":
+        fast_mode = False
+    elif fast_mode == "always":
+        fast_mode = True
 
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
 
