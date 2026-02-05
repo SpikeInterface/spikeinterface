@@ -423,7 +423,7 @@ class _BaseNWBExtractor:
         # Avoid impossible import errors during deletion to reduce logging noise
         if getattr(sys, "meta_path", None) is None:
             return
-        
+
         # backend mode
         if hasattr(self, "_file"):
             if hasattr(self._file, "store"):
