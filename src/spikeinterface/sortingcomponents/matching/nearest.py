@@ -33,7 +33,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         templates,
         return_output=True,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         detect_threshold=5,
         noise_levels=None,
         detection_radius_um=100.0,
@@ -143,16 +143,13 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
 
     name = "nearest-svd"
     need_noise_levels = True
-    params_doc = (
-        NearestTemplatesPeeler.params_doc
-        + """
+    params_doc = NearestTemplatesPeeler.params_doc + """
     svd_model : The svd model used to project the waveforms
         The radius to use to select neighbour channels for locally exclusive detection.
     svd_radius_um : float
         The radius in um of the local neighboorhood used, centered on every detected peaks, to compute
         the distances with all the templates in the SVD space
     """
-    )
 
     def __init__(
         self,
@@ -161,7 +158,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         svd_model,
         return_output=True,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         detect_threshold=5,
         noise_levels=None,
         detection_radius_um=100.0,

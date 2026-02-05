@@ -23,7 +23,6 @@ from spikeinterface.core.generate import (
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
 
-
 # this should be moved in probeinterface but later
 _toy_probes = {
     "Neuropixels1-384": dict(

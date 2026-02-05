@@ -86,7 +86,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -222,7 +222,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -248,7 +248,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -416,7 +416,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
 
 # def plot_comparison_precision(benchmarks):
-#     import pylab as plt
+#     import matplotlib.pyplot as plt
 
 #     fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(15, 10), squeeze=False)
 
@@ -487,7 +487,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #         norms = np.linalg.norm(benchmark.gt_positions[:, :2], axis=1)
 #         cell_ind = np.argsort(norms)[0]
 
-#     import pylab as plt
+#     import matplotlib.pyplot as plt
 
 #     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
 #     plot_probe_map(benchmark.recording, ax=axs[0, 0])

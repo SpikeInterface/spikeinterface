@@ -158,16 +158,12 @@ class SpykingcircusSorter(BaseSorter):
         if "win" in sys.platform and sys.platform != "darwin":
             shell_cmd = """
                         spyking-circus {recording} -c {num_workers}
-                    """.format(
-                recording=sorter_output_folder / "recording.npy", num_workers=num_workers
-            )
+                    """.format(recording=sorter_output_folder / "recording.npy", num_workers=num_workers)
         else:
             shell_cmd = """
                         #!/bin/bash
                         spyking-circus {recording} -c {num_workers}
-                    """.format(
-                recording=sorter_output_folder / "recording.npy", num_workers=num_workers
-            )
+                    """.format(recording=sorter_output_folder / "recording.npy", num_workers=num_workers)
 
         shell_script = ShellScript(
             shell_cmd,
