@@ -306,6 +306,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 "peak_after_width_left",
                 "peak_after_width_right",
             ],
+            dtype=int,
         )
 
         return tmp_data

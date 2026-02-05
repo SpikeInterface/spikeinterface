@@ -82,7 +82,7 @@ def get_trough_and_peak_idx(
 
     if len(trough_locs) == 0:
         # Fallback: use global minimum
-        trough_locs = np.array([np.nanargmin(template)])
+        trough_locs = np.array([np.nanargmin(template)], dtype=int)
         trough_props = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
 
     # Determine main trough (most prominent, or first if no valid prominences)
@@ -99,8 +99,8 @@ def get_trough_and_peak_idx(
     peaks_info["trough_widths"] = trough_props.get("widths", np.full(len(trough_locs), np.nan))
     peaks_info["trough_sample_index"] = trough_locs[main_trough_idx]
     peaks_info["trough_width"] = trough_props.get("widths", np.array([np.nan]))[main_trough_idx]
-    peaks_info["trough_width_left"] = trough_props.get("left_ips", np.array([np.nan]))[main_trough_idx]
-    peaks_info["trough_width_right"] = trough_props.get("right_ips", np.array([np.nan]))[main_trough_idx]
+    peaks_info["trough_width_left"] = trough_props.get("left_ips", np.array([-1], dtype=int))[main_trough_idx]
+    peaks_info["trough_width_right"] = trough_props.get("right_ips", np.array([-1], dtype=int))[main_trough_idx]
 
     # --- Find peaks before the main trough ---
     if main_trough_loc > 3:
@@ -126,7 +126,7 @@ def get_trough_and_peak_idx(
 
         # If still no peaks found, fall back to argmax
         if len(peak_locs_before) == 0:
-            peak_locs_before = np.array([np.nanargmax(template_before)])
+            peak_locs_before = np.array([np.nanargmax(template_before)], dtype=int)
             peak_props_before = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
 
         peak_prominences_before = peak_props_before.get("prominences", np.array([]))
@@ -142,20 +142,20 @@ def get_trough_and_peak_idx(
         peaks_info["peak_before_widths"] = peak_props_before.get("widths", np.full(len(peak_locs_before), np.nan))
         peaks_info["peak_before_sample_index"] = peak_locs_before[main_peak_before_idx]
         peaks_info["peak_before_width"] = peak_props_before.get("widths", np.array([np.nan]))[main_peak_before_idx]
-        peaks_info["peak_before_width_left"] = peak_props_before.get("left_ips", np.array([np.nan]))[
+        peaks_info["peak_before_width_left"] = peak_props_before.get("left_ips", np.array([-1], dtype=int))[
             main_peak_before_idx
         ]
-        peaks_info["peak_before_width_right"] = peak_props_before.get("right_ips", np.array([np.nan]))[
+        peaks_info["peak_before_width_right"] = peak_props_before.get("right_ips", np.array([-1], dtype=int))[
             main_peak_before_idx
         ]
     else:
         peaks_info["peak_before_sample_indices"] = np.array([], dtype=int)
         peaks_info["peak_before_prominences"] = np.array([], dtype=float)
         peaks_info["peak_before_widths"] = np.array([], dtype=float)
-        peaks_info["peak_before_sample_index"] = None
+        peaks_info["peak_before_sample_index"] = -1
         peaks_info["peak_before_width"] = np.nan
-        peaks_info["peak_before_width_left"] = np.nan
-        peaks_info["peak_before_width_right"] = np.nan
+        peaks_info["peak_before_width_left"] = -1
+        peaks_info["peak_before_width_right"] = -1
 
     # --- Find peaks after the main trough (repolarization peaks) ---
     if main_trough_loc < len(template) - 3:
@@ -181,7 +181,7 @@ def get_trough_and_peak_idx(
 
         # If still no peaks found, fall back to argmax
         if len(peak_locs_after) == 0:
-            peak_locs_after = np.array([np.nanargmax(template_after)])
+            peak_locs_after = np.array([np.nanargmax(template_after)], dtype=int)
             peak_props_after = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
 
         # Convert to original template coordinates
@@ -201,19 +201,19 @@ def get_trough_and_peak_idx(
         peaks_info["peak_after_sample_index"] = peak_locs_after_abs[main_peak_after_idx]
         peaks_info["peak_after_width"] = peak_props_after.get("widths", np.array([np.nan]))[main_peak_after_idx]
         peaks_info["peak_after_width_left"] = (
-            peak_props_after.get("left_ips", np.array([np.nan]))[main_peak_after_idx] + main_trough_loc
+            peak_props_after.get("left_ips", np.array([-1], dtype=int))[main_peak_after_idx] + main_trough_loc
         )
         peaks_info["peak_after_width_right"] = (
-            peak_props_after.get("right_ips", np.array([np.nan]))[main_peak_after_idx] + main_trough_loc
+            peak_props_after.get("right_ips", np.array([-1], dtype=int))[main_peak_after_idx] + main_trough_loc
         )
     else:
         peaks_info["peak_after_sample_indices"] = np.array([], dtype=int)
         peaks_info["peak_after_prominences"] = np.array([], dtype=float)
         peaks_info["peak_after_widths"] = np.array([], dtype=float)
-        peaks_info["peak_after_sample_index"] = None
+        peaks_info["peak_after_sample_index"] = -1
         peaks_info["peak_after_width"] = np.nan
-        peaks_info["peak_after_width_left"] = np.nan
-        peaks_info["peak_after_width_right"] = np.nan
+        peaks_info["peak_after_width_left"] = -1
+        peaks_info["peak_after_width_right"] = -1
 
     return peaks_info
 
@@ -490,18 +490,18 @@ def _compute_halfwidth(template, extremum_index, sampling_frequency):
     # threshold is half of peak height (assuming baseline is 0)
     threshold = 0.5 * extremum_val
 
-    (cpre_idx,) = np.where(template[:extremum_index] > threshold)
-    (cpost_idx,) = np.where(template[extremum_index:] > threshold)
+    # Find where the template crosses the threshold before and after the extremum
+    threshold_crossings = np.where(np.diff(template >= threshold))[0]
+    crossings_before_extremum = threshold_crossings[threshold_crossings < extremum_index]
+    crossings_after_extremum = threshold_crossings[threshold_crossings >= extremum_index]
 
-    if len(cpre_idx) == 0 or len(cpost_idx) == 0:
+    if len(crossings_before_extremum) == 0 or len(crossings_after_extremum) == 0:
         hw = np.nan
     else:
-        # last occurence of template lower than thr, before peak
-        cross_pre_pk = cpre_idx[0] - 1
-        # first occurence of template lower than peak, after peak
-        cross_post_pk = cpost_idx[-1] + 1 + extremum_index
+        last_crossing_before_extremum = crossings_before_extremum[-1]
+        first_crossing_after_extremum = crossings_after_extremum[0]
 
-        hw = (cross_post_pk - cross_pre_pk) / sampling_frequency
+        hw = (first_crossing_after_extremum - last_crossing_before_extremum) / sampling_frequency
 
     return hw
 
@@ -526,12 +526,14 @@ def get_half_widths(template_single, sampling_frequency, peaks_info, **kwargs) -
     """
     # Compute the trough half width
     if peaks_info["trough_sample_index"] is None:
+        # Edge case: template is flat
         trough_hw = np.nan
     else:
         # for the trough, we invert the waveform to compute halfwidth as for a peak
         trough_hw = _compute_halfwidth(-template_single, peaks_info["trough_sample_index"], sampling_frequency)
     # Compute the peak half width
     if peaks_info["peak_after_sample_index"] is None and peaks_info["peak_before_sample_index"] is None:
+        # Edge case: template is flat
         peak_hw = np.nan
     else:
         # find largest peak
