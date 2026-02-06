@@ -137,7 +137,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         all_labels = sorting_analyzer.sorting.unit_ids[spike_unit_indices]
 
         # Get extremum channels for neighbor selection in sparse mode
-        extremum_channels = get_template_extremum_channel(sorting_analyzer, peak_sign=self.params["peak_sign"])
+        extremum_channels = get_template_extremum_channel(sorting_analyzer)
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric
