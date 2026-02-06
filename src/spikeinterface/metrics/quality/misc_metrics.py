@@ -1493,7 +1493,6 @@ misc_metrics_list = [
     FiringRate,
     PresenceRatio,
     SNR,
-    SNRBaseline,
     ISIViolation,
     RPViolation,
     SlidingRPViolation,
