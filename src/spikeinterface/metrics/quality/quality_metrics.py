@@ -80,7 +80,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         use_valid_periods=False,
         periods=None,
         # common extension kwargs
-        peak_sign="neg",
+        peak_sign=None,
         seed=None,
         skip_pc_metrics=False,
     ):
