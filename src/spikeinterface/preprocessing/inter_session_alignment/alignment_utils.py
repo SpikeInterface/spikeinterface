@@ -7,7 +7,6 @@ from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_
 from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
 from packaging.version import Version
 
-
 # #############################################################################
 # Get Histograms
 # #############################################################################

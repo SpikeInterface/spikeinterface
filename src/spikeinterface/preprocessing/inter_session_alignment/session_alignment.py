@@ -236,7 +236,7 @@ def align_sessions(
 
     print("Computing a single activity histogram from each session...")
 
-    (session_histogram_list, temporal_bin_centers_list, spatial_bin_centers, spatial_bin_edges, histogram_info_list) = (
+    session_histogram_list, temporal_bin_centers_list, spatial_bin_centers, spatial_bin_edges, histogram_info_list = (
         _compute_session_histograms(recordings_list, peaks_list, peak_locations_list, **estimate_histogram_kwargs)
     )
 
