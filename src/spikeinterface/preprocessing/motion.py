@@ -600,16 +600,6 @@ def run_peak_detection_pipeline_node(recording, gather_mode, detect_kwargs, loca
     return peaks, peak_locations, run_times
 
 
-_doc_presets = "\n"
-for k, v in motion_options_preset.items():
-    if k == "":
-        continue
-    doc = v["doc"]
-    _doc_presets = _doc_presets + f"      * {k}: {doc}\n"
-
-correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _shared_job_kwargs_doc)
-
-
 def save_motion_info(motion_info, folder, overwrite=False):
     """
     Saves motion info
