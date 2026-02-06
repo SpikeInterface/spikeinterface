@@ -201,7 +201,7 @@ def compute_snrs(
 class SNR(BaseMetric):
     metric_name = "snr"
     metric_function = compute_snrs
-    metric_params = {"peak_sign": "neg", "peak_mode": "extremum"}
+    metric_params = {"peak_sign": "both", "peak_mode": "extremum"}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
     depend_on = ["noise_levels", "templates"]
@@ -1493,7 +1493,7 @@ misc_metrics_list = [
     FiringRate,
     PresenceRatio,
     SNR,
-    # SNRBaseline,
+    SNRBaseline,
     ISIViolation,
     RPViolation,
     SlidingRPViolation,

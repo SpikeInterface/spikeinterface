@@ -33,13 +33,15 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in
                 f"get_dense_templates_array: return_in_uV={return_in_uV} is not possible SortingAnalyzer has the reverse"
             )
         ext = one_object.get_extension("templates")
+        extension_key = "median" if one_object.has_extension("waveforms") or "median" in ext.data else "average"
         if ext is not None:
-            if "average" in ext.data:
-                templates_array = ext.data.get("average")
-            elif "median" in ext.data:
-                templates_array = ext.data.get("median")
+            if one_object.has_extension("waveforms") or "median" in ext.data:
+                extension_key = "median"
+            elif "average" in ext.data:
+                extension_key = "average"
             else:
                 raise ValueError("Average or median templates have not been computed.")
+            templates_array = ext.get_templates(operator=extension_key)
         else:
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
