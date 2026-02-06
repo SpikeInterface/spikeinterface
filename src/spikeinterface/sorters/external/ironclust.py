@@ -211,9 +211,7 @@ class IronClustSorter(BaseSorter):
             shell_cmd = """
                 #!/bin/bash
                 p_ironclust {tmpdir} {dataset_dir}/raw.mda {dataset_dir}/geom.csv '' '' {tmpdir}/firings.mda {dataset_dir}/argfile.txt
-            """.format(
-                tmpdir=str(tmpdir), dataset_dir=str(dataset_dir)
-            )
+            """.format(tmpdir=str(tmpdir), dataset_dir=str(dataset_dir))
         else:
             cmd = """
                 addpath('{source_dir}');
@@ -242,17 +240,13 @@ class IronClustSorter(BaseSorter):
                     {disk_move}
                     cd {tmpdir}
                     matlab -nosplash -wait -log -r run_ironclust
-                """.format(
-                    disk_move=str(tmpdir)[:2], tmpdir=tmpdir
-                )
+                """.format(disk_move=str(tmpdir)[:2], tmpdir=tmpdir)
             else:
                 shell_cmd = """
                     #!/bin/bash
                     cd "{tmpdir}"
                     matlab -nosplash -nodisplay -log -r run_ironclust
-                """.format(
-                    tmpdir=tmpdir
-                )
+                """.format(tmpdir=tmpdir)
 
         shell_script = ShellScript(
             shell_cmd,

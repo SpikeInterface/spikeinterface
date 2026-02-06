@@ -55,7 +55,7 @@ class BinaryRecordingExtractor(BaseRecording):
         file_paths,
         sampling_frequency,
         dtype,
-        num_channels: int,
+        num_channels: int | None = None,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -63,12 +63,18 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
+        num_chan=None,
     ):
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
         else:
             assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
+
+        # DO NOT DELETE! This is for backward compatibility
+        if num_chan is not None:
+            assert num_channels is None, "When both num_channels and num_chan are provided, num_channels is used"
+            num_channels = num_chan
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 

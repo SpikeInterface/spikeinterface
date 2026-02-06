@@ -8,7 +8,6 @@ from spikeinterface.metrics.template import (
 )
 from spikeinterface.metrics.template.metrics import single_channel_metrics, multi_channel_metrics
 
-
 template_metrics = get_single_channel_template_metric_names()
 
 

@@ -25,7 +25,6 @@ from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDrif
 from .noise_tools import generate_noise
 from probeinterface import Probe
 
-
 # this should be moved in probeinterface but later
 _toy_probes = {
     "Neuropixels1-384": dict(

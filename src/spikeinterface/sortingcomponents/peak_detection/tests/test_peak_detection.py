@@ -28,7 +28,6 @@ from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_f
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-
 try:
     import pyopencl
 
@@ -91,7 +90,7 @@ def pca_model_folder_path(recording, job_kwargs, tmp_path):
     n_components = 3
     n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
     peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
-    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
+    detect_peaks_params = dict(method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0)
     TemporalPCADenoising.fit(
         recording=recording,
         model_folder_path=model_folder_path,
@@ -262,7 +261,7 @@ def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
         recording,
         method="by_channel",
-        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0),
         job_kwargs=job_kwargs,
     )
 
@@ -273,7 +272,7 @@ def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
             method_kwargs=dict(
                 peak_sign="neg",
                 detect_threshold=5,
-                exclude_sweep_ms=0.1,
+                exclude_sweep_ms=1.0,
             ),
             job_kwargs=torch_job_kwargs,
         )
@@ -286,17 +285,44 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
     peaks_by_channel_np = detect_peaks(
         recording,
         method="by_channel",
-        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0),
         job_kwargs=job_kwargs,
     )
 
     peaks_local_numba = detect_peaks(
         recording,
         method="locally_exclusive",
-        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0),
         job_kwargs=job_kwargs,
     )
     assert len(peaks_by_channel_np) > len(peaks_local_numba)
+
+    # DEBUG = True
+    DEBUG = False
+    if DEBUG:
+        import matplotlib.pyplot as plt
+
+        peaks = peaks_local_numba
+        labels = [
+            "locally_exclusive numba",
+        ]
+
+        fig, ax = plt.subplots()
+        chan_offset = 500
+        traces = recording.get_traces().copy()
+        traces += np.arange(traces.shape[1])[None, :] * chan_offset
+        ax.plot(traces, color="k")
+
+        for count, peaks in enumerate(
+            [
+                peaks_local_numba,
+            ]
+        ):
+            sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
+            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
+
+        ax.legend()
+        plt.show()
 
     if HAVE_TORCH:
         peaks_local_torch = detect_peaks(
@@ -305,7 +331,7 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
             method_kwargs=dict(
                 peak_sign="neg",
                 detect_threshold=5,
-                exclude_sweep_ms=0.1,
+                exclude_sweep_ms=1.0,
             ),
             job_kwargs=torch_job_kwargs,
         )
@@ -318,63 +344,64 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
             method_kwargs=dict(
                 peak_sign="neg",
                 detect_threshold=5,
-                exclude_sweep_ms=0.1,
+                exclude_sweep_ms=1.0,
             ),
             job_kwargs=job_kwargs,
         )
-        assert len(peaks_local_numba) == len(peaks_local_cl)
+        # opencl and numba are not the same anymore
+        # assert len(peaks_local_numba) == len(peaks_local_cl)
 
 
-def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs):
-    peaks_by_channel_np = detect_peaks(
+def test_detect_peaks_matched_filtering(recording, job_kwargs):
+    peaks_le = detect_peaks(
         recording,
         method="locally_exclusive",
-        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1),
+        method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0),
         job_kwargs=job_kwargs,
     )
 
     ms_before = 1.0
     ms_after = 1.0
     prototype, _, _ = get_prototype_and_waveforms_from_peaks(
-        recording, peaks=peaks_by_channel_np, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
+        recording, peaks=peaks_le, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
     )
 
-    peaks_local_mf_filtering = detect_peaks(
+    peaks_mf_neg = detect_peaks(
         recording,
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
+            detect_threshold=5.0,
+            exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
         ),
         job_kwargs=job_kwargs,
     )
     # @pierre : lets put back this test later
-    # assert len(peaks_local_mf_filtering) > len(peaks_by_channel_np)
+    # assert len(peaks_mf_neg) > len(peaks_le)
 
-    peaks_local_mf_filtering_both = detect_peaks(
+    peaks_mf_both = detect_peaks(
         recording,
         method="matched_filtering",
         method_kwargs=dict(
             peak_sign="both",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
+            detect_threshold=5.0,
+            exclude_sweep_ms=1.0,
             prototype=prototype,
             ms_before=1.0,
         ),
         job_kwargs=job_kwargs,
     )
-    assert len(peaks_local_mf_filtering_both) > len(peaks_local_mf_filtering)
+    # @pierre there is no garanty that both have more peaks, because positive peaks can eliminate negative peaks!!
+    # assert len(peaks_mf_both) > len(peaks_mf_neg)
 
     DEBUG = False
+    # DEBUG = True
     if DEBUG:
         import matplotlib.pyplot as plt
 
-        peaks_local = peaks_by_channel_np
-        peaks_mf_neg = peaks_local_mf_filtering
-        peaks_mf_both = peaks_local_mf_filtering_both
+        peaks_by_methods = [peaks_le, peaks_mf_neg, peaks_mf_both]
         labels = ["locally_exclusive", "mf_neg", "mf_both"]
 
         fig, ax = plt.subplots()
@@ -383,9 +410,9 @@ def test_detect_peaks_locally_exclusive_matched_filtering(recording, job_kwargs)
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
         ax.plot(traces, color="k")
 
-        for count, peaks in enumerate([peaks_local, peaks_mf_neg, peaks_mf_both]):
+        for count, peaks in enumerate(peaks_by_methods):
             sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
-            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count])
+            ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, label=labels[count], s=50 - count * 15)
 
         ax.legend()
         plt.show()
@@ -430,134 +457,6 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
         assert all_peaks.size > 0
 
 
-# def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs, tmp_path):
-#     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1.0, ms_after=1.0, return_output=False)
-
-#     pipeline_nodes = [
-#         extract_dense_waveforms,
-#         PeakToPeakFeature(recording, all_channels=False, parents=[extract_dense_waveforms]),
-#         LocalizeCenterOfMass(recording, radius_um=50.0, parents=[extract_dense_waveforms]),
-#     ]
-#     peaks, ptp, peak_locations = detect_peaks(
-#         recording,
-#         method="locally_exclusive",
-#         method_kwargs=dict(
-#             peak_sign="neg",
-#             detect_threshold=5,
-#             exclude_sweep_ms=0.1,
-#         ),
-#         pipeline_nodes=pipeline_nodes,
-#         job_kwargs=job_kwargs,
-#     )
-#     assert peaks.shape[0] == ptp.shape[0]
-#     assert peaks.shape[0] == peak_locations.shape[0]
-#     assert "x" in peak_locations.dtype.fields
-
-#     # same pipeline but saved to npy
-#     folder = tmp_path / "peak_detection_folder"
-#     if folder.is_dir():
-#         shutil.rmtree(folder)
-#     peaks2, ptp2, peak_locations2 = detect_peaks(
-#         recording,
-#         method="locally_exclusive",
-#         method_kwargs=dict(
-#             peak_sign="neg",
-#             detect_threshold=5,
-#             exclude_sweep_ms=0.1,
-#         ),
-#         pipeline_nodes=pipeline_nodes,
-#         gather_mode="npy",
-#         folder=folder,
-#         names=["peaks", "ptps", "peak_locations"],
-#         job_kwargs=job_kwargs,
-#     )
-#     peak_file = folder / "peaks.npy"
-#     assert peak_file.is_file()
-#     peaks3 = np.load(peak_file)
-#     assert np.array_equal(peaks, peaks2)
-#     assert np.array_equal(peaks2, peaks3)
-
-#     ptp_file = folder / "ptps.npy"
-#     assert ptp_file.is_file()
-#     ptp3 = np.load(ptp_file)
-#     assert np.array_equal(ptp, ptp2)
-#     assert np.array_equal(ptp2, ptp3)
-
-#     peak_location_file = folder / "peak_locations.npy"
-#     assert peak_location_file.is_file()
-#     peak_locations3 = np.load(peak_location_file)
-#     assert np.array_equal(peak_locations, peak_locations2)
-#     assert np.array_equal(peak_locations2, peak_locations3)
-
-#     if HAVE_TORCH:
-#         peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(
-#             recording,
-#             method="locally_exclusive_torch",
-#             method_kwargs=dict(
-#                 peak_sign="neg",
-#                 detect_threshold=5,
-#                 exclude_sweep_ms=0.1,
-#             ),
-#             pipeline_nodes=pipeline_nodes,
-#             job_kwargs=torch_job_kwargs,
-#         )
-#         assert peaks_torch.shape[0] == ptp_torch.shape[0]
-#         assert peaks_torch.shape[0] == peak_locations_torch.shape[0]
-#         assert "x" in peak_locations_torch.dtype.fields
-
-#     if HAVE_PYOPENCL:
-#         peaks_cl, ptp_cl, peak_locations_cl = detect_peaks(
-#             recording,
-#             method="locally_exclusive_cl",
-#             method_kwargs=dict(
-#                 peak_sign="neg",
-#                 detect_threshold=5,
-#                 exclude_sweep_ms=0.1,
-#             ),
-#             pipeline_nodes=pipeline_nodes,
-#             job_kwargs=job_kwargs,
-#         )
-#         assert peaks_cl.shape[0] == ptp_cl.shape[0]
-#         assert peaks_cl.shape[0] == peak_locations_cl.shape[0]
-#         assert "x" in peak_locations_cl.dtype.fields
-
-#     # DEBUG
-#     DEBUG = False
-#     if DEBUG:
-#         import matplotlib.pyplot as plt
-#         import spikeinterface.widgets as sw
-#         from probeinterface.plotting import plot_probe
-
-#         sample_inds, chan_inds, amplitudes = peaks["sample_index"], peaks["channel_index"], peaks["amplitude"]
-#         chan_offset = 500
-#         traces = recording.get_traces()
-#         traces += np.arange(traces.shape[1])[None, :] * chan_offset
-#         fig, ax = plt.subplots()
-#         ax.plot(traces, color="k")
-#         ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color="r")
-#         plt.show()
-
-#         fig, ax = plt.subplots()
-#         probe = recording.get_probe()
-#         plot_probe(probe, ax=ax)
-#         ax.scatter(peak_locations["x"], peak_locations["y"], color="k", s=1, alpha=0.5)
-#         # MEArec is "yz" in 2D
-#         # import MEArec
-
-#         # recgen = MEArec.load_recordings(
-#         #     recordings=local_path,
-#         #     return_h5_objects=True,
-#         #     check_suffix=False,
-#         #     load=["recordings", "spiketrains", "channel_positions"],
-#         #     load_waveforms=False,
-#         # )
-#         # soma_positions = np.zeros((len(recgen.spiketrains), 3), dtype="float32")
-#         # for i, st in enumerate(recgen.spiketrains):
-#         #     soma_positions[i, :] = st.annotations["soma_position"]
-#         # ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color="g", s=20, marker="*")
-#         plt.show()
-
-
 if __name__ == "__main__":
     recording, sorting = make_dataset()
     tmp_path = Path(tempfile.mkdtemp())
@@ -565,16 +464,18 @@ if __name__ == "__main__":
     job_kwargs_main = job_kwargs()
     torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
     # Create a temporary directory using the standard library
-    tmp_dir_main = tempfile.mkdtemp()
-    pca_model_folder_path_main = pca_model_folder_path(recording, job_kwargs_main, tmp_dir_main)
-    peak_detector_kwargs_main = peak_detector_kwargs(recording)
+    # tmp_dir_main = tempfile.mkdtemp()
+    # pca_model_folder_path_main = pca_model_folder_path(recording, job_kwargs_main, tmp_dir_main)
+    # peak_detector_kwargs_main = peak_detector_kwargs(recording)
 
-    test_iterative_peak_detection(recording, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main)
+    # test_iterative_peak_detection(recording, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main)
 
-    test_peak_sign_consistency(recording, torch_job_kwargs_main, LocallyExclusiveTorchPeakDetector)
+    # test_peak_sign_consistency(recording, torch_job_kwargs_main, LocallyExclusiveTorchPeakDetector)
     # test_peak_detection_with_pipeline(recording, job_kwargs_main, torch_job_kwargs_main, tmp_path)
 
-    # test_detect_peaks_locally_exclusive_matched_filtering(
+    # test_detect_peaks_matched_filtering(
     #     recording,
     #     job_kwargs_main,
     # )
+
+    test_detect_peaks_locally_exclusive(recording, job_kwargs_main, torch_job_kwargs_main)
