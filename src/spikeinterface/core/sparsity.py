@@ -365,9 +365,39 @@ class ChannelSparsity:
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
 
     @classmethod
-    def from_radius(cls, templates_or_sorting_analyzer, radius_um, peak_sign="neg"):
+    def from_radius_and_main_channel(cls, unit_ids, channel_ids, main_channel_index, channel_locations, radius_um):
         """
-        Construct sparsity from a radius around the best channel.
+        Construct sparsity from a radius around the main channel.
+        Use the "radius_um" argument to specify the radius in um.
+
+        Parameters
+        ----------
+        main_channel_index : np.array
+            Main channel index per units.
+        channel_locations : np.array
+            Channel locations of the recording.
+        radius_um : float
+            Radius in um for "radius" method.
+        peak_sign : "neg" | "pos" | "both"
+            Sign of the template to compute best channels.
+
+        Returns
+        -------
+        sparsity : ChannelSparsity
+            The estimated sparsity.
+        """
+        mask = np.zeros((len(unit_ids), len(channel_ids)), dtype="bool")
+        distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
+        for unit_ind, main_chan in enumerate(main_channel_index):
+            (chan_inds,) = np.nonzero(distances[main_chan, :] <= radius_um)
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, unit_ids, channel_ids)
+
+
+    @classmethod
+    def from_radius(cls, templates_or_sorting_analyzer, radius_um, peak_sign="both"):
+        """
+        Construct sparsity from a radius around the main channel.
         Use the "radius_um" argument to specify the radius in um.
 
         Parameters
@@ -384,16 +414,14 @@ class ChannelSparsity:
         sparsity : ChannelSparsity
             The estimated sparsity.
         """
-        from .template_tools import get_template_extremum_channel
-
         mask = np.zeros(
             (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
         )
         channel_locations = templates_or_sorting_analyzer.get_channel_locations()
         distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
-        best_chan = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, outputs="index")
+        main_channel_index = templates_or_sorting_analyzer.get_main_channel(outputs="index")
         for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
-            chan_ind = best_chan[unit_id]
+            chan_ind = main_channel_index[unit_ind]
             (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
             mask[unit_ind, chan_inds] = True
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
@@ -724,6 +752,7 @@ def estimate_sparsity(
     amplitude_mode: "extremum" | "peak_to_peak" = "extremum",
     by_property: str | None = None,
     noise_levels: np.ndarray | list | None = None,
+    main_channel_index: np.ndarray | list | None = None,
     **job_kwargs,
 ):
     """
@@ -732,11 +761,10 @@ def estimate_sparsity(
     For the "snr" method, `noise_levels` must passed with the `noise_levels` argument.
     These can be computed with the `get_noise_levels()` function.
 
-    Contrary to the previous implementation:
-      * all units are computed in one read of recording
-      * it doesn't require a folder
-      * it doesn't consume too much memory
-      * it uses internally the `estimate_templates_with_accumulator()` which is fast and parallel
+    If main_channel_index is given and method="radius" then there is not need estimate
+    the templates otherwise the templates must be estimated using 
+    `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
+    the recording.
 
     Note that the "energy" method is not supported because it requires a `SortingAnalyzer` object.
 
@@ -755,6 +783,9 @@ def estimate_sparsity(
     noise_levels : np.array | None, default: None
         Noise levels required for the "snr" and "energy" methods. You can use the
         `get_noise_levels()` function to compute them.
+    main_channel_index : np.array | None, default: None
+        Main channel indicies can be provided in case of method="radius", this avoid the 
+        `estimate_templates_with_accumulator()` which is slow.
     {}
 
     Returns
@@ -779,7 +810,14 @@ def estimate_sparsity(
         chan_locs = recording.get_channel_locations()
         probe = recording.create_dummy_probe_from_locations(chan_locs)
 
-    if method != "by_property":
+    if method == "radius" and  main_channel_index is not None:
+        assert main_channel_index.size == sorting.unit_ids.size
+        chan_locs = recording.get_channel_locations()
+        sparsity = ChannelSparsity.from_radius_and_main_channel(
+            sorting.unit_ids, recording.channel_ids, main_channel_index, chan_locs, radius_um
+        )
+
+    elif method != "by_property":
         nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
         nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 

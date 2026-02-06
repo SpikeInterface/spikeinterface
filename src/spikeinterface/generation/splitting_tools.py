@@ -107,9 +107,9 @@ def split_sorting_by_amplitudes(
 
     rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
-    from spikeinterface.core.template_tools import get_template_extremum_channel
 
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
+    extremum_channel_inds = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+
     spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds, concatenated=False)
     new_spikes = spikes[0].copy()
     amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()

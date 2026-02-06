@@ -5,8 +5,6 @@ import shutil
 
 from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
 from spikeinterface.benchmark.benchmark_clustering import ClusteringStudy
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 from pathlib import Path
 
@@ -33,7 +31,8 @@ def test_benchmark_clustering(create_cache_folder):
 
         # sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
         # sorting_analyzer.compute(["random_spikes", "templates"])
-        extremum_channel_inds = get_template_extremum_channel(gt_analyzer, outputs="index")
+        extremum_channel_inds = gt_analyzer.get_main_channel(outputs="index", with_dict=True)
+
         spikes = gt_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         peaks[dataset] = spikes
 

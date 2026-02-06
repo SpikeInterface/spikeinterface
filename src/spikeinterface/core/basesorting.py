@@ -15,6 +15,9 @@ class BaseSorting(BaseExtractor):
     """
     Abstract class representing several segment several units and relative spiketrains.
     """
+    _main_properties = [
+        "main_channel_index",
+    ]
 
     def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
@@ -786,6 +789,7 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
 
+    # TODO sam : change extremum_channel_inds to main_channel_index with vector
     def to_spike_vector(
         self,
         concatenated=True,
@@ -806,7 +810,8 @@ class BaseSorting(BaseExtractor):
         extremum_channel_inds : None or dict, default: None
             If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
-            This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
+            This dict can be given by analyzer.get_main_channel(outputs="index", with_dict=True)
+
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.

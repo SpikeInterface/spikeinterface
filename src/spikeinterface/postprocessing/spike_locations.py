@@ -4,7 +4,6 @@ import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.sortinganalyzer import register_result_extension
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
@@ -75,9 +74,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
         peak_sign = self.params["spike_retriver_kwargs"]["peak_sign"]
-        extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
-        )
+        extremum_channels_indices = self.sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
 
         retriever = SpikeRetriever(
             sorting,

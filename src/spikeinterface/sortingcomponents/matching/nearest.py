@@ -53,13 +53,11 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         num_channels = recording.get_num_channels()
 
         if neighborhood_radius_um is not None:
-            from spikeinterface.core.template_tools import get_template_extremum_channel
+            main_channels = self.templates.get_main_channel(main_channel_peak_sign=self.peak_sign, outputs="index", with_dict=False)
 
-            best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
-            best_channels = np.array([best_channels[i] for i in templates.unit_ids])
             channel_locations = recording.get_channel_locations()
             template_distances = np.linalg.norm(
-                channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :], axis=2
+                channel_locations[:, None] - channel_locations[main_channels][np.newaxis, :], axis=2
             )
             self.neighborhood_mask = template_distances <= neighborhood_radius_um
         else:

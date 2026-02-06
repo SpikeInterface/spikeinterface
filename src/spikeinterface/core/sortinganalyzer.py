@@ -45,6 +45,10 @@ from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
 from .node_pipeline import run_node_pipeline
 
+from .waveform_tools import estimate_templates_with_accumulator
+from .sorting_tools import random_spikes_selection
+
+
 
 # high level function
 def create_sorting_analyzer(
@@ -52,6 +56,10 @@ def create_sorting_analyzer(
     recording,
     format="memory",
     folder=None,
+    main_channel_index=None,
+    main_channel_peak_sign="both",
+    main_channel_mode="extremum",
+    num_spikes_for_main_channel=100,
     sparse=True,
     sparsity=None,
     set_sparsity_by_dict_key=False,
@@ -59,7 +67,9 @@ def create_sorting_analyzer(
     return_in_uV=True,
     overwrite=False,
     backend_options=None,
-    **sparsity_kwargs,
+    sparsity_kwargs=None,
+    seed=None,
+    **job_kwargs
 ) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -68,6 +78,11 @@ def create_sorting_analyzer(
     templates, unit locations, spike locations, quality metrics ...
 
     This object will be also use used for plotting purpose.
+
+    The main_channel_index can be externally provided. If not then this is taken from
+    sorting property. If not then the main_channel_index is estimated using
+    `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
+    the recording.
 
 
     Parameters
@@ -82,6 +97,12 @@ def create_sorting_analyzer(
         The mode to store analyzer. If "folder", the analyzer is stored on disk in the specified folder.
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the analyzer is stored in RAM. Use this option carefully!
+    main_channel_index : None | np.array
+        The main_channel_index can be externally provided
+    main_channel_peak_sign : "both" | "neg"
+        In case when the main_channel_index is estimated wich sign to consider "both" or "neg".
+    num_spikes_for_main_channel : int, default: 100
+        How many spikes per units to compute the main channel.
     sparse : bool, default: True
         If True, then a sparsity mask is computed using the `estimate_sparsity()` function using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
@@ -107,8 +128,8 @@ def create_sorting_analyzer(
 
             * storage_options: dict | None (fsspec storage options)
             * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
-
-    sparsity_kwargs : keyword arguments
+    sparsity_kwargs : dict | None
+        Dict given to estimate the sparsity.
 
     Returns
     -------
@@ -144,6 +165,9 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
 
+    if sparsity_kwargs is None:
+        sparsity_kwargs = dict()
+
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
         if sorting.keys() != recording.keys():
@@ -168,8 +192,13 @@ def create_sorting_analyzer(
             return_in_uV=return_in_uV,
             overwrite=overwrite,
             backend_options=backend_options,
-            **sparsity_kwargs,
+            sparsity_kwargs=sparsity_kwargs,
+            **job_kwargs
         )
+
+    # normal case
+
+
 
     if format != "memory":
         if format == "zarr":
@@ -182,6 +211,26 @@ def create_sorting_analyzer(
                 else:
                     shutil.rmtree(folder)
 
+
+
+    # retrieve or compute the main channel index per unit
+    if main_channel_index is None:
+        if "main_channel_index" in sorting.get_property_keys():
+            main_channel_index = sorting.get_property("main_channel_index")
+    
+    if main_channel_index is None:
+        # this is weird but due to the cyclic import
+        from .template_tools import estimate_main_channel_from_recording
+        main_channel_index = estimate_main_channel_from_recording(
+            recording,
+            sorting,
+            main_channel_peak_sign=main_channel_peak_sign,
+            mode=main_channel_mode,
+            num_spikes_for_main_channel=num_spikes_for_main_channel,
+            seed=seed,
+            **job_kwargs
+        )
+
     # handle sparsity
     if sparsity is not None:
         # some checks
@@ -192,8 +241,9 @@ def create_sorting_analyzer(
         assert np.array_equal(
             recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        assert all(sparsity.mask[u, c] for u, c in enumerate(main_channel_index)), "sparsity si not constistentent with main_channel_index"
     elif sparse:
-        sparsity = estimate_sparsity(sorting, recording, **sparsity_kwargs)
+        sparsity = estimate_sparsity(sorting, recording, main_channel_index=main_channel_index, **sparsity_kwargs)
     else:
         sparsity = None
 
@@ -215,6 +265,7 @@ def create_sorting_analyzer(
         recording,
         format=format,
         folder=folder,
+        main_channel_index=main_channel_index,
         sparsity=sparsity,
         return_in_uV=return_in_uV,
         backend_options=backend_options,
@@ -347,6 +398,7 @@ class SortingAnalyzer:
             "zarr",
         ] = "memory",
         folder=None,
+        main_channel_index=None,
         sparsity=None,
         return_scaled=None,
         return_in_uV=True,
@@ -381,7 +433,10 @@ class SortingAnalyzer:
             from spikeinterface.curation.remove_excess_spikes import RemoveExcessSpikesSorting
 
             sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
-
+        
+        # This will ensure that the sorting saved always will have this main_channel
+        sorting.set_property("main_channel_index", main_channel_index)
+        
         if format == "memory":
             sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
         elif format == "binary_folder":
@@ -540,6 +595,8 @@ class SortingAnalyzer:
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
         from .loading import load
+
+        # TODO check that sorting has main_channel_index and ensure backward compatibility
 
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
@@ -713,6 +770,8 @@ class SortingAnalyzer:
         import zarr
         from .loading import load
 
+        # TODO check that sorting has main_channel_index and ensure backward compatibility
+
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
 
@@ -881,6 +940,24 @@ class SortingAnalyzer:
             Array of values for the property
         """
         return self.sorting.get_property(key, ids=ids)
+    
+    def get_main_channel(self, outputs="index", with_dict=False):
+        """
+
+        """
+        main_channel_index = self.get_sorting_property("main_channel_index")
+        if outputs is "index":
+            main_chans = main_channel_index
+        elif outputs is "id":
+            main_chans = self.channel_ids[main_channel_index]
+        else:
+            raise ValueError("wrong outputs")
+        
+        if with_dict:
+            return dict(zip(self.unit_ids, main_chans))
+        else:
+            return main_chans
+
 
     def are_units_mergeable(
         self,

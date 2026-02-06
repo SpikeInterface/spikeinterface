@@ -5,7 +5,6 @@ from __future__ import annotations
 import warnings
 import numpy as np
 
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 
@@ -137,7 +136,8 @@ class ComputeQualityMetrics(BaseMetricExtension):
         all_labels = sorting_analyzer.sorting.unit_ids[spike_unit_indices]
 
         # Get extremum channels for neighbor selection in sparse mode
-        extremum_channels = get_template_extremum_channel(sorting_analyzer)
+
+        main_channels = sorting_analyzer.get_main_channel(outputs="id", with_dict=True)
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric
@@ -152,7 +152,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if sorting_analyzer.is_sparse():
                 neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
                 neighbor_unit_ids = [
-                    other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
+                    other_unit for other_unit in unit_ids if main_channels[other_unit] in neighbor_channel_ids
                 ]
                 neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
             else:

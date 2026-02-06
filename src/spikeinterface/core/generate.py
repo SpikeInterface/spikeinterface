@@ -2444,6 +2444,10 @@ def generate_ground_truth_recording(
             **generate_templates_kwargs,
         )
         sorting.set_property("gt_unit_locations", unit_locations)
+        distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :], axis=2)
+        main_channel_index = np.argmin(distances, axis=1)
+        sorting.set_property("main_channel_index", main_channel_index)
+        
     else:
         assert templates.shape[0] == num_units
 

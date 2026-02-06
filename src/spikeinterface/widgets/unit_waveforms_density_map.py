@@ -5,7 +5,7 @@ import numpy as np
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
-from spikeinterface.core import ChannelSparsity, get_template_extremum_channel
+from spikeinterface.core import ChannelSparsity
 
 
 class UnitWaveformDensityMapWidget(BaseWidget):
@@ -43,7 +43,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         sparsity=None,
         same_axis=False,
         use_max_channel=False,
-        peak_sign="neg",
         unit_colors=None,
         backend=None,
         **backend_kwargs,
@@ -61,9 +60,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         if use_max_channel:
             assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"
-            max_channels = get_template_extremum_channel(
-                sorting_analyzer, mode="extremum", peak_sign=peak_sign, outputs="index"
-            )
+            max_channels = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backends need them all
         if sorting_analyzer.is_sparse():

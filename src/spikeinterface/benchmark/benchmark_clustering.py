@@ -13,7 +13,6 @@ import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 class ClusteringBenchmark(Benchmark):

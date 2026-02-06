@@ -2,7 +2,12 @@ from __future__ import annotations
 import numpy as np
 
 from .template import Templates
+from .waveform_tools import estimate_templates_with_accumulator
+from .sorting_tools import random_spikes_selection
 from .sortinganalyzer import SortingAnalyzer
+
+import warnings
+
 
 
 def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in_uV: bool = True):
@@ -126,6 +131,86 @@ def get_template_amplitudes(
     return peak_values
 
 
+
+def _get_main_channel_from_template_array(templates_array, mode, main_channel_peak_sign, nbefore):
+    # Step1 : max on time axis
+    if mode == "extremum":
+        if main_channel_peak_sign == "both":
+            values = np.max(np.abs(templates_array), axis=1)
+        elif main_channel_peak_sign == "neg":
+            values = -np.min(templates_array, axis=1)
+        elif main_channel_peak_sign == "pos":
+            values = np.max(templates_array, axis=1)
+    elif mode == "at_index":
+        if main_channel_peak_sign == "both":
+            values = np.abs(templates_array[:, nbefore, :])
+        elif main_channel_peak_sign in ["neg", "pos"]:
+            values = templates_array[:, nbefore, :]
+    elif mode == "peak_to_peak":
+        values = np.ptp(templates_array, axis=1)
+    
+    # Step2: max on channel axis
+    main_channel_index = np.argmax(values, axis=1)
+
+    return main_channel_index
+
+def estimate_main_channel_from_recording(
+        recording,
+        sorting,
+        main_channel_peak_sign: "neg" | "both" | "pos" = "both",
+        mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+        num_spikes_for_main_channel=100,
+        ms_before = 1.0,
+        ms_after = 2.5,
+        seed=None,
+        **job_kwargs
+):
+    """
+    Estimate the main channel from recording using `estimate_templates_with_accumulator()`
+
+    """
+
+    if main_channel_peak_sign == "pos":
+        warnings.warn(
+            "estimate_main_channel_from_recording() with peak_sign='pos' is a strange case maybe you " \
+            "should revert the traces instead"
+        )
+
+
+    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
+    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+    random_spikes_indices = random_spikes_selection(
+        sorting,
+        num_samples,
+        method="uniform",
+        max_spikes_per_unit=num_spikes_for_main_channel,
+        margin_size=max(nbefore, nafter),
+        seed=seed,
+    )
+    spikes = sorting.to_spike_vector()
+    spikes = spikes[random_spikes_indices]
+
+    templates_array = estimate_templates_with_accumulator(
+        recording,
+        spikes,
+        sorting.unit_ids,
+        nbefore,
+        nafter,
+        return_in_uV=False,
+        job_name="estimate_main_channel",
+        **job_kwargs,
+    )
+
+    main_channel_index = _get_main_channel_from_template_array(templates_array, mode, main_channel_peak_sign, nbefore)
+
+    return main_channel_index
+
+
+
+
+
 def get_template_extremum_channel(
     templates_or_sorting_analyzer,
     peak_sign: "neg" | "pos" | "both" = "neg",
@@ -156,6 +241,9 @@ def get_template_extremum_channel(
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
+    warnings.warn("get_template_extremum_channel() is deprecated use analyzer.get_main_channel() instead")
+    # TODO make a better logic here
+
     assert peak_sign in ("both", "neg", "pos"), "`peak_sign` must be one of `both`, `neg`, or `pos`"
     assert mode in ("extremum", "at_index", "peak_to_peak"), "'mode' must be 'extremum', 'at_index', or 'peak_to_peak'"
     assert outputs in ("id", "index"), "`outputs` must be either `id` or `index`"

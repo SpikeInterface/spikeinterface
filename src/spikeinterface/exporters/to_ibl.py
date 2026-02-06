@@ -10,7 +10,6 @@ import numpy as np
 
 from spikeinterface.core import SortingAnalyzer, BaseRecording, get_random_data_chunks
 from spikeinterface.core.job_tools import fix_job_kwargs, ChunkRecordingExecutor, _shared_job_kwargs_doc
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.exporters import export_to_phy
 
 
@@ -102,7 +101,7 @@ def export_to_ibl_gui(
         output_folder.mkdir(parents=True, exist_ok=True)
 
     ### Save spikes info ###
-    extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index")
+    extremum_channel_indices = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
     spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_indices)
 
     # spikes.clusters
@@ -137,7 +136,8 @@ def export_to_ibl_gui(
     np.save(output_folder / "clusters.waveforms.npy", templates)
 
     # cluster channels
-    extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index")
+    extremum_channel_indices = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+
     cluster_channels = np.array(list(extremum_channel_indices.values()), dtype="int32")
     np.save(output_folder / "clusters.channels.npy", cluster_channels)
 
