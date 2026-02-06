@@ -8,6 +8,8 @@ if __name__ != "__main__":
 
         matplotlib.use("Agg")
 
+HAVE_SORTINGVIEW = importlib.util.find_spec("sortingview") is not None
+
 
 from spikeinterface import (
     compute_sparsity,
@@ -22,7 +24,7 @@ from spikeinterface.preprocessing import scale, correct_motion
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
-SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW"))
+SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW")) or not HAVE_SORTINGVIEW
 
 
 class TestWidgets(unittest.TestCase):
