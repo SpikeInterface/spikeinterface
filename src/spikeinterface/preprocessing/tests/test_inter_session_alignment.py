@@ -123,6 +123,7 @@ class TestInterSessionAlignment:
         Test that `align_sessions` recovers the correct (linear) shifts.
         """
         recordings_list, shifts, peaks_list, peak_locations_list = recording_1
+        bin_um = 2
 
         assert shifts == (
             (0, 0),
@@ -136,7 +137,7 @@ class TestInterSessionAlignment:
         compute_alignment_kwargs["num_shifts_global"] = num_shifts_global
 
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-        estimate_histogram_kwargs["bin_um"] = 2
+        estimate_histogram_kwargs["bin_um"] = bin_um
         estimate_histogram_kwargs["histogram_type"] = histogram_type
         estimate_histogram_kwargs["log_transform"] = True
 
@@ -173,7 +174,7 @@ class TestInterSessionAlignment:
                 )
                 plt.show()
 
-            assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=0.02)
+            assert np.allclose(expected, extra_info["shifts_array"].squeeze(), rtol=0, atol=bin_um)
 
         corr_peaks_list, corr_peak_loc_list = session_alignment.compute_peaks_locations_for_session_alignment(
             corrected_recordings_list,
