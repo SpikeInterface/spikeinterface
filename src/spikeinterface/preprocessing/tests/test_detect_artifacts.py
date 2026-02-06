@@ -37,7 +37,7 @@ def test_detect_saturation_periods():
 
     # Generate some data in uV
     sat_value = 12
-    uV_per_ms_threshold = 12 / sample_frequency / 1e3 
+    uV_per_ms_threshold = 12 / sample_frequency / 1e3
     rng = np.random.default_rng()
     data = rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10
 
@@ -67,13 +67,14 @@ def test_detect_saturation_periods():
     combined = np.r_[data_seg_1.flatten(), data_seg_2.flatten()]
     max_ = np.max(combined)
     # min_ = np.min(combined)
-    gain =  max_ / 2**15   # (max_ - min_) / 65535
-    offset = 0              #  min_ + 32768 * gain
+    gain = max_ / 2**15  # (max_ - min_) / 65535
+    offset = 0  #  min_ + 32768 * gain
 
     PLOT = True
     if PLOT:
         import matplotlib
         import matplotlib.pyplot as plt
+
         plt.plot(data_seg_1)
         plt.title("data float")
         plt.show()
