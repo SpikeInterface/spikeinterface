@@ -434,7 +434,8 @@ class ChunkRecordingExecutor:
             if preferred_mp_context is not None and preferred_mp_context != mp_context:
                 warnings.warn(
                     f"Your processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
-                    f"So use mp_context='{preferred_mp_context}' instead")
+                    f"So use mp_context='{preferred_mp_context}' instead"
+                )
                 mp_context = preferred_mp_context
 
         self.mp_context = mp_context
@@ -501,7 +502,7 @@ class ChunkRecordingExecutor:
             init_args = self.init_args
             if self.need_worker_index:
                 worker_index = 0
-                init_args = init_args + (worker_index, )
+                init_args = init_args + (worker_index,)
 
             worker_dict = self.init_func(*init_args)
             if self.need_worker_index:
@@ -549,7 +550,9 @@ class ChunkRecordingExecutor:
 
                     if self.progress_bar:
                         results = tqdm(
-                            results, desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})", total=len(recording_slices)
+                            results,
+                            desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})",
+                            total=len(recording_slices),
                         )
 
                     for res in results:
@@ -650,7 +653,7 @@ def process_worker_initializer(func, init_func, init_args, max_threads_per_worke
                 break
         lock.release()
 
-        init_args = init_args + (worker_index, )
+        init_args = init_args + (worker_index,)
 
     if max_threads_per_worker is None:
         worker_dict = init_func(*init_args)
@@ -683,7 +686,7 @@ def thread_worker_initializer(
         worker_index = _thread_started
         _thread_started += 1
         lock.release()
-        init_args = init_args + (worker_index, )
+        init_args = init_args + (worker_index,)
 
     if max_threads_per_worker is None:
         worker_dict = init_func(*init_args)
