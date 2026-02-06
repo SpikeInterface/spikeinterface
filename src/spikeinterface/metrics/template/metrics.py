@@ -189,7 +189,7 @@ def get_trough_and_peak_idx(
     for k in ("peak_before", "trough", "peak_after"):
         sample_index = peaks_info[f"{k}_index"]
         sign = -1 if k == "trough" else 1
-        _, l, r = _compute_halfwidth(sign*template, sample_index, sampling_frequency)
+        _, l, r = _compute_halfwidth(sign * template, sample_index, sampling_frequency)
         peaks_info[f"{k}_half_width_left"] = l
         peaks_info[f"{k}_half_width_right"] = r
 
@@ -294,18 +294,12 @@ def get_waveform_ratios(template, peaks_info, **kwargs):
         - "main_peak_to_trough_ratio": ratio of larger peak to trough amplitude
     """
     # Get absolute amplitudes
-    trough_amp = (
-        abs(template[peaks_info["trough_index"]]) if peaks_info["trough_index"] is not None else np.nan
-    )
+    trough_amp = abs(template[peaks_info["trough_index"]]) if peaks_info["trough_index"] is not None else np.nan
     peak_before_amp = (
-        abs(template[peaks_info["peak_before_index"]])
-        if peaks_info["peak_before_index"] is not None
-        else np.nan
+        abs(template[peaks_info["peak_before_index"]]) if peaks_info["peak_before_index"] is not None else np.nan
     )
     peak_after_amp = (
-        abs(template[peaks_info["peak_after_index"]])
-        if peaks_info["peak_after_index"] is not None
-        else np.nan
+        abs(template[peaks_info["peak_after_index"]]) if peaks_info["peak_after_index"] is not None else np.nan
     )
 
     def safe_ratio(a, b):

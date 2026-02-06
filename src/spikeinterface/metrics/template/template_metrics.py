@@ -304,8 +304,14 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         # Add peaks_info and preprocessed templates to self.data for storage in extension
         columns = []
-        for k  in ("trough", "peak_before", "peak_after"):
-            for suffix in ("index", "width_left", "width_right", "half_width_left", "half_width_right",):
+        for k in ("trough", "peak_before", "peak_after"):
+            for suffix in (
+                "index",
+                "width_left",
+                "width_right",
+                "half_width_left",
+                "half_width_right",
+            ):
                 columns.append(f"{k}_{suffix}")
         df_peaks_info = pd.DataFrame(
             index=unit_ids,
