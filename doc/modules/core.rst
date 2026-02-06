@@ -95,9 +95,9 @@ with 16 channels:
 
 .. note::
 
-    Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (uV), you can apply a gain and an offset.
+    Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units (µV), you can apply a gain and an offset.
     Many devices have their own gains and offsets necessary to convert their data and these values are handled by SpikeInterface for its extractors. This
-    is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in uV. Read more in our how to guide, :ref:`physical_units`.
+    is triggered by the :code:`return_in_uV` parameter in :code:`get_traces()`, (see above example), which will return the traces in µV. Read more in our how to guide, :ref:`physical_units`.
 
 
 Sorting

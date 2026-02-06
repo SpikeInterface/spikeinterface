@@ -30,7 +30,8 @@ metric information. For example, you can get the list of available metrics using
     Available metric columns:
     [
         'peak_to_trough_duration',
-        'half_width',
+        'trough_half_width',
+        'peak_half_width',
         'repolarization_slope',
         'recovery_slope',
         'num_positive_peaks',
@@ -62,26 +63,30 @@ metric information. For example, you can get the list of available metrics using
 
     Metric descriptions:
     {
-        'peak_to_trough_duration': 'Duration in seconds between the trough (minimum) and the peak (maximum) of the spike waveform.',
-        'half_width': 'Duration in s at half the amplitude of the trough (minimum) of the spike waveform.',
-        'repolarization_slope': 'Slope of the repolarization phase of the spike waveform, between the trough (minimum) and return to baseline in uV/s.',
-        'recovery_slope': 'Slope of the recovery phase of the spike waveform, after the peak (maximum) returning to baseline in uV/s.',
-        'num_positive_peaks': 'Number of positive peaks in the template',
-        'num_negative_peaks': 'Number of negative peaks (troughs) in the template',
-        'main_to_next_peak_duration': 'Duration in seconds from main extremum to next extremum.',
-        'peak_before_to_trough_ratio': 'Ratio of peak before amplitude to trough amplitude',
-        'peak_after_to_trough_ratio': 'Ratio of peak after amplitude to trough amplitude',
-        'peak_before_to_peak_after_ratio': 'Ratio of peak before amplitude to peak after amplitude',
-        'main_peak_to_trough_ratio': 'Ratio of main peak amplitude to trough amplitude',
-        'trough_width': 'Width of the main trough in seconds',
-        'peak_before_width': 'Width of the main peak before trough in seconds',
-        'peak_after_width': 'Width of the main peak after trough in seconds',
-        'waveform_baseline_flatness': 'Ratio of max baseline amplitude to max waveform amplitude. Lower = flatter baseline.',
-        'velocity_above': 'Velocity of the spike propagation above the max channel in um/ms',
-        'velocity_below': 'Velocity of the spike propagation below the max channel in um/ms',
-        'exp_decay': 'Spatial decay of the template amplitude over distance from the extremum channel (1/um). Uses exponential or linear fit based on linear_fit parameter.',
-        'spread': 'Spread of the template amplitude in um, calculated as the distance between channels whose templates exceed the spread_threshold.'
-    }
+    'exp_decay': 'Spatial decay of the template amplitude over distance from the '
+                 'extremum channel (1/um). Uses exponential or linear fit based '
+                 'on linear_fit parameter.',
+    'main_peak_to_trough_ratio': 'Ratio of main peak amplitude to trough amplitude',
+    'main_to_next_extremum_duration': 'Duration in seconds from main extremum to  next extremum.',
+    'num_negative_peaks': 'Number of negative peaks (troughs) in the template',
+    'num_positive_peaks': 'Number of positive peaks in the template',
+    'peak_after_to_trough_ratio': 'Ratio of peak after amplitude to trough  amplitude',
+    'peak_after_width': 'Width of the main peak after trough in seconds',
+    'peak_before_to_peak_after_ratio': 'Ratio of peak before amplitude to peak  after amplitude',
+    'peak_before_to_trough_ratio': 'Ratio of peak before amplitude to trough  amplitude',
+    'peak_before_width': 'Width of the main peak before trough in seconds',
+    'peak_half_width': 'Duration in s at half the amplitude of the peak (maximum)  of the template.',
+    'peak_to_trough_duration': 'Duration in seconds between the trough (minimum)  and the next peak (maximum) of the template.',
+    'recovery_slope': 'Slope of the recovery phase of the template, after the  peak (maximum) returning to baseline in uV/s.',
+    'repolarization_slope': 'Slope of the repolarization phase of the template,  between the trough (minimum) and return to baseline in uV/s.',
+    'spread': 'Spread of the template amplitude in um, calculated as the distance between channels whose templates exceed the spread_threshold.',
+    'trough_half_width': 'Duration in s at half the amplitude of the trough (minimum) of the template.',
+    'trough_width': 'Width of the main trough in seconds',
+    'velocity_above': 'Velocity of the spike propagation above the max channel in um/ms',
+    'velocity_below': 'Velocity of the spike propagation below the max channel in um/ms',
+    'waveform_baseline_flatness': 'Ratio of max baseline amplitude to max waveform amplitude. Lower = flatter baseline.'
+}
+
 
 
 

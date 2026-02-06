@@ -532,9 +532,9 @@ def get_repolarization_slope(main_channel_template, sampling_frequency, peaks_in
     After reaching it's maximum polarization, the neuron potential will
     recover. The repolarization slope is defined as the dV/dT of the action potential
     between trough and baseline. The returned slope is in units of (unit of template)
-    per second. By default traces are scaled to units of uV, controlled
+    per second. By default traces are scaled to units of µV, controlled
     by `sorting_analyzer.return_in_uV`. In this case this function returns the slope
-    in uV/s.
+    in µV/s.
 
     Parameters
     ----------
@@ -579,9 +579,9 @@ def get_recovery_slope(main_channel_template, sampling_frequency, peaks_info, **
     After repolarization, the neuron hyperpolarizes until it peaks. The recovery slope is the
     slope of the action potential after the peak, returning to the baseline
     in dV/dT. The returned slope is in units of (unit of template)
-    per second. By default traces are scaled to units of uV, controlled
+    per second. By default traces are scaled to units of µV, controlled
     by `sorting_analyzer.return_in_uV`. In this case this function returns the slope
-    in uV/s. The slope is computed within a user-defined window after the peak.
+    in µV/s. The slope is computed within a user-defined window after the peak.
 
     Parameters
     ----------
@@ -699,7 +699,7 @@ def fit_line_robust(x, y, eps=1e-12):
 
 def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs):
     """
-    Compute both velocity above and below the max channel of the template in units um/ms.
+    Compute both velocity above and below the max channel of the template in units µm/ms.
 
     Parameters
     ----------
@@ -713,7 +713,7 @@ def get_velocity_fits(template, channel_locations, sampling_frequency, **kwargs)
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - min_channels: the minimum number of channels above or below to compute velocity
         - min_r2: the minimum r2 to accept the velocity fit
-        - column_range: the range in um in the x-direction to consider channels for velocity
+        - column_range: the range in µm in the x-direction to consider channels for velocity
 
     Returns
     -------
@@ -928,7 +928,7 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
 
 def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> float:
     """
-    Compute the spread of the template amplitude over distance in units um/s.
+    Compute the spread of the template amplitude over distance in units µm/s.
 
     Parameters
     ----------
@@ -941,7 +941,7 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs) -> flo
     **kwargs: Required kwargs:
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - spread_threshold: the threshold to compute the spread
-        - column_range: the range in um in the x-direction to consider channels for velocity
+        - column_range: the range in µm in the x-direction to consider channels for velocity
 
     Returns
     -------
@@ -1033,7 +1033,7 @@ class RepolarizationSlope(BaseMetric):
     metric_params = {}
     metric_columns = {"repolarization_slope": float}
     metric_descriptions = {
-        "repolarization_slope": "Slope of the repolarization phase of the template, between the trough (minimum) and return to baseline in uV/s."
+        "repolarization_slope": "Slope of the repolarization phase of the template, between the trough (minimum) and return to baseline in µV/s."
     }
     needs_tmp_data = True
 
@@ -1057,7 +1057,7 @@ class RecoverySlope(BaseMetric):
     metric_params = {"recovery_window_ms": 0.7}
     metric_columns = {"recovery_slope": float}
     metric_descriptions = {
-        "recovery_slope": "Slope of the recovery phase of the template, after the peak (maximum) returning to baseline in uV/s."
+        "recovery_slope": "Slope of the recovery phase of the template, after the peak (maximum) returning to baseline in µV/s."
     }
     needs_tmp_data = True
 
@@ -1292,8 +1292,8 @@ class VelocityFits(BaseMetric):
     }
     metric_columns = {"velocity_above": float, "velocity_below": float}
     metric_descriptions = {
-        "velocity_above": "Velocity of the spike propagation above the max channel in um/ms",
-        "velocity_below": "Velocity of the spike propagation below the max channel in um/ms",
+        "velocity_above": "Velocity of the spike propagation above the max channel in µm/ms",
+        "velocity_below": "Velocity of the spike propagation below the max channel in µm/ms",
     }
     needs_tmp_data = True
     deprecated_names = ["velocity_above", "velocity_below"]
@@ -1342,7 +1342,7 @@ class Spread(BaseMetric):
     metric_columns = {"spread": float}
     metric_descriptions = {
         "spread": (
-            "Spread of the template amplitude in um, calculated as the distance between channels whose "
+            "Spread of the template amplitude in µm, calculated as the distance between channels whose "
             "templates exceed the spread_threshold."
         )
     }

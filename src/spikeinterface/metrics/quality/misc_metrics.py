@@ -1028,7 +1028,7 @@ class AmplitudeCutoff(BaseMetric):
 
 def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
     """
-    Compute median of the amplitude distributions (in absolute value).
+    Compute median of the amplitude distributions.
 
     Parameters
     ----------
@@ -1068,9 +1068,7 @@ class AmplitudeMedian(BaseMetric):
     metric_name = "amplitude_median"
     metric_function = compute_amplitude_medians
     metric_columns = {"amplitude_median": float}
-    metric_descriptions = {
-        "amplitude_median": "Median of the amplitude distributions (in absolute value) for each unit in uV."
-    }
+    metric_descriptions = {"amplitude_median": "Median of the amplitude distributions for each unit in µV."}
     supports_periods = True
     depend_on = ["spike_amplitudes"]
 
@@ -1178,7 +1176,7 @@ def compute_drift_metrics(
     position in an interval with respect to the overall median positions over the entire duration
     (reference position).
 
-    The following metrics are computed for each unit (in um):
+    The following metrics are computed for each unit (in µm):
 
     * drift_ptp: peak-to-peak of the drift signal
     * drift_std: standard deviation of the drift signal
@@ -1214,11 +1212,11 @@ def compute_drift_metrics(
     Returns
     -------
     drift_ptp : dict
-        The drift signal peak-to-peak in um.
+        The drift signal peak-to-peak in µm.
     drift_std : dict
-        The drift signal standard deviation in um.
+        The drift signal standard deviation in µm.
     drift_mad : dict
-        The drift signal median absolute deviation in um.
+        The drift signal median absolute deviation in µm.
     median_positions : np.array (optional)
         The median positions of each unit over time (only returned if return_positions=True).
 
@@ -1325,9 +1323,9 @@ class Drift(BaseMetric):
     }
     metric_columns = {"drift_ptp": float, "drift_std": float, "drift_mad": float}
     metric_descriptions = {
-        "drift_ptp": "Peak-to-peak of the drift signal in um.",
-        "drift_std": "Standard deviation of the drift signal in um.",
-        "drift_mad": "Median absolute deviation of the drift signal in um.",
+        "drift_ptp": "Peak-to-peak of the drift signal in µm.",
+        "drift_std": "Standard deviation of the drift signal in µm.",
+        "drift_mad": "Median absolute deviation of the drift signal in µm.",
     }
     supports_periods = True
     depend_on = ["spike_locations"]
@@ -1634,7 +1632,7 @@ def amplitude_cutoff(
     Parameters
     ----------
     amplitudes : ndarray_like
-        The amplitudes (in uV) of the spikes for one unit.
+        The amplitudes (in µV) of the spikes for one unit.
     num_histogram_bins : int, default: 500
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
