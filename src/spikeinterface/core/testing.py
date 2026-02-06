@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 from numpy.testing import assert_array_equal
-from .base import BaseExtractor
 from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 
@@ -16,11 +16,41 @@ def check_sorted_arrays_equal(a1, a2):
 def check_recordings_equal(
     RX1: BaseRecording,
     RX2: BaseRecording,
-    return_scaled=True,
+    return_scaled=None,
+    return_in_uV=True,
     force_dtype=None,
     check_annotations: bool = False,
     check_properties: bool = False,
 ) -> None:
+    """
+    Check if two recordings are equal.
+
+    Parameters
+    ----------
+    RX1 : BaseRecording
+        First recording
+    RX2 : BaseRecording
+        Second recording
+    return_scaled : bool | None, default: None
+        DEPRECATED. Use return_in_uV instead.
+        If True, compare scaled traces
+    return_in_uV : bool, default: True
+        If True, compare scaled traces.
+    force_dtype : dtype, default: None
+        If not None, force the dtype of the traces before comparison
+    check_annotations : bool, default: False
+        If True, check annotations
+    check_properties : bool, default: False
+        If True, check properties
+    """
+    # Handle deprecated return_scaled parameter
+    if return_scaled is not None:
+        warnings.warn(
+            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        return_in_uV = return_scaled
     assert RX1.get_num_segments() == RX2.get_num_segments()
 
     for segment_idx in range(RX1.get_num_segments()):
@@ -36,13 +66,13 @@ def check_recordings_equal(
         # get_traces
         if force_dtype is None:
             assert np.allclose(
-                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
+                RX1.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV),
+                RX2.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV),
             )
         else:
             assert np.allclose(
-                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
+                RX1.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV).astype(force_dtype),
+                RX2.get_traces(segment_index=segment_idx, return_in_uV=return_in_uV).astype(force_dtype),
             )
         sf = 0
         ef = N
@@ -53,19 +83,19 @@ def check_recordings_equal(
         if force_dtype is None:
             assert np.allclose(
                 RX1.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ),
                 RX2.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ),
             )
         else:
             assert np.allclose(
                 RX1.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ).astype(force_dtype),
                 RX2.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_in_uV=return_in_uV
                 ).astype(force_dtype),
             )
 
@@ -82,30 +112,20 @@ def check_sortings_equal(
 
     max_spike_index = SX1.to_spike_vector()["sample_index"].max()
 
-    # TODO for later  use to_spike_vector() to do this without looping
-    for segment_idx in range(SX1.get_num_segments()):
-        # get_unit_ids
-        ids1 = np.sort(np.array(SX1.get_unit_ids()))
-        ids2 = np.sort(np.array(SX2.get_unit_ids()))
-        assert_array_equal(ids1, ids2)
-        for id in ids1:
-            train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx))
-            train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx))
-            assert np.array_equal(train1, train2)
-            train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30))
-            train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30))
-            assert np.array_equal(train1, train2)
-            # test that slicing works correctly
-            train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx, end_frame=max_spike_index - 30))
-            train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx, end_frame=max_spike_index - 30))
-            assert np.array_equal(train1, train2)
-            train1 = np.sort(
-                SX1.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30, end_frame=max_spike_index - 30)
-            )
-            train2 = np.sort(
-                SX2.get_unit_spike_train(id, segment_index=segment_idx, start_frame=30, end_frame=max_spike_index - 30)
-            )
-            assert np.array_equal(train1, train2)
+    s1 = SX1.to_spike_vector()
+    s2 = SX2.to_spike_vector()
+    assert_array_equal(s1, s2)
+
+    for start_frame, end_frame in [
+        (None, None),
+        (30, None),
+        (None, max_spike_index - 30),
+        (30, max_spike_index - 30),
+    ]:
+
+        slice1 = _slice_spikes(s1, start_frame, end_frame)
+        slice2 = _slice_spikes(s2, start_frame, end_frame)
+        assert np.array_equal(slice1, slice2)
 
     if check_annotations:
         check_extractor_annotations_equal(SX1, SX2)
@@ -125,3 +145,16 @@ def check_extractor_properties_equal(EX1, EX2) -> None:
 
     for property_name in EX1.get_property_keys():
         assert_array_equal(EX1.get_property(property_name), EX2.get_property(property_name))
+
+
+def _slice_spikes(spikes, start_frame=None, end_frame=None):
+    sample_indices = spikes["sample_index"]
+    if len(sample_indices) == 0:
+        return spikes[:0]
+    if start_frame is None:
+        start_frame = sample_indices[0]
+    if end_frame is None:
+        end_frame = sample_indices[-1] + 1
+    start_idx, end_idx = np.searchsorted(sample_indices, [start_frame, end_frame + 1], side="left")
+
+    return spikes[start_idx:end_idx]

@@ -86,7 +86,7 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -199,6 +199,14 @@ class UnitLocalizationBenchmark(Benchmark):
 
 
 class UnitLocalizationStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peaks localization methods.
+
+    The ground truth position of units must be known and method outputs
+    will be compared to them.
+
+    See also UnitLocalizationStudy.
+    """
 
     benchmark_class = UnitLocalizationBenchmark
 
@@ -214,7 +222,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -240,7 +248,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 5))
 
@@ -408,7 +416,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 
 
 # def plot_comparison_precision(benchmarks):
-#     import pylab as plt
+#     import matplotlib.pyplot as plt
 
 #     fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(15, 10), squeeze=False)
 
@@ -442,7 +450,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     ax.legend()
 #     ax.set_ylabel("error (um)")
 #     ax.set_xticks(np.arange(3), ["x", "y", "z"])
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     x_means = []
 #     x_stds = []
@@ -454,7 +462,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #     # ax.set_ylim(ymin, ymax)
 
 #     ax = axes[0, 1]
-#     _simpleaxis(ax)
+#     despine(ax)
 
 #     y_means = []
 #     y_stds = []
@@ -479,7 +487,7 @@ class UnitLocalizationStudy(BenchmarkStudy):
 #         norms = np.linalg.norm(benchmark.gt_positions[:, :2], axis=1)
 #         cell_ind = np.argsort(norms)[0]
 
-#     import pylab as plt
+#     import matplotlib.pyplot as plt
 
 #     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
 #     plot_probe_map(benchmark.recording, ax=axs[0, 0])

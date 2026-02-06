@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import importlib.util
+
 import numpy as np
+from itertools import chain
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 
@@ -17,14 +19,12 @@ class ComputeISIHistograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     window_ms : float, default: 50
         The window in ms
     bin_ms : float, default: 1
         The bin size in ms
     method : "auto" | "numpy" | "numba", default: "auto"
-        . If "auto" and numba is installed, numba is used, otherwise numpy is used
+        If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------
@@ -39,9 +39,6 @@ class ComputeISIHistograms(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = False
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -80,6 +77,29 @@ class ComputeISIHistograms(AnalyzerExtension):
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        new_bins = self.data["bins"]
+        arr = self.data["isi_histograms"]
+        num_dims = arr.shape[1]
+        all_new_units = new_sorting_analyzer.unit_ids
+        new_isi_hists = np.zeros((len(all_new_units), num_dims), dtype=arr.dtype)
+
+        # compute all new isi at once
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids_f)
+        only_new_hist, _ = _compute_isi_histograms(new_sorting, **self.params)
+
+        for unit_ind, unit_id in enumerate(all_new_units):
+            if unit_id not in new_unit_ids_f:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_isi_hists[unit_ind, :] = arr[keep_unit_index, :]
+            else:
+                new_unit_index = new_sorting.id_to_index(unit_id)
+                new_isi_hists[unit_ind, :] = only_new_hist[new_unit_index, :]
+
+        new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
+        return new_extension_data
+
     def _run(self, verbose=False):
         isi_histograms, bins = _compute_isi_histograms(self.sorting_analyzer.sorting, **self.params)
         self.data["isi_histograms"] = isi_histograms
@@ -102,7 +122,7 @@ def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
-        method = "numba" if HAVE_NUMBA else "numpy"
+        method = "numpy"  # numpy is faster for ISI computationc currently
 
     if method == "numpy":
         return compute_isi_histograms_numpy(sorting, window_ms, bin_ms)
@@ -130,10 +150,9 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
-    # TODO: There might be a better way than a double for loop?
     for i, unit_id in enumerate(sorting.unit_ids):
         for seg_index in range(sorting.get_num_segments()):
-            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
+            spike_train = sorting.get_unit_spike_train(unit_id, seg_index)
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
             ISIs[i] += ISI
 
@@ -181,6 +200,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 
 
 if HAVE_NUMBA:
+    import numba
 
     @numba.jit(
         nopython=True,

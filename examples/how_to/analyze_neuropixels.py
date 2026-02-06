@@ -143,8 +143,8 @@ rec
 #
 
 # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
-noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
-noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
+noise_levels_microV = si.get_noise_levels(rec, return_in_uV=True)
+noise_levels_int16 = si.get_noise_levels(rec, return_in_uV=False)
 
 
 fig, ax = plt.subplots()
@@ -169,14 +169,18 @@ ax.set_xlabel('noise  [microV]')
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
-                     detect_threshold=5, radius_um=50., **job_kwargs)
+peaks = detect_peaks(rec,
+                    method='locally_exclusive',
+                    method_kwargs=dict(
+                         noise_levels=noise_levels_int16,
+                     detect_threshold=5, radius_um=50.),
+                     job_kwargs=job_kwargs)
 peaks
 
 # +
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
+peak_locations = localize_peaks(rec, peaks, method='center_of_mass', method_kwargs=dict(radius_um=50.), job_kwargs=job_kwargs)
 # -
 
 # ### Check for drifts
@@ -286,13 +290,10 @@ analyzer_saved
 
 # ## Quality metrics
 #
-# We have a single function `compute_quality_metrics(SortingAnalyzer)` that returns a `pandas.Dataframe` with the desired metrics.
-#
-# Note that this function is also an extension and so can be saved. And so this is equivalent to do :
-# `metrics = analyzer.compute("quality_metrics").get_data()`
+# The `analyzer.compute("quality_metrics").get_data()` returns a `pandas.Dataframe` with the desired metrics.
 #
 #
-# Please visit the [metrics documentation](https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html) for more information and a list of all supported metrics.
+# Please visit the [metrics documentation](https://spikeinterface.readthedocs.io/en/latest/modules/metrics/qualitymetrics.html) for more information and a list of all supported metrics.
 #
 # Some metrics are based on PCA (like `'isolation_distance', 'l_ratio', 'd_prime'`) and require to estimate PCA for their computation. This can be achieved with:
 #
@@ -304,9 +305,8 @@ analyzer_saved
 metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
 
 
-# metrics = analyzer.compute("quality_metrics").get_data()
-# equivalent to
-metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
+metrics_ext = analyzer.compute("quality_metrics")
+metrics = metrics_ext.get_data()
 
 metrics
 # -

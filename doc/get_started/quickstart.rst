@@ -42,7 +42,7 @@ We need to import one by one different submodules separately
     import spikeinterface.preprocessing as spre
     import spikeinterface.sorters as ss
     import spikeinterface.postprocessing as spost
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
     import spikeinterface.comparison as sc
     import spikeinterface.exporters as sexp
     import spikeinterface.curation as scur
@@ -336,7 +336,7 @@ Alternatively we can pass a full dictionary containing the parameters:
 
     # parameters set by params dictionary
     sorting_TDC_2 = ss.run_sorter(
-        sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
+        sorter_name="tridesclous", recording=recording_preprocessed, folder="tdc_output2", **other_params
     )
     print(sorting_TDC_2)
 
@@ -627,7 +627,7 @@ compute quality metrics (some quality metrics require certain extensions
 
 .. code:: ipython3
 
-    qm_params = sqm.get_default_qm_params()
+    qm_params = sqm.get_default_quality_metrics_params()
     pprint(qm_params)
 
 

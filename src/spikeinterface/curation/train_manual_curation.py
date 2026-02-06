@@ -4,40 +4,42 @@ import numpy as np
 import json
 import spikeinterface
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.qualitymetrics import (
+
+# TODO fix with new metrics
+from spikeinterface.metrics import (
+    ComputeQualityMetrics,
+    ComputeTemplateMetrics,
     get_quality_metric_list,
     get_quality_pca_metric_list,
-    qm_compute_name_to_column_names,
+    get_template_metric_list,
 )
-from spikeinterface.postprocessing import get_template_metric_names
-from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
 from pathlib import Path
-from copy import deepcopy
 
 
 def get_default_classifier_search_spaces():
 
     from scipy.stats import uniform, randint
 
+    # note: the top value of randint is exclusive
     default_classifier_search_spaces = {
         "RandomForestClassifier": {
-            "n_estimators": [100, 150],
+            "n_estimators": randint(low=100, high=150),
             "criterion": ["gini", "entropy"],
-            "min_samples_split": [2, 4],
-            "min_samples_leaf": [2, 4],
+            "min_samples_split": randint(low=2, high=5),
+            "min_samples_leaf": randint(low=2, high=5),
             "class_weight": ["balanced", "balanced_subsample"],
         },
         "AdaBoostClassifier": {
-            "learning_rate": [1, 2],
-            "n_estimators": [50, 100],
+            "learning_rate": randint(low=1, high=3),
+            "n_estimators": randint(low=50, high=100),
             "algorithm": ["SAMME", "SAMME.R"],
         },
         "GradientBoostingClassifier": {
             "learning_rate": uniform(0.05, 0.1),
             "n_estimators": randint(100, 150),
-            "max_depth": [2, 4],
-            "min_samples_split": [2, 4],
-            "min_samples_leaf": [2, 4],
+            "max_depth": randint(low=2, high=5),
+            "min_samples_split": randint(low=2, high=5),
+            "min_samples_leaf": randint(low=2, high=5),
         },
         "SVC": {
             "C": uniform(0.001, 10.0),
@@ -51,13 +53,20 @@ def get_default_classifier_search_spaces():
             "max_iter": [100],
         },
         "XGBClassifier": {
-            "max_depth": [2, 4],
+            "max_depth": randint(low=2, high=5),
             "eta": uniform(0.2, 0.5),
             "sampling_method": ["uniform"],
             "grow_policy": ["depthwise", "lossguide"],
         },
-        "CatBoostClassifier": {"depth": [2, 4], "learning_rate": uniform(0.05, 0.15), "n_estimators": [100, 150]},
-        "LGBMClassifier": {"learning_rate": uniform(0.05, 0.15), "n_estimators": randint(100, 150)},
+        "CatBoostClassifier": {
+            "depth": randint(low=2, high=5),
+            "learning_rate": uniform(0.05, 0.15),
+            "n_estimators": randint(low=100, high=150),
+        },
+        "LGBMClassifier": {
+            "learning_rate": uniform(0.05, 0.15),
+            "n_estimators": randint(100, 150),
+        },
         "MLPClassifier": {
             "activation": ["tanh", "relu"],
             "solver": ["adam"],
@@ -228,7 +237,7 @@ class CurationModelTrainer:
 
     def get_default_metrics_list(self):
         """Returns the default list of metrics."""
-        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
+        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_list()
 
     def load_and_preprocess_analyzers(self, analyzers, enforce_metric_params):
         """
@@ -317,10 +326,8 @@ class CurationModelTrainer:
 
     def get_metric_params_csv(self):
 
-        from itertools import chain
-
-        qm_metric_names = list(chain.from_iterable(qm_compute_name_to_column_names.values()))
-        tm_metric_names = list(chain.from_iterable(tm_compute_name_to_column_names.values()))
+        qm_metric_names = ComputeQualityMetrics.get_metric_columns()
+        tm_metric_names = ComputeTemplateMetrics.get_metric_columns()
 
         quality_metric_names = []
         template_metric_names = []

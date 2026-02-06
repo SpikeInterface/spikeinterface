@@ -5,7 +5,7 @@ import_statement_list = [
     "import spikeinterface",
     "import spikeinterface.core",
     "import spikeinterface.extractors",
-    "import spikeinterface.qualitymetrics",
+    "import spikeinterface.metrics",
     "import spikeinterface.preprocessing",
     "import spikeinterface.comparison",
     "import spikeinterface.postprocessing",

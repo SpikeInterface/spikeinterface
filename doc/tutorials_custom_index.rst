@@ -91,6 +91,13 @@ Preprocessing tutorials
 .. grid:: 1 2 2 3
    :gutter: 2
 
+   .. grid-item-card:: Build full pipeline with dicts
+      :link: how_to/build_pipeline_with_dicts.html
+      :img-top: /images/logo.png
+      :img-alt: Build full pipeline with dicts
+      :class-card: gallery-card
+      :text-align: center
+
    .. grid-item-card:: Inter-session Alignment
       :link-type: ref
       :link: sphx_glr_tutorials_preprocessing_plot_7_inter_session_alignment.py
@@ -108,9 +115,8 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
    :gutter: 2
 
    .. grid-item-card:: Read various formats
-      :link-type: ref
-      :link: sphx_glr_tutorials_extractors_plot_1_read_various_formats.py
-      :img-top: /tutorials/extractors/images/thumb/sphx_glr_plot_1_read_various_formats_thumb.png
+      :link: how_to/read_various_formats.html
+      :img-top: how_to/read_various_formats_files/read_various_formats_12_0.png
       :img-alt: Read various formats
       :class-card: gallery-card
       :text-align: center
@@ -126,23 +132,23 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
 Quality metrics tutorial
 ------------------------
 
-The :code:`spikeinterface.qualitymetrics` module allows users to compute various quality metrics to assess the goodness of a spike sorting output.
+The :code:`spikeinterface.metrics.quality` module allows users to compute various quality metrics to assess the goodness of a spike sorting output.
 
 .. grid:: 1 2 2 3
    :gutter: 2
 
    .. grid-item-card:: Quality Metrics
       :link-type: ref
-      :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_metrics.py
-      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_metrics_thumb.png
+      :link: sphx_glr_tutorials_metrics_plot_3_quality_metrics.py
+      :img-top: /tutorials/metrics/images/thumb/sphx_glr_plot_3_quality_metrics_thumb.png
       :img-alt: Quality Metrics
       :class-card: gallery-card
       :text-align: center
 
    .. grid-item-card:: Curation Tutorial
       :link-type: ref
-      :link: sphx_glr_tutorials_qualitymetrics_plot_4_curation.py
-      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
+      :link: sphx_glr_tutorials_metrics_plot_4_curation.py
+      :img-top: /tutorials/metrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
       :img-alt: Curation Tutorial
       :class-card: gallery-card
       :text-align: center

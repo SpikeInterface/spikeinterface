@@ -5,7 +5,7 @@ spikeinterface.core
 -------------------
 .. automodule:: spikeinterface.core
 
-    .. autofunction:: load_extractor
+    .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
     .. autoclass:: BaseSorting
@@ -27,7 +27,7 @@ spikeinterface.core
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
-    .. autoclass:: NpzFolderSorting
+    .. autoclass:: NumpyFolderSorting
     .. autoclass:: NpyFolderSnippets
     .. autoclass:: NumpyRecording
     .. autoclass:: NumpySorting
@@ -76,7 +76,7 @@ Low-level
     .. autoclass:: ChunkRecordingExecutor
 
 
-Back-compatibility with ``WaveformExtractor`` (version < 0.101.0)
+Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: spikeinterface.core
@@ -105,6 +105,7 @@ NEO-based
     .. autofunction:: read_blackrock
     .. autofunction:: read_ced
     .. autofunction:: read_intan
+    .. autofunction:: read_split_intan_files
     .. autofunction:: read_maxwell
     .. autofunction:: read_mearec
     .. autofunction:: read_mcsraw
@@ -143,7 +144,9 @@ Non-NEO-based
     .. autofunction:: read_mcsh5
     .. autofunction:: read_mda_recording
     .. autofunction:: read_mda_sorting
-    .. autofunction:: read_nwb
+    .. autofunction:: read_nwb_sorting
+    .. autofunction:: read_nwb_recording
+    .. autofunction:: read_nwb_timeseries
     .. autofunction:: read_phy
     .. autofunction:: read_shybrid_recording
     .. autofunction:: read_shybrid_sorting
@@ -151,6 +154,7 @@ Non-NEO-based
     .. autofunction:: toy_example
     .. autofunction:: read_tridesclous
     .. autofunction:: read_waveclus
+    .. autofunction:: read_whitematter
     .. autofunction:: read_yass
 
 
@@ -165,19 +169,27 @@ spikeinterface.preprocessing
 
 .. automodule:: spikeinterface.preprocessing
 
+    .. autofunction:: apply_preprocessing_pipeline
+    .. autofunction:: get_preprocessing_dict_from_analyzer
+    .. autofunction:: get_preprocessing_dict_from_file
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
-    .. autofunction:: blank_staturation
+    .. autofunction:: blank_saturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: compute_motion
     .. autofunction:: correct_motion
     .. autofunction:: get_motion_presets
     .. autofunction:: get_motion_parameters_preset
+    .. autofunction:: load_motion_info
+    .. autofunction:: save_motion_info
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
+    .. autofunction:: detect_and_interpolate_bad_channels
+    .. autofunction:: detect_and_remove_bad_channels
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter
@@ -212,20 +224,33 @@ spikeinterface.postprocessing
     .. autofunction:: compute_spike_locations
     .. autofunction:: compute_template_similarity
     .. autofunction:: compute_correlograms
+    .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
-    .. autofunction:: get_template_metric_names
     .. autofunction:: align_sorting
 
 
-spikeinterface.qualitymetrics
------------------------------
+spikeinterface.metrics
+----------------------
 
-.. automodule:: spikeinterface.qualitymetrics
+.. automodule:: spikeinterface.metrics.quality
 
     .. autofunction:: compute_quality_metrics
     .. autofunction:: get_quality_metric_list
     .. autofunction:: get_quality_pca_metric_list
-    .. autofunction:: get_default_qm_params
+    .. autofunction:: get_default_quality_metrics_params
+
+.. automodule:: spikeinterface.metrics.template
+
+    .. autofunction:: compute_template_metrics
+    .. autofunction:: get_template_metric_list
+    .. autofunction:: get_default_template_metrics_params
+    .. autofunction:: get_single_channel_template_metric_names
+    .. autofunction:: get_multi_channel_template_metric_names
+
+.. automodule:: spikeinterface.metrics.spiketrain
+
+    .. autofunction:: get_spiketrain_metric_list
+    .. autofunction:: get_default_spiketrain_metrics_params
 
 
 spikeinterface.sorters
@@ -234,6 +259,7 @@ spikeinterface.sorters
 
     .. autofunction:: available_sorters
     .. autofunction:: installed_sorters
+    .. autofunction:: archived_sorters
     .. autofunction:: get_default_sorter_params
     .. autofunction:: get_sorter_params_description
     .. autofunction:: print_sorter_versions
@@ -333,6 +359,7 @@ spikeinterface.exporters
 .. automodule:: spikeinterface.exporters
 
     .. autofunction:: export_to_phy
+    .. autofunction:: export_to_ibl_gui
     .. autofunction:: export_report
 
 
@@ -341,14 +368,29 @@ spikeinterface.curation
 .. automodule:: spikeinterface.curation
 
     .. autofunction:: apply_curation
-    .. autofunction:: get_potential_auto_merge
+    .. autofunction:: compute_merge_unit_groups
     .. autofunction:: find_redundant_units
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+    .. autofunction:: model_based_label_units
     .. autofunction:: load_model
-    .. autofunction:: auto_label_units
     .. autofunction:: train_model
+    .. autofunction:: unitrefine_label_units
+
+Curation Model
+~~~~~~~~~~~~~~
+
+This section describes the ``pydantic`` curation model classes used to represent and manage curation actions
+such as merging and splitting units, as well as defining labels for units.
+
+.. automodule:: spikeinterface.curation.curation_model
+
+    .. autopydantic_model:: CurationModel
+    .. autopydantic_model:: Merge
+    .. autopydantic_model:: Split
+    .. autopydantic_model:: ManualLabel
+    .. autopydantic_model:: LabelDefinition
 
 Deprecated
 ~~~~~~~~~~
@@ -356,6 +398,7 @@ Deprecated
     :noindex:
 
     .. autofunction:: apply_sortingview_curation
+    .. autofunction:: get_potential_auto_merge
     .. autoclass:: CurationSorting
     .. autoclass:: MergeUnitsSorting
     .. autoclass:: SplitUnitSorting
@@ -364,58 +407,66 @@ Deprecated
 spikeinterface.generation
 -------------------------
 
-.. currentmodule:: spikeinterface.generation
-
 Core
 ~~~~
 
+.. automodule:: spikeinterface.generation
 
-.. autofunction:: generate_recording
-.. autofunction:: generate_sorting
-.. autofunction:: generate_snippets
-.. autofunction:: generate_templates
-.. autofunction:: generate_recording_by_size
-.. autofunction:: generate_ground_truth_recording
-.. autofunction:: add_synchrony_to_sorting
-.. autofunction:: synthesize_random_firings
-.. autofunction:: inject_some_duplicate_units
-.. autofunction:: inject_some_split_units
-.. autofunction:: synthetize_spike_train_bad_isi
-.. autofunction:: inject_templates
-.. autofunction:: noise_generator_recording
-.. autoclass:: InjectTemplatesRecording
-.. autoclass:: NoiseGeneratorRecording
+    .. autofunction:: generate_recording
+    .. autofunction:: generate_sorting
+    .. autofunction:: generate_snippets
+    .. autofunction:: generate_templates
+    .. autofunction:: generate_recording_by_size
+    .. autofunction:: generate_ground_truth_recording
+    .. autofunction:: add_synchrony_to_sorting
+    .. autofunction:: synthesize_random_firings
+    .. autofunction:: inject_some_duplicate_units
+    .. autofunction:: inject_some_split_units
+    .. autofunction:: synthetize_spike_train_bad_isi
+    .. autofunction:: inject_templates
+    .. autofunction:: noise_generator_recording
+    .. autoclass:: InjectTemplatesRecording
+    .. autoclass:: NoiseGeneratorRecording
 
 Drift
 ~~~~~
 
-.. autofunction:: generate_drifting_recording
-.. autofunction:: generate_displacement_vector
-.. autofunction:: make_one_displacement_vector
-.. autofunction:: make_linear_displacement
-.. autofunction:: move_dense_templates
-.. autofunction:: interpolate_templates
-.. autoclass:: DriftingTemplates
-.. autoclass:: InjectDriftingTemplatesRecording
+.. automodule:: spikeinterface.generation
+    :no-index:
+
+    .. autofunction:: generate_drifting_recording
+    .. autofunction:: generate_displacement_vector
+    .. autofunction:: make_one_displacement_vector
+    .. autofunction:: make_linear_displacement
+    .. autofunction:: move_dense_templates
+    .. autofunction:: interpolate_templates
+    .. autoclass:: DriftingTemplates
+    .. autoclass:: InjectDriftingTemplatesRecording
 
 Hybrid
 ~~~~~~
 
-.. autofunction:: generate_hybrid_recording
-.. autofunction:: estimate_templates_from_recording
-.. autofunction:: select_templates
-.. autofunction:: scale_template_to_range
-.. autofunction:: relocate_templates
-.. autofunction:: fetch_template_object_from_database
-.. autofunction:: fetch_templates_database_info
-.. autofunction:: list_available_datasets_in_template_database
-.. autofunction:: query_templates_from_database
+.. automodule:: spikeinterface.generation
+    :no-index:
+
+    .. autofunction:: generate_hybrid_recording
+    .. autofunction:: estimate_templates_from_recording
+    .. autofunction:: select_templates
+    .. autofunction:: scale_template_to_range
+    .. autofunction:: relocate_templates
+    .. autofunction:: fetch_template_object_from_database
+    .. autofunction:: fetch_templates_database_info
+    .. autofunction:: list_available_datasets_in_template_database
+    .. autofunction:: query_templates_from_database
 
 
 Noise
 ~~~~~
 
-.. autofunction:: generate_noise
+.. automodule:: spikeinterface.generation
+    :no-index:
+
+    .. autofunction:: generate_noise
 
 
 spikeinterface.sortingcomponents
@@ -437,7 +488,7 @@ Clustering
 ~~~~~~~~~~
 .. automodule:: spikeinterface.sortingcomponents.clustering
 
-    .. autofunction:: find_cluster_from_peaks
+    .. autofunction:: find_clusters_from_peaks
 
 Template Matching
 ~~~~~~~~~~~~~~~~~
@@ -455,3 +506,43 @@ Motion Correction
     .. autofunction:: interpolate_motion_on_traces
     .. autofunction:: clean_motion_vector
     .. autoclass:: InterpolateMotionRecording
+
+spikeinterface.benchmark
+------------------------
+
+.. automodule:: spikeinterface.benchmark
+
+    .. autoclass:: SorterStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_detection
+
+    .. autoclass:: PeakDetectionStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_peak_localization
+
+    .. autoclass:: PeakLocalizationStudy
+    .. autoclass:: UnitLocalizationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_motion_estimation
+
+    .. autoclass:: MotionEstimationStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_clustering
+
+    .. autoclass:: ClusteringStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_matching
+
+    .. autoclass:: MatchingStudy
+
+.. automodule:: spikeinterface.benchmark.benchmark_plot_tools
+
+    .. autofunction:: plot_run_times
+    .. autofunction:: plot_unit_counts
+    .. autofunction:: plot_agreement_matrix
+    .. autofunction:: plot_performances_vs_snr
+    .. autofunction:: plot_performances_ordered
+    .. autofunction:: plot_performances_swarm
+    .. autofunction:: plot_performances_comparison
+    .. autofunction:: plot_performances_vs_depth_and_snr
+    .. autofunction:: plot_performance_losses

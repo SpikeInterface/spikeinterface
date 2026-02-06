@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import warnings
+import importlib.util
 
 import numpy as np
+
 from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
 from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array, get_template_extremum_channel
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 
@@ -81,7 +82,7 @@ def compute_monopolar_triangulation(
         sparsity = sorting_analyzer_or_templates.sparsity
 
     templates = get_dense_templates_array(
-        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+        sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
     )
     nbefore = _get_nbefore(sorting_analyzer_or_templates)
 
@@ -89,8 +90,8 @@ def compute_monopolar_triangulation(
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
         unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        keep = [np.where(sorting_analyzer_or_templates.unit_ids == unit_id)[0][0] for unit_id in unit_ids]
+        templates = templates[np.array(keep), :, :]
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -167,18 +168,18 @@ def compute_center_of_mass(
         sparsity = sorting_analyzer_or_templates.sparsity
 
     templates = get_dense_templates_array(
-        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+        sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
     )
     nbefore = _get_nbefore(sorting_analyzer_or_templates)
 
     if unit_ids is None:
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
-        unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        all_unit_ids = list(sorting_analyzer_or_templates.unit_ids)
+        keep_unit_indices = np.array([all_unit_ids.index(unit_id) for unit_id in unit_ids])
+        templates = templates[keep_unit_indices, :, :]
 
-    unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
@@ -249,7 +250,7 @@ def compute_grid_convolution(
     contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
     templates = get_dense_templates_array(
-        sorting_analyzer_or_templates, return_scaled=get_return_scaled(sorting_analyzer_or_templates)
+        sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
     )
     nbefore = _get_nbefore(sorting_analyzer_or_templates)
     nafter = templates.shape[1] - nbefore
@@ -257,9 +258,9 @@ def compute_grid_convolution(
     if unit_ids is None:
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
-        unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        all_unit_ids = list(sorting_analyzer_or_templates.unit_ids)
+        keep_unit_indices = np.array([all_unit_ids.index(unit_id) for unit_id in unit_ids])
+        templates = templates[keep_unit_indices, :, :]
 
     fs = sorting_analyzer_or_templates.sampling_frequency
     percentile = 100 - percentile
@@ -282,7 +283,7 @@ def compute_grid_convolution(
     weights_sparsity_mask = weights > 0
 
     nb_weights = weights.shape[0]
-    unit_location = np.zeros((unit_ids.size, 3), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), 3), dtype="float64")
 
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
@@ -322,12 +323,12 @@ def compute_grid_convolution(
     return unit_location
 
 
-def get_return_scaled(sorting_analyzer_or_templates):
+def get_return_in_uV(sorting_analyzer_or_templates):
     if isinstance(sorting_analyzer_or_templates, Templates):
-        return_scaled = sorting_analyzer_or_templates.is_scaled
+        return_in_uV = sorting_analyzer_or_templates.is_in_uV
     else:
-        return_scaled = sorting_analyzer_or_templates.return_scaled
-    return return_scaled
+        return_in_uV = sorting_analyzer_or_templates.return_in_uV
+    return return_in_uV
 
 
 def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):
@@ -652,7 +653,9 @@ def get_convolution_weights(
 
 
 if HAVE_NUMBA:
-    enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
+    from numba import jit
+
+    enforce_decrease_shells = jit(enforce_decrease_shells_data, nopython=True)
 
 
 def compute_location_max_channel(

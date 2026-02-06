@@ -11,8 +11,8 @@ from spikeinterface.widgets import (
 )
 
 import numpy as np
-from .benchmark_base import Benchmark, BenchmarkStudy
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
+from spikeinterface.core.base import minimum_spike_dtype
 
 
 class MatchingBenchmark(Benchmark):
@@ -21,13 +21,19 @@ class MatchingBenchmark(Benchmark):
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.method = params["method"]
-        self.templates = params["method_kwargs"]["templates"]
+        # self.templates = params["method_kwargs"]["templates"]
+        self.templates = params["templates"]
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
-    def run(self, **job_kwargs):
+    def run(self, verbose=True, **job_kwargs):
         spikes = find_spikes_from_templates(
-            self.recording, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
+            self.recording,
+            self.templates,
+            method=self.method,
+            method_kwargs=self.method_kwargs,
+            verbose=verbose,
+            job_kwargs=job_kwargs,
         )
         unit_ids = self.templates.unit_ids
         sorting = np.zeros(spikes.size, dtype=minimum_spike_dtype)
@@ -38,9 +44,11 @@ class MatchingBenchmark(Benchmark):
         self.result = {"sorting": sorting, "spikes": spikes}
         self.result["templates"] = self.templates
 
-    def compute_result(self, with_collision=False, **result_params):
+    def compute_result(self, with_collision=False, match_score=0.5, exhaustive_gt=True):
         sorting = self.result["sorting"]
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=True)
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
         self.result["gt_comparison"] = comp
         if with_collision:
             self.result["gt_collision"] = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=True)
@@ -53,7 +61,17 @@ class MatchingBenchmark(Benchmark):
     _result_key_saved = [("gt_collision", "pickle"), ("gt_comparison", "pickle")]
 
 
-class MatchingStudy(BenchmarkStudy):
+class MatchingStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare template matchong methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    Templates must be also given. Note that the full template can be given but also
+    only a partial catalogue can be given to challenge the template matching
+    methods when catalogue is not entirely known.
+    """
 
     benchmark_class = MatchingBenchmark
 
@@ -84,61 +102,41 @@ class MatchingStudy(BenchmarkStudy):
 
         return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
 
-    def plot_collisions(self, case_keys=None, figsize=None):
+    def plot_performances_ordered(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, *args, **kwargs)
+
+    def plot_collisions(self, case_keys=None, metric="l2", mode="lines", show_legend=True, axs=None, figsize=None):
         if case_keys is None:
             case_keys = list(self.cases.keys())
         import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+        if axs is None:
+            fig, axs = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+            axs = axs[0, :]
+        else:
+            fig = axs[0].figure
 
         for count, key in enumerate(case_keys):
-            templates_array = self.get_result(key)["templates"].templates_array
+            label = self.cases[key]["label"]
+            templates_array = self.get_sorting_analyzer(key).get_extension("templates").get_templates(outputs="numpy")
+            ax = axs[count]
             plot_comparison_collision_by_similarity(
                 self.get_result(key)["gt_collision"],
                 templates_array,
-                ax=axs[0, count],
-                show_legend=True,
-                mode="lines",
-                good_only=False,
+                metric=metric,
+                ax=ax,
+                show_legend=show_legend,
+                mode=mode,
+                # good_only=False,
+                # good_only=False,
+                good_only=True,
             )
 
+            ax.set_title(label)
+
         return fig
-
-    def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
-        import pandas as pd
-
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-
-        if isinstance(case_keys[0], str):
-            index = pd.Index(case_keys, name=self.levels)
-        else:
-            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
-
-        columns = ["num_gt", "num_sorter", "num_well_detected"]
-        comp = self.get_result(case_keys[0])["gt_comparison"]
-        if comp.exhaustive_gt:
-            columns.extend(["num_false_positive", "num_redundant", "num_overmerged", "num_bad"])
-        count_units = pd.DataFrame(index=index, columns=columns, dtype=int)
-
-        for key in case_keys:
-            comp = self.get_result(key)["gt_comparison"]
-            assert comp is not None, "You need to do study.run_comparisons() first"
-
-            gt_sorting = comp.sorting1
-            sorting = comp.sorting2
-
-            count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
-            count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
-            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
-
-            if comp.exhaustive_gt:
-                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
-                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
-                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
-                count_units.loc[key, "num_bad"] = comp.count_bad_units()
-
-        return count_units
 
     def plot_unit_counts(self, case_keys=None, **kwargs):
         from .benchmark_plot_tools import plot_unit_counts

@@ -36,7 +36,7 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
         chunk_size=chunk_size,
         concatenated=True,
         seed=seed,
-        return_scaled=False,
+        return_in_uV=False,
     )
     # compute medians and lsb
     medians = np.median(random_data, axis=0)

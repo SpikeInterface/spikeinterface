@@ -15,16 +15,20 @@ def test_select_peaks():
     recording, _ = make_dataset()
 
     # by_channel
-    noise_levels = get_noise_levels(recording, return_scaled=False)
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
     peaks = detect_peaks(
         recording,
         method="by_channel",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
-        chunk_size=10000,
-        progress_bar=False,
-        noise_levels=noise_levels,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.8,
+            noise_levels=noise_levels,
+        ),
+        job_kwargs=dict(
+            chunk_size=10000,
+            progress_bar=False,
+        ),
     )
 
     peak_locations = localize_peaks(

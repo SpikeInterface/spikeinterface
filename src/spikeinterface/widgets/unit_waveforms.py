@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
+from packaging.version import parse
 from warnings import warn
+import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
@@ -40,6 +41,8 @@ class UnitWaveformsWidget(BaseWidget):
         displayed per waveform, (matplotlib backend)
     scale : float, default: 1
         Scale factor for the waveforms/templates (matplotlib backend)
+    abs_y_scale : None | float, default None
+        Absolut y_scale that override the auto y scale mechanism
     widen_narrow_scale : float, default: 1
         Scale factor for the x-axis of the waveforms/templates (matplotlib backend)
     axis_equal : bool, default: False
@@ -92,6 +95,7 @@ class UnitWaveformsWidget(BaseWidget):
         sparsity=None,
         ncols=5,
         scale=1,
+        abs_y_scale=None,
         widen_narrow_scale=1,
         lw_waveforms=1,
         lw_templates=2,
@@ -166,7 +170,7 @@ class UnitWaveformsWidget(BaseWidget):
 
         # get templates
         if isinstance(sorting_analyzer_or_templates, Templates):
-            templates = sorting_analyzer_or_templates.templates_array
+            templates = sorting_analyzer_or_templates.select_units(unit_ids).to_dense().templates_array
             nbefore = sorting_analyzer_or_templates.nbefore
             self.templates_ext = None
             templates_shading = None
@@ -206,6 +210,7 @@ class UnitWaveformsWidget(BaseWidget):
             unit_colors=unit_colors,
             channel_locations=channel_locations,
             scale=scale,
+            abs_y_scale=abs_y_scale,
             widen_narrow_scale=widen_narrow_scale,
             templates=templates,
             templates_shading=templates_shading,
@@ -255,6 +260,8 @@ class UnitWaveformsWidget(BaseWidget):
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
             dp.templates, dp.channel_locations, dp.nbefore, dp.x_offset_units, dp.widen_narrow_scale
         )
+        if dp.abs_y_scale is not None:
+            y_scale = dp.abs_y_scale
 
         for i, unit_id in enumerate(dp.unit_ids):
             if dp.same_axis:
@@ -383,8 +390,20 @@ class UnitWaveformsWidget(BaseWidget):
 
             # plot channels
             if dp.plot_channels:
-                # TODO enhance this
-                ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color="k")
+                from probeinterface import __version__ as pi_version
+
+                if parse(pi_version) >= parse("0.2.28"):
+                    from probeinterface.plotting import create_probe_polygons
+
+                    probe = dp.sorting_analyzer_or_templates.get_probe()
+                    contacts, _ = create_probe_polygons(probe, contacts_colors="w")
+                    ax.add_collection(contacts)
+                else:
+                    ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color="k")
+
+            # Apply axis_equal setting
+            if dp.axis_equal:
+                ax.set_aspect("equal")
 
             if dp.same_axis and dp.plot_legend:
                 if hasattr(self, "legend") and self.legend is not None:
@@ -650,19 +669,33 @@ def get_waveforms_scales(templates, channel_locations, nbefore, x_offset_units=F
     wf_max = np.max(templates)
     wf_min = np.min(templates)
 
-    x_chans = np.unique(channel_locations[:, 0])
-    if x_chans.size > 1:
-        delta_x = np.min(np.diff(x_chans))
-        if delta_x < 5:
-            delta_x = 20.0
-    else:
-        delta_x = 40.0
+    # estimating x and y interval from a weighted average of the distance matrix, factors include:
+    # 1. gaussian distance penalty: penalize far distances
+    # 2. trigonometric angular penalty: penalize distances unparallel to the corresponding interval
+    manh = np.abs(
+        channel_locations[None, :] - channel_locations[:, None]
+    )  # vertical and horizontal distances between each channel
+    eucl = np.linalg.norm(manh, axis=2)  # Euclidean distance matrix
+    np.fill_diagonal(eucl, np.inf)  # the distance of a channel to itself is not considered
+    gaus = np.exp(-0.5 * (eucl / eucl.min()) ** 2)  # sigma uses the min distance between channels
 
-    y_chans = np.unique(channel_locations[:, 1])
-    if y_chans.size > 1:
-        delta_y = np.min(np.diff(y_chans))
+    # horizontal interval
+    # penalize vertically inclined distances
+    # weights can be 0 when there is one column
+    weight = manh[..., 0] / eucl * gaus
+    if weight.sum() == 0:
+        delta_x = 10
     else:
-        delta_y = 40.0
+        delta_x = (manh[..., 0] * weight).sum() / weight.sum()
+
+    # vertical interval
+    # penalize horizontally inclined distances
+    # weights can be 0 when there is one row
+    weight = manh[..., 1] / eucl * gaus
+    if weight.sum() == 0:
+        delta_y = 10
+    else:
+        delta_y = (manh[..., 1] * weight).sum() / weight.sum()
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7

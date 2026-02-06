@@ -119,8 +119,8 @@ class ModelBasedClassification:
         )
 
         # Set predictions and probability as sorting properties
-        self.sorting_analyzer.sorting.set_property("classifier_label", predictions)
-        self.sorting_analyzer.sorting.set_property("classifier_probability", probabilities)
+        self.sorting_analyzer.set_sorting_property("classifier_label", predictions)
+        self.sorting_analyzer.set_sorting_property("classifier_probability", probabilities)
 
         if export_to_phy:
             self._export_to_phy(classified_units)
@@ -174,7 +174,9 @@ class ModelBasedClassification:
                     if model_metric_params is None or metric not in model_metric_params:
                         inconsistent_metrics.append(metric)
                     else:
-                        if metric_params[metric] != model_metric_params[metric]:
+                        if metric not in metric_params:
+                            inconsistent_metrics.append(metric)
+                        elif metric_params[metric] != model_metric_params[metric]:
                             warning_message = f"{extension_name} params for {metric} do not match those used to train the model. Parameters can be found in the 'model_info.json' file."
                             if enforce_metric_params is True:
                                 raise Exception(warning_message)
@@ -188,13 +190,8 @@ class ModelBasedClassification:
                     else:
                         warnings.warn(warning_message)
 
-    def _export_to_phy(self, classified_units):
+    def _export_to_phy(self, classified_df):
         """Export the classified units to Phy as cluster_prediction.tsv file"""
-
-        import pandas as pd
-
-        # Create a new DataFrame with unit_id, prediction, and probability columns from dict {unit_id: (prediction, probability)}
-        classified_df = pd.DataFrame.from_dict(classified_units, orient="index", columns=["prediction", "probability"])
 
         # Export to Phy format
         try:
@@ -207,11 +204,11 @@ class ModelBasedClassification:
         classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
 
 
-def auto_label_units(
+def model_based_label_units(
     sorting_analyzer: SortingAnalyzer,
     model_folder=None,
-    model_name=None,
     repo_id=None,
+    model_name=None,
     label_conversion=None,
     trust_model=False,
     trusted=None,
@@ -230,11 +227,11 @@ def auto_label_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    model_folder : str or Path, defualt: None
+    model_folder : str or Path, default: None
         The path to the folder containing the model
-    repo_id : str | Path, default: None
+    repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
-    model_name: str | Path, default: None
+    model_name: str, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     label_conversion : dic | None, default: None
         A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
@@ -284,6 +281,19 @@ def auto_label_units(
     return classified_units
 
 
+def auto_label_units(*args, **kwargs):
+    """
+    Deprecated function. Please use `model_based_label_units` instead.
+    """
+    warnings.warn(
+        "`auto_label_units` is deprecated and will be removed in v0.105.0. "
+        "Please use `model_based_label_units` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return model_based_label_units(*args, **kwargs)
+
+
 def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model and model_info from a HuggingFaceHub repo or a local folder.
@@ -292,9 +302,9 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=Fal
     ----------
     model_folder : str or Path, defualt: None
         The path to the folder containing the model
-    repo_id : str | Path, default: None
+    repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
-    model_name: str | Path, default: None
+    model_name: str, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     trust_model : bool, default: False
         Whether to trust the model. If True, the `trusted` parameter that is passed to `skops.load` to load the model will be

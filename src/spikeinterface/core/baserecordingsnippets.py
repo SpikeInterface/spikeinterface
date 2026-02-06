@@ -6,7 +6,6 @@ import numpy as np
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
@@ -16,8 +15,6 @@ class BaseRecordingSnippets(BaseExtractor):
     """
     Mixin that handles all probe and channel operations
     """
-
-    has_default_locations = False
 
     def __init__(self, sampling_frequency: float, channel_ids: list[str, int], dtype: np.dtype):
         BaseExtractor.__init__(self, channel_ids)
@@ -54,14 +51,6 @@ class BaseRecordingSnippets(BaseExtractor):
         else:
             return True
 
-    def has_scaled(self):
-        warn(
-            "`has_scaled` has been deprecated and will be removed in 0.103.0. Please use `has_scaleable_traces()`",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaleable_traces()
-
     def has_probe(self) -> bool:
         return "contact_vector" in self.get_property_keys()
 
@@ -72,10 +61,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
 
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        raise NotImplementedError
-
-    def set_probe(self, probe, group_mode="by_probe", in_place=False):
+    def set_probe(self, probe, group_mode="auto", in_place=False):
         """
         Attach a list of Probe object to a recording.
 
@@ -83,9 +69,9 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         probe_or_probegroup: Probe, list of Probe, or ProbeGroup
             The probe(s) to be attached to the recording
-        group_mode: "by_probe" | "by_shank", default: "by_probe
-            "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
-            or  shanks ("by_shanks")
+        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
+            How to add the "group" property.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
@@ -100,10 +86,10 @@ class BaseRecordingSnippets(BaseExtractor):
         probegroup.add_probe(probe)
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probegroup(self, probegroup, group_mode="by_probe", in_place=False):
+    def set_probegroup(self, probegroup, group_mode="auto", in_place=False):
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def _set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
+    def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False):
         """
         Attach a list of Probe objects to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
@@ -117,9 +103,9 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         probe_or_probegroup: Probe, list of Probe, or ProbeGroup
             The probe(s) to be attached to the recording
-        group_mode: "by_probe" | "by_shank", default: "by_probe"
-            "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
-            or  shanks ("by_shank")
+        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
+            How to add the "group" property.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
@@ -129,7 +115,12 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording: BaseRecording
             A view of the recording (ChannelSlice or clone or itself)
         """
-        assert group_mode in ("by_probe", "by_shank"), "'group_mode' can be 'by_probe' or 'by_shank'"
+        assert group_mode in (
+            "auto",
+            "by_probe",
+            "by_shank",
+            "by_side",
+        ), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
 
         # handle several input possibilities
         if isinstance(probe_or_probegroup, Probe):
@@ -164,6 +155,7 @@ class BaseRecordingSnippets(BaseExtractor):
             warn("The given probes have unconnected contacts: they are removed")
 
         probe_as_numpy_array = probe_as_numpy_array[keep]
+
         device_channel_indices = probe_as_numpy_array["device_channel_indices"]
         order = np.argsort(device_channel_indices)
         device_channel_indices = device_channel_indices[order]
@@ -213,42 +205,39 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording.set_property("location", locations, ids=None)
 
         # handle groups
-        groups = np.zeros(probe_as_numpy_array.size, dtype="int64")
-        if group_mode == "by_probe":
-            for group, probe_index in enumerate(np.unique(probe_as_numpy_array["probe_index"])):
-                mask = probe_as_numpy_array["probe_index"] == probe_index
-                groups[mask] = group
+        has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
+        has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
+        if group_mode == "auto":
+            group_keys = ["probe_index"]
+            if has_shank_id:
+                group_keys += ["shank_ids"]
+            if has_contact_side:
+                group_keys += ["contact_sides"]
+        elif group_mode == "by_probe":
+            group_keys = ["probe_index"]
         elif group_mode == "by_shank":
-            assert all(
-                probe.shank_ids is not None for probe in probegroup.probes
-            ), "shank_ids is None in probe, you cannot group by shank"
-            for group, a in enumerate(np.unique(probe_as_numpy_array[["probe_index", "shank_ids"]])):
-                mask = (probe_as_numpy_array["probe_index"] == a["probe_index"]) & (
-                    probe_as_numpy_array["shank_ids"] == a["shank_ids"]
-                )
-                groups[mask] = group
+            assert has_shank_id, "shank_ids is None in probe, you cannot group by shank"
+            group_keys = ["probe_index", "shank_ids"]
+        elif group_mode == "by_side":
+            assert has_contact_side, "contact_sides is None in probe, you cannot group by side"
+            if has_shank_id:
+                group_keys = ["probe_index", "shank_ids", "contact_sides"]
+            else:
+                group_keys = ["probe_index", "contact_sides"]
+        groups = np.zeros(probe_as_numpy_array.size, dtype="int64")
+        unique_keys = np.unique(probe_as_numpy_array[group_keys])
+        for group, a in enumerate(unique_keys):
+            mask = np.ones(probe_as_numpy_array.size, dtype=bool)
+            for k in group_keys:
+                mask &= probe_as_numpy_array[k] == a[k]
+            groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
         # add probe annotations to recording
         probes_info = []
         for probe in probegroup.probes:
             probes_info.append(probe.annotations)
-        self.annotate(probes_info=probes_info)
-
-        return sub_recording
-
-    def set_probes(self, probe_or_probegroup, group_mode="by_probe", in_place=False):
-
-        warning_msg = (
-            "`set_probes` is now a private function and the public function will be "
-            "removed in 0.103.0. Please use `set_probe` or `set_probegroup` instead"
-        )
-
-        warn(warning_msg, category=DeprecationWarning, stacklevel=2)
-
-        sub_recording = self._set_probes(
-            probe_or_probegroup=probe_or_probegroup, group_mode=group_mode, in_place=in_place
-        )
+        sub_recording.annotate(probes_info=probes_info)
 
         return sub_recording
 
@@ -275,6 +264,12 @@ class BaseRecordingSnippets(BaseExtractor):
                 probegroup.add_probe(probe)
         else:
             probegroup = ProbeGroup.from_numpy(arr)
+
+            if "probes_info" in self.get_annotation_keys():
+                probes_info = self.get_annotation("probes_info")
+                for probe, probe_info in zip(probegroup.probes, probes_info):
+                    probe.annotations = probe_info
+
             for probe_index, probe in enumerate(probegroup.probes):
                 contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
                 if contour is not None:
@@ -444,25 +439,6 @@ class BaseRecordingSnippets(BaseExtractor):
 
         return recording2d
 
-    # utils
-    def channel_slice(self, channel_ids, renamed_channel_ids=None):
-        """
-        Returns a new object with sliced channels.
-
-        Parameters
-        ----------
-        channel_ids : np.array or list
-            The list of channels to keep
-        renamed_channel_ids : np.array or list, default: None
-            A list of renamed channels
-
-        Returns
-        -------
-        BaseRecordingSnippets
-            The object with sliced channels
-        """
-        return self._channel_slice(channel_ids, renamed_channel_ids=renamed_channel_ids)
-
     def select_channels(self, channel_ids):
         """
         Returns a new object with sliced channels.
@@ -562,7 +538,7 @@ class BaseRecordingSnippets(BaseExtractor):
             recordings = {}
         for value in np.unique(values).tolist():
             (inds,) = np.nonzero(values == value)
-            new_channel_ids = self.get_channel_ids()[inds]
+            new_channel_ids = self.channel_ids[inds]
             subrec = self.select_channels(new_channel_ids)
             subrec.set_annotation("split_by_property", value=property)
             if outputs == "list":

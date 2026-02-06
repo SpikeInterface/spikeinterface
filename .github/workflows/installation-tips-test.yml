@@ -1,40 +1,40 @@
-name: Creates Conda Install for Installation Tips
+name: Checks uv installation from Installation Tips
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * 0"  # Weekly at noon UTC on Sundays
 
+env:
+  UV_SYSTEM_PYTHON: 1
+
 jobs:
   installation-tips-testing:
-    name: Build Conda Env on ${{ matrix.os }} OS
+    name: Test uv installation on ${{ matrix.os }} OS
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            label: linux_dandi
           - os: macos-latest
-            label: mac
           - os: windows-latest
-            label: windows
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
-    - name: Test Conda Environment Creation
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        miniconda-version: "latest"
-        environment-file: ./installation_tips/full_spikeinterface_environment_${{ matrix.label }}.yml
-        activate-environment: si_env
-    - name: Check Installation Tips
-      run: python ./installation_tips/check_your_install.py --ci # ci flag turns off gui
+        python-version: '3.12'
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Install requirements
+      run: uv pip install -r ./installation_tips/beginner_requirements_stable.txt
+    - name: Check Installation Tips (mac)
+      if: ${{ matrix.os == 'macos-latest' }}
+      run: python ./installation_tips/check_your_install.py --ci --short --skip-kilosort4 # ci flag turns off gui
+    - name: Check Installation Tips (linux/windows)
+      if: ${{ matrix.os != 'macos-latest' }}
+      run: python ./installation_tips/check_your_install.py --ci --short # ci flag turns off gui
     - name: Windows cleanup
-      if: ${{ matrix.label == 'windows' }}
+      if: ${{ matrix.os == 'windows-latest' }}
       run: python ./installation_tips/cleanup_for_windows.py

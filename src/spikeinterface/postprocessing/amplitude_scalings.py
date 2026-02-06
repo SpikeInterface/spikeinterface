@@ -3,18 +3,14 @@ from __future__ import annotations
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
+from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array, _get_nbefore
+from spikeinterface.core.sortinganalyzer import register_result_extension
+from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
-from spikeinterface.core.template_tools import get_template_extremum_channel
-
-from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-
-from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, run_node_pipeline, find_parent_of_type
-
-from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
+from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, find_parent_of_type
 
 
-class ComputeAmplitudeScalings(AnalyzerExtension):
+class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
     """
     Computes the amplitude scalings from a SortingAnalyzer.
 
@@ -55,31 +51,11 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         multi-linear regression model (with `sklearn.LinearRegression`). If False, each spike is fitted independently.
     delta_collision_ms: float, default: 2
         The maximum time difference in ms before and after a spike to gather colliding spikes.
-    load_if_exists : bool, default: False
-        Whether to load precomputed spike amplitudes, if they already exist.
-    outputs: "concatenated" | "by_unit", default: "concatenated"
-        How the output should be returned
-    {}
-
-    Returns
-    -------
-    amplitude_scalings: np.array or list of dict
-        The amplitude scalings.
-            - If "concatenated" all amplitudes for all spikes and all units are concatenated
-            - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
 
     extension_name = "amplitude_scalings"
     depend_on = ["templates"]
-    need_recording = True
-    use_nodepipeline = True
     nodepipeline_variables = ["amplitude_scalings", "collision_mask"]
-    need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
-
-        self.collisions = None
 
     def _set_params(
         self,
@@ -90,7 +66,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
         handle_collisions=True,
         delta_collision_ms=2,
     ):
-        params = dict(
+        return super()._set_params(
             sparsity=sparsity,
             max_dense_channels=max_dense_channels,
             ms_before=ms_before,
@@ -98,46 +74,18 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             handle_collisions=handle_collisions,
             delta_collision_ms=delta_collision_ms,
         )
-        return params
-
-    def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
-
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
-
-        new_data = dict()
-        new_data["amplitude_scalings"] = self.data["amplitude_scalings"][keep_spike_mask]
-        if self.params["handle_collisions"]:
-            new_data["collision_mask"] = self.data["collision_mask"][keep_spike_mask]
-        return new_data
-
-    def _merge_extension_data(
-        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
-    ):
-        new_data = dict()
-
-        if keep_mask is None:
-            new_data["amplitude_scalings"] = self.data["amplitude_scalings"].copy()
-            if self.params["handle_collisions"]:
-                new_data["collision_mask"] = self.data["collision_mask"].copy()
-        else:
-            new_data["amplitude_scalings"] = self.data["amplitude_scalings"][keep_mask]
-            if self.params["handle_collisions"]:
-                new_data["collision_mask"] = self.data["collision_mask"][keep_mask]
-
-        return new_data
 
     def _get_pipeline_nodes(self):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        return_scaled = self.sorting_analyzer.return_scaled
+        return_in_uV = self.sorting_analyzer.return_in_uV
 
-        all_templates = get_dense_templates_array(self.sorting_analyzer, return_scaled=return_scaled)
+        all_templates = get_dense_templates_array(self.sorting_analyzer, return_in_uV=return_in_uV)
         nbefore = _get_nbefore(self.sorting_analyzer)
         nafter = all_templates.shape[1] - nbefore
+        templates_ext = self.sorting_analyzer.get_extension("templates")
 
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
@@ -152,7 +100,7 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             cut_out_after = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
             assert (
                 cut_out_after <= nafter
-            ), f"`ms_after` must be smaller than `ms_after` used in WaveformExractor: {we._params['ms_after']}"
+            ), f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
         else:
             cut_out_after = nafter
 
@@ -179,7 +127,11 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             sparsity = self.params["sparsity"]
         else:
             if self.params["max_dense_channels"] is not None:
-                assert recording.get_num_channels() <= self.params["max_dense_channels"], ""
+                assert recording.get_num_channels() <= self.params["max_dense_channels"], (
+                    "Sparsity must be provided when the number of channels is "
+                    f"greater than {self.params['max_dense_channels']}. Alternatively, set max_dense_channels to None "
+                    "to compute amplitude scalings using dense waveforms."
+                )
             sparsity = ChannelSparsity.create_dense(self.sorting_analyzer)
         sparsity_mask = sparsity.mask
 
@@ -200,36 +152,12 @@ class ComputeAmplitudeScalings(AnalyzerExtension):
             nafter=nafter,
             cut_out_before=cut_out_before,
             cut_out_after=cut_out_after,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
         )
         nodes = [spike_retriever_node, amplitude_scalings_node]
         return nodes
-
-    def _run(self, verbose=False, **job_kwargs):
-        job_kwargs = fix_job_kwargs(job_kwargs)
-        nodes = self.get_pipeline_nodes()
-        amp_scalings, collision_mask = run_node_pipeline(
-            self.sorting_analyzer.recording,
-            nodes,
-            job_kwargs=job_kwargs,
-            job_name="amplitude_scalings",
-            gather_mode="memory",
-            verbose=verbose,
-        )
-        self.data["amplitude_scalings"] = amp_scalings
-        if self.params["handle_collisions"]:
-            self.data["collision_mask"] = collision_mask
-            # TODO: make collisions "global"
-            # for collision in collisions:
-            #     collisions_dict.update(collision)
-            # self.collisions = collisions_dict
-            # # Note: collisions are note in _extension_data because they are not pickable. We only store the indices
-            # self._extension_data["collisions"] = np.array(list(collisions_dict.keys()))
-
-    def _get_data(self):
-        return self.data[f"amplitude_scalings"]
 
 
 register_result_extension(ComputeAmplitudeScalings)
@@ -248,13 +176,13 @@ class AmplitudeScalingNode(PipelineNode):
         nafter,
         cut_out_before,
         cut_out_after,
-        return_scaled,
+        return_in_uV,
         handle_collisions,
         delta_collision_samples,
     ):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
-        self.return_scaled = return_scaled
-        if return_scaled and recording.has_scaleable_traces():
+        self.return_in_uV = return_in_uV
+        if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_gains()
@@ -291,7 +219,7 @@ class AmplitudeScalingNode(PipelineNode):
             nafter=nafter,
             cut_out_before=cut_out_before,
             cut_out_after=cut_out_after,
-            return_scaled=return_scaled,
+            return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
         )
@@ -693,7 +621,7 @@ def _plot_one_collision(
         center_spike["sample_index"] + max_delta + cut_out_samples,
         recording.get_num_samples(segment_index=center_spike["segment_index"]),
     )
-    tr_overlap = recording.get_traces(start_frame=sf, end_frame=ef, channel_ids=channel_ids, return_scaled=True)
+    tr_overlap = recording.get_traces(start_frame=sf, end_frame=ef, channel_ids=channel_ids, return_in_uV=True)
     ts = np.arange(sf, ef) / recording.sampling_frequency * 1000
     max_tr = np.max(np.abs(tr_overlap))
 

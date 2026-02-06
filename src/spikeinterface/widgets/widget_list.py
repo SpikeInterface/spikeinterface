@@ -10,6 +10,7 @@ from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .inter_session_alignment import SessionAlignmentWidget, ActivityHistogram1DWidget, ActivityHistogram2DWidget
+from .drift_templates import DriftingTemplatesWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import DriftRasterMapWidget, MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
@@ -37,6 +38,7 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
+from .unit_valid_periods import ValidUnitPeriodsWidget
 
 widget_list = [
     ActivityHistogram1DWidget,
@@ -48,7 +50,9 @@ widget_list = [
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
+    DriftingTemplatesWidget,
     DriftRasterMapWidget,
+    ValidUnitPeriodsWidget,
     ISIDistributionWidget,
     LocationsWidget,
     MotionWidget,
@@ -99,6 +103,11 @@ Returns
 -------
 w : BaseWidget
     The output widget object.
+
+Notes
+-----
+When using the matplotlib backend, the returned `BaseWidget` contains the matplotlib fig and axis objects. This allows
+customization of plots using matplotlib machinery e.g. `returned_widget.ax.set_xlim((0,100))`.
     """
     backend_str = ""
     backend_kwargs_str = ""
@@ -125,7 +134,9 @@ plot_autocorrelograms = AutoCorrelogramsWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_drifting_templates = DriftingTemplatesWidget
 plot_drift_raster_map = DriftRasterMapWidget
+plot_valid_unit_periods = ValidUnitPeriodsWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_locations = LocationsWidget
 plot_motion = MotionWidget

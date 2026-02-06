@@ -12,7 +12,7 @@ from spikeinterface.core import (
     BaseSnippets,
     BaseSnippetsSegment,
 )
-from .basesorting import minimum_spike_dtype
+from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
@@ -367,12 +367,20 @@ class NumpySorting(BaseSorting):
 
     @staticmethod
     def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+        warning_msg = (
+            "`from_times_labels` is deprecated and will be removed in 0.104.0. Note this function requires"
+            "samples rather than times so should not be used for clarity purposes. For those working in samples please"
+            "use `from_samples_and_labels` instead. For those working in time units (seconds) please use "
+            "`from_times_and_labels` instead."
+        )
+
         warnings.warn(
-            "from_times_labels is deprecated and will be removed in 0.104.0, use from_sample_and_labels instead",
+            warning_msg,
             DeprecationWarning,
             stacklevel=2,
         )
-        return NumpySorting.from_times_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
+        # despite the naming of the original function this required samples
+        return NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
 
     @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
@@ -418,9 +426,6 @@ class NumpySorting(BaseSorting):
         spikes = np.concatenate(spikes)
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
-
-        # Trick : populate the cache with dict that already exists
-        sorting._cached_spike_trains = {seg_ind: d for seg_ind, d in enumerate(units_dict_list)}
 
         return sorting
 

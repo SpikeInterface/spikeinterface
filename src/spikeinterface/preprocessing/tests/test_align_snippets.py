@@ -3,9 +3,6 @@ test for BaseSnippets are done with NumpySnippets.
 but check only for BaseRecording general methods.
 """
 
-import pytest
-import numpy as np
-
 from spikeinterface.core import generate_snippets
 from spikeinterface.preprocessing.align_snippets import AlignSnippets
 

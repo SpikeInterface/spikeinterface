@@ -27,8 +27,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     n_components : int, default: 5
         Number of components fo PCA
     mode : "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
@@ -43,6 +41,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         If True, waveforms are pre-whitened
     dtype : dtype, default: "float32"
         Dtype of the pc scores
+    {}
 
     Examples
     --------
@@ -69,9 +68,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
-
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
 
     def _set_params(
         self,
@@ -148,6 +144,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        return self.data.copy()
 
     def get_pca_model(self):
         """
@@ -522,8 +522,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         # transform a waveforms buffer
         # used by _run() and project_new()
 
-        from sklearn.exceptions import NotFittedError
-
         mode = self.params["mode"]
 
         # prepare buffer
@@ -682,6 +680,7 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
+ComputePrincipalComponents.__doc__.format(_shared_job_kwargs_doc)
 register_result_extension(ComputePrincipalComponents)
 compute_principal_components = ComputePrincipalComponents.function_factory()
 

@@ -5,7 +5,6 @@ import numpy as np
 from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
 
-
 # def setup_module():
 #     if test_dir.is_dir():
 #         shutil.rmtree(test_dir)
@@ -45,7 +44,7 @@ def test_compare_multiple_templates():
 
     for u1 in temp_cmp.hungarian_match_12.index.values:
         u2 = temp_cmp.hungarian_match_12[u1]
-        if u2 != -1:
+        if u2 != -1 and u2 != "":
             assert u1 == u2
 
     # multi-comparison

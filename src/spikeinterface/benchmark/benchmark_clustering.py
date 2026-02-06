@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.widgets import (
@@ -11,7 +11,7 @@ from spikeinterface.widgets import (
 
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
-from .benchmark_base import Benchmark, BenchmarkStudy
+from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -29,14 +29,19 @@ class ClusteringBenchmark(Benchmark):
         self.method_kwargs = params["method_kwargs"]
         self.result = {}
 
-    def run(self, **job_kwargs):
-        labels, peak_labels = find_cluster_from_peaks(
-            self.recording, self.peaks, method=self.method, method_kwargs=self.method_kwargs, **job_kwargs
+    def run(self, verbose=True, **job_kwargs):
+        labels, peak_labels = find_clusters_from_peaks(
+            self.recording,
+            self.peaks,
+            method=self.method,
+            method_kwargs=self.method_kwargs,
+            verbose=verbose,
+            job_kwargs=job_kwargs,
         )
         self.result["peak_labels"] = peak_labels
 
-    def compute_result(self, **result_params):
-        result_params, job_kwargs = split_job_kwargs(result_params)
+    def compute_result(self, with_template=False, **job_kwargs):
+        # result_params, job_kwargs = split_job_kwargs(result_params)
         job_kwargs = fix_job_kwargs(job_kwargs)
         self.noise = self.result["peak_labels"] < 0
         spikes = self.gt_sorting.to_spike_vector()
@@ -68,19 +73,20 @@ class ClusteringBenchmark(Benchmark):
             self.result["sliced_gt_sorting"], self.result["clustering"], exhaustive_gt=self.exhaustive_gt
         )
 
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates", **job_kwargs)
-        self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
+        if with_template:
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
 
-        sorting_analyzer = create_sorting_analyzer(
-            self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
-        )
-        sorting_analyzer.compute("random_spikes")
-        ext = sorting_analyzer.compute("templates", **job_kwargs)
-        self.result["clustering_templates"] = ext.get_data(outputs="Templates")
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["clustering_templates"] = ext.get_data(outputs="Templates")
 
     _run_key_saved = [("peak_labels", "npy")]
 
@@ -93,7 +99,17 @@ class ClusteringBenchmark(Benchmark):
     ]
 
 
-class ClusteringStudy(BenchmarkStudy):
+class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare clustering methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    The input of methods are the detected peaks. Because the clustering
+    can be performed on only a subset of the detected peaks, then selected peak
+    must be also given as index of all spikes.
+    """
 
     benchmark_class = ClusteringBenchmark
 
@@ -181,6 +197,11 @@ class ClusteringStudy(BenchmarkStudy):
 
         return plot_performances_vs_snr(self, **kwargs)
 
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
+
     def plot_performances_comparison(self, *args, **kwargs):
         from .benchmark_plot_tools import plot_performances_comparison
 
@@ -196,11 +217,26 @@ class ClusteringStudy(BenchmarkStudy):
 
         return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
 
+    def plot_performances_ordered(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, *args, **kwargs)
+
+    def plot_some_over_merged(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_merged
+
+        return plot_some_over_merged(self, *args, **kwargs)
+
+    def plot_some_over_splited(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_splited
+
+        return plot_some_over_splited(self, *args, **kwargs)
+
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -237,7 +273,7 @@ class ClusteringStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         if axes is None:
             fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
@@ -296,7 +332,7 @@ class ClusteringStudy(BenchmarkStudy):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -365,81 +401,3 @@ class ClusteringStudy(BenchmarkStudy):
         fig.colorbar(im, cax=cbar_ax, label=metric)
 
         return fig
-
-    def plot_some_over_merged(self, case_keys=None, overmerged_score=0.05, max_units=5, figsize=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-
-        figs = []
-        for count, key in enumerate(case_keys):
-            label = self.cases[key]["label"]
-            comp = self.get_result(key)["gt_comparison"]
-
-            unit_index = np.flatnonzero(np.sum(comp.agreement_scores.values > overmerged_score, axis=0) > 1)
-            overmerged_ids = comp.sorting2.unit_ids[unit_index]
-
-            n = min(len(overmerged_ids), max_units)
-            if n > 0:
-                fig, axs = plt.subplots(nrows=n, figsize=figsize)
-                for i, unit_id in enumerate(overmerged_ids[:n]):
-                    gt_unit_indices = np.flatnonzero(comp.agreement_scores.loc[:, unit_id].values > overmerged_score)
-                    gt_unit_ids = comp.sorting1.unit_ids[gt_unit_indices]
-                    ax = axs[i]
-                    ax.set_title(f"unit {unit_id} - GTids {gt_unit_ids}")
-
-                    analyzer = self.get_sorting_analyzer(key)
-
-                    wf_template = analyzer.get_extension("templates")
-                    templates = wf_template.get_templates(unit_ids=gt_unit_ids)
-                    if analyzer.sparsity is not None:
-                        chan_mask = np.any(analyzer.sparsity.mask[gt_unit_indices, :], axis=0)
-                        templates = templates[:, :, chan_mask]
-                    ax.plot(templates.swapaxes(1, 2).reshape(templates.shape[0], -1).T)
-                    ax.set_xticks([])
-
-                fig.suptitle(label)
-                figs.append(fig)
-            else:
-                print(key, "no overmerged")
-
-        return figs
-
-    def plot_some_over_splited(self, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-
-        figs = []
-        for count, key in enumerate(case_keys):
-            label = self.cases[key]["label"]
-            comp = self.get_result(key)["gt_comparison"]
-
-            gt_unit_indices = np.flatnonzero(np.sum(comp.agreement_scores.values > oversplit_score, axis=1) > 1)
-            oversplit_ids = comp.sorting1.unit_ids[gt_unit_indices]
-
-            n = min(len(oversplit_ids), max_units)
-            if n > 0:
-                fig, axs = plt.subplots(nrows=n, figsize=figsize)
-                for i, unit_id in enumerate(oversplit_ids[:n]):
-                    unit_indices = np.flatnonzero(comp.agreement_scores.loc[unit_id, :].values > oversplit_score)
-                    unit_ids = comp.sorting2.unit_ids[unit_indices]
-                    ax = axs[i]
-                    ax.set_title(f"Gt unit {unit_id} - unit_ids: {unit_ids}")
-
-                    templates = self.get_result(key)["clustering_templates"]
-
-                    template_arrays = templates.get_dense_templates()[unit_indices, :, :]
-                    if templates.sparsity is not None:
-                        chan_mask = np.any(templates.sparsity.mask[gt_unit_indices, :], axis=0)
-                        template_arrays = template_arrays[:, :, chan_mask]
-
-                    ax.plot(template_arrays.swapaxes(1, 2).reshape(template_arrays.shape[0], -1).T)
-                    ax.set_xticks([])
-
-                fig.suptitle(label)
-                figs.append(fig)
-            else:
-                print(key, "no over splited")
-
-            return figs

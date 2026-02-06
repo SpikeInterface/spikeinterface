@@ -55,7 +55,7 @@ class BinaryRecordingExtractor(BaseRecording):
         file_paths,
         sampling_frequency,
         dtype,
-        num_channels: int,
+        num_channels: int | None = None,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -63,12 +63,18 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
+        num_chan=None,
     ):
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
         else:
             assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
+
+        # DO NOT DELETE! This is for backward compatibility
+        if num_chan is not None:
+            assert num_channels is None, "When both num_channels and num_chan are provided, num_channels is used"
+            num_channels = num_chan
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -148,6 +154,18 @@ class BinaryRecordingExtractor(BaseRecording):
         )
         return d
 
+    def __del__(self):
+        """
+        Ensures that all segment resources are properly cleaned up when this recording extractor is deleted.
+        Closes any open file handles in the recording segments.
+        """
+        # Close all recording segments
+        if hasattr(self, "_recording_segments"):
+            for segment in self._recording_segments:
+                # This will trigger the __del__ method of the BinaryRecordingSegment
+                # which will close the file handle
+                del segment
+
 
 BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
     _shared_job_kwargs_doc
@@ -222,6 +240,15 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+
+    def __del__(self):
+        # Ensure that the file handle is closed when the segment is garbage-collected
+        try:
+            if hasattr(self, "file") and self.file and not self.file.closed:
+                self.file.close()
+        except Exception as e:
+            warnings.warn(f"Error closing file handle in BinaryRecordingSegment: {e}")
+            pass
 
 
 # For backward compatibility (old good time)

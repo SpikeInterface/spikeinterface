@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
-from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.motion import ensure_time_bin_edges, ensure_time_bins
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.motion import ensure_time_bins
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.preprocessing.filter import fix_dtype
@@ -523,4 +523,6 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-interpolate_motion = define_function_from_class(source_class=InterpolateMotionRecording, name="interpolate_motion")
+interpolate_motion = define_function_handling_dict_from_class(
+    source_class=InterpolateMotionRecording, name="interpolate_motion"
+)

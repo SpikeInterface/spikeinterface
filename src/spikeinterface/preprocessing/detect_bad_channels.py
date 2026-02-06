@@ -4,8 +4,154 @@ import warnings
 import numpy as np
 from typing import Literal
 
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .filter import highpass_filter
 from spikeinterface.core import get_random_data_chunks, order_channels_by_depth, BaseRecording
+from spikeinterface.core.channelslice import ChannelSliceRecording
+
+from inspect import signature
+
+_bad_channel_detection_kwargs_doc = """Different methods are implemented:
+
+* std : threhshold on channel standard deviations
+    If the standard deviation of a channel is greater than `std_mad_threshold` times the median of all
+    channels standard deviations, the channel is flagged as noisy
+* mad : same as std, but using median absolute deviations instead
+* coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
+    * Dead channels are those with low similarity to the surrounding channels (n=`n_neighbors` median)
+    * Noise channels are those with power at >80% Nyquist above the psd_hf_threshold (default 0.02 uV^2 / Hz)
+        and a high coherence with "far away" channels"
+    * Out of brain channels are contigious regions of channels dissimilar to the median of all channels
+        at the top end of the probe (i.e. large channel number)
+* neighborhood_r2
+    A method tuned for LFP use-cases, where channels should be highly correlated with their spatial
+    neighbors. This method estimates the correlation of each channel with the median of its spatial
+    neighbors, and considers channels bad when this correlation is too small.
+
+Parameters
+----------
+recording : BaseRecording
+    The recording for which bad channels are detected
+method : "coeherence+psd" | "std" | "mad" | "neighborhood_r2", default: "coeherence+psd"
+        The method to be used for bad channel detection
+std_mad_threshold : float, default: 5
+    The standard deviation/mad multiplier threshold
+psd_hf_threshold : float, default: 0.02
+    For coherence+psd - an absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
+    Channels with average power at >80% Nyquist larger than this threshold
+    will be labeled as noise
+dead_channel_threshold : float, default: -0.5
+    For coherence+psd - threshold for channel coherence below which channels are labeled as dead
+noisy_channel_threshold : float, default: 1
+    Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
+outside_channel_threshold : float, default: -0.75
+    For coherence+psd - threshold for channel coherence above which channels at the edge of the recording are marked as outside
+    of the brain
+outside_channels_location : "top" | "bottom" | "both", default: "top"
+    For coherence+psd - location of the outside channels. If "top", only the channels at the top of the probe can be
+    marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
+    marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
+    marked as outside channels
+n_neighbors : int, default: 11
+    For coeherence+psd - number of channel neighbors to compute median filter (needs to be odd)
+nyquist_threshold : float, default: 0.8
+    For coherence+psd - frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
+    with psd_hf_threshold
+direction : "x" | "y" | "z", default: "y"
+    For coherence+psd - the depth dimension
+highpass_filter_cutoff : float, default: 300
+    If the recording is not filtered, the cutoff frequency of the highpass filter
+chunk_duration_s : float, default: 0.5
+    Duration of each chunk
+num_random_chunks : int, default: 100
+    Number of random chunks
+    Having many chunks is important for reproducibility.
+welch_window_ms : float, default: 10
+    Window size for the scipy.signal.welch that will be converted to nperseg
+neighborhood_r2_threshold : float, default: 0.95
+    R^2 threshold for the neighborhood_r2 method.
+neighborhood_r2_radius_um : float, default: 30
+    Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
+seed : int | None, default: None
+    The random seed to extract chunks
+channel_filters : set | None, default: None
+    For coherence+psd - only return `bad_channel_ids` whose labels are in the set `channel_filter`.
+"""
+
+
+class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
+    """
+    Detects and removes bad channels. If `bad_channel_ids` are given,
+    the detection is skipped and uses these instead.
+
+    {}
+    bad_channel_ids : np.array | list | None, default: None
+        If given, these are used rather than being detected.
+    channel_labels : np.array | list | None, default: None
+        If given, these are labels given to the channels by the
+        detection process. Only intended for use when loading.
+
+    Returns
+    -------
+    removed_bad_channels_recording : DetectAndRemoveBadChannelsRecording
+        The recording with bad channels removed
+    """
+
+    _precomputable_kwarg_names = ["bad_channel_ids", "channel_labels"]
+
+    def __init__(
+        self,
+        parent_recording: BaseRecording,
+        bad_channel_ids=None,
+        channel_labels=None,
+        **detect_bad_channels_kwargs,
+    ):
+
+        if bad_channel_ids is None:
+            bad_channel_ids, channel_labels = detect_bad_channels(
+                recording=parent_recording, **detect_bad_channels_kwargs
+            )
+        else:
+            channel_labels = None
+
+        self._main_ids = parent_recording.get_channel_ids()
+        new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, bad_channel_ids)]
+
+        ChannelSliceRecording.__init__(
+            self,
+            parent_recording=parent_recording,
+            channel_ids=new_channel_ids,
+        )
+
+        # Do not want these, since they are not _kwargs of `DetectAndRemoveBadChannelsRecording`
+        self._kwargs.pop("channel_ids")
+        self._kwargs.pop("renamed_channel_ids")
+
+        self._kwargs.update({"bad_channel_ids": bad_channel_ids})
+        if channel_labels is not None:
+            self._kwargs.update({"channel_labels": channel_labels})
+
+        all_bad_channels_kwargs = _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs)
+        self._kwargs.update(all_bad_channels_kwargs)
+
+
+DetectAndRemoveBadChannelsRecording.__doc__ = DetectAndRemoveBadChannelsRecording.__doc__.format(
+    _bad_channel_detection_kwargs_doc
+)
+detect_and_remove_bad_channels = define_function_handling_dict_from_class(
+    source_class=DetectAndRemoveBadChannelsRecording, name="detect_and_remove_bad_channels"
+)
+
+
+def _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs):
+    """Get the default parameters from `detect_bad_channels`, and update with any user-specified parameters."""
+
+    sig = signature(detect_bad_channels)
+    all_detect_bad_channels_kwargs = {
+        k: v.default for k, v in sig.parameters.items() if k not in ["recording", "parent_recording"]
+    }
+    all_detect_bad_channels_kwargs.update(detect_bad_channels_kwargs)
+    return all_detect_bad_channels_kwargs
 
 
 def detect_bad_channels(
@@ -27,74 +173,13 @@ def detect_bad_channels(
     neighborhood_r2_threshold: float = 0.9,
     neighborhood_r2_radius_um: float = 30.0,
     seed: int | None = None,
+    channel_filters: set | None = None,
 ):
     """
     Perform bad channel detection.
     The recording is assumed to be filtered. If not, a highpass filter is applied on the fly.
 
-    Different methods are implemented:
-
-    * std : threhshold on channel standard deviations
-        If the standard deviation of a channel is greater than `std_mad_threshold` times the median of all
-        channels standard deviations, the channel is flagged as noisy
-    * mad : same as std, but using median absolute deviations instead
-    * coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
-        * Dead channels are those with low similarity to the surrounding channels (n=`n_neighbors` median)
-        * Noise channels are those with power at >80% Nyquist above the psd_hf_threshold (default 0.02 uV^2 / Hz)
-          and a high coherence with "far away" channels"
-        * Out of brain channels are contigious regions of channels dissimilar to the median of all channels
-          at the top end of the probe (i.e. large channel number)
-    * neighborhood_r2
-        A method tuned for LFP use-cases, where channels should be highly correlated with their spatial
-        neighbors. This method estimates the correlation of each channel with the median of its spatial
-        neighbors, and considers channels bad when this correlation is too small.
-
-    Parameters
-    ----------
-    recording : BaseRecording
-        The recording for which bad channels are detected
-    method : "coeherence+psd" | "std" | "mad" | "neighborhood_r2", default: "coeherence+psd"
-        The method to be used for bad channel detection
-    std_mad_threshold : float, default: 5
-        The standard deviation/mad multiplier threshold
-    psd_hf_threshold : float, default: 0.02
-        For coherence+psd - an absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
-        Channels with average power at >80% Nyquist larger than this threshold
-        will be labeled as noise
-    dead_channel_threshold : float, default: -0.5
-        For coherence+psd - threshold for channel coherence below which channels are labeled as dead
-    noisy_channel_threshold : float, default: 1
-        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition)
-    outside_channel_threshold : float, default: -0.75
-        For coherence+psd - threshold for channel coherence above which channels at the edge of the recording are marked as outside
-        of the brain
-    outside_channels_location : "top" | "bottom" | "both", default: "top"
-        For coherence+psd - location of the outside channels. If "top", only the channels at the top of the probe can be
-        marked as outside channels. If "bottom", only the channels at the bottom of the probe can be
-        marked as outside channels. If "both", both the channels at the top and bottom of the probe can be
-        marked as outside channels
-    n_neighbors : int, default: 11
-        For coeherence+psd - number of channel neighbors to compute median filter (needs to be odd)
-    nyquist_threshold : float, default: 0.8
-        For coherence+psd - frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
-        with psd_hf_threshold
-    direction : "x" | "y" | "z", default: "y"
-        For coherence+psd - the depth dimension
-    highpass_filter_cutoff : float, default: 300
-        If the recording is not filtered, the cutoff frequency of the highpass filter
-    chunk_duration_s : float, default: 0.5
-        Duration of each chunk
-    num_random_chunks : int, default: 100
-        Number of random chunks
-        Having many chunks is important for reproducibility.
-    welch_window_ms : float, default: 10
-        Window size for the scipy.signal.welch that will be converted to nperseg
-    neighborhood_r2_threshold : float, default: 0.95
-        R^2 threshold for the neighborhood_r2 method.
-    neighborhood_r2_radius_um : float, default: 30
-        Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
-    seed : int or None, default: None
-        The random seed to extract chunks
+    {}
 
     Returns
     -------
@@ -139,13 +224,13 @@ def detect_bad_channels(
 
     # Adjust random chunk kwargs based on method
     if method in ("std", "mad"):
-        random_chunk_kwargs["return_scaled"] = False
+        random_chunk_kwargs["return_in_uV"] = False
         random_chunk_kwargs["concatenated"] = True
     elif method == "coherence+psd":
-        random_chunk_kwargs["return_scaled"] = True
+        random_chunk_kwargs["return_in_uV"] = True
         random_chunk_kwargs["concatenated"] = False
     elif method == "neighborhood_r2":
-        random_chunk_kwargs["return_scaled"] = False
+        random_chunk_kwargs["return_in_uV"] = False
         random_chunk_kwargs["concatenated"] = False
 
     random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
@@ -219,6 +304,22 @@ def detect_bad_channels(
                 "(good channels may be erroneously labeled as dead)."
             )
 
+        allowed_filters = {"dead", "noise", "out"}
+
+        if channel_filters is None:
+            channel_filters = allowed_filters
+
+        if not isinstance(channel_filters, set):
+            raise ValueError(f"channel_filters must be None or a set of the following values : {allowed_filters} ")
+
+        if not channel_filters.issubset(allowed_filters):
+            raise ValueError(
+                f"{channel_filter.difference(allowed_filters)} is not a valid argument of channel_filters. Please use one of the following instead {allowed_filters}."
+            )
+
+        filtered_bad_channel_mask = np.isin(channel_labels, list(channel_filters))
+        bad_channel_ids = recording.channel_ids[filtered_bad_channel_mask]
+
     elif method == "neighborhood_r2":
         # make neighboring channels structure. this should probably be a function in core.
         geom = recording.get_channel_locations()
@@ -267,6 +368,9 @@ def detect_bad_channels(
         channel_labels[bad_channel_mask] = "noise"
 
     return bad_channel_ids, channel_labels
+
+
+detect_bad_channels.__doc__ = detect_bad_channels.__doc__.format(_bad_channel_detection_kwargs_doc)
 
 
 # ----------------------------------------------------------------------------------------------
