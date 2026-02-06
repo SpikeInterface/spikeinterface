@@ -36,8 +36,8 @@ def test_detect_saturation_periods():
     job_kwargs = {"chunk_size": chunk_size}
 
     # Generate some data in uV
-    sat_value = 1200
-    uV_per_sec_threshold = 12 / sample_frequency
+    sat_value = 12
+    uV_per_ms_threshold = 12 / sample_frequency / 1e3 
     rng = np.random.default_rng()
     data = rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10
 
@@ -64,12 +64,33 @@ def test_detect_saturation_periods():
         data_seg_2[start : stop + second_seg_offset, :] = sat_value
 
     # this center the int16 around 0 and saturate on positive
-    max_ = np.max(np.r_[data_seg_1.flatten(), data_seg_2.flatten()])
-    gain = max_ / 2**15
-    offset = 50
+    combined = np.r_[data_seg_1.flatten(), data_seg_2.flatten()]
+    max_ = np.max(combined)
+    # min_ = np.min(combined)
+    gain =  max_ / 2**15   # (max_ - min_) / 65535
+    offset = 0              #  min_ + 32768 * gain
+
+    PLOT = True
+    if PLOT:
+        import matplotlib
+        import matplotlib.pyplot as plt
+        plt.plot(data_seg_1)
+        plt.title("data float")
+        plt.show()
+        plt.plot(np.diff(data_seg_1, axis=0))
+        plt.title("diff float")
+        plt.show()
 
     seg_1_int16 = np.clip(np.rint((data_seg_1 - offset) / gain), -32768, 32767).astype(np.int16)
     seg_2_int16 = np.clip(np.rint((data_seg_2 - offset) / gain), -32768, 32767).astype(np.int16)
+
+    if PLOT:
+        plt.plot(seg_1_int16)
+        plt.title("data int")
+        plt.show()
+        plt.plot(np.diff(seg_1_int16, axis=0))
+        plt.title("diff int")
+        plt.show()
 
     recording = NumpyRecording([seg_1_int16, seg_2_int16], sample_frequency)
     recording.set_channel_gains(gain)
@@ -78,7 +99,7 @@ def test_detect_saturation_periods():
     periods = detect_saturation_periods(
         recording,
         saturation_threshold_uV=sat_value * 0.98,
-        uV_per_sec_threshold=uV_per_sec_threshold,
+        uV_per_ms_threshold=uV_per_ms_threshold,
         job_kwargs=job_kwargs,
     )
 
@@ -103,7 +124,7 @@ def test_detect_saturation_periods():
     periods = detect_saturation_periods(
         recording,
         saturation_threshold_uV=sat_value * (1 / 0.98),
-        uV_per_sec_threshold=uV_per_sec_threshold,
+        uV_per_ms_threshold=uV_per_ms_threshold,
         job_kwargs=job_kwargs,
     )
     assert periods["start_sample_index"][0] == 1000
@@ -114,7 +135,7 @@ def test_detect_saturation_periods():
         method="saturation",
         method_kwargs=dict(
             saturation_threshold_uV=sat_value * (1 / 0.98),
-            uV_per_sec_threshold=uV_per_sec_threshold,
+            uV_per_ms_threshold=uV_per_ms_threshold,
         ),
         job_kwargs=job_kwargs,
     )
