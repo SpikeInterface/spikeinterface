@@ -460,7 +460,7 @@ class TestSessionDisplacementGenerator:
         num_units = 5
         duration = 10
         sampling_frequency = 30000.0
-        probe_name = "Neuropixel-128"
+        probe_name = "Neuropixels1-128"
         generate_probe_kwargs = None
         generate_unit_locations_kwargs = dict()
         generate_templates_kwargs = dict(ms_before=1.5, ms_after=3)
