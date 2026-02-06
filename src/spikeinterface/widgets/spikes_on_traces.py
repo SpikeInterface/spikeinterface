@@ -121,7 +121,7 @@ class SpikesOnTracesWidget(BaseWidget):
         else:
             if sparsity is None:
                 # in this case, we construct a sparsity dictionary only with the main channel
-                main_channels = sorting_analyzer.get_main_channel(outputs="id", with_dict=True)
+                main_channels = sorting_analyzer.get_main_channels(outputs="id", with_dict=True)
                 unit_id_to_channel_ids = {u: [ch] for u, ch in main_channels.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,

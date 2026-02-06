@@ -73,8 +73,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        peak_sign = self.params["spike_retriver_kwargs"]["peak_sign"]
-        extremum_channels_indices = self.sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         retriever = SpikeRetriever(
             sorting,

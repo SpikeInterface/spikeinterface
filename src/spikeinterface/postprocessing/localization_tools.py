@@ -100,7 +100,7 @@ def compute_monopolar_triangulation(
             neighbours_mask[i, chan_inds] = True
         enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
 
-        best_channels = sorting_analyzer_or_templates.get_main_channel(outputs="index", with_dict=True)
+        best_channels = sorting_analyzer_or_templates.get_main_channels(outputs="index", with_dict=True)
 
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
@@ -280,7 +280,7 @@ def compute_grid_convolution(
         contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
-    main_channels = sorting_analyzer_or_templates.get_main_channel(outputs="index", with_dict=True)
+    main_channels = sorting_analyzer_or_templates.get_main_channels(outputs="index", with_dict=True)
 
     weights_sparsity_mask = weights > 0
 
@@ -687,7 +687,7 @@ def compute_location_max_channel(
     unit_locations: np.ndarray
         2d
     """
-    extremum_channels_index = templates_or_sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+    extremum_channels_index = templates_or_sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
     contact_locations = templates_or_sorting_analyzer.get_channel_locations()
     if unit_ids is None:

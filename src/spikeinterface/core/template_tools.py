@@ -132,21 +132,21 @@ def get_template_amplitudes(
 
 
 
-def _get_main_channel_from_template_array(templates_array, mode, main_channel_peak_sign, nbefore):
+def _get_main_channel_from_template_array(templates_array, peak_mode, main_channel_peak_sign, nbefore):
     # Step1 : max on time axis
-    if mode == "extremum":
+    if peak_mode == "extremum":
         if main_channel_peak_sign == "both":
             values = np.max(np.abs(templates_array), axis=1)
         elif main_channel_peak_sign == "neg":
             values = -np.min(templates_array, axis=1)
         elif main_channel_peak_sign == "pos":
             values = np.max(templates_array, axis=1)
-    elif mode == "at_index":
+    elif peak_mode == "at_index":
         if main_channel_peak_sign == "both":
             values = np.abs(templates_array[:, nbefore, :])
         elif main_channel_peak_sign in ["neg", "pos"]:
             values = templates_array[:, nbefore, :]
-    elif mode == "peak_to_peak":
+    elif peak_mode == "peak_to_peak":
         values = np.ptp(templates_array, axis=1)
     
     # Step2: max on channel axis
@@ -158,7 +158,7 @@ def estimate_main_channel_from_recording(
         recording,
         sorting,
         main_channel_peak_sign: "neg" | "both" | "pos" = "both",
-        mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+        peak_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
         num_spikes_for_main_channel=100,
         ms_before = 1.0,
         ms_after = 2.5,
@@ -203,7 +203,7 @@ def estimate_main_channel_from_recording(
         **job_kwargs,
     )
 
-    main_channel_index = _get_main_channel_from_template_array(templates_array, mode, main_channel_peak_sign, nbefore)
+    main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, main_channel_peak_sign, nbefore)
 
     return main_channel_index
 
@@ -241,7 +241,7 @@ def get_template_extremum_channel(
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
-    warnings.warn("get_template_extremum_channel() is deprecated use analyzer.get_main_channel() instead")
+    warnings.warn("get_template_extremum_channel() is deprecated use analyzer.get_main_channels() instead")
     # TODO make a better logic here
 
     assert peak_sign in ("both", "neg", "pos"), "`peak_sign` must be one of `both`, `neg`, or `pos`"

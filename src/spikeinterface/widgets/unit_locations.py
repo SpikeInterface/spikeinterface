@@ -85,7 +85,7 @@ class UnitLocationsWidget(BaseWidget):
 
         if np.any(np.isnan(all_unit_locations[sorting.ids_to_indices(unit_ids)])):
             warnings.warn("Some unit locations contain NaN values. Replacing with extremum channel location.")
-            main_channels = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+            main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
             for unit_id in unit_ids:
                 if np.any(np.isnan(unit_locations[unit_id])):
                     unit_locations[unit_id] = channel_locations[main_channels[unit_id]]

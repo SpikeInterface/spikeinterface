@@ -58,7 +58,7 @@ def create_sorting_analyzer(
     folder=None,
     main_channel_index=None,
     main_channel_peak_sign="both",
-    main_channel_mode="extremum",
+    main_channel_peak_mode="extremum",
     num_spikes_for_main_channel=100,
     sparse=True,
     sparsity=None,
@@ -101,6 +101,11 @@ def create_sorting_analyzer(
         The main_channel_index can be externally provided
     main_channel_peak_sign : "both" | "neg"
         In case when the main_channel_index is estimated wich sign to consider "both" or "neg".
+    main_channel_peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+        Where the amplitude is computed
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
     num_spikes_for_main_channel : int, default: 100
         How many spikes per units to compute the main channel.
     sparse : bool, default: True
@@ -225,7 +230,7 @@ def create_sorting_analyzer(
             recording,
             sorting,
             main_channel_peak_sign=main_channel_peak_sign,
-            mode=main_channel_mode,
+            peak_mode=main_channel_peak_mode,
             num_spikes_for_main_channel=num_spikes_for_main_channel,
             seed=seed,
             **job_kwargs
@@ -266,6 +271,8 @@ def create_sorting_analyzer(
         format=format,
         folder=folder,
         main_channel_index=main_channel_index,
+        main_channel_peak_sign=main_channel_peak_sign,
+        main_channel_peak_mode=main_channel_peak_mode,
         sparsity=sparsity,
         return_in_uV=return_in_uV,
         backend_options=backend_options,
@@ -335,6 +342,8 @@ class SortingAnalyzer:
         format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
+        main_channel_peak_sign="both",
+        main_channel_peak_mode="extremum",
         backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
@@ -345,6 +354,8 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_in_uV = return_in_uV
+        self.main_channel_peak_sign = main_channel_peak_sign
+        self.main_channel_peak_mode = main_channel_peak_mode
 
         # For backward compatibility
         self.return_scaled = return_in_uV
@@ -402,6 +413,8 @@ class SortingAnalyzer:
         sparsity=None,
         return_scaled=None,
         return_in_uV=True,
+        main_channel_peak_sign="both",
+        main_channel_peak_mode="extremum",
         backend_options=None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
@@ -435,10 +448,14 @@ class SortingAnalyzer:
             sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
         
         # This will ensure that the sorting saved always will have this main_channel
+        assert main_channel_index is not None
         sorting.set_property("main_channel_index", main_channel_index)
         
         if format == "memory":
-            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
+            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV,
+                                                  main_channel_peak_sign,
+                                                 main_channel_peak_mode,
+                                             rec_attributes=None)
         elif format == "binary_folder":
             sorting_analyzer = cls.create_binary_folder(
                 folder,
@@ -446,6 +463,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
+                main_channel_peak_sign,
+                main_channel_peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -459,6 +478,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
+                main_channel_peak_sign,
+                main_channel_peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -497,7 +518,10 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, return_in_uV, rec_attributes):
+    def create_memory(cls, sorting, recording, sparsity, return_in_uV,
+                main_channel_peak_sign,
+                main_channel_peak_mode,
+                rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -518,11 +542,18 @@ class SortingAnalyzer:
             format="memory",
             sparsity=sparsity,
             return_in_uV=return_in_uV,
+            main_channel_peak_sign=main_channel_peak_sign,
+            main_channel_peak_mode=main_channel_peak_mode,
+
         )
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
+    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_in_uV, 
+                main_channel_peak_sign,
+                main_channel_peak_mode,
+                             
+                             rec_attributes, backend_options):
         # used by create and save_as
 
         folder = Path(folder)
@@ -586,11 +617,44 @@ class SortingAnalyzer:
         settings_file = folder / f"settings.json"
         settings = dict(
             return_in_uV=return_in_uV,
+            main_channel_peak_sign=main_channel_peak_sign,
+            main_channel_peak_mode=main_channel_peak_mode,
         )
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
 
         return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
+
+    @classmethod
+    def _handle_backward_compatibility(cls, settings, sorting, sparsity):
+        # backward compatibility at analyzer level
+        # (there is also something similar at extension level)
+
+        new_settings = dict()
+        new_settings.update(settings)
+        if "return_scaled" in settings:
+            new_settings["return_in_uV"] = new_settings.pop("return_scaled")
+        elif "return_in_uV" in settings:
+            pass
+        else:
+            # old version did not have settings at all
+            new_settings["return_in_uV"] = True
+
+        retrospect_main_channel_index = None
+        if "main_channel_peak_sign" not in settings:
+            # before 0.104.0 was not in main_channel_peak_sign
+            # TODO make something more fancy that exlore the previous params of extension
+            new_settings["main_channel_peak_sign"] = "both"
+            new_settings["main_channel_peak_mode"] = "extremum"
+
+            if "main_channel_index" not in sorting.get_property_keys():
+                # TODO
+                raise NotImplementedError("backward compatibility with main_channel_index is not implemented yet")
+
+        if retrospect_main_channel_index is not None:
+            sorting.set_property("main_channel_index", retrospect_main_channel_index)
+
+        return new_settings
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
@@ -653,13 +717,19 @@ class SortingAnalyzer:
         if settings_file.exists():
             with open(settings_file, "r") as f:
                 settings = json.load(f)
+            need_to_create = False
         else:
+            need_to_create = True
+            settings = dict()
+
+        settings = cls._handle_backward_compatibility(settings, sorting, sparsity)
+
+        if need_to_create:
             warnings.warn("settings.json not found for this folder writing one with return_in_uV=True")
-            settings = dict(return_in_uV=True)
             with open(settings_file, "w") as f:
                 json.dump(check_json(settings), f, indent=4)
 
-        return_in_uV = settings.get("return_in_uV", settings.get("return_scaled", True))
+
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -667,7 +737,9 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
-            return_in_uV=return_in_uV,
+            return_in_uV = settings["return_in_uV"],
+            main_channel_peak_sign = settings["main_channel_peak_sign"],
+            main_channel_peak_mode = settings["main_channel_peak_mode"],
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -682,7 +754,11 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
+    def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, 
+                main_channel_peak_sign,
+                main_channel_peak_mode,
+                    
+                    rec_attributes, backend_options):
         # used by create and save_as
         import zarr
         import numcodecs
@@ -706,7 +782,11 @@ class SortingAnalyzer:
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
 
-        settings = dict(return_in_uV=return_in_uV)
+        settings = dict(
+            return_in_uV=return_in_uV,
+            main_channel_peak_sign=main_channel_peak_sign,
+            main_channel_peak_mode=main_channel_peak_mode,
+        )
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
@@ -827,10 +907,9 @@ class SortingAnalyzer:
             )
         else:
             sparsity = None
-
-        return_in_uV = zarr_root.attrs["settings"].get(
-            "return_in_uV", zarr_root.attrs["settings"].get("return_scaled", True)
-        )
+        
+        settings = zarr_root.attrs["settings"]
+        settings = cls._handle_backward_compatibility(settings, sorting, sparsity)
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -838,7 +917,9 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
-            return_in_uV=return_in_uV,
+            return_in_uV = settings["return_in_uV"],
+            main_channel_peak_sign = settings["main_channel_peak_sign"],
+            main_channel_peak_mode = settings["main_channel_peak_mode"],
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -941,7 +1022,7 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
     
-    def get_main_channel(self, outputs="index", with_dict=False):
+    def get_main_channels(self, outputs="index", with_dict=False):
         """
 
         """
@@ -1180,7 +1261,10 @@ class SortingAnalyzer:
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
-                sorting_provenance, recording, sparsity, self.return_in_uV, self.rec_attributes
+                sorting_provenance, recording, sparsity, self.return_in_uV,
+                self.main_channel_peak_sign,
+                self.main_channel_peak_mode,
+                  self.rec_attributes
             )
 
         elif format == "binary_folder":
@@ -1193,6 +1277,9 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
+                self.main_channel_peak_sign,
+                self.main_channel_peak_mode,
+
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1206,6 +1293,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
+                self.main_channel_peak_sign,
+                self.main_channel_peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
             )

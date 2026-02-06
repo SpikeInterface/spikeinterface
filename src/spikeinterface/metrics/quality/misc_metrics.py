@@ -181,7 +181,7 @@ def compute_snrs(
 
     channel_ids = sorting_analyzer.channel_ids
 
-    main_channel_index = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+    main_channel_index = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
     unit_amplitudes = get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
 
     snrs = {}
@@ -1290,7 +1290,7 @@ def compute_sd_ratio(
     noise_levels = get_noise_levels(
         sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )
-    main_channels = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+    main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
     n_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 

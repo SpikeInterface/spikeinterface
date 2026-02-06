@@ -189,7 +189,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-        extremum_channel_indices = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+        extremum_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
 

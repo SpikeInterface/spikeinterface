@@ -80,7 +80,7 @@ def test_run_node_pipeline(cache_folder_creation):
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = sorting_analyzer.get_main_channel( outputs="index", with_dict=True)
+    extremum_channel_inds = sorting_analyzer.get_main_channels( outputs="index", with_dict=True)
 
     peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
     # print(peaks.size)
@@ -202,7 +202,7 @@ def test_skip_after_n_peaks_and_recording_slices():
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = sorting_analyzer.get_main_channel( outputs="index", with_dict=True)
+    extremum_channel_inds = sorting_analyzer.get_main_channels( outputs="index", with_dict=True)
 
     peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
     # print(peaks.size)

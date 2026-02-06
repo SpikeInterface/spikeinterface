@@ -104,8 +104,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
         else:
             cut_out_after = nafter
 
-        peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
-        extremum_channels_indices = self.sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
 
         # collisions

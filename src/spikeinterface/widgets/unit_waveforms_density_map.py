@@ -25,8 +25,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         If SortingAnalyzer is already sparse, the argument is ignored
     use_max_channel : bool, default: False
         Use only the max channel
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Used to detect max channel only when use_max_channel=True
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
@@ -60,7 +58,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         if use_max_channel:
             assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"
-            max_channels = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+            max_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backends need them all
         if sorting_analyzer.is_sparse():

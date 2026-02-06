@@ -810,7 +810,7 @@ class BaseSorting(BaseExtractor):
         extremum_channel_inds : None or dict, default: None
             If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
-            This dict can be given by analyzer.get_main_channel(outputs="index", with_dict=True)
+            This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=True)
 
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).

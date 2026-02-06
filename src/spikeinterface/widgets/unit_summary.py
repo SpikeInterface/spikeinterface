@@ -135,7 +135,7 @@ class UnitSummaryWidget(BaseWidget):
         col_counter += 1
 
         unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
-        main_channels = sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+        main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         unit_location = unit_locations[unit_id]
         x, y = unit_location[0], unit_location[1]

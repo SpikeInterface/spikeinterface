@@ -137,7 +137,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
 
         # Get extremum channels for neighbor selection in sparse mode
 
-        main_channels = sorting_analyzer.get_main_channel(outputs="id", with_dict=True)
+        main_channels = sorting_analyzer.get_main_channels(outputs="id", with_dict=True)
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric

@@ -35,7 +35,7 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
         peak_sign = self.params["peak_sign"]
         return_in_uV = self.sorting_analyzer.return_in_uV
 
-        extremum_channels_indices = self.sorting_analyzer.get_main_channel(outputs="index", with_dict=True)
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_analyzer, peak_sign=peak_sign)
 

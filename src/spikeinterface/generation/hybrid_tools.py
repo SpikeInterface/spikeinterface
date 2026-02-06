@@ -127,7 +127,7 @@ def select_templates(
         min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None
     ), "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
     # get template amplitudes and depth
-    main_channel_indices = templates.get_main_channel(outputs="index", with_dict=False)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
 
     mask = np.ones(templates.num_units, dtype=bool)
@@ -190,7 +190,7 @@ def scale_template_to_range(
     Templates
         The scaled templates.
     """
-    main_channel_indices = templates.get_main_channel(outputs="index", with_dict=False)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
     # get amplitudes
     if amplitude_function == "ptp":
@@ -263,7 +263,7 @@ def relocate_templates(
     """
     seed = _ensure_seed(seed)
 
-    main_channel_indices = templates.get_main_channel(outputs="index", with_dict=False)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
     depth_dimension = ["x", "y"].index(depth_direction)
     channel_depths = templates.get_channel_locations()[:, depth_dimension]
     unit_depths = channel_depths[main_channel_indices]

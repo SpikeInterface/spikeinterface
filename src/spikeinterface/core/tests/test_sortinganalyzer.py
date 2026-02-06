@@ -56,7 +56,7 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     # Note the sorting contain already main_channel_index
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
-    assert np.array_equal(sorting_analyzer.get_main_channel() , sorting.get_property("main_channel_index"))
+    assert np.array_equal(sorting_analyzer.get_main_channels() , sorting.get_property("main_channel_index"))
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
@@ -365,7 +365,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert ext is None
 
     assert sorting_analyzer.has_recording()
-
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -635,7 +634,7 @@ class DummyPipelineAnalyzerExtension(BaseSpikeVectorExtension):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        extremum_channel_inds = self.sorting_analyzer.get_main_channel( outputs="index", with_dict=True)
+        extremum_channel_inds = self.sorting_analyzer.get_main_channels( outputs="index", with_dict=True)
         spike_retriever_node = SpikeRetriever(
             sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
         )

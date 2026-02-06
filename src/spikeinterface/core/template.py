@@ -484,7 +484,7 @@ class Templates:
         channel_locations = self.probe.contact_positions
         return channel_locations
 
-    def get_main_channel(self,
+    def get_main_channels(self,
         main_channel_peak_sign: "neg" | "both" | "pos" = "both",
         mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
         outputs="index",

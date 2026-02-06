@@ -29,8 +29,6 @@ _sparsity_doc = """
                          In this case the sparsity for each unit is given by the channels that have the same property
                          value as the unit. Use the "by_property" argument to specify the property name.
 
-    peak_sign : "neg" | "pos" | "both"
-        Sign of the template to compute best channels.
     num_channels : int
         Number of channels for "best_channels" method.
     radius_um : float
@@ -83,14 +81,14 @@ class ChannelSparsity:
 
     Using the N best channels (largest template amplitude):
 
-    >>> sparsity = ChannelSparsity.from_best_channels(sorting_analyzer, num_channels, peak_sign="neg")
+    >>> sparsity = ChannelSparsity.from_best_channels(sorting_analyzer, num_channels)
 
     Using a neighborhood by radius:
 
-    >>> sparsity = ChannelSparsity.from_radius(sorting_analyzer, radius_um, peak_sign="neg")
+    >>> sparsity = ChannelSparsity.from_radius(sorting_analyzer, radius_um)
 
     Using a SNR threshold:
-    >>> sparsity = ChannelSparsity.from_snr(sorting_analyzer, threshold, peak_sign="neg")
+    >>> sparsity = ChannelSparsity.from_snr(sorting_analyzer, threshold)
 
     Using a template energy threshold:
     >>> sparsity = ChannelSparsity.from_energy(sorting_analyzer, threshold)
@@ -395,7 +393,7 @@ class ChannelSparsity:
 
 
     @classmethod
-    def from_radius(cls, templates_or_sorting_analyzer, radius_um, peak_sign="both"):
+    def from_radius(cls, templates_or_sorting_analyzer, radius_um):
         """
         Construct sparsity from a radius around the main channel.
         Use the "radius_um" argument to specify the radius in um.
@@ -414,17 +412,14 @@ class ChannelSparsity:
         sparsity : ChannelSparsity
             The estimated sparsity.
         """
-        mask = np.zeros(
-            (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
-        )
+        main_channel_index = templates_or_sorting_analyzer.get_main_channels(outputs="index")
         channel_locations = templates_or_sorting_analyzer.get_channel_locations()
-        distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
-        main_channel_index = templates_or_sorting_analyzer.get_main_channel(outputs="index")
-        for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
-            chan_ind = main_channel_index[unit_ind]
-            (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
-            mask[unit_ind, chan_inds] = True
-        return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
+        return cls.from_radius_and_main_channel(
+            templates_or_sorting_analyzer.unit_ids,
+            templates_or_sorting_analyzer.channel_ids,
+            main_channel_index,
+            channel_locations,
+            radius_um)
 
     @classmethod
     def from_snr(

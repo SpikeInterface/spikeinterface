@@ -53,7 +53,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         num_channels = recording.get_num_channels()
 
         if neighborhood_radius_um is not None:
-            main_channels = self.templates.get_main_channel(main_channel_peak_sign=self.peak_sign, outputs="index", with_dict=False)
+            main_channels = self.templates.get_main_channels(main_channel_peak_sign=self.peak_sign, outputs="index", with_dict=False)
 
             channel_locations = recording.get_channel_locations()
             template_distances = np.linalg.norm(
