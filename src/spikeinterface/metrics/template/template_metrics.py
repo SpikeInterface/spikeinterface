@@ -209,7 +209,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         import pandas as pd
         from scipy.signal import resample_poly, savgol_filter
 
-        # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
+        # compute main_channel_templates and multi_channel_templates (if include_multi_channel_metrics is True)
         tmp_data = {}
 
         if unit_ids is None:
@@ -236,9 +236,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
-        templates_single = []
+        main_channel_templates = []
         peaks_info = []
-        templates_multi = []
+        multi_channel_templates = []
         channel_locations_multi = []
         templates_upsampled = []
         templates_smoothed = []
@@ -265,10 +265,11 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
             peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
+                sampling_frequency_up,
                 min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
             )
 
-            templates_single.append(template_upsampled)
+            main_channel_templates.append(template_upsampled)
             peaks_info.append(peaks_info_unit)
 
             if include_multi_channel_metrics:
@@ -289,39 +290,31 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                     template_multi_upsampled = resample_poly(template_multi, up=upsampling_factor, down=1, axis=0)
                 else:
                     template_multi_upsampled = template_multi
-                templates_multi.append(template_multi_upsampled)
+                multi_channel_templates.append(template_multi_upsampled)
                 channel_locations_multi.append(channel_location_multi)
 
         tmp_data["peaks_info"] = peaks_info
-        tmp_data["templates_single"] = np.array(templates_single)
+        tmp_data["main_channel_templates"] = np.array(main_channel_templates)
 
         if include_multi_channel_metrics:
-            # templates_multi is a list of 2D arrays of shape (n_times, n_channels)
-            tmp_data["templates_multi"] = templates_multi
+            # multi_channel_templates is a list of 2D arrays of shape (n_times, n_channels)
+            tmp_data["multi_channel_templates"] = multi_channel_templates
             tmp_data["channel_locations_multi"] = channel_locations_multi
             tmp_data["depth_direction"] = self.params["depth_direction"]
 
         # Add peaks_info and preprocessed templates to self.data for storage in extension
-        self.data["peaks_info"] = pd.DataFrame(
+        columns = []
+        for k  in ("trough", "peak_before", "peak_after"):
+            for suffix in ("index", "width_left", "width_right", "half_width_left", "half_width_right",):
+                columns.append(f"{k}_{suffix}")
+        df_peaks_info = pd.DataFrame(
             index=unit_ids,
             data=peaks_info,
-            columns=[
-                "trough_sample_index",
-                "trough_width_left",
-                "trough_width_right",
-                "peak_before_sample_index",
-                "peak_before_width_left",
-                "peak_before_width_right",
-                "peak_after_sample_index",
-                "peak_after_width_left",
-                "peak_after_width_right",
-            ],
+            columns=columns,
             dtype=int,
         )
-        if len(templates_upsampled) > 0:
-            self.data["templates_upsampled"] = np.array(templates_upsampled)
-        if len(templates_smoothed) > 0:
-            self.data["templates_smoothed"] = np.array(templates_smoothed)
+        self.data["peaks_info"] = df_peaks_info
+        self.data["main_channel_templates"] = main_channel_templates
 
         return tmp_data
 
