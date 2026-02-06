@@ -45,7 +45,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
     method : "auto" | "numpy" | "numba", default: "auto"
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
-    fast_mode : "auto" | "never" | "always", default: "auto"
+    fast_mode : "auto" | "on" | "off", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
 
@@ -322,7 +322,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     method : str
         To use "numpy" or "numba". "auto" will use numba if available,
         otherwise numpy.
-    fast_mode : "auto" | "never" | "always", default: "auto"
+    fast_mode : "auto" | "on" | "off", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
 
@@ -343,9 +343,9 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     if method == "numba" and fast_mode == "auto":
         num_units = len(sorting.unit_ids)
         fast_mode = num_units > 300
-    elif fast_mode == "never":
+    elif fast_mode == "off":
         fast_mode = False
-    elif fast_mode == "always":
+    elif fast_mode == "on":
         fast_mode = True
 
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
