@@ -338,11 +338,10 @@ def compute_motion(
     from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, peak_localization_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
-    from spikeinterface.sortingcomponents.motion.motion_estimation import (
-        estimate_motion,
-        estimate_motion_methods,
+    from spikeinterface.sortingcomponents.motion import (
         InterpolateMotionRecording,
     )
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods, estimate_motion
 
     # get preset params and update if necessary
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
@@ -383,7 +382,7 @@ def compute_motion(
         gather_mode = "memory"
 
         peaks, peak_locations, peaks_run_time = run_peak_detection_pipeline_node(
-            recording, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
+            recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
         )
         run_times = dict(detect_and_localize=peaks_run_time)
 
@@ -547,13 +546,15 @@ def correct_motion(
 
 
 # TODO: carefully recheck this against main version after merge
-def run_peak_detection_pipeline_node(recording, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):
+def run_peak_detection_pipeline_node(
+    recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
+):
     """
     TODO: add docstring
     """
     from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
-    from spikeinterface.sortingcomponents.peak_localization import localize_peak_methods
+    from spikeinterface.sortingcomponents.peak_localization import peak_localization_methods
 
     # Don't modify the kwargs in place in case the caller requires them
     detect_kwargs = copy.deepcopy(detect_kwargs)

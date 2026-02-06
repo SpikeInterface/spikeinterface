@@ -13,6 +13,7 @@ from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_
 from spikeinterface.core.motion import Motion
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
 from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
+from spikeinterface.core import get_noise_levels
 
 import copy
 
@@ -236,7 +237,7 @@ def align_sessions(
 
     print("Computing a single activity histogram from each session...")
 
-    (session_histogram_list, temporal_bin_centers_list, spatial_bin_centers, spatial_bin_edges, histogram_info_list) = (
+    session_histogram_list, temporal_bin_centers_list, spatial_bin_centers, spatial_bin_edges, histogram_info_list = (
         _compute_session_histograms(recordings_list, peaks_list, peak_locations_list, **estimate_histogram_kwargs)
     )
 
@@ -407,8 +408,10 @@ def compute_peaks_locations_for_session_alignment(
     peak_locations_list = []
 
     for recording in recording_list:
+        noise_levels = get_noise_levels(recording, return_in_uV=False)  # TODO: this is new, check with Sam
+
         peaks, peak_locations, _ = run_peak_detection_pipeline_node(
-            recording, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
+            recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
         )
         peaks_list.append(peaks)
         peak_locations_list.append(peak_locations)
