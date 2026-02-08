@@ -81,17 +81,19 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         phy_folder = Path(folder_path)
         spike_times = np.load(phy_folder / "spike_times.npy").astype(int)
 
-        if load_templates_clusters=="auto":
+        if load_templates_clusters == "auto":
             if (phy_folder / "spike_clusters.npy").is_file():
                 spike_clusters = np.load(phy_folder / "spike_clusters.npy")
             else:
                 spike_clusters = np.load(phy_folder / "spike_templates.npy")
-        elif load_templates_clusters=="templates":
+        elif load_templates_clusters == "templates":
             spike_clusters = np.load(phy_folder / "spike_templates.npy")
-        elif load_templates_clusters=="clusters":
+        elif load_templates_clusters == "clusters":
             spike_clusters = np.load(phy_folder / "spike_clusters.npy")
         else:
-            raise ValueError("Invalid value provided for load_templates_clusters: '{}'.".format(load_templates_clusters))
+            raise ValueError(
+                "Invalid value provided for load_templates_clusters: '{}'.".format(load_templates_clusters)
+            )
 
         # spike_times and spike_clusters can be 2d sometimes --> convert to 1d.
         spike_times = np.atleast_1d(spike_times.squeeze())
