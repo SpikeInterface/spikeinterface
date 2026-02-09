@@ -268,9 +268,6 @@ def install_package_in_container(
         raise ValueError(f"install_package_incontainer, wrong installation_mode={installation_mode}")
 
     if isinstance(res_output, str) and "ERROR" in res_output.upper():
-        warnings.warn(
-            f"pip install of {package_name} in container may have failed. "
-            f"pip output:\n{res_output}"
-        )
+        warnings.warn(f"pip install of {package_name} in container may have failed. " f"pip output:\n{res_output}")
 
     return res_output
