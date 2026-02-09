@@ -1603,21 +1603,9 @@ def slidingRP_violations(
 
     method = "numba" if HAVE_NUMBA else "numpy"
 
-    bin_size = max(int(bin_size_ms / 1000 * sorting.sampling_frequency), 1)
-    window_size = int(window_size_s * sorting.sampling_frequency)
+    from spikeinterface.postprocessing.correlograms import compute_correlograms
 
-    if method == "numpy":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
-
-        correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
-    if method == "numba":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
-
-        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size)[0, 0]
-
-    ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
-    # the choice of the bin_size above, but I am not the author of the code...
-    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, method=method)[0][0, 0]
+    correlogram = compute_correlograms(sorting, 2 * window_size_s * 1000, bin_size_ms, method=method)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
 
     conf_matrix = _compute_violations(
