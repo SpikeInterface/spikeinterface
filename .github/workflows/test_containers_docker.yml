@@ -25,6 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U pip  # Official recommended way
+          pip install --upgrade "setuptools<81.0.0"
           pip install pytest
           pip install -e .[full]
           pip install docker

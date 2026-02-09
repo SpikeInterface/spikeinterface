@@ -35,6 +35,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y wget squashfs-tools
           python -m pip install -U pip  # Official recommended way
+          pip install --upgrade "setuptools<81.0.0"
           pip install pytest
           pip install -e .[full]
           pip install spython

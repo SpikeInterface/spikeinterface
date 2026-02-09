@@ -83,6 +83,7 @@ jobs:
 
       - name: Install packages
         run: |
+          pip install --upgrade "setuptools<81.0.0"
           pip install -e .[test_core]
         shell: bash
 
