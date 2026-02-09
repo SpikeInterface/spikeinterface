@@ -10,6 +10,7 @@ runs:
         git config --global user.name "CI Almighty"
         pip install tabulate  # This produces summaries at the end
         pip install -e .[test,extractors,streaming_extractors,test_extractors,full]
+        pip install --upgrade "setuptools<81.0.0"
       shell: bash
     - name: Install git-annex
       shell: bash
