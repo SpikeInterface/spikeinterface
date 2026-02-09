@@ -354,6 +354,7 @@ class SortingAnalyzer:
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
         # some checks
+
         if sorting.sampling_frequency != recording.sampling_frequency:
             if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
                 warnings.warn(
@@ -369,6 +370,7 @@ class SortingAnalyzer:
                     f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}. "
                     "Ensure that you are associating the correct Recording and Sorting when creating a SortingAnalyzer."
                 )
+
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)
