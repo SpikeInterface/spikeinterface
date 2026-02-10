@@ -239,6 +239,19 @@ jobs:
         run: |
           pip install -e .[full]
           pip list
+
+          # Internal shell check for platform and env var
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            # Locate the binary dynamically
+            SHM_BINARY=$(python -c "import torch; from pathlib import Path; print(Path(torch.__file__).parent / 'bin' / 'torch_shm_manager')")
+            if [ -f "$SHM_BINARY" ]; then
+              echo "Applying chmod +x to $SHM_BINARY"
+              chmod +x "$SHM_BINARY"
+            else
+              echo "Warning: torch_shm_manager not found at $SHM_BINARY"
+            fi
+          fi
+
           ./.github/run_tests.sh sortingcomponents --no-virtual-env
 
       - name: Test generation
