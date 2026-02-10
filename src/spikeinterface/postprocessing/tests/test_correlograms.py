@@ -156,6 +156,7 @@ def test_equal_results_fast_correlograms(window_and_bin_ms):
 
     assert_almost_equal(result_numba_fast, result_numba)
 
+
 @pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 @pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
 def test_equal_results_fast_auto_correlograms(window_and_bin_ms):
