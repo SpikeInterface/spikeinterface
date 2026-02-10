@@ -64,9 +64,10 @@ def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
     assert len(gen_multi_list.exclude_intervals) == 2 * len(recording_multi_list) + 2
 
 
-@pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.fixture(scope="module")
 def deepinterpolation_model(recording_and_shape_fixture, create_cache_folder):
+    if not HAVE_DEEPINTERPOLATION:
+        pytest.skip("requires deepinterpolation")
     recording, desired_shape = recording_and_shape_fixture
 
     cache_folder = create_cache_folder
