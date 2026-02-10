@@ -1193,7 +1193,6 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         return {}
 
-
     def _compute_metrics(
         self,
         sorting_analyzer: SortingAnalyzer,
@@ -1349,7 +1348,7 @@ class BaseMetricExtension(AnalyzerExtension):
         """
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
-    
+
     def _update_data_after_merge_or_split(self, old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):
         # this construct new array or dataframe after a merge and a split
 
@@ -1357,14 +1356,15 @@ class BaseMetricExtension(AnalyzerExtension):
         not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
 
         import pandas as pd
+
         if isinstance(new_arr, pd.DataFrame):
             new_df = pd.DataFrame(index=all_unit_ids, columns=old_arr.columns)
             new_df.loc[not_new_ids, :] = old_arr.loc[not_new_ids, :]
             new_df.loc[new_unit_ids, :] = new_sub_arr
             return new_df
-            
+
         elif isinstance(new_arr, np.ndarray):
-            new_shape = (len(all_unit_ids), )+ old_arr.shape[1:]
+            new_shape = (len(all_unit_ids),) + old_arr.shape[1:]
             new_arr = np.zeros(new_shape, dtype=old_arr.dtype)
             new_inds = new_analyzer.sorting.ids_to_indices(not_new_ids)
             old_inds = old_analyzer.sorting.ids_to_indices(not_new_ids)
@@ -1415,15 +1415,18 @@ class BaseMetricExtension(AnalyzerExtension):
         new_metrics, _, new_tmp_data = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
-        
-        metrics = self._update_data_after_merge_or_split(self.analyzer, new_sorting_analyzer,
-                                                         self.data["metrics"], new_metrics, new_unit_ids)
+
+        metrics = self._update_data_after_merge_or_split(
+            self.analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids
+        )
         new_data = dict()
         new_data["metrics"] = self._cast_metrics(metrics)
 
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
-                new_arr = self._update_data_after_merge_or_split(self.analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids)
+                new_arr = self._update_data_after_merge_or_split(
+                    self.analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
+                )
                 new_data[k] = new_arr
 
         return new_data
@@ -1471,7 +1474,6 @@ class BaseMetricExtension(AnalyzerExtension):
 
         # new_data = dict(metrics=metrics)
 
-
         ####
         available_metric_names = [m.metric_name for m in self.metric_list]
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
@@ -1481,14 +1483,17 @@ class BaseMetricExtension(AnalyzerExtension):
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
 
-        metrics = self._update_data_after_merge_or_split(self.analyzer, new_sorting_analyzer,
-                                                         self.data["metrics"], new_metrics, new_unit_ids_f)
+        metrics = self._update_data_after_merge_or_split(
+            self.analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids_f
+        )
         new_data = dict()
         new_data["metrics"] = self._cast_metrics(metrics)
 
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
-                new_arr = self._update_data_after_merge_or_split(self.analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f)
+                new_arr = self._update_data_after_merge_or_split(
+                    self.analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
+                )
                 new_data[k] = new_arr
 
         return new_data
