@@ -1496,12 +1496,12 @@ class BaseMetricExtension(AnalyzerExtension):
     def set_data(self, ext_data_name, data):
         import pandas as pd
 
-        if ext_data_name != "metrics":
-            return
-        if not isinstance(data, pd.DataFrame):
-            return
-        metrics = self._cast_metrics(data)
-        self.data[ext_data_name] = metrics
+        if ext_data_name == "metrics":
+            metrics = self._cast_metrics(data)
+            self.data[ext_data_name] = metrics
+        else:
+            self.data[ext_data_name] = data
+
 
 
 class BaseSpikeVectorExtension(AnalyzerExtension):
