@@ -1417,7 +1417,7 @@ class BaseMetricExtension(AnalyzerExtension):
         )
 
         metrics = self._update_data_after_merge_or_split(
-            self.analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids
+            self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids
         )
         new_data = dict()
         new_data["metrics"] = self._cast_metrics(metrics)
@@ -1425,7 +1425,7 @@ class BaseMetricExtension(AnalyzerExtension):
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
                 new_arr = self._update_data_after_merge_or_split(
-                    self.analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
+                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
                 )
                 new_data[k] = new_arr
 
@@ -1484,7 +1484,7 @@ class BaseMetricExtension(AnalyzerExtension):
         )
 
         metrics = self._update_data_after_merge_or_split(
-            self.analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids_f
+            self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids_f
         )
         new_data = dict()
         new_data["metrics"] = self._cast_metrics(metrics)
@@ -1492,7 +1492,7 @@ class BaseMetricExtension(AnalyzerExtension):
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
                 new_arr = self._update_data_after_merge_or_split(
-                    self.analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
+                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
                 )
                 new_data[k] = new_arr
 
