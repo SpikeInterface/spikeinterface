@@ -36,12 +36,18 @@ class LabelingHistogramsWidget(BaseWidget):
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
+        # Flatten thresholds for easier access
+        flat_thresholds = {}
+        for category, metric_dict in thresholds.items():
+            for metric_name, thresh in metric_dict.items():
+                flat_thresholds[metric_name] = thresh
+
         if metrics_to_plot is None:
-            metrics_to_plot = [m for m in thresholds.keys() if m in combined_metrics.columns]
+            metrics_to_plot = [m for m in flat_thresholds.keys() if m in combined_metrics.columns]
 
         plot_data = dict(
             metrics=combined_metrics,
-            thresholds=thresholds,
+            thresholds=flat_thresholds,
             metrics_to_plot=metrics_to_plot,
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -106,6 +112,8 @@ class LabelingHistogramsWidget(BaseWidget):
         for idx in range(len(metrics_to_plot), n_rows * n_cols):
             axes[idx // n_cols, idx % n_cols].set_visible(False)
 
+        self.figure.subplots_adjust(hspace=0.4, wspace=0.3)
+
 
 class UpsetPlotWidget(BaseWidget):
     """
@@ -143,6 +151,7 @@ class UpsetPlotWidget(BaseWidget):
                 unit_labels_to_plot = ["noise", "mua", "non_soma_good", "non_soma_mua"]
             else:
                 unit_labels_to_plot = ["noise", "mua", "non_soma"]
+
         plot_data = dict(
             metrics=combined_metrics,
             unit_labels=unit_labels,
@@ -152,19 +161,13 @@ class UpsetPlotWidget(BaseWidget):
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-    def _get_metrics_for_unit_label(self, unit_label):
-        from spikeinterface.curation.bombcell_curation import (
-            DEFAULT_NOISE_METRICS,
-            DEFAULT_MUA_METRICS,
-            DEFAULT_NON_SOMATIC_METRICS,
-        )
-
+    def _get_metrics_for_unit_label(self, unit_label, thresholds):
         if unit_label == "noise":
-            return DEFAULT_NOISE_METRICS
+            return thresholds["noise"]
         elif unit_label == "mua":
-            return DEFAULT_MUA_METRICS
+            return thresholds["mua"]
         elif unit_label in ("non_soma", "non_soma_good", "non_soma_mua"):
-            return DEFAULT_NON_SOMATIC_METRICS
+            return thresholds["non-somatic"]
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
@@ -211,7 +214,7 @@ class UpsetPlotWidget(BaseWidget):
             if n_units == 0:
                 continue
 
-            relevant_metrics = self._get_metrics_for_unit_label(unit_label)
+            relevant_metrics = self._get_metrics_for_unit_label(unit_label, thresholds)
             if relevant_metrics is not None:
                 available_metrics = [m for m in relevant_metrics if m in failure_table.columns]
                 if len(available_metrics) == 0:

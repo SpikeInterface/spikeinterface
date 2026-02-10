@@ -63,7 +63,7 @@ qm_thresholds = {
 }
 
 # %%
-qm_labels = sc.qualitymetrics_label_units(sorting_analyzer, thresholds=qm_thresholds)
+qm_labels = sc.threshold_metrics_label_units(sorting_analyzer, thresholds=qm_thresholds)
 
 # %%
 qm_labels["label"].value_counts()
@@ -86,7 +86,7 @@ bombcell_default_thresholds = sc.bombcell_get_default_thresholds()
 pprint(bombcell_default_thresholds)
 
 # %%
-bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds)
+bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, implementation="new")
 
 # %%
 bombcell_labels["label"].value_counts()
@@ -94,6 +94,12 @@ bombcell_labels["label"].value_counts()
 # %%
 w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["label"], ylims=(-300, 100))
 w.figure.suptitle("Bombcell labeling")
+
+# %%
+sw.plot_unit_labeling_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
+
+# %%
+sw.plot_unit_labeling_upset(sorting_analyzer, unit_labels=bombcell_labels["label"], thresholds=bombcell_default_thresholds)
 
 # %% [markdown]
 # ## UnitRefine

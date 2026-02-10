@@ -93,12 +93,29 @@ def bombcell_label_units(
     """
     Label units based on quality metrics and template metrics using Bombcell logic:
 
-    1. NOISE: Units that fail any of the noise thresholds are labeled as "noise".
-    2. MUA: Units that are not "noise" but fail any of the MUA thresholds are labeled as "mua".
-    3. GOOD: Units that pass all noise and MUA thresholds are labeled as "good".
-    4. NON-SOMATIC: Among units that are not "noise", those that meet non-somatic criteria based on waveform shape are
-         labeled as "non_soma". Optionally, these can be further split into "non_soma_good" and "non_soma_mua" based on
-         their original good/mua label.
+    1. NOISE:
+        Units that fail any of the noise thresholds are labeled as "noise". The thresholds in the "noise" section
+        are applied with an "AND" operator, meaning a unit must fail at least one noise metric to be labeled as
+        "noise". Units that are not labeled as "noise" are then evaluated for MUA thresholds.
+    2. MUA:
+        Units that are not "noise" but fail any of the MUA thresholds are labeled as "mua". The thresholds in the
+        "mua" section are also applied with an "AND" operator, meaning a unit must fail at least one MUA metric to
+        be labeled as "mua".
+    3. GOOD:
+        Units that pass all noise and MUA thresholds are labeled as "good".
+    4. NON-SOMATIC:
+        Among units that are not "noise", those that meet non-somatic criteria based on waveform shape are
+        labeled as "non_soma".
+        These non-somatic criteria include:
+
+        - Narrow peak and trough widths (using "peak_before_width" and "trough_width" metrics)
+        - Large ratios of peak_before the trough and/or peak_before to peak_after
+          (using "peak_before_to_trough_ratio" and "peak_before_to_peak_after_ratio" metrics)
+        - Large main peak to trough ratio (using "main_peak_to_trough_ratio" metric)
+
+        If units have a narrow peak and a large ratio OR a large main peak to trough ratio,
+        they are labeled as non-somatic. If `split_non_somatic_good_mua` is True, non-somatic units are further split
+        into "non_soma_good" and "non_soma_mua", otherwise they are all labeled as "non_soma".
 
     Parameters
     ----------
@@ -106,12 +123,13 @@ def bombcell_label_units(
         SortingAnalyzer with computed quality_metrics and/or template_metrics extensions.
         If provided, metrics are extracted automatically using get_metrics_extension_data().
     thresholds : dict | str | Path | None
-        Threshold dict or JSON file, including a set of {"metric": {"min": val, "max": val}}.
-        If None, default bombcell thresholds are used.
-    label_non_somatic : bool
-        If True, detect non-somatic (axonal) units.
-    split_non_somatic_good_mua : bool
-        If True, split non-somatic into NON_SOMA_GOOD (3) and NON_SOMA_MUA (4).
+        Threshold dict or JSON file, including a three sections ("noise", "mua", "non-somatic") of
+        {"metric": {"min": val, "max": val}}.
+        If None, default Bombcell thresholds are used.
+    label_non_somatic : bool, default: True
+        If True, detect non-somatic (dendritic, axonal) units.
+    split_non_somatic_good_mua : bool, default: False
+        If True, split non-somatic into "non_soma_good" and "non_soma_mua".
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
 
@@ -119,6 +137,12 @@ def bombcell_label_units(
     -------
     labels : pd.DataFrame
         A DataFrame with unit ids as index and "label" as column
+
+    References
+    ----------
+    Ported by Julie Fabre and Alessio Buccino from the Bombcell repository:
+    https://github.com/Julie-Fabre/bombcell
+    See [Fabre]_ for more details on the original implementation and rationale behind the thresholds.
     """
     import pandas as pd
 
@@ -158,37 +182,39 @@ def bombcell_label_units(
 
     # NOISE: waveform failures
     if implementation == "new":
-        noise_thresholds = {
-            metric: thresholds_dict[metric] for metric in DEFAULT_NOISE_METRICS if metric in thresholds_dict
-        }
-        unit_labels = threshold_metrics_label_units(
-            sorting_analyzer_or_metrics=combined_metrics,
-            thresholds=noise_thresholds,
-            pass_label="good",
-            fail_label="noise",
-            operator="and",
-            nan_policy="fail",
-        )
-        (non_noise_indices,) = np.nonzero(unit_labels["label"] == "good")
-        mua_thresholds = {
-            metric: thresholds_dict[metric] for metric in DEFAULT_MUA_METRICS if metric in thresholds_dict
-        }
-        neural_metrics = combined_metrics.iloc[non_noise_indices]
-        mua_labels = threshold_metrics_label_units(
-            sorting_analyzer_or_metrics=neural_metrics,
-            thresholds=mua_thresholds,
-            pass_label="good",
-            fail_label="mua",
-            operator="and",
-            nan_policy="ignore",
-        )
-        unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
+        noise_thresholds = thresholds_dict.get("noise", {})
+        if len(noise_thresholds) > 0:
+            unit_labels = threshold_metrics_label_units(
+                sorting_analyzer_or_metrics=combined_metrics,
+                thresholds=noise_thresholds,
+                pass_label="good",
+                fail_label="noise",
+                operator="and",
+                nan_policy="fail",
+            )
+            (non_noise_indices,) = np.nonzero(unit_labels["label"] == "good")
+        else:
+            unit_labels = pd.DataFrame(data={"label": np.array(["good"] * n_units)}, index=combined_metrics.index)
+            non_noise_indices = np.arange(n_units)
+        mua_thresholds = thresholds_dict.get("mua", {})
+        if len(mua_thresholds) > 0:
+            neural_metrics = combined_metrics.iloc[non_noise_indices]
+            mua_labels = threshold_metrics_label_units(
+                sorting_analyzer_or_metrics=neural_metrics,
+                thresholds=mua_thresholds,
+                pass_label="good",
+                fail_label="mua",
+                operator="and",
+                nan_policy="ignore",
+            )
+            unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
+
         if label_non_somatic:
-            non_somatic_thresholds = {
-                metric: thresholds_dict[metric] for metric in DEFAULT_NON_SOMATIC_METRICS if metric in thresholds_dict
-            }
+            non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
             width_thresholds = {
-                m: thresholds_dict[m] for m in ["peak_before_width", "trough_width"] if m in non_somatic_thresholds
+                m: non_somatic_thresholds[m]
+                for m in ["peak_before_width", "trough_width"]
+                if m in non_somatic_thresholds
             }
             if len(width_thresholds) > 0:
                 width_condition_labels = threshold_metrics_label_units(
@@ -205,7 +231,7 @@ def bombcell_label_units(
                 )
 
             ratio_thresholds = {
-                m: thresholds_dict[m]
+                m: non_somatic_thresholds[m]
                 for m in ["peak_before_to_trough_ratio", "peak_before_to_peak_after_ratio"]
                 if m in non_somatic_thresholds
             }
@@ -222,8 +248,9 @@ def bombcell_label_units(
                 ratio_condition_labels = pd.DataFrame(
                     data={"label": np.array(["not_large_ratio"] * len(combined_metrics))}, index=combined_metrics.index
                 )
+
             large_main_peak_thresholds = {
-                m: thresholds_dict[m] for m in ["main_peak_to_trough_ratio"] if m in non_somatic_thresholds
+                m: non_somatic_thresholds[m] for m in ["main_peak_to_trough_ratio"] if m in non_somatic_thresholds
             }
             if len(large_main_peak_thresholds) > 0:
                 large_main_peak_labels = threshold_metrics_label_units(
@@ -260,13 +287,14 @@ def bombcell_label_units(
         unit_labels = np.full(n_units, fill_value="good", dtype="U10")
 
         noise_mask = np.zeros(n_units, dtype=bool)
-        for metric_name in DEFAULT_NOISE_METRICS:
-            if metric_name not in combined_metrics.columns or metric_name not in thresholds:
+        noise_thresholds = thresholds_dict.get("noise", {})
+        for metric_name in noise_thresholds:
+            if metric_name not in combined_metrics.columns:
                 continue
             values = combined_metrics[metric_name].values
             if metric_name in absolute_value_metrics:
                 values = np.abs(values)
-            thresh = thresholds[metric_name]
+            thresh = noise_thresholds[metric_name]
             noise_mask |= np.isnan(values)
             if not is_threshold_disabled(thresh["min"]):
                 noise_mask |= values < thresh["min"]
@@ -277,14 +305,15 @@ def bombcell_label_units(
         # MUA: spike quality failures
         valid_mask = unit_labels == "good"
         mua_mask = np.zeros(np.sum(valid_mask), dtype=bool)
-        for metric_name in DEFAULT_MUA_METRICS:
-            if metric_name not in combined_metrics.columns or metric_name not in thresholds:
+        mua_thresholds = thresholds_dict.get("mua", {})
+        for metric_name in mua_thresholds:
+            if metric_name not in combined_metrics.columns:
                 continue
             values = combined_metrics[metric_name].values[valid_mask]
             # if metric_name in absolute_value_metrics:
             #     values = np.abs(values)
             num_mua_before = mua_mask.sum()
-            thresh = thresholds[metric_name]
+            thresh = mua_thresholds[metric_name]
             if not is_threshold_disabled(thresh["min"]):
                 mua_mask |= ~np.isnan(values) & (values < thresh["min"])
             if not is_threshold_disabled(thresh["max"]):
@@ -295,6 +324,7 @@ def bombcell_label_units(
 
         # NON-SOMATIC
         if label_non_somatic:
+            non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
 
             def get_metric(name):
                 if name in combined_metrics.columns:
@@ -303,8 +333,8 @@ def bombcell_label_units(
 
             peak_before_width = get_metric("peak_before_width")
             trough_width = get_metric("trough_width")
-            width_thresh_peak = thresholds_dict.get("peak_before_width", {}).get("min", None)
-            width_thresh_trough = thresholds_dict.get("trough_width", {}).get("min", None)
+            width_thresh_peak = non_somatic_thresholds.get("peak_before_width", {}).get("min", None)
+            width_thresh_trough = non_somatic_thresholds.get("trough_width", {}).get("min", None)
 
             narrow_peak = (
                 ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak)
@@ -322,9 +352,9 @@ def bombcell_label_units(
             peak_before_to_peak_after = get_metric("peak_before_to_peak_after_ratio")
             main_peak_to_trough = get_metric("main_peak_to_trough_ratio")
 
-            ratio_thresh_pbt = thresholds_dict.get("peak_before_to_trough_ratio", {}).get("max", None)
-            ratio_thresh_pbpa = thresholds_dict.get("peak_before_to_peak_after_ratio", {}).get("max", None)
-            ratio_thresh_mpt = thresholds_dict.get("main_peak_to_trough_ratio", {}).get("max", None)
+            ratio_thresh_pbt = non_somatic_thresholds.get("peak_before_to_trough_ratio", {}).get("max", None)
+            ratio_thresh_pbpa = non_somatic_thresholds.get("peak_before_to_peak_after_ratio", {}).get("max", None)
+            ratio_thresh_mpt = non_somatic_thresholds.get("main_peak_to_trough_ratio", {}).get("max", None)
 
             large_initial_peak = (
                 ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt)
@@ -396,16 +426,22 @@ def save_bombcell_results(
         wide_df.insert(0, "label", unit_label)
         wide_df.to_csv(folder / "labeling_results_wide.csv")
 
+    # Flatten thresholds for saving
+    flat_thresholds = {}
+    for category, metric_dict in thresholds.items():
+        for metric_name, thresh in metric_dict.items():
+            flat_thresholds[metric_name] = thresh
+
     # Narrow format: one row per unit-metric combination
     if save_narrow:
         rows = []
         for i, unit_id in enumerate(unit_ids):
             label = unit_label[i]
             for metric_name in metrics.columns:
-                if metric_name not in thresholds:
+                if metric_name not in flat_thresholds:
                     continue
                 value = metrics.loc[unit_id, metric_name]
-                thresh = thresholds[metric_name]
+                thresh = flat_thresholds[metric_name]
                 thresh_min = thresh.get("min", None)
                 thresh_max = thresh.get("max", None)
 
