@@ -1508,7 +1508,6 @@ class BaseMetricExtension(AnalyzerExtension):
             self.data[ext_data_name] = data
 
 
-
 class BaseSpikeVectorExtension(AnalyzerExtension):
     """
     Base class for spikevector-based extension, where the data is a numpy array with the same
