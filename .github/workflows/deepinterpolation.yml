@@ -40,9 +40,8 @@ jobs:
         run: |
           python -m pip install -U pip  # Official recommended way
           # install deepinteprolation
-          pip install tensorflow==2.7.0
+          pip install tensorflow==2.8.4
           pip install deepinterpolation@git+https://github.com/AllenInstitute/deepinterpolation.git
-          pip install protobuf==3.20.*
           pip install numpy==1.26.4
           pip install -e .[full,test_core]
       - name: Pip list
