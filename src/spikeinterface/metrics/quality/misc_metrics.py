@@ -182,8 +182,14 @@ def compute_snrs(
 
     channel_ids = sorting_analyzer.channel_ids
 
-    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
-    unit_amplitudes = get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
+    operator = "median" if sorting_analyzer.has_extension("waveforms") else "average"
+
+    extremum_channels_ids = get_template_extremum_channel(
+        sorting_analyzer, peak_sign=peak_sign, mode=peak_mode, operator=operator
+    )
+    unit_amplitudes = get_template_extremum_amplitude(
+        sorting_analyzer, peak_sign=peak_sign, mode=peak_mode, operator=operator
+    )
 
     # make a dict to access by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))

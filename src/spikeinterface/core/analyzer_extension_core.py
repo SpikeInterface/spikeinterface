@@ -1430,25 +1430,6 @@ class BaseMetricExtension(AnalyzerExtension):
         import pandas as pd
         from itertools import chain
 
-        # available_metric_names = [m.metric_name for m in self.metric_list]
-        # metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
-        # old_metrics = self.data["metrics"]
-
-        # all_unit_ids = new_sorting_analyzer.unit_ids
-        # new_unit_ids_f = list(chain(*new_unit_ids))
-        # not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
-
-        # metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
-
-        # metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        # metrics.loc[new_unit_ids_f, :], _, new_tmp_data = self._compute_metrics(
-        #     sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
-        # )
-        # metrics = self._cast_metrics(metrics)
-
-        # new_data = dict(metrics=metrics)
-
-        ####
         available_metric_names = [m.metric_name for m in self.metric_list]
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
 
