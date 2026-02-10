@@ -54,6 +54,7 @@ class Mahalanobis(BaseMetric):
     }
     depend_on = ["principal_components"]
     needs_tmp_data = True
+    deprecated_names = ["l_ratio", "isolation_distance"]
 
 
 def _d_prime_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
@@ -318,6 +319,7 @@ class NearestNeighborAdvanced(BaseMetric):
     depend_on = ["principal_components", "waveforms", "templates"]
     needs_tmp_data = True
     needs_job_kwargs = True
+    deprecated_names = ["nn_isolation", "nn_noise_overlap"]
 
 
 def _silhouette_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):

@@ -295,6 +295,8 @@ class ZarrSortingExtractor(BaseSorting):
         spikes["unit_index"] = spikes_group["unit_index"][:]
         for i, (start, end) in enumerate(segment_slices_list):
             spikes["segment_index"][start:end] = i
+        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        self._cached_spike_vector = spikes
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)

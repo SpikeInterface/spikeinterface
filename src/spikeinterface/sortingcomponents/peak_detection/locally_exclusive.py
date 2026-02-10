@@ -49,7 +49,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
         recording,
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         radius_um=50,
         noise_levels=None,
         return_output=True,
@@ -81,7 +81,8 @@ class LocallyExclusivePeakDetector(PeakDetector):
         self.neighbours_mask = self.channel_distance <= radius_um
 
     def get_trace_margin(self):
-        return self.exclude_sweep_size
+        # the +1 in the border is important because we need peak in the border
+        return self.exclude_sweep_size + 1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         assert HAVE_NUMBA, "You need to install numba"
@@ -104,88 +105,84 @@ class LocallyExclusivePeakDetector(PeakDetector):
 if HAVE_NUMBA:
     import numba
 
+    @numba.jit(nopython=True, parallel=False, nogil=True, fastmath=True)
     def detect_peaks_numba_locally_exclusive_on_chunk(
-        traces, peak_sign, abs_thresholds, exclude_sweep_size, neighbours_mask
+        traces,
+        peak_sign,
+        abs_thresholds,
+        exclude_sweep_size,
+        neighbours_mask,
     ):
+        num_chans = traces.shape[1]
+        num_samples = traces.shape[0]
 
-        # if medians is not None:
-        #     traces = traces - medians
+        do_pos = peak_sign in ("pos", "both")
+        do_neg = peak_sign in ("neg", "both")
 
-        traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
+        # first find peaks
+        peak_mask = np.zeros(traces.shape, dtype="bool")
+        for s in range(1, num_samples - 1):
+            for chan_ind in range(num_chans):
+                if do_neg:
+                    if (
+                        (traces[s, chan_ind] <= -abs_thresholds[chan_ind])
+                        and (traces[s, chan_ind] < traces[s - 1, chan_ind])
+                        and (traces[s, chan_ind] <= traces[s + 1, chan_ind])
+                    ):
+                        peak_mask[s, chan_ind] = True
 
-        if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_thresholds[None, :]
-            peak_mask = _numba_detect_peak_pos(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
-            )
+                if do_pos:
+                    if (
+                        (traces[s, chan_ind] >= abs_thresholds[chan_ind])
+                        and (traces[s, chan_ind] > traces[s - 1, chan_ind])
+                        and (traces[s, chan_ind] >= traces[s + 1, chan_ind])
+                    ):
+                        peak_mask[s, chan_ind] = True
 
-        if peak_sign in ("neg", "both"):
-            if peak_sign == "both":
-                peak_mask_pos = peak_mask.copy()
+        samples_inds, chan_inds = np.nonzero(peak_mask)
 
-            peak_mask = traces_center < -abs_thresholds[None, :]
-            peak_mask = _numba_detect_peak_neg(
-                traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
-            )
+        npeaks = samples_inds.size
+        keep_peak = np.ones(npeaks, dtype="bool")
+        next_start = 0
+        for i in range(npeaks):
 
-            if peak_sign == "both":
-                peak_mask = peak_mask | peak_mask_pos
+            if (samples_inds[i] < exclude_sweep_size + 1) or (
+                samples_inds[i] >= (num_samples - exclude_sweep_size - 1)
+            ):
+                keep_peak[i] = False
+                continue
 
-        # Find peaks and correct for time shift
-        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
-        peak_sample_ind += exclude_sweep_size
-
-        return peak_sample_ind, peak_chan_ind
-
-    @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_pos(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
-    ):
-        num_chans = traces_center.shape[1]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[0]):
-                if not peak_mask[s, chan_ind]:
+            for j in range(next_start, npeaks):
+                if i == j:
                     continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces_center[s, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] > traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= (
-                            traces_center[s, chan_ind] >= traces[exclude_sweep_size + s + i + 1, neighbour]
-                        )
-                        if not peak_mask[s, chan_ind]:
-                            break
-                    if not peak_mask[s, chan_ind]:
-                        break
-        return peak_mask
 
-    @numba.jit(nopython=True, parallel=False)
-    def _numba_detect_peak_neg(
-        traces, traces_center, peak_mask, exclude_sweep_size, abs_thresholds, peak_sign, neighbours_mask
-    ):
-        num_chans = traces_center.shape[1]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[0]):
-                if not peak_mask[s, chan_ind]:
+                if samples_inds[i] + exclude_sweep_size < samples_inds[j]:
+                    break
+
+                if samples_inds[i] - exclude_sweep_size > samples_inds[j]:
+                    next_start = j
                     continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces_center[s, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] < traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= (
-                            traces_center[s, chan_ind] <= traces[exclude_sweep_size + s + i + 1, neighbour]
-                        )
-                        if not peak_mask[s, chan_ind]:
+
+                # search for neighbors with higher amplitudes
+                if neighbours_mask[chan_inds[i], chan_inds[j]]:
+                    # if inside spatial zone ...
+                    if abs(samples_inds[i] - samples_inds[j]) <= exclude_sweep_size:
+                        # ...and if inside tempral zone ...
+                        value_i = abs(traces[samples_inds[i], chan_inds[i]]) / abs_thresholds[chan_inds[i]]
+                        value_j = abs(traces[samples_inds[j], chan_inds[j]]) / abs_thresholds[chan_inds[j]]
+
+                        if value_j > value_i:
+                            # ... and if smaller
+                            keep_peak[i] = False
                             break
-                    if not peak_mask[s, chan_ind]:
-                        break
-        return peak_mask
+                        if (value_j == value_i) & (samples_inds[i] > samples_inds[j]):
+                            # ... equal but after
+                            keep_peak[i] = False
+                            break
+
+        samples_inds, chan_inds = samples_inds[keep_peak], chan_inds[keep_peak]
+
+        return samples_inds, chan_inds
 
 
 class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
@@ -205,7 +202,7 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
         recording,
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         noise_levels=None,
         device=None,
         radius_um=50,
@@ -275,7 +272,7 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
         recording,
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         radius_um=50,
         noise_levels=None,
         opencl_context_kwargs={},
