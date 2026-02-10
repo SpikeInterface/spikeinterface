@@ -154,17 +154,17 @@ class UpsetPlotWidget(BaseWidget):
 
     def _get_metrics_for_unit_label(self, unit_label):
         from spikeinterface.curation.bombcell_curation import (
-            NOISE_METRICS,
-            SPIKE_QUALITY_METRICS,
-            NON_SOMATIC_METRICS,
+            DEFAULT_NOISE_METRICS,
+            DEFAULT_MUA_METRICS,
+            DEFAULT_NON_SOMATIC_METRICS,
         )
 
         if unit_label == "noise":
-            return NOISE_METRICS
+            return DEFAULT_NOISE_METRICS
         elif unit_label == "mua":
-            return SPIKE_QUALITY_METRICS
+            return DEFAULT_MUA_METRICS
         elif unit_label in ("non_soma", "non_soma_good", "non_soma_mua"):
-            return NON_SOMATIC_METRICS
+            return DEFAULT_NON_SOMATIC_METRICS
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):

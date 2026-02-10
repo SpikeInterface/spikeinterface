@@ -18,7 +18,7 @@ import numpy as np
 from .curation_tools import is_threshold_disabled
 from .threshold_metrics_curation import threshold_metrics_label_units
 
-NOISE_METRICS = [
+DEFAULT_NOISE_METRICS = [
     "num_positive_peaks",
     "num_negative_peaks",
     "peak_to_trough_duration",
@@ -27,7 +27,7 @@ NOISE_METRICS = [
     "exp_decay",
 ]
 
-SPIKE_QUALITY_METRICS = [
+DEFAULT_MUA_METRICS = [
     "amplitude_median",
     "snr",
     "amplitude_cutoff",
@@ -37,7 +37,7 @@ SPIKE_QUALITY_METRICS = [
     "drift_ptp",
 ]
 
-NON_SOMATIC_METRICS = [
+DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_trough_ratio",
     "peak_before_width",
     "trough_width",
@@ -55,27 +55,30 @@ def bombcell_get_default_thresholds() -> dict:
     """
     # bombcell
     return {
-        # Waveform quality (failures -> NOISE)
-        "num_positive_peaks": {"min": None, "max": 2},
-        "num_negative_peaks": {"min": None, "max": 1},
-        "peak_to_trough_duration": {"min": 0.0001, "max": 0.00115},  # seconds
-        "waveform_baseline_flatness": {"min": None, "max": 0.5},
-        "peak_after_to_trough_ratio": {"min": None, "max": 0.8},
-        "exp_decay": {"min": 0.01, "max": 0.1},
-        # Spike quality (failures -> MUA)
-        "amplitude_median": {"min": 40, "max": None},  # uV
-        "snr": {"min": 5, "max": None},
-        "amplitude_cutoff": {"min": None, "max": 0.2},
-        "num_spikes": {"min": 300, "max": None},
-        "rp_contamination": {"min": None, "max": 0.1},
-        "presence_ratio": {"min": 0.7, "max": None},
-        "drift_ptp": {"min": None, "max": 100},  # um
-        # Non-somatic detection
-        "peak_before_to_trough_ratio": {"min": None, "max": 3},
-        "peak_before_width": {"min": 0.00015, "max": None},  # seconds
-        "trough_width": {"min": 0.0002, "max": None},  # seconds
-        "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
-        "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
+        "noise": {  # failures -> NOISE
+            "num_positive_peaks": {"min": None, "max": 2},
+            "num_negative_peaks": {"min": None, "max": 1},
+            "peak_to_trough_duration": {"min": 0.0001, "max": 0.00115},  # seconds
+            "waveform_baseline_flatness": {"min": None, "max": 0.5},
+            "peak_after_to_trough_ratio": {"min": None, "max": 0.8},
+            "exp_decay": {"min": 0.01, "max": 0.1},
+        },
+        "mua": {  # failures -> MUA, only applied to units that passed noise thresholds
+            "amplitude_median": {"min": 40, "max": None},  # uV
+            "snr": {"min": 5, "max": None},
+            "amplitude_cutoff": {"min": None, "max": 0.2},
+            "num_spikes": {"min": 300, "max": None},
+            "rp_contamination": {"min": None, "max": 0.1},
+            "presence_ratio": {"min": 0.7, "max": None},
+            "drift_ptp": {"min": None, "max": 100},  # um
+        },
+        "non-somatic": {
+            "peak_before_to_trough_ratio": {"min": None, "max": 3},
+            "peak_before_width": {"min": 0.00015, "max": None},  # seconds
+            "trough_width": {"min": 0.0002, "max": None},  # seconds
+            "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
+            "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
+        },
     }
 
 
@@ -88,7 +91,14 @@ def bombcell_label_units(
     implementation: str = "new",
 ) -> "pd.DataFrame":
     """
-    bombcell - label units based on quality metrics and thresholds.
+    Label units based on quality metrics and template metrics using Bombcell logic:
+
+    1. NOISE: Units that fail any of the noise thresholds are labeled as "noise".
+    2. MUA: Units that are not "noise" but fail any of the MUA thresholds are labeled as "mua".
+    3. GOOD: Units that pass all noise and MUA thresholds are labeled as "good".
+    4. NON-SOMATIC: Among units that are not "noise", those that meet non-somatic criteria based on waveform shape are
+         labeled as "non_soma". Optionally, these can be further split into "non_soma_good" and "non_soma_mua" based on
+         their original good/mua label.
 
     Parameters
     ----------
@@ -148,7 +158,9 @@ def bombcell_label_units(
 
     # NOISE: waveform failures
     if implementation == "new":
-        noise_thresholds = {metric: thresholds_dict[metric] for metric in NOISE_METRICS if metric in thresholds_dict}
+        noise_thresholds = {
+            metric: thresholds_dict[metric] for metric in DEFAULT_NOISE_METRICS if metric in thresholds_dict
+        }
         unit_labels = threshold_metrics_label_units(
             sorting_analyzer_or_metrics=combined_metrics,
             thresholds=noise_thresholds,
@@ -159,7 +171,7 @@ def bombcell_label_units(
         )
         (non_noise_indices,) = np.nonzero(unit_labels["label"] == "good")
         mua_thresholds = {
-            metric: thresholds_dict[metric] for metric in SPIKE_QUALITY_METRICS if metric in thresholds_dict
+            metric: thresholds_dict[metric] for metric in DEFAULT_MUA_METRICS if metric in thresholds_dict
         }
         neural_metrics = combined_metrics.iloc[non_noise_indices]
         mua_labels = threshold_metrics_label_units(
@@ -173,7 +185,7 @@ def bombcell_label_units(
         unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
         if label_non_somatic:
             non_somatic_thresholds = {
-                metric: thresholds_dict[metric] for metric in NON_SOMATIC_METRICS if metric in thresholds_dict
+                metric: thresholds_dict[metric] for metric in DEFAULT_NON_SOMATIC_METRICS if metric in thresholds_dict
             }
             width_thresholds = {
                 m: thresholds_dict[m] for m in ["peak_before_width", "trough_width"] if m in non_somatic_thresholds
@@ -248,7 +260,7 @@ def bombcell_label_units(
         unit_labels = np.full(n_units, fill_value="good", dtype="U10")
 
         noise_mask = np.zeros(n_units, dtype=bool)
-        for metric_name in NOISE_METRICS:
+        for metric_name in DEFAULT_NOISE_METRICS:
             if metric_name not in combined_metrics.columns or metric_name not in thresholds:
                 continue
             values = combined_metrics[metric_name].values
@@ -265,7 +277,7 @@ def bombcell_label_units(
         # MUA: spike quality failures
         valid_mask = unit_labels == "good"
         mua_mask = np.zeros(np.sum(valid_mask), dtype=bool)
-        for metric_name in SPIKE_QUALITY_METRICS:
+        for metric_name in DEFAULT_MUA_METRICS:
             if metric_name not in combined_metrics.columns or metric_name not in thresholds:
                 continue
             values = combined_metrics[metric_name].values[valid_mask]
