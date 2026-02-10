@@ -38,6 +38,8 @@ using three different approaches:
     sorting_analyzer
 
 
+
+
 .. parsed-literal::
 
     SortingAnalyzer: 96 channels - 142 units - 1 segments - zarr - sparse - has recording
@@ -80,7 +82,7 @@ curation:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A simple solution is to use a filter based on quality metrics. To do so,
-we can use the ``spikeinterface.curation.threshold_metrics_label_units``
+we can use the ``spikeinterface.curation.qualitymetrics_label_units``
 function and provide a set of thresholds.
 
 .. code:: ipython3
@@ -118,6 +120,7 @@ function and provide a set of thresholds.
 
 
 
+
 .. image:: auto_label_units_files/auto_label_units_12_1.png
 
 
@@ -125,6 +128,18 @@ Only 27 units are labeled as *good*, and we can see from the plots that
 some “noisy” waveforms are not properly flagged and some visually good
 waveforms are labeled as noise. Let’s take a look at more powerful
 methods.
+
+We can also check the distribution of the metrics and the thresholds
+across all units:
+
+.. code:: ipython3
+
+    _ = sw.plot_unit_labeling_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
+
+
+
+.. image:: auto_label_units_files/auto_label_units_14_0.png
+
 
 1. Bombcell
 -----------
@@ -144,29 +159,29 @@ file.
 
 .. parsed-literal::
 
-    {'amplitude_cutoff': {'max': 0.2, 'min': None},
-     'amplitude_median': {'max': None, 'min': 40},
-     'drift_ptp': {'max': 100, 'min': None},
-     'exp_decay': {'max': 0.1, 'min': 0.01},
-     'main_peak_to_trough_ratio': {'max': 0.8, 'min': None},
-     'num_negative_peaks': {'max': 1, 'min': None},
-     'num_positive_peaks': {'max': 2, 'min': None},
-     'num_spikes': {'max': None, 'min': 300},
-     'peak_after_to_trough_ratio': {'max': 0.8, 'min': None},
-     'peak_before_to_peak_after_ratio': {'max': 3, 'min': None},
-     'peak_before_to_trough_ratio': {'max': 3, 'min': None},
-     'peak_before_width': {'max': None, 'min': 0.00015},
-     'peak_to_trough_duration': {'max': 0.00115, 'min': 0.0001},
-     'presence_ratio': {'max': None, 'min': 0.7},
-     'rp_contamination': {'max': 0.1, 'min': None},
-     'snr_baseline': {'max': None, 'min': 5},
-     'trough_width': {'max': None, 'min': 0.0002},
-     'waveform_baseline_flatness': {'max': 0.5, 'min': None}}
+    {'mua': {'amplitude_cutoff': {'max': 0.2, 'min': None},
+             'amplitude_median': {'max': None, 'min': 40},
+             'drift_ptp': {'max': 100, 'min': None},
+             'num_spikes': {'max': None, 'min': 300},
+             'presence_ratio': {'max': None, 'min': 0.7},
+             'rp_contamination': {'max': 0.1, 'min': None},
+             'snr': {'max': None, 'min': 5}},
+     'noise': {'exp_decay': {'max': 0.1, 'min': 0.01},
+               'num_negative_peaks': {'max': 1, 'min': None},
+               'num_positive_peaks': {'max': 2, 'min': None},
+               'peak_after_to_trough_ratio': {'max': 0.8, 'min': None},
+               'peak_to_trough_duration': {'max': 0.00115, 'min': 0.0001},
+               'waveform_baseline_flatness': {'max': 0.5, 'min': None}},
+     'non-somatic': {'main_peak_to_trough_ratio': {'max': 0.8, 'min': None},
+                     'peak_before_to_peak_after_ratio': {'max': 3, 'min': None},
+                     'peak_before_to_trough_ratio': {'max': 3, 'min': None},
+                     'peak_before_width': {'max': None, 'min': 0.00015},
+                     'trough_width': {'max': None, 'min': 0.0002}}}
 
 
 .. code:: ipython3
 
-    bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds)
+    bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True, implementation="new")
 
 .. code:: ipython3
 
@@ -178,10 +193,10 @@ file.
 .. parsed-literal::
 
     label
-    good        58
-    noise       50
-    mua         33
-    non_soma     1
+    mua             70
+    noise           50
+    good            21
+    non_soma_mua     1
     Name: count, dtype: int64
 
 
@@ -193,7 +208,43 @@ file.
 
 
 
-.. image:: auto_label_units_files/auto_label_units_18_1.png
+
+.. image:: auto_label_units_files/auto_label_units_19_1.png
+
+
+Bombcell uses many more metrics!
+
+.. code:: ipython3
+
+    _ = sw.plot_unit_labeling_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
+
+
+
+
+
+.. image:: auto_label_units_files/auto_label_units_21_1.png
+
+
+Bombcell also provides a specific widget to inspect the failure mode of
+each labeling step. The *upset* plot shows the combination of metrics
+that cause a failure (e.g. “noise” labeling). The top panel shows how
+many units failed for that combination. For example, in the following
+plot, we see that 9 units were labeled as “noise” because they didn’t
+pass the ``num_positive_peaks`` and ``num_negative_peaks`` thresholds.
+19 units were labeled as “mua” for poor SNR and high refractory period
+contamination (``rp_contamination``).
+
+.. code:: ipython3
+
+    _ = sw.plot_bombcell_labels_upset(sorting_analyzer, unit_labels=bombcell_labels["label"], thresholds=bombcell_default_thresholds, unit_labels_to_plot=["noise", "mua"])
+
+
+
+.. image:: auto_label_units_files/auto_label_units_23_1.png
+
+
+
+.. image:: auto_label_units_files/auto_label_units_23_2.png
 
 
 UnitRefine
@@ -239,14 +290,13 @@ page <https://huggingface.co/SpikeInterface>`__.
 
 
 
-.. image:: auto_label_units_files/auto_label_units_22_1.png
+
+.. image:: auto_label_units_files/auto_label_units_27_1.png
 
 
-.. note::
-
-    If you want to train your own models, see the `UnitRefine
-    repo <%60https://github.com/anoushkajain/UnitRefine%60>`__ for
-    instructions!
+   **NOTE:** If you want to train your own models, see the `UnitRefine
+   repo <%60https://github.com/anoushkajain/UnitRefine%60>`__ for
+   instructions!
 
 This “How To” demonstrated how to automatically label units after spike
 sorting with different strategies. We recommend running **Bombcell** and
@@ -255,6 +305,12 @@ further curation and make downstream analysis cleaner.
 
 To remove units from your ``SortingAnalyzer``, you can simply use the
 ``select_units`` function:
+
+Remove units from ``SortingAnalyzer``
+-------------------------------------
+
+After auto-labeling, we can easily remove the “noise” units for
+downstream analysis:
 
 .. code:: ipython3
 
@@ -271,4 +327,4 @@ To remove units from your ``SortingAnalyzer``, you can simply use the
 .. parsed-literal::
 
     SortingAnalyzer: 96 channels - 92 units - 1 segments - memory - sparse - has recording
-    Loaded 14 extensions: random_spikes, waveforms, templates, amplitude_scalings, correlograms, isi_histograms, noise_levels, principal_components, spike_locations, spike_amplitudes, quality_metrics, template_metrics, template_similarity, unit_locations
+    Loaded 14 extensions: random_spikes, waveforms, templates, amplitude_scalings, correlograms, isi_histograms, noise_levels, principal_components, spike_amplitudes, spike_locations, quality_metrics, template_metrics, template_similarity, unit_locations

@@ -74,6 +74,11 @@ w.figure.suptitle("Quality-metrics labeling")
 
 # %% [markdown]
 # Only 27 units are labeled as *good*, and we can see from the plots that some "noisy" waveforms are not properly flagged and some visually good waveforms are labeled as noise. Let's take a look at more powerful methods.
+#
+# We can also check the distribution of the metrics and the thresholds across all units:
+
+# %%
+_ = sw.plot_unit_labeling_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
 
 # %% [markdown]
 # ## 2. Bombcell
@@ -86,7 +91,7 @@ bombcell_default_thresholds = sc.bombcell_get_default_thresholds()
 pprint(bombcell_default_thresholds)
 
 # %%
-bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, implementation="new")
+bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True, implementation="new")
 
 # %%
 bombcell_labels["label"].value_counts()
@@ -95,11 +100,20 @@ bombcell_labels["label"].value_counts()
 w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["label"], ylims=(-300, 100))
 w.figure.suptitle("Bombcell labeling")
 
-# %%
-sw.plot_unit_labeling_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
+# %% [markdown]
+# Bombcell uses many more metrics!
 
 # %%
-sw.plot_unit_labeling_upset(sorting_analyzer, unit_labels=bombcell_labels["label"], thresholds=bombcell_default_thresholds)
+_ = sw.plot_unit_labeling_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
+
+# %% [markdown]
+# Bombcell also provides a specific widget to inspect the failure mode of each labeling step.
+# The *upset* plot shows the combination of metrics that cause a failure (e.g. "noise" labeling). The top panel shows how many units failed for that combination.
+# For example, in the following plot, we see that 9 units were labeled as "noise" because they didn't pass the `num_positive_peaks` and `num_negative_peaks` thresholds.
+# 19 units were labeled as "mua" for poor SNR and high refractory period contamination (`rp_contamination`).
+
+# %%
+_ = sw.plot_bombcell_labels_upset(sorting_analyzer, unit_labels=bombcell_labels["label"], thresholds=bombcell_default_thresholds, unit_labels_to_plot=["noise", "mua"])
 
 # %% [markdown]
 # ## UnitRefine
@@ -129,6 +143,11 @@ w.figure.suptitle("UnitRefine labeling")
 # This "How To" demonstrated how to automatically label units after spike sorting with different strategies. We recommend running **Bombcell** and **UnitRefine** as part of your pipeline. These methods will facilitate further curation and make downstream analysis cleaner.
 #
 # To remove units from your `SortingAnalyzer`, you can simply use the `select_units` function:
+
+# %% [markdown]
+# ## Remove units from `SortingAnalyzer`
+#
+# After auto-labeling, we can easily remove the "noise" units for downstream analysis:
 
 # %%
 non_noisy_units = bombcell_labels["label"] != "noise"
