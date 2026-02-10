@@ -78,7 +78,7 @@ w.figure.suptitle("Quality-metrics labeling")
 # We can also check the distribution of the metrics and the thresholds across all units:
 
 # %%
-_ = sw.plot_unit_labeling_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
+_ = sw.plot_metric_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
 
 # %% [markdown]
 # ## 2. Bombcell
@@ -104,7 +104,7 @@ w.figure.suptitle("Bombcell labeling")
 # Bombcell uses many more metrics!
 
 # %%
-_ = sw.plot_unit_labeling_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
+_ = sw.plot_metric_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
 
 # %% [markdown]
 # Bombcell also provides a specific widget to inspect the failure mode of each labeling step.

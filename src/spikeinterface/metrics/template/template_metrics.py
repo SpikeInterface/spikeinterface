@@ -167,7 +167,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         include_multi_channel_metrics=False,
         depth_direction="y",
         min_thresh_detect_peaks_troughs=0.4,
-        smooth=True,
+        smooth=False,
         smooth_window_ms=0.3,
         smooth_polyorder=3,
     ):

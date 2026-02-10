@@ -134,7 +134,7 @@ across all units:
 
 .. code:: ipython3
 
-    _ = sw.plot_unit_labeling_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
+    _ = sw.plot_metric_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
 
 
 
@@ -216,7 +216,7 @@ Bombcell uses many more metrics!
 
 .. code:: ipython3
 
-    _ = sw.plot_unit_labeling_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
+    _ = sw.plot_metric_histograms(sorting_analyzer, bombcell_default_thresholds, figsize=(15, 10))
 
 
 

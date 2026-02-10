@@ -9,7 +9,8 @@ import numpy as np
 from spikeinterface.curation.curation_tools import is_threshold_disabled
 
 from .base import BaseWidget, to_attr
-from .unit_labels import WaveformOverlayByLabelWidget, LabelingHistogramsWidget
+from .metrics import MetricsHistogramsWidget
+from .unit_labels import WaveformOverlayByLabelWidget
 
 
 class BombcellUpsetPlotWidget(BaseWidget):
@@ -250,7 +251,7 @@ def plot_bombcell_unit_labeling_all(
 
     # Histograms
     if has_metrics:
-        results["histograms"] = LabelingHistogramsWidget(
+        results["histograms"] = MetricsHistogramsWidget(
             sorting_analyzer,
             thresholds=thresholds,
             backend=backend,

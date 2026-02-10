@@ -1349,32 +1349,6 @@ class BaseMetricExtension(AnalyzerExtension):
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _update_data_after_merge_or_split(self, old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):
-        # this construct new array or dataframe after a merge and a split
-
-        all_unit_ids = new_analyzer.unit_ids
-        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
-
-        import pandas as pd
-
-        if isinstance(new_arr, pd.DataFrame):
-            new_df = pd.DataFrame(index=all_unit_ids, columns=old_arr.columns)
-            new_df.loc[not_new_ids, :] = old_arr.loc[not_new_ids, :]
-            new_df.loc[new_unit_ids, :] = new_sub_arr
-            return new_df
-
-        elif isinstance(new_arr, np.ndarray):
-            new_shape = (len(all_unit_ids),) + old_arr.shape[1:]
-            new_arr = np.zeros(new_shape, dtype=old_arr.dtype)
-            new_inds = new_analyzer.sorting.ids_to_indices(not_new_ids)
-            old_inds = old_analyzer.sorting.ids_to_indices(not_new_ids)
-            new_arr[new_inds] = old_arr[old_inds]
-            new_inds = new_analyzer.sorting.ids_to_indices(new_unit_ids)
-            new_arr[new_inds] = new_sub_arr
-            return new_arr
-        else:
-            raise NotImplementedError
-
     def _merge_extension_data(
         self,
         merge_unit_groups: list[list[int | str]],
@@ -1416,7 +1390,7 @@ class BaseMetricExtension(AnalyzerExtension):
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
 
-        metrics = self._update_data_after_merge_or_split(
+        metrics = _update_data_after_merge_or_split(
             self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids
         )
         new_data = dict()
@@ -1424,7 +1398,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
-                new_arr = self._update_data_after_merge_or_split(
+                new_arr = _update_data_after_merge_or_split(
                     self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
                 )
                 new_data[k] = new_arr
@@ -1483,7 +1457,7 @@ class BaseMetricExtension(AnalyzerExtension):
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
 
-        metrics = self._update_data_after_merge_or_split(
+        metrics = _update_data_after_merge_or_split(
             self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids_f
         )
         new_data = dict()
@@ -1491,7 +1465,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
-                new_arr = self._update_data_after_merge_or_split(
+                new_arr = _update_data_after_merge_or_split(
                     self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
                 )
                 new_data[k] = new_arr
@@ -1678,3 +1652,51 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only changes random spikes assignments
         return self.data.copy()
+
+
+def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):
+    """Updates a DataFrame or np.ndarray after a merge or split.
+
+    Parameters
+    ----------
+    old_analyzer : SortingAnalyzer
+        The old SortingAnalyzer object before merging or splitting.
+    new_analyzer : SortingAnalyzer
+        The new SortingAnalyzer object after merging or splitting.
+    old_arr : Union[pd.DataFrame, np.ndarray]
+        The old array or DataFrame before merging or splitting.
+    new_sub_arr : Union[pd.DataFrame, np.ndarray]
+        The new array or DataFrame after merging or splitting only for the new units ids.
+    new_unit_ids : np.ndarray
+        The new unit IDs after merging or splitting.
+
+    Returns
+    -------
+    Union[pd.DataFrame, np.ndarray]
+        The updated array or DataFrame after merging or splitting.
+    """
+    # this construct new array or dataframe after a merge and a split
+    import pandas as pd
+
+    all_unit_ids = new_analyzer.unit_ids
+    not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
+
+    if isinstance(new_sub_arr, pd.DataFrame):
+        new_df = pd.DataFrame(index=all_unit_ids, columns=old_arr.columns)
+        new_df.loc[not_new_ids, :] = old_arr.loc[not_new_ids, :]
+        new_df.loc[new_unit_ids, :] = new_sub_arr
+        return new_df
+
+    elif isinstance(new_sub_arr, np.ndarray):
+        new_shape = (len(all_unit_ids),) + old_arr.shape[1:]
+        new_arr = np.zeros(new_shape, dtype=old_arr.dtype)
+        new_inds = new_analyzer.sorting.ids_to_indices(not_new_ids)
+        old_inds = old_analyzer.sorting.ids_to_indices(not_new_ids)
+        new_arr[new_inds] = old_arr[old_inds]
+        new_inds = new_analyzer.sorting.ids_to_indices(new_unit_ids)
+        new_arr[new_inds] = new_sub_arr
+        return new_arr
+    else:
+        raise NotImplementedError(
+            "Only pandas DataFrame and numpy array are supported for merging and splitting extension data."
+        )

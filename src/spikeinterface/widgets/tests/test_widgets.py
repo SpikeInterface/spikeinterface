@@ -2,13 +2,13 @@ import unittest
 import os
 import importlib.util
 
+import numpy as np
+
 if __name__ != "__main__":
     if importlib.util.find_spec("matplotlib") is not None:
         import matplotlib
 
         matplotlib.use("Agg")
-
-HAVE_SORTINGVIEW = importlib.util.find_spec("sortingview") is not None
 
 
 from spikeinterface import (
@@ -24,6 +24,7 @@ from spikeinterface.preprocessing import scale, correct_motion
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+HAVE_SORTINGVIEW = importlib.util.find_spec("sortingview") is not None
 SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW")) or not HAVE_SORTINGVIEW
 
 
@@ -703,6 +704,31 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_valid_unit_periods(
                     self.sorting_analyzer_dense, backend=backend, show_only_units_with_valid_periods=False
                 )
+
+    def test_plot_unit_labels(self):
+        possible_backends = list(sw.WaveformOverlayByLabelWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                labels = np.random.choice(["A", "B", "C"], size=self.num_units)
+                sw.plot_unit_labels(
+                    self.sorting_analyzer_dense, unit_labels=labels, backend=backend, **self.backend_kwargs[backend]
+                )
+
+    def test_plot_metric_histograms(self):
+        possible_backends = list(sw.MetricsHistogramsWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                thresholds = {"snr": {"min": 5}, "isi_violation": {"max": 0.5}}
+                sw.plot_metric_histograms(
+                    self.sorting_analyzer_dense, thresholds=thresholds, backend=backend, **self.backend_kwargs[backend]
+                )
+
+    def test_plot_bombcell_labels_upset(self):
+        possible_backends = list(sw.BombcellUpsetPlotWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                labels = np.random.choice(["noise", "mua", "good"], size=self.num_units)
+                sw.plot_bombcell_labels_upset(self.sorting_analyzer_dense, unit_labels=labels, backend=backend)
 
 
 if __name__ == "__main__":
