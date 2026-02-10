@@ -93,6 +93,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     depend_on = ["templates"]
     need_backward_compatibility_on_load = True
     metric_list = single_channel_metrics + multi_channel_metrics
+    tmp_data_to_save = ["peaks_data", "main_channel_templates"]
 
     def _handle_backward_compatibility_on_load(self):
         from copy import deepcopy
@@ -313,14 +314,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 "half_width_right",
             ):
                 columns.append(f"{k}_{suffix}")
-        df_peaks_info = pd.DataFrame(
+        tmp_data["peaks_data"] = pd.DataFrame(
             index=unit_ids,
             data=peaks_info,
             columns=columns,
             dtype=int,
         )
-        self.data["peaks_info"] = df_peaks_info
-        self.data["main_channel_templates"] = main_channel_templates
 
         return tmp_data
 
