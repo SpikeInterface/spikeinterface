@@ -236,6 +236,8 @@ jobs:
       - name: Test sortingcomponents
         shell: bash
         if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
+        env:
+          PYTORCH_NO_SHM: ${{ runner.os == 'macOS' && '1' || '' }}
         run: |
           pip install -e .[full]
           pip list
