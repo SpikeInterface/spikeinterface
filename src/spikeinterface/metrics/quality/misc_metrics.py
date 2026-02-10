@@ -1613,7 +1613,7 @@ def slidingRP_violations(
     if method == "numba":
         from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
 
-        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size)[0, 0]
+        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode="auto")[0, 0]
 
     ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
     # the choice of the bin_size above, but I am not the author of the code...
