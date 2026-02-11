@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Optional
 from packaging.version import parse
 
 from .tf_utils import has_tf, import_tf
@@ -58,7 +57,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
         use_gpu: bool = True,
         predict_workers: int = 1,
         disable_tf_logger: bool = True,
-        memory_gpu: Optional[int] = None,
+        memory_gpu: int | None = None,
     ):
         import deepinterpolation
 

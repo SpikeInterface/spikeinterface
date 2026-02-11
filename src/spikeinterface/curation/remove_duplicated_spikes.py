@@ -1,4 +1,3 @@
-from typing import Optional
 import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -58,7 +57,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         censored_period: int,
         unit_ids,
         method: str,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         super().__init__()
         self._parent_segment = parent_segment
@@ -67,9 +66,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         self.seed = seed
         self._duplicated_spikes = {}
 
-    def get_unit_spike_train(
-        self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None
-    ) -> np.ndarray:
+    def get_unit_spike_train(self, unit_id, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
 
         if unit_id not in self._duplicated_spikes:

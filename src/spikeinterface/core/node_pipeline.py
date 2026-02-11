@@ -1,6 +1,6 @@
 """ """
 
-from typing import Optional, Type
+from typing import Type
 
 import struct
 
@@ -25,7 +25,7 @@ class PipelineNode:
         self,
         recording: BaseRecording,
         return_output: bool | tuple[bool] = True,
-        parents: Optional[list[Type["PipelineNode"]]] = None,
+        parents: list[Type["PipelineNode"]] | None = None,
     ):
         """
         This is a generic object that will make some computation on peaks given a buffer of traces.
@@ -40,7 +40,7 @@ class PipelineNode:
         return_output : bool or tuple[bool], default: True
             Whether or not the output of the node is returned by the pipeline.
             When a Node have several toutputs then this can be a tuple of bool
-        parents : Optional[list[PipelineNode]], default: None
+        parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation.
         """
 
@@ -278,7 +278,7 @@ class WaveformsNode(PipelineNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[list[PipelineNode]] = None,
+        parents: list[PipelineNode] | None = None,
         return_output: bool = False,
     ):
         """
@@ -293,7 +293,7 @@ class WaveformsNode(PipelineNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[list[PipelineNode]], default: None
+        parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -313,7 +313,7 @@ class ExtractDenseWaveforms(WaveformsNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[list[PipelineNode]] = None,
+        parents: list[PipelineNode] | None = None,
         return_output: bool = False,
     ):
         """
@@ -329,7 +329,7 @@ class ExtractDenseWaveforms(WaveformsNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[list[PipelineNode]], default: None
+        parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
@@ -359,7 +359,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         recording: BaseRecording,
         ms_before: float,
         ms_after: float,
-        parents: Optional[list[PipelineNode]] = None,
+        parents: list[PipelineNode] | None = None,
         return_output: bool = False,
         radius_um: float = 100.0,
         sparsity_mask: np.ndarray = None,
@@ -383,7 +383,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             The number of milliseconds to include before the peak of the spike
         ms_after : float
             The number of milliseconds to include after the peak of the spike
-        parents : Optional[list[PipelineNode]], default: None
+        parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline

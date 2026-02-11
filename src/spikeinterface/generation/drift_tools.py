@@ -1,5 +1,4 @@
 import math
-from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -338,9 +337,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         drifting_templates: DriftingTemplates,
         displacement_vectors: list[np.ndarray],
         displacement_sampling_frequency: float,
-        displacement_unit_factor: Optional[np.ndarray] = None,
-        parent_recording: Optional[BaseRecording] = None,
-        num_samples: Optional[list[int]] = None,
+        displacement_unit_factor: np.ndarray | None = None,
+        parent_recording: BaseRecording | None = None,
+        num_samples: list[int] | None = None,
         amplitude_factor: list[np.ndarray] | np.ndarray | float | None = None,
         mode="precompute",
         # TODO handle upsample vector
@@ -506,11 +505,11 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         dtype,
         spike_vector: np.ndarray,
         drifting_templates: DriftingTemplates,
-        amplitude_vector: Optional[np.ndarray] = None,
-        parent_recording_segment: Optional[BaseRecordingSegment] = None,
-        num_samples: Optional[int] = None,
-        displacement_indices: Optional[np.ndarray] = None,
-        templates_array_moved: Optional[np.ndarray] = None,
+        amplitude_vector: np.ndarray | None = None,
+        parent_recording_segment: BaseRecordingSegment | None = None,
+        num_samples: int | None = None,
+        displacement_indices: np.ndarray | None = None,
+        templates_array_moved: np.ndarray | None = None,
         # upsample_vector: list |float | None,
     ) -> None:
         BaseRecordingSegment.__init__(
@@ -537,9 +536,9 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Optional[int] = None,
-        end_frame: Optional[int] = None,
-        channel_indices: Optional[list] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         start_frame = 0 if start_frame is None else start_frame
         end_frame = self.num_samples if end_frame is None else end_frame

@@ -5,7 +5,6 @@ This backwards compatibility module aims to:
 """
 
 import warnings
-from typing import Optional
 
 from pathlib import Path
 
@@ -188,7 +187,7 @@ class MockWaveformExtractor:
     def has_recording(self) -> bool:
         return self.sorting_analyzer._recording is not None
 
-    def get_num_samples(self, segment_index: Optional[int] = None) -> int:
+    def get_num_samples(self, segment_index: int | None = None) -> int:
         return self.sorting_analyzer.get_num_samples(segment_index)
 
     def get_total_samples(self) -> int:
@@ -372,7 +371,7 @@ def load_sorting_analyzer_or_waveforms(folder, sorting=None):
 def load_waveforms(
     folder,
     with_recording: bool = True,
-    sorting: Optional[BaseSorting] = None,
+    sorting: BaseSorting | None = None,
     output="MockWaveformExtractor",
 ) -> MockWaveformExtractor | SortingAnalyzer:
     """

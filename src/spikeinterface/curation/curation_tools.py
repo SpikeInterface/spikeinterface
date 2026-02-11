@@ -1,6 +1,4 @@
-from typing import Optional
 import numpy as np
-from spikeinterface import SortingAnalyzer
 
 try:
     import numba
@@ -16,7 +14,7 @@ _methods_numpy = ("keep_first", "random", "keep_last")
 def _find_duplicated_spikes_numpy(
     spike_train: np.ndarray,
     censored_period: int,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     method: "keep_first" | "random" | "keep_last" = "keep_first",
 ) -> np.ndarray:
     (indices_of_duplicates,) = np.where(np.diff(spike_train) <= censored_period)
@@ -95,7 +93,7 @@ def find_duplicated_spikes(
     spike_train,
     censored_period: int,
     method: "keep_first" | "keep_last" | "keep_first_iterative" | "keep_last_iterative" | "random" = "random",
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> np.ndarray:
     """
     Finds the indices where spikes should be considered duplicates.
