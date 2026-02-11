@@ -191,7 +191,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def _save(self, format="binary", **save_kwargs):
         raise NotImplementedError
 
-    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
+    def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
 
         return ChannelSliceSnippets(self, channel_ids)

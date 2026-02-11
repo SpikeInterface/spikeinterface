@@ -34,7 +34,7 @@ class TracesWidget(BaseWidget):
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
-    events : np.array | list[np.narray] or None, default: None
+    events : np.ndarray | list[np.narray] or None, default: None
         Events to display as vertical lines.
         The numpy arrays cen either be of dtype float, with event times in seconds,
         or a structured array with the "time" field,

@@ -316,7 +316,7 @@ class MockWaveformExtractor:
             return wfs
 
     def get_all_templates(
-        self, unit_ids: list | np.array | tuple | None = None, mode="average", percentile: float | None = None
+        self, unit_ids: list | np.ndarray | tuple | None = None, mode="average", percentile: float | None = None
     ):
         ext = self.sorting_analyzer.get_extension("templates")
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import warnings
 
 from copy import deepcopy
@@ -434,7 +435,7 @@ class BaseSorting(BaseExtractor):
         ----------
         outputs : "dict" | "array", default: "dict"
             Control the type of the returned object : a dict (keys are unit_ids) or an numpy array.
-        unit_ids: np.array | None
+        unit_ids: np.ndarray | None
             Compute the number of spikes on a subset unit_ids only
         Returns
         -------

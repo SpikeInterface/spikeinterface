@@ -18,7 +18,7 @@ def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
         The motion object.
     recording : Recording
         The recording object. This is used to convert sample indices to times.
-    peak_locations: np.array | None
+    peak_locations: np.ndarray | None
         Optional : peaks location vector.
         Otherwise use the channel_index for location.
     Returns

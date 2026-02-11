@@ -84,9 +84,9 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
     the detection is skipped and uses these instead.
 
     {}
-    bad_channel_ids : np.array | list | None, default: None
+    bad_channel_ids : np.ndarray | list | None, default: None
         If given, these are used rather than being detected.
-    channel_labels : np.array | list | None, default: None
+    channel_labels : np.ndarray | list | None, default: None
         If given, these are labels given to the channels by the
         detection process. Only intended for use when loading.
 

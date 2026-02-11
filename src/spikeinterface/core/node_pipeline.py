@@ -578,7 +578,7 @@ def run_node_pipeline(
 
     Returns
     -------
-    outputs: tuple of np.array | np.array
+    outputs: tuple of np.ndarray | np.ndarray
         a tuple of vector for the output of nodes having return_output=True.
         If squeeze_output=True and only one output then directly np.array.
     """
