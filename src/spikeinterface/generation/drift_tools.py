@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import math
 from typing import Optional
 
@@ -346,7 +344,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         amplitude_factor: list[np.ndarray] | np.ndarray | float | None = None,
         mode="precompute",
         # TODO handle upsample vector
-        # upsample_vector: Union[list[int], None] = None,
+        # upsample_vector: list[int] | None = None,
     ):
         import scipy.spatial
 
@@ -513,7 +511,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         num_samples: Optional[int] = None,
         displacement_indices: Optional[np.ndarray] = None,
         templates_array_moved: Optional[np.ndarray] = None,
-        # upsample_vector: Union[list[float], None],
+        # upsample_vector: list |float | None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,

@@ -2,7 +2,6 @@
 Some utils to handle parallel jobs on top of job and/or loky
 """
 
-from __future__ import annotations
 import numpy as np
 import platform
 import os

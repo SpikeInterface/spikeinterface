@@ -4,8 +4,6 @@ This backwards compatibility module aims to:
   * mock the function extract_waveforms() and the class SortingAnalyzer() but based SortingAnalyzer
 """
 
-from __future__ import annotations
-
 import warnings
 from typing import Optional
 

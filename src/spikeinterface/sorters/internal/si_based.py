@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.core import load, NumpyRecording
 
 from spikeinterface.sorters import BaseSorter

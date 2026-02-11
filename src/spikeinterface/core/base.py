@@ -1,7 +1,7 @@
-from __future__ import annotations
 from pathlib import Path
 import shutil
-from typing import Any, Iterable, List, Optional, Sequence, Union
+from typing import Any
+from collections.abc import Iterable, Sequence
 import importlib
 import warnings
 import weakref
@@ -144,11 +144,11 @@ class BaseExtractor:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
-    def get_parent(self) -> Optional[BaseExtractor]:
+    def get_parent(self) -> BaseExtractor | None:
         """Returns parent object if it exists, otherwise None"""
         return getattr(self, "_parent", None)
 
-    def _check_segment_index(self, segment_index: Optional[int] = None) -> int:
+    def _check_segment_index(self, segment_index: int | None = None) -> int:
         if segment_index is None:
             if self.get_num_segments() == 1:
                 return 0
@@ -251,7 +251,7 @@ class BaseExtractor:
             v = deepcopy(v)
         return v
 
-    def get_annotation_keys(self) -> List:
+    def get_annotation_keys(self) -> list:
         return list(self._annotations.keys())
 
     def set_property(
@@ -361,14 +361,14 @@ class BaseExtractor:
                 self._properties[key] = np.zeros_like(values, dtype=values.dtype)
                 self._properties[key][indices] = values
 
-    def get_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
+    def get_property(self, key: str, ids: Iterable | None = None) -> np.ndarray:
         values = self._properties.get(key, None)
         if ids is not None and values is not None:
             inds = self.ids_to_indices(ids)
             values = values[inds]
         return values
 
-    def get_property_keys(self) -> List:
+    def get_property_keys(self) -> list:
         return list(self._properties.keys())
 
     def delete_property(self, key) -> None:
@@ -381,8 +381,8 @@ class BaseExtractor:
         self,
         other: "BaseExtractor",
         only_main: bool = False,
-        ids: Union[Iterable, slice, None] = None,
-        skip_properties: Optional[Iterable[str]] = None,
+        ids: Iterable | slice | None = None,
+        skip_properties: Iterable[str] | None = None,
     ) -> None:
         """
         Copy metadata (annotations/properties) to another extractor (`other`).
@@ -436,7 +436,7 @@ class BaseExtractor:
         self,
         include_annotations: bool = False,
         include_properties: bool = False,
-        relative_to: Union[str, Path, None] = None,
+        relative_to: str | Path | None = None,
         folder_metadata=None,
         recursive: bool = False,
     ) -> dict:
@@ -461,11 +461,11 @@ class BaseExtractor:
             Whether to include all annotations in the dictionary
         include_properties : bool, default: False
             Whether to include all properties in the dictionary, by default False.
-        relative_to : Union[str, Path, None], default: None
+        relative_to : str | Path | None, default: None
             If provided, file and folder paths will be made relative to this path,
             enabling portability in folder formats such as the waveform extractor,
             by default None.
-        folder_metadata : Union[str, Path, None], default: None
+        folder_metadata : str | Path | None, default: None
             Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
             in numpy `npy` format, by default None.
         recursive : bool, default: False
@@ -568,7 +568,7 @@ class BaseExtractor:
         return dump_dict
 
     @staticmethod
-    def from_dict(dictionary: dict, base_folder: Optional[Union[Path, str]] = None) -> "BaseExtractor":
+    def from_dict(dictionary: dict, base_folder: Path | str | None = None) -> "BaseExtractor":
         """
         Instantiate extractor from dictionary
 
@@ -677,7 +677,7 @@ class BaseExtractor:
         return self.check_serializability("pickle")
 
     @staticmethod
-    def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
+    def _get_file_path(file_path: str | Path, extensions: Sequence) -> Path:
         """
         Helper function to be used by various dump_to_file utilities.
 
@@ -708,7 +708,7 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path: Union[str, Path], relative_to=None, folder_metadata=None) -> None:
+    def dump(self, file_path: str | Path, relative_to=None, folder_metadata=None) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -729,9 +729,9 @@ class BaseExtractor:
 
     def dump_to_json(
         self,
-        file_path: Union[str, Path, None] = None,
-        relative_to: Union[str, Path, bool, None] = None,
-        folder_metadata: Union[str, Path, None] = None,
+        file_path: str | Path | None = None,
+        relative_to: str | Path | bool | None = None,
+        folder_metadata: str | Path | None = None,
     ) -> None:
         """
         Dump recording extractor to json file.
@@ -770,10 +770,10 @@ class BaseExtractor:
 
     def dump_to_pickle(
         self,
-        file_path: Union[str, Path, None] = None,
-        relative_to: Union[str, Path, bool, None] = None,
+        file_path: str | Path | None = None,
+        relative_to: str | Path | bool | None = None,
         include_properties: bool = True,
-        folder_metadata: Union[str, Path, None] = None,
+        folder_metadata: str | Path | None = None,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -814,9 +814,7 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(
-        file_or_folder_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None
-    ) -> "BaseExtractor":
+    def load(file_or_folder_path: str | Path, base_folder: Path | str | bool | None = None) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
@@ -1184,7 +1182,7 @@ class BaseSegment:
         self._parent_extractor = None
 
     @property
-    def parent_extractor(self) -> Union[BaseExtractor, None]:
+    def parent_extractor(self) -> BaseExtractor | None:
         return self._parent_extractor()
 
     def set_parent_extractor(self, parent_extractor: BaseExtractor) -> None:

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List, Union, Optional
 
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.core_tools import define_function_from_class
@@ -58,12 +57,12 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
 
     def __init__(
         self,
-        file_path: Union[str, Path],
+        file_path: str | Path,
         sampling_frequency: float,
         num_channels: int,
-        channel_ids: Optional[List] = None,
-        is_filtered: Optional[bool] = None,
-        gain_to_uV: Optional[float] = None,
+        channel_ids: list | None = None,
+        is_filtered: bool | None = None,
+        gain_to_uV: float | None = None,
     ):
 
         gain_to_uV = gain_to_uV if gain_to_uV is not None else self.HEADSTAGE_GAIN_TO_UV

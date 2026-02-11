@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc

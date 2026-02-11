@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .dummy import DummyClustering
 from .positions import PositionsClustering
 

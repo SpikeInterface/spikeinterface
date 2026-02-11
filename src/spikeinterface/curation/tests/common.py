@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer

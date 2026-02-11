@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 # """Sorting components: clustering"""
 from pathlib import Path
 

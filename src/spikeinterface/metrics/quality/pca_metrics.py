@@ -1,7 +1,5 @@
 """Cluster quality metrics computed from principal components."""
 
-from __future__ import annotations
-
 import warnings
 from collections import namedtuple
 from pathlib import Path
