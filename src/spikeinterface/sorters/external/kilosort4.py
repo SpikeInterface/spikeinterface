@@ -415,7 +415,7 @@ class Kilosort4Sorter(BaseSorter):
             detect_spikes_kwargs.update(dict(verbose=verbose))
 
         if HAS_DIAGNOSTIC_PLOTS:
-            st, tF, wall0, clu0 = detect_spikes(**detect_spikes_kwargs)
+            st, tF, Wall0, clu0 = detect_spikes(**detect_spikes_kwargs)
             kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
         else:
             st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
