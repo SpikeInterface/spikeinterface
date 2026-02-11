@@ -144,7 +144,7 @@ class BaseExtractor:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
-    def get_parent(self) -> BaseExtractor | None:
+    def get_parent(self) -> "BaseExtractor" | None:
         """Returns parent object if it exists, otherwise None"""
         return getattr(self, "_parent", None)
 
@@ -1090,7 +1090,7 @@ class BaseExtractor:
         return cached
 
 
-def _load_extractor_from_dict(dic) -> BaseExtractor:
+def _load_extractor_from_dict(dic) -> "BaseExtractor":
     """
     Convert a dictionary into an instance of BaseExtractor or its subclass.
 
