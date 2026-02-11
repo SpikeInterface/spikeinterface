@@ -416,11 +416,9 @@ class Kilosort4Sorter(BaseSorter):
 
         if HAS_DIAGNOSTIC_PLOTS:
             st, tF, wall0, clu0 = detect_spikes(**detect_spikes_kwargs)
+            kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
         else:
             st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
-
-        if HAS_DIAGNOSTIC_PLOTS:
-            kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
 
         cluster_spikes_kwargs = dict(
             st=st,
