@@ -11,51 +11,28 @@ class DartsortSorter(BaseSorter):
     requires_locations = False
     compatible_with_parallel = {"loky": False, "multiprocessing": False, "threading": False}
 
-    # @charlie @julien @cole: tell which parameters you want to propagate here
+    sorter_description = "Dartsort is the Columbia university sorter made with love by Charlie Windolf and Liam Paninski's team."
+
     _default_params = {
-        "n_jobs": -1,
-        "device": None,
-        "waveform": {
-            "ms_before": 1.4,
-            "ms_after": 2.6,
-        },
-        "featurization":{
-            "do_nn_denoise": True,
-            "do_tpca_denoise": True,
-            "do_enforce_decrease": True,
-            "denoise_only":False,
-            # ... more params are available
-        },
-        "subtraction":{
-            "spike_length_samples": 121,
-            "detection_thresholds": [12, 10, 8, 6, 5, 4],
-            "chunk_length_samples": 30_000,
-            "peak_sign": "neg",
-            "spatial_dedup_radius": 150.0,
-            "extract_radius": 200.0,
-            "n_chunks_fit": 40,
-            "fit_subsampling_random_state": 0,
-            "residnorm_decrease_threshold": 3.162,
-            # ... more params are available
-
-        },
-        "template": {
-            "spikes_per_unit": 500,
-            # ... more params are available
-        },
-        "matching": {
-            "threshold": 50.,
-            # ... more params are available
-        }
-
     }
 
     _params_description = {
-        "n_jobs": "number of worker",
-        "device": "Torch device used. None is auto."
     }
 
-    sorter_description = "Dartsort is the Columbia university sorter made with love by Charlie Windolf, Julien Boussard, Cole Hurwitz, Chris Langfield and Hyun Dong Lee from Liam Paninski team."
+    @classmethod
+    def _dynamic_params(cls):
+        from darsort import DARTsortUserConfig
+        from pydantic import RootModel
+        # the trick is to transform the DARTsortUserConfig  (a pydantic.dataclass) into a pydantic model
+        model = RootModel[DARTsortUserConfig](DARTsortUserConfig())
+        default_params = model.model_dump(mode='python')
+        # default_params_descriptions = 
+
+        return default_params, default_params_descriptions
+
+
+
+    
 
     installation_mesg = """\nTo use dartsort run:\n
        >>> pip install dartsort
