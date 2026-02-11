@@ -8,7 +8,6 @@ from spikeinterface.core import get_chunk_with_margin, ensure_chunk_size, get_gl
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-
 HIGHPASS_ERROR_THRESHOLD_HZ = 100
 MARGIN_TO_CHUNK_PERCENT_WARNING = 0.2  # 20%
 
@@ -126,7 +125,7 @@ class FilterRecording(BasePreprocessor):
                 f"of the global chunk size {global_job_kwargs_chunk_size} samples. This may lead to performance bottlenecks when "
                 f"chunking. Consider increasing the chunk_size or chunk_duration to minimize margin overhead."
             )
-        
+
         self.margin_samples = margin
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(
@@ -262,7 +261,12 @@ class BandpassFilterRecording(FilterRecording):
     ):
         if margin_ms == "auto":
             margin_ms = adjust_margin_ms_for_highpass(freq_min)
-        highpass_check(freq_min, margin_ms, ignore_low_freq_error=ignore_low_freq_error, skip_warning=_skip_margin_warning_for_old_version)
+        highpass_check(
+            freq_min,
+            margin_ms,
+            ignore_low_freq_error=ignore_low_freq_error,
+            skip_warning=_skip_margin_warning_for_old_version,
+        )
         FilterRecording.__init__(
             self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
         )
@@ -280,13 +284,13 @@ class BandpassFilterRecording(FilterRecording):
     @classmethod
     def _handle_backward_compatibility(cls, old_kwargs, full_dict):
         new_kwargs = old_kwargs.copy()
-        is_lfp_case =  old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
-        if 'ignore_low_freq_error' not in new_kwargs:
-            new_kwargs['ignore_low_freq_error'] = True
-            if  is_lfp_case:
-                new_kwargs['_skip_margin_warning_for_old_version'] = False
+        is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
+        if "ignore_low_freq_error" not in new_kwargs:
+            new_kwargs["ignore_low_freq_error"] = True
+            if is_lfp_case:
+                new_kwargs["_skip_margin_warning_for_old_version"] = False
             else:
-                new_kwargs['_skip_margin_warning_for_old_version'] = True
+                new_kwargs["_skip_margin_warning_for_old_version"] = True
         return new_kwargs
 
 
@@ -316,11 +320,23 @@ class HighpassFilterRecording(FilterRecording):
     """
 
     def __init__(
-        self, recording, freq_min=300.0, margin_ms="auto", dtype=None, ignore_low_freq_error=False, _skip_margin_warning_for_old_version=False, **filter_kwargs
+        self,
+        recording,
+        freq_min=300.0,
+        margin_ms="auto",
+        dtype=None,
+        ignore_low_freq_error=False,
+        _skip_margin_warning_for_old_version=False,
+        **filter_kwargs,
     ):
         if margin_ms == "auto":
             margin_ms = adjust_margin_ms_for_highpass(freq_min)
-        highpass_check(freq_min, margin_ms, ignore_low_freq_error=ignore_low_freq_error, skip_warning=_skip_margin_warning_for_old_version)
+        highpass_check(
+            freq_min,
+            margin_ms,
+            ignore_low_freq_error=ignore_low_freq_error,
+            skip_warning=_skip_margin_warning_for_old_version,
+        )
         FilterRecording.__init__(
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
         )
@@ -331,13 +347,13 @@ class HighpassFilterRecording(FilterRecording):
     @classmethod
     def _handle_backward_compatibility(cls, old_kwargs, full_dict):
         new_kwargs = old_kwargs.copy()
-        is_lfp_case =  old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
-        if 'ignore_low_freq_error' not in new_kwargs:
-            new_kwargs['ignore_low_freq_error'] = True
-            if  is_lfp_case:
-                new_kwargs['_skip_margin_warning_for_old_version'] = False
+        is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
+        if "ignore_low_freq_error" not in new_kwargs:
+            new_kwargs["ignore_low_freq_error"] = True
+            if is_lfp_case:
+                new_kwargs["_skip_margin_warning_for_old_version"] = False
             else:
-                new_kwargs['_skip_margin_warning_for_old_version'] = True
+                new_kwargs["_skip_margin_warning_for_old_version"] = True
         return new_kwargs
 
 

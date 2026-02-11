@@ -1144,7 +1144,7 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
             f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
         )
 
-        if hasattr(extractor_class, '_handle_backward_compatibility'):
+        if hasattr(extractor_class, "_handle_backward_compatibility"):
             new_kwargs = extractor_class._handle_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
