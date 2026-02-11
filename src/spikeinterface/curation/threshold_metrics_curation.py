@@ -15,6 +15,7 @@ def threshold_metrics_label_units(
     fail_label: str = "noise",
     operator: str = "and",
     nan_policy: str = "fail",
+    column_name: str = "label",
 ):
     """Label units based on metrics and thresholds.
 
@@ -39,11 +40,13 @@ def threshold_metrics_label_units(
         If "ignore", NaN values will be ignored. Note that the "ignore" behavior will depend on the operator used.
         If "and", NaNs will be treated as passing, since the initial mask is all true;
         if "or", NaNs will be treated as failing, since the initial mask is all false.
+    column_name : str, default: "label"
+        The name of the column in the output DataFrame that will contain the assigned labels.
 
     Returns
     -------
     labels : pd.DataFrame
-        A DataFrame with unit IDs as index and a column 'label' containing the assigned labels (`fail_label` or `pass_label`)
+        A DataFrame with unit IDs as index and a column `column_name` containing the assigned labels (`fail_label` or `pass_label`)
     """
     import pandas as pd
 
@@ -77,7 +80,7 @@ def threshold_metrics_label_units(
         raise ValueError("nan_policy must be 'fail', 'pass', or 'ignore'")
 
     labels = pd.DataFrame(index=metrics.index, dtype=str)
-    labels["label"] = fail_label
+    labels[column_name] = fail_label
 
     # Key change: init depends on operator
     pass_mask = np.ones(len(metrics), dtype=bool) if operator == "and" else np.zeros(len(metrics), dtype=bool)
@@ -101,24 +104,24 @@ def threshold_metrics_label_units(
             metric_ok &= values <= max_value
 
         # Handle NaNs
-        nan_mask = slice(None)
         if nan_policy == "fail":
             metric_ok &= ~is_nan
+            valid_mask = slice(None)
         elif nan_policy == "pass":
             metric_ok |= is_nan
-        else:
-            # if nan_policy == "ignore", we only set values for non-nan entries
-            nan_mask = ~is_nan
+            valid_mask = slice(None)
+        elif nan_policy == "ignore":
+            valid_mask = ~is_nan
 
         any_threshold_applied = True
 
         if operator == "and":
-            pass_mask[nan_mask] &= metric_ok[nan_mask]
-        else:
-            pass_mask[nan_mask] |= metric_ok[nan_mask]
+            pass_mask[valid_mask] &= metric_ok[valid_mask]
+        elif operator == "or":
+            pass_mask[valid_mask] |= metric_ok[valid_mask]
 
     if not any_threshold_applied:
         pass_mask[:] = True
 
-    labels.loc[pass_mask, "label"] = pass_label
+    labels.loc[pass_mask, column_name] = pass_label
     return labels
