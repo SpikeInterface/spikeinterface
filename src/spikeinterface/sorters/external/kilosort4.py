@@ -173,7 +173,7 @@ class Kilosort4Sorter(BaseSorter):
             import kilosort.plots as kplots
         else:
             HAS_DIAGNOSTIC_PLOTS = False
-            
+
         import time
         import torch
         import numpy as np
@@ -401,7 +401,7 @@ class Kilosort4Sorter(BaseSorter):
         if HAS_DIAGNOSTIC_PLOTS:
             kplots.plot_drift_amount(ops, results_dir)
             kplots.plot_drift_scatter(st0, results_dir)
-            
+
         # Sort spikes and save results
         detect_spikes_kwargs = dict(
             ops=ops,
@@ -417,7 +417,7 @@ class Kilosort4Sorter(BaseSorter):
 
         if HAS_DIAGNOSTIC_PLOTS:
             kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
-        
+
         cluster_spikes_kwargs = dict(
             st=st,
             tF=tF,
