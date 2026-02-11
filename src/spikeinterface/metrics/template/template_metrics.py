@@ -141,6 +141,19 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             # parameters are already updated from velocity_above
             if "velocity_below" in self.params["metric_params"]:
                 del self.params["metric_params"]["velocity_below"]
+        # exp_decay parameters changes
+        if "exp_decay" in self.params["metric_names"]:
+            if "exp_peak_function" in self.params["metric_params"]["exp_decay"]:
+                self.params["metric_params"]["exp_decay"]["peak_function"] = self.params["metric_params"]["exp_decay"][
+                    "exp_peak_function"
+                ]
+            if "min_r2_exp_decay" in self.params["metric_params"]["exp_decay"]:
+                self.params["metric_params"]["exp_decay"]["min_r2"] = self.params["metric_params"]["exp_decay"][
+                    "min_r2_exp_decay"
+                ]
+        if "depth_direction" not in self.params:
+            self.params["depth_direction"] = "y"
+
         # peak_to_valley -> peak_to_trough_duration
         if "peak_to_valley" in self.params["metric_names"]:
             self.params["metric_names"].remove("peak_to_valley")
