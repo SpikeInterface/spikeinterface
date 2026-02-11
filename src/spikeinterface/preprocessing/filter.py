@@ -121,11 +121,10 @@ class FilterRecording(BasePreprocessor):
         global_job_kwargs_chunk_size = ensure_chunk_size(recording, **get_global_job_kwargs())
         if margin > MARGIN_TO_CHUNK_PERCENT_WARNING * global_job_kwargs_chunk_size:
             warnings.warn(
-                f"The margin size ({self.margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
+                f"The margin size ({margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
                 f"of the global chunk size {global_job_kwargs_chunk_size} samples. This may lead to performance bottlenecks when "
                 f"chunking. Consider increasing the chunk_size or chunk_duration to minimize margin overhead."
             )
-
         self.margin_samples = margin
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(
