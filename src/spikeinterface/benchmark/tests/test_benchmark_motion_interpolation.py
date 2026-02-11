@@ -113,7 +113,6 @@ def test_benchmark_motion_interpolation(create_cache_folder):
     study = MotionInterpolationStudy.create(study_folder, datasets, cases)
 
     # this study needs analyzer
-    study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
 
     # run and result

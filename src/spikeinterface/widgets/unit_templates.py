@@ -13,15 +13,25 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         UnitWaveformsWidget.__init__(self, *args, **kargs)
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
         sorting_analyzer = dp.sorting_analyzer_or_templates
         assert isinstance(sorting_analyzer, SortingAnalyzer), "This widget requires a SortingAnalyzer as input"
 
-        assert len(dp.templates_shading) <= 4, "Only 2 ans 4 templates shading are supported in sortingview"
+        assert len(dp.templates_shading) in (2, 4), "Only 2 ans 4 templates shading are supported in sortingview"
 
         # ensure serializable for sortingview
         unit_id_to_channel_ids = dp.final_sparsity.unit_id_to_channel_ids
@@ -32,16 +42,17 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
-            templates_dict[unit]["mean"] = dp.templates[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
+            template_data = dp.templates[u_i]
+            templates_dict[unit]["mean"] = template_data[:, unit_id_to_channel_indices[unit]]
             if dp.do_shading:
-                templates_dict[unit]["shading"] = [
-                    s[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]] for s in dp.templates_shading
-                ]
+                templates_dict[unit]["shading"] = []
+                for shading_data in dp.templates_shading:
+                    templates_dict[unit]["shading"].append(shading_data[u_i][:, unit_id_to_channel_indices[unit]])
             else:
                 templates_dict[unit]["shading"] = None
 
         aw_items = [
-            vv.AverageWaveformItem(
+            vv_views.AverageWaveformItem(
                 unit_id=u,
                 channel_ids=list(unit_id_to_channel_ids[u]),
                 waveform=t["mean"],
@@ -50,15 +61,15 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
             for u, t in templates_dict.items()
         ]
 
-        locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
-        v_average_waveforms = vv.AverageWaveforms(average_waveforms=aw_items, channel_locations=locations)
+        channel_locations = {str(ch): dp.channel_locations[i_ch].astype(float) for i_ch, ch in enumerate(channel_ids)}
+        v_average_waveforms = vv_views.AverageWaveforms(average_waveforms=aw_items, channel_locations=channel_locations)
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(sorting_analyzer.sorting)
+            v_units_table = generate_unit_table_view(sorting_analyzer.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
-                items=[vv.LayoutItem(v_units_table, max_size=150), vv.LayoutItem(v_average_waveforms)],
+                items=[vv_base.LayoutItem(v_units_table, max_size=150), vv_base.LayoutItem(v_average_waveforms)],
             )
         else:
             self.view = v_average_waveforms

@@ -28,7 +28,7 @@ class MetricsBaseWidget(BaseWidget):
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
+        For figpack backend, if True the unit selector is not displayed
     include_metrics_data : bool, default: True
         If True, metrics data are included in unit table
     """
@@ -258,8 +258,18 @@ class MetricsBaseWidget(BaseWidget):
         self.figure.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
@@ -275,7 +285,7 @@ class MetricsBaseWidget(BaseWidget):
         metrics_sv = []
         for col in metric_names:
             dtype = np.array(metrics.iloc[0][col]).dtype
-            metric = vv.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
+            metric = vv_views.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
             metrics_sv.append(metric)
 
         units_m = []
@@ -290,8 +300,8 @@ class MetricsBaseWidget(BaseWidget):
                     continue
                 values_skip_nans[k] = v
 
-            units_m.append(vv.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans))
-        v_metrics = vv.UnitMetricsGraph(units=units_m, metrics=metrics_sv)
+            units_m.append(vv_views.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans))
+        v_metrics = vv_views.UnitMetricsGraph(units=units_m, metrics=metrics_sv)
 
         if not dp.hide_unit_selector:
             if dp.include_metrics_data:
@@ -301,12 +311,14 @@ class MetricsBaseWidget(BaseWidget):
                     if col not in sorting_copy.get_property_keys():
                         sorting_copy.set_property(col, metrics[col].values)
                 # generate table with properties
-                v_units_table = generate_unit_table_view(sorting_copy, unit_properties=metric_names)
+                v_units_table = generate_unit_table_view(
+                    sorting_copy, unit_properties=metric_names, use_sortingview=use_sortingview
+                )
             else:
-                v_units_table = generate_unit_table_view(dp.sorting)
+                v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Splitter(
-                direction="horizontal", item1=vv.LayoutItem(v_units_table), item2=vv.LayoutItem(v_metrics)
+            self.view = vv_base.Splitter(
+                direction="horizontal", item1=vv_base.LayoutItem(v_units_table), item2=vv_base.LayoutItem(v_metrics)
             )
         else:
             self.view = v_metrics

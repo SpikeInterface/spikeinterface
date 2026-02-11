@@ -1136,7 +1136,11 @@ class SortingAnalyzer:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
         recompute_dict = {}
-        for extension_name, extension in self.extensions.items():
+        extensions_to_compute = _sort_extensions_by_dependency(
+            {ext.extension_name: ext.params for ext in self.extensions.values()}
+        )
+        for extension_name in extensions_to_compute:
+            extension = self.extensions[extension_name]
             if merge_unit_groups is None and split_units is None:
                 # copy full or select
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
@@ -2471,6 +2475,18 @@ class AnalyzerExtension:
         all_dependencies = list(chain.from_iterable([dep.split("|") for dep in all_dependencies]))
         return all_dependencies
 
+    @classmethod
+    def get_default_params(cls):
+        """
+        Get the default params for the extension.
+
+        Returns
+        -------
+        default_params : dict
+            The default parameters for the extension.
+        """
+        return get_default_analyzer_extension_params(cls.extension_name)
+
     def load_run_info(self):
         run_info = None
         if self.format == "binary_folder":
@@ -2667,8 +2683,9 @@ class AnalyzerExtension:
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
+                    ext_data_ = check_json(ext_data)
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
-                        json.dump(ext_data, f)
+                        json.dump(ext_data_, f)
                 elif isinstance(ext_data, np.ndarray):
                     data_file = extension_folder / f"{ext_data_name}.npy"
                     if isinstance(ext_data, np.memmap) and data_file.exists():
@@ -2698,10 +2715,12 @@ class AnalyzerExtension:
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
-                if isinstance(ext_data, dict):
+                if isinstance(ext_data, (dict, list)):
+                    ext_data_ = check_json(ext_data)
                     extension_group.create_dataset(
-                        name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
+                        name=ext_data_name, data=np.array([ext_data_], dtype=object), object_codec=numcodecs.JSON()
                     )
+                    extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
@@ -2884,6 +2903,7 @@ _builtin_extensions = {
     "spike_locations": "spikeinterface.postprocessing",
     "template_similarity": "spikeinterface.postprocessing",
     "unit_locations": "spikeinterface.postprocessing",
+    "valid_unit_periods": "spikeinterface.postprocessing",
     # from metrics
     "quality_metrics": "spikeinterface.metrics",
     "template_metrics": "spikeinterface.metrics",

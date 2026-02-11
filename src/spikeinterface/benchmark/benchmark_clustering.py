@@ -222,11 +222,21 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         return plot_performances_ordered(self, *args, **kwargs)
 
+    def plot_some_over_merged(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_merged
+
+        return plot_some_over_merged(self, *args, **kwargs)
+
+    def plot_some_over_splited(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_splited
+
+        return plot_some_over_splited(self, *args, **kwargs)
+
     def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -263,7 +273,7 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         if axes is None:
             fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
@@ -322,7 +332,7 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         if case_keys is None:
             case_keys = list(self.cases.keys())
-        import pylab as plt
+        import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
@@ -391,81 +401,3 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
         fig.colorbar(im, cax=cbar_ax, label=metric)
 
         return fig
-
-    def plot_some_over_merged(self, case_keys=None, overmerged_score=0.05, max_units=5, figsize=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-
-        figs = []
-        for count, key in enumerate(case_keys):
-            label = self.cases[key]["label"]
-            comp = self.get_result(key)["gt_comparison"]
-
-            unit_index = np.flatnonzero(np.sum(comp.agreement_scores.values > overmerged_score, axis=0) > 1)
-            overmerged_ids = comp.sorting2.unit_ids[unit_index]
-
-            n = min(len(overmerged_ids), max_units)
-            if n > 0:
-                fig, axs = plt.subplots(nrows=n, figsize=figsize)
-                for i, unit_id in enumerate(overmerged_ids[:n]):
-                    gt_unit_indices = np.flatnonzero(comp.agreement_scores.loc[:, unit_id].values > overmerged_score)
-                    gt_unit_ids = comp.sorting1.unit_ids[gt_unit_indices]
-                    ax = axs[i]
-                    ax.set_title(f"unit {unit_id} - GTids {gt_unit_ids}")
-
-                    analyzer = self.get_sorting_analyzer(key)
-
-                    wf_template = analyzer.get_extension("templates")
-                    templates = wf_template.get_templates(unit_ids=gt_unit_ids)
-                    if analyzer.sparsity is not None:
-                        chan_mask = np.any(analyzer.sparsity.mask[gt_unit_indices, :], axis=0)
-                        templates = templates[:, :, chan_mask]
-                    ax.plot(templates.swapaxes(1, 2).reshape(templates.shape[0], -1).T)
-                    ax.set_xticks([])
-
-                fig.suptitle(label)
-                figs.append(fig)
-            else:
-                print(key, "no overmerged")
-
-        return figs
-
-    def plot_some_over_splited(self, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):
-        if case_keys is None:
-            case_keys = list(self.cases.keys())
-        import pylab as plt
-
-        figs = []
-        for count, key in enumerate(case_keys):
-            label = self.cases[key]["label"]
-            comp = self.get_result(key)["gt_comparison"]
-
-            gt_unit_indices = np.flatnonzero(np.sum(comp.agreement_scores.values > oversplit_score, axis=1) > 1)
-            oversplit_ids = comp.sorting1.unit_ids[gt_unit_indices]
-
-            n = min(len(oversplit_ids), max_units)
-            if n > 0:
-                fig, axs = plt.subplots(nrows=n, figsize=figsize)
-                for i, unit_id in enumerate(oversplit_ids[:n]):
-                    unit_indices = np.flatnonzero(comp.agreement_scores.loc[unit_id, :].values > oversplit_score)
-                    unit_ids = comp.sorting2.unit_ids[unit_indices]
-                    ax = axs[i]
-                    ax.set_title(f"Gt unit {unit_id} - unit_ids: {unit_ids}")
-
-                    templates = self.get_result(key)["clustering_templates"]
-
-                    template_arrays = templates.get_dense_templates()[unit_indices, :, :]
-                    if templates.sparsity is not None:
-                        chan_mask = np.any(templates.sparsity.mask[gt_unit_indices, :], axis=0)
-                        template_arrays = template_arrays[:, :, chan_mask]
-
-                    ax.plot(template_arrays.swapaxes(1, 2).reshape(template_arrays.shape[0], -1).T)
-                    ax.set_xticks([])
-
-                fig.suptitle(label)
-                figs.append(fig)
-            else:
-                print(key, "no over splited")
-
-            return figs
