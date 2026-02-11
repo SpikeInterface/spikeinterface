@@ -398,7 +398,7 @@ class Kilosort4Sorter(BaseSorter):
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
-        if HAS_DIAGNOSTIC_PLOTS:
+        if HAS_DIAGNOSTIC_PLOTS and not params["skip_kilosort_preprocessing"]:
             kplots.plot_drift_amount(ops, results_dir)
             kplots.plot_drift_scatter(st0, results_dir)
 
@@ -413,7 +413,11 @@ class Kilosort4Sorter(BaseSorter):
         )
         if version.parse(ks_version) >= version.parse("4.0.28"):
             detect_spikes_kwargs.update(dict(verbose=verbose))
-        st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
+
+        if HAS_DIAGNOSTIC_PLOTS:
+            st, tF, wall0, clu0 = detect_spikes(**detect_spikes_kwargs)
+        else:
+            st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
 
         if HAS_DIAGNOSTIC_PLOTS:
             kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
