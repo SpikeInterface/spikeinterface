@@ -394,7 +394,7 @@ class Kilosort4Sorter(BaseSorter):
 
         kplots.plot_drift_amount(ops, results_dir)
         kplots.plot_drift_scatter(st0, results_dir)
-            
+
         # Sort spikes and save results
         detect_spikes_kwargs = dict(
             ops=ops,
@@ -409,7 +409,7 @@ class Kilosort4Sorter(BaseSorter):
         st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
 
         kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
-        
+
         cluster_spikes_kwargs = dict(
             st=st,
             tF=tF,
