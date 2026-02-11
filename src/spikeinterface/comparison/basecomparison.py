@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from copy import deepcopy
 from typing import OrderedDict
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 
+from spikeinterface.core.job_tools import fix_job_kwargs
 from .comparisontools import make_possible_match, make_best_match, make_hungarian_match
 
 
@@ -25,7 +29,7 @@ class BaseMultiComparison(BaseComparison):
     It handles graph operations, comparisons, and agreements.
     """
 
-    def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False):
+    def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False, n_jobs=1):
         import networkx as nx
 
         BaseComparison.__init__(
@@ -39,6 +43,7 @@ class BaseMultiComparison(BaseComparison):
         self.graph = None
         self.subgraphs = None
         self.clean_graph = None
+        self.n_jobs = n_jobs
 
     def _compute_all(self):
         self._do_comparison()
@@ -61,9 +66,9 @@ class BaseMultiComparison(BaseComparison):
         Computes subgraphs of connected components.
         Returns
         -------
-        sg_object_names: list
+        sg_object_names : list
             List of sorter names for each node in the connected component subgraph
-        sg_units: list
+        sg_units : list
             List of unit ids for each node in the connected component subgraph
         """
         if self.clean_graph is not None:
@@ -91,9 +96,13 @@ class BaseMultiComparison(BaseComparison):
     ):
         # do pairwise matching
         if self._verbose:
-            print("Multicomaprison step 1: pairwise comparison")
+            print("Multicomparison step 1: pairwise comparison")
 
         self.comparisons = {}
+
+        n_jobs = fix_job_kwargs({"n_jobs": self.n_jobs})["n_jobs"]
+        job_list = []
+        job_names = []
         for i in range(len(self.object_list)):
             for j in range(i + 1, len(self.object_list)):
                 if self.name_list is not None:
@@ -102,10 +111,17 @@ class BaseMultiComparison(BaseComparison):
                 else:
                     name_i = "object i"
                     name_j = "object j"
-                if self._verbose:
-                    print(f"  Comparing: {name_i} and {name_j}")
-                comp = self._compare_ij(i, j)
-                self.comparisons[(name_i, name_j)] = comp
+                job_list.append((i, j))
+                job_names.append((name_i, name_j))
+
+        if self.n_jobs == 1:
+            for job_name, job in zip(job_names, job_list):
+                self.comparisons[job_name] = self._compare_ij(*job)
+        else:
+            with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+                results = list(executor.map(self._compare_ij, *zip(*job_list)))
+            for job_name, result in zip(job_names, results):
+                self.comparisons[job_name] = result
 
     def _do_graph(self):
         if self._verbose:
@@ -121,7 +137,7 @@ class BaseMultiComparison(BaseComparison):
         for comp_name, comp in self.comparisons.items():
             for u1 in comp.hungarian_match_12.index.values:
                 u2 = comp.hungarian_match_12[u1]
-                if u2 != -1:
+                if u2 != -1 and u2 != "":
                     name_1, name_2 = comp_name
                     node1 = name_1, u1
                     node2 = name_2, u2
@@ -133,7 +149,7 @@ class BaseMultiComparison(BaseComparison):
 
     def _clean_graph(self):
         if self._verbose:
-            print("Multicomaprison step 3: clean graph")
+            print("Multicomparison step 3: clean graph")
         clean_graph = self.graph.copy()
         import networkx as nx
 
@@ -223,7 +239,7 @@ class BasePairComparison(BaseComparison):
     It handles the matching procedurs.
 
     Agreement scores must be computed in inherited classes by overriding the
-    '_do_agreement(self)' function
+    "_do_agreement(self)" function
     """
 
     def __init__(self, object1, object2, name1, name2, match_score=0.5, chance_score=0.1, verbose=False):
@@ -278,12 +294,12 @@ class MixinSpikeTrainComparison:
     Mixin for spike train comparisons to define:
        * delta_time / delta_frames
        * sampling frequency
-       * n_jobs
+       * agreement method
     """
 
-    def __init__(self, delta_time=0.4, n_jobs=-1):
+    def __init__(self, delta_time=0.4, agreement_method="count"):
         self.delta_time = delta_time
-        self.n_jobs = n_jobs
+        self.agreement_method = agreement_method
         self.sampling_frequency = None
         self.delta_frames = None
 
@@ -311,9 +327,11 @@ class MixinTemplateComparison:
     """
     Mixin for template comparisons to define:
        * similarity method
-       * sparsity
+       * support
+       * num_shifts
     """
 
-    def __init__(self, similarity_method="cosine_similarity", sparsity_dict=None):
+    def __init__(self, similarity_method="cosine", support="union", num_shifts=0):
         self.similarity_method = similarity_method
-        self.sparsity_dict = sparsity_dict
+        self.support = support
+        self.num_shifts = num_shifts

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .base import BaseWidget, to_attr
 
 from .crosscorrelograms import CrossCorrelogramsWidget
@@ -7,7 +9,13 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
     # the doc is copied form CrossCorrelogramsWidget
 
     def __init__(self, *args, **kargs):
-        CrossCorrelogramsWidget.__init__(self, *args, **kargs)
+        _ = kargs.pop("min_similarity_for_correlograms", 0.0)
+        CrossCorrelogramsWidget.__init__(
+            self,
+            *args,
+            **kargs,
+            min_similarity_for_correlograms=None,
+        )
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
@@ -33,8 +41,18 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
             ax.set_title(str(unit_id))
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
         unit_ids = make_serializable(dp.unit_ids)
@@ -44,14 +62,14 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
             for j in range(i, len(unit_ids)):
                 if i == j:
                     ac_items.append(
-                        vv.AutocorrelogramItem(
+                        vv_views.AutocorrelogramItem(
                             unit_id=unit_ids[i],
                             bin_edges_sec=(dp.bins / 1000.0).astype("float32"),
                             bin_counts=dp.correlograms[i, j].astype("int32"),
                         )
                     )
 
-        self.view = vv.Autocorrelograms(autocorrelograms=ac_items)
+        self.view = vv_views.Autocorrelograms(autocorrelograms=ac_items)
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 

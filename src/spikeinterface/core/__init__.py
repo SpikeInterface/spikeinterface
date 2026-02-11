@@ -1,15 +1,23 @@
-from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, BaseSortingSegment
+from .basesorting import BaseSorting, BaseSortingSegment, SpikeVectorSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 
+from .loading import load, load_extractor
+
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
-from .numpyextractors import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent, NumpySnippets
-from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
+from .numpyextractors import (
+    NumpyRecording,
+    SharedMemoryRecording,
+    NumpySorting,
+    SharedMemorySorting,
+    NumpyEvent,
+    NumpySnippets,
+)
+from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
 from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
@@ -79,14 +87,21 @@ from .globals import (
 
 # tools
 from .core_tools import (
-    write_binary_recording,
-    write_to_h5_dataset_format,
-    write_binary_recording,
     read_python,
     write_python,
+    normal_pdf,
 )
-from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
+from .job_tools import (
+    get_best_job_kwargs,
+    ensure_n_jobs,
+    ensure_chunk_size,
+    ChunkRecordingExecutor,
+    split_job_kwargs,
+    fix_job_kwargs,
+)
 from .recording_tools import (
+    write_binary_recording,
+    write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,
     get_closest_channels,
@@ -94,17 +109,27 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .waveform_tools import extract_waveforms_to_buffers
+from .sorting_tools import (
+    spike_vector_to_spike_trains,
+    spike_vector_to_indices,
+    random_spikes_selection,
+    apply_merges_to_sorting,
+    apply_splits_to_sorting,
+)
+
+from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import (
-    WaveformExtractor,
-    BaseWaveformExtractorExtension,
-    extract_waveforms,
-    load_waveforms,
-    precompute_sparsity,
-)
+# Important not for compatibility!!
+# This wil be commented after 0.100 relase but the module will not be removed.
+# from .waveform_extractor import (
+#     WaveformExtractor,
+#     BaseWaveformExtractorExtension,
+# extract_waveforms,
+# load_waveforms,
+#     precompute_sparsity,
+# )
 
 # retrieve datasets
 from .datasets import download_dataset
@@ -119,14 +144,48 @@ from .old_api_utils import (
 # templates addition
 # from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
+
+# channel sparsity
+from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
+
+from .template import Templates
+
+# SortingAnalyzer and AnalyzerExtension
+from .sortinganalyzer import (
+    SortingAnalyzer,
+    AnalyzerExtension,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    get_available_analyzer_extensions,
+    get_default_analyzer_extension_params,
+)
+
 # template tools
 from .template_tools import (
     get_template_amplitudes,
     get_template_extremum_channel,
     get_template_extremum_channel_peak_shift,
     get_template_extremum_amplitude,
-    get_template_channel_sparsity,
 )
 
-# channel sparsity
-from .sparsity import ChannelSparsity, compute_sparsity
+
+from .analyzer_extension_core import (
+    ComputeRandomSpikes,
+    compute_random_spikes,
+    ComputeWaveforms,
+    compute_waveforms,
+    ComputeTemplates,
+    compute_templates,
+    ComputeNoiseLevels,
+    compute_noise_levels,
+)
+
+from .motion import Motion
+
+# Important not for compatibility!!
+# This wil be uncommented after 0.100
+from .waveforms_extractor_backwards_compatibility import (
+    extract_waveforms,
+    load_waveforms,
+    load_sorting_analyzer_or_waveforms,
+)

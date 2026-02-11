@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import os
 from typing import Union
@@ -6,12 +8,12 @@ import sys
 
 import numpy as np
 
-from spikeinterface.core.core_tools import write_to_h5_dataset_format
-from ..basesorter import BaseSorter
-from ..utils import ShellScript
+from spikeinterface.core import write_to_h5_dataset_format
+from spikeinterface.sorters.basesorter import BaseSorter
+from spikeinterface.sorters.utils import ShellScript
 
 # from spikeinterface.extractors import MaxOneRecordingExtractor
-from spikeinterface.extractors import HDSortSortingExtractor
+from spikeinterface.extractors.extractor_classes import HDSortSortingExtractor
 
 PathType = Union[str, Path]
 
@@ -144,7 +146,7 @@ class HDSortSorter(BaseSorter):
         P["featureExtraction"] = {"nDims": float(params["n_pc_dims"])}  # 6
         P["clustering"] = {
             "maxSpikes": 50000.0,  # dont align spikes you dont cluster..
-            "meanShiftBandWidthFactor": 1.8
+            "meanShiftBandWidthFactor": 1.8,
             # 'meanShiftBandWidth': sqrt(1.8*6)  # todo: check this!
         }
 

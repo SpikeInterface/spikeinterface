@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import re
 import numpy as np
@@ -15,9 +17,9 @@ class MClustSortingExtractor(BaseSorting):
         Path to folder with t files.
     sampling_frequency : sampling frequency
         sampling frequency in Hz.
-    sampling_frequency_raw: float or None
+    sampling_frequency_raw: float or None, default: None
         Required to read files with raw formats. In that case, the samples are saved in the same
-        unit as the input data. Default None
+        unit as the input data
         Examples:
             - If raw time is in tens of ms sampling_frequency_raw=10000
             - If raw time is in samples sampling_frequency_raw=sampling_frequency
@@ -26,9 +28,6 @@ class MClustSortingExtractor(BaseSorting):
     extractor : MClustSortingExtractor
         Loaded data.
     """
-
-    extractor_name = "MClustSortingExtractor"
-    name = "mclust"
 
     def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw=None):
         end_header_str = "%%ENDHEADER"

@@ -9,6 +9,7 @@ import spikeinterface as si
 # this imports everything in a flat module
 import spieinterface.full as si
 """
+
 import importlib.metadata
 
 __version__ = importlib.metadata.version("spikeinterface")
@@ -18,8 +19,10 @@ from .extractors import *
 from .sorters import *
 from .preprocessing import *
 from .postprocessing import *
-from .qualitymetrics import *
+from .metrics import *
 from .curation import *
 from .comparison import *
 from .widgets import *
 from .exporters import *
+from .generation import *
+from .benchmark import *

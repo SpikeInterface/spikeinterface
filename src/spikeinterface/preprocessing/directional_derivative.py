@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class DirectionalDerivativeRecording(BasePreprocessor):
-    name = "directional_derivative"
-    installed = True
 
     def __init__(
         self,
@@ -18,8 +18,8 @@ class DirectionalDerivativeRecording(BasePreprocessor):
     ):
         """Take derivative of any `order` along `direction`
 
-        np.gradient is applied independently along each colum (direction='y')
-        or row (direction='x'). Accounts for channel spacings and boundary
+        np.gradient is applied independently along each colum (direction="y")
+        or row (direction="x"). Accounts for channel spacings and boundary
         issues using np.gradient -- see that function's documentation for
         more information about `edge_order`.
 
@@ -30,15 +30,15 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         ----------
         recording : BaseRecording
             recording to zero-pad
-        direction : str
-            Gradients will be taken along this dimension.
-        order : int
-            np.gradient will be applied this many times.
-        edge_order : int
+        direction : "x" | "y" | "z", default: "y"
+            Gradients will be taken along this dimension
+        order : int, default: 1
+            np.gradient will be applied this many times
+        edge_order : int, default: 1
             Order of gradient accuracy at edges; see np.gradient for details.
-        dtype : optional numpy dtype
-            If unset, parent dtype is preserved, but the derivative can
-            overflow or lose accuracy, so "float32" by default.
+        dtype : numpy dtype or None, default: "float32"
+            If None, parent dtype is preserved, but the derivative can
+            overflow or lose accuracy
         """
         parent_channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
@@ -101,11 +101,6 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         self.unique_pos_other_dims, self.column_inds = np.unique(geom_other_dims, axis=0, return_inverse=True)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         parent_traces = self.parent_recording_segment.get_traces(
             start_frame=start_frame,
             end_frame=end_frame,
@@ -141,6 +136,6 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-directional_derivative = define_function_from_class(
+directional_derivative = define_function_handling_dict_from_class(
     source_class=DirectionalDerivativeRecording, name="directional_derivative"
 )

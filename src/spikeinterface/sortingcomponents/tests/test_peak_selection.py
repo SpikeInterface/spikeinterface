@@ -1,40 +1,38 @@
 import pytest
 import numpy as np
 
-from spikeinterface import download_dataset
 
 from spikeinterface.core import get_noise_levels
-from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
+from spikeinterface.sortingcomponents.tests.common import make_dataset
+
 
 def test_select_peaks():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+    recording, _ = make_dataset()
 
     # by_channel
-
-    noise_levels = get_noise_levels(recording, return_scaled=False)
-
+    noise_levels = get_noise_levels(recording, return_in_uV=False)
     peaks = detect_peaks(
         recording,
         method="by_channel",
-        peak_sign="neg",
-        detect_threshold=5,
-        exclude_sweep_ms=0.1,
-        chunk_size=10000,
-        verbose=1,
-        progress_bar=False,
-        noise_levels=noise_levels,
+        method_kwargs=dict(
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.8,
+            noise_levels=noise_levels,
+        ),
+        job_kwargs=dict(
+            chunk_size=10000,
+            progress_bar=False,
+        ),
     )
 
     peak_locations = localize_peaks(
-        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, verbose=True, progress_bar=True
+        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, progress_bar=True
     )
 
     n_peaks = 100
@@ -47,6 +45,11 @@ def test_select_peaks():
     ]
     for method in select_methods:
         selected_peaks = select_peaks(peaks, method=method, **select_kwargs)
+        assert (
+            selected_peaks.size <= n_peaks
+        ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"
+
+        selected_peaks = select_peaks(peaks, recording=recording, method=method, margin=(10, 10), **select_kwargs)
         assert (
             selected_peaks.size <= n_peaks
         ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"

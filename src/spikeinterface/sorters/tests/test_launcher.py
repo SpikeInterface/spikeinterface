@@ -1,55 +1,40 @@
-import os
 import sys
 import shutil
+import tempfile
 import time
-
 import pytest
 from pathlib import Path
-
-from spikeinterface.core import load_extractor
-
-# from spikeinterface.extractors import toy_example
+from platform import system
 from spikeinterface import generate_ground_truth_recording
-from spikeinterface.sorters import run_sorter_jobs, run_sorters, run_sorter_by_property
-
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sorters"
-else:
-    cache_folder = Path("cache_folder") / "sorters"
-
-base_output = cache_folder / "sorter_output"
+from spikeinterface.sorters import run_sorter_jobs, run_sorter_by_property
 
 # no need to have many
-num_recordings = 2
-sorters = ["tridesclous2"]
+NUM_RECORDINGS = 2
+SORTERS = ["tridesclous2"]
 
 
-def setup_module():
-    base_seed = 42
-    for i in range(num_recordings):
-        rec, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
-        rec_folder = cache_folder / f"toy_rec_{i}"
-        if rec_folder.is_dir():
-            shutil.rmtree(rec_folder)
+def create_recordings(NUM_RECORDINGS=2, base_seed=42):
+    recordings = []
+    for i in range(NUM_RECORDINGS):
+        recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
 
         if i % 2 == 0:
-            rec.set_channel_groups(["0"] * 4 + ["1"] * 4)
+            recording.set_channel_groups(["0"] * 4 + ["1"] * 4)
         else:
-            rec.set_channel_groups([0] * 4 + [1] * 4)
+            recording.set_channel_groups([0] * 4 + [1] * 4)
+        recordings.append(recording)
+    return recordings
 
-        rec.save(folder=rec_folder)
 
-
-def get_job_list():
+def get_job_list(base_folder):
     jobs = []
-    for i in range(num_recordings):
-        for sorter_name in sorters:
-            recording = load_extractor(cache_folder / f"toy_rec_{i}")
+    recordings = create_recordings(NUM_RECORDINGS)
+    for i, recording in enumerate(recordings):
+        for sorter_name in SORTERS:
             kwargs = dict(
                 sorter_name=sorter_name,
                 recording=recording,
-                output_folder=base_output / f"{sorter_name}_rec{i}",
+                folder=base_folder / f"{sorter_name}_rec{i}",
                 verbose=True,
                 raise_error=False,
             )
@@ -58,30 +43,33 @@ def get_job_list():
     return jobs
 
 
-@pytest.fixture(scope="module")
-def job_list():
-    return get_job_list()
+@pytest.fixture(scope="function")
+def job_list(create_cache_folder):
+    cache_folder = create_cache_folder
+    folder = cache_folder / "sorting_output"
+    return get_job_list(folder)
 
 
 def test_run_sorter_jobs_loop(job_list):
-    if base_output.is_dir():
-        shutil.rmtree(base_output)
     sortings = run_sorter_jobs(job_list, engine="loop", return_output=True)
     print(sortings)
 
 
+@pytest.mark.skipif(True, reason="tridesclous is already multiprocessing, joblib cannot run it in parralel")
 def test_run_sorter_jobs_joblib(job_list):
-    if base_output.is_dir():
-        shutil.rmtree(base_output)
     sortings = run_sorter_jobs(
         job_list, engine="joblib", engine_kwargs=dict(n_jobs=2, backend="loky"), return_output=True
     )
     print(sortings)
 
 
-def test_run_sorter_jobs_processpoolexecutor(job_list):
-    if base_output.is_dir():
-        shutil.rmtree(base_output)
+@pytest.mark.skipif(
+    True, reason="tridesclous is already multiprocessing, processpoolexecutor cannot run it in parralel"
+)
+def test_run_sorter_jobs_processpoolexecutor(job_list, create_cache_folder):
+    cache_folder = create_cache_folder
+    if (cache_folder / "sorting_output").is_dir():
+        shutil.rmtree(cache_folder / "sorting_output")
     sortings = run_sorter_jobs(
         job_list, engine="processpoolexecutor", engine_kwargs=dict(max_workers=2), return_output=True
     )
@@ -90,8 +78,6 @@ def test_run_sorter_jobs_processpoolexecutor(job_list):
 
 @pytest.mark.skipif(True, reason="This is tested locally")
 def test_run_sorter_jobs_dask(job_list):
-    if base_output.is_dir():
-        shutil.rmtree(base_output)
 
     # create a dask Client for a slurm queue
     from dask.distributed import Client
@@ -122,11 +108,10 @@ def test_run_sorter_jobs_dask(job_list):
 
 
 @pytest.mark.skip("Slurm launcher need a machine with slurm")
-def test_run_sorter_jobs_slurm(job_list):
-    if base_output.is_dir():
-        shutil.rmtree(base_output)
+def test_run_sorter_jobs_slurm(job_list, create_cache_folder):
+    cache_folder = create_cache_folder
 
-    working_folder = cache_folder / "test_run_sorters_slurm"
+    working_folder = cache_folder / "test_run_SORTERS_slurm"
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
 
@@ -143,7 +128,79 @@ def test_run_sorter_jobs_slurm(job_list):
     )
 
 
-def test_run_sorter_by_property():
+@pytest.mark.skipif(system() != "Linux", reason="Assumes we are on Linux to run SLURM")
+def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
+    """
+    Mock `subprocess.run()` to check that engine_kwargs are
+    propagated to the call as expected.
+    """
+    # First, mock `subprocess.run()`, set up a call to `run_sorter_jobs`
+    # then check the mocked `subprocess.run()` was called with the
+    # expected signature. Two jobs are passed in `jobs_list`, first
+    # check the most recent call.
+    mock_subprocess_run = mocker.patch("spikeinterface.sorters.launcher.subprocess.run")
+
+    tmp_script_folder = tmp_path / "slurm_scripts"
+
+    engine_kwargs = dict(
+        tmp_script_folder=tmp_script_folder,
+        sbatch_args={
+            "cpus-per-task": 32,
+            "mem": "32G",
+            "gres": "gpu:1",
+            "any_random_kwarg": 12322,
+        },
+    )
+
+    run_sorter_jobs(job_list, engine="slurm", engine_kwargs=engine_kwargs)
+
+    script_0_path = f"{tmp_script_folder}/si_script_0.py"
+    script_1_path = f"{tmp_script_folder}/si_script_1.py"
+
+    expected_command = [
+        "sbatch",
+        "--cpus-per-task",
+        "32",
+        "--mem",
+        "32G",
+        "--gres",
+        "gpu:1",
+        "--any_random_kwarg",
+        "12322",
+        script_1_path,
+    ]
+    mock_subprocess_run.assert_called_with(expected_command, capture_output=True, text=True)
+
+    # Next, check the fisrt call (which sets up `si_script_0.py`)
+    # also has the expected arguments.
+    expected_command[9] = script_0_path
+    assert mock_subprocess_run.call_args_list[0].args[0] == expected_command
+
+    # Next, check that defaults are used properly when no kwargs are
+    # passed. This will default to `_default_engine_kwargs` as
+    # set in `launcher.py`
+    run_sorter_jobs(
+        job_list,
+        engine="slurm",
+        engine_kwargs={"tmp_script_folder": tmp_script_folder},
+    )
+    expected_command = ["sbatch", "--cpus-per-task", "1", "--mem", "1G", script_1_path]
+    mock_subprocess_run.assert_called_with(expected_command, capture_output=True, text=True)
+
+    # Finally, check that the `tmp_script_folder` is generated on the
+    # fly as expected. A random foldername is generated, just check that
+    # the folder to which the scripts are saved is in the `tempfile` format.
+    run_sorter_jobs(
+        job_list,
+        engine="slurm",
+        engine_kwargs=None,
+    )
+    tmp_script_folder = Path(tempfile.gettempdir()) / "spikeinterface_slurm_"
+    assert str(tmp_script_folder) in mock_subprocess_run.call_args_list[-1].args[0][5]
+
+
+def test_run_sorter_by_property(create_cache_folder):
+    cache_folder = create_cache_folder
     working_folder1 = cache_folder / "test_run_sorter_by_property_1"
     if working_folder1.is_dir():
         shutil.rmtree(working_folder1)
@@ -152,7 +209,9 @@ def test_run_sorter_by_property():
     if working_folder2.is_dir():
         shutil.rmtree(working_folder2)
 
-    rec0 = load_extractor(cache_folder / "toy_rec_0")
+    recordings = create_recordings(NUM_RECORDINGS)
+
+    rec0 = recordings[0]
     rec0_by = rec0.split_by("group")
     group_names0 = list(rec0_by.keys())
 
@@ -161,7 +220,7 @@ def test_run_sorter_by_property():
     assert "group" in sorting0.get_property_keys()
     assert all([g in group_names0 for g in sorting0.get_property("group")])
 
-    rec1 = load_extractor(cache_folder / "toy_rec_1")
+    rec1 = recordings[1]
     rec1_by = rec1.split_by("group")
     group_names1 = list(rec1_by.keys())
 
@@ -171,80 +230,16 @@ def test_run_sorter_by_property():
     assert all([g in group_names1 for g in sorting1.get_property("group")])
 
 
-# run_sorters is deprecated
-# This will test will be removed in next release
-def test_run_sorters_with_list():
-    working_folder = cache_folder / "test_run_sorters_list"
-    if working_folder.is_dir():
-        shutil.rmtree(working_folder)
-
-    # make serializable
-    rec0 = load_extractor(cache_folder / "toy_rec_0")
-    rec1 = load_extractor(cache_folder / "toy_rec_1")
-
-    recording_list = [rec0, rec1]
-    sorter_list = ["tridesclous2"]
-
-    run_sorters(sorter_list, recording_list, working_folder, engine="loop", verbose=False, with_output=False)
-
-
-# run_sorters is deprecated
-# This will test will be removed in next release
-def test_run_sorters_with_dict():
-    working_folder = cache_folder / "test_run_sorters_dict"
-    if working_folder.is_dir():
-        shutil.rmtree(working_folder)
-
-    rec0 = load_extractor(cache_folder / "toy_rec_0")
-    rec1 = load_extractor(cache_folder / "toy_rec_1")
-
-    recording_dict = {"toy_tetrode": rec0, "toy_octotrode": rec1}
-
-    sorter_list = ["tridesclous2"]
-
-    sorter_params = {"tridesclous2": dict()}
-
-    # simple loop
-    t0 = time.perf_counter()
-    results = run_sorters(
-        sorter_list,
-        recording_dict,
-        working_folder,
-        engine="loop",
-        sorter_params=sorter_params,
-        with_output=True,
-        mode_if_folder_exists="raise",
-    )
-
-    t1 = time.perf_counter()
-    print(t1 - t0)
-    print(results)
-
-    shutil.rmtree(working_folder / "toy_tetrode" / "tridesclous2")
-    run_sorters(
-        sorter_list,
-        recording_dict,
-        working_folder / "by_dict",
-        engine="loop",
-        sorter_params=sorter_params,
-        with_output=False,
-        mode_if_folder_exists="keep",
-    )
-
-
 if __name__ == "__main__":
-    setup_module()
-    job_list = get_job_list()
+    # setup_module()
+    tmp_folder = Path("tmp")
+    job_list = get_job_list(tmp_folder)
 
-    test_run_sorter_jobs_loop(job_list)
+    # test_run_sorter_jobs_loop(job_list)
     # test_run_sorter_jobs_joblib(job_list)
     # test_run_sorter_jobs_processpoolexecutor(job_list)
     # test_run_sorter_jobs_multiprocessing(job_list)
     # test_run_sorter_jobs_dask(job_list)
     # test_run_sorter_jobs_slurm(job_list)
 
-    # test_run_sorter_by_property()
-
-    # this deprecated
-    # test_run_sorters_with_list()
-    # test_run_sorters_with_dict()
+    test_run_sorter_by_property(tmp_folder)

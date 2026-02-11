@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional
 import numpy as np
 from spikeinterface.core import BaseSorting, BaseSortingSegment
@@ -13,11 +14,11 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The parent sorting.
-    censored_period_ms: float
+    censored_period_ms : float
         The censored period to consider 2 spikes to be duplicated (in ms).
-    method: str in ("keep_first", "keep_last", "keep_first_iterative', 'keep_last_iterative", random")
+    method : "keep_first" | "keep_last" | "keep_first_iterative" | "keep_last_iterative" | "random", default: "keep_first"
         Method used to remove the duplicated spikes.
         If method = "random", will randomly choose to remove the first or last spike.
         If method = "keep_first", for each ISI violation, will remove the second spike.
@@ -29,7 +30,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
 
     Returns
     -------
-    sorting_without_duplicated_spikes: Remove_DuplicatedSpikesSorting
+    sorting_without_duplicated_spikes : Remove_DuplicatedSpikesSorting
         The sorting without any duplicated spikes.
     """
 
@@ -44,6 +45,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
             )
 
         sorting.copy_metadata(self, only_main=False)
+        self._parent = sorting
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
@@ -61,20 +63,24 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
     ) -> None:
         super().__init__()
         self._parent_segment = parent_segment
+        self.censored_period = censored_period
+        self.method = method
+        self.seed = seed
         self._duplicated_spikes = {}
-
-        for unit_id in unit_ids:
-            self._duplicated_spikes[unit_id] = find_duplicated_spikes(
-                parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None),
-                censored_period,
-                method=method,
-                seed=seed,
-            )
 
     def get_unit_spike_train(
         self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None
     ) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
+
+        if unit_id not in self._duplicated_spikes:
+            self._duplicated_spikes[unit_id] = find_duplicated_spikes(
+                spike_train,
+                self.censored_period,
+                method=self.method,
+                seed=self.seed,
+            )
+
         spike_train = np.delete(spike_train, self._duplicated_spikes[unit_id])
 
         if start_frame == None:

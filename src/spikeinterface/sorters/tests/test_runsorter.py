@@ -1,30 +1,42 @@
 import os
+import platform
 import pytest
 from pathlib import Path
+import shutil
+from packaging.version import parse
+import json
+import numpy as np
 
-from spikeinterface import download_dataset
-from spikeinterface.extractors import read_mearec
+from spikeinterface import generate_ground_truth_recording, load
 from spikeinterface.sorters import run_sorter
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sorters"
-else:
-    cache_folder = Path("cache_folder") / "sorters"
+def _generate_recording():
+    recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=2205)
+    return recording
 
 
-def test_run_sorter_local():
-    local_path = download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    recording, sorting_true = read_mearec(local_path)
+@pytest.fixture(scope="module")
+def generate_recording():
+    return _generate_recording()
+
+
+@pytest.mark.xfail(
+    platform.system() == "Windows" and parse(platform.python_version()) > parse("3.12"),
+    reason="3rd parth threadpoolctl issue: OSError('GetModuleFileNameEx failed')",
+)
+def test_run_sorter_local(generate_recording, create_cache_folder):
+    recording = generate_recording
+    cache_folder = create_cache_folder
 
     sorter_params = {"detect_threshold": 4.9}
 
     sorting = run_sorter(
-        "tridesclous",
+        "tridesclous2",
         recording,
-        output_folder=cache_folder / "sorting_tdc_local",
+        folder=cache_folder / "sorting_tdc_local",
         remove_existing_folder=True,
         delete_output_folder=False,
         verbose=True,
@@ -35,63 +47,124 @@ def test_run_sorter_local():
     print(sorting)
 
 
-@pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
-def test_run_sorter_docker():
-    mearec_filename = download_dataset(remote_path="mearec/mearec_test_10s.h5", unlock=True)
-    output_folder = cache_folder / "sorting_tdc_docker"
+def test_run_sorter_dict(generate_recording, create_cache_folder):
+    recording = generate_recording
+    cache_folder = create_cache_folder
 
-    recording, sorting_true = read_mearec(mearec_filename)
+    recording = recording.time_slice(start_time=0, end_time=3)
+
+    recording.set_property(key="split_property", values=[4, 4, "g", "g", 4, 4, 4, "g"])
+    dict_of_recordings = recording.split_by("split_property")
 
     sorter_params = {"detect_threshold": 4.9}
 
-    docker_image = "spikeinterface/tridesclous-base:1.6.4-1"
+    folder = cache_folder / "sorting_tdc_local_dict"
 
-    sorting = run_sorter(
-        "tridesclous",
-        recording,
-        output_folder=output_folder,
+    dict_of_sortings = run_sorter(
+        "simple",
+        dict_of_recordings,
+        folder=folder,
         remove_existing_folder=True,
         delete_output_folder=False,
         verbose=True,
         raise_error=True,
-        docker_image=docker_image,
-        with_output=False,
         **sorter_params,
     )
-    assert sorting is None
-    # TODO: Add another run with `with_output=True` and check sorting result
+
+    assert set(list(dict_of_sortings.keys())) == set(["g", "4"])
+    assert (folder / "g").is_dir()
+    assert (folder / "4").is_dir()
+
+    assert dict_of_sortings["g"]._recording.get_num_channels() == 3
+    assert dict_of_sortings["4"]._recording.get_num_channels() == 5
+
+    info_filepath = folder / "spikeinterface_info.json"
+    assert info_filepath.is_file()
+
+    with open(info_filepath) as f:
+        spikeinterface_info = json.load(f)
+
+    si_info_keys = spikeinterface_info.keys()
+    for key in ["version", "dev_mode", "object"]:
+        assert key in si_info_keys
+
+    loaded_sortings = load(folder)
+    assert loaded_sortings.keys() == dict_of_sortings.keys()
+    for key, sorting in loaded_sortings.items():
+        assert np.all(sorting.unit_ids == dict_of_sortings[key].unit_ids)
+        assert np.all(sorting.to_spike_vector() == dict_of_sortings[key].to_spike_vector())
+
+
+@pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
+def test_run_sorter_docker(generate_recording, create_cache_folder):
+    recording = generate_recording
+    cache_folder = create_cache_folder
+
+    sorter_params = {"detect_threshold": 4.9}
+
+    docker_image = "spikeinterface/tridesclous-base"
+
+    for installation_mode in ("dev", "pypi", "github"):
+        print(f"\nTest with installation_mode {installation_mode}")
+        output_folder = cache_folder / f"sorting_tdc_docker_{installation_mode}"
+
+        sorting = run_sorter(
+            "tridesclous",
+            recording,
+            folder=output_folder,
+            remove_existing_folder=True,
+            delete_output_folder=False,
+            verbose=True,
+            raise_error=True,
+            docker_image=docker_image,
+            with_output=True,
+            installation_mode=installation_mode,
+            spikeinterface_version="0.99.1",
+            **sorter_params,
+        )
+        print(sorting)
+
+        shutil.rmtree(output_folder)
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Singularity tests don't run on github: test it locally")
-def test_run_sorter_singularity():
-    mearec_filename = download_dataset(remote_path="mearec/mearec_test_10s.h5", unlock=True)
-    output_folder = cache_folder / "sorting_tdc_singularity"
+def test_run_sorter_singularity(generate_recording, create_cache_folder):
+    recording = generate_recording
+    cache_folder = create_cache_folder
 
-    recording, sorting_true = read_mearec(mearec_filename)
+    # use an output folder outside of the package. otherwise dev mode will not work
+    # singularity_cache_folder = Path(si.__file__).parents[3] / "sandbox"
+    # singularity_cache_folder.mkdir(exist_ok=True)
 
     sorter_params = {"detect_threshold": 4.9}
 
-    singularity_image = "spikeinterface/tridesclous-base:1.6.4-1"
+    singularity_image = "spikeinterface/tridesclous-base"
 
-    sorting = run_sorter(
-        "tridesclous",
-        recording,
-        output_folder=output_folder,
-        remove_existing_folder=True,
-        delete_output_folder=False,
-        verbose=True,
-        raise_error=True,
-        singularity_image=singularity_image,
-        **sorter_params,
-    )
-    print(sorting)
+    for installation_mode in ("dev", "pypi", "github"):
+        print(f"\nTest with installation_mode {installation_mode}")
+        output_folder = cache_folder / f"sorting_tdc_singularity_{installation_mode}"
+        sorting = run_sorter(
+            "tridesclous",
+            recording,
+            folder=output_folder,
+            remove_existing_folder=True,
+            delete_output_folder=False,
+            verbose=True,
+            raise_error=True,
+            singularity_image=singularity_image,
+            delete_container_files=True,
+            installation_mode=installation_mode,
+            spikeinterface_version="0.99.1",
+            **sorter_params,
+        )
+        print(sorting)
 
-    # basic check to confirm sorting was successful
-    assert "Tridesclous" in sorting.to_dict()["class"]
-    assert len(sorting.get_unit_ids()) > 0
+        shutil.rmtree(output_folder)
 
 
 if __name__ == "__main__":
-    # test_run_sorter_local()
-    # test_run_sorter_docker()
-    test_run_sorter_singularity()
+    rec = _generate_recording()
+    cache_folder = Path("tmp")
+    test_run_sorter_local(rec, cache_folder)
+    # test_run_sorter_docker(rec, cache_folder)
+    # test_run_sorter_singularity(rec, cache_folder)

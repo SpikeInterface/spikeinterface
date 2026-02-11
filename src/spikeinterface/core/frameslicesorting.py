@@ -1,5 +1,5 @@
+from __future__ import annotations
 import numpy as np
-import warnings
 
 from .basesorting import BaseSorting, BaseSortingSegment
 from .waveform_tools import has_exceeding_spikes
@@ -20,15 +20,15 @@ class FrameSliceSorting(BaseSorting):
     Parameters
     ----------
     parent_sorting: BaseSorting
-    start_frame: None or int
+    start_frame: None or int, default: None
         Earliest included frame in the parent sorting(/recording).
         Spike times(/traces) are re-referenced to start_frame in the
-        sliced objects. Set to 0 by default.
-    end_frame: None or int
+        sliced objects. Set to 0 if None.
+    end_frame: None or int, default: None
         Latest frame in the parent sorting(/recording). As for usual
         python slicing, the end frame is excluded (such that the max
         spike frame in the sliced sorting is `end_frame - start_frame - 1`)
-        If None (default), the end_frame is either:
+        If None, the end_frame is either:
             - The total number of samples, if a recording is assigned
             - The maximum spike frame + 1, if no recording is assigned
     """
@@ -49,14 +49,15 @@ class FrameSliceSorting(BaseSorting):
                 end_frame = parent_n_samples
             assert (
                 end_frame <= parent_n_samples
-            ), "`end_frame` should be smaller than the sortings' total number of samples."
+            ), f"`end_frame` should be smaller than the sortings' total number of samples {parent_n_samples}."
             assert (
                 start_frame <= parent_n_samples
             ), "`start_frame` should be smaller than the sortings' total number of samples."
-            if check_spike_frames and has_exceeding_spikes(parent_sorting._recording, parent_sorting):
+            if check_spike_frames and has_exceeding_spikes(parent_sorting, parent_sorting._recording):
                 raise ValueError(
-                    "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
-                    "with the `spikeinterface.curation.remove_excess_spikes()` function"
+                    "The sorting object has spikes whose times go beyond the recording duration."
+                    "This could indicate a bug in the sorter. "
+                    "To remove those spikes, you can use `spikeinterface.curation.remove_excess_spikes()`."
                 )
         else:
             # Pull df end_frame from spikes
@@ -81,6 +82,7 @@ class FrameSliceSorting(BaseSorting):
 
         # copy properties and annotations
         parent_sorting.copy_metadata(self)
+        self._parent = parent_sorting
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording.frame_slice(start_frame=start_frame, end_frame=end_frame))

@@ -2,11 +2,6 @@ Welcome to SpikeInterface's documentation!
 ==========================================
 
 
-.. image:: images/logo.png
-  :scale: 100 %
-  :align: center
-
-
 SpikeInterface is a Python module to analyze extracellular electrophysiology data.
 
 With a few lines of code, SpikeInterface enables you to load and pre-process the recording, run several
@@ -24,31 +19,37 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
-- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
-- post-process spike sorted data.
+- run many popular, semi-automatic spike sorters (kilosort1-4, mountainsort4-5, spykingcircus,
+  tridesclous, ironclust, herdingspikes, yass, waveclus)
+- run sorters developed in house (lupin, spkykingcicus2, tridesclous2, simple) that compete with
+  kilosort4
+- run theses polar sorters without installation using containers (Docker/Singularity).
+- post-process sorted datasets using th SortingAnalyzer
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
-- visualize recordings and spike sorting outputs.
-- export a report and/or export to Phy.
-- offer a powerful Qt-based viewer in a separate package `spikeinterface-gui <https://github.com/SpikeInterface/spikeinterface-gui>`_
-- have some powerful sorting components to build your own sorter.
+- visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
+- export a report and/or export to phy
+- curate your sorting with several strategies (ml-based, metrics based, manual, ...)
+- offer a powerful desktop or web viewer in a separate package `spikeinterface-gui <https://github.com/SpikeInterface/spikeinterface-gui>`_ for manual curation that replace phy.
+- have powerful sorting components to build your own sorter.
 - have a full motion/drift correction framework (See :ref:`motion_correction`)
+
+
 
 .. toctree::
     :maxdepth: 1
     :caption: Contents:
 
     overview
-    installation
-    modules/index
+    get_started/index
+    tutorials_custom_index
     how_to/index
-    modules_gallery/index
-    install_sorters
-    viewers
-    development/development
+    modules/index
     api
+    development/development
     whatisnew
     authors
+    references
 
 
 Other resources

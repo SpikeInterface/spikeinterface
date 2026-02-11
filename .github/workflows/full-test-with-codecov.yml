@@ -6,8 +6,8 @@ on:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 env:
-  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
-  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+  KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   full-tests-with-codecov:
@@ -19,26 +19,26 @@ jobs:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      - name: Get current year-month
-        id: date
-        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - name: Restore cached virtual environment with dependencies
-        uses: actions/cache/restore@v3
-        id: cache-venv
-        with:
-          path: ${{ github.workspace }}/test_env
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
+          python-version: '3.12'
+      - name: Free space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium
+          df -h
       - name: Get ephy_testing_data current head hash
         # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
         run: |
           echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - name: Restore cached gin data for extractors tests
-        uses: actions/cache/restore@v3
+        uses: actions/cache/restore@v4
         id: cache-datasets
         env:
           # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
@@ -49,17 +49,18 @@ jobs:
           restore-keys: ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
-      - name: Shows installed packages by pip, git-annex and cached testing files
-        uses: ./.github/actions/show-test-environment
+      - name: Pip list
+        run: pip list
       - name: run tests
+        env:
+          HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
           pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY
-          python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
+          python ./.github/scripts/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report_full.txt
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true

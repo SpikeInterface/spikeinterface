@@ -1,11 +1,10 @@
+from __future__ import annotations
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
 from .core_tools import define_function_from_class
-
-from typing import List, Union
 
 
 def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_diff):
@@ -41,8 +40,8 @@ class AppendSegmentRecording(BaseRecording):
     ----------
     recording_list : list of BaseRecording
         A list of recordings
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across recordings (default 0)
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across recordings
     """
 
     def __init__(self, recording_list, sampling_frequency_max_diff=0):
@@ -106,10 +105,10 @@ class ConcatenateSegmentRecording(BaseRecording):
     ----------
     recording_list : list of BaseRecording
         A list of recordings
-    ignore_times: bool
-        If True (default), time information (t_start, time_vector) is ignored when concatenating recordings.
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across recordings (default 0)
+    ignore_times: bool, default: True
+        If True, time information (t_start, time_vector) is ignored when concatenating recordings
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across recordings
     """
 
     def __init__(self, recording_list, ignore_times=True, sampling_frequency_max_diff=0):
@@ -122,13 +121,13 @@ class ConcatenateSegmentRecording(BaseRecording):
         parent_segments = []
         for rec in recording_list:
             for parent_segment in rec._recording_segments:
-                d = parent_segment.get_times_kwargs()
+                time_kwargs = parent_segment.get_times_kwargs()
                 if not ignore_times:
-                    assert d["time_vector"] is None, (
+                    assert time_kwargs["time_vector"] is None, (
                         "ConcatenateSegmentRecording does not handle time_vector. "
                         "Use ignore_times=True to ignore time information."
                     )
-                    assert d["t_start"] is None, (
+                    assert time_kwargs["t_start"] is None, (
                         "ConcatenateSegmentRecording does not handle t_start. "
                         "Use ignore_times=True to ignore time information."
                     )
@@ -148,27 +147,22 @@ class ConcatenateSegmentRecording(BaseRecording):
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
     def __init__(self, parent_segments, sampling_frequency, ignore_times=True):
         if ignore_times:
-            d = {}
-            d["t_start"] = None
-            d["time_vector"] = None
-            d["sampling_frequency"] = sampling_frequency
+            time_kwargs = {}
+            time_kwargs["t_start"] = None
+            time_kwargs["time_vector"] = None
+            time_kwargs["sampling_frequency"] = sampling_frequency
         else:
-            d = parent_segments[0].get_times_kwargs()
-        BaseRecordingSegment.__init__(self, **d)
+            time_kwargs = parent_segments[0].get_times_kwargs()
+        BaseRecordingSegment.__init__(self, **time_kwargs)
         self.parent_segments = parent_segments
         self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
-        self.cumsum_length = np.cumsum([0] + self.all_length)
-        self.total_length = np.sum(self.all_length)
+        self.cumsum_length = [0] + [sum(self.all_length[: i + 1]) for i in range(len(self.all_length))]
+        self.total_length = int(sum(self.all_length))
 
     def get_num_samples(self):
         return self.total_length
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         # # Ensures that we won't request invalid segment indices
         if (start_frame >= self.get_num_samples()) or (end_frame <= start_frame):
             # Return (0 * num_channels) array of correct dtype
@@ -197,16 +191,20 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
                 seg_start = self.cumsum_length[i]
                 if i == i0:
                     # first
-                    traces_chunk = rec_seg.get_traces(start_frame - seg_start, None, channel_indices)
+                    end_frame_ = rec_seg.get_num_samples()
+                    traces_chunk = rec_seg.get_traces(start_frame - seg_start, end_frame_, channel_indices)
                     all_traces.append(traces_chunk)
                 elif i == i1:
                     # last
                     if (end_frame - seg_start) > 0:
-                        traces_chunk = rec_seg.get_traces(None, end_frame - seg_start, channel_indices)
+                        start_frame_ = 0
+                        traces_chunk = rec_seg.get_traces(start_frame_, end_frame - seg_start, channel_indices)
                         all_traces.append(traces_chunk)
                 else:
                     # in between
-                    traces_chunk = rec_seg.get_traces(None, None, channel_indices)
+                    start_frame_ = 0
+                    end_frame_ = rec_seg.get_num_samples()
+                    traces_chunk = rec_seg.get_traces(start_frame_, end_frame_, channel_indices)
                     all_traces.append(traces_chunk)
             traces = np.concatenate(all_traces, axis=0)
 
@@ -226,11 +224,11 @@ class SelectSegmentRecording(BaseRecording):
     ----------
     recording : BaseRecording
         The multi-segment recording
-    segment_indices : list of int
+    segment_indices : int | list[int]
         The segment indices to select
     """
 
-    def __init__(self, recording: BaseRecording, segment_indices: Union[int, List[int]]):
+    def __init__(self, recording: BaseRecording, segment_indices: int | list[int]):
         BaseRecording.__init__(self, recording.get_sampling_frequency(), recording.channel_ids, recording.get_dtype())
         recording.copy_metadata(self)
 
@@ -245,6 +243,7 @@ class SelectSegmentRecording(BaseRecording):
         for segment_index in segment_indices:
             rec_seg = recording._recording_segments[segment_index]
             self.add_recording_segment(rec_seg)
+        self._parent = recording
 
         self._kwargs = {"recording": recording, "segment_indices": segment_indices}
 
@@ -284,8 +283,8 @@ class AppendSegmentSorting(BaseSorting):
     ----------
     sorting_list : list of BaseSorting
         A list of sortings
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across sortings (default 0)
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across sortings
     """
 
     def __init__(self, sorting_list, sampling_frequency_max_diff=0):
@@ -345,15 +344,15 @@ class ConcatenateSegmentSorting(BaseSorting):
         A list of sortings. If `total_samples_list` is not provided, all
         sortings should have an assigned recording.  Otherwise, all sortings
         should be monosegments.
-    total_samples_list : list[int] or None
+    total_samples_list : list[int] or None, default: None
         If the sortings have no assigned recording, the total number of samples
         of each of the concatenated (monosegment) sortings is pulled from this
         list.
-    ignore_times : bool
-        If True (default), time information (t_start, time_vector) is ignored
+    ignore_times : bool, default: True
+        If True, time information (t_start, time_vector) is ignored
         when concatenating the sortings' assigned recordings.
-    sampling_frequency_max_diff : float
-        Maximum allowed difference of sampling frequencies across sortings (default 0)
+    sampling_frequency_max_diff : float, default: 0
+        Maximum allowed difference of sampling frequencies across sortings
     """
 
     def __init__(self, sorting_list, total_samples_list=None, ignore_times=True, sampling_frequency_max_diff=0):
@@ -452,7 +451,7 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
         self.parent_segments = parent_segments
         self.parent_num_samples = parent_num_samples
         self.cumsum_length = np.cumsum([0] + self.parent_num_samples)
-        self.total_num_samples = np.sum(self.parent_num_samples)
+        self.total_num_samples = int(sum(self.parent_num_samples))
 
     def get_num_samples(self):
         return self.total_num_samples
@@ -523,12 +522,12 @@ class SplitSegmentSorting(BaseSorting):
     ----------
     parent_sorting : BaseSorting
         Sorting with a single segment (e.g. from sorting concatenated recording)
-    recording_or_recording_list : list of recordings, ConcatenateSegmentRecording, or None
+    recording_or_recording_list : list of recordings, ConcatenateSegmentRecording, or None, default: None
         If list of recordings, uses the lengths of those recordings to split the sorting
         into smaller segments
         If ConcatenateSegmentRecording, uses the associated list of recordings to split
         the sorting into smaller segments
-        If None, looks for the recording associated with the sorting (default None)
+        If None, looks for the recording associated with the sorting
     """
 
     def __init__(self, parent_sorting: BaseSorting, recording_or_recording_list=None):
@@ -566,6 +565,7 @@ class SplitSegmentSorting(BaseSorting):
             )
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
+        self._parent = parent_sorting
 
         self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
 
@@ -581,11 +581,11 @@ class SelectSegmentSorting(BaseSorting):
     ----------
     sorting : BaseSorting
         The multi-segment sorting
-    segment_indices : list of int
+    segment_indices : int | list[int]
         The segment indices to select
     """
 
-    def __init__(self, sorting: BaseSorting, segment_indices: Union[int, List[int]]):
+    def __init__(self, sorting: BaseSorting, segment_indices: int | list[int]):
         BaseSorting.__init__(self, sorting.get_sampling_frequency(), sorting.unit_ids)
         sorting.copy_metadata(self)
 

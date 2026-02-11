@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import inspect
 
 global default_backend_
 default_backend_ = "matplotlib"
 
+from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+
 
 def get_default_plotter_backend():
     """Return the default backend for spikeinterface widgets.
-    The default backend is 'matplotlib' at init.
+    The default backend is "matplotlib" at init.
     It can be be globally set with `set_default_plotter_backend(backend)`
     """
 
@@ -21,33 +26,45 @@ def set_default_plotter_backend(backend):
 
 backend_kwargs_desc = {
     "matplotlib": {
-        "figure": "Matplotlib figure. When None, it is created. Default None",
-        "ax": "Single matplotlib axis. When None, it is created. Default None",
-        "axes": "Multiple matplotlib axes. When None, they is created. Default None",
-        "ncols": "Number of columns to create in subplots.  Default 5",
-        "figsize": "Size of matplotlib figure. Default None",
-        "figtitle": "The figure title. Default None",
+        "figure": "Matplotlib figure. When None, it is created, default: None",
+        "ax": "Single matplotlib axis. When None, it is created, default: None",
+        "axes": "Multiple matplotlib axes. When None, they is created, default: None",
+        "ncols": "Number of columns to create in subplots, default: 5",
+        "figsize": "Size of matplotlib figure, default: None",
+        "figtitle": "The figure title, default: None",
     },
-    "sortingview": {
-        "generate_url": "If True, the figurl URL is generated and printed. Default True",
-        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
-        "figlabel": "The figurl figure label. Default None",
-        "height": "The height of the sortingview View in jupyter. Default None",
+    "figpack": {
+        "generate_url": "If True, the figurl URL is generated and printed, default: True",
+        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell, default: True.",
+        "figlabel": "The figurl figure label, default: None",
+        "inline": "If True, the widget is displayed inline in the cell, default: None",
+        "height": "The height of the figpack View in jupyter, default: None",
     },
     "ipywidgets": {
-        "width_cm": "Width of the figure in cm (default 10)",
-        "height_cm": "Height of the figure in cm (default 6)",
-        "display": "If True, widgets are immediately displayed",
+        "width_cm": "Width of the figure in cm, default: 10",
+        "height_cm": "Height of the figure in cm, default 6",
+        "display": "If True, widgets are immediately displayed, default: True",
         # "controllers": ""
     },
     "ephyviewer": {},
+    "spikeinterface_gui": {},
+    # deprecated
+    "sortingview": {
+        "generate_url": "If True, the figurl URL is generated and printed, default: True",
+        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell, default: True.",
+        "figlabel": "The figurl figure label, default: None",
+        "height": "The height of the sortingview View in jupyter, default: None",
+    },
 }
 
 default_backend_kwargs = {
     "matplotlib": {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None},
-    "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
+    "figpack": {"generate_url": True, "display": True, "figlabel": None, "inline": None, "height": None},
     "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
     "ephyviewer": {},
+    "spikeinterface_gui": {},
+    # deprecated
+    "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
 }
 
 
@@ -100,18 +117,40 @@ class BaseWidget:
         func = getattr(self, f"plot_{self.backend}")
         func(self.data_plot, **self.backend_kwargs)
 
+    @classmethod
+    def ensure_sorting_analyzer(cls, input):
+        # internal help to accept both SortingAnalyzer or MockWaveformExtractor for a plotter
+        if isinstance(input, SortingAnalyzer):
+            return input
+        elif isinstance(input, MockWaveformExtractor):
+            return input.sorting_analyzer
+        else:
+            raise TypeError("input must be a SortingAnalyzer or MockWaveformExtractor")
+
+    @classmethod
+    def ensure_sorting(cls, input):
+        # internal help to accept both Sorting or SortingAnalyzer or MockWaveformExtractor for a plotter
+        if isinstance(input, BaseSorting):
+            return input
+        elif isinstance(input, SortingAnalyzer):
+            return input.sorting
+        elif isinstance(input, MockWaveformExtractor):
+            return input.sorting_analyzer.sorting
+        else:
+            raise TypeError("input must be a SortingAnalyzer, MockWaveformExtractor, or of type BaseSorting")
+
     @staticmethod
-    def check_extensions(waveform_extractor, extensions):
+    def check_extensions(sorting_analyzer, extensions):
         if isinstance(extensions, str):
             extensions = [extensions]
         error_msg = ""
         raise_error = False
         for extension in extensions:
-            if not waveform_extractor.is_extension(extension):
+            if not sorting_analyzer.has_extension(extension):
                 raise_error = True
                 error_msg += (
-                    f"The {extension} waveform extension is required for this widget. "
-                    f"Run the `compute_{extension}` to compute it.\n"
+                    f"The {extension} sorting analyzer extension is required for this widget. "
+                    f"Run the `sorting_analyzer.compute('{extension}', ...)` to compute it.\n"
                 )
         if raise_error:
             raise Exception(error_msg)
@@ -123,7 +162,7 @@ class to_attr(object):
         Helper function that transform a dict into
         an object where attributes are the keys of the dict
 
-        d = {'a': 1, 'b': 'yep'}
+        d = {"a": 1, "b": "yep"}
         o = to_attr(d)
         print(o.a, o.b)
         """

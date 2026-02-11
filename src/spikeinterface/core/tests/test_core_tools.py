@@ -1,173 +1,48 @@
 import platform
-from multiprocessing.shared_memory import SharedMemory
+import math
 from pathlib import Path
-
 import pytest
 import numpy as np
 
-from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
-from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.core.core_tools import (
+    recursive_path_modifier,
+    make_paths_relative,
+    make_paths_absolute,
+    check_paths_relative,
+    normal_pdf,
+    convert_string_to_bytes,
+    add_suffix,
+)
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
+def test_add_suffix():
+    # first case - no dot provided before extension
+    file_path = "testpath"
+    possible_suffix = ["raw", "bin", "path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
+
+    # second case - dot provided before extension
+    file_path = "testpath"
+    possible_suffix = [".raw", ".bin", ".path"]
+    file_path_with_suffix = add_suffix(file_path, possible_suffix)
+    expected_path = "testpath.raw"
+    assert str(file_path_with_suffix) == expected_path
 
 
-def test_write_binary_recording(tmp_path):
-    # Test write_binary_recording() with loop (n_jobs=1)
-    # Setup
-    sampling_frequency = 30_000
-    num_channels = 2
-    dtype = "float32"
-
-    durations = [10.0]
-    recording = NoiseGeneratorRecording(
-        durations=durations,
-        num_channels=num_channels,
-        sampling_frequency=sampling_frequency,
-        strategy="tile_pregenerated",
-    )
-    file_paths = [tmp_path / "binary01.raw"]
-
-    # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=1)
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
-
-    # Check if written data matches original data
-    recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
-    )
-    assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
-
-
-def test_write_binary_recording_offset(tmp_path):
-    # Test write_binary_recording() with loop (n_jobs=1)
-    # Setup
-    sampling_frequency = 30_000
-    num_channels = 2
-    dtype = "float32"
-
-    durations = [10.0]
-    recording = NoiseGeneratorRecording(
-        durations=durations,
-        num_channels=num_channels,
-        sampling_frequency=sampling_frequency,
-        strategy="tile_pregenerated",
-    )
-    file_paths = [tmp_path / "binary01.raw"]
-
-    # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=1)
-    byte_offset = 125
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, byte_offset=byte_offset, **job_kwargs)
-
-    # Check if written data matches original data
-    recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths,
-        sampling_frequency=sampling_frequency,
-        num_channels=num_channels,
-        dtype=dtype,
-        file_offset=byte_offset,
-    )
-    assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
-
-
-def test_write_binary_recording_parallel(tmp_path):
-    # Test write_binary_recording() with parallel processing (n_jobs=2)
-
-    # Setup
-    sampling_frequency = 30_000
-    num_channels = 2
-    dtype = "float32"
-    durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
-        durations=durations,
-        num_channels=num_channels,
-        sampling_frequency=sampling_frequency,
-        dtype=dtype,
-        strategy="tile_pregenerated",
-    )
-    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
-
-    # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k", mp_context="spawn")
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
-
-    # Check if written data matches original data
-    recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
-    )
-    for segment_index in range(recording.get_num_segments()):
-        binary_traces = recorder_binary.get_traces(segment_index=segment_index)
-        recording_traces = recording.get_traces(segment_index=segment_index)
-        assert np.allclose(binary_traces, recording_traces)
-
-
-def test_write_binary_recording_multiple_segment(tmp_path):
-    # Test write_binary_recording() with multiple segments (n_jobs=2)
-    # Setup
-    sampling_frequency = 30_000
-    num_channels = 10
-    dtype = "float32"
-
-    durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
-        durations=durations,
-        num_channels=num_channels,
-        sampling_frequency=sampling_frequency,
-        strategy="tile_pregenerated",
-    )
-    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
-
-    # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k", mp_context="spawn")
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
-
-    # Check if written data matches original data
-    recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
-    )
-
-    for segment_index in range(recording.get_num_segments()):
-        binary_traces = recorder_binary.get_traces(segment_index=segment_index)
-        recording_traces = recording.get_traces(segment_index=segment_index)
-        assert np.allclose(binary_traces, recording_traces)
-
-
-def test_write_memory_recording():
-    # 2 segments
-    recording = NoiseGeneratorRecording(
-        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
-    )
-    recording = recording.save()
-
-    # write with loop
-    write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
-
-    write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True)
-
-    if platform.system() != "Windows":
-        # write parrallel
-        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
-
-        # write parrallel
-        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, total_memory="200k", progress_bar=True)
-
-
-def test_recursive_path_modifier():
-    # this test nested depth 2 path modifier
+@pytest.mark.skipif(platform.system() == "Windows", reason="Runs on posix only")
+def test_path_utils_functions():
+    # posix path
     d = {
         "kwargs": {
-            "path": "/yep/path1",
+            "path": "/yep/sub/path1",
             "recording": {
                 "module": "mock_module",
                 "class": "mock_class",
                 "version": "1.2",
                 "annotations": {},
-                "kwargs": {"path": "/yep/path2"},
+                "kwargs": {"path": "/yep/sub/path2"},
             },
         }
     }
@@ -177,12 +52,144 @@ def test_recursive_path_modifier():
     assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
 
-if __name__ == "__main__":
-    # Create a temporary folder using the standard library
-    import tempfile
+@pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
+def test_relative_path_on_windows():
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp_path = Path(tmpdirname)
-        test_write_binary_recording(tmp_path)
-        # test_write_memory_recording()
-        # test_recursive_path_modifier()
+    d = {
+        "kwargs": {
+            "path": r"c:\yep\sub\path1",
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": r"c:\yep\sub\path2"},
+            },
+        }
+    }
+
+    # same drive
+    assert check_paths_relative(d, r"c:\yep")
+    # not the same drive
+    assert not check_paths_relative(d, r"d:\yep")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Runs only on Windows")
+def test_universal_naming_convention():
+    d = {
+        "kwargs": {
+            "path": r"\\host\share\yep\sub\path1",
+        }
+    }
+    # UNC cannot be relative to d: drive
+    assert not check_paths_relative(d, r"d:\yep")
+
+    # UNC can be relative to the same UNC
+    assert check_paths_relative(d, r"\\host\share")
+
+
+def test_make_paths_relative(tmp_path):
+
+    path_1 = tmp_path / "sub" / "path1"
+    path_2 = tmp_path / "sub" / "path2"
+
+    # Create the objects in the path
+    path_1.mkdir(parents=True, exist_ok=True)
+    path_2.mkdir(parents=True, exist_ok=True)
+    extractor_dict = {
+        "kwargs": {
+            "path": str(path_1),  # Note this is different in windows and posix
+            "electrical_series_path": "/acquisition/timeseries",  # non-existent path-like objects should not be modified
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": str(path_2)},
+            },
+        }
+    }
+    modified_extractor_dict = make_paths_relative(extractor_dict, tmp_path)
+    assert modified_extractor_dict["kwargs"]["path"] == "sub/path1"
+    assert modified_extractor_dict["kwargs"]["recording"]["kwargs"]["path"] == "sub/path2"
+    assert modified_extractor_dict["kwargs"]["electrical_series_path"] == "/acquisition/timeseries"
+
+
+def test_make_paths_absolute(tmp_path):
+
+    path_1 = tmp_path / "sub" / "path1"
+    path_2 = tmp_path / "sub" / "path2"
+
+    path_1.mkdir(parents=True, exist_ok=True)
+    path_2.mkdir(parents=True, exist_ok=True)
+
+    extractor_dict = {
+        "kwargs": {
+            "path": "sub/path1",
+            "electrical_series_path": "/acquisition/timeseries",  # non-existent path-like objects should not be modified
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": "sub/path2"},
+            },
+        }
+    }
+
+    modified_extractor_dict = make_paths_absolute(extractor_dict, tmp_path)
+    assert modified_extractor_dict["kwargs"]["path"].startswith(str(tmp_path.as_posix()))
+    assert modified_extractor_dict["kwargs"]["recording"]["kwargs"]["path"].startswith(str(tmp_path.as_posix()))
+    assert modified_extractor_dict["kwargs"]["electrical_series_path"] == "/acquisition/timeseries"
+
+
+def test_convert_string_to_bytes():
+    # Test SI prefixes
+    assert convert_string_to_bytes("1k") == 1000
+    assert convert_string_to_bytes("1M") == 1000000
+    assert convert_string_to_bytes("1G") == 1000000000
+    assert convert_string_to_bytes("1T") == 1000000000000
+    assert convert_string_to_bytes("1P") == 1000000000000000
+    # Test IEC prefixes
+    assert convert_string_to_bytes("1Ki") == 1024
+    assert convert_string_to_bytes("1Mi") == 1048576
+    assert convert_string_to_bytes("1Gi") == 1073741824
+    assert convert_string_to_bytes("1Ti") == 1099511627776
+    assert convert_string_to_bytes("1Pi") == 1125899906842624
+    # Test mixed values
+    assert convert_string_to_bytes("1.5k") == 1500
+    assert convert_string_to_bytes("2.5M") == 2500000
+    assert convert_string_to_bytes("0.5G") == 500000000
+    assert convert_string_to_bytes("1.2T") == 1200000000000
+    assert convert_string_to_bytes("1.5Pi") == 1688849860263936
+    # Test zero values
+    assert convert_string_to_bytes("0k") == 0
+    assert convert_string_to_bytes("0Ki") == 0
+    # Test invalid inputs (should raise assertion error)
+    with pytest.raises(AssertionError) as e:
+        convert_string_to_bytes("1Z")
+        assert str(e.value) == "Unknown suffix: Z"
+
+    with pytest.raises(AssertionError) as e:
+        convert_string_to_bytes("1Xi")
+        assert str(e.value) == "Unknown suffix: Xi"
+
+
+def test_normal_pdf() -> None:
+    mu = 4.160771
+    sigma = 2.9334
+    dx = 0.001
+
+    xaxis = np.arange(-15, 25, dx)
+    gauss = normal_pdf(xaxis, mu=mu, sigma=sigma)
+
+    assert math.isclose(1.0, dx * np.sum(gauss))  # Checking that sum of pdf is 1
+    assert math.isclose(mu, dx * np.sum(xaxis * gauss))  # Checking that mean is mu
+    assert math.isclose(sigma**2, dx * np.sum(xaxis**2 * gauss) - mu**2)  # Checking that variance is sigma^2
+
+    print(normal_pdf(-0.9355, mu=mu, sigma=sigma))
+    assert math.isclose(normal_pdf(-0.9355, mu=mu, sigma=sigma), 0.03006929091)
+
+
+if __name__ == "__main__":
+    test_path_utils_functions()

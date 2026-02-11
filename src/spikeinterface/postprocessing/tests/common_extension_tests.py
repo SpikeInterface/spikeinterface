@@ -1,221 +1,209 @@
+from __future__ import annotations
+
 import pytest
-import numpy as np
-import pandas as pd
 import shutil
-import platform
-from pathlib import Path
+import numpy as np
 
-from spikeinterface import extract_waveforms, load_extractor, load_waveforms, compute_sparsity
-from spikeinterface.core.generate import generate_ground_truth_recording
+from spikeinterface.core import (
+    generate_ground_truth_recording,
+    create_sorting_analyzer,
+    load_sorting_analyzer,
+    estimate_sparsity,
+)
+from spikeinterface.core.sortinganalyzer import get_extension_class
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "postprocessing"
-else:
-    cache_folder = Path("cache_folder") / "postprocessing"
+extensions_which_allow_unit_ids = ["unit_locations"]
 
 
-class WaveformExtensionCommonTestSuite:
+def get_dataset():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[15.0, 5.0],
+        sampling_frequency=24000.0,
+        num_channels=6,
+        num_units=3,
+        generate_sorting_kwargs=dict(firing_rates=3.0, refractory_period_ms=4.0),
+        generate_unit_locations_kwargs=dict(
+            margin_um=5.0,
+            minimum_z=5.0,
+            maximum_z=20.0,
+        ),
+        generate_templates_kwargs=dict(
+            unit_params=dict(
+                alpha=(100.0, 500.0),
+            )
+        ),
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        seed=2205,
+    )
+    return recording, sorting
+
+
+class AnalyzerExtensionCommonTestSuite:
     """
-    This class runs common tests for extensions.
+    Common tests with class approach to compute extension on several cases,
+    format ("memory", "binary_folder", "zarr") and sparsity (True, False).
+    Extensions refer to the extension classes that handle the postprocessing,
+    for example extracting principal components or amplitude scalings.
+
+    This base class provides a fixture which sets a recording
+    and sorting object onto itself, which are set up once each time
+    the base class is subclassed in a test environment. The recording
+    and sorting object are used in the creation of the `sorting_analyzer`
+    object used to run postprocessing routines.
+
+    When subclassed, a test function that parametrises arguments
+    that are passed to the `sorting_analyzer.compute()` can be setup.
+    This must call `run_extension_tests()`  which sets up a `sorting_analyzer`
+    with the relevant format and sparsity. This also automatically precomputes
+    extension dependencies with default params, Then, `check_one()` is called
+    which runs the compute function with the passed params and tests that:
+
+    1) the returned extractor object has data on it
+    2) check `sorting_analyzer.get_extension()` does not return None
+    3) the correct units are sliced with the `select_units()` function.
     """
 
-    extension_class = None
-    extension_data_names = []
-    extension_function_kwargs_list = None
+    @pytest.fixture(autouse=True, scope="class")
+    def setUpClass(self, create_cache_folder):
+        """
+        This method sets up the class once at the start of testing. It is
+        in scope for the lifetime of te class and is reused across all
+        tests that inherit from this base class to save processing time and
+        force a small radius.
 
-    def setUp(self):
-        self.cache_folder = cache_folder
+        When setting attributes on `self` in `scope="class"` a new
+        class instance is used for each. In this case, we have to set
+        from the base object `__class__` to ensure the attributes
+        are available to all subclass instances.
+        """
+        self.__class__.recording, self.__class__.sorting = get_dataset()
 
-        # 1-segment
-        recording, sorting = generate_ground_truth_recording(
-            durations=[10],
-            sampling_frequency=30000,
-            num_channels=12,
-            num_units=10,
-            dtype="float32",
-            seed=91,
-            generate_sorting_kwargs=dict(add_spikes_on_borders=True),
-            noise_kwargs=dict(noise_level=10.0, strategy="tile_pregenerated"),
+        self.__class__.sparsity = estimate_sparsity(
+            self.__class__.sorting, self.__class__.recording, method="radius", radius_um=20
+        )
+        self.__class__.cache_folder = create_cache_folder
+
+    def get_sorting_analyzer(self, recording, sorting, format="memory", sparsity=None, name=""):
+        sparse = sparsity is not None
+
+        if format == "memory":
+            folder = None
+        elif format == "binary_folder":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}"
+        elif format == "zarr":
+            folder = self.cache_folder / f"test_{name}_sparse{sparse}_{format}.zarr"
+        if folder and folder.exists():
+            shutil.rmtree(folder)
+
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format=format, folder=folder, sparse=False, sparsity=sparsity
         )
 
-        # add gains and offsets and save
-        gain = 0.1
-        recording.set_channel_gains(gain)
-        recording.set_channel_offsets(0)
-        if (cache_folder / "toy_rec_1seg").is_dir():
-            recording = load_extractor(cache_folder / "toy_rec_1seg")
+        return sorting_analyzer
+
+    def _compute_extensions_recursively(self, sorting_analyzer, extension_class, params):
+        # compute dependencies of the extension class with default params
+        dependencies = extension_class.get_required_dependencies(**params)
+        for dependency_name in dependencies:
+            if "|" in dependency_name:
+                dependency_name = dependency_name.split("|")[0]
+            if not sorting_analyzer.has_extension(dependency_name):
+                # compute dependencies of the dependency
+                self._compute_extensions_recursively(sorting_analyzer, get_extension_class(dependency_name), {})
+                # compute the dependency itself
+                sorting_analyzer.compute(dependency_name)
+
+    def _prepare_sorting_analyzer(self, format, sparse, extension_class, extension_params=None):
+        # prepare a SortingAnalyzer object with depencies already computed
+        sparsity_ = self.sparsity if sparse else None
+        sorting_analyzer = self.get_sorting_analyzer(
+            self.recording, self.sorting, format=format, sparsity=sparsity_, name=extension_class.extension_name
+        )
+        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, seed=2205)
+
+        # default params for dependencies
+        params = sorting_analyzer.get_default_extension_params(extension_class.extension_name)
+        if extension_params is not None:
+            params.update(extension_params)
+        self._compute_extensions_recursively(sorting_analyzer, extension_class, params)
+
+        return sorting_analyzer
+
+    def _check_one(self, sorting_analyzer, extension_class, params):
+        """
+        Take a prepared sorting analyzer object, compute the extension of interest
+        with the passed parameters, and check the output is not empty, the extension
+        exists and `select_units()` method works.
+        """
+        import pandas as pd
+
+        if extension_class.need_job_kwargs:
+            job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
         else:
-            recording = recording.save(folder=cache_folder / "toy_rec_1seg")
-        if (cache_folder / "toy_sorting_1seg").is_dir():
-            sorting = load_extractor(cache_folder / "toy_sorting_1seg")
-        else:
-            sorting = sorting.save(folder=cache_folder / "toy_sorting_1seg")
-        we1 = extract_waveforms(
-            recording,
-            sorting,
-            cache_folder / "toy_waveforms_1seg",
-            max_spikes_per_unit=500,
-            sparse=False,
-            n_jobs=1,
-            chunk_size=30000,
-            overwrite=True,
-        )
-        self.we1 = we1
-        self.sparsity1 = compute_sparsity(we1, method="radius", radius_um=50)
+            job_kwargs = dict()
 
-        # 2-segments
-        recording, sorting = generate_ground_truth_recording(
-            durations=[10, 5],
-            sampling_frequency=30000,
-            num_channels=12,
-            num_units=10,
-            dtype="float32",
-            seed=91,
-            generate_sorting_kwargs=dict(add_spikes_on_borders=True),
-            noise_kwargs=dict(noise_level=10.0, strategy="tile_pregenerated"),
-        )
-        recording.set_channel_gains(gain)
-        recording.set_channel_offsets(0)
-        if (cache_folder / "toy_rec_2seg").is_dir():
-            recording = load_extractor(cache_folder / "toy_rec_2seg")
-        else:
-            recording = recording.save(folder=cache_folder / "toy_rec_2seg")
-        if (cache_folder / "toy_sorting_2seg").is_dir():
-            sorting = load_extractor(cache_folder / "toy_sorting_2seg")
-        else:
-            sorting = sorting.save(folder=cache_folder / "toy_sorting_2seg")
-        we2 = extract_waveforms(
-            recording,
-            sorting,
-            cache_folder / "toy_waveforms_2seg",
-            max_spikes_per_unit=500,
-            sparse=False,
-            n_jobs=1,
-            chunk_size=30000,
-            overwrite=True,
-        )
-        self.we2 = we2
+        ext = sorting_analyzer.compute(extension_class.extension_name, **params, **job_kwargs)
+        assert len(ext.data) > 0
+        main_data = ext.get_data()
+        assert main_data is not None
 
-        # make we read-only
-        if platform.system() != "Windows":
-            we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
-            if not we_ro_folder.is_dir():
-                shutil.copytree(we2.folder, we_ro_folder)
-            # change permissions (R+X)
-            we_ro_folder.chmod(0o555)
-            self.we_ro = load_waveforms(we_ro_folder)
+        ext = sorting_analyzer.get_extension(extension_class.extension_name)
+        assert ext is not None
 
-        self.sparsity2 = compute_sparsity(we2, method="radius", radius_um=30)
-        we_memory = extract_waveforms(
-            recording,
-            sorting,
-            mode="memory",
-            sparse=False,
-            max_spikes_per_unit=500,
-            n_jobs=1,
-            chunk_size=30000,
-        )
-        self.we_memory2 = we_memory
+        some_unit_ids = sorting_analyzer.unit_ids[::2]
+        sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
+        assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
 
-        self.we_zarr2 = we_memory.save(folder=cache_folder / "toy_sorting_2seg", overwrite=True, format="zarr")
+        some_merges = [sorting_analyzer.unit_ids[:2].tolist()]
+        num_units_after_merge = len(sorting_analyzer.unit_ids) - 1
+        merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
+        assert len(merged.unit_ids) == num_units_after_merge
 
-        # use best channels for PC-concatenated
-        sparsity = compute_sparsity(we_memory, method="best_channels", num_channels=2)
-        self.we_sparse = we_memory.save(
-            folder=cache_folder / "toy_sorting_2seg_sparse", format="binary", sparsity=sparsity, overwrite=True
-        )
+        # Test that order of units doesn't change things
+        if extension_class.extension_name in extensions_which_allow_unit_ids:
+            reversed_unit_ids = some_unit_ids[::-1]
+            sliced_reversed = sorting_analyzer.select_units(reversed_unit_ids, format="memory")
+            ext = sorting_analyzer.compute(
+                extension_class.extension_name, unit_ids=reversed_unit_ids, **params, **job_kwargs
+            )
+            recomputed_data = ext.get_data()
+            sliced_data = sliced_reversed.get_extension(extension_class.extension_name).get_data()
+            np.testing.assert_allclose(recomputed_data, sliced_data)
 
-    def tearDown(self):
-        # allow pytest to delete RO folder
-        if platform.system() != "Windows":
-            we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
-            we_ro_folder.chmod(0o777)
-
-    def _test_extension_folder(self, we, in_memory=False):
-        if self.extension_function_kwargs_list is None:
-            extension_function_kwargs_list = [dict()]
-        else:
-            extension_function_kwargs_list = self.extension_function_kwargs_list
-
-        for ext_kwargs in extension_function_kwargs_list:
-            # print(ext_kwargs)
-            _ = self.extension_class.get_extension_function()(we, load_if_exists=False, **ext_kwargs)
-
-            # reload as an extension from we
-            assert self.extension_class.extension_name in we.get_available_extension_names()
-            assert we.is_extension(self.extension_class.extension_name)
-            ext = we.load_extension(self.extension_class.extension_name)
-            assert isinstance(ext, self.extension_class)
-            for ext_name in self.extension_data_names:
-                assert ext_name in ext._extension_data
-            if not in_memory:
-                ext_loaded = self.extension_class.load(we.folder)
-                for ext_name in self.extension_data_names:
-                    assert ext_name in ext_loaded._extension_data
-
-            # test select units
-            # print('test select units', we.format)
-            if we.format == "binary":
-                new_folder = cache_folder / f"{we.folder.stem}_{self.extension_class.extension_name}_selected"
-                if new_folder.is_dir():
-                    shutil.rmtree(new_folder)
-                we_new = we.select_units(
-                    unit_ids=we.sorting.unit_ids[::2],
-                    new_folder=cache_folder / f"{we.folder.stem}_{self.extension_class.extension_name}_selected",
-                )
-                # check that extension is present after select_units()
-                assert self.extension_class.extension_name in we_new.get_available_extension_names()
-            elif we.folder is None:
-                # test select units in-memory and zarr
-                we_new = we.select_units(unit_ids=we.sorting.unit_ids[::2])
-                # check that extension is present after select_units()
-                assert self.extension_class.extension_name in we_new.get_available_extension_names()
-            else:
-                print("select_units() not supported for Zarr")
-
-    def test_extension(self):
-        print("Test extension", self.extension_class)
-        # 1 segment
-        print("1 segment", self.we1)
-        self._test_extension_folder(self.we1)
-        # 2 segment
-        print("2 segment", self.we2)
-        self._test_extension_folder(self.we2)
-        # memory
-        print("Memory", self.we_memory2)
-        self._test_extension_folder(self.we_memory2, in_memory=True)
-        # zarr
-        # @alessio : this need to be fixed the PCA extention do not work wih zarr
-        print("Zarr", self.we_zarr2)
-        self._test_extension_folder(self.we_zarr2)
-
-        # sparse
-        print("Sparse", self.we_sparse)
-        self._test_extension_folder(self.we_sparse)
-
-        # test content of memory/content/zarr
-        for ext in self.we2.get_available_extension_names():
-            print(f"Testing data for {ext}")
-            ext_memory = self.we2.load_extension(ext)
-            ext_folder = self.we2.load_extension(ext)
-            ext_zarr = self.we2.load_extension(ext)
-
-            for ext_data_name, ext_data_mem in ext_memory._extension_data.items():
-                ext_data_folder = ext_folder._extension_data[ext_data_name]
-                ext_data_zarr = ext_zarr._extension_data[ext_data_name]
-                if isinstance(ext_data_mem, np.ndarray):
-                    np.testing.assert_array_equal(ext_data_mem, ext_data_folder)
-                    np.testing.assert_array_equal(ext_data_mem, ext_data_zarr)
-                elif isinstance(ext_data_mem, pd.DataFrame):
-                    assert ext_data_mem.equals(ext_data_folder)
-                    assert ext_data_mem.equals(ext_data_zarr)
+        # test roundtrip
+        if sorting_analyzer.format in ("binary_folder", "zarr"):
+            sorting_analyzer_loaded = load_sorting_analyzer(sorting_analyzer.folder)
+            ext_loaded = sorting_analyzer_loaded.get_extension(extension_class.extension_name)
+            for ext_data_name, ext_data_loaded in ext_loaded.data.items():
+                if isinstance(ext_data_loaded, np.ndarray):
+                    if len(ext_data_loaded) > 0 and isinstance(ext_data_loaded[0], dict):
+                        for i in range(len(ext_data_loaded)):
+                            assert np.array_equal(np.array(ext.data[ext_data_name][i]), np.array(ext_data_loaded[i]))
+                    else:
+                        assert np.array_equal(ext.data[ext_data_name], ext_data_loaded)
+                elif isinstance(ext_data_loaded, pd.DataFrame):
+                    # skip nan values
+                    for col in ext_data_loaded.columns:
+                        np.testing.assert_array_almost_equal(
+                            ext.data[ext_data_name][col].dropna().to_numpy(),
+                            ext_data_loaded[col].dropna().to_numpy(),
+                            decimal=5,
+                        )
+                elif isinstance(ext_data_loaded, dict):
+                    assert ext.data[ext_data_name] == ext_data_loaded
                 else:
-                    print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
+                    continue
 
-        # read-only - Extension is memory only
-        if platform.system() != "Windows":
-            _ = self.extension_class.get_extension_function()(self.we_ro, load_if_exists=False)
-            assert self.extension_class.extension_name in self.we_ro.get_available_extension_names()
-            ext_ro = self.we_ro.load_extension(self.extension_class.extension_name)
-            assert ext_ro.format == "memory"
-            assert ext_ro.extension_folder is None
+    def run_extension_tests(self, extension_class, params):
+        """
+        Convenience function to perform all checks on the extension
+        of interest with the passed parameters. Will perform tests
+        for sparsity and format.
+        """
+        for sparse in (True, False):
+            for format in ("memory", "binary_folder", "zarr"):
+                print("sparse", sparse, format)
+                sorting_analyzer = self._prepare_sorting_analyzer(
+                    format, sparse, extension_class, extension_params=params
+                )
+                self._check_one(sorting_analyzer, extension_class, params)

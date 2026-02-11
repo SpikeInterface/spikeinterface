@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import pickle
 
 import numpy as np
 
 from spikeinterface import download_dataset, get_global_dataset_folder
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor
-from spikeinterface.extractors import get_neo_streams, get_neo_num_blocks
 
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 
@@ -17,8 +18,9 @@ class CommonTestSuite:
     downloads = []
     entities = []
 
-    def setUp(self):
-        for remote_path in self.downloads:
+    @classmethod
+    def setUpClass(cls):
+        for remote_path in cls.downloads:
             download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder, update_if_exists=True)
 
 
@@ -50,8 +52,11 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 num_samples = rec.get_num_samples(segment_index=segment_index)
 
                 full_traces = rec.get_traces(segment_index=segment_index)
-                assert full_traces.shape == (num_samples, num_chans)
-                assert full_traces.dtype == dtype
+                assert full_traces.shape == (
+                    num_samples,
+                    num_chans,
+                ), f"{full_traces.shape} != {(num_samples, num_chans)}"
+                assert full_traces.dtype == dtype, f"{full_traces.dtype} != {dtype=}"
 
                 traces_sample_first = rec.get_traces(segment_index=segment_index, start_frame=0, end_frame=1)
                 assert traces_sample_first.shape == (1, num_chans)
@@ -63,13 +68,13 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 assert traces_sample_last.shape == (1, num_chans)
                 assert np.all(full_traces[-1, :] == traces_sample_last[0, :])
 
-            # try return_scaled
+            # try return_in_uV
             if isinstance(rec, NeoBaseRecordingExtractor):
                 assert rec.get_property("gain_to_uV") is not None
                 assert rec.get_property("offset_to_uV") is not None
 
             if rec.get_property("gain_to_uV") is not None and rec.get_property("offset_to_uV") is not None:
-                trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
+                trace_scaled = rec.get_traces(segment_index=segment_index, return_in_uV=True, end_frame=2)
                 assert trace_scaled.dtype == "float32"
 
     def test_neo_annotations(self):

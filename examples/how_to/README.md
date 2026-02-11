@@ -2,7 +2,7 @@
 
 In this examples folder, we only keep the light-weight .py files that will appear in the docs.
 
-The `modules_gallery` folder will be built with `sphinx-gallery` (all examples starting with `plot_`) will be run in
+The `tutorials` folder will be built with `sphinx-gallery` (all examples starting with `plot_`) will be run in
 Read The Docs and added to the documentation at run-time.
 
 The `how_to` examples, instead, are manually run and added to the documentation.
@@ -14,17 +14,21 @@ with `nbconvert`. Here are the steps (in this example for the `get_started`):
 
 ```
 >>>  jupytext --to notebook get_started.py
+>>>  jupytext --set-formats ipynb.py get_started.ipynb
 ```
 
 2. Run the notebook
 
+3. Sync the run notebook to the .py file:
 
-3. Convert the notebook to .rst
+```
+>>> jupytext --sync get_started.ipynb
+```
+
+4. Convert the notebook to .rst
 
 ```
 >>>  jupyter nbconvert get_started.ipynb --to rst
->>>  jupyter nbconvert analyse_neuropixels.ipynb --to rst
 ```
 
-
-4. Move the .rst and associated folder (e.g. `get_started.rst` and `get_started_files` folder) to the `doc/how_to`.
+5. Move the .rst and associated folder (e.g. `get_started.rst` and `get_started_files` folder) to the `doc/how_to`.

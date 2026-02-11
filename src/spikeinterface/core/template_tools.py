@@ -1,58 +1,125 @@
 from __future__ import annotations
 import numpy as np
-import warnings
 
-from .sparsity import compute_sparsity, _sparsity_doc
-from .recording_tools import get_channel_distances, get_noise_levels
+from .template import Templates
+from .sortinganalyzer import SortingAnalyzer
+
+
+def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in_uV: bool = True):
+    """
+    Return dense templates as numpy array from either a Templates object or a SortingAnalyzer.
+
+    Parameters
+    ----------
+    one_object : Templates | SortingAnalyzer
+        The Templates or SortingAnalyzer objects. If SortingAnalyzer, it needs the "templates" extension.
+    return_in_uV : bool, default: True
+        If True, templates are scaled.
+
+    Returns
+    -------
+    dense_templates : np.ndarray
+        The dense templates (num_units, num_samples, num_channels)
+    """
+    if isinstance(one_object, Templates):
+        if return_in_uV != one_object.is_in_uV:
+            raise ValueError(
+                f"get_dense_templates_array: return_in_uV={return_in_uV} is not possible Templates has the reverse"
+            )
+        templates_array = one_object.get_dense_templates()
+    elif isinstance(one_object, SortingAnalyzer):
+        if return_in_uV != one_object.return_in_uV:
+            raise ValueError(
+                f"get_dense_templates_array: return_in_uV={return_in_uV} is not possible SortingAnalyzer has the reverse"
+            )
+        ext = one_object.get_extension("templates")
+        if ext is not None:
+            if "average" in ext.data:
+                templates_array = ext.data.get("average")
+            elif "median" in ext.data:
+                templates_array = ext.data.get("median")
+            else:
+                raise ValueError("Average or median templates have not been computed.")
+        else:
+            raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
+    else:
+        raise ValueError("Input should be Templates or SortingAnalyzer")
+    return templates_array
+
+
+def _get_nbefore(one_object):
+    if isinstance(one_object, Templates):
+        return one_object.nbefore
+    elif isinstance(one_object, SortingAnalyzer):
+        ext = one_object.get_extension("templates")
+        if ext is None:
+            raise ValueError("SortingAnalyzer need extension 'templates' to be computed")
+        return ext.nbefore
+    else:
+        raise ValueError("Input should be Templates or SortingAnalyzer")
 
 
 def get_template_amplitudes(
-    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum"
+    templates_or_sorting_analyzer,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+    return_in_uV: bool = True,
+    abs_value: bool = True,
 ):
     """
     Get amplitude per channel for each unit.
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-    peak_sign: "neg" | "pos" | "both", default: "neg"
-        Sign of the template to compute best channels
-    mode: "extremum" | "at_index", default: "extremum"
-        'extremum':  max or min
-        'at_index': take value at spike index
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
+        A Templates or a SortingAnalyzer object
+    peak_sign :  "neg" | "pos" | "both"
+        Sign of the template to find extremum channels
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+        Where the amplitude is computed
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
+    return_in_uV : bool, default True
+        The amplitude is scaled or not.
+    abs_value : bool = True
+        Whether the extremum amplitude should be returned as an absolute value or not
 
     Returns
     -------
-    peak_values: dict
+    peak_values : dict
         Dictionary with unit ids as keys and template amplitudes as values
     """
     assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be 'both', 'neg', or 'pos'"
-    assert mode in ("extremum", "at_index"), "'mode' must be 'extremum' or 'at_index'"
-    unit_ids = waveform_extractor.sorting.unit_ids
+    assert mode in ("extremum", "at_index", "peak_to_peak"), "'mode' must be 'extremum', 'at_index', or 'peak_to_peak'"
 
-    before = waveform_extractor.nbefore
+    unit_ids = templates_or_sorting_analyzer.unit_ids
+    before = _get_nbefore(templates_or_sorting_analyzer)
 
     peak_values = {}
 
-    templates = waveform_extractor.get_all_templates(mode="average")
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_in_uV=return_in_uV)
+
     for unit_ind, unit_id in enumerate(unit_ids):
-        template = templates[unit_ind, :, :]
+        template = templates_array[unit_ind, :, :]
 
         if mode == "extremum":
             if peak_sign == "both":
                 values = np.max(np.abs(template), axis=0)
             elif peak_sign == "neg":
-                values = -np.min(template, axis=0)
+                values = np.min(template, axis=0)
             elif peak_sign == "pos":
                 values = np.max(template, axis=0)
         elif mode == "at_index":
             if peak_sign == "both":
                 values = np.abs(template[before, :])
-            elif peak_sign == "neg":
-                values = -template[before, :]
-            elif peak_sign == "pos":
+            elif peak_sign in ["neg", "pos"]:
                 values = template[before, :]
+        elif mode == "peak_to_peak":
+            values = np.ptp(template, axis=0)
+
+        if abs_value:
+            values = np.abs(values)
 
         peak_values[unit_id] = values
 
@@ -60,9 +127,9 @@ def get_template_amplitudes(
 
 
 def get_template_extremum_channel(
-    waveform_extractor,
+    templates_or_sorting_analyzer,
     peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" = "extremum",
+    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
     outputs: "id" | "index" = "id",
 ):
     """
@@ -70,35 +137,50 @@ def get_template_extremum_channel(
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-    peak_sign: "neg" | "pos" | "both", default: "neg"
-        Sign of the template to compute best channels
-    mode: "extremum" | "at_index", default: "extremum"
-        'extremum':  max or min
-        'at_index': take value at spike index
-    outputs: "id" | "index", default: "id"
-        * 'id': channel id
-        * 'index': channel index
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
+        A Templates or a SortingAnalyzer object
+    peak_sign :  "neg" | "pos" | "both"
+        Sign of the template to find extremum channels
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+        Where the amplitude is computed
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
+    outputs : "id" | "index", default: "id"
+        * "id" : channel id
+        * "index" : channel index
 
     Returns
     -------
-    extremum_channels: dict
-        Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
+    extremum_channels : dict
+        Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
-    assert peak_sign in ("both", "neg", "pos")
-    assert mode in ("extremum", "at_index")
-    assert outputs in ("id", "index")
+    assert peak_sign in ("both", "neg", "pos"), "`peak_sign` must be one of `both`, `neg`, or `pos`"
+    assert mode in ("extremum", "at_index", "peak_to_peak"), "'mode' must be 'extremum', 'at_index', or 'peak_to_peak'"
+    assert outputs in ("id", "index"), "`outputs` must be either `id` or `index`"
 
-    unit_ids = waveform_extractor.sorting.unit_ids
-    channel_ids = waveform_extractor.channel_ids
+    unit_ids = templates_or_sorting_analyzer.unit_ids
+    channel_ids = templates_or_sorting_analyzer.channel_ids
 
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
+    # if SortingAnalyzer need to use global SortingAnalyzer return_scaled otherwise
+    # we use the Templates is_in_uV
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_in_uV = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_in_uV = templates_or_sorting_analyzer.return_in_uV
+    else:
+        return_in_uV = templates_or_sorting_analyzer.is_in_uV
+
+    peak_values = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_in_uV=return_in_uV
+    )
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
-        max_ind = np.argmax(peak_values[unit_id])
+        max_ind = np.argmax(np.abs(peak_values[unit_id]))
         extremum_channels_id[unit_id] = channel_ids[max_ind]
         extremum_channels_index[unit_id] = max_ind
 
@@ -108,64 +190,7 @@ def get_template_extremum_channel(
         return extremum_channels_index
 
 
-def get_template_channel_sparsity(
-    waveform_extractor,
-    method="radius",
-    peak_sign="neg",
-    num_channels=5,
-    radius_um=100.0,
-    threshold=5,
-    by_property=None,
-    outputs="id",
-):
-    """
-        Get channel sparsity (subset of channels) for each template with several methods.
-
-        Parameters
-        ----------
-        waveform_extractor: WaveformExtractor
-            The waveform extractor
-    {}
-        outputs: str
-            * 'id': channel id
-            * 'index': channel index
-
-        Returns
-        -------
-        sparsity: dict
-            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
-            as values
-    """
-    from spikeinterface.core.sparsity import compute_sparsity
-
-    warnings.warn(
-        "The 'get_template_channel_sparsity()' function is deprecated. " "Use 'compute_sparsity()' instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-    assert outputs in ("id", "index"), "'outputs' can either be 'id' or 'index'"
-    sparsity = compute_sparsity(
-        waveform_extractor,
-        method=method,
-        peak_sign=peak_sign,
-        num_channels=num_channels,
-        radius_um=radius_um,
-        threshold=threshold,
-        by_property=by_property,
-    )
-
-    # handle output ids or indexes
-    if outputs == "id":
-        return sparsity.unit_id_to_channel_ids
-    elif outputs == "index":
-        return sparsity.unit_id_to_channel_indices
-
-
-get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(_sparsity_doc)
-
-
-def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg"):
+def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak_sign: "neg" | "pos" | "both" = "neg"):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -173,29 +198,42 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: "neg
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-    peak_sign: "neg" | "pos" | "both", default: "neg"
-        Sign of the template to compute best channels
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
+        A Templates or a SortingAnalyzer object
+    peak_sign :  "neg" | "pos" | "both"
+        Sign of the template to find extremum channels
 
     Returns
     -------
-    shifts: dict
+    shifts : dict
         Dictionary with unit ids as keys and shifts as values
     """
-    sorting = waveform_extractor.sorting
-    unit_ids = sorting.unit_ids
+    unit_ids = templates_or_sorting_analyzer.unit_ids
+    channel_ids = templates_or_sorting_analyzer.channel_ids
+    nbefore = _get_nbefore(templates_or_sorting_analyzer)
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign)
 
     shifts = {}
 
-    templates = waveform_extractor.get_all_templates(mode="average")
+    # We need to use the SortingAnalyzer return_scaled
+    # We need to use the Templates is_in_uV
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_in_uV = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_in_uV = templates_or_sorting_analyzer.return_in_uV
+    else:
+        return_in_uV = templates_or_sorting_analyzer.is_in_uV
+
+    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_in_uV=return_in_uV)
+
     for unit_ind, unit_id in enumerate(unit_ids):
-        template = templates[unit_ind, :, :]
+        template = templates_array[unit_ind, :, :]
 
         chan_id = extremum_channels_ids[unit_id]
-        chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
+        chan_ind = list(channel_ids).index(chan_id)
 
         if peak_sign == "both":
             peak_pos = np.argmax(np.abs(template[:, chan_ind]))
@@ -203,48 +241,65 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: "neg
             peak_pos = np.argmin(template[:, chan_ind])
         elif peak_sign == "pos":
             peak_pos = np.argmax(template[:, chan_ind])
-        shift = peak_pos - waveform_extractor.nbefore
+        shift = peak_pos - nbefore
         shifts[unit_id] = shift
 
     return shifts
 
 
 def get_template_extremum_amplitude(
-    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "at_index"
+    templates_or_sorting_analyzer,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" | "peak_to_peak" = "at_index",
+    abs_value: bool = True,
 ):
     """
     Computes amplitudes on the best channel.
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-    peak_sign:  "neg" | "pos" | "both"
-        Sign of the template to compute best channels
-    mode: "extremum" | "at_index", default: "at_index"
+    templates_or_sorting_analyzer : Templates | SortingAnalyzer
+        A Templates or a SortingAnalyzer object
+    peak_sign :  "neg" | "pos" | "both"
+        Sign of the template to find extremum channels
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
-        'extremum':  max or min
-        'at_index': take value at spike index
+        * "extremum": take the peak value (max or min depending on `peak_sign`)
+        * "at_index": take value at `nbefore` index
+        * "peak_to_peak": take the peak-to-peak amplitude
+    abs_value : bool = True
+        Whether the extremum amplitude should be returned as an absolute value or not
+
 
     Returns
     -------
-    amplitudes: dict
+    amplitudes : dict
         Dictionary with unit ids as keys and amplitudes as values
     """
     assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be  'neg' or 'pos' or 'both'"
-    assert mode in ("extremum", "at_index"), "'mode' must be 'extremum' or 'at_index'"
-    unit_ids = waveform_extractor.sorting.unit_ids
+    assert mode in ("extremum", "at_index", "peak_to_peak"), "'mode' must be 'extremum', 'at_index', or 'peak_to_peak'"
+    unit_ids = templates_or_sorting_analyzer.unit_ids
+    channel_ids = templates_or_sorting_analyzer.channel_ids
 
-    before = waveform_extractor.nbefore
+    extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode)
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=mode)
+    if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
+        # For backward compatibility
+        if hasattr(templates_or_sorting_analyzer, "return_scaled"):
+            return_in_uV = templates_or_sorting_analyzer.return_scaled
+        else:
+            return_in_uV = templates_or_sorting_analyzer.return_in_uV
+    else:
+        return_in_uV = templates_or_sorting_analyzer.is_in_uV
 
-    extremum_amplitudes = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
+    extremum_amplitudes = get_template_amplitudes(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_in_uV=return_in_uV, abs_value=abs_value
+    )
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
         channel_id = extremum_channels_ids[unit_id]
-        best_channel = waveform_extractor.channel_ids_to_indices([channel_id])[0]
+        best_channel = list(channel_ids).index(channel_id)
         unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes

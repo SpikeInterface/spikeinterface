@@ -1,0 +1,15 @@
+.. _release0.100.1:
+
+SpikeInterface 0.100.1 release notes
+------------------------------------
+
+11th March 2024
+
+Minor release with some bug fixes and Kilosort4 support.
+
+* Use `has_channel_location` instead of `get_property("contact_vector")` (#2475)
+* Fix singularity issue in deleting py_user_folder (#2493)
+* Small bug fix in zscore : gain / offset must be reset (#2510)
+* Fix mutually exclusive keys in job_kwargs (#2511)
+* Fix scaling of inject templates with copy (#2521)
+* **Added support for Kilosort4** (#2529)

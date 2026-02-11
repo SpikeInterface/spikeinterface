@@ -1,11 +1,14 @@
-import numpy as np
-from typing import Union
+from __future__ import annotations
 
+import warnings
+import numpy as np
 from probeinterface import ProbeGroup
+
+from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
 
 
 class UnitLocationsWidget(BaseWidget):
@@ -14,53 +17,79 @@ class UnitLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get unit locations from
-    unit_ids : list
-        List of unit ids default None
-    with_channel_ids : bool
-        Add channel ids text on the probe, default False
-    unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
-    hide_unit_selector : bool
-        If True, the unit selector is not displayed, default False (sortingview backend)
-    plot_all_units : bool
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer that must contains  "unit_locations" extension
+    unit_ids : list or None, default: None
+        List of unit ids
+    with_channel_ids : bool, default: False
+        Add channel ids text on the probe
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
+    hide_unit_selector : bool, default: False
+        If True, the unit selector is not displayed (sortingview backend)
+    plot_all_units : bool, default: True
         If True, all units are plotted. The unselected ones (not in unit_ids),
-        are plotted in grey, default True (matplotlib backend)
-    plot_legend : bool
-        If True, the legend is plotted, default False (matplotlib backend)
-    hide_axis : bool
-        If True, the axis is set to off, default False (matplotlib backend)
+        are plotted in grey (matplotlib backend)
+    plot_legend : bool, default: False
+        If True, the legend is plotted (matplotlib backend)
+    hide_axis : bool, default: False
+        If True, the axis is set to off (matplotlib backend)
+    margin : float, default: 50
+        Amount of margin to add to plot, beyond the extremum unit locations.
     """
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
-        unit_ids=None,
-        with_channel_ids=False,
-        unit_colors=None,
-        hide_unit_selector=False,
-        plot_all_units=True,
-        plot_legend=False,
-        hide_axis=False,
-        backend=None,
+        sorting_analyzer: SortingAnalyzer,
+        unit_ids: list | None = None,
+        with_channel_ids: bool = False,
+        unit_colors: dict | None = None,
+        hide_unit_selector: bool = False,
+        plot_all_units: bool = True,
+        plot_legend: bool = False,
+        hide_axis: bool = False,
+        backend: str | None = None,
+        margin: float = 50,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "unit_locations")
-        ulc = waveform_extractor.load_extension("unit_locations")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+
+        self.check_extensions(sorting_analyzer, "unit_locations")
+        ulc = sorting_analyzer.get_extension("unit_locations")
         unit_locations = ulc.get_data(outputs="by_unit")
 
-        sorting = waveform_extractor.sorting
+        # set axis limits based on extremum unit locations
+        all_unit_locations = ulc.get_data()
 
-        channel_ids = waveform_extractor.channel_ids
-        channel_locations = waveform_extractor.get_channel_locations()
-        probegroup = waveform_extractor.get_probegroup()
+        x_locations = all_unit_locations[:, 0]
+        x_min = np.nanmin(x_locations)
+        x_max = np.nanmax(x_locations)
+        x_lim = (x_min - margin, x_max + margin)
+
+        y_locations = all_unit_locations[:, 1]
+        y_min = np.nanmin(y_locations)
+        y_max = np.nanmax(y_locations)
+        y_lim = (y_min - margin, y_max + margin)
+
+        sorting = sorting_analyzer.sorting
+
+        channel_ids = sorting_analyzer.channel_ids
+        channel_locations = sorting_analyzer.get_channel_locations()
+        probegroup = sorting_analyzer.get_probegroup()
 
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
+
+        if np.any(np.isnan(all_unit_locations[sorting.ids_to_indices(unit_ids)])):
+            warnings.warn("Some unit locations contain NaN values. Replacing with extremum channel location.")
+            extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index")
+            for unit_id in unit_ids:
+                if np.any(np.isnan(unit_locations[unit_id])):
+                    unit_locations[unit_id] = channel_locations[extremum_channel_indices[unit_id]]
 
         data_plot = dict(
             all_unit_ids=sorting.unit_ids,
@@ -76,6 +105,8 @@ class UnitLocationsWidget(BaseWidget):
             plot_all_units=plot_all_units,
             plot_legend=plot_legend,
             hide_axis=hide_axis,
+            x_lim=x_lim,
+            y_lim=y_lim,
         )
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
@@ -89,9 +120,7 @@ class UnitLocationsWidget(BaseWidget):
         from matplotlib.lines import Line2D
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         unit_locations = dp.unit_locations
@@ -118,6 +147,8 @@ class UnitLocationsWidget(BaseWidget):
                 poly_contour.set_zorder(1)
 
         self.ax.set_title("")
+        self.ax.set_xlim(*dp.x_lim)
+        self.ax.set_ylim(*dp.y_lim)
 
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)
@@ -125,11 +156,11 @@ class UnitLocationsWidget(BaseWidget):
         if dp.plot_all_units:
             unit_colors = {}
             unit_ids = dp.all_unit_ids
-            for unit in dp.all_unit_ids:
-                if unit not in dp.unit_ids:
-                    unit_colors[unit] = "gray"
+            for unit_id in dp.all_unit_ids:
+                if unit_id not in dp.unit_ids:
+                    unit_colors[unit_id] = "gray"
                 else:
-                    unit_colors[unit] = dp.unit_colors[unit]
+                    unit_colors[unit_id] = dp.unit_colors[unit_id]
         else:
             unit_ids = dp.unit_ids
             unit_colors = dp.unit_colors
@@ -137,13 +168,13 @@ class UnitLocationsWidget(BaseWidget):
 
         patches = [
             Ellipse(
-                (unit_locations[unit]),
-                color=unit_colors[unit],
-                zorder=5 if unit in dp.unit_ids else 3,
-                alpha=0.9 if unit in dp.unit_ids else 0.5,
+                (unit_locations[unit_id]),
+                color=unit_colors[unit_id],
+                zorder=5 if unit_id in dp.unit_ids else 3,
+                alpha=0.9 if unit_id in dp.unit_ids else 0.5,
                 **ellipse_kwargs,
             )
-            for i, unit in enumerate(unit_ids)
+            for unit_ind, unit_id in enumerate(unit_ids)
         ]
         for p in patches:
             self.ax.add_patch(p)
@@ -222,8 +253,18 @@ class UnitLocationsWidget(BaseWidget):
         fig.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
@@ -235,19 +276,21 @@ class UnitLocationsWidget(BaseWidget):
         unit_items = []
         for unit_id in unit_ids:
             unit_items.append(
-                vv.UnitLocationsItem(
+                vv_views.UnitLocationsItem(
                     unit_id=unit_id, x=float(dp.unit_locations[unit_id][0]), y=float(dp.unit_locations[unit_id][1])
                 )
             )
 
-        v_unit_locations = vv.UnitLocations(units=unit_items, channel_locations=locations, disable_auto_rotate=True)
+        v_unit_locations = vv_views.UnitLocations(
+            units=unit_items, channel_locations=locations, disable_auto_rotate=True
+        )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting)
+            v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
-                items=[vv.LayoutItem(v_units_table, max_size=150), vv.LayoutItem(v_unit_locations)],
+                items=[vv_base.LayoutItem(v_units_table, max_size=150), vv_base.LayoutItem(v_unit_locations)],
             )
         else:
             self.view = v_unit_locations

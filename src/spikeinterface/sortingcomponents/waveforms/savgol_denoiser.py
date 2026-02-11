@@ -1,7 +1,7 @@
-from pathlib import Path
-import json
+from __future__ import annotations
+
+
 from typing import List, Optional
-import scipy.signal
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
@@ -15,15 +15,15 @@ class SavGolDenoiser(WaveformsNode):
     Parameters
     ----------
     recording: BaseRecording
-        The recording extractor object.
-    return_output: bool, optional
-        Whether to return output from this node (default True).
-    parents: list of PipelineNodes, optional
-        The parent nodes of this node (default None).
-    order: int, optional
-        the order of the filter (default 3)
-    window_length_ms: float, optional
-        the temporal duration of the filter in ms (default 0.25)
+        The recording extractor object
+    return_output: bool, default: True
+        Whether to return output from this node
+    parents: list of PipelineNodes, default: None
+        The parent nodes of this node
+    order: int, default: 3
+        the order of the filter
+    window_length_ms: float, default: 0.25
+        the temporal duration of the filter in ms
     """
 
     def __init__(
@@ -49,11 +49,13 @@ class SavGolDenoiser(WaveformsNode):
         self.order = order
         waveforms_sampling_frequency = self.recording.get_sampling_frequency()
         self.window_length = int(window_length_ms * waveforms_sampling_frequency / 1000)
-
+        self.order = min(self.order, self.window_length - 1)
         self._kwargs.update(dict(order=order, window_length_ms=window_length_ms))
 
     def compute(self, traces, peaks, waveforms):
         # Denoise
+        import scipy.signal
+
         denoised_waveforms = scipy.signal.savgol_filter(waveforms, self.window_length, self.order, axis=1)
 
         return denoised_waveforms

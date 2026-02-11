@@ -1,42 +1,43 @@
+from __future__ import annotations
+
+from warnings import warn
 import numpy as np
-import random
 
-from ..core import ChannelSparsity
-
-try:
-    import distinctipy
-
-    HAVE_DISTINCTIPY = True
-except ImportError:
-    HAVE_DISTINCTIPY = False
-
-try:
-    import matplotlib.pyplot as plt
-
-    HAVE_MPL = True
-except ImportError:
-    HAVE_MPL = False
+from spikeinterface.core import BaseSorting
 
 
-def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None):
+def get_some_colors(
+    keys,
+    color_engine="auto",
+    map_name="gist_ncar",
+    format="RGBA",
+    shuffle=None,
+    seed=None,
+    margin=None,
+    resample=True,
+):
     """
     Return a dict of colors for given keys
 
     Parameters
     ----------
-    color_engine : str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
+    color_engine : "auto" | "matplotlib" | "colorsys" | "distinctipy", default: "auto"
         The engine to generate colors
     map_name : str
         Used for matplotlib
-    format: str
-        The output formats, default 'RGBA'
-    shuffle : bool or None
-        Shuffle or not, default None
+    format: str, default: "RGBA"
+        The output formats
+    shuffle : bool or None, default: None
+        Shuffle or not the colors.
         If None then:
         * set to True for matplotlib and colorsys
         * set to False for distinctipy
-    seed: int or None
-        Set the seed, default None
+    seed: int or None, default: None
+        Set the seed
+    margin: None or int
+        If None, put a margin to remove colors on borders of some colomap of matplotlib.
+    resample : bool, dafult True
+        For matplotlib, only resample the cmap to the number of keys + eventualy maring
 
     Returns
     -------
@@ -44,6 +45,20 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
         A dict of colors for given keys.
 
     """
+    try:
+        import matplotlib.pyplot as plt
+
+        HAVE_MPL = True
+    except ImportError:
+        HAVE_MPL = False
+
+    try:
+        import distinctipy
+
+        HAVE_DISTINCTIPY = True
+    except ImportError:
+        HAVE_DISTINCTIPY = False
+
     assert color_engine in ("auto", "distinctipy", "matplotlib", "colorsys")
 
     possible_formats = ("RGBA",)
@@ -73,8 +88,12 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
 
     elif color_engine == "matplotlib":
         # some map have black or white at border so +10
-        margin = max(4, int(N * 0.08))
-        cmap = plt.get_cmap(map_name, N + 2 * margin)
+
+        cmap = plt.colormaps[map_name]
+        if resample:
+            if margin is None:
+                margin = max(4, int(N * 0.08))
+            cmap = cmap.resampled(N + 2 * margin)
         colors = [cmap(i + margin) for i, key in enumerate(keys)]
 
     elif color_engine == "colorsys":
@@ -83,7 +102,7 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1.0,) for x in range(N)]
 
     if shuffle:
-        rng = np.random.RandomState(seed=seed)
+        rng = np.random.default_rng(seed=seed)
         inds = np.arange(N)
         rng.shuffle(inds)
         colors = [colors[i] for i in inds]
@@ -93,12 +112,19 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
     return dict_colors
 
 
-def get_unit_colors(sorting, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None):
+def get_unit_colors(
+    sorting_or_analyzer_or_templates, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None
+):
     """
     Return a dict colors per units.
     """
     colors = get_some_colors(
-        sorting.unit_ids, color_engine=color_engine, map_name=map_name, format=format, shuffle=shuffle, seed=seed
+        sorting_or_analyzer_or_templates.unit_ids,
+        color_engine=color_engine,
+        map_name=map_name,
+        format=format,
+        shuffle=shuffle,
+        seed=seed,
     )
     return colors
 
@@ -139,6 +165,7 @@ def array_to_image(
     output_image : 3D numpy array
 
     """
+    import matplotlib.pyplot as plt
 
     from scipy.ndimage import zoom
 
@@ -151,7 +178,7 @@ def array_to_image(
     num_channels = data.shape[1]
     spacing = int(num_channels * spatial_zoom[1] * row_spacing)
 
-    cmap = plt.get_cmap(colormap)
+    cmap = plt.colormaps[colormap]
     zoomed_data = zoom(data, spatial_zoom)
     num_timepoints_after_scaling, num_channels_after_scaling = zoomed_data.shape
     num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])
@@ -230,3 +257,170 @@ def array_to_image(
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image
+
+
+def make_units_table_from_sorting(sorting, units_table=None):
+    """
+    Make a DataFrame from sorting properties.
+    Only for properties with ndim=1
+
+    Parameters
+    ----------
+    sorting : Sorting
+        The Sorting object
+    units_table : None | pd.DataFrame
+        Optionally a existing dataframe.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+
+    if units_table is None:
+        import pandas as pd
+
+        units_table = pd.DataFrame(index=sorting.unit_ids)
+
+    for col in sorting.get_property_keys():
+        values = sorting.get_property(col)
+        if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+            units_table.loc[:, col] = values
+
+    return units_table
+
+
+def make_units_table_from_analyzer(
+    analyzer,
+    extra_properties=None,
+    with_unit_locations=True,
+    with_quality_metrics=True,
+    with_template_metrics=True,
+):
+    """
+    Make a DataFrame by aggregating :
+      * quality metrics
+      * template metrics
+      * unit_position
+      * sorting properties
+      * extra columns
+
+    This used in sortingview and spikeinterface-gui to display the units table in a flexible way.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The SortingAnalyzer object
+    extra_properties : None | dict
+        Extra columns given as dict.
+
+    Returns
+    -------
+    units_table : pd.DataFrame
+        Table containing all columns.
+    """
+    import pandas as pd
+
+    all_df = []
+
+    if with_unit_locations and analyzer.get_extension("unit_locations") is not None:
+        locs = analyzer.get_extension("unit_locations").get_data()
+        df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
+        all_df.append(df)
+
+    if with_quality_metrics and analyzer.get_extension("quality_metrics") is not None:
+        df = analyzer.get_extension("quality_metrics").get_data()
+        all_df.append(df)
+
+    if with_template_metrics and analyzer.get_extension("template_metrics") is not None:
+        df = analyzer.get_extension("template_metrics").get_data()
+        all_df.append(df)
+
+    if len(all_df) > 0:
+        units_table = pd.concat(all_df, axis=1)
+    else:
+        units_table = pd.DataFrame(index=analyzer.unit_ids)
+
+    make_units_table_from_sorting(analyzer.sorting, units_table=units_table)
+
+    if extra_properties is not None:
+        for col, values in extra_properties.items():
+            # the ndim = 1 is important because we need  column only for the display in gui.
+            if values.dtype.kind in "iuUSfb" and values.ndim == 1:
+                units_table.loc[:, col] = values
+            else:
+                warn(
+                    f"Extra property {col} not added to the units table because it has ndim > 1 or dtype not supported",
+                )
+
+    return units_table
+
+
+def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSorting):
+    """
+    Validate a list of segment indices for a sorting object.
+
+    Parameters
+    ----------
+    segment_indices : list of int
+        The segment index or indices to validate.
+    sorting : BaseSorting
+        The sorting object to validate against.
+
+    Returns
+    -------
+    list of int
+        A list of valid segment indices.
+
+    Raises
+    ------
+    ValueError
+        If the segment indices are not valid.
+    """
+    num_segments = sorting.get_num_segments()
+
+    # Handle segment_indices input
+    if segment_indices is None:
+        if num_segments > 1:
+            warn("Segment indices not specified. Using first available segment only.")
+        return [0]
+
+    # Convert segment_index to list for consistent processing
+    if not isinstance(segment_indices, list):
+        raise ValueError(
+            "segment_indices must be a list of ints - available segments are: " + list(range(num_segments))
+        )
+
+    # Validate segment indices
+    for idx in segment_indices:
+        if not isinstance(idx, int):
+            raise ValueError(f"Each segment index must be an integer, got {type(idx)}")
+        if idx < 0 or idx >= num_segments:
+            raise ValueError(f"segment_index {idx} out of range (0 to {num_segments - 1})")
+
+    return segment_indices
+
+
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> list[float]:
+    """
+    Calculate the duration of each segment in a sorting object.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object containing spike data
+
+    Returns
+    -------
+    list[float]
+        List of segment durations in seconds
+    """
+    spikes = sorting.to_spike_vector()
+
+    segment_boundaries = [
+        np.searchsorted(spikes["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
+    ]
+
+    durations = [(spikes["sample_index"][end - 1] + 1) / sorting.sampling_frequency for (_, end) in segment_boundaries]
+
+    return durations

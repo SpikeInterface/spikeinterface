@@ -1,0 +1,13 @@
+.. _release0.99.1:
+
+SpikeInterface 0.99.1 release notes
+-----------------------------------
+
+14th November 2023
+
+Minor release with some bug fixes.
+
+* Fix crash when default start / end frame arguments on motion interpolation are used (#2176)
+* Fix bug in `make_match_count_matrix()` when computing matching events (#2182, #2191, #2196)
+* Fix maxwell tests by setting HDF5_PLUGIN_PATH env in action (#2161)
+* Add read_npz_sorting to extractors module (#2183)

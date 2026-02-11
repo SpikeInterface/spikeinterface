@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
-from ..core.waveform_extractor import WaveformExtractor
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 
 class TemplateSimilarityWidget(BaseWidget):
@@ -10,24 +12,24 @@ class TemplateSimilarityWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get template similarity from
-    unit_ids : list
-        List of unit ids default None
-    display_diagonal_values : bool
+    sorting_analyzer : SortingAnalyzer
+        The object to get template similarity from
+    unit_ids : list or None, default: None
+        List of unit ids default: None
+    display_diagonal_values : bool, default: False
         If False, the diagonal is displayed as zeros.
-        If True, the similarity values (all 1s) are displayed, default False
-    cmap : str
-        The matplotlib colormap. Default 'viridis'.
-    show_unit_ticks : bool
-        If True, ticks display unit ids, default False.
-    show_colorbar : bool
-        If True, color bar is displayed, default True.
+        If True, the similarity values (all 1s) are displayed
+    cmap : matplotlib colormap, default: "viridis"
+        The matplotlib colormap
+    show_unit_ticks : bool, default: False
+        If True, ticks display unit ids
+    show_colorbar : bool, default: True
+        If True, color bar is displayed
     """
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         cmap="viridis",
         display_diagonal_values=False,
@@ -36,11 +38,13 @@ class TemplateSimilarityWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "similarity")
-        tsc = waveform_extractor.load_extension("similarity")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "template_similarity")
+
+        tsc = sorting_analyzer.get_extension("template_similarity")
         similarity = tsc.get_data().copy()
 
-        sorting = waveform_extractor.sorting
+        sorting = sorting_analyzer.sorting
         if unit_ids is None:
             unit_ids = sorting.unit_ids
         else:
@@ -83,8 +87,17 @@ class TemplateSimilarityWidget(BaseWidget):
             self.figure.colorbar(im)
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
@@ -96,9 +109,11 @@ class TemplateSimilarityWidget(BaseWidget):
         for i1, u1 in enumerate(unit_ids):
             for i2, u2 in enumerate(unit_ids):
                 ss_items.append(
-                    vv.UnitSimilarityScore(unit_id1=u1, unit_id2=u2, similarity=dp.similarity[i1, i2].astype("float32"))
+                    vv_views.UnitSimilarityScore(
+                        unit_id1=u1, unit_id2=u2, similarity=dp.similarity[i1, i2].astype("float32")
+                    )
                 )
 
-        self.view = vv.UnitSimilarityMatrix(unit_ids=list(unit_ids), similarity_scores=ss_items)
+        self.view = vv_views.UnitSimilarityMatrix(unit_ids=list(unit_ids), similarity_scores=ss_items)
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)

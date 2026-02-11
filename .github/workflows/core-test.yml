@@ -19,10 +19,10 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: Install dependencies
         run: |
           git config --global user.email "CI@example.com"
@@ -31,7 +31,7 @@ jobs:
           pip install -e .[test_core]
       - name: Test core with pytest
         run: |
-          pytest -vv -ra --durations=0 --durations-min=0.001 src/spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          pytest -m "core" -vv -ra --durations=0 --durations-min=0.001 | tee report.txt; test $? -eq 0 || exit 1
         shell: bash  # Necessary for pipeline to work on windows
       - name: Build test summary
         run: |
@@ -39,7 +39,7 @@ jobs:
           pip install tabulate
           echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY
           # Outputs markdown summary to standard output
-          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY
+          python ./.github/scripts/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report.txt
         shell: bash  # Necessary for pipeline to work on windows

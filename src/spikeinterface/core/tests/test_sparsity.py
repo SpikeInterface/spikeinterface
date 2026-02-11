@@ -3,8 +3,10 @@ import pytest
 import numpy as np
 import json
 
-from spikeinterface.core import ChannelSparsity
+from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_sparsity, get_noise_levels
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.core import create_sorting_analyzer
 
 
 def test_ChannelSparsity():
@@ -84,7 +86,7 @@ def test_sparsify_waveforms():
         num_active_channels = len(non_zero_indices)
         assert waveforms_sparse.shape == (num_units, num_samples, num_active_channels)
 
-        # Test round-trip (note that this is loosy)
+        # Test round-trip (note that this is lossy)
         unit_id = unit_ids[unit_id]
         non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
         waveforms_dense2 = sparsity.densify_waveforms(waveforms_sparse, unit_id=unit_id)
@@ -143,5 +145,167 @@ def test_densify_waveforms():
         assert np.array_equal(template_sparse, template_sparse2)
 
 
+def get_dataset():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[30.0],
+        sampling_frequency=16000.0,
+        num_channels=10,
+        num_units=5,
+        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
+        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
+        seed=2205,
+    )
+    recording.set_property("group", ["a"] * 5 + ["b"] * 5)
+    sorting.set_property("group", ["a"] * 3 + ["b"] * 2)
+    return recording, sorting
+
+
+def test_estimate_sparsity():
+    recording, sorting = get_dataset()
+    num_units = sorting.unit_ids.size
+
+    # small radius should give a very sparse = one channel per unit
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="radius",
+        radius_um=1.0,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=2,
+    )
+    # print(sparsity)
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units))
+
+    # best_channel : the mask should exactly 3 channels per units
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="best_channels",
+        num_channels=3,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
+
+    # closest_channels : the mask should exactly 3 channels per units
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="closest_channels",
+        num_channels=3,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
+
+    # by_property
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="by_property",
+        by_property="group",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 5)
+
+    # amplitude
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="amplitude",
+        threshold=5,
+        amplitude_mode="peak_to_peak",
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+
+    # snr: fails without noise levels
+    with pytest.raises(AssertionError):
+        sparsity = estimate_sparsity(
+            sorting,
+            recording,
+            num_spikes_for_sparsity=50,
+            ms_before=1.0,
+            ms_after=2.0,
+            method="snr",
+            threshold=5,
+            chunk_duration="1s",
+            progress_bar=True,
+            n_jobs=1,
+        )
+    # snr: works with noise levels
+    noise_levels = get_noise_levels(recording)
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+        num_spikes_for_sparsity=50,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="snr",
+        threshold=5,
+        noise_levels=noise_levels,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    print(noise_levels)
+
+
+def test_compute_sparsity():
+    recording, sorting = get_dataset()
+
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False, return_in_uV=True)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute(
+        "waveforms",
+    )
+    sorting_analyzer.compute("templates")
+    sorting_analyzer.compute("noise_levels")
+    # this is needed for method="energy"
+
+    # using object SortingAnalyzer
+    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="closest_channels", num_channels=2)
+    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5, peak_sign="neg")
+    sparsity = compute_sparsity(
+        sorting_analyzer, method="snr", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
+    )
+    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
+    sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
+
+    # using object Templates
+    templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
+    noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
+    sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
+    sparsity = compute_sparsity(templates, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
+    sparsity = compute_sparsity(templates, method="closest_channels", num_channels=2)
+
+
 if __name__ == "__main__":
-    test_ChannelSparsity()
+    # test_ChannelSparsity()
+    # test_estimate_sparsity()
+    test_compute_sparsity()

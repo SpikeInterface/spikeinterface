@@ -1,57 +1,37 @@
-import unittest
 import numpy as np
+import pytest
 
-from spikeinterface import compute_sparsity
-from spikeinterface.postprocessing import AmplitudeScalingsCalculator
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
-from spikeinterface.postprocessing.tests.common_extension_tests import (
-    WaveformExtensionCommonTestSuite,
-)
+from spikeinterface.postprocessing import ComputeAmplitudeScalings
 
 
-class AmplitudeScalingsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = AmplitudeScalingsCalculator
-    extension_data_names = ["amplitude_scalings"]
-    extension_function_kwargs_list = [
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=1),
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=1, ms_before=0.5, ms_after=0.5),
-        dict(outputs="by_unit", chunk_size=10000, n_jobs=1),
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=-1),
-        dict(outputs="concatenated", chunk_size=10000, n_jobs=2, ms_before=0.5, ms_after=0.5),
-    ]
+class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
 
-    def test_scaling_parallel(self):
-        scalings1 = self.extension_class.get_extension_function()(
-            self.we1,
-            outputs="concatenated",
-            chunk_size=10000,
-            n_jobs=1,
-        )
-        scalings2 = self.extension_class.get_extension_function()(
-            self.we1,
-            outputs="concatenated",
-            chunk_size=10000,
-            n_jobs=2,
-        )
-        np.testing.assert_array_equal(scalings1, scalings2)
+    @pytest.mark.parametrize("params", [dict(handle_collisions=True), dict(handle_collisions=False)])
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeAmplitudeScalings, params)
 
     def test_scaling_values(self):
-        scalings1 = self.extension_class.get_extension_function()(
-            self.we1,
-            outputs="by_unit",
-            chunk_size=10000,
-            n_jobs=1,
+        """
+        Amplitude finds the scaling factor for each waveform
+        to best match its unit template. In this test, amplitude scalings
+        are calculated from the `sorting_analyzer`. In the test environment,
+        injected waveforms are not scaled from the template and so
+        should only differ by Gaussian noise. Therefore the median
+        scaling should be close to 1.
+        """
+        sorting_analyzer = self._prepare_sorting_analyzer(
+            "memory", sparse=True, extension_class=ComputeAmplitudeScalings
         )
-        # since this is GT spikes, the rounded median must be 1
-        for u, scalings in scalings1[0].items():
+        sorting_analyzer.compute("amplitude_scalings", handle_collisions=False)
+
+        spikes = sorting_analyzer.sorting.to_spike_vector()
+
+        ext = sorting_analyzer.get_extension("amplitude_scalings")
+
+        for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+            mask = spikes["unit_index"] == unit_index
+            scalings = ext.data["amplitude_scalings"][mask]
             median_scaling = np.median(scalings)
-            print(u, median_scaling)
             np.testing.assert_array_equal(np.round(median_scaling), 1)
-
-
-if __name__ == "__main__":
-    test = AmplitudeScalingsExtensionTest()
-    test.setUp()
-    test.test_extension()
-    test.test_scaling_values()
-    test.test_scaling_parallel()

@@ -1,0 +1,10 @@
+.. _release0.100.4:
+
+SpikeInterface 0.100.4 release notes
+------------------------------------
+
+29th March 2024
+
+Minor release with improved compression capability for Zarr
+
+* Extend zarr compression options (#2643)

@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class AverageAcrossDirectionRecording(BaseRecording):
-    name = "average_across_direction"
-    installed = True
 
     def __init__(
         self,
@@ -24,12 +24,12 @@ class AverageAcrossDirectionRecording(BaseRecording):
         ----------
         parent_recording : BaseRecording
             recording to zero-pad
-        direction : str
+        direction : "x" | "y" | "z", default: "y"
             Channels living at unique positions along this direction
             will be averaged.
-        dtype : optional numpy dtype
-            If unset, parent dtype is preserved, but the average will
-            lose accuracy, so float32 by default.
+        dtype : numpy dtype or None,  default: float32
+            If None, parent dtype is preserved, but the average will
+            lose accuracy
         """
         parent_channel_locations = parent_recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
@@ -114,11 +114,6 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
         return self.parent_recording_segment.get_num_samples()
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
-
         parent_traces = self.parent_recording_segment.get_traces(
             start_frame=start_frame,
             end_frame=end_frame,
@@ -137,11 +132,14 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
         # now, divide by the number of channels at that position
         traces /= self.n_chans_each_pos
 
+        if channel_indices is not None:
+            traces = traces[:, channel_indices]
+
         return traces
 
 
 # function for API
-average_across_direction = define_function_from_class(
+average_across_direction = define_function_handling_dict_from_class(
     source_class=AverageAcrossDirectionRecording,
     name="average_across_direction",
 )

@@ -1,16 +1,15 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-import pandas as pd
 
-from spikeinterface.extractors import NumpySorting, toy_example
+from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 
 
 def make_sorting(times1, labels1, times2, labels2):
     sampling_frequency = 30000.0
-    gt_sorting = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
-    tested_sorting = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
+    gt_sorting = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
+    tested_sorting = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency)
     return gt_sorting, tested_sorting
 
 
@@ -57,6 +56,8 @@ def test_compare_sorter_to_ground_truth():
             "pooled_with_average",
         ]
         for method in methods:
+            import pandas as pd
+
             perf_df = sc.get_performance(method=method, output="pandas")
             assert isinstance(perf_df, (pd.Series, pd.DataFrame))
             perf_dict = sc.get_performance(method=method, output="dict")

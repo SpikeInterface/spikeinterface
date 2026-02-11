@@ -1,16 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-
-try:
-    import h5py
-
-    HAVE_H5PY = True
-except ImportError:
-    HAVE_H5PY = False
 
 
 class CombinatoSortingExtractor(BaseSorting):
@@ -22,9 +17,9 @@ class CombinatoSortingExtractor(BaseSorting):
         Path to the Combinato folder.
     sampling_frequency : int, default: 30000
         The sampling frequency.
-    user : str
-        The username that ran the sorting. Defaults to 'simple'.
-    det_sign : {'both', 'pos', 'neg'}
+    user : str, default: "simple"
+        The username that ran the sorting
+    det_sign : "both", "pos", "neg", default: "both"
         Which sign was used for detection.
     keep_good_only : bool, default: True
         Whether to only keep good units.
@@ -35,12 +30,14 @@ class CombinatoSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "CombinatoSortingExtractor"
-    installed = HAVE_H5PY
     installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
-    name = "combinato"
 
     def __init__(self, folder_path, sampling_frequency=None, user="simple", det_sign="both", keep_good_only=True):
+        try:
+            import h5py
+        except ImportError:
+            raise ImportError(self.installation_mesg)
+
         folder_path = Path(folder_path)
         assert folder_path.is_dir(), "Folder {} doesn't exist".format(folder_path)
         if sampling_frequency is None:

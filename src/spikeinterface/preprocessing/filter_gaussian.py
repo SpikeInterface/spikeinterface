@@ -1,60 +1,87 @@
+from __future__ import annotations
+
 from typing import Iterable, Union
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin, normal_pdf
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
-class GaussianBandpassFilterRecording(BasePreprocessor):
+class GaussianFilterRecording(BasePreprocessor):
     """
-    Class for performing a bandpass gaussian filtering/smoothing on a recording.
-    This is done by a convolution with a Gaussian kernel, which acts as a lowpass-filter.
-    The highpass-filter can be computed by subtracting the result.
+    Class for performing a gaussian filtering/smoothing on a recording.
 
-    Here, the bandpass is computed in the Fourier domain to accelerate the computation.
+    This is done by a convolution with a Gaussian kernel, which acts as a lowpass-filter.
+    A highpass-filter can be computed by subtracting the result of the convolution to
+    the original signal.
+    A bandpass-filter is obtained by substracting the signal smoothed with a narrow
+    gaussian to the signal smoothed with a wider gaussian.
+
+    Here, convolution is performed in the Fourier domain to accelerate the computation.
 
     Parameters
     ----------
-    recording: BaseRecording
+    recording : BaseRecording
         The recording extractor to be filtered.
-    freq_min: float
+    freq_min : float or None
         The lower frequency cutoff for the bandpass filter.
-    freq_max: float
+        If None, the resulting object is a lowpass filter.
+    freq_max : float or None
         The higher frequency cutoff for the bandpass filter.
+        If None, the resulting object is a highpass filter.
+    margin_sd : float, default: 5.0
+        The number of standard deviation to take for margins.
 
     Returns
     -------
-    gaussian_bandpass_filtered_recording: GaussianBandpassFilterRecording
+    gaussian_filtered_recording : GaussianFilterRecording
         The filtered recording extractor object.
     """
 
-    name = "gaussian_bandpass_filter"
-
-    def __init__(self, recording: BaseRecording, freq_min: float = 300.0, freq_max: float = 5000.0):
-        sf = recording.sampling_frequency
+    def __init__(
+        self, recording: BaseRecording, freq_min: float = 300.0, freq_max: float = 5000.0, margin_sd: float = 5.0
+    ):
         BasePreprocessor.__init__(self, recording)
         self.annotate(is_filtered=True)
 
+        if freq_min is None and freq_max is None:
+            raise ValueError("At least one of `freq_min`,`freq_max` should be specified.")
+
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max))
+            # Sampling frequency is taken from recording since segments may not have it set (in case of time_vector)
+            self.add_recording_segment(
+                GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd, self.sampling_frequency)
+            )
 
         self._kwargs = {"recording": recording, "freq_min": freq_min, "freq_max": freq_max}
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float):
+    def __init__(
+        self,
+        parent_recording_segment: BaseRecordingSegment,
+        freq_min: float,
+        freq_max: float,
+        margin_sd: float = 5.0,
+        parent_sampling_frequency: float = None,
+    ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.freq_min = freq_min
         self.freq_max = freq_max
         self.cached_gaussian = dict()
 
-        sf = parent_recording_segment.sampling_frequency
-        low_sigma = sf / (2 * np.pi * freq_min)
-        high_sigma = sf / (2 * np.pi * freq_max)
-        self.margin = int(max(low_sigma, high_sigma) * 6.0 + 1)
+        self.parent_sampling_frequency = parent_sampling_frequency
+
+        # Margin from widest gaussian
+        sigmas = []
+        if freq_min is not None:
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_min))
+        if freq_max is not None:
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_max))
+        self.margin = 1 + int(max(sigmas) * margin_sd)
 
     def get_traces(
         self,
@@ -63,16 +90,31 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         channel_indices: Union[Iterable, None] = None,
     ):
         traces, left_margin, right_margin = get_chunk_with_margin(
-            self.parent_recording_segment, start_frame, end_frame, channel_indices, self.margin
+            self.parent_recording_segment,
+            start_frame,
+            end_frame,
+            channel_indices,
+            self.margin,
+            add_reflect_padding=True,
         )
         dtype = traces.dtype
 
         traces_fft = np.fft.fft(traces, axis=0)
-        gauss_low = self._create_gaussian(traces.shape[0], self.freq_min)
-        gauss_high = self._create_gaussian(traces.shape[0], self.freq_max)
 
-        filtered_fft = traces_fft * (gauss_high - gauss_low)[:, None]
+        if self.freq_max is not None:
+            pos_factor = self._create_gaussian(traces.shape[0], self.freq_max)
+        else:
+            pos_factor = np.ones((traces.shape[0],))
+        if self.freq_min is not None:
+            neg_factor = self._create_gaussian(traces.shape[0], self.freq_min)
+        else:
+            neg_factor = np.zeros((traces.shape[0],))
+
+        filtered_fft = traces_fft * (pos_factor * (1 - neg_factor))[:, None]
         filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
+
+        if np.issubdtype(dtype, np.integer):
+            filtered_traces = filtered_traces.round()
 
         if right_margin > 0:
             return filtered_traces[left_margin:-right_margin, :].astype(dtype)
@@ -83,19 +125,18 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         if cutoff_f in self.cached_gaussian and N in self.cached_gaussian[cutoff_f]:
             return self.cached_gaussian[cutoff_f][N]
 
-        sf = self.parent_recording_segment.sampling_frequency
-        faxis = np.fft.fftfreq(N, d=1 / sf)
+        faxis = np.fft.fftfreq(N, d=1 / self.parent_sampling_frequency)
 
-        from scipy.stats import norm
-
-        if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
-            sigma = sf / (2 * np.pi * cutoff_f)
-            limit = int(round(6 * sigma)) + 1
+        if (
+            cutoff_f > self.parent_sampling_frequency / 8
+        ):  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
+            sigma = self.parent_sampling_frequency / (2 * np.pi * cutoff_f)
+            limit = int(round(5 * sigma)) + 1
             xaxis = np.arange(-limit, limit + 1) / sigma
-            gaussian = norm.pdf(xaxis) / sigma
+            gaussian = normal_pdf(xaxis) / sigma
             gaussian = np.abs(np.fft.fft(gaussian, n=N))
         else:
-            gaussian = norm.pdf(faxis / cutoff_f) * np.sqrt(2 * np.pi)
+            gaussian = normal_pdf(faxis / cutoff_f) * np.sqrt(2 * np.pi)
 
         if cutoff_f not in self.cached_gaussian:
             self.cached_gaussian[cutoff_f] = dict()
@@ -104,6 +145,4 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         return gaussian
 
 
-gaussian_bandpass_filter = define_function_from_class(
-    source_class=GaussianBandpassFilterRecording, name="gaussian_filter"
-)
+gaussian_filter = define_function_handling_dict_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")

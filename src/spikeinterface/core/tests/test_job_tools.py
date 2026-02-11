@@ -1,7 +1,9 @@
 import pytest
 import os
 
-from spikeinterface.core import generate_recording
+import time
+
+from spikeinterface.core import generate_recording, set_global_job_kwargs, get_global_job_kwargs, get_best_job_kwargs
 
 from spikeinterface.core.job_tools import (
     divide_segment_into_chunks,
@@ -42,11 +44,9 @@ def test_ensure_n_jobs():
 
 
 def test_ensure_chunk_size():
-    recording = generate_recording(num_channels=2)
+    recording = generate_recording(num_channels=2, durations=[5.0, 2.5])  # This is the default value for two semgents
     dtype = recording.get_dtype()
     assert dtype == "float32"
-    # make serializable
-    recording = recording.save()
 
     chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
     assert chunk_size == 32000000
@@ -69,29 +69,35 @@ def test_ensure_chunk_size():
     chunk_size = ensure_chunk_size(recording, chunk_duration="500ms")
     assert chunk_size == 15000
 
+    # Test edge case to define single chunk for n_jobs=1
+    chunk_size = ensure_chunk_size(recording, n_jobs=1, chunk_size=None)
+    chunks = divide_recording_into_chunks(recording, chunk_size)
+    assert len(chunks) == recording.get_num_segments()
+    for chunk in chunks:
+        segment_index, start_frame, end_frame = chunk
+        assert start_frame == 0
+        assert end_frame == recording.get_num_frames(segment_index=segment_index)
 
-def func(segment_index, start_frame, end_frame, worker_ctx):
+
+def func(segment_index, start_frame, end_frame, worker_dict):
     import os
-    import time
 
-    #  print('func', segment_index, start_frame, end_frame, worker_ctx, os.getpid())
+    #  print('func', segment_index, start_frame, end_frame, worker_dict, os.getpid())
     time.sleep(0.010)
     # time.sleep(1.0)
     return os.getpid()
 
 
 def init_func(arg1, arg2, arg3):
-    worker_ctx = {}
-    worker_ctx["arg1"] = arg1
-    worker_ctx["arg2"] = arg2
-    worker_ctx["arg3"] = arg3
-    return worker_ctx
+    worker_dict = {}
+    worker_dict["arg1"] = arg1
+    worker_dict["arg2"] = arg2
+    worker_dict["arg3"] = arg3
+    return worker_dict
 
 
 def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels=2)
-    # make serializable
-    recording = recording.save()
 
     init_args = "a", 120, "yep"
 
@@ -132,7 +138,7 @@ def test_ChunkRecordingExecutor():
 
     gathering_func2 = GatherClass()
 
-    # chunk + parallel + gather_func
+    # process + gather_func
     processor = ChunkRecordingExecutor(
         recording,
         func,
@@ -141,6 +147,7 @@ def test_ChunkRecordingExecutor():
         verbose=True,
         progress_bar=True,
         gather_func=gathering_func2,
+        pool_engine="process",
         n_jobs=2,
         chunk_duration="200ms",
         job_name="job_name",
@@ -150,7 +157,7 @@ def test_ChunkRecordingExecutor():
 
     assert gathering_func2.pos == num_chunks
 
-    # chunk + parallel + spawn
+    # process spawn
     processor = ChunkRecordingExecutor(
         recording,
         func,
@@ -158,7 +165,23 @@ def test_ChunkRecordingExecutor():
         init_args,
         verbose=True,
         progress_bar=True,
+        pool_engine="process",
         mp_context="spawn",
+        n_jobs=2,
+        chunk_duration="200ms",
+        job_name="job_name",
+    )
+    processor.run()
+
+    # thread
+    processor = ChunkRecordingExecutor(
+        recording,
+        func,
+        init_func,
+        init_args,
+        verbose=True,
+        progress_bar=True,
+        pool_engine="thread",
         n_jobs=2,
         chunk_duration="200ms",
         job_name="job_name",
@@ -180,15 +203,28 @@ def test_fix_job_kwargs():
     else:
         assert fixed_job_kwargs["n_jobs"] == 1
 
-    # test minimum n_jobs
-    job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s")
+    # test float value > 1 is cast to correct int
+    job_kwargs = dict(n_jobs=float(os.cpu_count()), progress_bar=False, chunk_duration="1s")
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
-    assert fixed_job_kwargs["n_jobs"] == 1
+    assert fixed_job_kwargs["n_jobs"] == os.cpu_count()
 
     # test wrong keys
     with pytest.raises(AssertionError):
         job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s", other_param="other")
         fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+
+    # test mutually exclusive
+    _old_global = get_global_job_kwargs().copy()
+    set_global_job_kwargs(chunk_memory="50M")
+    job_kwargs = dict()
+    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert "chunk_memory" in fixed_job_kwargs
+
+    job_kwargs = dict(chunk_duration="300ms")
+    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert "chunk_memory" not in fixed_job_kwargs
+    assert fixed_job_kwargs["chunk_duration"] == "300ms"
+    set_global_job_kwargs(**_old_global)
 
 
 def test_split_job_kwargs():
@@ -200,10 +236,94 @@ def test_split_job_kwargs():
     assert "other_param" not in job_kwargs and "n_jobs" in job_kwargs and "progress_bar" in job_kwargs
 
 
+def func2(segment_index, start_frame, end_frame, worker_dict):
+    time.sleep(0.010)
+    # print(os.getpid(), worker_dict["worker_index"])
+    return worker_dict["worker_index"]
+
+
+def init_func2():
+    # this leave time for other thread/process to start
+    time.sleep(0.010)
+    worker_dict = {}
+    return worker_dict
+
+
+def test_worker_index():
+    recording = generate_recording(num_channels=2)
+    init_args = tuple()
+
+    for i in range(2):
+        # making this 2 times ensure to test that global variables are correctly reset
+        for pool_engine in ("process", "thread"):
+            processor = ChunkRecordingExecutor(
+                recording,
+                func2,
+                init_func2,
+                init_args,
+                progress_bar=False,
+                gather_func=None,
+                pool_engine=pool_engine,
+                n_jobs=2,
+                handle_returns=True,
+                chunk_duration="200ms",
+                need_worker_index=True,
+            )
+            res = processor.run()
+            # we should have a mix of 0 and 1
+            assert 0 in res
+            assert 1 in res
+
+
+def test_get_best_job_kwargs():
+    job_kwargs = get_best_job_kwargs()
+    print(job_kwargs)
+
+
+# def quick_becnhmark():
+#     # keep this commented do not remove
+
+#     from spikeinterface.generation import generate_drifting_recording
+#     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+#     from spikeinterface import get_noise_levels
+#     import time
+
+#     all_job_kwargs = [
+#         dict(pool_engine="process", n_jobs=2, mp_context="spawn", max_threads_per_worker=2),
+#         dict(pool_engine="process", n_jobs=4, mp_context="spawn", max_threads_per_worker=1),
+#         dict(pool_engine="thread", n_jobs=4, mp_context=None, max_threads_per_worker=1),
+#         dict(pool_engine="thread", n_jobs=2, mp_context=None, max_threads_per_worker=2),
+#         dict(n_jobs=1),
+#     ]
+
+
+#     rec, _, sorting = generate_drifting_recording(
+#         num_units=50,
+#         duration=120.0,
+#         sampling_frequency=30000.0,
+#         probe_name="Neuropixels-128",
+
+#     )
+#     # print(rec)
+
+#     noise_levels = get_noise_levels(rec, return_in_uV=False)
+#     for job_kwargs in all_job_kwargs:
+#         print()
+#         print(job_kwargs)
+#         t0 = time.perf_counter()
+#         peaks = detect_peaks(rec, method="locally_exclusive", noise_levels=noise_levels, **job_kwargs)
+#         t1 = time.perf_counter()
+#         print("time included the spawn:", t1-t0)
+
+
 if __name__ == "__main__":
     # test_divide_segment_into_chunks()
     # test_ensure_n_jobs()
     # test_ensure_chunk_size()
-    test_ChunkRecordingExecutor()
+    # test_ChunkRecordingExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
+    # test_worker_index()
+    test_get_best_job_kwargs()
+
+    # quick_becnhmark()

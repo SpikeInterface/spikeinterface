@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import numpy as np
-from typing import Union
 
 # from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
 
 # from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 
 class UnitProbeMapWidget(BaseWidget):
@@ -17,20 +19,20 @@ class UnitProbeMapWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
-    unit_ids: list
+    sorting_analyzer : SortingAnalyzer
+    unit_ids : list
         List of unit ids.
-    channel_ids: list
+    channel_ids : list
         The channel ids to display
-    animated: True/False
-        animation for amplitude on time
-    with_channel_ids: bool False default
+    animated : bool, default: False
+        Animation for amplitude on time
+    with_channel_ids : bool, default: False
         add channel ids text on the probe
     """
 
     def __init__(
         self,
-        waveform_extractor,
+        sorting_analyzer,
         unit_ids=None,
         channel_ids=None,
         animated=None,
@@ -39,15 +41,17 @@ class UnitProbeMapWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+
         if unit_ids is None:
-            unit_ids = waveform_extractor.sorting.unit_ids
+            unit_ids = sorting_analyzer.unit_ids
         self.unit_ids = unit_ids
         if channel_ids is None:
-            channel_ids = waveform_extractor.recording.channel_ids
+            channel_ids = sorting_analyzer.channel_ids
         self.channel_ids = channel_ids
 
         data_plot = dict(
-            waveform_extractor=waveform_extractor,
+            sorting_analyzer=sorting_analyzer,
             unit_ids=unit_ids,
             channel_ids=channel_ids,
             animated=animated,
@@ -71,15 +75,19 @@ class UnitProbeMapWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        we = dp.waveform_extractor
-        probe = we.get_probe()
+        sorting_analyzer = dp.sorting_analyzer
+        probe = sorting_analyzer.get_probe()
 
         probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
+
+        templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
+        templates = templates[sorting_analyzer.sorting.ids_to_indices(dp.unit_ids), :, :]
 
         all_poly_contact = []
         for i, unit_id in enumerate(dp.unit_ids):
             ax = self.axes.flatten()[i]
-            template = we.get_template(unit_id)
+            # template = we.get_template(unit_id)
+            template = templates[i, :, :]
             # static
             if dp.animated:
                 contacts_values = np.zeros(template.shape[1])
@@ -114,7 +122,8 @@ class UnitProbeMapWidget(BaseWidget):
 
             def animate_func(frame):
                 for i, unit_id in enumerate(self.unit_ids):
-                    template = we.get_template(unit_id)
+                    # template = we.get_template(unit_id)
+                    template = templates[i, :, :]
                     contacts_values = np.abs(template[frame, :])
                     poly_contact = all_poly_contact[i]
                     poly_contact.set_array(contacts_values)

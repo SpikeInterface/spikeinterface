@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 
 class SpikeLocationsWidget(BaseWidget):
@@ -11,35 +13,35 @@ class SpikeLocationsWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The object to compute/get spike locations from
-    unit_ids : list
-        List of unit ids, default None
-    segment_index : int or None
-        The segment index (or None if mono-segment), default None
-    max_spikes_per_unit : int
+    sorting_analyzer : SortingAnalyzer
+        The object to get spike locations from
+    unit_ids : list or None, default: None
+        List of unit ids
+    segment_index : int or None, default: None
+        The segment index (or None if mono-segment)
+    max_spikes_per_unit : int or None, default: 500
         Number of max spikes per unit to display. Use None for all spikes.
-        Default 500.
-    with_channel_ids : bool
-        Add channel ids text on the probe, default False
-    unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
-    hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed, default False
-    plot_all_units : bool
+    with_channel_ids : bool, default: False
+        Add channel ids text on the probe
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
+    hide_unit_selector : bool, default: False
+        For sortingview backend, if True the unit selector is not displayed
+    plot_all_units : bool, default: True
         If True, all units are plotted. The unselected ones (not in unit_ids),
-        are plotted in grey. Default True (matplotlib backend)
-    plot_legend : bool
-        If True, the legend is plotted. Default False (matplotlib backend)
-    hide_axis : bool
-        If True, the axis is set to off. Default False (matplotlib backend)
+        are plotted in grey (matplotlib backend)
+    plot_legend : bool, default: False
+        If True, the legend is plotted (matplotlib backend)
+    hide_axis : bool, default: False
+        If True, the axis is set to off (matplotlib backend)
     """
 
     # possible_backends = {}
 
     def __init__(
         self,
-        waveform_extractor: WaveformExtractor,
+        sorting_analyzer: SortingAnalyzer,
         unit_ids=None,
         segment_index=None,
         max_spikes_per_unit=500,
@@ -52,15 +54,16 @@ class SpikeLocationsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        self.check_extensions(waveform_extractor, "spike_locations")
-        slc = waveform_extractor.load_extension("spike_locations")
-        spike_locations = slc.get_data(outputs="by_unit")
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        self.check_extensions(sorting_analyzer, "spike_locations")
 
-        sorting = waveform_extractor.sorting
+        spike_locations_by_units = sorting_analyzer.get_extension("spike_locations").get_data(outputs="by_unit")
 
-        channel_ids = waveform_extractor.channel_ids
-        channel_locations = waveform_extractor.get_channel_locations()
-        probegroup = waveform_extractor.get_probegroup()
+        sorting = sorting_analyzer.sorting
+
+        channel_ids = sorting_analyzer.channel_ids
+        channel_locations = sorting_analyzer.get_channel_locations()
+        probegroup = sorting_analyzer.get_probegroup()
 
         if sorting.get_num_segments() > 1:
             assert segment_index is not None, "Specify segment index for multi-segment object"
@@ -73,7 +76,7 @@ class SpikeLocationsWidget(BaseWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        all_spike_locs = spike_locations[segment_index]
+        all_spike_locs = spike_locations_by_units[segment_index]
         if max_spikes_per_unit is None:
             spike_locs = all_spike_locs
         else:
@@ -246,9 +249,18 @@ class SpikeLocationsWidget(BaseWidget):
         fig.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
 
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
         dp = to_attr(data_plot)
         spike_locations = dp.spike_locations
 
@@ -264,7 +276,7 @@ class SpikeLocationsWidget(BaseWidget):
                 unit_id=unit, segment_index=dp.segment_index, return_times=True
             )
             unit_items.append(
-                vv.SpikeLocationsItem(
+                vv_views.SpikeLocationsItem(
                     unit_id=unit,
                     spike_times_sec=spike_times_sec.astype("float32"),
                     x_locations=spike_locations[unit]["x"].astype("float32"),
@@ -272,7 +284,7 @@ class SpikeLocationsWidget(BaseWidget):
                 )
             )
 
-        v_spike_locations = vv.SpikeLocations(
+        v_spike_locations = vv_views.SpikeLocations(
             units=unit_items,
             hide_unit_selector=dp.hide_unit_selector,
             x_range=xlims.astype("float32"),
@@ -282,13 +294,13 @@ class SpikeLocationsWidget(BaseWidget):
         )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting)
+            v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
                 items=[
-                    vv.LayoutItem(v_units_table, max_size=150),
-                    vv.LayoutItem(v_spike_locations),
+                    vv_base.LayoutItem(v_units_table, max_size=150),
+                    vv_base.LayoutItem(v_spike_locations),
                 ],
             )
         else:

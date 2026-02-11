@@ -8,19 +8,15 @@ https://github.com/kwikteam/phy-doc/blob/master/docs/kwik-model.md
 04/08/20
 """
 
+from __future__ import annotations
+
+
 from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment, read_python
+from spikeinterface.core import BaseSorting, BaseSortingSegment, read_python
 from spikeinterface.core.core_tools import define_function_from_class
-
-try:
-    import h5py
-
-    HAVE_H5PY = True
-except ImportError:
-    HAVE_H5PY = False
 
 
 # noinspection SpellCheckingInspection
@@ -31,7 +27,7 @@ class KlustaSortingExtractor(BaseSorting):
     ----------
     file_or_folder_path : str or Path
         Path to the ALF folder.
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups : list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
 
     Returns
@@ -40,19 +36,15 @@ class KlustaSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "KlustaSortingExtractor"
-    installed = HAVE_H5PY  # check at class level if installed or not
-    installation_mesg = (
-        "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
-    )
-    mode = "file_or_folder"
-    name = "klusta"
+    installation_mesg = "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"
 
     default_cluster_groups = {0: "Noise", 1: "MUA", 2: "Good", 3: "Unsorted"}
 
     def __init__(self, file_or_folder_path, exclude_cluster_groups=None):
-        assert HAVE_H5PY, self.installation_mesg
-        # ~ SortingExtractor.__init__(self)
+        try:
+            import h5py
+        except ImportError:
+            raise ImportError(self.installation_mesg)
 
         kwik_file_or_folder = Path(file_or_folder_path)
         kwikfile = None

@@ -1,25 +1,60 @@
-from pathlib import Path
-from typing import Union
+from __future__ import annotations
+from pathlib import Path, WindowsPath
+from typing import Union, Generator
 import os
 import sys
 import datetime
 import json
 from copy import deepcopy
-import gc
-import mmap
+import importlib
+from math import prod
+from collections import namedtuple
 import inspect
 
 import numpy as np
-from tqdm import tqdm
 
-from .job_tools import (
-    ensure_chunk_size,
-    ensure_n_jobs,
-    divide_segment_into_chunks,
-    fix_job_kwargs,
-    ChunkRecordingExecutor,
-    _shared_job_kwargs_doc,
-)
+
+def define_function_handling_dict_from_class(source_class, name):
+    """
+    Depending on whether `source_class` is passed a `Recording` object or a dict of
+    `Recording` objects, this function will return `source_class` or a dict of
+    `source_class` objects to match the input.
+    """
+
+    from spikeinterface.core import BaseRecording
+
+    def source_class_or_dict_of_sources_classes(*args, **kwargs):
+
+        recording_in_kwargs = False
+        if rec_or_dict_of_recs := kwargs.get("recording"):
+            recording_in_kwargs = True
+        else:
+            rec_or_dict_of_recs = args[0]
+
+        if isinstance(rec_or_dict_of_recs, BaseRecording):
+            return source_class(*args, **kwargs)
+        elif isinstance(rec_or_dict_of_recs, dict):
+            # Edit args & kwargs to pass the dict of recordings but _not_ the original recording
+            new_kwargs = {key: kwarg for key, kwarg in kwargs.items() if key != "recording"}
+            if recording_in_kwargs:
+                new_args = args
+            else:
+                new_args = args[1:]
+
+            preprocessed_recordings_dict = {
+                property_id: source_class(recording, *new_args, **new_kwargs)
+                for property_id, recording in rec_or_dict_of_recs.items()
+            }
+
+            return preprocessed_recordings_dict
+        else:
+            raise TypeError(f"The function `{name}` only accepts a recording or a dict of recordings.")
+
+    source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
+    source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
+    source_class_or_dict_of_sources_classes.__name__ = name
+
+    return source_class_or_dict_of_sources_classes
 
 
 def define_function_from_class(source_class, name):
@@ -84,6 +119,7 @@ class SIJsonEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from spikeinterface.core.base import BaseExtractor
+        from spikeinterface.core.motion import Motion
 
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
@@ -93,13 +129,24 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, np.generic):
             return obj.item()
 
-        if np.issctype(obj):  # Cast numpy datatypes to their names
+        # Standard numpy dtypes like np.dtype('int32") are transformed this way
+        if isinstance(obj, np.dtype):
+            return np.dtype(obj).name
+
+        # This will transform to a string canonical representation of the dtype (e.g. np.int32 -> 'int32')
+        if isinstance(obj, type) and issubclass(obj, np.generic):
             return np.dtype(obj).name
 
         if isinstance(obj, np.ndarray):
             return obj.tolist()
 
         if isinstance(obj, BaseExtractor):
+            return obj.to_dict()
+
+        if isinstance(obj, Path):
+            return str(obj)
+
+        if isinstance(obj, Motion):
             return obj.to_dict()
 
         # The base-class handles the assertion
@@ -150,270 +197,29 @@ def check_json(dictionary: dict) -> dict:
     return json.loads(json_string)
 
 
+def clean_zarr_folder_name(folder):
+    folder = Path(folder)
+    if folder.suffix != ".zarr":
+        folder = folder.parent / f"{folder.stem}.zarr"
+    return folder
+
+
 def add_suffix(file_path, possible_suffix):
     file_path = Path(file_path)
     if isinstance(possible_suffix, str):
         possible_suffix = [possible_suffix]
     possible_suffix = [s if s.startswith(".") else "." + s for s in possible_suffix]
     if file_path.suffix not in possible_suffix:
-        file_path = file_path.parent / (file_path.name + "." + possible_suffix[0])
+        file_path = file_path.parent / (file_path.name + possible_suffix[0])
     return file_path
-
-
-def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
-    """
-    Read binary .bin or .dat file.
-
-    Parameters
-    ----------
-    file: str
-        File name
-    num_channels: int
-        Number of channels
-    dtype: dtype
-        dtype of the file
-    time_axis: 0 (default) or 1
-        If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
-        If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    offset: int
-        number of offset bytes
-
-    """
-    num_channels = int(num_channels)
-    with Path(file).open() as f:
-        nsamples = (os.fstat(f.fileno()).st_size - offset) // (num_channels * np.dtype(dtype).itemsize)
-    if time_axis == 0:
-        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(nsamples, num_channels))
-    else:
-        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(num_channels, nsamples)).T
-    return samples
-
-
-# used by write_binary_recording + ChunkRecordingExecutor
-def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsigned):
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["byte_offset"] = byte_offest
-    worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
-
-    file_dict = {segment_index: open(file_path, "r+") for segment_index, file_path in file_path_dict.items()}
-    worker_ctx["file_dict"] = file_dict
-
-    return worker_ctx
-
-
-# used by write_binary_recording + ChunkRecordingExecutor
-def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    byte_offset = worker_ctx["byte_offset"]
-    cast_unsigned = worker_ctx["cast_unsigned"]
-    file = worker_ctx["file_dict"][segment_index]
-
-    # Open the memmap
-    # What we need is the file_path
-    num_channels = recording.get_num_channels()
-    num_frames = recording.get_num_frames(segment_index=segment_index)
-    shape = (num_frames, num_channels)
-    dtype_size_bytes = np.dtype(dtype).itemsize
-    data_size_bytes = dtype_size_bytes * num_frames * num_channels
-
-    # Offset (The offset needs to be multiple of the page size)
-    # The mmap offset is associated to be as big as possible but still a multiple of the page size
-    # The array offset takes care of the reminder
-    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
-    mmmap_length = data_size_bytes + array_offset
-    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
-
-    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
-    if traces.dtype != dtype:
-        traces = traces.astype(dtype)
-    array[start_frame:end_frame, :] = traces
-
-    # Close the memmap
-    memmap_obj.flush()
-
-
-def write_binary_recording(
-    recording,
-    file_paths=None,
-    dtype=None,
-    add_file_extension=True,
-    byte_offset=0,
-    auto_cast_uint=True,
-    **job_kwargs,
-):
-    """
-    Save the trace of a recording extractor in several binary .dat format.
-
-    Note :
-        time_axis is always 0 (contrary to previous version.
-        to get time_axis=1 (which is a bad idea) use `write_binary_recording_file_handle()`
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    file_path: str
-        The path to the file.
-    dtype: dtype
-        Type of the saved data. Default float32.
-    add_file_extension: bool
-        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    byte_offset: int
-        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
-    {}
-    """
-    assert file_paths is not None, "Provide 'file_path'"
-    job_kwargs = fix_job_kwargs(job_kwargs)
-
-    file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
-    num_segments = recording.get_num_segments()
-    if len(file_path_list) != num_segments:
-        raise ValueError("'file_paths' must be a list of the same size as the number of segments in the recording")
-
-    file_path_list = [Path(file_path) for file_path in file_path_list]
-    if add_file_extension:
-        file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
-
-    dtype = dtype if dtype is not None else recording.get_dtype()
-    cast_unsigned = False
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-
-    dtype_size_bytes = np.dtype(dtype).itemsize
-    num_channels = recording.get_num_channels()
-
-    file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
-    for segment_index, file_path in file_path_dict.items():
-        num_frames = recording.get_num_frames(segment_index=segment_index)
-        data_size_bytes = dtype_size_bytes * num_frames * num_channels
-        file_size_bytes = data_size_bytes + byte_offset
-
-        file = open(file_path, "wb+")
-        file.truncate(file_size_bytes)
-        file.close()
-        assert Path(file_path).is_file()
-
-    # use executor (loop or workers)
-    func = _write_binary_chunk
-    init_func = _init_binary_worker
-    init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
-    )
-    executor.run()
-
-
-write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
-
-
-def write_binary_recording_file_handle(
-    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs
-):
-    """
-    Old variant version of write_binary_recording with one file handle.
-    Can be useful in some case ???
-    Not used anymore at the moment.
-
-    @ SAM useful for writing with time_axis=1!
-    """
-    assert file_handle is not None
-    assert recording.get_num_segments() == 1, "If file_handle is given then only deals with one segment"
-
-    if dtype is None:
-        dtype = recording.get_dtype()
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-
-    if chunk_size is not None and time_axis == 1:
-        print("Chunking disabled due to 'time_axis' == 1")
-        chunk_size = None
-
-    if chunk_size is None:
-        # no chunking
-        traces = recording.get_traces(segment_index=0)
-        if time_axis == 1:
-            traces = traces.T
-        if dtype is not None:
-            traces = traces.astype(dtype)
-        traces.tofile(file_handle)
-    else:
-        num_frames = recording.get_num_samples(segment_index=0)
-        chunks = divide_segment_into_chunks(num_frames, chunk_size)
-
-        for start_frame, end_frame in chunks:
-            traces = recording.get_traces(segment_index=0, start_frame=start_frame, end_frame=end_frame)
-            if time_axis == 1:
-                traces = traces.T
-            if dtype is not None:
-                traces = traces.astype(dtype)
-            file_handle.write(traces.tobytes())
-
-
-# used by write_memory_recording
-def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsigned):
-    # create a local dict per worker
-    worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        worker_ctx["recording"] = load_extractor(recording)
-    else:
-        worker_ctx["recording"] = recording
-
-    worker_ctx["dtype"] = np.dtype(dtype)
-
-    if arrays is None:
-        # create it from share memory name
-        from multiprocessing.shared_memory import SharedMemory
-
-        arrays = []
-        # keep shm alive
-        worker_ctx["shms"] = []
-        for i in range(len(shm_names)):
-            shm = SharedMemory(shm_names[i])
-            worker_ctx["shms"].append(shm)
-            arr = np.ndarray(shape=shapes[i], dtype=dtype, buffer=shm.buf)
-            arrays.append(arr)
-
-    worker_ctx["arrays"] = arrays
-    worker_ctx["cast_unsigned"] = cast_unsigned
-
-    return worker_ctx
-
-
-# used by write_memory_recording
-def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    arr = worker_ctx["arrays"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
-
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
-    traces = traces.astype(dtype)
-    arr[start_frame:end_frame, :] = traces
 
 
 def make_shared_array(shape, dtype):
     from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
-    nbytes = int(np.prod(shape) * dtype.itemsize)
+    shape = tuple(int(x) for x in shape)  # We need to be sure that shape comes in int instead of numpy scalars
+    nbytes = prod(shape) * dtype.itemsize
     shm = SharedMemory(name=None, create=True, size=nbytes)
     arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
     arr[:] = 0
@@ -421,369 +227,87 @@ def make_shared_array(shape, dtype):
     return arr, shm
 
 
-def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, **job_kwargs):
+def is_dict_extractor(d: dict) -> bool:
     """
-    Save the traces into numpy arrays (memory).
-    try to use the SharedMemory introduce in py3.8 if n_jobs > 1
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    dtype: dtype
-        Type of the saved data. Default float32.
-    verbose: bool
-        If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
-    {}
+    Check if a dict describes an extractor.
 
     Returns
-    ---------
-    arrays: one arrays per segment
-    """
-    job_kwargs = fix_job_kwargs(job_kwargs)
-
-    if dtype is None:
-        dtype = recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
-
-    # create sharedmmep
-    arrays = []
-    shm_names = []
-    shapes = []
-
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get("n_jobs", 1))
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
-        shape = (num_frames, num_channels)
-        shapes.append(shape)
-        if n_jobs > 1:
-            arr, shm = make_shared_array(shape, dtype)
-            shm_names.append(shm.name)
-        else:
-            arr = np.zeros(shape, dtype=dtype)
-        arrays.append(arr)
-
-    # use executor (loop or workers)
-    func = _write_memory_chunk
-    init_func = _init_memory_worker
-    if n_jobs > 1:
-        init_args = (recording, None, shm_names, shapes, dtype, cast_unsigned)
-    else:
-        init_args = (recording, arrays, None, None, dtype, cast_unsigned)
-
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
-    )
-    executor.run()
-
-    return arrays
-
-
-write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
-
-
-def write_to_h5_dataset_format(
-    recording,
-    dataset_path,
-    segment_index,
-    save_path=None,
-    file_handle=None,
-    time_axis=0,
-    single_axis=False,
-    dtype=None,
-    chunk_size=None,
-    chunk_memory="500M",
-    verbose=False,
-    auto_cast_uint=True,
-    return_scaled=False,
-):
-    """
-    Save the traces of a recording extractor in an h5 dataset.
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    dataset_path: str
-        Path to dataset in h5 file (e.g. '/dataset')
-    segment_index: int
-        index of segment
-    save_path: str
-        The path to the file.
-    file_handle: file handle
-        The file handle to dump data. This can be used to append data to an header. In case file_handle is given,
-        the file is NOT closed after writing the binary data.
-    time_axis: 0 (default) or 1
-        If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
-        If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    single_axis: bool, default False
-        If True, a single-channel recording is saved as a one dimensional array.
-    dtype: dtype
-        Type of the saved data. Default float32.
-    chunk_size: None or int
-        Number of chunks to save the file in. This avoid to much memory consumption for big files.
-        If None and 'chunk_memory' is given, the file is saved in chunks of 'chunk_memory' MB (default 500MB)
-    chunk_memory: None or str
-        Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M')
-    verbose: bool
-        If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
-    return_scaled : bool, optional
-        If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-        traces are dumped to uV, by default False
-    """
-    import h5py
-
-    # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
-    assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"
-
-    if save_path is not None:
-        save_path = Path(save_path)
-        if save_path.suffix == "":
-            # when suffix is already raw/bin/dat do not change it.
-            save_path = save_path.parent / (save_path.name + ".h5")
-
-    num_channels = recording.get_num_channels()
-    num_frames = recording.get_num_frames(segment_index=0)
-
-    if file_handle is not None:
-        assert isinstance(file_handle, h5py.File)
-    else:
-        file_handle = h5py.File(save_path, "w")
-
-    if dtype is None:
-        dtype_file = recording.get_dtype()
-    else:
-        dtype_file = dtype
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
-
-    if single_axis:
-        shape = (num_frames,)
-    else:
-        if time_axis == 0:
-            shape = (num_frames, num_channels)
-        else:
-            shape = (num_channels, num_frames)
-
-    dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
-
-    chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
-
-    if chunk_size is None:
-        traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
-        if dtype is not None:
-            traces = traces.astype(dtype_file)
-        if time_axis == 1:
-            traces = traces.T
-        if single_axis:
-            dset[:] = traces[:, 0]
-        else:
-            dset[:] = traces
-    else:
-        chunk_start = 0
-        # chunk size is not None
-        n_chunk = num_frames // chunk_size
-        if num_frames % chunk_size > 0:
-            n_chunk += 1
-        if verbose:
-            chunks = tqdm(range(n_chunk), ascii=True, desc="Writing to .h5 file")
-        else:
-            chunks = range(n_chunk)
-        for i in chunks:
-            traces = recording.get_traces(
-                segment_index=segment_index,
-                start_frame=i * chunk_size,
-                end_frame=min((i + 1) * chunk_size, num_frames),
-                cast_unsigned=cast_unsigned,
-                return_scaled=return_scaled,
-            )
-            chunk_frames = traces.shape[0]
-            if dtype is not None:
-                traces = traces.astype(dtype_file)
-            if single_axis:
-                dset[chunk_start : chunk_start + chunk_frames] = traces[:, 0]
-            else:
-                if time_axis == 0:
-                    dset[chunk_start : chunk_start + chunk_frames, :] = traces
-                else:
-                    dset[:, chunk_start : chunk_start + chunk_frames] = traces.T
-
-            chunk_start += chunk_frames
-
-    if save_path is not None:
-        file_handle.close()
-    return save_path
-
-
-def write_traces_to_zarr(
-    recording,
-    zarr_root,
-    zarr_path,
-    storage_options,
-    dataset_paths,
-    channel_chunk_size=None,
-    dtype=None,
-    compressor=None,
-    filters=None,
-    verbose=False,
-    auto_cast_uint=True,
-    **job_kwargs,
-):
-    """
-    Save the trace of a recording extractor in several zarr format.
-
-
-    Parameters
-    ----------
-    recording: RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    zarr_root: zarr.Group
-        The zarr root
-    zarr_path: str or Path
-        The path to the zarr file
-    storage_options: dict or None
-        Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-    dataset_paths: list
-        List of paths to traces datasets in the zarr group
-    channel_chunk_size: int or None
-        Channels per chunk. Default None (chunking in time only)
-    dtype: dtype
-        Type of the saved data. Default float32.
-    compressor: zarr compressor or None
-        Zarr compressor
-    filters: list
-        List of zarr filters
-    verbose: bool
-        If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
-    {}
-    """
-    assert dataset_paths is not None, "Provide 'file_path'"
-
-    if not isinstance(dataset_paths, list):
-        dataset_paths = [dataset_paths]
-    assert len(dataset_paths) == recording.get_num_segments()
-
-    if dtype is None:
-        dtype = recording.get_dtype()
-    if auto_cast_uint:
-        cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-
-    # create zarr datasets files
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
-        dset_name = dataset_paths[segment_index]
-        shape = (num_frames, num_channels)
-        _ = zarr_root.create_dataset(
-            name=dset_name,
-            shape=shape,
-            chunks=(chunk_size, channel_chunk_size),
-            dtype=dtype,
-            filters=filters,
-            compressor=compressor,
-        )
-        # synchronizer=zarr.ThreadSynchronizer())
-
-    # use executor (loop or workers)
-    func = _write_zarr_chunk
-    init_func = _init_zarr_worker
-    init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
-    )
-    executor.run()
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned):
-    import zarr
-
-    # create a local dict per worker
-    worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        worker_ctx["recording"] = load_extractor(recording)
-    else:
-        worker_ctx["recording"] = recording
-
-    # reload root and datasets
-    if storage_options is None:
-        if isinstance(zarr_path, str):
-            zarr_path_init = zarr_path
-            zarr_path = Path(zarr_path)
-        else:
-            zarr_path_init = str(zarr_path)
-    else:
-        zarr_path_init = zarr_path
-
-    root = zarr.open(zarr_path_init, mode="r+", storage_options=storage_options)
-    zarr_datasets = []
-    for dset_name in dataset_paths:
-        z = root[dset_name]
-        zarr_datasets.append(z)
-    worker_ctx["zarr_datasets"] = zarr_datasets
-    worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
-
-    return worker_ctx
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
-
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
-    traces = traces.astype(dtype)
-    zarr_dataset[start_frame:end_frame, :] = traces
-
-    # fix memory leak by forcing garbage collection
-    del traces
-    gc.collect()
-
-
-def determine_cast_unsigned(recording, dtype):
-    recording_dtype = np.dtype(recording.get_dtype())
-
-    if np.dtype(dtype) != recording_dtype and recording_dtype.kind == "u" and np.dtype(dtype).kind == "i":
-        cast_unsigned = True
-    else:
-        cast_unsigned = False
-    return cast_unsigned
-
-
-def is_dict_extractor(d):
-    """
-    Check if a dict describe an extractor.
+    -------
+    is_extractor : bool
+        Whether the dict describes an extractor
     """
     if not isinstance(d, dict):
         return False
     is_extractor = ("module" in d) and ("class" in d) and ("version" in d) and ("annotations" in d)
     return is_extractor
+
+
+extractor_dict_element = namedtuple(typename="extractor_dict_element", field_names=["value", "name", "access_path"])
+
+
+def extractor_dict_iterator(extractor_dict: dict) -> Generator[extractor_dict_element, None, None]:
+    """
+    Iterator for recursive traversal of a dictionary.
+    This function explores the dictionary recursively and yields the path to each value along with the value itself.
+
+    By path here we mean the keys that lead to the value in the dictionary:
+    e.g. for the dictionary {'a': {'b': 1}}, the path to the value 1 is ('a', 'b').
+
+    See `BaseExtractor.to_dict()` for a description of `extractor_dict` structure.
+
+    Parameters
+    ----------
+    extractor_dict : dict
+        Input dictionary
+
+    Yields
+    ------
+    extractor_dict_element
+        Named tuple containing the value, the name, and the access_path to the value in the dictionary.
+
+    """
+
+    def _extractor_dict_iterator(dict_list_or_value, access_path=(), name=""):
+        if isinstance(dict_list_or_value, dict):
+            for k, v in dict_list_or_value.items():
+                yield from _extractor_dict_iterator(v, access_path + (k,), name=k)
+        elif isinstance(dict_list_or_value, list):
+            for i, v in enumerate(dict_list_or_value):
+                yield from _extractor_dict_iterator(
+                    v, access_path + (i,), name=name
+                )  # Propagate name of list to children
+        else:
+            yield extractor_dict_element(
+                value=dict_list_or_value,
+                name=name,
+                access_path=access_path,
+            )
+
+    yield from _extractor_dict_iterator(extractor_dict)
+
+
+def set_value_in_extractor_dict(extractor_dict: dict, access_path: tuple, new_value):
+    """
+    In place modification of a value in a nested dictionary given its access path.
+
+    Parameters
+    ----------
+    extractor_dict : dict
+        The dictionary to modify
+    access_path : tuple
+        The path to the value in the dictionary
+    new_value : object
+        The new value to set
+
+    Returns
+    -------
+    None
+    """
+
+    current = extractor_dict
+    for key in access_path[:-1]:
+        current = current[key]
+    current[access_path[-1]] = new_value
 
 
 def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
@@ -804,10 +328,10 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
         Extractor dictionary
     func : function
         Function to apply to the path. It must take a path as input and return a path
-    target : str, optional
-        String to match to dictionary key, by default 'path'
-    copy : bool, optional
-        If True the original dictionary is deep copied, by default True (at first call)
+    target : str, default: "path"
+        String to match to dictionary key
+    copy : bool, default: True (at first call)
+        If True the original dictionary is deep copied
 
     Returns
     -------
@@ -853,8 +377,159 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
 
+# This is the current definition that an element in a extractor_dict is a path
+# This is shared across a couple of definition so it is here for DNRY
+element_is_path = lambda element: isinstance(element.value, (str, Path)) and "path" in element.name
+
+
+def _get_paths_list(d: dict) -> list[str | Path]:
+    path_list = [e.value for e in extractor_dict_iterator(d) if element_is_path(e)]
+
+    # if check_if_exists: TODO: Enable this once container_tools test uses proper mocks
+    #     path_list = [p for p in path_list if Path(p).exists()]
+
+    return path_list
+
+
+def _relative_to(p, relative_folder):
+    # custum os.path.relpath() with more checks
+
+    relative_folder = Path(relative_folder).resolve()
+    p = Path(p).resolve()
+    # the as_posix transform \\ to / on window which make better json files
+    rel_to = os.path.relpath(p.as_posix(), start=relative_folder.as_posix())
+    return Path(rel_to).as_posix()
+
+
+def check_paths_relative(input_dict, relative_folder) -> bool:
+    """
+    Check if relative path is possible to be applied on a dict describing an BaseExtractor.
+
+    For instance on windows, if some data are on a drive "D:/" and the folder is on drive "C:/" it returns False.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    relative_possible: bool
+        Whether the given input can be made relative to the relative_folder
+    """
+    path_list = _get_paths_list(input_dict)
+    relative_folder = Path(relative_folder).resolve().absolute()
+    not_possible = []
+    for p in path_list:
+        # check path is not an URL
+        if "http" in str(p):
+            not_possible.append(p)
+            continue
+
+        # check path is not a remote path, see
+        # https://github.com/SpikeInterface/spikeinterface/issues/4045
+        if is_path_remote(p):
+            not_possible.append(p)
+            continue
+
+        # convert to Path
+        p = Path(p)
+
+        # If windows path check have same drive
+        if isinstance(p, WindowsPath) and isinstance(relative_folder, WindowsPath):
+            # check that on same drive
+            # important note : for UNC path on window the "//host/shared" is the drive
+            if p.resolve().absolute().drive != relative_folder.drive:
+                not_possible.append(p)
+                continue
+
+        # check relative is possible
+        try:
+            p2 = _relative_to(p, relative_folder)
+        except ValueError:
+            not_possible.append(p)
+            continue
+
+    return len(not_possible) == 0
+
+
+def make_paths_relative(input_dict: dict, relative_folder: str | Path) -> dict:
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path relative to a folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    relative_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+
+    relative_folder = Path(relative_folder).resolve().absolute()
+
+    path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
+    # Only paths that exist are made relative
+    path_elements_in_dict = [e for e in path_elements_in_dict if Path(e.value).exists()]
+
+    output_dict = deepcopy(input_dict)
+    for element in path_elements_in_dict:
+        new_value = _relative_to(element.value, relative_folder)
+        set_value_in_extractor_dict(
+            extractor_dict=output_dict,
+            access_path=element.access_path,
+            new_value=new_value,
+        )
+
+    return output_dict
+
+
+def make_paths_absolute(input_dict, base_folder) -> dict:
+    """
+    Recursively transform a dict describing an BaseExtractor to make every path absolute given a base_folder.
+
+    Parameters
+    ----------
+    input_dict: dict
+        A dict describing an extactor obtained by BaseExtractor.to_dict()
+    base_folder: str or Path
+        The folder to be relative to.
+
+    Returns
+    -------
+    output_dict: dict
+        A copy of the input dict with modified paths.
+    """
+    base_folder = Path(base_folder)
+    # use as_posix instead of str to make the path unix like even on window
+    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
+
+    path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
+    output_dict = deepcopy(input_dict)
+
+    for element in path_elements_in_dict:
+        absolute_path = (base_folder / element.value).resolve()
+        if Path(absolute_path).exists():
+            new_value = absolute_path.as_posix()  # Not so sure about this, Sam
+            set_value_in_extractor_dict(
+                extractor_dict=output_dict,
+                access_path=element.access_path,
+                new_value=new_value,
+            )
+
+    return output_dict
+
+
 def recursive_key_finder(d, key):
     # Find all values for a key on a dictionary, even if nested
+    # TODO refactor to use extractor_dict_iterator
+
     for k, v in d.items():
         if isinstance(v, dict):
             yield from recursive_key_finder(v, key)
@@ -870,7 +545,7 @@ def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
     ----------
     seconds : float
         The duration in seconds.
-    long_notation : bool, optional, default: True
+    long_notation : bool, default: True
         Whether to display the time with additional units (such as milliseconds, minutes,
         hours, or days). If set to True, the function will display a more detailed
         representation of the duration, including other units alongside the primary
@@ -936,3 +611,150 @@ def convert_bytes_to_str(byte_value: int) -> str:
         byte_value /= 1024
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
+
+
+_exponents = {
+    "k": 1e3,
+    "M": 1e6,
+    "G": 1e9,
+    "T": 1e12,
+    "P": 1e15,  # Decimal (SI) prefixes
+    "Ki": 1024**1,
+    "Mi": 1024**2,
+    "Gi": 1024**3,
+    "Ti": 1024**4,
+    "Pi": 1024**5,  # Binary (IEC) prefixes
+}
+
+
+def convert_string_to_bytes(memory_string: str) -> int:
+    """
+    Convert a memory size string to the corresponding number of bytes.
+
+    Parameters:
+    mem (str): Memory size string (e.g., "1G", "512Mi", "2T").
+
+    Returns:
+    int: Number of bytes.
+    """
+    if memory_string[-2:] in _exponents:
+        suffix = memory_string[-2:]
+        mem_value = memory_string[:-2]
+    else:
+        suffix = memory_string[-1]
+        mem_value = memory_string[:-1]
+
+    assert suffix in _exponents, f"Unknown suffix: {suffix}"
+    bytes_value = int(float(mem_value) * _exponents[suffix])
+    return bytes_value
+
+
+def is_editable_mode() -> bool:
+    """
+    Check if spikeinterface is installed in editable mode
+    pip install -e .
+    """
+    import spikeinterface
+
+    return (Path(spikeinterface.__file__).parents[2] / "README.md").exists()
+
+
+def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):
+    """
+    Manual implementation of the Normal distribution pdf (probability density function).
+    It is about 8 to 10 times faster than scipy.stats.norm.pdf().
+
+    Parameters
+    ----------
+    x: scalar or array
+        The x-axis
+    mu: float, default: 0.0
+        The mean of the Normal distribution.
+    sigma: float, default: 1.0
+        The standard deviation of the Normal distribution.
+
+    Returns
+    -------
+    normal_pdf: scalar or array (same type as 'x')
+        The pdf of the Normal distribution for the given x-axis.
+    """
+
+    return 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(-((x - mu) ** 2) / (2 * sigma**2))
+
+
+def retrieve_importing_provenance(a_class) -> dict:
+    """
+    Retrieve the import provenance of a class, including its import name (that consists of the class name and the module),
+    the top-level module, and the module version.
+
+    Parameters
+    ----------
+    a_class : type
+        The class object for which to retrieve the import provenance.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - 'class':  The module path and the name of the class concatenated (e.g., 'package.subpackage.ClassName').
+        - 'module': The top-level module name where the class is defined.
+        - 'version': The version of the module if available, otherwise 'unknown'.
+    Get class info as a dict.
+    """
+    module_import_path = a_class.__module__
+    class_name_no_path = a_class.__name__
+    class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
+    module = class_name.split(".")[0]
+
+    imported_module = importlib.import_module(module)
+    module_version = getattr(imported_module, "__version__", "unknown")
+
+    info = {
+        "class": class_name,
+        "module": module,
+        "version": module_version,
+    }
+
+    return info
+
+
+def measure_memory_allocation(measure_in_process: bool = True) -> float:
+    """
+    A local utility to measure memory allocation at a specific point in time.
+    Can measure either the process resident memory or system wide memory available
+
+    Uses psutil package.
+
+    Parameters
+    ----------
+    measure_in_process : bool, True by default
+        Mesure memory allocation in the current process only, if false then measures at the system
+        level.
+    """
+    import psutil
+
+    if measure_in_process:
+        process = psutil.Process()
+        memory = process.memory_info().rss
+    else:
+        mem_info = psutil.virtual_memory()
+        memory = mem_info.total - mem_info.available
+
+    return memory
+
+
+def is_path_remote(path: str | Path) -> bool:
+    """
+    Returns True if the path is a remote path (e.g., s3:// or gcs://).
+
+    Parameters
+    ----------
+    path : str or Path
+        The path to check.
+
+    Returns
+    -------
+    bool
+        Whether the path is a remote path.
+    """
+    return "s3://" in str(path) or "gcs://" in str(path)

@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 from pathlib import Path
 import os
 from typing import Union
 
-from ..basesorter import BaseSorter
+from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
-from ..utils import get_git_commit
-
+from spikeinterface.sorters.utils import get_git_commit
 
 PathType = Union[str, Path]
 
@@ -39,6 +40,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "detect_threshold": 6,
         "projection_threshold": [10, 4],
         "preclust_threshold": 8,
+        "whiteningRange": 32.0,
+        "momentum": [20.0, 400.0],
         "car": True,
         "minFR": 0.1,
         "minfr_goodchannels": 0.1,
@@ -46,6 +49,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "sig": 20,
         "freq_min": 150,
         "sigmaMask": 30,
+        "lam": 10.0,
         "nPCs": 3,
         "ntbuff": 64,
         "nfilt_factor": 4,
@@ -65,6 +69,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "detect_threshold": "Threshold for spike detection",
         "projection_threshold": "Threshold on projections",
         "preclust_threshold": "Threshold crossings for pre-clustering (in PCA projection space)",
+        "whiteningRange": "Number of channels to use for whitening each channel",
+        "momentum": "Number of samples to average over (annealed from first to second value)",
         "car": "Enable or disable common reference",
         "minFR": "Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
         "minfr_goodchannels": "Minimum firing rate on a 'good' channel",
@@ -72,6 +78,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "sig": "spatial smoothness constant for registration",
         "freq_min": "High-pass filter cutoff frequency",
         "sigmaMask": "Spatial constant in um for computing residual variance of spike",
+        "lam": "The importance of the amplitude penalty (like in Kilosort1: 0 means not used, 10 is average, 50 is a lot)",
         "nPCs": "Number of PCA dimensions",
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
@@ -80,7 +87,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "keep_good_only": "If True only 'good' units are returned",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
-        "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
+        "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
         "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
@@ -146,24 +153,24 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         if p["wave_length"] % 2 != 1:
             p["wave_length"] = p["wave_length"] + 1  # The wave_length must be odd
         if p["wave_length"] > 81:
-            p["wave_length"] = 81  # The wave_length must be less than 81.
+            p["wave_length"] = 81  # The wave_length must be <=81
         return p
 
     @classmethod
-    def _get_specific_options(cls, ops, params):
+    def _get_specific_options(cls, ops, params) -> dict:
         """
         Adds specific options for Kilosort2_5 in the ops dict and returns the final dict
 
         Parameters
         ----------
-        ops: dict
+        ops : dict
             options data
-        params: dict
+        params : dict
             Custom parameters dictionary for kilosort3
 
         Returns
         ----------
-        ops: dict
+        ops : dict
             Final ops data
         """
         # frequency for high pass filtering (300)
@@ -183,7 +190,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops["Th"] = projection_threshold
 
         # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
-        ops["lam"] = 10.0
+        ops["lam"] = params["lam"]
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
         ops["AUCsplit"] = params["AUCsplit"]
@@ -191,8 +198,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
         ops["minFR"] = params["minFR"]
 
+        momentum = [float(mom) for mom in params["momentum"]]
         # number of samples to average over (annealed from first to second value)
-        ops["momentum"] = [20.0, 400.0]
+        ops["momentum"] = momentum
 
         # spatial constant in um for computing residual variance of spike
         ops["sigmaMask"] = params["sigmaMask"]
@@ -213,7 +221,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops["NT"] = params[
             "NT"
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
-        ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
+        ops["whiteningRange"] = params["whiteningRange"]  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into
         ops["useRAM"] = 0.0  # not yet available

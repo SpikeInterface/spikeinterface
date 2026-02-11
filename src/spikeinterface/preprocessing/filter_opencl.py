@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import numpy as np
 import scipy.signal
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 try:
     import pyopencl
@@ -18,7 +20,7 @@ class FilterOpenCLRecording(BasePreprocessor):
     """
     Simple implementation of FilterRecording in OpenCL.
 
-    Only filter_mode='sos' is supported.
+    Only filter_mode="sos" is supported.
 
     Author : Samuel Garcia
     This kernel is ported from "tridesclous"
@@ -29,15 +31,13 @@ class FilterOpenCLRecording(BasePreprocessor):
         The recording extractor to be re-referenced
 
     N: order
-    filter_mode: 'sos' only
+    filter_mode: "sos" only
 
-    ftypestr: 'butter' / 'cheby1' / ... all possible of scipy.signal.iirdesign
+    ftypestr: "butter" / "cheby1" / ... all possible of scipy.signal.iirdesign
 
     margin: margin in second on border to avoid border effect
 
     """
-
-    name = "filter"
 
     def __init__(
         self,

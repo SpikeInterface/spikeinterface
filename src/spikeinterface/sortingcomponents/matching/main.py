@@ -1,149 +1,116 @@
-from threadpoolctl import threadpool_limits
+from __future__ import annotations
+
 import numpy as np
+import warnings
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
-from spikeinterface.core import get_chunk_with_margin
+from .method_list import *
+
+from spikeinterface.core.node_pipeline import run_node_pipeline
+
+from ..tools import make_multi_method_doc
 
 
-def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extra_outputs=False, **job_kwargs):
+def find_spikes_from_templates(
+    recording,
+    templates,
+    method=None,
+    method_kwargs={},
+    extra_outputs=False,
+    pipeline_kwargs=None,
+    verbose=False,
+    job_kwargs=None,
+    **old_kwargs,
+) -> np.ndarray | tuple[np.ndarray, dict]:
     """Find spike from a recording from given templates.
 
     Parameters
     ----------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The recording extractor object
-    method: str
-        Which method to use ('naive' | 'tridesclous' | 'circus' | 'circus-omp' | 'wobble')
-    method_kwargs: dict, optional
+    templates : Templates
+        The Templates that should be look for in the data
+    method : str
+        The matching method to use. See `matching_methods` for available methods.
+    method_kwargs : dict, optional
         Keyword arguments for the chosen method
-    extra_outputs: bool
-        If True then method_kwargs is also returned
-    job_kwargs: dict
+    extra_outputs : bool
+        If True then a dict is also returned is also returned
+    pipeline_kwargs : dict
+        Dict transmited to run_node_pipelines to handle fine details
+        like : gather_mode/folder/skip_after_n_peaks/recording_slices
+    verbose : Bool, default: False
+        If True, output is verbose
+    job_kwargs : dict
         Parameters for ChunkRecordingExecutor
+
+    {method_doc}
 
     Returns
     -------
-    spikes: ndarray
+    spikes : ndarray
         Spikes found from templates.
-    method_kwargs:
+    outputs:
         Optionaly returns for debug purpose.
-
-    Notes
-    -----
-    For all methods except 'wobble', templates are represented as a WaveformExtractor in method_kwargs
-    so statistics can be extracted.  For 'wobble' templates are represented as a numpy.ndarray.
     """
-    from .method_list import matching_methods
+
+    if len(old_kwargs) > 0:
+        # This is the old behavior and will be remove in 0.105.0
+        warnings.warn(
+            "The signature of find_spikes_from_templates() has changed, now job_kwargs are in separated dict and not flatten"
+            "This warning will raise an error in version 0.105.0"
+        )
+        assert job_kwargs is None
+        job_kwargs = old_kwargs
+
+    if "method" in method_kwargs:
+        # for flexibility the caller can put method inside method_kwargs
+        assert method is None
+        method_kwargs = method_kwargs.copy()
+        method = method_kwargs.pop("method")
 
     assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
-    job_kwargs = fix_job_kwargs(job_kwargs)
-
     method_class = matching_methods[method]
 
-    # initialize
-    method_kwargs = method_class.initialize_and_check_kwargs(recording, method_kwargs)
+    # if method_class.full_convolution:
+    #   Maybe we need to automatically adjust the temporal chunks given templates and n_processes
 
-    # add
-    method_kwargs["margin"] = method_class.get_margin(recording, method_kwargs)
+    if len(templates.unit_ids) == 0:
+        return np.zeros(0, dtype=node0.get_dtype())
 
-    # serialiaze for worker
-    method_kwargs_seralized = method_class.serialize_method_kwargs(method_kwargs)
+    if method_class.need_noise_levels:
+        if "noise_levels" not in method_kwargs:
+            raise ValueError(f"find_spikes_from_templates() method {method} need noise_levels")
 
-    # and run
-    func = _find_spikes_chunk
-    init_func = _init_worker_find_spikes
-    init_args = (recording, method, method_kwargs_seralized)
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, handle_returns=True, job_name=f"find spikes ({method})", **job_kwargs
+    node0 = method_class(recording, templates=templates, **method_kwargs)
+    nodes = [node0]
+
+    if pipeline_kwargs is None:
+        pipeline_kwargs = dict()
+
+    names = ["spikes"]
+
+    spikes = run_node_pipeline(
+        recording,
+        nodes,
+        job_kwargs,
+        job_name=f"find spikes ({method})",
+        squeeze_output=True,
+        names=names,
+        verbose=verbose,
+        **pipeline_kwargs,
     )
-    spikes = processor.run()
-
-    spikes = np.concatenate(spikes)
 
     if extra_outputs:
-        return spikes, method_kwargs
+        outputs = node0.get_extra_outputs()
+
+    node0.clean()
+
+    if extra_outputs:
+        return spikes, outputs
     else:
         return spikes
 
 
-def _init_worker_find_spikes(recording, method, method_kwargs):
-    """Initialize worker for finding spikes."""
-
-    from .method_list import matching_methods
-
-    method_class = matching_methods[method]
-    method_kwargs = method_class.unserialize_in_worker(method_kwargs)
-
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["method"] = method
-    worker_ctx["method_kwargs"] = method_kwargs
-    worker_ctx["function"] = method_class.main_function
-
-    return worker_ctx
-
-
-def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    """Find spikes from a chunk of data."""
-
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    method = worker_ctx["method"]
-    method_kwargs = worker_ctx["method_kwargs"]
-    margin = method_kwargs["margin"]
-
-    # load trace in memory given some margin
-    recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(
-        recording_segment, start_frame, end_frame, None, margin, add_zeros=True
-    )
-
-    function = worker_ctx["function"]
-
-    with threadpool_limits(limits=1):
-        spikes = function(traces, method_kwargs)
-
-    # remove spikes in margin
-    if margin > 0:
-        keep = (spikes["sample_index"] >= margin) & (spikes["sample_index"] < (traces.shape[0] - margin))
-        spikes = spikes[keep]
-
-    spikes["sample_index"] += start_frame - margin
-    spikes["segment_index"] = segment_index
-    return spikes
-
-
-# generic class for template engine
-class BaseTemplateMatchingEngine:
-    default_params = {}
-
-    @classmethod
-    def initialize_and_check_kwargs(cls, recording, kwargs):
-        """This function runs before loops"""
-        # need to be implemented in subclass
-        raise NotImplementedError
-
-    @classmethod
-    def serialize_method_kwargs(cls, kwargs):
-        """This function serializes kwargs to distribute them to workers"""
-        # need to be implemented in subclass
-        raise NotImplementedError
-
-    @classmethod
-    def unserialize_in_worker(cls, recording, kwargs):
-        """This function unserializes kwargs in workers"""
-        # need to be implemented in subclass
-        raise NotImplementedError
-
-    @classmethod
-    def get_margin(cls, recording, kwargs):
-        # need to be implemented in subclass
-        raise NotImplementedError
-
-    @classmethod
-    def main_function(cls, traces, method_kwargs):
-        """This function returns the number of samples for the chunk margins"""
-        # need to be implemented in subclass
-        raise NotImplementedError
+method_doc = make_multi_method_doc(list(matching_methods.values()))
+find_spikes_from_templates.__doc__ = find_spikes_from_templates.__doc__.format(method_doc=method_doc)

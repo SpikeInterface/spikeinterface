@@ -1,18 +1,8 @@
-import pytest
-from pathlib import Path
-
-from spikeinterface import NumpyRecording, set_global_tmp_folder
-from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import resample
+from spikeinterface.core import NumpyRecording
 
 
 import numpy as np
-from scipy.fft import fft, fftfreq
-
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
 
 DEBUG = False
 # DEBUG = True
@@ -38,14 +28,14 @@ def create_sinusoidal_traces(sampling_frequency=3e4, duration=30, freqs_n=10, ma
 
     Parameters
     ----------
-    sampling_frequency : float, optional
-        Sampling rate of the signal, by default 3e4
-    duration : int, optional
-        Duration of the signal in seconds, by default 30
-    freqs_n : int, optional
-        Total frequencies to span on the signal, by default 10
-    max_freq : int, optional
-        Maximum frequency of sinusoids, by default 10000
+    sampling_frequency : float, default: 30000
+        Sampling rate of the signal
+    duration : int, default: 30
+        Duration of the signal in seconds
+    freqs_n : int, default: 10
+        Total frequencies to span on the signal
+    max_freq : int, default: 10000
+        Maximum frequency of sinusoids
 
     Returns
     -------
@@ -72,6 +62,8 @@ def create_sinusoidal_traces(sampling_frequency=3e4, duration=30, freqs_n=10, ma
 
 
 def get_fft(traces, sampling_frequency):
+    from scipy.fft import fft, fftfreq
+
     # Return the power spectrum of the positive fft
     N = len(traces)
     yf = fft(traces)

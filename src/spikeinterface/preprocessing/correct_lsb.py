@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import warnings
 import numpy as np
 
 from .normalize_scale import scale
-from ..core import get_random_data_chunks
+from spikeinterface.core import get_random_data_chunks
 
 
 def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=None, verbose=False):
@@ -14,18 +16,18 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
     ----------
     recording : RecordingExtractor
         The recording extractor to be LSB-corrected.
-    num_chunks_per_segment: int
-        Number of chunks per segment for random chunk, by default 20
-    chunk_size : int
-        Size of a chunk in number for random chunk, by default 10000
-    seed : int
-        Random seed for random chunk, by default None
-    verbose : bool
-        If True, estimate LSB value is printed, by default False
+    num_chunks_per_segment : int, default: 20
+        Number of chunks per segment for random chunk
+    chunk_size : int, default: 10000
+        Size of a chunk in number for random chunk
+    seed : int or None, default: None
+        Random seed for random chunk
+    verbose : bool, default: False
+        If True, estimate LSB value is printed
 
     Returns
     -------
-    correct_lsb_recording: ScaleRecording
+    correct_lsb_recording : ScaleRecording
         The recording extractor with corrected LSB
     """
     random_data = get_random_data_chunks(
@@ -34,7 +36,7 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
         chunk_size=chunk_size,
         concatenated=True,
         seed=seed,
-        return_scaled=False,
+        return_in_uV=False,
     )
     # compute medians and lsb
     medians = np.median(random_data, axis=0)
@@ -57,7 +59,7 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
         # apply LSB division and instantiate parent
         recording_lsb = scale(recording_lsb, gain=1.0 / lsb, dtype=dtype)
         # if recording has scaled traces, correct gains
-        if recording.has_scaled():
+        if recording.has_scaleable_traces():
             recording_lsb.set_channel_gains(recording_lsb.get_channel_gains() * lsb)
     return recording_lsb
 

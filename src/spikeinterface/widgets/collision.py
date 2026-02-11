@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -9,35 +11,33 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
     Parameters
     ----------
-    comp: CollisionGTComparison
+    comp : CollisionGTComparison
         The collision ground truth comparison object
-    templates: array
+    templates_array : array
         template of units
-    mode: 'heatmap' or 'lines'
-        to see collision curves for every pairs ('heatmap') or as lines averaged over pairs.
-    similarity_bins: array
-        if mode is 'lines', the bins used to average the pairs
-    cmap: string
-        colormap used to show averages if mode is 'lines'
-    metric: 'cosine_similarity'
+    mode : "heatmap" or "lines"
+        to see collision curves for every pairs ("heatmap") or as lines averaged over pairs.
+    similarity_bins : array
+        if mode is "lines", the bins used to average the pairs
+    cmap : string
+        colormap used to show averages if mode is "lines"
+    metric : "cosine_similarity"
         metric for ordering
-    good_only: True
+    good_only : True
         keep only the pairs with a non zero accuracy (found templates)
-    min_accuracy: float
+    min_accuracy : float
         If good only, the minimum accuracy every cell should have, individually, to be
         considered in a putative pair
-    unit_ids: list
+    unit_ids : list
         List of considered units
     """
 
     def __init__(
         self,
         comp,
-        templates,
+        templates_array,
         unit_ids=None,
         metric="cosine_similarity",
-        figure=None,
-        ax=None,
         mode="heatmap",
         similarity_bins=np.linspace(-0.4, 1, 8),
         cmap="winter",
@@ -53,7 +53,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         data_plot = dict(
             comp=comp,
-            templates=templates,
+            templates_array=templates_array,
             unit_ids=unit_ids,
             metric=metric,
             mode=mode,
@@ -74,6 +74,8 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         from .utils_matplotlib import make_mpl_figure
 
+        from spikeinterface.postprocessing.template_similarity import compute_similarity_with_templates_array
+
         dp = to_attr(data_plot)
 
         # self.make_mpl_figure(**backend_kwargs)
@@ -86,12 +88,23 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         all_unit_ids = list(comp.sorting1.get_unit_ids())
         template_inds = [all_unit_ids.index(u) for u in dp.unit_ids]
 
-        templates = dp.templates[template_inds, :, :].copy()
-        flat_templates = templates.reshape(templates.shape[0], -1)
-        if dp.metric == "cosine_similarity":
-            similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
-        else:
-            raise NotImplementedError("metric=...")
+        templates_array = dp.templates_array[template_inds, :, :].copy()
+        flat_templates = templates_array.reshape(templates_array.shape[0], -1)
+
+        similarity_matrix, _ = compute_similarity_with_templates_array(
+            templates_array,
+            templates_array,
+            method=dp.metric,
+            num_shifts=0,
+            support="union",
+            sparsity=None,
+            other_sparsity=None,
+        )
+
+        # if dp.metric == "cosine_similarity":
+        #     similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+        # else:
+        #     raise NotImplementedError("metric=...")
 
         fs = comp.sorting1.get_sampling_frequency()
         lags = comp.bins / fs * 1000
@@ -134,7 +147,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
             ax1.set_xlabel("lag (ms)")
         elif dp.mode == "lines":
-            my_cmap = plt.get_cmap(dp.cmap)
+            my_cmap = plt.colormaps[dp.cmap]
             cNorm = matplotlib.colors.Normalize(vmin=dp.similarity_bins.min(), vmax=dp.similarity_bins.max())
             scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
@@ -178,19 +191,19 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
     Parameters
     ----------
-    study: CollisionGTStudy
+    study : CollisionGTStudy
         The collision study object.
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
-    metric: 'cosine_similarity'
+    metric : "cosine_similarity"
         metric for ordering
-    similarity_bins: array
-        if mode is 'lines', the bins used to average the pairs
-    cmap: string
-        colormap used to show averages if mode is 'lines'
-    good_only: False
+    similarity_bins : array
+        if mode is "lines", the bins used to average the pairs
+    cmap : string
+        colormap used to show averages if mode is "lines"
+    good_only : False
         keep only the pairs with a non zero accuracy (found templates)
-    min_accuracy: float
+    min_accuracy : float
         If good only, the minimum accuracy every cell should have, individually, to be
         considered in a putative pair
     """
@@ -243,7 +256,7 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
         study = dp.study
 
-        my_cmap = plt.get_cmap(dp.cmap)
+        my_cmap = plt.colormaps[dp.cmap]
         cNorm = matplotlib.colors.Normalize(vmin=dp.similarity_bins.min(), vmax=dp.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
         study.precompute_scores_by_similarities(

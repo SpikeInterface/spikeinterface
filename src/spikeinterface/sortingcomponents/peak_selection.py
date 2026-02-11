@@ -1,54 +1,61 @@
 """Sorting components: peak selection"""
 
+from __future__ import annotations
+
+
 import numpy as np
-from sklearn.preprocessing import QuantileTransformer
 
 
-def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **method_kwargs):
+def select_peaks(
+    peaks, recording=None, method="uniform", seed=None, return_indices=False, margin=None, **method_kwargs
+):
     """
     Method to select a subset of peaks from a set of peaks.
     Usually use for reducing computational foorptint of downstream methods.
     Parameters
     ----------
     peaks: the peaks that have been found
-    method: 'uniform', 'uniform_locations', 'smart_sampling_amplitudes', 'smart_sampling_locations',
-    'smart_sampling_locations_and_time'
+    method: "uniform", "uniform_locations", "smart_sampling_amplitudes", "smart_sampling_locations",
+    "smart_sampling_locations_and_time"
         Method to use. Options:
-            * 'uniform': a random subset is selected from all the peaks, on a per channel basis by default
-            * 'smart_sampling_amplitudes': peaks are selected via monte-carlo rejection probabilities
+            * "uniform": a random subset is selected from all the peaks, on a per channel basis by default
+            * "smart_sampling_amplitudes": peaks are selected via monte-carlo rejection probabilities
                 based on peak amplitudes, on a per channel basis
-            * 'smart_sampling_locations': peaks are selection via monte-carlo rejections probabilities
+            * "smart_sampling_locations": peaks are selection via monte-carlo rejections probabilities
                 based on peak locations, on a per area region basis-
-            * 'smart_sampling_locations_and_time': peaks are selection via monte-carlo rejections probabilities
+            * "smart_sampling_locations_and_time": peaks are selection via monte-carlo rejections probabilities
                 based on peak locations and time positions, assuming everything is independent
 
     seed: int
         The seed for random generations
     return_indices: bool
         If True, return the indices of selection such that selected_peaks = peaks[selected_indices]
+    margin : Margin in timesteps. default: None. Otherwise should be a tuple (nbefore, nafter)
+        preventing peaks to be selected at the borders of the segments. A recording should be provided to get the duration
+        of the segments
 
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
-            'uniform':
-                * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (False by default)
+            "uniform":
+                * select_per_channel: bool, default: False
+                    If True, the selection is done on a per channel basis
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
-            'smart_sampling_amplitudes':
+            "smart_sampling_amplitudes":
                 * noise_levels : array
                     The noise levels used while detecting the peaks
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
-                * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (False by default)
-            'smart_sampling_locations':
+                * select_per_channel: bool, default: False
+                    If True, the selection is done on a per channel basis
+            "smart_sampling_locations":
                 * n_peaks: int
                     Total number of peaks to select
                 * peaks_locations: array
                     The locations of all the peaks, computed via localize_peaks
-            'smart_sampling_locations_and_time':
+            "smart_sampling_locations_and_time":
                 * n_peaks: int
                     Total number of peaks to select
                 * peaks_locations: array
@@ -64,8 +71,26 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
         return_indices is True.
     """
 
+    if margin is not None:
+        assert recording is not None, "recording should be provided if margin is not None"
+
     selected_indices = select_peak_indices(peaks, method=method, seed=seed, **method_kwargs)
     selected_peaks = peaks[selected_indices]
+    num_segments = len(np.unique(selected_peaks["segment_index"]))
+
+    if margin is not None:
+        to_keep = np.zeros(len(selected_peaks), dtype=bool)
+        for segment_index in range(num_segments):
+            num_samples_in_segment = recording.get_num_samples(segment_index)
+            i0, i1 = np.searchsorted(selected_peaks["segment_index"], [segment_index, segment_index + 1])
+            while selected_peaks["sample_index"][i0] <= margin[0]:
+                i0 += 1
+            while selected_peaks["sample_index"][i1 - 1] >= (num_samples_in_segment - margin[1]):
+                i1 -= 1
+            to_keep[i0:i1] = True
+        selected_indices = selected_indices[to_keep]
+        selected_peaks = peaks[selected_indices]
+
     if return_indices:
         return selected_peaks, selected_indices
     else:
@@ -80,6 +105,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
 
     :py:func:`spikeinterface.sortingcomponents.peak_selection.select_peaks` for detailed documentation.
     """
+    from sklearn.preprocessing import QuantileTransformer
 
     selected_indices = []
 
@@ -257,7 +283,9 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
         )
 
     selected_indices = np.concatenate(selected_indices)
-    selected_indices = selected_indices[np.argsort(peaks[selected_indices]["sample_index"])]
+    selected_indices = selected_indices[
+        np.lexsort((peaks[selected_indices]["sample_index"], peaks[selected_indices]["segment_index"]))
+    ]
     return selected_indices
 
 

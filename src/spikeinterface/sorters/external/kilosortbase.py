@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from warnings import warn
 import json
@@ -6,9 +8,9 @@ import sys
 
 import numpy as np
 
-from ..utils import ShellScript, get_matlab_shell_name, get_bash_path
-from ..basesorter import get_job_kwargs
-from spikeinterface.extractors import KiloSortSortingExtractor
+from spikeinterface.sorters.utils import ShellScript, get_matlab_shell_name, get_bash_path
+from spikeinterface.sorters.basesorter import get_job_kwargs
+from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
@@ -77,11 +79,11 @@ class KilosortBase:
 
         Parameters
         ----------
-        recording: BaseRecording
+        recording : BaseRecording
             The recording to generate the channel map file
-        params: dict
+        params : dict
             Custom parameters dictionary for kilosort
-        sorter_output_folder: pathlib.Path
+        sorter_output_folder : pathlib.Path
             Path object to save `ops.mat`
         """
         ops = {}
@@ -94,7 +96,7 @@ class KilosortBase:
         ops["fbinary"] = str(binary_file_path.absolute())  # will be created for 'openEphys'
         ops["fproc"] = str((sorter_output_folder / "temp_wh.dat").absolute())  # residual from RAM of preprocessed data
         ops["root"] = str(sorter_output_folder.absolute())  # 'openEphys' only: where raw files are
-        ops["trange"] = [0, np.Inf]  #  time range to sort
+        ops["trange"] = [0, np.inf]  #  time range to sort
         ops["chanMap"] = str((sorter_output_folder / "chanMap.mat").absolute())
 
         ops["fs"] = recording.get_sampling_frequency()  # sample rate
@@ -125,7 +127,7 @@ class KilosortBase:
         skip_kilosort_preprocessing = params.get("skip_kilosort_preprocessing", False)
 
         if (
-            recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1)
+            recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_length=1)
             and not skip_kilosort_preprocessing
         ):
             # no copy
@@ -144,7 +146,7 @@ class KilosortBase:
                 padding_start = 0
                 padding_end = pad
                 padded_recording = TracePaddedRecording(
-                    parent_recording=recording,
+                    recording=recording,
                     padding_start=padding_start,
                     padding_end=padding_end,
                 )

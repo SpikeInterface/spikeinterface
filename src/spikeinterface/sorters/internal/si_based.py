@@ -1,4 +1,6 @@
-from spikeinterface.core import load_extractor, NumpyRecording
+from __future__ import annotations
+
+from spikeinterface.core import load, NumpyRecording
 
 from spikeinterface.sorters import BaseSorter
 
@@ -18,7 +20,7 @@ class ComponentsBasedSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):
-        sorting = load_extractor(output_folder / "sorting")
+        sorting = load(output_folder / "sorting")
         return sorting
 
     @classmethod

@@ -1,0 +1,403 @@
+from __future__ import annotations
+
+from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
+from spikeinterface.core import NumpySorting
+from spikeinterface.comparison import GroundTruthComparison
+from spikeinterface.widgets import (
+    plot_probe_map,
+    plot_agreement_matrix,
+)
+
+
+import numpy as np
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
+from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
+from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
+from spikeinterface.core.template_tools import get_template_extremum_channel
+
+
+class ClusteringBenchmark(Benchmark):
+
+    def __init__(self, recording, gt_sorting, params, indices, peaks, exhaustive_gt=True):
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.indices = indices
+        self.peaks = peaks[self.indices]
+        self.params = params
+        self.exhaustive_gt = exhaustive_gt
+        self.method = params["method"]
+        self.method_kwargs = params["method_kwargs"]
+        self.result = {}
+
+    def run(self, verbose=True, **job_kwargs):
+        labels, peak_labels = find_clusters_from_peaks(
+            self.recording,
+            self.peaks,
+            method=self.method,
+            method_kwargs=self.method_kwargs,
+            verbose=verbose,
+            job_kwargs=job_kwargs,
+        )
+        self.result["peak_labels"] = peak_labels
+
+    def compute_result(self, with_template=False, **job_kwargs):
+        # result_params, job_kwargs = split_job_kwargs(result_params)
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        self.noise = self.result["peak_labels"] < 0
+        spikes = self.gt_sorting.to_spike_vector()
+        self.result["sliced_gt_sorting"] = NumpySorting(
+            spikes[self.indices], self.recording.sampling_frequency, self.gt_sorting.unit_ids
+        )
+
+        data = spikes[self.indices][~self.noise]
+        # data["unit_index"] = self.result["peak_labels"][~self.noise]
+        gt_unit_locations = self.gt_sorting.get_property("gt_unit_locations")
+        if gt_unit_locations is None:
+            print("'gt_unit_locations' is not a property of the sorting so compute it")
+            gt_analyzer = create_sorting_analyzer(
+                self.gt_sorting, self.recording, format="memory", sparse=True, **job_kwargs
+            )
+            gt_analyzer.compute("random_spikes")
+            gt_analyzer.compute("templates", **job_kwargs)
+            ext = gt_analyzer.compute("unit_locations", method="monopolar_triangulation")
+            gt_unit_locations = ext.get_data()
+            self.gt_sorting.set_property("gt_unit_locations", gt_unit_locations)
+
+        self.result["sliced_gt_sorting"].set_property("gt_unit_locations", gt_unit_locations)
+
+        self.result["clustering"] = NumpySorting.from_samples_and_labels(
+            data["sample_index"], self.result["peak_labels"][~self.noise], self.recording.sampling_frequency
+        )
+
+        self.result["gt_comparison"] = GroundTruthComparison(
+            self.result["sliced_gt_sorting"], self.result["clustering"], exhaustive_gt=self.exhaustive_gt
+        )
+
+        if with_template:
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["sliced_gt_sorting"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["sliced_gt_templates"] = ext.get_data(outputs="Templates")
+
+            sorting_analyzer = create_sorting_analyzer(
+                self.result["clustering"], self.recording, format="memory", sparse=False, **job_kwargs
+            )
+            sorting_analyzer.compute("random_spikes")
+            ext = sorting_analyzer.compute("templates", **job_kwargs)
+            self.result["clustering_templates"] = ext.get_data(outputs="Templates")
+
+    _run_key_saved = [("peak_labels", "npy")]
+
+    _result_key_saved = [
+        ("gt_comparison", "pickle"),
+        ("sliced_gt_sorting", "sorting"),
+        ("clustering", "sorting"),
+        ("sliced_gt_templates", "zarr_templates"),
+        ("clustering_templates", "zarr_templates"),
+    ]
+
+
+class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare clustering methods.
+
+    The ground truth sorting objects must be given and method outputs
+    will be compared to them.
+
+    The input of methods are the detected peaks. Because the clustering
+    can be performed on only a subset of the detected peaks, then selected peak
+    must be also given as index of all spikes.
+    """
+
+    benchmark_class = ClusteringBenchmark
+
+    def create_benchmark(self, key):
+        dataset_key = self.cases[key]["dataset"]
+        recording, gt_sorting = self.datasets[dataset_key]
+        params = self.cases[key]["params"]
+        init_kwargs = self.cases[key]["init_kwargs"]
+        benchmark = ClusteringBenchmark(recording, gt_sorting, params, **init_kwargs)
+        return benchmark
+
+    def homogeneity_score(self, ignore_noise=True, case_keys=None):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        for count, key in enumerate(case_keys):
+            result = self.get_result(key)
+            noise = result["peak_labels"] < 0
+            from sklearn.metrics import homogeneity_score
+
+            gt_labels = self.benchmarks[key].gt_sorting.to_spike_vector()["unit_index"]
+            gt_labels = gt_labels[self.benchmarks[key].indices]
+            found_labels = result["peak_labels"]
+            if ignore_noise:
+                gt_labels = gt_labels[~noise]
+                found_labels = found_labels[~noise]
+            print(
+                self.cases[key]["label"],
+                "Homogeneity:",
+                homogeneity_score(gt_labels, found_labels),
+                "Noise (%):",
+                np.mean(noise),
+            )
+
+    def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+
+        if isinstance(case_keys[0], str):
+            index = pd.Index(case_keys, name=self.levels)
+        else:
+            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
+
+        columns = ["num_gt", "num_sorter", "num_well_detected"]
+        comp = self.get_result(case_keys[0])["gt_comparison"]
+        if comp.exhaustive_gt:
+            columns.extend(["num_false_positive", "num_redundant", "num_overmerged", "num_bad"])
+        count_units = pd.DataFrame(index=index, columns=columns, dtype=int)
+
+        for key in case_keys:
+            comp = self.get_result(key)["gt_comparison"]
+            assert comp is not None, "You need to do study.run_comparisons() first"
+
+            gt_sorting = comp.sorting1
+            sorting = comp.sorting2
+
+            count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
+            count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
+            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
+
+            if comp.exhaustive_gt:
+                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
+                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
+                count_units.loc[key, "num_bad"] = comp.count_bad_units()
+
+        return count_units
+
+    # plotting by methods
+    def plot_unit_counts(self, **kwargs):
+        from .benchmark_plot_tools import plot_unit_counts
+
+        return plot_unit_counts(self, **kwargs)
+
+    def plot_agreement_matrix(self, **kwargs):
+        from .benchmark_plot_tools import plot_agreement_matrix
+
+        return plot_agreement_matrix(self, **kwargs)
+
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
+
+        return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
+
+    def plot_performances_comparison(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_comparison
+
+        return plot_performances_comparison(self, *args, **kwargs)
+
+    def plot_performance_losses(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performance_losses
+
+        return plot_performance_losses(self, *args, **kwargs)
+
+    def plot_performances_vs_depth_and_snr(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_depth_and_snr
+
+        return plot_performances_vs_depth_and_snr(self, *args, **kwargs)
+
+    def plot_performances_ordered(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, *args, **kwargs)
+
+    def plot_some_over_merged(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_merged
+
+        return plot_some_over_merged(self, *args, **kwargs)
+
+    def plot_some_over_splited(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_splited
+
+        return plot_some_over_splited(self, *args, **kwargs)
+
+    def plot_error_metrics(self, metric="cosine", case_keys=None, figsize=(15, 5)):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        import matplotlib.pyplot as plt
+
+        fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+
+        for count, key in enumerate(case_keys):
+
+            result = self.get_result(key)
+            scores = result["gt_comparison"].get_ordered_agreement_scores()
+
+            unit_ids1 = scores.index.values
+            unit_ids2 = scores.columns.values
+            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1)
+            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(unit_ids2)
+            t1 = result["sliced_gt_templates"].templates_array[:]
+            t2 = result["clustering_templates"].templates_array[:]
+            a = t1.reshape(len(t1), -1)[inds_1]
+            b = t2.reshape(len(t2), -1)[inds_2]
+
+            import sklearn
+
+            if metric == "cosine":
+                distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+            else:
+                distances = sklearn.metrics.pairwise_distances(a, b, metric)
+
+            im = axes[0, count].imshow(distances, aspect="auto")
+            axes[0, count].set_title(metric)
+            fig.colorbar(im, ax=axes[0, count])
+            label = self.cases[key]["label"]
+            axes[0, count].set_title(label)
+
+        return fig
+
+    def plot_metrics_vs_snr(self, metric="agreement", case_keys=None, figsize=(15, 5), axes=None):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        import matplotlib.pyplot as plt
+
+        if axes is None:
+            fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+            axes = axes.flatten()
+        else:
+            fig = None
+
+        for count, key in enumerate(case_keys):
+
+            result = self.get_result(key)
+            scores = result["gt_comparison"].agreement_scores
+
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = analyzer.get_extension("quality_metrics").get_data()
+
+            unit_ids1 = result["gt_comparison"].unit1_ids
+            matched_ids2 = result["gt_comparison"].hungarian_match_12.values
+            mask = matched_ids2 > -1
+
+            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1[mask])
+            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(matched_ids2[mask])
+
+            t1 = result["sliced_gt_templates"].templates_array[:]
+            t2 = result["clustering_templates"].templates_array[:]
+            a = t1.reshape(len(t1), -1)
+            b = t2.reshape(len(t2), -1)
+
+            import sklearn
+
+            if metric == "cosine":
+                distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+            elif metric == "l2":
+                distances = sklearn.metrics.pairwise_distances(a, b, metric)
+
+            snr_matched = metrics["snr"][unit_ids1[mask]]
+            snr_missed = metrics["snr"][unit_ids1[~mask]]
+
+            to_plot = []
+            if metric in ["cosine", "l2"]:
+                for found, real in zip(inds_2, inds_1):
+                    to_plot += [distances[real, found]]
+            elif metric == "agreement":
+                for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
+                    to_plot += [scores.at[real, found]]
+            axes[count].plot(snr_matched, to_plot, ".", label="matched")
+            axes[count].plot(snr_missed, np.zeros(len(snr_missed)), ".", c="r", label="missed")
+            axes[count].set_xlabel("snr")
+            axes[count].set_ylabel(metric)
+            label = self.cases[key]["label"]
+            axes[count].set_title(label)
+            axes[count].legend()
+
+        return fig
+
+    def plot_metrics_vs_depth_and_snr(self, metric="agreement", case_keys=None, figsize=(15, 5)):
+
+        if case_keys is None:
+            case_keys = list(self.cases.keys())
+        import matplotlib.pyplot as plt
+
+        fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
+
+        for count, key in enumerate(case_keys):
+
+            result = self.get_result(key)
+            scores = result["gt_comparison"].agreement_scores
+
+            positions = result["sliced_gt_sorting"].get_property("gt_unit_locations")
+            # positions = self.datasets[key[1]][1].get_property("gt_unit_locations")
+            depth = positions[:, 1]
+
+            analyzer = self.get_sorting_analyzer(key)
+            metrics = analyzer.get_extension("quality_metrics").get_data()
+
+            unit_ids1 = result["gt_comparison"].unit1_ids
+            matched_ids2 = result["gt_comparison"].hungarian_match_12.values
+            mask = matched_ids2 > -1
+
+            inds_1 = result["gt_comparison"].sorting1.ids_to_indices(unit_ids1[mask])
+            inds_2 = result["gt_comparison"].sorting2.ids_to_indices(matched_ids2[mask])
+
+            t1 = result["sliced_gt_templates"].templates_array[:]
+            t2 = result["clustering_templates"].templates_array[:]
+            a = t1.reshape(len(t1), -1)
+            b = t2.reshape(len(t2), -1)
+
+            import sklearn
+
+            if metric == "cosine":
+                distances = sklearn.metrics.pairwise.cosine_similarity(a, b)
+            elif metric == "l2":
+                distances = sklearn.metrics.pairwise_distances(a, b, metric)
+
+            snr_matched = metrics["snr"][unit_ids1[mask]]
+            snr_missed = metrics["snr"][unit_ids1[~mask]]
+            depth_matched = depth[mask]
+            depth_missed = depth[~mask]
+
+            to_plot = []
+            if metric in ["cosine", "l2"]:
+                for found, real in zip(inds_2, inds_1):
+                    to_plot += [distances[real, found]]
+            elif metric == "agreement":
+                for found, real in zip(matched_ids2[mask], unit_ids1[mask]):
+                    to_plot += [scores.at[real, found]]
+            elif metric in ["recall", "precision", "accuracy"]:
+                to_plot = result["gt_comparison"].get_performance()[metric].values
+                depth_matched = depth
+                snr_matched = metrics["snr"]
+
+            im = axes[0, count].scatter(depth_matched, snr_matched, c=to_plot, label="matched")
+            im.set_clim(0, 1)
+            axes[0, count].scatter(depth_missed, snr_missed, c=np.zeros(len(snr_missed)), label="missed")
+            axes[0, count].set_xlabel("depth")
+            axes[0, count].set_ylabel("snr")
+            label = self.cases[key]["label"]
+            axes[0, count].set_title(label)
+            if count > 0:
+                axes[0, count].set_ylabel("")
+                axes[0, count].set_yticks([], [])
+            # axs[0, count].legend()
+
+        fig.subplots_adjust(right=0.85)
+        cbar_ax = fig.add_axes([0.9, 0.1, 0.025, 0.75])
+        fig.colorbar(im, cax=cbar_ax, label=metric)
+
+        return fig

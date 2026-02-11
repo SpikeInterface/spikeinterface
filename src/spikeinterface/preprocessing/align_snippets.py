@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Union
 
 import numpy as np
@@ -6,9 +8,7 @@ from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 
 
 class AlignSnippets(BaseSnippets):
-    installed = True  # check at class level if installed or not
     installation_mesg = ""  # err
-    name = "align_snippets"
 
     def __init__(self, snippets, new_nbefore, new_nafter, mode="main_peak", interpolate=1, det_sign=0):
         assert isinstance(snippets, BaseSnippets), "'snippets' must be a SnippetsExtractor"
@@ -25,6 +25,7 @@ class AlignSnippets(BaseSnippets):
         assert self.snippet_len >= new_nbefore + new_nafter, "snippet_len smaller than new_nbefore+new_nafter"
 
         snippets.copy_metadata(self, only_main=False, ids=None)
+        self._parent = snippets
 
         for i in range(snippets.get_num_segments()):
             self.add_snippets_segment(

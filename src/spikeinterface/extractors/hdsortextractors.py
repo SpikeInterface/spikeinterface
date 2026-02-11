@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 
@@ -22,10 +24,6 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
     extractor : HDSortSortingExtractor
         The loaded data.
     """
-
-    extractor_name = "HDSortSortingExtractor"
-    mode = "file"
-    name = "hdsort"
 
     def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)
@@ -191,13 +189,13 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         if noise_std_by_channel is None:
             noise_std_by_channel = np.ones((1, n_channels))
 
-        dict_to_save = {'Units': units,
-                        'MultiElectrode': multi_electrode,
-                        'noiseStd': noise_std_by_channel,
+        dict_to_save = {"Units": units,
+                        "MultiElectrode": multi_electrode,
+                        "noiseStd": noise_std_by_channel,
                         "samplingRate": sorting._sampling_frequency}
 
         # Save Units and MultiElectrode to .mat file:
-        MATSortingExtractor.write_dict_to_mat(save_path, dict_to_save, version='7.3')
+        MATSortingExtractor.write_dict_to_mat(save_path, dict_to_save, version="7.3")
     """
 
 

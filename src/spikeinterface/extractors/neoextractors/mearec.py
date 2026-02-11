@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Union
 
 import numpy as np
 
-import probeinterface as pi
+import probeinterface
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -32,23 +34,29 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to load the recordings from.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "MEArecRawIO"
-    name = "mearec"
 
-    def __init__(self, file_path: Union[str, Path], all_annotations: bool = False):
+    def __init__(self, file_path: Union[str, Path], all_annotations: bool = False, use_names_as_ids: bool = False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
+        )
 
         self.extra_requirements.append("mearec")
 
-        probe = pi.read_mearec(file_path)
+        probe = probeinterface.read_mearec(file_path)
         probe.annotations["mearec_name"] = str(probe.annotations["mearec_name"])
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)
@@ -73,10 +81,8 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
-    mode = "file"
     NeoRawIOClass = "MEArecRawIO"
     neo_returns_frames = False
-    name = "mearec"
 
     def __init__(self, file_path: Union[str, Path]):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
@@ -118,14 +124,14 @@ def read_mearec(file_path):
 
     Parameters
     ----------
-    file_path: str or Path
+    file_path : str or Path
         Path to MEArec h5 file
 
     Returns
     -------
-    recording: MEArecRecordingExtractor
+    recording : MEArecRecordingExtractor
         The recording extractor object
-    sorting: MEArecSortingExtractor
+    sorting : MEArecSortingExtractor
         The sorting extractor object
     """
     recording = MEArecRecordingExtractor(file_path)

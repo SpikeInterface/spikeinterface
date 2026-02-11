@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
@@ -11,7 +13,7 @@ class TridesclousSortingExtractor(BaseSorting):
     ----------
     folder_path : str or Path
         Path to the Tridesclous folder.
-    chan_grp : list, optional
+    chan_grp : list or None, default: None
         The channel group(s) to load.
 
     Returns
@@ -20,10 +22,7 @@ class TridesclousSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = "TridesclousSortingExtractor"
-    mode = "folder"
     installation_mesg = "To use the TridesclousSortingExtractor install tridesclous: \n\n pip install tridesclous\n\n"  # error message when not installed
-    name = "tridesclous"
 
     def __init__(self, folder_path, chan_grp=None):
         try:
@@ -31,7 +30,6 @@ class TridesclousSortingExtractor(BaseSorting):
         except ImportError:
             raise ImportError(self.installation_mesg)
 
-        assert self.installed, self.installation_mesg
         tdc_folder = Path(folder_path)
 
         dataio = tdc.DataIO(str(tdc_folder))

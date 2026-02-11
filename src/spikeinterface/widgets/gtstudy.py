@@ -1,135 +1,69 @@
-import numpy as np
+"""
+This module will be deprecated and will be removed in 0.102.0
 
-from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
+All ploting for the previous GTStudy is now centralized in spikeinterface.benchmark.benchmark_plot_tools
+Please not that GTStudy is replaced by SorterStudy wich is based more generic BenchmarkStudy.
+"""
 
-from ..core import ChannelSparsity
-from ..core.waveform_extractor import WaveformExtractor
-from ..core.basesorting import BaseSorting
+from __future__ import annotations
+
+from .base import BaseWidget
+
+import warnings
 
 
 class StudyRunTimesWidget(BaseWidget):
     """
-    Plot sorter run times for a GroundTruthStudy
-
+    Plot sorter run times for a SorterStudy.
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : SorterStudy
         A study object.
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
 
     """
 
-    def __init__(
-        self,
-        study,
-        case_keys=None,
-        backend=None,
-        **backend_kwargs,
-    ):
-        if case_keys is None:
-            case_keys = list(study.cases.keys())
-
-        plot_data = dict(
-            study=study,
-            run_times=study.get_run_times(case_keys),
-            case_keys=case_keys,
+    def __init__(self, study, case_keys=None, backend=None, **backend_kwargs):
+        warnings.warn(
+            "plot_study_run_times is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
         )
-
+        plot_data = dict(study=study, case_keys=case_keys)
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
+        from spikeinterface.benchmark.benchmark_plot_tools import plot_run_times
 
-        dp = to_attr(data_plot)
-
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        for i, key in enumerate(dp.case_keys):
-            label = dp.study.cases[key]["label"]
-            rt = dp.run_times.loc[key]
-            self.ax.bar(i, rt, width=0.8, label=label)
-
-        self.ax.legend()
+        plot_run_times(data_plot["study"], case_keys=data_plot["case_keys"])
 
 
-# TODO : plot optionally average on some levels using group by
 class StudyUnitCountsWidget(BaseWidget):
     """
     Plot unit counts for a study: "num_well_detected", "num_false_positive", "num_redundant", "num_overmerged"
 
-
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : SorterStudy
         A study object.
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
 
     """
 
-    def __init__(
-        self,
-        study,
-        case_keys=None,
-        backend=None,
-        **backend_kwargs,
-    ):
-        if case_keys is None:
-            case_keys = list(study.cases.keys())
-
-        plot_data = dict(
-            study=study,
-            count_units=study.get_count_units(case_keys=case_keys),
-            case_keys=case_keys,
+    def __init__(self, study, case_keys=None, backend=None, **backend_kwargs):
+        warnings.warn(
+            "plot_study_unit_counts is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
         )
-
+        plot_data = dict(study=study, case_keys=case_keys)
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
-        from .utils import get_some_colors
+        from spikeinterface.benchmark.benchmark_plot_tools import plot_unit_counts
 
-        dp = to_attr(data_plot)
-
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        columns = dp.count_units.columns.tolist()
-        columns.remove("num_gt")
-        columns.remove("num_sorter")
-
-        ncol = len(columns)
-
-        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
-        colors["num_well_detected"] = "green"
-
-        xticklabels = []
-        for i, key in enumerate(dp.case_keys):
-            for c, col in enumerate(columns):
-                x = i + 1 + c / (ncol + 1)
-                y = dp.count_units.loc[key, col]
-                if not "well_detected" in col:
-                    y = -y
-
-                if i == 0:
-                    label = col.replace("num_", "").replace("_", " ").title()
-                else:
-                    label = None
-
-                self.ax.bar([x], [y], width=1 / (ncol + 2), label=label, color=colors[col])
-
-            xticklabels.append(dp.study.cases[key]["label"])
-
-        self.ax.set_xticks(np.arange(len(dp.case_keys)) + 1)
-        self.ax.set_xticklabels(xticklabels)
-        self.ax.legend()
+        plot_unit_counts(data_plot["study"], case_keys=data_plot["case_keys"])
 
 
-# TODO : plot optionally average on some levels using group by
 class StudyPerformances(BaseWidget):
     """
     Plot performances over case for a study.
@@ -137,117 +71,136 @@ class StudyPerformances(BaseWidget):
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    mode: str
-        Which mode in "swarm"
-    case_keys: list or None
-        A selection of cases to plot, if None, then all.
+    mode : "ordered" | "snr" | "swarm", default: "ordered"
+        Which plot mode to use:
 
+        * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy
+        * "snr": plot performance metrics vs snr
+        * "swarm": plot performance metrics as a swarm plot (see seaborn.swarmplot for details)
+    performance_names : list or tuple, default: ("accuracy", "precision", "recall")
+        Which performances to plot ("accuracy", "precision", "recall")
+    case_keys : list or None
+        A selection of cases to plot, if None, then all.
     """
 
     def __init__(
         self,
         study,
-        mode="swarm",
+        mode="ordered",
+        performance_names=("accuracy", "precision", "recall"),
         case_keys=None,
         backend=None,
         **backend_kwargs,
     ):
-        if case_keys is None:
-            case_keys = list(study.cases.keys())
-
+        warnings.warn(
+            "plot_study_performances is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(
             study=study,
-            perfs=study.get_performance_by_unit(case_keys=case_keys),
             mode=mode,
+            performance_names=performance_names,
             case_keys=case_keys,
         )
-
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
-        from .utils import get_some_colors
+        from spikeinterface.benchmark.benchmark_plot_tools import plot_performances
 
-        import pandas as pd
-        import seaborn as sns
-
-        dp = to_attr(data_plot)
-        perfs = dp.perfs
-
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        if dp.mode == "swarm":
-            levels = perfs.index.names
-            df = pd.melt(
-                perfs.reset_index(),
-                id_vars=levels,
-                var_name="Metric",
-                value_name="Score",
-                value_vars=("accuracy", "precision", "recall"),
-            )
-            df["x"] = df.apply(lambda r: " ".join([r[col] for col in levels]), axis=1)
-            sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True)
+        plot_performances(
+            data_plot["study"],
+            mode=data_plot["mode"],
+            performance_names=data_plot["performance_names"],
+            case_keys=data_plot["case_keys"],
+        )
 
 
-class StudyPerformancesVsMetrics(BaseWidget):
+class StudyAgreementMatrix(BaseWidget):
     """
-    Plot performances vs a metrics (snr for instance) over case for a study.
-
+    Plot agreement matrix.
 
     Parameters
     ----------
-    study: GroundTruthStudy
+    study : GroundTruthStudy
         A study object.
-    mode: str
-        Which mode in "swarm"
-    case_keys: list or None
+    case_keys : list or None
         A selection of cases to plot, if None, then all.
-
+    ordered : bool
+        Order units with best agreement scores.
+        This enable to see agreement on a diagonal.
     """
 
     def __init__(
         self,
         study,
-        metric_name="snr",
-        performance_name="accuracy",
+        ordered=True,
         case_keys=None,
         backend=None,
         **backend_kwargs,
     ):
-        if case_keys is None:
-            case_keys = list(study.cases.keys())
-
+        warnings.warn(
+            "plot_study_agreement_matrix is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
         plot_data = dict(
             study=study,
-            metric_name=metric_name,
-            performance_name=performance_name,
             case_keys=case_keys,
+            ordered=ordered,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
-        from .utils import get_some_colors
+        from spikeinterface.benchmark.benchmark_plot_tools import plot_agreement_matrix
 
-        dp = to_attr(data_plot)
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+        plot_agreement_matrix(data_plot["study"], ordered=data_plot["ordered"], case_keys=data_plot["case_keys"])
 
-        study = dp.study
-        perfs = study.get_performance_by_unit(case_keys=dp.case_keys)
 
-        max_metric = 0
-        for key in dp.case_keys:
-            x = study.get_metrics(key)[dp.metric_name].values
-            y = perfs.xs(key)[dp.performance_name].values
-            label = dp.study.cases[key]["label"]
-            self.ax.scatter(x, y, label=label)
-            max_metric = max(max_metric, np.max(x))
+class StudySummary(BaseWidget):
+    """
+    Plot a summary of a ground truth study.
+    Internally this plotting function runs:
 
-        self.ax.legend()
-        self.ax.set_xlim(0, max_metric * 1.05)
-        self.ax.set_ylim(0, 1.05)
+      * plot_study_run_times
+      * plot_study_unit_counts
+      * plot_study_performances
+      * plot_study_agreement_matrix
+
+    Parameters
+    ----------
+    study : GroundTruthStudy
+        A study object.
+    case_keys : list or None, default: None
+        A selection of cases to plot, if None, then all.
+    """
+
+    def __init__(
+        self,
+        study,
+        case_keys=None,
+        backend=None,
+        **backend_kwargs,
+    ):
+
+        warnings.warn(
+            "plot_study_summary is to be deprecated. Use spikeinterface.benchmark.benchmark_plot_tools instead."
+        )
+        plot_data = dict(study=study, case_keys=case_keys)
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        study = data_plot["study"]
+        case_keys = data_plot["case_keys"]
+
+        from spikeinterface.benchmark.benchmark_plot_tools import (
+            plot_agreement_matrix,
+            plot_performances,
+            plot_unit_counts,
+            plot_run_times,
+        )
+
+        plot_performances(study=study, case_keys=case_keys, mode="ordered")
+        plot_performances(study=study, case_keys=case_keys, mode="snr")
+        plot_agreement_matrix(study=study, case_keys=case_keys)
+        plot_run_times(study=study, case_keys=case_keys)
+        plot_unit_counts(study=study, case_keys=case_keys)

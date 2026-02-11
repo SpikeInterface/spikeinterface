@@ -1,0 +1,132 @@
+"""
+This replace the previous `GroundTruthStudy`
+"""
+
+import numpy as np
+from spikeinterface.core import NumpySorting, create_sorting_analyzer
+from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
+from spikeinterface.sorters import run_sorter
+from spikeinterface.comparison import compare_sorter_to_ground_truth
+
+# TODO later integrate CollisionGTComparison optionally in this class.
+
+
+class SorterBenchmark(Benchmark):
+    def __init__(self, recording, gt_sorting, params, sorter_folder):
+        self.recording = recording
+        self.gt_sorting = gt_sorting
+        self.params = params
+        self.sorter_folder = sorter_folder
+        self.result = {}
+
+    def run(self):
+        # run one sorter sorter_name is must be in params
+        raw_sorting = run_sorter(recording=self.recording, folder=self.sorter_folder, **self.params)
+        sorting = NumpySorting.from_sorting(raw_sorting)
+        self.result = {"sorting": sorting}
+
+    def compute_result(self, match_score=0.5, exhaustive_gt=True, with_analyzer=False, **job_kwargs):
+        # run becnhmark result
+        sorting = self.result["sorting"]
+        comp = compare_sorter_to_ground_truth(
+            self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
+        )
+        self.result["gt_comparison"] = comp
+
+        if with_analyzer:
+            # optionally computes analyzer to have templates for oversplited/overmerged
+            analyzer = create_sorting_analyzer(sorting, self.recording, format="memory", sparse=True, **job_kwargs)
+            analyzer.compute("random_spikes")
+            analyzer.compute("templates", **job_kwargs)
+            self.result["sorter_analyzer"] = analyzer
+
+    _run_key_saved = [
+        ("sorting", "sorting"),
+    ]
+    _result_key_saved = [
+        ("gt_comparison", "pickle"),
+        ("sorter_analyzer", "sorting_analyzer"),
+    ]
+
+
+class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
+    """
+    Benchmark study to compare Spike Sorters in various situtation.
+
+    This is the most most top level benchmark to compare sorter between then
+    but also to compare one sorter in challenging situation (drift, noise, ...).
+    This can also be used to compare sorters with differents paramerters.
+
+    The ground truth sorting must be given and sorting output from sorter will be
+    compared to then.
+    """
+
+    benchmark_class = SorterBenchmark
+
+    def create_benchmark(self, key):
+        dataset_key = self.cases[key]["dataset"]
+        recording, gt_sorting = self.datasets[dataset_key]
+        params = self.cases[key]["params"]
+        sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+        benchmark = SorterBenchmark(recording, gt_sorting, params, sorter_folder)
+        return benchmark
+
+    def remove_benchmark(self, key):
+        BenchmarkStudy.remove_benchmark(self, key)
+
+        sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+        import shutil
+
+        if sorter_folder.exists():
+            shutil.rmtree(sorter_folder)
+
+    # plotting as methods
+    def plot_unit_counts(self, **kwargs):
+        from .benchmark_plot_tools import plot_unit_counts
+
+        return plot_unit_counts(self, **kwargs)
+
+    def plot_performances(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances
+
+        return plot_performances(self, **kwargs)
+
+    def plot_performances_vs_snr(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_snr
+
+        return plot_performances_vs_snr(self, **kwargs)
+
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
+
+    def plot_performances_ordered(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_ordered
+
+        return plot_performances_ordered(self, **kwargs)
+
+    def plot_performances_swarm(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_swarm
+
+        return plot_performances_swarm(self, **kwargs)
+
+    def plot_agreement_matrix(self, **kwargs):
+        from .benchmark_plot_tools import plot_agreement_matrix
+
+        return plot_agreement_matrix(self, **kwargs)
+
+    def plot_performance_losses(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_performance_losses
+
+        return plot_performance_losses(self, *args, **kwargs)
+
+    def plot_some_over_merged(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_merged
+
+        return plot_some_over_merged(self, *args, **kwargs)
+
+    def plot_some_over_splited(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_splited
+
+        return plot_some_over_splited(self, *args, **kwargs)

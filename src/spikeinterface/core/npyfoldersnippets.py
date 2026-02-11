@@ -1,11 +1,9 @@
+from __future__ import annotations
 from pathlib import Path
 import json
 
-import numpy as np
-
-from .base import _make_paths_absolute
 from .npysnippetsextractor import NpySnippetsExtractor
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, make_paths_absolute
 
 
 class NpyFolderSnippets(NpySnippetsExtractor):
@@ -13,20 +11,19 @@ class NpyFolderSnippets(NpySnippetsExtractor):
     NpyFolderSnippets is an internal format used in spikeinterface.
     It is a NpySnippetsExtractor + metadata contained in a folder.
 
-    It is created with the function: `snippets.save(format='npy', folder='/myfolder')`
+    It is created with the function: `snippets.save(format="npy", folder="/myfolder")`
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
         The path to the folder
 
     Returns
     -------
-    snippets: NpyFolderSnippets
+    snippets : NpyFolderSnippets
         The snippets
     """
 
-    extractor_name = "NpyFolderSnippets"
     mode = "folder"
     name = "npyfolder"
 
@@ -41,7 +38,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
 
         assert d["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        d = make_paths_absolute(d, folder_path)
 
         NpySnippetsExtractor.__init__(self, **d["kwargs"])
 

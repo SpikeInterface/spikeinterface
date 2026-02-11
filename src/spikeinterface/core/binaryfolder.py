@@ -1,11 +1,11 @@
+from __future__ import annotations
 from pathlib import Path
 import json
 
 import numpy as np
 
-from .base import _make_paths_absolute
 from .binaryrecordingextractor import BinaryRecordingExtractor
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, make_paths_absolute
 
 
 class BinaryFolderRecording(BinaryRecordingExtractor):
@@ -13,21 +13,17 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     BinaryFolderRecording is an internal format used in spikeinterface.
     It is a BinaryRecordingExtractor + metadata contained in a folder.
 
-    It is created with the function: `recording.save(format='binary', folder='/myfolder')`
+    It is created with the function: `recording.save(format="binary", folder="/myfolder")`
 
     Parameters
     ----------
-    folder_path: str or Path
+    folder_path : str or Path
 
     Returns
     -------
-    recording: BinaryFolderRecording
+    recording : BinaryFolderRecording
         The recording
     """
-
-    extractor_name = "BinaryFolder"
-    mode = "folder"
-    name = "binaryfolder"
 
     def __init__(self, folder_path):
         folder_path = Path(folder_path)
@@ -40,7 +36,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         assert d["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        d = make_paths_absolute(d, folder_path)
 
         BinaryRecordingExtractor.__init__(self, **d["kwargs"])
 
@@ -53,7 +49,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"
             self._bin_kwargs["num_channels"] = self._bin_kwargs["num_chan"]
 
-    def is_binary_compatible(self):
+    def is_binary_compatible(self) -> bool:
         return True
 
     def get_binary_description(self):

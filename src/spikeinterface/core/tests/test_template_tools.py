@@ -1,9 +1,10 @@
 import pytest
-import shutil
-from pathlib import Path
+import numpy as np
 
-from spikeinterface import load_extractor, extract_waveforms, load_waveforms, generate_recording, generate_sorting
+from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 
+
+from spikeinterface import Templates
 from spikeinterface.core import (
     get_template_amplitudes,
     get_template_extremum_channel,
@@ -12,46 +13,67 @@ from spikeinterface.core import (
 )
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "core"
-else:
-    cache_folder = Path("cache_folder") / "core"
-
-
-def setup_module():
-    for folder_name in ("toy_rec", "toy_sort", "toy_waveforms", "toy_waveforms_1"):
-        if (cache_folder / folder_name).is_dir():
-            shutil.rmtree(cache_folder / folder_name)
-
-    durations = [10.0, 5.0]
-    recording = generate_recording(durations=durations, num_channels=4)
-    sorting = generate_sorting(durations=durations, num_units=10)
-
+def get_sorting_analyzer():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[10.0, 5.0],
+        sampling_frequency=10_000.0,
+        num_channels=4,
+        num_units=10,
+        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        seed=2205,
+    )
     recording.annotate(is_filtered=True)
     recording.set_channel_groups([0, 0, 1, 1])
-    recording = recording.save(folder=cache_folder / "toy_rec")
     sorting.set_property("group", [0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
-    sorting = sorting.save(folder=cache_folder / "toy_sort")
 
-    we = extract_waveforms(recording, sorting, cache_folder / "toy_waveforms")
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    sorting_analyzer.compute("random_spikes")
+    sorting_analyzer.compute("templates")
 
-
-def test_get_template_amplitudes():
-    we = load_waveforms(cache_folder / "toy_waveforms")
-    peak_values = get_template_amplitudes(we)
-    print(peak_values)
+    return sorting_analyzer
 
 
-def test_get_template_extremum_channel():
-    we = load_waveforms(cache_folder / "toy_waveforms")
-    extremum_channels_ids = get_template_extremum_channel(we, peak_sign="both")
+@pytest.fixture(scope="module")
+def sorting_analyzer():
+    return get_sorting_analyzer()
+
+
+def _get_templates_object_from_sorting_analyzer(sorting_analyzer):
+    ext = sorting_analyzer.get_extension("templates")
+    templates = Templates(
+        templates_array=ext.data["average"],
+        sampling_frequency=sorting_analyzer.sampling_frequency,
+        nbefore=ext.nbefore,
+        # this is dense
+        sparsity_mask=None,
+        channel_ids=sorting_analyzer.channel_ids,
+        unit_ids=sorting_analyzer.unit_ids,
+        is_in_uV=sorting_analyzer.return_in_uV,
+    )
+    return templates
+
+
+def test_get_template_amplitudes(sorting_analyzer):
+    peak_values = get_template_amplitudes(sorting_analyzer)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
+    peak_values = get_template_amplitudes(templates, abs_value=True)
+    peak_to_peak_values = get_template_amplitudes(templates, mode="peak_to_peak")
+    assert np.all(ptp > p for ptp, p in zip(peak_to_peak_values.values(), peak_values.values()))
+
+
+def test_get_template_extremum_channel(sorting_analyzer):
+    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign="both")
+    print(extremum_channels_ids)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
+    extremum_channels_ids = get_template_extremum_channel(templates, peak_sign="both")
     print(extremum_channels_ids)
 
 
-def test_get_template_extremum_channel_peak_shift():
-    we = load_waveforms(cache_folder / "toy_waveforms")
-    shifts = get_template_extremum_channel_peak_shift(we, peak_sign="neg")
+def test_get_template_extremum_channel_peak_shift(sorting_analyzer):
+    shifts = get_template_extremum_channel_peak_shift(sorting_analyzer, peak_sign="neg")
     print(shifts)
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
+    shifts = get_template_extremum_channel_peak_shift(templates, peak_sign="neg")
 
     # DEBUG
     # import matplotlib.pyplot as plt
@@ -69,17 +91,22 @@ def test_get_template_extremum_channel_peak_shift():
     #     plt.show()
 
 
-def test_get_template_extremum_amplitude():
-    we = load_waveforms(cache_folder / "toy_waveforms")
+def test_get_template_extremum_amplitude(sorting_analyzer):
 
-    extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign="both")
+    extremum_channels_ids = get_template_extremum_amplitude(sorting_analyzer, peak_sign="both")
     print(extremum_channels_ids)
+
+    templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
+    extremum_channels_ids = get_template_extremum_amplitude(templates, peak_sign="both")
 
 
 if __name__ == "__main__":
-    setup_module()
+    # setup_module()
 
-    test_get_template_amplitudes()
-    test_get_template_extremum_channel()
-    test_get_template_extremum_channel_peak_shift()
-    test_get_template_extremum_amplitude()
+    sorting_analyzer = get_sorting_analyzer()
+    print(sorting_analyzer)
+
+    test_get_template_amplitudes(sorting_analyzer)
+    test_get_template_extremum_channel(sorting_analyzer)
+    test_get_template_extremum_channel_peak_shift(sorting_analyzer)
+    test_get_template_extremum_amplitude(sorting_analyzer)

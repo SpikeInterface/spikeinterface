@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import warnings
 from pathlib import Path
 from typing import Union, Optional
+from xml.etree import ElementTree as Etree
 
 import numpy as np
 
@@ -8,7 +11,6 @@ from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
-
 
 PathType = Union[str, Path]
 OptionalPathType = Optional[PathType]
@@ -23,31 +25,46 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The file path to the binary container usually a .dat, .lfp, .eeg extension.
-    xml_file_path: str, optional
+    xml_file_path : str, default: None
         The path to the xml file. If None, the xml file is assumed to have the same name as the binary file.
-    stream_id: str, optional
+    stream_id : str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name : str, default: None
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, default: False
+    all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     """
 
-    mode = "file"
     NeoRawIOClass = "NeuroScopeRawIO"
-    name = "neuroscope"
 
-    def __init__(self, file_path, xml_file_path=None, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(
+        self,
+        file_path,
+        xml_file_path=None,
+        stream_id=None,
+        stream_name: bool = None,
+        all_annotations: bool = False,
+        use_names_as_ids: bool = False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path, xml_file_path)
 
         NeoBaseRecordingExtractor.__init__(
-            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
+            **neo_kwargs,
         )
         if xml_file_path is not None:
             xml_file_path = str(Path(xml_file_path).absolute())
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), xml_file_path=xml_file_path))
+        self.xml_file_path = xml_file_path if xml_file_path is not None else Path(file_path).with_suffix(".xml")
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, xml_file_path=None):
@@ -62,16 +79,81 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
 
         return neo_kwargs
 
+    def _parse_xml_file(self, xml_file_path):
+        """
+        Comes from NeuroPhy package by Diba Lab
+        """
+        tree = Etree.parse(xml_file_path)
+        myroot = tree.getroot()
+
+        for sf in myroot.findall("acquisitionSystem"):
+            n_channels = int(sf.find("nChannels").text)
+
+        channel_groups, skipped_channels, anatomycolors = [], [], {}
+        for x in myroot.findall("anatomicalDescription"):
+            for y in x.findall("channelGroups"):
+                for z in y.findall("group"):
+                    chan_group = []
+                    for chan in z.findall("channel"):
+                        if int(chan.attrib["skip"]) == 1:
+                            skipped_channels.append(int(chan.text))
+
+                        chan_group.append(int(chan.text))
+                    if chan_group:
+                        channel_groups.append(np.array(chan_group))
+
+        for x in myroot.findall("neuroscope"):
+            for y in x.findall("channels"):
+                for i, z in enumerate(y.findall("channelColors")):
+                    try:
+                        channel_id = str(z.find("channel").text)
+                        color = z.find("color").text
+
+                    except AttributeError:
+                        channel_id = i
+                        color = "#0080ff"
+                    anatomycolors[channel_id] = color
+
+        discarded_channels = [ch for ch in range(n_channels) if all(ch not in group for group in channel_groups)]
+        kept_channels = [ch for ch in range(n_channels) if ch not in skipped_channels and ch not in discarded_channels]
+
+        return channel_groups, kept_channels, discarded_channels, anatomycolors
+
+    def _set_neuroscope_groups(self):
+        """
+        Set the group ids and colors based on the xml file.
+        These group ids are usually different brain/body anatomical areas, or shanks from multi-shank probes.
+        The group ids are set as a property of the recording extractor.
+        """
+        n = self.get_num_channels()
+        group_ids = np.full(n, -1, dtype=int)  # Initialize all positions to -1
+
+        channel_groups, kept_channels, discarded_channels, colors = self._parse_xml_file(self.xml_file_path)
+        for group_id, numbers in enumerate(channel_groups):
+            group_ids[numbers] = group_id  # Assign group_id to the positions in `numbers`
+        self.set_property("neuroscope_group", group_ids)
+        discarded_ppty = np.full(n, False, dtype=bool)
+        discarded_ppty[discarded_channels] = True
+        self.set_property("discarded_channels", discarded_ppty)
+        self.set_property("colors", values=list(colors.values()), ids=list(colors.keys()))
+
+    def prepare_neuroscope_for_ephyviewer(self):
+        """
+        Prepare the recording extractor for ephyviewer by setting the group ids and colors.
+        This function is not called when the extractor is initialized, and the user must call it manually.
+        """
+        self._set_neuroscope_groups()
+
 
 class NeuroScopeSortingExtractor(BaseSorting):
     """
     Extracts spiking information from an arbitrary number of .res.%i and .clu.%i files in the general folder path.
 
-    The .res is a text file with a sorted list of spiketimes from all units displayed in sample (integer '%i') units.
+    The .res is a text file with a sorted list of spiketimes from all units displayed in sample (integer "%i") units.
     The .clu file is a file with one more row than the .res with the first row corresponding to the total number of
     unique ids in the file (and may exclude 0 & 1 from this count)
     with the rest of the rows indicating which unit id the corresponding entry in the .res file refers to.
-    The group id is loaded as unit property 'group'.
+    The group id is loaded as unit property "group".
 
     In the original Neuroscope format:
         Unit ID 0 is the cluster of unsorted spikes (noise).
@@ -92,17 +174,14 @@ class NeuroScopeSortingExtractor(BaseSorting):
     clufile_path : PathType
         Optional. Path to a particular .clu text file. If given, only the single .clu file
         (and the respective .res file) are loaded
-    keep_mua_units : bool
-        Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
+    keep_mua_units : bool, default: True
+        Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res.%i and .clu.%i pairs.
-    xml_file_path : PathType, optional
+    xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
-
-    extractor_name = "NeuroscopeSortingExtractor"
-    name = "neuroscope"
 
     def __init__(
         self,
@@ -300,18 +379,19 @@ def read_neuroscope(
 
     Parameters
     ----------
-    file_path: str
+    file_path : str
         The xml file.
-    stream_id: str or None
-    keep_mua_units: bool
-        Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
-    exclude_shanks: list
+    stream_id : str or None
+        The stream id to load. If None, the first stream is loaded
+    keep_mua_units : bool, default: False
+        Optional. Whether or not to return sorted spikes from multi-unit activity
+    exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res. % i and .clu. % i pairs.
-    load_recording: bool
-        If True, the recording is loaded (default True)
-    load_sorting: bool
-        If True, the sorting is loaded (default False)
+    load_recording : bool, default: True
+        If True, the recording is loaded
+    load_sorting : bool, default: False
+        If True, the sorting is loaded
     """
     outputs = ()
     # TODO add checks for recording and sorting existence

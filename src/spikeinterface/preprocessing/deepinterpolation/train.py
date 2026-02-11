@@ -1,19 +1,14 @@
 from __future__ import annotations
-import json
 import os
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
 from .tf_utils import import_tf
-
-# from .generators import define_recording_generator_class
-
-from ...core import BaseRecording
-
+from spikeinterface.core import BaseRecording
 
 global train_func
 
@@ -45,7 +40,7 @@ def train_deepinterpolation(
     nb_workers: int = -1,
     caching_validation: bool = False,
     run_uid: str = "si",
-    network_name: str = "unet_single_ephys_1024",
+    network: Callable | None = None,
     use_gpu: bool = True,
     disable_tf_logger: bool = True,
     memory_gpu: Optional[int] = None,
@@ -84,36 +79,38 @@ def train_deepinterpolation(
         Number of frames after the frame to be predicted
     pre_post_omission : int
         Number of frames to be omitted before and after the frame to be predicted
-    existing_model_path : str | Path
-        Path to an existing model to be used for transfer learning, default is None
-    verbose : bool
-        Whether to print the progress of the training, default is True
-    steps_per_epoch : int
+    existing_model_path : str | Path | None, default: None
+        Path to an existing model to be used for transfer learning
+    verbose : bool, default: True
+        Whether to print the progress of the training
+    steps_per_epoch : int, default: 10
         Number of steps per epoch
-    period_save : int
+    period_save : int, default: 100
         Period of saving the model
-    apply_learning_decay : int
+    apply_learning_decay : int, default: 0
         Whether to use a learning scheduler during training
-    nb_times_through_data : int
+    nb_times_through_data : int, default: 1
         Number of times the data is repeated during training
-    learning_rate : float
+    learning_rate : float, default: 0.0001
         Learning rate
-    loss : str
+    loss : str, default: "mean_squared_error"
         Loss function to be used
-    nb_workers : int
+    nb_workers : int, default: -1
         Number of workers to be used for the training
-    caching_validation : bool
-        Whether to cache the validation data, default is False
-    run_uid : str
+    caching_validation : bool, default: False
+        Whether to cache the validation data
+    run_uid : str, default: "si"
         Unique identifier for the training
-    network_name : str
-        Name of the network to be used, default is None
-    use_gpu : bool
-        Whether to use GPU, default is True
-    disable_tf_logger : bool
-        Whether to disable the tensorflow logger, default is True
-    memory_gpu : int
-        Amount of memory to be used by the GPU, default is None
+    network : Callable or None, default: None
+        Name deepinterpolation network to use. If None, the "unet_single_ephys_1024" network is used.
+        The network should be a callable that takes a dictionary as input and returns a deepinterpolation network.
+        See deepinterpolation.network_collection for examples.
+    use_gpu : bool, default: True
+        Whether to use GPU
+    disable_tf_logger : bool, default: True
+        Whether to disable the tensorflow logger
+    memory_gpu : int, default: None
+        Amount of memory to be used by the GPU
 
     Returns
     -------
@@ -151,7 +148,7 @@ def train_deepinterpolation(
         nb_workers,
         caching_validation,
         run_uid,
-        network_name,
+        network,
         use_gpu,
         disable_tf_logger,
         memory_gpu,
@@ -191,13 +188,12 @@ def train_deepinterpolation_process(
     nb_workers: int = -1,
     caching_validation: bool = False,
     run_uid: str = "training",
-    network_name: str = "unet_single_ephys_1024",
+    network: Callable | None = None,
     use_gpu: bool = True,
     disable_tf_logger: bool = True,
     memory_gpu: Optional[int] = None,
 ):
     from deepinterpolation.trainor_collection import core_trainer
-    from deepinterpolation.generic import ClassLoader
     from .generators import SpikeInterfaceRecordingGenerator
 
     # initialize TF
@@ -232,11 +228,7 @@ def train_deepinterpolation_process(
         ):
             warnings.warn("Training and testing overlap. This is not recommended.")
 
-    # Those are parameters used for the network topology
-    network_params = dict()
-    network_params["type"] = "network"
-    # Name of network topology in the collection
-    network_params["name"] = network_name if network_name is not None else "unet_single_ephys_1024"
+    # # Those are parameters used for the network topology
     training_params = dict()
     training_params["output_dir"] = str(trained_model_folder)
     # We pass on the uid
@@ -280,18 +272,14 @@ def train_deepinterpolation_process(
         total_samples=total_samples_testing,
     )
 
-    network_json_path = trained_model_folder / "network_params.json"
-    with open(network_json_path, "w") as f:
-        json.dump(network_params, f)
+    if network is None:
+        from deepinterpolation.network_collection import unet_single_ephys_1024
 
-    network_obj = ClassLoader(network_json_path)
-    data_network = network_obj.find_and_build()(network_json_path)
+        network_obj = unet_single_ephys_1024({})
+    else:
+        network_obj = network({})
 
-    training_json_path = trained_model_folder / "training_params.json"
-    with open(training_json_path, "w") as f:
-        json.dump(training_params, f)
-
-    training_class = core_trainer(training_data_generator, test_data_generator, data_network, training_json_path)
+    training_class = core_trainer(training_data_generator, test_data_generator, network_obj, training_params)
 
     if verbose:
         print("Created objects for training. Running training job")

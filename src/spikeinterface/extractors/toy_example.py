@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from probeinterface import Probe
@@ -41,32 +43,38 @@ def toy_example(
 
     Parameters
     ----------
-    duration: float (or list if multi segment)
-        Duration in seconds (default 10).
-    num_channels: int
-        Number of channels (default 4).
-    num_units: int
-        Number of units (default 10).
-    sampling_frequency: float
-        Sampling frequency (default 30000).
-    num_segments: int
-        Number of segments (default 2).
-    spike_times: ndarray (or list of multi segment)
-        Spike time in the recording.
-    spike_labels: ndarray (or list of multi segment)
+    duration : float or list[float], default: 10
+        Duration in seconds. If a list is provided, it will be the duration of each segment.
+    num_channels : int, default: 4
+        Number of channels
+    num_units : int, default: 10
+        Number of units
+    sampling_frequency : float, default: 30000
+        Sampling frequency
+    num_segments : int, default: 2
+        Number of segments.
+    spike_times : np.array or list[nparray] or None, default: None
+        Spike time in the recording
+    spike_labels : np.array or list[nparray] or None, default: None
         Cluster label for each spike time (needs to specified both together).
-    # score_detection: int (between 0 and 1)
-    #    Generate the sorting based on a subset of spikes compare with the trace generation.
-    firing_rate: float
-        The firing rate for the units (in Hz).
-    seed: int
+    firing_rate : float, default: 3.0
+        The firing rate for the units (in Hz)
+    seed : int or None, default: None
         Seed for random initialization.
+    upsample_factor : None or int, default: None
+        An upsampling factor, used only when templates are not provided.
+    num_columns : int, default:  1
+        Number of columns in probe.
+    average_peak_amplitude : float, default: -100
+        Average peak amplitude of generated templates.
+    contact_spacing_um : float, default: 40.0
+        Spacing between probe contacts in micrometers.
 
     Returns
     -------
-    recording: RecordingExtractor
+    recording : RecordingExtractor
         The output recording extractor.
-    sorting: SortingExtractor
+    sorting : SortingExtractor
         The output sorting extractor.
 
     """
@@ -127,7 +135,7 @@ def toy_example(
         assert isinstance(spike_labels, list)
         assert len(spike_times) == len(spike_labels)
         assert len(spike_times) == num_segments
-        sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
+        sorting = NumpySorting.from_samples_and_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
     else:
         sorting = generate_sorting(
             num_units=num_units,
@@ -149,7 +157,7 @@ def toy_example(
         ms_after=ms_after,
         dtype="float32",
         seed=seed,
-        noise_kwargs=dict(noise_level=10.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=10.0, strategy="on_the_fly"),
     )
 
     return recording, sorting

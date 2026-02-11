@@ -1,7 +1,5 @@
-"""
+""" """
 
-
-"""
 import importlib.metadata
 
 __version__ = importlib.metadata.version("spikeinterface")
@@ -25,3 +23,9 @@ or alternativley you can do
 import spikeinterface.full as si
 
 """
+
+# This flag must be set to False for release
+# This avoids using versioning that contains ".dev0" (and this is a better choice)
+# This is mainly useful when using run_sorter in a container and spikeinterface install
+DEV_MODE = True
+# DEV_MODE = False

@@ -1,7 +1,6 @@
-from pathlib import Path
-import json
+from __future__ import annotations
+
 from typing import List, Optional
-import scipy.signal
 import numpy as np
 import operator
 from typing import Literal
@@ -16,27 +15,27 @@ class WaveformThresholder(WaveformsNode):
 
     This node allows you to perform adaptive masking by setting channels to 0
     that have a given feature below a certain threshold. The available features
-    to consider are peak-to-peak amplitude ('ptp'), mean amplitude ('mean'),
-    energy ('energy'), and peak voltage ('peak_voltage').
+    to consider are peak-to-peak amplitude ("ptp"), mean amplitude ("mean"),
+    energy ("energy"), and peak voltage ("peak_voltage").
 
     Parameters
     ----------
     recording: BaseRecording
-        The recording extractor object.
-    return_output: bool, optional
-        Whether to return output from this node (default True).
-    parents: list of PipelineNodes, optional
-        The parent nodes of this node (default None).
-    feature: {'ptp', 'mean', 'energy', 'peak_voltage'}, optional
-        The feature to be considered for thresholding (default 'ptp'). Features are normalized with the channel noise levels.
-    threshold: float, optional
-        The threshold value for the selected feature (default 2).
-    noise_levels: array, optional
+        The recording extractor object
+    return_output: bool, default: True
+        Whether to return output from this node
+    parents: list of PipelineNodes, default: None
+        The parent nodes of this node
+    feature: "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        The feature to be considered for thresholding . Features are normalized with the channel noise levels.
+    threshold: float, default: 2
+        The threshold value for the selected feature
+    noise_levels: array of None, default: None
         The noise levels to determine the thresholds
-    random_chunk_kwargs: dict
+    random_chunk_kwargs: dict, default: dict()
         Parameters for computing noise levels, if not provided (sub optimal)
-    operator: callable, optional
-        Comparator to flag values that should be set to 0 (default less or equal)
+    operator: callable, default: operator.le (less or equal)
+        Comparator to flag values that should be set to 0
     """
 
     def __init__(
@@ -71,7 +70,7 @@ class WaveformThresholder(WaveformsNode):
 
         self.noise_levels = noise_levels
         if self.noise_levels is None:
-            self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_scaled=False)
+            self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_in_uV=False)
 
         self._kwargs.update(
             dict(feature=feature, threshold=threshold, operator=operator, noise_levels=self.noise_levels)
@@ -79,7 +78,7 @@ class WaveformThresholder(WaveformsNode):
 
     def compute(self, traces, peaks, waveforms):
         if self.feature == "ptp":
-            wf_data = waveforms.ptp(axis=1) / self.noise_levels
+            wf_data = np.ptp(waveforms, axis=1) / self.noise_levels
         elif self.feature == "mean":
             wf_data = waveforms.mean(axis=1) / self.noise_levels
         elif self.feature == "energy":

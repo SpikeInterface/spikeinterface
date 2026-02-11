@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import json
 import struct
@@ -10,7 +12,7 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.core_tools import write_binary_recording
+from spikeinterface.core import write_binary_recording
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
@@ -21,22 +23,18 @@ class MdaRecordingExtractor(BaseRecording):
     ----------
     folder_path : str or Path
         Path to the MDA folder.
-    raw_fname: str
-        File name of raw file. Defaults to 'raw.mda'.
-    params_fname: str
-        File name of params file. Defaults to 'params.json'.
-    geom_fname: str
-        File name of geom file. Defaults to 'geom.csv'.
+    raw_fname : str, default: "raw.mda"
+        File name of raw file
+    params_fname : str, default: "params.json"
+        File name of params file
+    geom_fname : str, default: "geom.csv"
+        File name of geom file
 
     Returns
     -------
     extractor : MdaRecordingExtractor
         The loaded data.
     """
-
-    extractor_name = "MdaRecording"
-    mode = "folder"
-    name = "mda"
 
     def __init__(self, folder_path, raw_fname="raw.mda", params_fname="params.json", geom_fname="geom.csv"):
         folder_path = Path(folder_path)
@@ -74,27 +72,30 @@ class MdaRecordingExtractor(BaseRecording):
         params_fname="params.json",
         geom_fname="geom.csv",
         dtype=None,
+        verbose=False,
         **job_kwargs,
     ):
         """Write a recording to file in MDA format.
 
         Parameters
         ----------
-        recording: RecordingExtractor
+        recording : RecordingExtractor
             The recording extractor to be saved.
-        save_path: str or Path
+        save_path : str or Path
             The folder to save the Mda files.
-        params: dictionary
+        params : dictionary
             Dictionary with optional parameters to save metadata.
             Sampling frequency is appended to this dictionary.
-        raw_fname: str
-            File name of raw file. Defaults to 'raw.mda'.
-        params_fname: str
-            File name of params file. Defaults to 'params.json'.
-        geom_fname: str
-            File name of geom file. Defaults to 'geom.csv'.
-        dtype: dtype
+        raw_fname : str, default: "raw.mda"
+            File name of raw file
+        params_fname : str, default: "params.json"
+            File name of params file
+        geom_fname : str, default: "geom.csv"
+            File name of geom file
+        dtype : dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
+        verbose : bool
+            If True, shows progress bar when saving recording.
         **job_kwargs:
             Use by job_tools modules to set:
 
@@ -132,6 +133,7 @@ class MdaRecordingExtractor(BaseRecording):
             dtype=dtype,
             byte_offset=header_size,
             add_file_extension=False,
+            verbose=verbose,
             **job_kwargs,
         )
 
@@ -154,7 +156,7 @@ class MdaRecordingSegment(BaseRecordingSegment):
         """Returns the number of samples in this signal block
 
         Returns:
-            SampleIndex: Number of samples in the signal block
+            SampleIndex : Number of samples in the signal block
         """
         return self._num_samples
 
@@ -178,6 +180,13 @@ class MdaRecordingSegment(BaseRecordingSegment):
 class MdaSortingExtractor(BaseSorting):
     """Load MDA format data as a sorting extractor.
 
+    NOTE: As in the MDA format, the max_channel property indexes the channels that are given as input
+    to the sorter.
+    If sorting was run on a subset of channels of the recording, then the max_channel values are
+    based on that subset, so care must be taken when associating these values with a recording.
+    If additional sorting segments are added to this sorting extractor after initialization,
+    then max_channel will not be updated. The max_channel indices begin at 1.
+
     Parameters
     ----------
     file_path : str or Path
@@ -191,10 +200,6 @@ class MdaSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = "MdaSorting"
-    mode = "file"
-    name = "mda"
-
     def __init__(self, file_path, sampling_frequency):
         firings = readmda(str(Path(file_path).absolute()))
         labels = firings[2, :]
@@ -204,6 +209,19 @@ class MdaSortingExtractor(BaseSorting):
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
 
+        # Store the max channel for each unit
+        # Every spike assigned to a unit (label) has the same max channel
+        # ref: https://github.com/SpikeInterface/spikeinterface/issues/3695#issuecomment-2663329006
+        max_channels = []
+        segment = self._sorting_segments[0]
+        for unit_id in self.unit_ids:
+            label_mask = segment._labels == unit_id
+            # since all max channels are the same, we can just grab the first occurrence for the unit
+            max_channel = segment._max_channels[label_mask][0]
+            max_channels.append(max_channel)
+
+        self.set_property(key="max_channel", values=max_channels)
+
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),
             "sampling_frequency": sampling_frequency,
@@ -211,7 +229,7 @@ class MdaSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " "sorting"
+        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment sorting"
         unit_ids = sorting.get_unit_ids()
         times_list = []
         labels_list = []
@@ -225,7 +243,7 @@ class MdaSortingExtractor(BaseSorting):
             else:
                 labels_list.append(np.ones(times.shape, dtype=int) * unit_index)
             if write_primary_channels:
-                if "max_channel" in sorting.get_unit_property_names(unit_id):
+                if "max_channel" in sorting.get_property_keys():
                     primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
                 else:
                     raise ValueError(
@@ -442,17 +460,21 @@ def is_url(path):
 
 
 def _download_bytes_to_tmpfile(url, start, end):
-    try:
-        import requests
-    except:
-        raise Exception("Unable to import module: requests")
-    headers = {"Range": "bytes={}-{}".format(start, end - 1)}
-    r = requests.get(url, headers=headers, stream=True)
-    fd, tmp_fname = tempfile.mkstemp()
-    with open(tmp_fname, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk:
-                f.write(chunk)
+    import requests
+
+    headers = {"Range": f"bytes={start}-{end - 1}"}
+
+    with requests.get(url, headers=headers, stream=True) as r:
+        r.raise_for_status()  # Exposes HTTPError if one occurred
+
+        with tempfile.NamedTemporaryFile(delete=False, mode="wb") as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+
+            # Store the temp file name for return
+            tmp_fname = f.name
+
     return tmp_fname
 
 

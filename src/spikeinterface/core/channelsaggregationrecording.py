@@ -1,4 +1,5 @@
-from typing import List, Union
+from __future__ import annotations
+import warnings
 
 import numpy as np
 
@@ -13,43 +14,61 @@ class ChannelsAggregationRecording(BaseRecording):
 
     """
 
-    def __init__(self, recording_list, renamed_channel_ids=None):
-        channel_map = {}
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None, recording_list=None):
 
-        num_all_channels = sum([rec.get_num_channels() for rec in recording_list])
-        if renamed_channel_ids is not None:
-            assert len(np.unique(renamed_channel_ids)) == num_all_channels, (
-                "'renamed_channel_ids' doesn't have the " "right size or has duplicates!"
+        if recording_list is not None:
+            warnings.warn(
+                "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
+                category=DeprecationWarning,
+                stacklevel=2,
             )
+            recording_list_or_dict = recording_list
+
+        if isinstance(recording_list_or_dict, dict):
+            recording_list = list(recording_list_or_dict.values())
+            recording_ids = list(recording_list_or_dict.keys())
+        elif isinstance(recording_list_or_dict, list):
+            recording_list = recording_list_or_dict
+            recording_ids = range(len(recording_list))
+        else:
+            raise TypeError(
+                "`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings."
+            )
+
+        self._recordings = recording_list
+
+        for group_id, recording in zip(recording_ids, recording_list):
+            recording.set_property("aggregation_key", [group_id] * recording.get_num_channels())
+
+        self._perform_consistency_checks()
+        sampling_frequency = recording_list[0].get_sampling_frequency()
+        dtype = recording_list[0].get_dtype()
+        num_segments = recording_list[0].get_num_segments()
+
+        # Generate a default list of channel ids that are unique and consecutive numbers as strings.
+        num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
+        if renamed_channel_ids is not None:
+            assert (
+                len(np.unique(renamed_channel_ids)) == num_all_channels
+            ), "'renamed_channel_ids' doesn't have the right size or has duplicates!"
             channel_ids = list(renamed_channel_ids)
         else:
-            channel_ids = list(np.arange(num_all_channels))
 
-        # channel map maps channel indices that are used to get traces
-        ch_id = 0
-        for r_i, recording in enumerate(recording_list):
-            single_channel_ids = recording.get_channel_ids()
-            single_channel_indices = recording.ids_to_indices(single_channel_ids)
-            for chan_id, chan_idx in zip(single_channel_ids, single_channel_indices):
-                channel_map[ch_id] = {"recording_id": r_i, "channel_index": chan_idx}
-                ch_id += 1
+            # Explicitly check if all channel_ids arrays are either all integers or all strings.
+            all_ids_are_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
+            all_ids_are_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
 
-        sampling_frequency = recording_list[0].get_sampling_frequency()
-        num_segments = recording_list[0].get_num_segments()
-        dtype = recording_list[0].get_dtype()
+            all_ids_have_same_dtype = all_ids_are_int_dtype or all_ids_are_str_dtype
+            if all_ids_have_same_dtype:
+                combined_ids = np.concatenate([rec.channel_ids for rec in recording_list])
+                all_channel_ids_are_unique = np.unique(combined_ids).size == num_all_channels
 
-        ok1 = all(sampling_frequency == rec.get_sampling_frequency() for rec in recording_list)
-        ok2 = all(num_segments == rec.get_num_segments() for rec in recording_list)
-        ok3 = all(dtype == rec.get_dtype() for rec in recording_list)
-        ok4 = True
-        for i_seg in range(num_segments):
-            num_samples = recording_list[0].get_num_samples(i_seg)
-            ok4 = all(num_samples == rec.get_num_samples(i_seg) for rec in recording_list)
-            if not ok4:
-                break
-
-        if not (ok1 and ok2 and ok3 and ok4):
-            raise ValueError("Sortings don't have the same sampling_frequency/num_segments/dtype/num samples")
+            if all_ids_have_same_dtype and all_channel_ids_are_unique:
+                channel_ids = combined_ids
+            else:
+                # If IDs are not unique or not of the same type, use default as stringify IDs
+                default_channel_ids = [str(i) for i in range(num_all_channels)]
+                channel_ids = default_channel_ids
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -84,14 +103,73 @@ class ChannelsAggregationRecording(BaseRecording):
                 "Locations are not unique! " "Cannot aggregate recordings!"
             )
 
-        # finally add segments
+        planar_contour_keys = [
+            key for recording in recording_list for key in recording.get_annotation_keys() if "planar_contour" in key
+        ]
+        if len(planar_contour_keys) > 0:
+            if all(
+                k == planar_contour_keys[0] for k in planar_contour_keys
+            ):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
+                planar_contour_key = planar_contour_keys[0]
+                collect_planar_contours = []
+                for rec in recording_list:
+                    collect_planar_contours.append(rec.get_annotation(planar_contour_key))
+                if all(np.array_equal(arr, collect_planar_contours[0]) for arr in collect_planar_contours):
+                    self.set_annotation(planar_contour_key, collect_planar_contours[0])
+
+        # finally add segments, we need a channel mapping
+        ch_id = 0
+        channel_map = {}
+        for r_i, recording in enumerate(recording_list):
+            single_channel_ids = recording.get_channel_ids()
+            single_channel_indices = recording.ids_to_indices(single_channel_ids)
+            for chan_id, chan_idx in zip(single_channel_ids, single_channel_indices):
+                channel_map[ch_id] = {"recording_id": r_i, "channel_index": chan_idx}
+                ch_id += 1
+
         for i_seg in range(num_segments):
             parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
-        self._recordings = recording_list
-        self._kwargs = {"recording_list": [rec for rec in recording_list], "renamed_channel_ids": renamed_channel_ids}
+        self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
+
+    @property
+    def recordings(self):
+        return self._recordings
+
+    def _perform_consistency_checks(self):
+
+        # Check for consistent sampling frequency across recordings
+        sampling_frequencies = [rec.get_sampling_frequency() for rec in self.recordings]
+        sampling_frequency = sampling_frequencies[0]
+        consistent_sampling_frequency = all(sampling_frequency == sf for sf in sampling_frequencies)
+        if not consistent_sampling_frequency:
+            raise ValueError(f"Inconsistent sampling frequency among recordings: {sampling_frequencies}")
+
+        # Check for consistent number of segments across recordings
+        num_segments_list = [rec.get_num_segments() for rec in self.recordings]
+        num_segments = num_segments_list[0]
+        consistent_num_segments = all(num_segments == ns for ns in num_segments_list)
+        if not consistent_num_segments:
+            raise ValueError(f"Inconsistent number of segments among recordings: {num_segments_list}")
+
+        # Check for consistent data type across recordings
+        data_types = [rec.get_dtype() for rec in self.recordings]
+        dtype = data_types[0]
+        consistent_dtype = all(dtype == dt for dt in data_types)
+        if not consistent_dtype:
+            raise ValueError(f"Inconsistent data type among recordings: {data_types}")
+
+        # Check for consistent number of samples across recordings for each segment
+        for segment_index in range(num_segments):
+            num_samples_list = [rec.get_num_samples(segment_index=segment_index) for rec in self.recordings]
+            num_samples = num_samples_list[0]
+            consistent_num_samples = all(num_samples == ns for ns in num_samples_list)
+            if not consistent_num_samples:
+                raise ValueError(
+                    f"Inconsistent number of samples in segment {segment_index} among recordings: {num_samples_list}"
+                )
 
 
 class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
@@ -121,9 +199,9 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | slice | None = None,
     ) -> np.ndarray:
         return_all_channels = False
         if channel_indices is None:
@@ -138,11 +216,17 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
                 # in case channel_indices is slice, it has step 1
                 step = channel_indices.step if channel_indices.step is not None else 1
                 channel_indices = list(range(channel_indices.start, channel_indices.stop, step))
+            recording_id_channels_map = {}
             for channel_idx in channel_indices:
-                segment = self._parent_segments[self._channel_map[channel_idx]["recording_id"]]
+                recording_id = self._channel_map[channel_idx]["recording_id"]
                 channel_index_recording = self._channel_map[channel_idx]["channel_index"]
+                if recording_id not in recording_id_channels_map:
+                    recording_id_channels_map[recording_id] = []
+                recording_id_channels_map[recording_id].append(channel_index_recording)
+            for recording_id, channel_indices_recording in recording_id_channels_map.items():
+                segment = self._parent_segments[recording_id]
                 traces_recording = segment.get_traces(
-                    channel_indices=[channel_index_recording], start_frame=start_frame, end_frame=end_frame
+                    channel_indices=channel_indices_recording, start_frame=start_frame, end_frame=end_frame
                 )
                 traces.append(traces_recording)
         else:
@@ -154,20 +238,25 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         return np.concatenate(traces, axis=1)
 
 
-def aggregate_channels(recording_list, renamed_channel_ids=None):
+def aggregate_channels(
+    recording_list_or_dict=None,
+    renamed_channel_ids=None,
+    recording_list=None,
+):
     """
     Aggregates channels of multiple recording into a single recording object
 
     Parameters
     ----------
-    recording_list: list
-        List of BaseRecording objects to aggregate
+    recording_list_or_dict: list | dict
+        List or dict of BaseRecording objects to aggregate.
     renamed_channel_ids: array-like
-        If given, channel ids are renamed as provided. If None, unit ids are sequential integers.
+        If given, channel ids are renamed as provided.
 
     Returns
     -------
-    aggregate_recording: UnitsAggregationSorting
-        The aggregated sorting object
+    aggregate_recording: ChannelsAggregationRecording
+        The aggregated recording object
     """
-    return ChannelsAggregationRecording(recording_list, renamed_channel_ids)
+
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)

@@ -4,16 +4,14 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
+from spikeinterface.core.generate import generate_recording
 
 
-def test_ChannelSliceRecording():
-    if hasattr(pytest, "global_test_folder"):
-        cache_folder = pytest.global_test_folder / "core"
-    else:
-        cache_folder = Path("cache_folder") / "core"
+def test_ChannelSliceRecording(create_cache_folder):
+    cache_folder = create_cache_folder
 
     num_seg = 2
     num_chan = 3
@@ -41,6 +39,7 @@ def test_ChannelSliceRecording():
     assert traces.shape[1] == 2
     traces = rec_sliced.get_traces(segment_index=1, channel_ids=[2, 0])
     assert traces.shape[1] == 2
+    assert rec_sliced.get_parent() == rec
 
     assert np.allclose(rec_sliced.get_times(0), rec.get_times(0))
 
@@ -58,7 +57,7 @@ def test_ChannelSliceRecording():
     assert np.all(traces[:, 1] == 0)
 
     # with probe and after save()
-    probe = pi.generate_linear_probe(num_elec=num_chan)
+    probe = probeinterface.generate_linear_probe(num_elec=num_chan)
     probe.set_device_channel_indices(np.arange(num_chan))
     rec_p = rec.set_probe(probe)
     rec_sliced3 = ChannelSliceRecording(rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
@@ -71,6 +70,33 @@ def test_ChannelSliceRecording():
     traces3 = rec_saved.get_traces(segment_index=0)
     assert np.all(traces3[:, 0] == 0)
     assert np.all(traces3[:, 1] == 2)
+
+
+def test_failure_with_non_unique_channel_ids():
+    durations = [1.0]
+    seed = 10
+    rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
+    with pytest.raises(AssertionError):
+        rec_sliced = ChannelSliceRecording(rec, channel_ids=["0", "1"], renamed_channel_ids=[0, 0])
+
+
+def test_remove_channels():
+    """
+    Check that `remove_channels` returns a recording with the correct channels removed, and that
+    it raises an error if non-existent channels are given.
+    """
+    durations = [1.0]
+    seed = 1205
+
+    # Note: generated recordings have channel ids: '0', '1', '2', '3', ...
+    rec = generate_recording(num_channels=4, durations=durations, set_probe=False, seed=seed)
+
+    rec_sliced = rec.remove_channels(remove_channel_ids=["0", "2"])
+    rec_sliced_channel_ids = rec_sliced.get_channel_ids()
+    assert np.all(rec_sliced_channel_ids == np.array(["1", "3"]))
+
+    with pytest.raises(ValueError):
+        rec_sliced = rec.remove_channels(remove_channel_ids=[0, "1"])
 
 
 if __name__ == "__main__":
