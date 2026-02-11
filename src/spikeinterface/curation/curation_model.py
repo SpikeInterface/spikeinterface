@@ -4,6 +4,7 @@ from itertools import chain, combinations
 import numpy as np
 
 from spikeinterface import BaseSorting
+from spikeinterface.core.sorting_tools import _get_ids_after_merging, _get_ids_after_splitting
 
 
 class LabelDefinition(BaseModel):
@@ -377,34 +378,39 @@ class CurationModel(BaseModel):
         final_ids : list
             The ids of the sorting/analyzer after curation takes place
         """
+        final_ids = list(self.unit_ids)
+        # 1. Remove units
+        for unit_id in self.removed:
+            if unit_id not in final_ids:
+                raise ValueError(f"Removed unit_id {unit_id} is not in the unit list")
+            final_ids.remove(unit_id)
 
-        intial_ids = self.unit_ids
-
-        ids_to_add = []
-        ids_to_remove = []
-        ids_to_remove = ids_to_remove + self.removed
-
-        for split in self.splits:
-            if split.new_unit_ids is None:
-                raise ValueError(
-                    f"The `new_unit_ids` for the split of unit {split.unit_id} is `None`. These must be given."
-                )
-            ids_to_remove.append(split.unit_id)
-            ids_to_add = ids_to_add + split.new_unit_ids
+        # 2. Merge units
+        merge_unit_groups = []
+        new_merge_unit_ids = []
         for merge in self.merges:
             if merge.new_unit_id is None:
                 raise ValueError(
                     f"The `new_unit_id` for the merge of units {merge.unit_ids} is `None`. This must be given."
                 )
-            ids_to_remove = ids_to_remove + merge.unit_ids
-            ids_to_add.append(merge.new_unit_id)
+            merge_unit_groups.append(merge.unit_ids)
+            new_merge_unit_ids.append(merge.new_unit_id)
+        final_ids = _get_ids_after_merging(
+            final_ids, merge_unit_groups=merge_unit_groups, new_unit_ids=new_merge_unit_ids
+        )
 
-        if ids_to_add is None:
-            ids_to_add = set()
-        if ids_to_remove is None:
-            ids_to_remove = set()
-
-        final_ids = set(intial_ids).difference(ids_to_remove).union(ids_to_add)
+        # 3. Split units
+        split_units = {}
+        split_new_unit_ids = []
+        for split in self.splits:
+            if split.new_unit_ids is None:
+                raise ValueError(
+                    f"The `new_unit_ids` for the split of unit {split.unit_id} is `None`. These must be given."
+                )
+            # we only need the correct key and elements for the split, to mimic the output of the split function
+            split_units[split.unit_id] = [[]] * len(split.new_unit_ids)
+            split_new_unit_ids.append(split.new_unit_ids)
+        final_ids = _get_ids_after_splitting(final_ids, split_units=split_units, new_unit_ids=split_new_unit_ids)
         return list(final_ids)
 
     @model_validator(mode="before")
