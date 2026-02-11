@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import mmap
 import tqdm
-
+import numpy.typing as npt
 
 import numpy as np
 
@@ -69,7 +69,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.typing.DTypeLike = None,
+    dtype: npt.DTypeLike | None = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     verbose: bool = False,
