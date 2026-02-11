@@ -249,9 +249,18 @@ class SpikeLocationsWidget(BaseWidget):
         fig.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
 
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
         dp = to_attr(data_plot)
         spike_locations = dp.spike_locations
 
@@ -267,7 +276,7 @@ class SpikeLocationsWidget(BaseWidget):
                 unit_id=unit, segment_index=dp.segment_index, return_times=True
             )
             unit_items.append(
-                vv.SpikeLocationsItem(
+                vv_views.SpikeLocationsItem(
                     unit_id=unit,
                     spike_times_sec=spike_times_sec.astype("float32"),
                     x_locations=spike_locations[unit]["x"].astype("float32"),
@@ -275,7 +284,7 @@ class SpikeLocationsWidget(BaseWidget):
                 )
             )
 
-        v_spike_locations = vv.SpikeLocations(
+        v_spike_locations = vv_views.SpikeLocations(
             units=unit_items,
             hide_unit_selector=dp.hide_unit_selector,
             x_range=xlims.astype("float32"),
@@ -285,13 +294,13 @@ class SpikeLocationsWidget(BaseWidget):
         )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting)
+            v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
                 items=[
-                    vv.LayoutItem(v_units_table, max_size=150),
-                    vv.LayoutItem(v_spike_locations),
+                    vv_base.LayoutItem(v_units_table, max_size=150),
+                    vv_base.LayoutItem(v_spike_locations),
                 ],
             )
         else:

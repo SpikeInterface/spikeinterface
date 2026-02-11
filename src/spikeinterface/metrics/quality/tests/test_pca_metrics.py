@@ -54,7 +54,7 @@ def test_compute_pc_metrics_multi_processing(small_sorting_analyzer, tmp_path):
 
 
 if __name__ == "__main__":
-    from spikeinterface.metrics.tests.conftest import make_small_analyzer
+    from spikeinterface.metrics.conftest import make_small_analyzer
 
     small_sorting_analyzer = make_small_analyzer()
     test_compute_pc_metrics_multi_processing(small_sorting_analyzer)
