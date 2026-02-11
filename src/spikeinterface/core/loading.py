@@ -14,7 +14,6 @@ _error_msg = (
 
 def load(
     file_or_folder_or_dict,
-    ignore_warnings=False,
     **kwargs,
     # load_extensions=True, backend_options=None
 ) -> "BaseExtractor | SortingAnalyzer | Motion | Template":
