@@ -760,6 +760,11 @@ def fp_fn_worker_func(period, sorting, all_amplitudes_by_unit, params):
     unit_id = sorting.unit_ids[unit_index]
 
     amplitudes_unit = all_amplitudes_by_unit[segment_index][unit_id]
+
+    # make sure amplitudes are positive
+    if np.median(amplitudes_unit) < 0:
+        amplitudes_unit = -amplitudes_unit
+
     spiketrain = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
 
     start_index, end_index = np.searchsorted(spiketrain, [start_sample_index, end_sample_index])
