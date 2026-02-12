@@ -314,7 +314,7 @@ def detect_bad_channels(
 
         if not channel_filters.issubset(allowed_filters):
             raise ValueError(
-                f"{channel_filter.difference(allowed_filters)} is not a valid argument of channel_filters. Please use one of the following instead {allowed_filters}."
+                f"{channel_filters.difference(allowed_filters)} is not a valid argument of channel_filters. Please use one of the following instead {allowed_filters}."
             )
 
         filtered_bad_channel_mask = np.isin(channel_labels, list(channel_filters))
@@ -387,7 +387,7 @@ def detect_bad_channels_ibl(
     outside_channel_thr=-0.75,
     n_neighbors=11,
     nyquist_threshold=0.8,
-    welch_window_ms=0.3,
+    welch_window_ms=10.0,
     outside_channels_location="top",
 ):
     """
@@ -409,7 +409,7 @@ def detect_bad_channels_ibl(
     outside_channel_thr : float, default: -0.75
         Threshold for channel coherence above which channels
     n_neighbors : int, default: 11
-        Number of neighbors to compute median fitler
+        Number of neighbors to compute median filter
     nyquist_threshold : float, default: 0.8
         Threshold on Nyquist frequency to calculate HF noise band
     welch_window_ms : float, default: 0.3
@@ -425,71 +425,53 @@ def detect_bad_channels_ibl(
     1d array
         Channels labels: 0: good,  1: dead low coherence / amplitude, 2: noisy, 3: outside of the brain
     """
-    _, nc = raw.shape
-    raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
+    import scipy
+
+    # Compute PSD
+    raw = raw - np.mean(raw, axis=0, keepdims=True)
     nperseg = int(welch_window_ms * fs / 1000)
-    import scipy.signal
-
     fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0, window="hann", nperseg=nperseg)
+    psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold)], axis=0)
 
-    # compute similarities
+    # Compute similarities
     ref = np.median(raw, axis=1)
-    xcorr = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref**2)
+    # ref = ref - np.mean(ref)
+    xcorr = raw.T @ ref / np.sum(ref**2)
 
-    # compute coherence
-    xcorr_neighbors = detrend(xcorr, n_neighbors)
-    xcorr_distant = xcorr - detrend(xcorr, n_neighbors) - 1
+    # Compute coherence
+    trend = scipy.ndimage.median_filter(xcorr, n_neighbors, mode="nearest")
+    xcorr_neighbors = xcorr - trend
+    xcorr_distant = trend - 1
 
-    # make recommendation
-    psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold), :], axis=0)
+    # Find dead, noisy and outside channels
+    num_channels = raw.shape[1]
+    ichannels = np.zeros(num_channels, dtype=int)
 
-    ichannels = np.zeros(nc, dtype=int)
-    idead = np.where(xcorr_neighbors < dead_channel_thr)[0]
-    inoisy = np.where(np.logical_or(psd_hf > psd_hf_threshold, xcorr_neighbors > noisy_channel_thr))[0]
-
+    idead = xcorr_neighbors < dead_channel_thr
     ichannels[idead] = 1
+
+    inoisy = np.logical_or(psd_hf > psd_hf_threshold, xcorr_neighbors > noisy_channel_thr)
     ichannels[inoisy] = 2
 
-    # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
-    # the chanels outside need to be at the extreme of the probe
-    (ioutside,) = np.where(xcorr_distant < outside_channel_thr)
-    a = np.cumsum(np.r_[0, np.diff(ioutside) - 1])
-    if ioutside.size > 0:
-        if outside_channels_location == "top":
-            # channels are sorted bottom to top, so the last channel needs to be (nc - 1)
-            if ioutside[-1] == (nc - 1):
-                ioutside = ioutside[(a == np.max(a)) & (a > 0)]
-                ichannels[ioutside] = 3
-        elif outside_channels_location == "bottom":
+    # Channels outside the brain are contiguous channels at the extreme of the probe below the
+    # threshold on the trend coherency
+    below_threshold = xcorr_distant < outside_channel_thr
+    if np.any(below_threshold):
+        # Find contiguous blocks of dead channels
+        (ibelow, ) = np.where(below_threshold)
+        breaks = np.where(np.diff(ibelow) > 1)[0] + 1
+        contiguous_blocks = np.split(ibelow, breaks)
+
+        # Mark blocks at the edges of the probe
+        if outside_channels_location in ("top", "both"):
+            # channels are sorted bottom to top, so the last channel needs to be (num_channels - 1)
+            top_block = contiguous_blocks[-1]
+            if top_block[-1] == num_channels - 1:
+                ichannels[top_block] = 3
+        if outside_channels_location in ("bottom", "both"):
             # outside channels are at the bottom of the probe, so the first channel needs to be 0
-            if ioutside[0] == 0:
-                ioutside = ioutside[(a == np.min(a)) & (a < np.max(a))]
-                ichannels[ioutside] = 3
-        else:  # both extremes are considered
-            if ioutside[-1] == (nc - 1) or ioutside[0] == 0:
-                ioutside = ioutside[(a == np.max(a)) | (a == np.min(a))]
-                ichannels[ioutside] = 3
+            bottom_block = contiguous_blocks[0]
+            if bottom_block[0] == 0:
+                ichannels[bottom_block] = 3
 
     return ichannels
-
-
-# ----------------------------------------------------------------------------------------------
-# IBL Helpers
-# ----------------------------------------------------------------------------------------------
-
-
-def detrend(x, nmed):
-    """
-    Subtract the trend from a vector
-    The trend is a median filtered version of the said vector with tapering
-    :param x : input vector
-    :param nmed : number of points of the median filter
-    :return : np.array
-    """
-    ntap = int(np.ceil(nmed / 2))
-    xf = np.r_[np.zeros(ntap) + x[0], x, np.zeros(ntap) + x[-1]]
-
-    import scipy.signal
-
-    xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
-    return x - xf
