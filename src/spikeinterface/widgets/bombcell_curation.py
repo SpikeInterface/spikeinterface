@@ -209,8 +209,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
 def plot_bombcell_unit_labeling_all(
     sorting_analyzer,
     unit_labels: np.ndarray,
-    thresholds: Optional[dict] = None,
-    split_non_somatic: bool = False,
+    thresholds: dict | None = None,
     include_upset: bool = True,
     backend=None,
     **kwargs,
@@ -226,8 +225,6 @@ def plot_bombcell_unit_labeling_all(
         Array of unit labels as strings.
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
-    split_non_somatic : bool, default: False
-        Whether to split "non_soma" into "non_soma_good" and "non_soma_mua".
     include_upset : bool, default: True
         Whether to include UpSet plots (requires upsetplot package).
     **kwargs
@@ -267,7 +264,6 @@ def plot_bombcell_unit_labeling_all(
             sorting_analyzer,
             unit_labels,
             thresholds=thresholds,
-            split_non_somatic=split_non_somatic,
             backend=backend,
             **kwargs,
         )
