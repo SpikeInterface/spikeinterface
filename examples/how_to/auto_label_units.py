@@ -63,7 +63,8 @@ qm_thresholds = {
 }
 
 # %%
-qm_labels = sc.threshold_metrics_label_units(sorting_analyzer, thresholds=qm_thresholds)
+all_metrics = sorting_analyzer.get_metrics_extension_data()
+qm_labels = sc.threshold_metrics_label_units(all_metrics, thresholds=qm_thresholds)
 
 # %%
 qm_labels["label"].value_counts()

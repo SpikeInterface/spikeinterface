@@ -184,7 +184,7 @@ def bombcell_label_units(
         noise_thresholds = thresholds_dict.get("noise", {})
         if len(noise_thresholds) > 0:
             unit_labels = threshold_metrics_label_units(
-                sorting_analyzer_or_metrics=combined_metrics,
+                metrics=combined_metrics,
                 thresholds=noise_thresholds,
                 pass_label="good",
                 fail_label="noise",
@@ -199,7 +199,7 @@ def bombcell_label_units(
         if len(mua_thresholds) > 0:
             neural_metrics = combined_metrics.iloc[non_noise_indices]
             mua_labels = threshold_metrics_label_units(
-                sorting_analyzer_or_metrics=neural_metrics,
+                metrics=neural_metrics,
                 thresholds=mua_thresholds,
                 pass_label="good",
                 fail_label="mua",
@@ -217,7 +217,7 @@ def bombcell_label_units(
             }
             if len(width_thresholds) > 0:
                 width_condition_labels = threshold_metrics_label_units(
-                    sorting_analyzer_or_metrics=combined_metrics,
+                    metrics=combined_metrics,
                     thresholds=width_thresholds,
                     pass_label="not_narrow_width",
                     fail_label="narrow_width",
@@ -236,7 +236,7 @@ def bombcell_label_units(
             }
             if len(ratio_thresholds) > 0:
                 ratio_condition_labels = threshold_metrics_label_units(
-                    sorting_analyzer_or_metrics=combined_metrics,
+                    metrics=combined_metrics,
                     thresholds=ratio_thresholds,
                     pass_label="not_large_ratio",
                     fail_label="large_ratio",
@@ -253,7 +253,7 @@ def bombcell_label_units(
             }
             if len(large_main_peak_thresholds) > 0:
                 large_main_peak_labels = threshold_metrics_label_units(
-                    sorting_analyzer_or_metrics=combined_metrics,
+                    metrics=combined_metrics,
                     thresholds=large_main_peak_thresholds,
                     pass_label="not_large_main_peak",
                     fail_label="large_main_peak",
