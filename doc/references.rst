@@ -57,7 +57,7 @@ methods:
  - :code:`acgs_3d` [Beau]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`monopolar_triangulation` based on work from [Boussard]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`grid_convolution` based on work from [Pachitariu]_
-
+ - :code:`compute_valid_unit_periods` based on work from [npyx]_ and [Fabre]_
 
 Metrics Module
 --------------
