@@ -392,6 +392,10 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 valid_unit_periods
 ^^^^^^^^^^^^^^^^^^
 
+Based on code and ideas originally developed in the NeuroPyxles [npyx]_ and Bombcell [Fabre]_ packages.
+The code is not an exact replica of the original, and extensive comparison tests have not yet been performed. Hence
+differences in results may occur.
+
 This extension computes the valid unit periods for each unit based on the estimation of false positive rates
 (using RP violation - see ::doc:`metrics/qualitymetrics/isi_violations`) and false negative rates
 (using amplitude cutoff - see ::doc:`metrics/qualitymetrics/amplitude_cutoff`) computed over chunks of the recording.
