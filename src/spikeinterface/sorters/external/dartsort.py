@@ -74,11 +74,12 @@ class DartsortSorter(BaseSorter):
         cfg = DARTsortUserConfig(**params)
         print(cfg)
         
-        sorting = dartsort_main(
+        ret = dartsort_main(
             recording,
             sorter_output_folder,
             cfg,
         )
+        sorting = ret['sorting']
         
         NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")
 
