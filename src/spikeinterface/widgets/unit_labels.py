@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from spikeinterface.curation.curation_tools import is_threshold_disabled
 from .base import BaseWidget, to_attr
 
 
@@ -29,7 +30,7 @@ class WaveformOverlayByLabelWidget(BaseWidget):
         self,
         sorting_analyzer,
         unit_labels: np.ndarray,
-        labels_order=None,
+        labels_order: list[str] | None = None,
         max_columns: int = 3,
         ylims=None,
         backend=None,

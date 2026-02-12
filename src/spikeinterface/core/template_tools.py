@@ -5,7 +5,9 @@ from .template import Templates
 from .sortinganalyzer import SortingAnalyzer
 
 
-def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in_uV: bool = True):
+def get_dense_templates_array(
+    one_object: Templates | SortingAnalyzer, return_in_uV: bool = True, operator="average"
+) -> np.ndarray:
     """
     Return dense templates as numpy array from either a Templates object or a SortingAnalyzer.
 
@@ -15,6 +17,9 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in
         The Templates or SortingAnalyzer objects. If SortingAnalyzer, it needs the "templates" extension.
     return_in_uV : bool, default: True
         If True, templates are scaled.
+    operator : str, default: "average"
+        If the "templates" extension of the SortingAnalyzer contains several operators (e.g., "average" and "median"),
+        this parameter can be used to specify which one to return.
 
     Returns
     -------
@@ -33,15 +38,8 @@ def get_dense_templates_array(one_object: Templates | SortingAnalyzer, return_in
                 f"get_dense_templates_array: return_in_uV={return_in_uV} is not possible SortingAnalyzer has the reverse"
             )
         ext = one_object.get_extension("templates")
-        extension_key = "median" if one_object.has_extension("waveforms") or "median" in ext.data else "average"
         if ext is not None:
-            if one_object.has_extension("waveforms") or "median" in ext.data:
-                extension_key = "median"
-            elif "average" in ext.data:
-                extension_key = "average"
-            else:
-                raise ValueError("Average or median templates have not been computed.")
-            templates_array = ext.get_templates(operator=extension_key)
+            templates_array = ext.get_templates(operator=operator)
         else:
             raise ValueError("SortingAnalyzer need extension 'templates' to be computed to retrieve templates")
     else:
@@ -67,6 +65,7 @@ def get_template_amplitudes(
     mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
     return_in_uV: bool = True,
     abs_value: bool = True,
+    operator: str = "average",
 ):
     """
     Get amplitude per channel for each unit.
@@ -86,6 +85,9 @@ def get_template_amplitudes(
         The amplitude is scaled or not.
     abs_value : bool = True
         Whether the extremum amplitude should be returned as an absolute value or not
+    operator : str, default: "average"
+        If the "templates" extension of the SortingAnalyzer contains several operators (e.g., "average" and "median"),
+        this parameter can be used to specify which one to use to compute the amplitudes.
 
     Returns
     -------
@@ -100,7 +102,9 @@ def get_template_amplitudes(
 
     peak_values = {}
 
-    templates_array = get_dense_templates_array(templates_or_sorting_analyzer, return_in_uV=return_in_uV)
+    templates_array = get_dense_templates_array(
+        templates_or_sorting_analyzer, return_in_uV=return_in_uV, operator=operator
+    )
 
     for unit_ind, unit_id in enumerate(unit_ids):
         template = templates_array[unit_ind, :, :]
@@ -133,6 +137,7 @@ def get_template_extremum_channel(
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
     outputs: "id" | "index" = "id",
+    operator: str = "average",
 ):
     """
     Compute the channel with the extremum peak for each unit.
@@ -151,6 +156,9 @@ def get_template_extremum_channel(
     outputs : "id" | "index", default: "id"
         * "id" : channel id
         * "index" : channel index
+    operator : str, default: "average"
+        If the "templates" extension of the SortingAnalyzer contains several operators (e.g., "average" and "median"),
+        this parameter can be used to specify which one to use to compute the extremum channels.
 
     Returns
     -------
@@ -177,7 +185,7 @@ def get_template_extremum_channel(
         return_in_uV = templates_or_sorting_analyzer.is_in_uV
 
     peak_values = get_template_amplitudes(
-        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_in_uV=return_in_uV
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_in_uV=return_in_uV, operator=operator
     )
     extremum_channels_id = {}
     extremum_channels_index = {}
@@ -192,7 +200,9 @@ def get_template_extremum_channel(
         return extremum_channels_index
 
 
-def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak_sign: "neg" | "pos" | "both" = "neg"):
+def get_template_extremum_channel_peak_shift(
+    templates_or_sorting_analyzer, peak_sign: "neg" | "pos" | "both" = "neg", operator: str = "average"
+):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -204,6 +214,9 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
         A Templates or a SortingAnalyzer object
     peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
+    operator : str, default: "average"
+        If the "templates" extension of the SortingAnalyzer contains several operators (e.g., "average" and "median"),
+        this parameter can be used to specify which one to use to compute the shifts.
 
     Returns
     -------
@@ -254,6 +267,7 @@ def get_template_extremum_amplitude(
     peak_sign: "neg" | "pos" | "both" = "neg",
     mode: "extremum" | "at_index" | "peak_to_peak" = "at_index",
     abs_value: bool = True,
+    operator: str = "average",
 ):
     """
     Computes amplitudes on the best channel.
@@ -271,6 +285,9 @@ def get_template_extremum_amplitude(
         * "peak_to_peak": take the peak-to-peak amplitude
     abs_value : bool = True
         Whether the extremum amplitude should be returned as an absolute value or not
+    operator : str, default: "average"
+        If the "templates" extension of the SortingAnalyzer contains several operators (e.g., "average" and "median"),
+        this parameter can be used to specify which one to use to compute the amplitudes.
 
 
     Returns
@@ -295,7 +312,12 @@ def get_template_extremum_amplitude(
         return_in_uV = templates_or_sorting_analyzer.is_in_uV
 
     extremum_amplitudes = get_template_amplitudes(
-        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, return_in_uV=return_in_uV, abs_value=abs_value
+        templates_or_sorting_analyzer,
+        peak_sign=peak_sign,
+        mode=mode,
+        return_in_uV=return_in_uV,
+        abs_value=abs_value,
+        operator=operator,
     )
 
     unit_amplitudes = {}

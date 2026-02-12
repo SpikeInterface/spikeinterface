@@ -909,6 +909,7 @@ class BaseMetricExtension(AnalyzerExtension):
     need_job_kwargs = True
     need_backward_compatibility_on_load = False
     metric_list: list[BaseMetric] = None  # list of BaseMetric
+    tmp_data_to_save = None
 
     def __init__(self, sorting_analyzer):
         super().__init__(sorting_analyzer)
@@ -1290,7 +1291,7 @@ class BaseMetricExtension(AnalyzerExtension):
 
         metrics = self._cast_metrics(metrics)
 
-        return metrics, run_times
+        return metrics, run_times, tmp_data
 
     def _run(self, **job_kwargs):
 
@@ -1301,7 +1302,7 @@ class BaseMetricExtension(AnalyzerExtension):
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         # compute the metrics which have been specified by the user
-        computed_metrics, run_times = self._compute_metrics(
+        computed_metrics, run_times, tmp_data = self._compute_metrics(
             sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute, **job_kwargs
         )
 
@@ -1330,6 +1331,10 @@ class BaseMetricExtension(AnalyzerExtension):
 
         self.data["metrics"] = computed_metrics
         self.data["runtime_s"] = run_times
+
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                self.data[k] = tmp_data[k]
 
     def _get_data(self):
         # convert to correct dtype
@@ -1388,20 +1393,24 @@ class BaseMetricExtension(AnalyzerExtension):
 
         available_metric_names = self.get_available_metric_names()
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
-        old_metrics = self.data["metrics"]
 
-        all_unit_ids = new_sorting_analyzer.unit_ids
-        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
-
-        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
-
-        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids, :], _ = self._compute_metrics(
+        new_metrics, _, new_tmp_data = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
         )
-        metrics = self._cast_metrics(metrics)
 
-        new_data = dict(metrics=metrics)
+        metrics = _update_data_after_merge_or_split(
+            self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids
+        )
+        new_data = dict()
+        new_data["metrics"] = self._cast_metrics(metrics)
+
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                new_arr = _update_data_after_merge_or_split(
+                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
+                )
+                new_data[k] = new_arr
+
         return new_data
 
     def _split_extension_data(
@@ -1431,32 +1440,35 @@ class BaseMetricExtension(AnalyzerExtension):
 
         available_metric_names = [m.metric_name for m in self.metric_list]
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
-        old_metrics = self.data["metrics"]
 
-        all_unit_ids = new_sorting_analyzer.unit_ids
         new_unit_ids_f = list(chain(*new_unit_ids))
-        not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids_f)]
-
-        metrics = pd.DataFrame(index=all_unit_ids, columns=old_metrics.columns)
-
-        metrics.loc[not_new_ids, :] = old_metrics.loc[not_new_ids, :]
-        metrics.loc[new_unit_ids_f, :], _ = self._compute_metrics(
+        new_metrics, _, new_tmp_data = self._compute_metrics(
             sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
         )
-        metrics = self._cast_metrics(metrics)
 
-        new_data = dict(metrics=metrics)
+        metrics = _update_data_after_merge_or_split(
+            self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids_f
+        )
+        new_data = dict()
+        new_data["metrics"] = self._cast_metrics(metrics)
+
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                new_arr = _update_data_after_merge_or_split(
+                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
+                )
+                new_data[k] = new_arr
+
         return new_data
 
     def set_data(self, ext_data_name, data):
         import pandas as pd
 
-        if ext_data_name != "metrics":
-            return
-        if not isinstance(data, pd.DataFrame):
-            return
-        metrics = self._cast_metrics(data)
-        self.data[ext_data_name] = metrics
+        if ext_data_name == "metrics":
+            metrics = self._cast_metrics(data)
+            self.data[ext_data_name] = metrics
+        else:
+            self.data[ext_data_name] = data
 
 
 class BaseSpikeVectorExtension(AnalyzerExtension):
@@ -1629,3 +1641,51 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only changes random spikes assignments
         return self.data.copy()
+
+
+def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):
+    """Updates a DataFrame or np.ndarray after a merge or split.
+
+    Parameters
+    ----------
+    old_analyzer : SortingAnalyzer
+        The old SortingAnalyzer object before merging or splitting.
+    new_analyzer : SortingAnalyzer
+        The new SortingAnalyzer object after merging or splitting.
+    old_arr : Union[pd.DataFrame, np.ndarray]
+        The old array or DataFrame before merging or splitting.
+    new_sub_arr : Union[pd.DataFrame, np.ndarray]
+        The new array or DataFrame after merging or splitting only for the new units ids.
+    new_unit_ids : np.ndarray
+        The new unit IDs after merging or splitting.
+
+    Returns
+    -------
+    Union[pd.DataFrame, np.ndarray]
+        The updated array or DataFrame after merging or splitting.
+    """
+    # this construct new array or dataframe after a merge and a split
+    import pandas as pd
+
+    all_unit_ids = new_analyzer.unit_ids
+    not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
+
+    if isinstance(new_sub_arr, pd.DataFrame):
+        new_df = pd.DataFrame(index=all_unit_ids, columns=old_arr.columns)
+        new_df.loc[not_new_ids, :] = old_arr.loc[not_new_ids, :]
+        new_df.loc[new_unit_ids, :] = new_sub_arr
+        return new_df
+
+    elif isinstance(new_sub_arr, np.ndarray):
+        new_shape = (len(all_unit_ids),) + old_arr.shape[1:]
+        new_arr = np.zeros(new_shape, dtype=old_arr.dtype)
+        new_inds = new_analyzer.sorting.ids_to_indices(not_new_ids)
+        old_inds = old_analyzer.sorting.ids_to_indices(not_new_ids)
+        new_arr[new_inds] = old_arr[old_inds]
+        new_inds = new_analyzer.sorting.ids_to_indices(new_unit_ids)
+        new_arr[new_inds] = new_sub_arr
+        return new_arr
+    else:
+        raise NotImplementedError(
+            "Only pandas DataFrame and numpy array are supported for merging and splitting extension data."
+        )

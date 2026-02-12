@@ -3,125 +3,48 @@
 from __future__ import annotations
 
 import warnings
-from typing import Optional
 
 import numpy as np
 
 from spikeinterface.curation.curation_tools import is_threshold_disabled
 
 from .base import BaseWidget, to_attr
+from .metrics import MetricsHistogramsWidget
 from .unit_labels import WaveformOverlayByLabelWidget
 
 
-class LabelingHistogramsWidget(BaseWidget):
-    """Plot histograms of quality metrics with threshold lines."""
-
-    def __init__(
-        self,
-        sorting_analyzer,
-        thresholds: Optional[dict] = None,
-        metrics_to_plot: Optional[list] = None,
-        backend=None,
-        **backend_kwargs,
-    ):
-        from spikeinterface.curation import bombcell_get_default_thresholds
-
-        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
-        combined_metrics = sorting_analyzer.get_metrics_extension_data()
-        if combined_metrics.empty:
-            raise ValueError(
-                "SortingAnalyzer has no metrics extensions computed. "
-                "Compute quality_metrics and/or template_metrics first."
-            )
-
-        if thresholds is None:
-            thresholds = bombcell_get_default_thresholds()
-        if metrics_to_plot is None:
-            metrics_to_plot = [m for m in thresholds.keys() if m in combined_metrics.columns]
-
-        plot_data = dict(
-            metrics=combined_metrics,
-            thresholds=thresholds,
-            metrics_to_plot=metrics_to_plot,
-        )
-        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-    def plot_matplotlib(self, data_plot, **backend_kwargs):
-        from .utils_matplotlib import make_mpl_figure
-        import matplotlib.pyplot as plt
-
-        dp = to_attr(data_plot)
-        metrics = dp.metrics
-        thresholds = dp.thresholds
-        metrics_to_plot = dp.metrics_to_plot
-
-        n_metrics = len(metrics_to_plot)
-        if n_metrics == 0:
-            print("No metrics to plot")
-            return
-
-        n_cols = min(4, n_metrics)
-        n_rows = int(np.ceil(n_metrics / n_cols))
-        backend_kwargs["ncols"] = n_cols
-        backend_kwargs["num_axes"] = n_cols * n_rows
-        if "figsize" not in backend_kwargs:
-            backend_kwargs["figsize"] = (4 * n_cols, 3 * n_rows)
-        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        colors = plt.cm.tab10(np.linspace(0, 1, 10))
-        absolute_value_metrics = ["amplitude_median"]
-
-        axes = self.axes
-        for idx, metric_name in enumerate(metrics_to_plot):
-            row, col = idx // n_cols, idx % n_cols
-            ax = axes[row, col]
-
-            values = metrics[metric_name].values
-            if metric_name in absolute_value_metrics:
-                values = np.abs(values)
-            values = values[~np.isnan(values) & ~np.isinf(values)]
-
-            if len(values) == 0:
-                ax.set_title(f"{metric_name}\n(no valid data)")
-                continue
-
-            ax.hist(values, bins=30, color=colors[idx % 10], alpha=0.7, edgecolor="black", density=True)
-
-            thresh = thresholds.get(metric_name, {})
-            has_thresh = False
-            if not is_threshold_disabled(thresh.get("min", None)):
-                ax.axvline(thresh["min"], color="red", ls="--", lw=2, label=f"min={thresh['min']:.2g}")
-                has_thresh = True
-            if not is_threshold_disabled(thresh.get("max", None)):
-                ax.axvline(thresh["max"], color="blue", ls="--", lw=2, label=f"max={thresh['max']:.2g}")
-                has_thresh = True
-
-            ax.set_xlabel(metric_name)
-            ax.set_ylabel("Density")
-            if has_thresh:
-                ax.legend(fontsize=8, loc="upper right")
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-
-        for idx in range(len(metrics_to_plot), n_rows * n_cols):
-            axes[idx // n_cols, idx % n_cols].set_visible(False)
-
-
-class UpsetPlotWidget(BaseWidget):
+class BombcellUpsetPlotWidget(BaseWidget):
     """
-    Plot UpSet plots showing which metrics fail together for each unit label.
+    Plot UpSet plots showing which metrics fail together for each unit label after Bombcell
+    curation.
 
-    Requires `upsetplot` package. Each unit label shows relevant metrics:
-    NOISE -> waveform metrics, MUA -> spike quality metrics, NON_SOMA -> non-somatic metrics.
+    Requires `upsetplot` package.
+    Each unit label shows relevant metrics based on the threshold dictionary.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object with computed metrics extensions.
+    unit_labels : np.ndarray
+        Array of unit labels as strings, includeing bombcell labels like "noise", "mua",
+        "non_soma", "non_soma_good", "non_soma_mua".
+    thresholds : dict, optional
+        Threshold dictionary with structure "noise", "mua", "non-somatic" as sections. Each section contains
+        metric names keys with "min" and "max" thresholds.
+        If None, uses default thresholds.
+    unit_labels_to_plot : list of str, optional
+        List of unit labels to include in the plot. If None, defaults to all labels in thresholds.
+    min_subset_size : int, default: 1
+        Minimum number of units in a subset to be included in the UpSet plot. Subsets with fewer units will be
+        filtered out for clarity.
     """
 
     def __init__(
         self,
         sorting_analyzer,
         unit_labels: np.ndarray,
-        thresholds: Optional[dict] = None,
-        unit_labels_to_plot: Optional[list] = None,
-        split_non_somatic: bool = False,
+        thresholds: dict | None = None,
+        unit_labels_to_plot: list | None = None,
         min_subset_size: int = 1,
         backend=None,
         **backend_kwargs,
@@ -138,11 +61,12 @@ class UpsetPlotWidget(BaseWidget):
 
         if thresholds is None:
             thresholds = bombcell_get_default_thresholds()
+
         if unit_labels_to_plot is None:
-            if split_non_somatic:
-                unit_labels_to_plot = ["noise", "mua", "non_soma_good", "non_soma_mua"]
-            else:
-                unit_labels_to_plot = ["noise", "mua", "non_soma"]
+            unit_labels_to_plot = list(set(unit_labels))
+            if "good" in unit_labels_to_plot:
+                unit_labels_to_plot.remove("good")
+
         plot_data = dict(
             metrics=combined_metrics,
             unit_labels=unit_labels,
@@ -152,19 +76,13 @@ class UpsetPlotWidget(BaseWidget):
         )
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-    def _get_metrics_for_unit_label(self, unit_label):
-        from spikeinterface.curation.bombcell_curation import (
-            DEFAULT_NOISE_METRICS,
-            DEFAULT_MUA_METRICS,
-            DEFAULT_NON_SOMATIC_METRICS,
-        )
-
+    def _get_metrics_for_unit_label(self, unit_label, thresholds):
         if unit_label == "noise":
-            return DEFAULT_NOISE_METRICS
+            return thresholds["noise"]
         elif unit_label == "mua":
-            return DEFAULT_MUA_METRICS
+            return thresholds["mua"]
         elif unit_label in ("non_soma", "non_soma_good", "non_soma_mua"):
-            return DEFAULT_NON_SOMATIC_METRICS
+            return thresholds["non-somatic"]
         return None
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
@@ -211,7 +129,7 @@ class UpsetPlotWidget(BaseWidget):
             if n_units == 0:
                 continue
 
-            relevant_metrics = self._get_metrics_for_unit_label(unit_label)
+            relevant_metrics = self._get_metrics_for_unit_label(unit_label, thresholds)
             if relevant_metrics is not None:
                 available_metrics = [m for m in relevant_metrics if m in failure_table.columns]
                 if len(available_metrics) == 0:
@@ -266,7 +184,12 @@ class UpsetPlotWidget(BaseWidget):
         absolute_value_metrics = ["amplitude_median"]
         failure_data = {}
 
-        for metric_name, thresh in thresholds.items():
+        thresholds_flat = {}
+        for category, metric_dict in thresholds.items():
+            for metric_name, thresh in metric_dict.items():
+                thresholds_flat[metric_name] = thresh
+
+        for metric_name, thresh in thresholds_flat.items():
             if metric_name not in metrics.columns:
                 continue
             values = metrics[metric_name].values.copy()
@@ -283,7 +206,7 @@ class UpsetPlotWidget(BaseWidget):
         return pd.DataFrame(failure_data, index=metrics.index)
 
 
-def plot_unit_labeling_all(
+def plot_bombcell_unit_labeling_all(
     sorting_analyzer,
     unit_labels: np.ndarray,
     thresholds: Optional[dict] = None,
@@ -328,7 +251,7 @@ def plot_unit_labeling_all(
 
     # Histograms
     if has_metrics:
-        results["histograms"] = LabelingHistogramsWidget(
+        results["histograms"] = MetricsHistogramsWidget(
             sorting_analyzer,
             thresholds=thresholds,
             backend=backend,
@@ -340,7 +263,7 @@ def plot_unit_labeling_all(
 
     # UpSet plots
     if include_upset and has_metrics:
-        results["upset"] = UpsetPlotWidget(
+        results["upset"] = BombcellUpsetPlotWidget(
             sorting_analyzer,
             unit_labels,
             thresholds=thresholds,

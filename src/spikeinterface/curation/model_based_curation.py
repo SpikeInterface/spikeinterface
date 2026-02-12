@@ -366,7 +366,6 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=Fal
         model, model_info = _load_model_from_huggingface(
             repo_id=repo_id, model_name=model_name, trust_model=trust_model, trusted=trusted
         )
-    print(f"Model loaded successfully.", model.feature_names_in_)
 
     return model, model_info
 

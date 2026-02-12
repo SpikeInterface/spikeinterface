@@ -11,6 +11,7 @@ from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .drift_templates import DriftingTemplatesWidget
 from .isi_distribution import ISIDistributionWidget
+from .metrics import MetricsHistogramsWidget
 from .motion import DriftRasterMapWidget, MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
 from .peak_activity import PeakActivityMapWidget
@@ -39,25 +40,21 @@ from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformanc
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 from .unit_labels import WaveformOverlayByLabelWidget
 from .unit_valid_periods import ValidUnitPeriodsWidget
-from .bombcell_curation import (
-    LabelingHistogramsWidget,
-    UpsetPlotWidget,
-    plot_unit_labeling_all,
-)
+from .bombcell_curation import BombcellUpsetPlotWidget, plot_bombcell_unit_labeling_all
 
 widget_list = [
     AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
-    LabelingHistogramsWidget,
+    BombcellUpsetPlotWidget,
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
     DriftingTemplatesWidget,
     DriftRasterMapWidget,
-    ValidUnitPeriodsWidget,
     ISIDistributionWidget,
+    MetricsHistogramsWidget,
     LocationsWidget,
     MotionWidget,
     MotionInfoWidget,
@@ -84,7 +81,7 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
-    UpsetPlotWidget,
+    ValidUnitPeriodsWidget,
     WaveformOverlayByLabelWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
@@ -134,6 +131,7 @@ plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
+plot_bombcell_labels_upset = BombcellUpsetPlotWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
@@ -161,8 +159,7 @@ plot_template_similarity = TemplateSimilarityWidget
 plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
 plot_unit_labels = WaveformOverlayByLabelWidget
-plot_unit_labeling_upset = UpsetPlotWidget
-plot_unit_labeling_histograms = LabelingHistogramsWidget
+plot_metric_histograms = MetricsHistogramsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_unit_presence = UnitPresenceWidget
 plot_unit_probe_map = UnitProbeMapWidget
