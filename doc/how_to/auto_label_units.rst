@@ -290,13 +290,14 @@ page <https://huggingface.co/SpikeInterface>`__.
 
 
 
-
 .. image:: auto_label_units_files/auto_label_units_27_1.png
 
 
-   **NOTE:** If you want to train your own models, see the `UnitRefine
-   repo <%60https://github.com/anoushkajain/UnitRefine%60>`__ for
-   instructions!
+
+.. note::
+
+    If you want to train your own models, see the `UnitRefine repo <https://github.com/anoushkajain/UnitRefine>`__ for instructions!
+
 
 This “How To” demonstrated how to automatically label units after spike
 sorting with different strategies. We recommend running **Bombcell** and
