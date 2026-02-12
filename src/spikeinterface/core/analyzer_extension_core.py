@@ -9,6 +9,7 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
+from copy import copy
 import warnings
 import numpy as np
 from collections import namedtuple
@@ -387,6 +388,13 @@ class ComputeTemplates(AnalyzerExtension):
             # compatibility february 2024 > july 2024
             self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
 
+        old_keys = copy(list(self.data.keys()))
+        for operator in old_keys:
+            if "pencentile" in operator:
+                fixed_operator = operator.replace("pencentile", "percentile")
+                self.data[fixed_operator] = self.data[operator]
+                del self.data[operator]
+
     def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=None):
         operators = operators or ["average", "std"]
         assert isinstance(operators, list)
@@ -485,7 +493,7 @@ class ComputeTemplates(AnalyzerExtension):
             elif isinstance(operator, (list, tuple)):
                 operator, percentile = operator
                 assert operator == "percentile"
-                key = f"pencentile_{percentile}"
+                key = f"percentile_{percentile}"
             else:
                 raise ValueError(f"ComputeTemplates: wrong operator {operator}")
             self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
@@ -516,7 +524,7 @@ class ComputeTemplates(AnalyzerExtension):
                 elif isinstance(operator, (list, tuple)):
                     operator, percentile = operator
                     arr = np.percentile(wfs, percentile, axis=0)
-                    key = f"pencentile_{percentile}"
+                    key = f"percentile_{percentile}"
 
                 if self.sparsity is None:
                     self.data[key][unit_index, :, :] = arr
@@ -606,7 +614,7 @@ class ComputeTemplates(AnalyzerExtension):
                         elif operator == "median":
                             arr = np.median(wfs, axis=0)
                         elif "percentile" in operator:
-                            _, percentile = operator.splot("_")
+                            _, percentile = operator.split("_")
                             arr = np.percentile(wfs, float(percentile), axis=0)
                         new_array[split_unit_index, ...] = arr
                 else:
@@ -676,7 +684,7 @@ class ComputeTemplates(AnalyzerExtension):
             key = operator
         else:
             assert percentile is not None, "You must provide percentile=... if `operator='percentile'`"
-            key = f"pencentile_{percentile}"
+            key = f"percentile_{percentile}"
 
         if key in self.data:
             templates_array = self.data[key]
