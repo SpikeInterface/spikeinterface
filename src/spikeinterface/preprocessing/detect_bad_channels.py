@@ -458,7 +458,7 @@ def detect_bad_channels_ibl(
     below_threshold = xcorr_distant < outside_channel_thr
     if np.any(below_threshold):
         # Find contiguous blocks of dead channels
-        (ibelow, ) = np.where(below_threshold)
+        (ibelow,) = np.where(below_threshold)
         breaks = np.where(np.diff(ibelow) > 1)[0] + 1
         contiguous_blocks = np.split(ibelow, breaks)
 
@@ -478,8 +478,8 @@ def detect_bad_channels_ibl(
 
 
 def shrinking_median_filter(s, size=11):
-    """ Compute median filter but reducing the filter size near edges to avoid padding.
-    
+    """Compute median filter but reducing the filter size near edges to avoid padding.
+
     Parameters
     ----------
     s : 1d array
