@@ -1137,13 +1137,14 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    is_old_version = not _check_same_version(class_name, dic["version"])
-    if is_old_version:
+    if not _check_same_version(class_name, dic["version"]):
         warnings.warn(
             f"Versions are not the same. This might lead to compatibility errors. "
             f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
         )
 
+    is_old_micro_version = not _check_same_version(class_name, dic["version"], micro=True)
+    if is_old_micro_version:
         if hasattr(extractor_class, "_handle_backward_compatibility"):
             new_kwargs = extractor_class._handle_backward_compatibility(new_kwargs, dic)
 
@@ -1170,7 +1171,7 @@ def _get_class_from_string(class_string):
     return imported_class
 
 
-def _check_same_version(class_string, version):
+def _check_same_version(class_string, version, micro=False):
     module = class_string.split(".")[0]
     imported_module = importlib.import_module(module)
 
@@ -1178,7 +1179,12 @@ def _check_same_version(class_string, version):
     saved_version = parse(version)
 
     try:
-        return current_version.major == saved_version.major and current_version.minor == saved_version.minor
+        major_minor_match = (
+            current_version.major == saved_version.major and current_version.minor == saved_version.minor
+        )
+        if micro:
+            return current_version.micro == saved_version.micro and major_minor_match
+        return major_minor_match
     except AttributeError:
         return "unknown"
 
