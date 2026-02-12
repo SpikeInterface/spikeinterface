@@ -435,11 +435,11 @@ def detect_bad_channels_ibl(
 
     # Compute similarities
     ref = np.median(raw, axis=1)
-    # ref = ref - np.mean(ref)
+    ref = ref - np.mean(ref)
     xcorr = raw.T @ ref / np.sum(ref**2)
 
     # Compute coherence
-    trend = scipy.ndimage.median_filter(xcorr, n_neighbors, mode="nearest")
+    trend = shrinking_median_filter(xcorr, n_neighbors)
     xcorr_neighbors = xcorr - trend
     xcorr_distant = trend - 1
 
@@ -475,3 +475,24 @@ def detect_bad_channels_ibl(
                 ichannels[bottom_block] = 3
 
     return ichannels
+
+
+def shrinking_median_filter(s, size=11):
+    """ Compute median filter but reducing the filter size near edges to avoid padding.
+    
+    Parameters
+    ----------
+    s : 1d array
+        The signal to be filtered.
+    size : int, default: 11
+            The size of the median filter.
+    """
+    half = size // 2
+
+    filtered = np.empty_like(s)
+    for i in range(len(s)):
+        lo = max(0, i - half)
+        hi = i + half + 1  # upper bound > len(s) is auto-clipped by numpy
+        filtered[i] = np.median(s[lo:hi])
+
+    return filtered
