@@ -398,7 +398,7 @@ class Kilosort4Sorter(BaseSorter):
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
-        if HAS_DIAGNOSTIC_PLOTS and ops['dshift'] is not None:
+        if HAS_DIAGNOSTIC_PLOTS and ops["dshift"] is not None:
             kplots.plot_drift_amount(ops, results_dir)
             kplots.plot_drift_scatter(st0, results_dir)
 
