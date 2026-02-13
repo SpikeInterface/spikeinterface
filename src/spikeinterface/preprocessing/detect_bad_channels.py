@@ -38,8 +38,8 @@ std_mad_threshold : float, default: 5
     The standard deviation/mad multiplier threshold
 psd_hf_threshold : float, default: 0.02
     For coherence+psd - an absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
-    Channels with average power at >80% Nyquist larger than this threshold
-    will be labeled as noise
+    Channels with average power at >80% Nyquist larger than this threshold will be labeled as noise.
+    IBL suggests 0.02 for AP data and 1.4 for LFP data.
 dead_channel_threshold : float, default: -0.5
     For coherence+psd - threshold for channel coherence below which channels are labeled as dead
 noisy_channel_threshold : float, default: 1
@@ -391,7 +391,36 @@ def detect_bad_channels_ibl(
     outside_channels_location="top",
 ):
     """
-    Bad channels detection for Neuropixel probes developed by IBL
+    Bad channels detection for Neuropixel probes developed by IBL.
+
+    `xcorr` is the dot product of each channel with the reference (median of all channels) normalized
+    by the energy of the reference, which is a "correlation-like" measure that captures similarity
+    of each channel to the rest of the probe. Values near 1 indicate good channels.
+
+    A `trend` is estimated by median filtering `xcorr`: this smoothed signal captures the difference
+    in similarities across depths. `n_neighbors` is the size of this median filter (larger values
+    capture broader trends, smaller values are more local but less robust to bad channels). This is
+    also expected to be values near 1 for good (i.e., most) channels.
+
+    Outside channels are defined as contiguous channels on the 'top', 'bottom' or either ('both') 
+    side of the probe where trend < (outside_channel_thr + 1). outside_channel_thr = -0.75 by 
+    default so this essentially flags channnels at the top or bottom where 
+    corr(channel, reference) < 0.25.
+
+    The trend is subtracted from the xcorr to get `xcorr_neighbors`. Outliers on this zero-centered
+    signal are labelled as dead or noisy channels:
+        a) dead if xcorr_neighbors < dead_channel_thr (-0.5 by default, essentially corr(chanel, reference) < 0.5)
+        b) noisy if xcorr_neighbors > noisy_channel_thr (1.0 by default)
+
+    Spectral analysis is also used to label noisy channels. `psd` is computed using welch method: 
+    split the signal into overlapping windows of size `welch_window_ms`, compute the psd in each 
+    window, and average over windows. `psd_hf` is the mean power of frequencies above 
+    `nyquist_threshold` * Nyquist frequency. If `psd_hf` > `psd_hf_threshold`, the channel is 
+    labelled as noisy.
+
+    When a channel is bad in more than one way, the following priority is applied to the labeling: 
+    outside > noisy > dead. This means that if a channel is both outside and noisy, it will be 
+    labeled as outside. If it is both noisy and dead, it will be labeled as noisy.
 
     Parameters
     ----------
@@ -441,7 +470,6 @@ def detect_bad_channels_ibl(
     # Compute coherence
     trend = shrinking_median_filter(xcorr, n_neighbors)
     xcorr_neighbors = xcorr - trend
-    xcorr_distant = trend - 1
 
     # Find dead, noisy and outside channels
     num_channels = raw.shape[1]
@@ -455,7 +483,7 @@ def detect_bad_channels_ibl(
 
     # Channels outside the brain are contiguous channels at the extreme of the probe below the
     # threshold on the trend coherency
-    below_threshold = xcorr_distant < outside_channel_thr
+    below_threshold = trend < (outside_channel_thr + 1)
     if np.any(below_threshold):
         # Find contiguous blocks of dead channels
         (ibelow,) = np.where(below_threshold)
