@@ -190,6 +190,10 @@ test = [
 
     # for slurm jobs
     "pytest-mock",
+
+    # for IBL data fetching
+    "pooch",
+    "datalad"
 ]
 
 docs = [
