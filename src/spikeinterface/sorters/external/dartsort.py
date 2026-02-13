@@ -2,7 +2,7 @@ from pathlib import Path
 from packaging.version import parse
 
 from ..basesorter import BaseSorter
-from ...core import NumpyFolderSorting
+from ...core import NumpyFolderSorting, NumpySorting
 
 class DartsortSorter(BaseSorter):
     """Dartsort wrapper"""
@@ -70,16 +70,23 @@ class DartsortSorter(BaseSorter):
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         # dartsort config are set using dataclass we need to map this
-        print(params)
         cfg = DARTsortUserConfig(**params)
-        print(cfg)
         
         ret = dartsort_main(
             recording,
             sorter_output_folder,
             cfg,
         )
-        sorting = ret['sorting']
+        # the dartsort_sorting is not the spikeinterface sorting!!!
+        dartsort_sorting = ret['sorting']
+
+        times_samples = dartsort_sorting.times_samples
+        labels = dartsort_sorting.labels
+        mask = labels >= 0
+
+        sorting = NumpySorting.from_samples_and_labels(
+            [times_samples[mask]], [labels[mask]], dartsort_sorting.sampling_frequency
+        )
         
         NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")
 
