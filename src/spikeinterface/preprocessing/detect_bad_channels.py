@@ -402,9 +402,9 @@ def detect_bad_channels_ibl(
     capture broader trends, smaller values are more local but less robust to bad channels). This is
     also expected to be values near 1 for good (i.e., most) channels.
 
-    Outside channels are defined as contiguous channels on the 'top', 'bottom' or either ('both') 
-    side of the probe where trend < (outside_channel_thr + 1). outside_channel_thr = -0.75 by 
-    default so this essentially flags channnels at the top or bottom where 
+    Outside channels are defined as contiguous channels on the 'top', 'bottom' or either ('both')
+    side of the probe where trend < (outside_channel_thr + 1). outside_channel_thr = -0.75 by
+    default so this essentially flags channnels at the top or bottom where
     corr(channel, reference) < 0.25.
 
     The trend is subtracted from the xcorr to get `xcorr_neighbors`. Outliers on this zero-centered
@@ -412,14 +412,14 @@ def detect_bad_channels_ibl(
         a) dead if xcorr_neighbors < dead_channel_thr (-0.5 by default, essentially corr(chanel, reference) < 0.5)
         b) noisy if xcorr_neighbors > noisy_channel_thr (1.0 by default)
 
-    Spectral analysis is also used to label noisy channels. `psd` is computed using welch method: 
-    split the signal into overlapping windows of size `welch_window_ms`, compute the psd in each 
-    window, and average over windows. `psd_hf` is the mean power of frequencies above 
-    `nyquist_threshold` * Nyquist frequency. If `psd_hf` > `psd_hf_threshold`, the channel is 
+    Spectral analysis is also used to label noisy channels. `psd` is computed using welch method:
+    split the signal into overlapping windows of size `welch_window_ms`, compute the psd in each
+    window, and average over windows. `psd_hf` is the mean power of frequencies above
+    `nyquist_threshold` * Nyquist frequency. If `psd_hf` > `psd_hf_threshold`, the channel is
     labelled as noisy.
 
-    When a channel is bad in more than one way, the following priority is applied to the labeling: 
-    outside > noisy > dead. This means that if a channel is both outside and noisy, it will be 
+    When a channel is bad in more than one way, the following priority is applied to the labeling:
+    outside > noisy > dead. This means that if a channel is both outside and noisy, it will be
     labeled as outside. If it is both noisy and dead, it will be labeled as noisy.
 
     Parameters
