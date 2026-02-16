@@ -1508,6 +1508,7 @@ misc_metrics_list = [
     AmplitudeMedian,
     Drift,
     SDRatio,
+    SNRBaseline,
 ]
 
 
