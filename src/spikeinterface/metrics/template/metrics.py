@@ -336,23 +336,38 @@ def _plot_peaks_info_markers(
 
     if len(other_troughs) > 0:
         ax.plot(
-            time_ms[other_troughs], template[other_troughs] + trough_offset,
-            "v", markerfacecolor="none", markeredgecolor=trough_color,
-            markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
+            time_ms[other_troughs],
+            template[other_troughs] + trough_offset,
+            "v",
+            markerfacecolor="none",
+            markeredgecolor=trough_color,
+            markeredgewidth=1.2,
+            markersize=other_size,
+            zorder=zorder_other,
             label=f"Other {prefix_str}troughs ({len(other_troughs)})",
         )
     if len(other_peaks_before) > 0:
         ax.plot(
-            time_ms[other_peaks_before], template[other_peaks_before],
-            "^", markerfacecolor="none", markeredgecolor=peak_before_color,
-            markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
+            time_ms[other_peaks_before],
+            template[other_peaks_before],
+            "^",
+            markerfacecolor="none",
+            markeredgecolor=peak_before_color,
+            markeredgewidth=1.2,
+            markersize=other_size,
+            zorder=zorder_other,
             label=f"Other {prefix_str}peaks before ({len(other_peaks_before)})",
         )
     if len(other_peaks_after) > 0:
         ax.plot(
-            time_ms[other_peaks_after], template[other_peaks_after],
-            "^", markerfacecolor="none", markeredgecolor=peak_after_color,
-            markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
+            time_ms[other_peaks_after],
+            template[other_peaks_after],
+            "^",
+            markerfacecolor="none",
+            markeredgecolor=peak_after_color,
+            markeredgewidth=1.2,
+            markersize=other_size,
+            zorder=zorder_other,
             label=f"Other {prefix_str}peaks after ({len(other_peaks_after)})",
         )
 
@@ -363,20 +378,32 @@ def _plot_peaks_info_markers(
 
     if main_trough is not None and main_trough >= 0:
         ax.plot(
-            time_ms[main_trough], template[main_trough] + trough_offset,
-            "v", color=trough_color, markersize=main_size, zorder=zorder_main,
+            time_ms[main_trough],
+            template[main_trough] + trough_offset,
+            "v",
+            color=trough_color,
+            markersize=main_size,
+            zorder=zorder_main,
             label=f"Main {prefix_str}trough",
         )
     if main_peak_before is not None and main_peak_before >= 0:
         ax.plot(
-            time_ms[main_peak_before], template[main_peak_before],
-            "^", color=peak_before_color, markersize=main_size, zorder=zorder_main,
+            time_ms[main_peak_before],
+            template[main_peak_before],
+            "^",
+            color=peak_before_color,
+            markersize=main_size,
+            zorder=zorder_main,
             label=f"Main {prefix_str}peak before",
         )
     if main_peak_after is not None and main_peak_after >= 0:
         ax.plot(
-            time_ms[main_peak_after], template[main_peak_after],
-            "^", color=peak_after_color, markersize=main_size, zorder=zorder_main,
+            time_ms[main_peak_after],
+            template[main_peak_after],
+            "^",
+            color=peak_after_color,
+            markersize=main_size,
+            zorder=zorder_main,
             label=f"Main {prefix_str}peak after",
         )
 
@@ -449,9 +476,19 @@ def plot_template_peak_detection(
 
     # --- Plot detected peaks/troughs ---
     _plot_peaks_info_markers(
-        ax, time_ms, template_raw, peaks_info, trough_offset,
-        trough_color="blue", peak_before_color="red", peak_after_color="green",
-        prefix="", zorder_main=7, zorder_other=5, main_size=14, other_size=9,
+        ax,
+        time_ms,
+        template_raw,
+        peaks_info,
+        trough_offset,
+        trough_color="blue",
+        peak_before_color="red",
+        peak_after_color="green",
+        prefix="",
+        zorder_main=7,
+        zorder_other=5,
+        main_size=14,
+        other_size=9,
     )
 
     # --- Half-widths ---
