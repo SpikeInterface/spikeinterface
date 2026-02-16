@@ -15,7 +15,6 @@ from spikeinterface.core.template_tools import get_template_extremum_channel, ge
 
 from .metrics import (
     get_trough_and_peak_idx,
-    plot_template_peak_detection,
     single_channel_metrics,
     multi_channel_metrics,
 )
@@ -90,10 +89,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     baseline_window_ms : tuple, default: (0.0, 0.5)
         (start_ms, end_ms) defining the baseline window for flatness computation.
     baseline_flatness_thresh : float, default: 0.12
-        Flatness threshold for baseline pass/fail visualization in diagnostic plots.
-    plot : bool, default: False
-        If True, generate diagnostic plots showing template and detected peaks/troughs
-        for each unit.
+        Flatness threshold for the waveform_baseline_flatness metric.
 
     Returns
     -------
@@ -201,7 +197,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         edge_exclusion_ms=0.09,
         baseline_window_ms=(0.0, 0.5),
         baseline_flatness_thresh=0.12,
-        plot=False,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
         num_channels = self.sorting_analyzer.get_num_channels()
@@ -235,7 +230,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             edge_exclusion_ms=edge_exclusion_ms,
             baseline_window_ms=baseline_window_ms,
             baseline_flatness_thresh=baseline_flatness_thresh,
-            plot=plot,
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
@@ -251,8 +245,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
         edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.09)
-        baseline_window_ms = self.params.get("baseline_window_ms", (0.0, 0.5))
-        baseline_flatness_thresh = self.params.get("baseline_flatness_thresh", 0.12)
 
         sampling_frequency = sorting_analyzer.sampling_frequency
         if self.params["upsampling_factor"] > 1:
@@ -269,8 +261,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
 
         channel_locations = sorting_analyzer.get_channel_locations()
-
-        plot = self.params.get("plot", False)
 
         main_channel_templates = []
         peaks_info = []
@@ -317,45 +307,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                     template_multi_upsampled = template_multi
                 multi_channel_templates.append(template_multi_upsampled)
                 channel_locations_multi.append(channel_location_multi)
-
-        # Generate diagnostic plots if requested
-        if plot:
-            import matplotlib.pyplot as plt
-
-            n_units = len(unit_ids)
-            n_cols = min(2, n_units)
-            max_rows_per_fig = 8
-            units_per_fig = max_rows_per_fig * n_cols
-
-            for fig_start in range(0, n_units, units_per_fig):
-                fig_end = min(fig_start + units_per_fig, n_units)
-                n_units_this_fig = fig_end - fig_start
-                n_rows = int(np.ceil(n_units_this_fig / n_cols))
-                fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 3.5 * n_rows), squeeze=False)
-
-                for i, unit_index_plot in enumerate(range(fig_start, fig_end)):
-                    unit_id = unit_ids[unit_index_plot]
-                    row, col = divmod(i, n_cols)
-                    ax = axes[row, col]
-                    plot_template_peak_detection(
-                        main_channel_templates[unit_index_plot],
-                        sampling_frequency_up,
-                        peaks_info=peaks_info[unit_index_plot],
-                        min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
-                        edge_exclusion_ms=edge_exclusion_ms,
-                        baseline_window_ms=baseline_window_ms,
-                        baseline_flatness_thresh=baseline_flatness_thresh,
-                        ax=ax,
-                    )
-                    ax.set_title(f"Unit {unit_id}", fontsize=9)
-
-                # Hide unused axes
-                for idx in range(n_units_this_fig, n_rows * n_cols):
-                    row, col = divmod(idx, n_cols)
-                    axes[row, col].set_visible(False)
-
-                fig.tight_layout()
-                plt.show()
 
         tmp_data["peaks_info"] = peaks_info
         tmp_data["main_channel_templates"] = np.array(main_channel_templates)
