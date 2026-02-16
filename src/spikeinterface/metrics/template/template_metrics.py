@@ -13,7 +13,12 @@ from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
 
-from .metrics import get_trough_and_peak_idx, plot_template_peak_detection, single_channel_metrics, multi_channel_metrics
+from .metrics import (
+    get_trough_and_peak_idx,
+    plot_template_peak_detection,
+    single_channel_metrics,
+    multi_channel_metrics,
+)
 
 MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
 MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS = 64

@@ -286,9 +286,19 @@ def get_trough_and_peak_idx(
 
 
 def _plot_peaks_info_markers(
-    ax, time_ms, template, info, trough_offset,
-    trough_color, peak_before_color, peak_after_color,
-    prefix, zorder_main, zorder_other, main_size, other_size,
+    ax,
+    time_ms,
+    template,
+    info,
+    trough_offset,
+    trough_color,
+    peak_before_color,
+    peak_after_color,
+    prefix,
+    zorder_main,
+    zorder_other,
+    main_size,
+    other_size,
 ):
     """Plot troughs/peaks_before/peaks_after from a peaks_info dict onto an axes."""
     prefix_str = f"{prefix.lower()} " if prefix else ""
@@ -436,8 +446,9 @@ def plot_template_peak_detection(
 
         if bl_end_idx > bl_start_idx:
             # Shade the baseline window
-            ax.axvspan(time_ms[bl_start_idx], time_ms[bl_end_idx - 1],
-                       color="yellow", alpha=0.15, label="Baseline window")
+            ax.axvspan(
+                time_ms[bl_start_idx], time_ms[bl_end_idx - 1], color="yellow", alpha=0.15, label="Baseline window"
+            )
 
             # Compute baseline flatness (referenced to baseline mean)
             baseline_segment = template_raw[bl_start_idx:bl_end_idx]
@@ -456,11 +467,21 @@ def plot_template_peak_detection(
                 status = "FAIL" if fails else "ok"
 
                 # Draw horizontal lines at baseline_mean +/- max_baseline_dev
-                ax.axhline(baseline_mean + max_baseline_dev, color=line_color, linestyle="--",
-                           alpha=line_alpha, linewidth=line_width,
-                           label=f"Baseline limit ({status}, flatness={flatness:.3f})")
-                ax.axhline(baseline_mean - max_baseline_dev, color=line_color, linestyle="--",
-                           alpha=line_alpha, linewidth=line_width)
+                ax.axhline(
+                    baseline_mean + max_baseline_dev,
+                    color=line_color,
+                    linestyle="--",
+                    alpha=line_alpha,
+                    linewidth=line_width,
+                    label=f"Baseline limit ({status}, flatness={flatness:.3f})",
+                )
+                ax.axhline(
+                    baseline_mean - max_baseline_dev,
+                    color=line_color,
+                    linestyle="--",
+                    alpha=line_alpha,
+                    linewidth=line_width,
+                )
 
     ax.set_xlabel("Time (ms)")
     ax.set_ylabel("Amplitude")
