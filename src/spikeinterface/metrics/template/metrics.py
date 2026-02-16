@@ -10,13 +10,8 @@ from spikeinterface.core.analyzer_extension_core import BaseMetric
 def get_trough_and_peak_idx(
     template,
     sampling_frequency,
-    min_thresh_detect_peaks_troughs=0.3,
-    smooth=False,
-    smooth_window_ms=0.3,
-    smooth_window_frac=None,
-    smooth_polyorder=3,
-    detection_mode=None,
-    edge_exclusion_ms=0.35,
+    min_thresh_detect_peaks_troughs=0.4,
+    edge_exclusion_ms=0.1,
 ):
     """
     Detect troughs and peaks in a template waveform and return detailed information
@@ -30,25 +25,9 @@ def get_trough_and_peak_idx(
         The 1D template waveform
     sampling_frequency : float
         The sampling frequency in Hz
-    min_thresh_detect_peaks_troughs : float, default: 0.4
+    min_thresh_detect_peaks_troughs : float, default: 0.3
         Minimum prominence threshold as a fraction of the template's absolute max value
-    smooth : bool, default: False
-        Whether to apply Savitzky-Golay smoothing before peak detection.
-        Ignored when detection_mode is not None.
-    smooth_window_ms : float, default: 0.3
-        Smoothing window length in milliseconds (used with sampling_frequency to compute window in samples).
-        Ignored if smooth_window_frac is provided.
-    smooth_window_frac : float or None, default: None
-        Smoothing window length as a fraction of template length (0.05-0.2 recommended).
-        If provided, takes precedence over smooth_window_ms.
-    smooth_polyorder : int, default: 3
-        Polynomial order for Savitzky-Golay filter (must be < window_length)
-    detection_mode : str or None, default: None
-        Detection strategy: "raw" (no smoothing), "smoothed" (smooth then detect),
-        or "combo" (detect on smoothed, refine locations on raw for precise timing
-        and true amplitudes). When None, falls back to the ``smooth`` bool for
-        backward compatibility.
-    edge_exclusion_ms : float, default: 0.2
+    edge_exclusion_ms : float, default: 0.09
         Duration in milliseconds to exclude from the start and end of the template
         when detecting peaks/troughs. Prevents spurious edge detections.
 
@@ -66,29 +45,9 @@ def get_trough_and_peak_idx(
         - "{extremum}_half_width_left": left intersection point of the main with half of amplitude
         - "{extremum}_half_width_right": right intersection point of the main with half of amplitude
     """
-    from scipy.signal import find_peaks, savgol_filter
+    from scipy.signal import find_peaks
 
     assert template.ndim == 1
-
-    # Resolve detection_mode from smooth bool when not explicitly set
-    if detection_mode is None:
-        detection_mode = "smoothed" if smooth else "raw"
-
-    # --- Compute smoothed template when needed ---
-    template_raw = template  # keep raw reference
-    window_length = None
-    if detection_mode in ("smoothed", "combo"):
-        if smooth_window_frac is not None:
-            window_length = int(len(template) * smooth_window_frac) // 2 * 2 + 1
-        else:
-            window_length = int(sampling_frequency * smooth_window_ms / 1000)
-            if window_length % 2 == 0:
-                window_length += 1
-        window_length = max(smooth_polyorder + 2, window_length)
-        template_smoothed = savgol_filter(template, window_length=window_length, polyorder=smooth_polyorder)
-        # For "smoothed" mode, detection and metrics both use the smoothed template.
-        # For "combo" mode, detection uses smoothed but metrics/refinement use raw.
-        template = template_smoothed
 
     peaks_info = {}
     # Get min prominence to detect peaks and troughs relative to template abs max value
@@ -315,67 +274,13 @@ def get_trough_and_peak_idx(
         peaks_info["peak_after_width_left"] = -1
         peaks_info["peak_after_width_right"] = -1
 
-    # compute half-width for trough (this is a whim from Sam)
-    # For combo mode, compute half-widths on the raw template after refinement
-    halfwidth_template = template_raw if detection_mode == "combo" else template
+    # Compute half-widths
     for k in ("peak_before", "trough", "peak_after"):
         sample_index = peaks_info[f"{k}_index"]
         sign = -1 if k == "trough" else 1
-        _, l, r = _compute_halfwidth(sign * halfwidth_template, sample_index, sampling_frequency)
+        _, l, r = _compute_halfwidth(sign * template, sample_index, sampling_frequency)
         peaks_info[f"{k}_half_width_left"] = l
         peaks_info[f"{k}_half_width_right"] = r
-
-    # --- Combo mode: refine smoothed detections on the raw template ---
-    if detection_mode == "combo" and window_length is not None:
-        search_radius = window_length // 4
-        n = len(template_raw)
-
-        def _refine_trough(loc):
-            """Find true minimum on raw template near smoothed detection."""
-            lo = max(edge_samples, loc - search_radius)
-            hi = min(n - edge_samples, loc + search_radius + 1)
-            if hi <= lo:
-                return loc
-            return lo + int(np.nanargmin(template_raw[lo:hi]))
-
-        def _refine_peak(loc):
-            """Find true maximum on raw template near smoothed detection."""
-            lo = max(edge_samples, loc - search_radius)
-            hi = min(n - edge_samples, loc + search_radius + 1)
-            if hi <= lo:
-                return loc
-            return lo + int(np.nanargmax(template_raw[lo:hi]))
-
-        # Refine trough locations
-        peaks_info["trough_sample_indices"] = np.array(
-            [_refine_trough(loc) for loc in peaks_info["trough_sample_indices"]], dtype=int
-        )
-        if peaks_info["trough_index"] >= 0:
-            peaks_info["trough_index"] = _refine_trough(peaks_info["trough_index"])
-
-        # Refine peak_before locations
-        if len(peaks_info["peak_before_sample_indices"]) > 0:
-            peaks_info["peak_before_sample_indices"] = np.array(
-                [_refine_peak(loc) for loc in peaks_info["peak_before_sample_indices"]], dtype=int
-            )
-        if peaks_info["peak_before_index"] >= 0:
-            peaks_info["peak_before_index"] = _refine_peak(peaks_info["peak_before_index"])
-
-        # Refine peak_after locations
-        if len(peaks_info["peak_after_sample_indices"]) > 0:
-            peaks_info["peak_after_sample_indices"] = np.array(
-                [_refine_peak(loc) for loc in peaks_info["peak_after_sample_indices"]], dtype=int
-            )
-        if peaks_info["peak_after_index"] >= 0:
-            peaks_info["peak_after_index"] = _refine_peak(peaks_info["peak_after_index"])
-
-        # Recompute half-widths on raw template with refined locations
-        for k in ("peak_before", "trough", "peak_after"):
-            sample_index = peaks_info[f"{k}_index"]
-            sign = -1 if k == "trough" else 1
-            _, l, r = _compute_halfwidth(sign * template_raw, sample_index, sampling_frequency)
-            peaks_info[f"{k}_half_width_left"] = l
-            peaks_info[f"{k}_half_width_right"] = r
 
     return peaks_info
 
@@ -386,6 +291,7 @@ def _plot_peaks_info_markers(
     prefix, zorder_main, zorder_other, main_size, other_size,
 ):
     """Plot troughs/peaks_before/peaks_after from a peaks_info dict onto an axes."""
+    prefix_str = f"{prefix.lower()} " if prefix else ""
     # --- Others (hollow markers) ---
     other_troughs = info.get("trough_sample_indices", np.array([], dtype=int))
     other_peaks_before = info.get("peak_before_sample_indices", np.array([], dtype=int))
@@ -396,21 +302,21 @@ def _plot_peaks_info_markers(
             time_ms[other_troughs], template[other_troughs] + trough_offset,
             "v", markerfacecolor="none", markeredgecolor=trough_color,
             markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
-            label=f"Other {prefix.lower()} troughs ({len(other_troughs)})",
+            label=f"Other {prefix_str}troughs ({len(other_troughs)})",
         )
     if len(other_peaks_before) > 0:
         ax.plot(
             time_ms[other_peaks_before], template[other_peaks_before],
             "^", markerfacecolor="none", markeredgecolor=peak_before_color,
             markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
-            label=f"Other {prefix.lower()} peaks before ({len(other_peaks_before)})",
+            label=f"Other {prefix_str}peaks before ({len(other_peaks_before)})",
         )
     if len(other_peaks_after) > 0:
         ax.plot(
             time_ms[other_peaks_after], template[other_peaks_after],
             "^", markerfacecolor="none", markeredgecolor=peak_after_color,
             markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
-            label=f"Other {prefix.lower()} peaks after ({len(other_peaks_after)})",
+            label=f"Other {prefix_str}peaks after ({len(other_peaks_after)})",
         )
 
     # --- Main (filled markers) ---
@@ -422,34 +328,28 @@ def _plot_peaks_info_markers(
         ax.plot(
             time_ms[main_trough], template[main_trough] + trough_offset,
             "v", color=trough_color, markersize=main_size, zorder=zorder_main,
-            label=f"Main {prefix.lower()} trough",
+            label=f"Main {prefix_str}trough",
         )
     if main_peak_before is not None and main_peak_before >= 0:
         ax.plot(
             time_ms[main_peak_before], template[main_peak_before],
             "^", color=peak_before_color, markersize=main_size, zorder=zorder_main,
-            label=f"Main {prefix.lower()} peak before",
+            label=f"Main {prefix_str}peak before",
         )
     if main_peak_after is not None and main_peak_after >= 0:
         ax.plot(
             time_ms[main_peak_after], template[main_peak_after],
             "^", color=peak_after_color, markersize=main_size, zorder=zorder_main,
-            label=f"Main {prefix.lower()} peak after",
+            label=f"Main {prefix_str}peak after",
         )
 
 
 def plot_template_peak_detection(
     template_raw,
     sampling_frequency,
-    template_smoothed=None,
     peaks_info=None,
-    min_thresh_detect_peaks_troughs=0.4,
-    smooth=True,
-    smooth_window_ms=0.3,
-    smooth_window_frac=None,
-    smooth_polyorder=3,
-    detection_mode=None,
-    edge_exclusion_ms=0.2,
+    min_thresh_detect_peaks_troughs=0.3,
+    edge_exclusion_ms=0.09,
     baseline_window_ms=(0.0, 0.2),
     baseline_flatness_thresh=0.12,
     ax=None,
@@ -457,43 +357,27 @@ def plot_template_peak_detection(
     """
     Plot a diagnostic view of template peak/trough detection.
 
-    Shows the raw template, optionally the smoothed template, marks
-    all detected peaks and troughs, and visualizes the baseline window
-    with flatness limit lines.
+    Shows the template, marks all detected peaks and troughs, and visualizes
+    the baseline window with flatness limit lines.
 
     Parameters
     ----------
     template_raw : numpy.ndarray
-        The 1D raw (unsmoothed) template waveform
+        The 1D template waveform
     sampling_frequency : float
         The sampling frequency in Hz
-    template_smoothed : numpy.ndarray or None, default: None
-        The smoothed template. If None and smooth=True, smoothing is computed
-        internally using smooth_window_frac or smooth_window_ms.
     peaks_info : dict or None, default: None
         Pre-computed peaks info from get_trough_and_peak_idx. If None, peak
-        detection is run internally (on the smoothed template if smooth=True,
-        otherwise on the raw template).
-    min_thresh_detect_peaks_troughs : float, default: 0.4
+        detection is run internally.
+    min_thresh_detect_peaks_troughs : float, default: 0.3
         Minimum prominence threshold as a fraction of the template's absolute max value.
         Only used if peaks_info is None.
-    smooth : bool, default: True
-        Whether to compute and display a smoothed template. Ignored if
-        template_smoothed is provided.
-    smooth_window_ms : float, default: 0.3
-        Smoothing window length in milliseconds. Ignored if smooth_window_frac is provided.
-        Only used if smooth=True and template_smoothed is None.
-    smooth_window_frac : float or None, default: None
-        Smoothing window length as a fraction of template length (0.05-0.2 recommended).
-        If provided, takes precedence over smooth_window_ms.
-    smooth_polyorder : int, default: 3
-        Polynomial order for Savitzky-Golay filter. Only used if smooth=True
-        and template_smoothed is None.
-    detection_mode : str or None, default: None
-        The detection mode used ("raw", "smoothed", or "combo"). Used for
-        plot title annotation. When None, not shown.
-    edge_exclusion_ms : float, default: 0.2
+    edge_exclusion_ms : float, default: 0.09
         Duration in ms to exclude from template edges in reference detections.
+    baseline_window_ms : tuple or None, default: (0.0, 0.2)
+        (start_ms, end_ms) defining the baseline window for flatness visualization.
+    baseline_flatness_thresh : float, default: 0.12
+        Flatness threshold for pass/fail visualization.
     ax : matplotlib.axes.Axes or None, default: None
         Axes to plot on. If None, a new figure is created.
 
@@ -508,38 +392,14 @@ def plot_template_peak_detection(
 
     time_ms = np.arange(len(template_raw)) / sampling_frequency * 1000
 
-    # Compute smoothed template if needed
-    if template_smoothed is None and smooth:
-        from scipy.signal import savgol_filter
-
-        if smooth_window_frac is not None:
-            window_length = int(len(template_raw) * smooth_window_frac) // 2 * 2 + 1
-        else:
-            window_length = int(sampling_frequency * smooth_window_ms / 1000)
-            if window_length % 2 == 0:
-                window_length += 1
-        window_length = max(smooth_polyorder + 2, window_length)
-        template_smoothed = savgol_filter(template_raw, window_length=window_length, polyorder=smooth_polyorder)
-
     # Compute peaks_info if not provided
     if peaks_info is None:
-        detection_template = template_smoothed if template_smoothed is not None else template_raw
         peaks_info = get_trough_and_peak_idx(
-            detection_template,
+            template_raw,
             sampling_frequency,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
+            edge_exclusion_ms=edge_exclusion_ms,
         )
-
-    from scipy.signal import find_peaks
-
-    has_smoothed = template_smoothed is not None
-    is_combo = detection_mode == "combo"
-
-    # Determine which template the peaks_info indices refer to
-    if is_combo or not has_smoothed:
-        detection_template = template_raw
-    else:
-        detection_template = template_smoothed
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 5))
@@ -547,63 +407,17 @@ def plot_template_peak_detection(
     amp_range = np.nanmax(np.abs(template_raw)) if np.nanmax(np.abs(template_raw)) > 0 else 1.0
     trough_offset = -0.06 * amp_range
 
-    # --- Plot waveforms ---
-    ax.plot(time_ms, template_raw, color="black", linewidth=1.5, label="Raw template")
-    if has_smoothed:
-        ax.plot(time_ms, template_smoothed, color="gray", alpha=0.7, linewidth=1, label="Smoothed template")
+    # --- Plot waveform ---
+    ax.plot(time_ms, template_raw, color="black", linewidth=1.5, label="Template")
 
-    # --- Run independent detection on raw template for reference (smoothed/combo modes) ---
-    edge_samples = int(edge_exclusion_ms / 1000 * sampling_frequency) if edge_exclusion_ms > 0 else 0
-    n_samples = len(template_raw)
+    # --- Plot detected peaks/troughs ---
+    _plot_peaks_info_markers(
+        ax, time_ms, template_raw, peaks_info, trough_offset,
+        trough_color="blue", peak_before_color="red", peak_after_color="green",
+        prefix="", zorder_main=7, zorder_other=5, main_size=14, other_size=9,
+    )
 
-    def _edge_filter(locs):
-        if edge_samples == 0 or len(locs) == 0:
-            return locs
-        return locs[(locs >= edge_samples) & (locs < n_samples - edge_samples)]
-
-    # Interior region (excluding edges)
-    lo = edge_samples if edge_samples > 0 else 0
-    hi = n_samples - edge_samples if edge_samples > 0 else n_samples
-
-    if is_combo:
-        # --- COMBO MODE: only show combo-refined markers from peaks_info ---
-        _plot_peaks_info_markers(
-            ax, time_ms, template_raw, peaks_info, trough_offset,
-            trough_color="blue", peak_before_color="red", peak_after_color="green",
-            prefix="Combo", zorder_main=7, zorder_other=5, main_size=16, other_size=9,
-        )
-
-    else:
-        # --- RAW / SMOOTHED MODE: run get_trough_and_peak_idx on each template ---
-
-        # Raw detection (uses same function as the actual metrics)
-        raw_info = get_trough_and_peak_idx(
-            template_raw, sampling_frequency,
-            min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
-            detection_mode="raw",
-            edge_exclusion_ms=edge_exclusion_ms,
-        )
-        _plot_peaks_info_markers(
-            ax, time_ms, template_raw, raw_info, trough_offset,
-            trough_color="darkblue", peak_before_color="darkred", peak_after_color="darkgreen",
-            prefix="Raw", zorder_main=7, zorder_other=5, main_size=12, other_size=8,
-        )
-
-        # Smoothed detection (only if smoothed template available)
-        if has_smoothed:
-            sm_info = get_trough_and_peak_idx(
-                template_smoothed, sampling_frequency,
-                min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
-                detection_mode="raw",  # already smoothed, just detect
-                edge_exclusion_ms=edge_exclusion_ms,
-            )
-            _plot_peaks_info_markers(
-                ax, time_ms, template_smoothed, sm_info, trough_offset,
-                trough_color="cornflowerblue", peak_before_color="salmon", peak_after_color="lightgreen",
-                prefix="Smoothed", zorder_main=6, zorder_other=4, main_size=12, other_size=8,
-            )
-
-    # --- Half-widths (from peaks_info, shown on raw template) ---
+    # --- Half-widths ---
     for k, color in [("trough", "blue"), ("peak_before", "red"), ("peak_after", "green")]:
         hw_left = peaks_info.get(f"{k}_half_width_left", -1)
         hw_right = peaks_info.get(f"{k}_half_width_right", -1)
@@ -650,8 +464,7 @@ def plot_template_peak_detection(
 
     ax.set_xlabel("Time (ms)")
     ax.set_ylabel("Amplitude")
-    mode_str = f" [{detection_mode}]" if detection_mode else ""
-    ax.set_title(f"Template Peak Detection{mode_str} (thresh={min_thresh_detect_peaks_troughs})")
+    ax.set_title(f"Template Peak Detection (thresh={min_thresh_detect_peaks_troughs})")
     ax.legend(loc="best", fontsize=6, ncol=2)
     ax.grid(True, alpha=0.3)
 
@@ -1088,8 +901,7 @@ def get_number_of_peaks(peaks_info, **kwargs):
     """
     Count the total number of peaks (positive) and troughs (negative) in the template.
 
-    Uses the pre-computed peak/trough detection from get_trough_and_peak_idx which
-    applies smoothing for more robust detection.
+    Uses the pre-computed peak/trough detection from get_trough_and_peak_idx.
 
     Parameters
     ----------

@@ -53,6 +53,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         * recovery_slope
         * number_of_peaks
         * waveform_ratios
+        * waveform_widths
+        * waveform_baseline_flatness
 
     Optionally, the following multi-channel metrics can be computed (when include_multi_channel_metrics=True):
         * velocity_fits
@@ -70,32 +72,23 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
         Default parameters can be obtained with: `si.metrics.template_metrics.get_default_template_metrics_params()`
-    peak_sign : {"neg", "pos"}, default: "neg"
-        Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
+    peak_sign : {"neg", "pos", "both"}, default: "both"
+        Whether to use the positive ("pos"), negative ("neg"), or both ("both") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
     include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
-    min_thresh_detect_peaks_troughs : float, default: 0.4
+    min_thresh_detect_peaks_troughs : float, default: 0.3
         Minimum prominence threshold as a fraction of the template's absolute max value
-    smooth : bool, default: False
-        Whether to apply Savitzky-Golay smoothing before peak detection
-    smooth_window_ms : float, default: 0.3
-        Smoothing window length in milliseconds. Ignored if smooth_window_frac is provided.
-    smooth_window_frac : float or None, default: None
-        Smoothing window length as a fraction of template length (0.05-0.2 recommended).
-        If provided, takes precedence over smooth_window_ms.
-    smooth_polyorder : int, default: 3
-        Polynomial order for Savitzky-Golay filter (must be < window_length)
-    detection_mode : str or None, default: "combo"
-        Detection strategy: "raw" (no smoothing), "smoothed" (smooth then detect),
-        or "combo" (detect on smoothed template for robust peak/trough count,
-        then refine each location on the raw template for precise timing and true
-        amplitudes). When None, falls back to the ``smooth`` bool for backward
-        compatibility. When set, overrides ``smooth``.
+    edge_exclusion_ms : float, default: 0.09
+        Duration in milliseconds to exclude from template edges during peak/trough detection.
+    baseline_window_ms : tuple, default: (0.0, 0.5)
+        (start_ms, end_ms) defining the baseline window for flatness computation.
+    baseline_flatness_thresh : float, default: 0.12
+        Flatness threshold for baseline pass/fail visualization in diagnostic plots.
     plot : bool, default: False
-        If True, generate diagnostic plots showing raw template, smoothed template,
-        and detected peaks/troughs for each unit.
+        If True, generate diagnostic plots showing template and detected peaks/troughs
+        for each unit.
 
     Returns
     -------
@@ -199,13 +192,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         upsampling_factor=10,
         include_multi_channel_metrics=False,
         depth_direction="y",
-        min_thresh_detect_peaks_troughs=0.4,
-        smooth=False,
-        smooth_window_ms=0.3,
-        smooth_window_frac=None,
-        smooth_polyorder=3,
-        detection_mode="combo",
-        edge_exclusion_ms=0.2,
+        min_thresh_detect_peaks_troughs=0.3,
+        edge_exclusion_ms=0.09,
         baseline_window_ms=(0.0, 0.5),
         baseline_flatness_thresh=0.12,
         plot=False,
@@ -239,11 +227,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             include_multi_channel_metrics=include_multi_channel_metrics,
             depth_direction=depth_direction,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
-            smooth=smooth,
-            smooth_window_ms=smooth_window_ms,
-            smooth_window_frac=smooth_window_frac,
-            smooth_polyorder=smooth_polyorder,
-            detection_mode=detection_mode,
             edge_exclusion_ms=edge_exclusion_ms,
             baseline_window_ms=baseline_window_ms,
             baseline_flatness_thresh=baseline_flatness_thresh,
@@ -253,7 +236,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     def _prepare_data(self, sorting_analyzer, unit_ids):
         import warnings
         import pandas as pd
-        from scipy.signal import resample_poly, savgol_filter
+        from scipy.signal import resample_poly
 
         # compute main_channel_templates and multi_channel_templates (if include_multi_channel_metrics is True)
         tmp_data = {}
@@ -262,12 +245,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             unit_ids = sorting_analyzer.unit_ids
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
-        smooth = self.params["smooth"]
-        smooth_window_ms = self.params["smooth_window_ms"]
-        smooth_window_frac = self.params["smooth_window_frac"]
-        smooth_polyorder = self.params["smooth_polyorder"]
-        detection_mode = self.params.get("detection_mode", None)
-        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.2)
+        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.09)
         baseline_window_ms = self.params.get("baseline_window_ms", (0.0, 0.5))
         baseline_flatness_thresh = self.params.get("baseline_flatness_thresh", 0.12)
 
@@ -289,14 +267,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         plot = self.params.get("plot", False)
 
-        # Resolve effective detection mode for internal logic
-        if detection_mode is not None:
-            effective_mode = detection_mode
-        else:
-            effective_mode = "smoothed" if smooth else "raw"
-
         main_channel_templates = []
-        raw_templates = []  # store pre-smoothing templates for plotting
         peaks_info = []
         multi_channel_templates = []
         channel_locations_multi = []
@@ -311,61 +282,13 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             else:
                 template_upsampled = template_single
 
-            if effective_mode == "combo":
-                # Combo mode: pass raw template to get_trough_and_peak_idx which handles
-                # smoothing internally, detects on smoothed, and refines on raw.
-                # Store raw template for metrics (amplitudes/durations at true locations).
-                if plot:
-                    raw_templates.append(template_upsampled.copy())
-
-                peaks_info_unit = get_trough_and_peak_idx(
-                    template_upsampled,
-                    sampling_frequency_up,
-                    min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
-                    detection_mode="combo",
-                    smooth_window_ms=smooth_window_ms,
-                    smooth_window_frac=smooth_window_frac,
-                    smooth_polyorder=smooth_polyorder,
-                    edge_exclusion_ms=edge_exclusion_ms,
-                )
-                # Store raw template — metrics use raw values at refined locations
-                main_channel_templates.append(template_upsampled)
-
-            elif effective_mode == "smoothed":
-                # Save raw (pre-smoothing) template for plotting
-                if plot:
-                    raw_templates.append(template_upsampled.copy())
-
-                # Smooth template externally (existing behavior)
-                if smooth_window_frac is not None:
-                    window_length = int(len(template_upsampled) * smooth_window_frac) // 2 * 2 + 1
-                else:
-                    window_length = int(sampling_frequency_up * smooth_window_ms / 1000)
-                    if window_length % 2 == 0:
-                        window_length += 1
-                window_length = max(smooth_polyorder + 2, window_length)
-                template_upsampled = savgol_filter(
-                    template_upsampled, window_length=window_length, polyorder=smooth_polyorder
-                )
-
-                # Smoothing already applied above, pass smooth=False to avoid double-smoothing
-                peaks_info_unit = get_trough_and_peak_idx(
-                    template_upsampled,
-                    sampling_frequency_up,
-                    min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
-                    edge_exclusion_ms=edge_exclusion_ms,
-                )
-                main_channel_templates.append(template_upsampled)
-
-            else:
-                # Raw mode (no smoothing)
-                peaks_info_unit = get_trough_and_peak_idx(
-                    template_upsampled,
-                    sampling_frequency_up,
-                    min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
-                    edge_exclusion_ms=edge_exclusion_ms,
-                )
-                main_channel_templates.append(template_upsampled)
+            peaks_info_unit = get_trough_and_peak_idx(
+                template_upsampled,
+                sampling_frequency_up,
+                min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
+                edge_exclusion_ms=edge_exclusion_ms,
+            )
+            main_channel_templates.append(template_upsampled)
 
             peaks_info.append(peaks_info_unit)
 
@@ -409,33 +332,17 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                     unit_id = unit_ids[unit_index_plot]
                     row, col = divmod(i, n_cols)
                     ax = axes[row, col]
-                    if effective_mode in ("smoothed", "combo") and raw_templates:
-                        template_raw_plot = raw_templates[unit_index_plot]
-                        if effective_mode == "smoothed":
-                            template_smoothed_plot = main_channel_templates[unit_index_plot]
-                        else:
-                            # Combo: main_channel_templates stores raw; compute smoothed for display
-                            template_smoothed_plot = None  # let plot function compute it
-                    else:
-                        template_raw_plot = main_channel_templates[unit_index_plot]
-                        template_smoothed_plot = None
                     plot_template_peak_detection(
-                        template_raw_plot,
+                        main_channel_templates[unit_index_plot],
                         sampling_frequency_up,
-                        template_smoothed=template_smoothed_plot,
                         peaks_info=peaks_info[unit_index_plot],
                         min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
-                        smooth=effective_mode == "combo",  # compute smoothed for display in combo mode
-                        smooth_window_ms=smooth_window_ms,
-                        smooth_window_frac=smooth_window_frac,
-                        smooth_polyorder=smooth_polyorder,
-                        detection_mode=effective_mode,
                         edge_exclusion_ms=edge_exclusion_ms,
                         baseline_window_ms=baseline_window_ms,
                         baseline_flatness_thresh=baseline_flatness_thresh,
                         ax=ax,
                     )
-                    ax.set_title(f"Unit {unit_id} ({effective_mode})", fontsize=9)
+                    ax.set_title(f"Unit {unit_id}", fontsize=9)
 
                 # Hide unused axes
                 for idx in range(n_units_this_fig, n_rows * n_cols):
