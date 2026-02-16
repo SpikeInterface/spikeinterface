@@ -127,7 +127,11 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             sparsity = self.params["sparsity"]
         else:
             if self.params["max_dense_channels"] is not None:
-                assert recording.get_num_channels() <= self.params["max_dense_channels"], ""
+                assert recording.get_num_channels() <= self.params["max_dense_channels"], (
+                    "Sparsity must be provided when the number of channels is "
+                    f"greater than {self.params['max_dense_channels']}. Alternatively, set max_dense_channels to None "
+                    "to compute amplitude scalings using dense waveforms."
+                )
             sparsity = ChannelSparsity.create_dense(self.sorting_analyzer)
         sparsity_mask = sparsity.mask
 

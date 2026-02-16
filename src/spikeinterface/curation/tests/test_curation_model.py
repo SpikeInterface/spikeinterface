@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 import numpy as np
 
-from spikeinterface.curation.curation_model import CurationModel, LabelDefinition
+from spikeinterface.curation.curation_model import CurationModel, SequentialCuration, LabelDefinition
 
 
 # Test data for format version
@@ -282,3 +282,33 @@ def test_complete_model():
     assert len(model.merges) == 1
     assert len(model.splits) == 1
     assert len(model.removed) == 1
+
+
+def test_sequential_curation():
+    sequential_curation_steps_valid = [
+        {"format_version": "2", "unit_ids": [1, 2, 3, 4], "merges": [{"unit_ids": [1, 2], "new_unit_id": 22}]},
+        {
+            "format_version": "2",
+            "unit_ids": [3, 4, 22],
+            "splits": [
+                {"unit_id": 22, "mode": "indices", "indices": [[0, 1, 2], [3, 4, 5]], "new_unit_ids": [222, 223]}
+            ],
+        },
+        {"format_version": "2", "unit_ids": [3, 4, 222, 223], "removed": [223]},
+    ]
+
+    # this is valid
+    SequentialCuration(curation_steps=sequential_curation_steps_valid)
+
+    sequential_curation_steps_no_ids = sequential_curation_steps_valid.copy()
+    # remove new_unit_id in merge step
+    sequential_curation_steps_no_ids[0]["merges"][0]["new_unit_id"] = None
+
+    with pytest.raises(ValidationError):
+        SequentialCuration(curation_steps=sequential_curation_steps_no_ids)
+
+    sequential_curation_steps_invalid = sequential_curation_steps_valid.copy()
+    # invalid unit_ids in last step
+    sequential_curation_steps_invalid[2]["unit_ids"] = [3, 4, 222, 224]  # 224 should be 223
+    with pytest.raises(ValidationError):
+        SequentialCuration(curation_steps=sequential_curation_steps_invalid)
