@@ -173,7 +173,9 @@ def get_trough_and_peak_idx(
         if len(peak_locs_before) == 0:
             search_start = edge_samples if edge_samples > 0 else 0
             if search_start < len(template_before):
-                peak_locs_before = np.array([search_start + int(np.nanargmax(template_before[search_start:]))], dtype=int)
+                peak_locs_before = np.array(
+                    [search_start + int(np.nanargmax(template_before[search_start:]))], dtype=int
+                )
             else:
                 peak_locs_before = np.array([np.nanargmax(template_before)], dtype=int)
             peak_props_before = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
@@ -355,9 +357,19 @@ def get_trough_and_peak_idx(
 
 
 def _plot_peaks_info_markers(
-    ax, time_ms, template, info, trough_offset,
-    trough_color, peak_before_color, peak_after_color,
-    prefix, zorder_main, zorder_other, main_size, other_size,
+    ax,
+    time_ms,
+    template,
+    info,
+    trough_offset,
+    trough_color,
+    peak_before_color,
+    peak_after_color,
+    prefix,
+    zorder_main,
+    zorder_other,
+    main_size,
+    other_size,
 ):
     """Plot troughs/peaks_before/peaks_after from a peaks_info dict onto an axes."""
     # --- Others (hollow markers) ---
@@ -367,23 +379,38 @@ def _plot_peaks_info_markers(
 
     if len(other_troughs) > 0:
         ax.plot(
-            time_ms[other_troughs], template[other_troughs] + trough_offset,
-            "v", markerfacecolor="none", markeredgecolor=trough_color,
-            markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
+            time_ms[other_troughs],
+            template[other_troughs] + trough_offset,
+            "v",
+            markerfacecolor="none",
+            markeredgecolor=trough_color,
+            markeredgewidth=1.2,
+            markersize=other_size,
+            zorder=zorder_other,
             label=f"Other {prefix.lower()} troughs ({len(other_troughs)})",
         )
     if len(other_peaks_before) > 0:
         ax.plot(
-            time_ms[other_peaks_before], template[other_peaks_before],
-            "^", markerfacecolor="none", markeredgecolor=peak_before_color,
-            markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
+            time_ms[other_peaks_before],
+            template[other_peaks_before],
+            "^",
+            markerfacecolor="none",
+            markeredgecolor=peak_before_color,
+            markeredgewidth=1.2,
+            markersize=other_size,
+            zorder=zorder_other,
             label=f"Other {prefix.lower()} peaks before ({len(other_peaks_before)})",
         )
     if len(other_peaks_after) > 0:
         ax.plot(
-            time_ms[other_peaks_after], template[other_peaks_after],
-            "^", markerfacecolor="none", markeredgecolor=peak_after_color,
-            markeredgewidth=1.2, markersize=other_size, zorder=zorder_other,
+            time_ms[other_peaks_after],
+            template[other_peaks_after],
+            "^",
+            markerfacecolor="none",
+            markeredgecolor=peak_after_color,
+            markeredgewidth=1.2,
+            markersize=other_size,
+            zorder=zorder_other,
             label=f"Other {prefix.lower()} peaks after ({len(other_peaks_after)})",
         )
 
@@ -394,20 +421,32 @@ def _plot_peaks_info_markers(
 
     if main_trough is not None and main_trough >= 0:
         ax.plot(
-            time_ms[main_trough], template[main_trough] + trough_offset,
-            "v", color=trough_color, markersize=main_size, zorder=zorder_main,
+            time_ms[main_trough],
+            template[main_trough] + trough_offset,
+            "v",
+            color=trough_color,
+            markersize=main_size,
+            zorder=zorder_main,
             label=f"Main {prefix.lower()} trough",
         )
     if main_peak_before is not None and main_peak_before >= 0:
         ax.plot(
-            time_ms[main_peak_before], template[main_peak_before],
-            "^", color=peak_before_color, markersize=main_size, zorder=zorder_main,
+            time_ms[main_peak_before],
+            template[main_peak_before],
+            "^",
+            color=peak_before_color,
+            markersize=main_size,
+            zorder=zorder_main,
             label=f"Main {prefix.lower()} peak before",
         )
     if main_peak_after is not None and main_peak_after >= 0:
         ax.plot(
-            time_ms[main_peak_after], template[main_peak_after],
-            "^", color=peak_after_color, markersize=main_size, zorder=zorder_main,
+            time_ms[main_peak_after],
+            template[main_peak_after],
+            "^",
+            color=peak_after_color,
+            markersize=main_size,
+            zorder=zorder_main,
             label=f"Main {prefix.lower()} peak after",
         )
 
@@ -542,9 +581,19 @@ def plot_template_peak_detection(
     if is_combo:
         # --- COMBO MODE: only show combo-refined markers from peaks_info ---
         _plot_peaks_info_markers(
-            ax, time_ms, template_raw, peaks_info, trough_offset,
-            trough_color="blue", peak_before_color="red", peak_after_color="green",
-            prefix="Combo", zorder_main=7, zorder_other=5, main_size=16, other_size=9,
+            ax,
+            time_ms,
+            template_raw,
+            peaks_info,
+            trough_offset,
+            trough_color="blue",
+            peak_before_color="red",
+            peak_after_color="green",
+            prefix="Combo",
+            zorder_main=7,
+            zorder_other=5,
+            main_size=16,
+            other_size=9,
         )
 
     else:
@@ -552,29 +601,51 @@ def plot_template_peak_detection(
 
         # Raw detection (uses same function as the actual metrics)
         raw_info = get_trough_and_peak_idx(
-            template_raw, sampling_frequency,
+            template_raw,
+            sampling_frequency,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
             detection_mode="raw",
             edge_exclusion_ms=edge_exclusion_ms,
         )
         _plot_peaks_info_markers(
-            ax, time_ms, template_raw, raw_info, trough_offset,
-            trough_color="darkblue", peak_before_color="darkred", peak_after_color="darkgreen",
-            prefix="Raw", zorder_main=7, zorder_other=5, main_size=12, other_size=8,
+            ax,
+            time_ms,
+            template_raw,
+            raw_info,
+            trough_offset,
+            trough_color="darkblue",
+            peak_before_color="darkred",
+            peak_after_color="darkgreen",
+            prefix="Raw",
+            zorder_main=7,
+            zorder_other=5,
+            main_size=12,
+            other_size=8,
         )
 
         # Smoothed detection (only if smoothed template available)
         if has_smoothed:
             sm_info = get_trough_and_peak_idx(
-                template_smoothed, sampling_frequency,
+                template_smoothed,
+                sampling_frequency,
                 min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
                 detection_mode="raw",  # already smoothed, just detect
                 edge_exclusion_ms=edge_exclusion_ms,
             )
             _plot_peaks_info_markers(
-                ax, time_ms, template_smoothed, sm_info, trough_offset,
-                trough_color="cornflowerblue", peak_before_color="salmon", peak_after_color="lightgreen",
-                prefix="Smoothed", zorder_main=6, zorder_other=4, main_size=12, other_size=8,
+                ax,
+                time_ms,
+                template_smoothed,
+                sm_info,
+                trough_offset,
+                trough_color="cornflowerblue",
+                peak_before_color="salmon",
+                peak_after_color="lightgreen",
+                prefix="Smoothed",
+                zorder_main=6,
+                zorder_other=4,
+                main_size=12,
+                other_size=8,
             )
 
     # --- Half-widths (from peaks_info, shown on raw template) ---
@@ -596,8 +667,9 @@ def plot_template_peak_detection(
 
         if bl_end_idx > bl_start_idx:
             # Shade the baseline window
-            ax.axvspan(time_ms[bl_start_idx], time_ms[bl_end_idx - 1],
-                       color="yellow", alpha=0.15, label="Baseline window")
+            ax.axvspan(
+                time_ms[bl_start_idx], time_ms[bl_end_idx - 1], color="yellow", alpha=0.15, label="Baseline window"
+            )
 
             # Compute baseline flatness (referenced to baseline mean)
             baseline_segment = template_raw[bl_start_idx:bl_end_idx]
@@ -616,11 +688,21 @@ def plot_template_peak_detection(
                 status = "FAIL" if fails else "ok"
 
                 # Draw horizontal lines at baseline_mean +/- max_baseline_dev
-                ax.axhline(baseline_mean + max_baseline_dev, color=line_color, linestyle="--",
-                           alpha=line_alpha, linewidth=line_width,
-                           label=f"Baseline limit ({status}, flatness={flatness:.3f})")
-                ax.axhline(baseline_mean - max_baseline_dev, color=line_color, linestyle="--",
-                           alpha=line_alpha, linewidth=line_width)
+                ax.axhline(
+                    baseline_mean + max_baseline_dev,
+                    color=line_color,
+                    linestyle="--",
+                    alpha=line_alpha,
+                    linewidth=line_width,
+                    label=f"Baseline limit ({status}, flatness={flatness:.3f})",
+                )
+                ax.axhline(
+                    baseline_mean - max_baseline_dev,
+                    color=line_color,
+                    linestyle="--",
+                    alpha=line_alpha,
+                    linewidth=line_width,
+                )
 
     ax.set_xlabel("Time (ms)")
     ax.set_ylabel("Amplitude")
