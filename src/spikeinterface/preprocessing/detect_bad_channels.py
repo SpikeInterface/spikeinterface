@@ -68,7 +68,7 @@ num_random_chunks : int, default: 100
     Having many chunks is important for reproducibility.
 welch_window_ms : float, default: 10
     Window size for the scipy.signal.welch that will be converted to nperseg
-neighborhood_r2_threshold : float, default: 0.95
+neighborhood_r2_threshold : float, default: 0.9
     R^2 threshold for the neighborhood_r2 method.
 neighborhood_r2_radius_um : float, default: 30
     Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
