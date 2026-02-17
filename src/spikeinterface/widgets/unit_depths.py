@@ -6,7 +6,7 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 
-from spikeinterface.core.template_tools import get_template_extremum_amplitude
+from spikeinterface.core.template_tools import get_template_main_channel_amplitude
 
 
 class UnitDepthsWidget(BaseWidget):
@@ -44,7 +44,7 @@ class UnitDepthsWidget(BaseWidget):
         unit_locations = ulc.get_data(outputs="numpy")
         unit_depths = unit_locations[:, depth_axis]
 
-        unit_amplitudes = get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign)
+        unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer)
         unit_amplitudes = np.abs([unit_amplitudes[unit_id] for unit_id in unit_ids])
 
         num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(outputs="array")

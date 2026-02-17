@@ -15,7 +15,7 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
+from spikeinterface.core.template_tools import get_template_main_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
 
@@ -629,7 +629,7 @@ def clean_templates(
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
         n_before = len(templates.unit_ids)
-        shifts = get_template_extremum_channel_peak_shift(templates)
+        shifts = get_template_main_channel_peak_shift(templates, with_dict=True)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:

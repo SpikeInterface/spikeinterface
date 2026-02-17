@@ -7,7 +7,7 @@ from spikeinterface import (
     create_sorting_analyzer,
     generate_ground_truth_recording,
     set_global_job_kwargs,
-    get_template_extremum_amplitude,
+    get_template_main_channel_amplitude,
 )
 from spikeinterface.core.generate import inject_some_split_units
 
@@ -85,7 +85,7 @@ def get_dataset_to_merge():
     analyzer_raw = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     analyzer_raw.compute(["random_spikes", "templates"])
     # select 3 largest templates to split
-    sort_by_amp = np.argsort(list(get_template_extremum_amplitude(analyzer_raw).values()))[::-1]
+    sort_by_amp = np.argsort(get_template_main_channel_amplitude(analyzer_raw, with_dict=False))[::-1]
     split_ids = sorting.unit_ids[sort_by_amp][:3]
 
     sorting_with_splits, split_unit_ids = inject_some_split_units(
@@ -116,7 +116,7 @@ def get_dataset_to_split():
     analyzer_raw = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     analyzer_raw.compute(["random_spikes", "templates"])
     # select 3 largest templates to split
-    sort_by_amp = np.argsort(list(get_template_extremum_amplitude(analyzer_raw).values()))[::-1]
+    sort_by_amp = np.argsort(list(get_template_main_channel_amplitude(analyzer_raw).values()))[::-1]
     large_units = sorting.unit_ids[sort_by_amp][:2]
 
     return recording, sorting, large_units

@@ -485,19 +485,19 @@ class Templates:
         return channel_locations
 
     def get_main_channels(self,
-        main_channel_peak_sign: "neg" | "both" | "pos" = "both",
-        mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+        peak_sign: "neg" | "both" | "pos" = "both",
+        peak_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
         outputs="index",
         with_dict=True
     ):
         from .template_tools import _get_main_channel_from_template_array
 
         templates_array = self.get_dense_templates()
-        main_channel_index = _get_main_channel_from_template_array(templates_array, mode, main_channel_peak_sign, self.nbefore)
+        main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, self.nbefore)
 
-        if outputs is "index":
+        if outputs == "index":
             main_chans = main_channel_index
-        elif outputs is "id":
+        elif outputs == "id":
             main_chans = self.channel_ids[main_channel_index]
         else:
             raise ValueError("wrong outputs")

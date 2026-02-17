@@ -6,7 +6,7 @@ import warnings
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
-from spikeinterface.core import get_template_extremum_amplitude
+from spikeinterface.core import get_template_main_channel_amplitude
 from spikeinterface.postprocessing import compute_correlograms
 
 
@@ -105,7 +105,7 @@ def export_report(
     units["max_on_channel_id"] = sorting_analyzer.get_main_channels(outputs="id", with_dict=False)
     units["main_channel_id"] = sorting_analyzer.get_main_channels(outputs="id", with_dict=False)
 
-    units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign))
+    units["amplitude"] = pd.Series(get_template_main_channel_amplitude(sorting_analyzer))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 
     unit_colors = sw.get_unit_colors(sorting)

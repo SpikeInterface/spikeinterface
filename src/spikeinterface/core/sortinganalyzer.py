@@ -229,7 +229,7 @@ def create_sorting_analyzer(
         main_channel_index = estimate_main_channel_from_recording(
             recording,
             sorting,
-            main_channel_peak_sign=main_channel_peak_sign,
+            peak_sign=main_channel_peak_sign,
             peak_mode=main_channel_peak_mode,
             num_spikes_for_main_channel=num_spikes_for_main_channel,
             seed=seed,
@@ -626,9 +626,17 @@ class SortingAnalyzer:
         return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
 
     @classmethod
-    def _handle_backward_compatibility(cls, settings, sorting, sparsity):
-        # backward compatibility at analyzer level
-        # (there is also something similar at extension level)
+    def _handle_backward_compatibility_settings_pre_init(cls, settings, sorting, sparsity):
+        """
+        backward compatibility before the __init__ to handle the settings:
+          * return_scaled > return_in_uV
+          * main_channel_peak_sign
+          * main_channel_peak_mode
+
+        Note :
+         * see also _handle_backward_compatibility_settings_post_init
+         * there is also something at extension level to handle changes in paramaters with deferents mechanism
+        """
 
         new_settings = dict()
         new_settings.update(settings)
@@ -640,21 +648,73 @@ class SortingAnalyzer:
             # old version did not have settings at all
             new_settings["return_in_uV"] = True
 
-        retrospect_main_channel_index = None
         if "main_channel_peak_sign" not in settings:
             # before 0.104.0 was not in main_channel_peak_sign
             # TODO make something more fancy that exlore the previous params of extension
             new_settings["main_channel_peak_sign"] = "both"
             new_settings["main_channel_peak_mode"] = "extremum"
 
-            if "main_channel_index" not in sorting.get_property_keys():
-                # TODO
-                raise NotImplementedError("backward compatibility with main_channel_index is not implemented yet")
-
-        if retrospect_main_channel_index is not None:
-            sorting.set_property("main_channel_index", retrospect_main_channel_index)
-
         return new_settings
+    
+    def _handle_backward_compatibility_settings_post_init(self):
+        """
+        backward compatibility after the __init__ to :
+          * main_channel_index
+        
+        Note :
+         * see also _handle_backward_compatibility_settings_pre_init
+         * there is also something at extension level to handle changes in paramaters with deferents mechanism
+        """
+
+
+        if "main_channel_index" not in self.sorting.get_property_keys():
+            
+            warnings.warn("This loaded analyzer is from an older verion main_channel_index need to be computed from templates")
+
+            main_channel_index = None
+            if self.has_extension("templates"):
+                # first try to load templates extension
+                ext = self.get_extension("templates")
+                
+                for k in ("average", "median"):
+                    if k in ext.data:
+                        from .template_tools import _get_main_channel_from_template_array
+                        templates_array = ext.data[k]
+                        # TODO @alessio @chris : we need to discuss this
+                        peak_sign = "both" # or "neg" ?????
+                        peak_mode = "extremum"
+                        main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, ext.nbefore)
+                        break
+
+            if main_channel_index is None:
+                if not self.has_recording():
+                    # TODO @alessio @chris : we need to discuss this
+                    # what to do in this case ???????
+                    raise ValueError("This analyzer cannot be load and is from an old version, the recording is not available")
+                else:
+
+                    # otherwise we need to estimate the 
+
+                    from .template_tools import estimate_main_channel_from_recording
+                    # TODO @alessio @chris : we need to discuss this
+                    peak_sign = "both" # or "neg" ?????
+                    peak_mode = "extremum"
+
+                    main_channel_index = estimate_main_channel_from_recording(
+                        self.recording,
+                        self.sorting,
+                        peak_sign=peak_sign,
+                        peak_mode=peak_mode,
+                        num_spikes_for_main_channel=100,
+                        seed=None,
+                    )
+
+            # this is only in memory
+            self.sorting.set_property("main_channel_index", main_channel_index)
+            # TODO @alessio @chris : we need to discuss this
+            # this save also to disk but maybe there is no write for the analyzer...
+            self.set_sorting_property("main_channel_index", main_channel_index, save=True)
+
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
@@ -722,7 +782,7 @@ class SortingAnalyzer:
             need_to_create = True
             settings = dict()
 
-        settings = cls._handle_backward_compatibility(settings, sorting, sparsity)
+        settings = cls._handle_backward_compatibility_settings_pre_init(settings, sorting, sparsity)
 
         if need_to_create:
             warnings.warn("settings.json not found for this folder writing one with return_in_uV=True")
@@ -909,7 +969,7 @@ class SortingAnalyzer:
             sparsity = None
         
         settings = zarr_root.attrs["settings"]
-        settings = cls._handle_backward_compatibility(settings, sorting, sparsity)
+        settings = cls._handle_backward_compatibility_settings_pre_init(settings, sorting, sparsity)
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -1027,9 +1087,9 @@ class SortingAnalyzer:
 
         """
         main_channel_index = self.get_sorting_property("main_channel_index")
-        if outputs is "index":
+        if outputs == "index":
             main_chans = main_channel_index
-        elif outputs is "id":
+        elif outputs == "id":
             main_chans = self.channel_ids[main_channel_index]
         else:
             raise ValueError("wrong outputs")
