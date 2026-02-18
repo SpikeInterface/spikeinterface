@@ -3,7 +3,7 @@ This replace the previous `GroundTruthStudy`
 """
 
 import numpy as np
-from spikeinterface.core import NumpySorting
+from spikeinterface.core import NumpySorting, create_sorting_analyzer
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
@@ -25,7 +25,7 @@ class SorterBenchmark(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self, match_score=0.5, exhaustive_gt=True):
+    def compute_result(self, match_score=0.5, exhaustive_gt=True, with_analyzer=False, **job_kwargs):
         # run becnhmark result
         sorting = self.result["sorting"]
         comp = compare_sorter_to_ground_truth(
@@ -33,11 +33,19 @@ class SorterBenchmark(Benchmark):
         )
         self.result["gt_comparison"] = comp
 
+        if with_analyzer:
+            # optionally computes analyzer to have templates for oversplited/overmerged
+            analyzer = create_sorting_analyzer(sorting, self.recording, format="memory", sparse=True, **job_kwargs)
+            analyzer.compute("random_spikes")
+            analyzer.compute("templates", **job_kwargs)
+            self.result["sorter_analyzer"] = analyzer
+
     _run_key_saved = [
         ("sorting", "sorting"),
     ]
     _result_key_saved = [
         ("gt_comparison", "pickle"),
+        ("sorter_analyzer", "sorting_analyzer"),
     ]
 
 
@@ -112,3 +120,13 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performance_losses
 
         return plot_performance_losses(self, *args, **kwargs)
+
+    def plot_some_over_merged(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_merged
+
+        return plot_some_over_merged(self, *args, **kwargs)
+
+    def plot_some_over_splited(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_splited
+
+        return plot_some_over_splited(self, *args, **kwargs)

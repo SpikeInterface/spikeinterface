@@ -83,10 +83,10 @@ print(set(model.feature_names_in_).issubset(set(all_metric_names)))
 
 ##############################################################################
 # Great! We can now use the model to predict labels. Here, we pass the HF repo id directly
-# to the ``auto_label_units`` function. This returns a dictionary containing a label and
+# to the ``model_based_label_units`` function. This returns a dictionary containing a label and
 # a confidence for each unit contained in the ``sorting_analyzer``.
 
-labels = sc.auto_label_units(
+labels = sc.model_based_label_units(
     sorting_analyzer = sorting_analyzer,
     repo_id = "SpikeInterface/toy_tetrode_model",
     trusted = ['numpy.dtype']
@@ -211,16 +211,16 @@ plt.legend(); plt.grid(True); plt.show()
 # For example, the following classifiers are trained on Neuropixels data from 11 mice recorded in
 # V1,SC and ALM: https://huggingface.co/SpikeInterface/UnitRefine_noise_neural_classifier/ and
 # https://huggingface.co/SpikeInterface/UnitRefine_sua_mua_classifier/. One will classify units into
-# `noise` or `not-noise` and the other will classify the `not-noise` units into single
+# `noise` or `neural` and the other will classify the `neural` units into single
 # unit activity (sua) units and multi-unit activity (mua) units.
 #
 # There is more information about the model on the model's HuggingFace page. Take a look!
-# The idea here is to first apply the noise/not-noise classifier, then the sua/mua one.
+# The idea here is to first apply the noise/neural classifier, then the sua/mua one.
 # We can do so as follows:
 #
 
-# Apply the noise/not-noise model
-noise_neuron_labels = sc.auto_label_units(
+# Apply the noise/neural model
+noise_neuron_labels = sc.model_based_label_units(
     sorting_analyzer=sorting_analyzer,
     repo_id="SpikeInterface/UnitRefine_noise_neural_classifier",
     trust_model=True,
@@ -230,7 +230,7 @@ noise_units = noise_neuron_labels[noise_neuron_labels['prediction']=='noise']
 analyzer_neural = sorting_analyzer.remove_units(noise_units.index)
 
 # Apply the sua/mua model
-sua_mua_labels = sc.auto_label_units(
+sua_mua_labels = sc.model_based_label_units(
     sorting_analyzer=analyzer_neural,
     repo_id="SpikeInterface/UnitRefine_sua_mua_classifier",
     trust_model=True,
@@ -238,6 +238,18 @@ sua_mua_labels = sc.auto_label_units(
 
 all_labels = pd.concat([sua_mua_labels, noise_units]).sort_index()
 print(all_labels)
+
+##############################################################################
+# Both steps can be done in one go using the ``unitrefine_label_units`` function:
+#
+
+all_labels = sc.unitrefine_label_units(
+    sorting_analyzer,
+    noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier",
+    sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier",
+)
+print(all_labels)
+
 
 ##############################################################################
 # If you run this without the ``trust_model=True`` parameter, you will receive an error:
@@ -252,7 +264,7 @@ print(all_labels)
 #
 # .. dropdown:: More about security
 #
-#   Sharing models, with are Python objects, is complicated.
+#   Sharing models, which are Python objects, is complicated.
 #   We have chosen to use the `skops format <https://skops.readthedocs.io/en/stable/>`_, instead
 #   of the common but insecure ``.pkl`` format (read about ``pickle`` security issues
 #   `here <https://lwn.net/Articles/964392/>`_). While unpacking the ``.skops`` file, each function
@@ -276,7 +288,7 @@ print(all_labels)
 #
 # .. code-block::
 #
-#    labels = sc.auto_label_units(
+#    labels = sc.model_based_label_units(
 #        sorting_analyzer = sorting_analyzer,
 #        model_folder = "path/to/model/folder",
 #    )

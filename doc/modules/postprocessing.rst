@@ -163,8 +163,10 @@ Extensions are generally saved in two ways, suitable for two workflows:
    :code:`sorting_analyzer.compute('waveforms', save=False)`).
 
 
-**NOTE**: We recommend choosing a workflow and sticking with it. Either keep everything on disk or keep everything in memory until
-you'd like to save. A mixture can lead to unexpected behavior. For example, consider the following code
+.. note::
+
+    We recommend choosing a workflow and sticking with it. Either keep everything on disk or keep everything in memory until
+    you'd like to save. A mixture can lead to unexpected behavior. For example, consider the following code
 
 .. code::
 
@@ -257,14 +259,34 @@ spike_amplitudes
 This extension computes the amplitude of each spike as the value of the traces on the extremum channel at the times of
 each spike. The extremum channel is computed from the templates.
 
+
 **NOTE:** computing spike amplitudes is highly recommended before calculating amplitude-based quality metrics, such as
 :ref:`amp_cutoff` and :ref:`amp_median`.
 
 .. code-block:: python
 
-    amplitudes = sorting_analyzer.compute(input="spike_amplitudes", peak_sign="neg")
+    amplitudes = sorting_analyzer.compute(input="spike_amplitudes")
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
+
+
+.. _postprocessing_amplitude_scalings:
+
+amplitude_scalings
+^^^^^^^^^^^^^^^^^^
+
+This extension computes the amplitude scaling of each spike as the value of the linear fit between the template and the
+spike waveform. In case of spatio-temporal collisions, a multi-linear fit is performed using the templates of all units
+involved in the collision.
+
+**NOTE:** computing amplitude scalings is highly recommended before calculating amplitude-based quality metrics, such as
+:ref:`amp_cutoff` and :ref:`amp_median`.
+
+.. code-block:: python
+
+    amplitude_scalings = sorting_analyzer.compute(input="amplitude_scalings")
+
+For more information, see :py:func:`~spikeinterface.postprocessing.compute_amplitude_scalings`
 
 .. _postprocessing_spike_locations:
 
@@ -367,7 +389,29 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
         method="auto"
     )
 
-For more information, see :py:func:`~spikeinterface.postprocessing.compute_isi_histograms`
+valid_unit_periods
+^^^^^^^^^^^^^^^^^^
+
+This extension computes the valid unit periods for each unit based on the estimation of false positive rates
+(using RP violation - see ::doc:`metrics/qualitymetrics/isi_violations`) and false negative rates
+(using amplitude cutoff - see ::doc:`metrics/qualitymetrics/amplitude_cutoff`) computed over chunks of the recording.
+The valid unit periods are the periods where both false positive and false negative rates are below specified
+thresholds. Periods can be either absolute (in seconds), same for all units, or relative, where
+chunks will be unit-specific depending on firing rate (with a target number of spikes per chunk).
+
+.. code-block:: python
+
+    valid_periods = sorting_analyzer.compute(
+        input="valid_unit_periods",
+        period_mode='relative',
+        target_num_spikes=300,
+        fp_threshold=0.1,
+        fn_threshold=0.1,
+    )
+
+For more information, see :py:func:`~spikeinterface.postprocessing.compute_valid_unit_periods`.
+
+
 
 
 Other postprocessing tools

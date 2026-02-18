@@ -90,8 +90,8 @@ def compute_monopolar_triangulation(
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
         unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        keep = [np.where(sorting_analyzer_or_templates.unit_ids == unit_id)[0][0] for unit_id in unit_ids]
+        templates = templates[np.array(keep), :, :]
 
     if enforce_decrease:
         neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
@@ -175,11 +175,11 @@ def compute_center_of_mass(
     if unit_ids is None:
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
-        unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        all_unit_ids = list(sorting_analyzer_or_templates.unit_ids)
+        keep_unit_indices = np.array([all_unit_ids.index(unit_id) for unit_id in unit_ids])
+        templates = templates[keep_unit_indices, :, :]
 
-    unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
@@ -258,9 +258,9 @@ def compute_grid_convolution(
     if unit_ids is None:
         unit_ids = sorting_analyzer_or_templates.unit_ids
     else:
-        unit_ids = np.asanyarray(unit_ids)
-        keep = np.isin(sorting_analyzer_or_templates.unit_ids, unit_ids)
-        templates = templates[keep, :, :]
+        all_unit_ids = list(sorting_analyzer_or_templates.unit_ids)
+        keep_unit_indices = np.array([all_unit_ids.index(unit_id) for unit_id in unit_ids])
+        templates = templates[keep_unit_indices, :, :]
 
     fs = sorting_analyzer_or_templates.sampling_frequency
     percentile = 100 - percentile
@@ -283,7 +283,7 @@ def compute_grid_convolution(
     weights_sparsity_mask = weights > 0
 
     nb_weights = weights.shape[0]
-    unit_location = np.zeros((unit_ids.size, 3), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), 3), dtype="float64")
 
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]

@@ -30,7 +30,7 @@ def setup_dataset_and_peaks(cache_folder):
         noise_levels=get_noise_levels(recording, return_in_uV=False),
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         return_output=True,
     )
     extract_dense_waveforms = ExtractDenseWaveforms(

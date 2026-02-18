@@ -48,25 +48,24 @@ class UnitsSelectionSorting(BaseSorting):
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
     def _compute_and_cache_spike_vector(self) -> None:
+        from spikeinterface.core.sorting_tools import remap_unit_indices_in_vector
+
         if self._parent_sorting._cached_spike_vector is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
             if self._parent_sorting._cached_spike_vector is None:
                 return
 
-        parent_spike_vector = self._parent_sorting._cached_spike_vector
-        parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
-        sort_indices = np.argsort(parent_unit_indices)
-        mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
-        spike_vector = np.array(
-            parent_spike_vector[mask]
-        )  # np.array() necessary to fix 'read-only' crash with memmaps.
-        indices = np.searchsorted(
-            parent_unit_indices, spike_vector["unit_index"], sorter=sort_indices
-        )  # Trick to make sure that the new indices are correct.
-        spike_vector["unit_index"] = np.arange(len(parent_unit_indices))[sort_indices][indices]
-
-        self._cached_spike_vector = spike_vector
+        spike_vector, _ = remap_unit_indices_in_vector(
+            vector=self._parent_sorting._cached_spike_vector,
+            all_old_unit_ids=self._parent_sorting.unit_ids,
+            all_new_unit_ids=self._unit_ids,
+        )
+        # lexsort by segment_index, sample_index, unit_index
+        sort_indices = np.lexsort(
+            (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+        )
+        self._cached_spike_vector = spike_vector[sort_indices]
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):

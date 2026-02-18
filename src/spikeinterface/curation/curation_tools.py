@@ -14,6 +14,15 @@ _methods = ("keep_first", "random", "keep_last", "keep_first_iterative", "keep_l
 _methods_numpy = ("keep_first", "random", "keep_last")
 
 
+def is_threshold_disabled(value):
+    """Check if a threshold value is disabled (None or np.nan)."""
+    if value is None:
+        return True
+    if isinstance(value, float) and np.isnan(value):
+        return True
+    return False
+
+
 def _find_duplicated_spikes_numpy(
     spike_train: np.ndarray,
     censored_period: int,

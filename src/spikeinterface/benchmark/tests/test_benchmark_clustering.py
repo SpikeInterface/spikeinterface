@@ -52,7 +52,6 @@ def test_benchmark_clustering(create_cache_folder):
     print(study)
 
     # this study needs analyzer
-    # study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
 
     study = ClusteringStudy(study_folder)

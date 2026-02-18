@@ -457,27 +457,6 @@ class BenchmarkStudy:
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
 
-    def create_sorting_analyzer_gt(self, case_keys=None, return_in_uV=True, random_params={}, **job_kwargs):
-        print("###### Study.create_sorting_analyzer_gt() is not used anymore!!!!!!")
-        # if case_keys is None:
-        #     case_keys = self.cases.keys()
-
-        # base_folder = self.folder / "sorting_analyzer"
-        # base_folder.mkdir(exist_ok=True)
-
-        # dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
-        # dataset_keys = set(dataset_keys)
-        # for dataset_key in dataset_keys:
-        #     # the waveforms depend on the dataset key
-        #     folder = base_folder / self.key_to_str(dataset_key)
-        #     recording, gt_sorting = self.datasets[dataset_key]
-        #     sorting_analyzer = create_sorting_analyzer(
-        #         gt_sorting, recording, format="binary_folder", folder=folder, return_in_uV=return_in_uV
-        #     )
-        #     sorting_analyzer.compute("random_spikes", **random_params)
-        #     sorting_analyzer.compute("templates", **job_kwargs)
-        #     sorting_analyzer.compute("noise_levels")
-
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]

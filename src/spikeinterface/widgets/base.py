@@ -33,11 +33,12 @@ backend_kwargs_desc = {
         "figsize": "Size of matplotlib figure, default: None",
         "figtitle": "The figure title, default: None",
     },
-    "sortingview": {
+    "figpack": {
         "generate_url": "If True, the figurl URL is generated and printed, default: True",
         "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell, default: True.",
         "figlabel": "The figurl figure label, default: None",
-        "height": "The height of the sortingview View in jupyter, default: None",
+        "inline": "If True, the widget is displayed inline in the cell, default: None",
+        "height": "The height of the figpack View in jupyter, default: None",
     },
     "ipywidgets": {
         "width_cm": "Width of the figure in cm, default: 10",
@@ -47,14 +48,23 @@ backend_kwargs_desc = {
     },
     "ephyviewer": {},
     "spikeinterface_gui": {},
+    # deprecated
+    "sortingview": {
+        "generate_url": "If True, the figurl URL is generated and printed, default: True",
+        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell, default: True.",
+        "figlabel": "The figurl figure label, default: None",
+        "height": "The height of the sortingview View in jupyter, default: None",
+    },
 }
 
 default_backend_kwargs = {
     "matplotlib": {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None},
-    "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
+    "figpack": {"generate_url": True, "display": True, "figlabel": None, "inline": None, "height": None},
     "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
     "ephyviewer": {},
     "spikeinterface_gui": {},
+    # deprecated
+    "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
 }
 
 

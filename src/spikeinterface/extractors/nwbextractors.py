@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Literal, Dict, BinaryIO
+import sys
 import warnings
 import importlib.util
 
@@ -420,6 +421,10 @@ class _BaseNWBExtractor:
                     warnings.warn(f"Error closing object {object_name}")
 
     def __del__(self):
+        # Avoid impossible import errors during deletion to reduce logging noise
+        if getattr(sys, "meta_path", None) is None:
+            return
+
         # backend mode
         if hasattr(self, "_file"):
             if hasattr(self._file, "store"):

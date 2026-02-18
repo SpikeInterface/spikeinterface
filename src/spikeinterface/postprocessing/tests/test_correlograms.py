@@ -104,6 +104,28 @@ def test_equal_results_correlograms(window_and_bin_ms):
     assert np.array_equal(result_numpy, result_numba)
 
 
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_fast_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numba_fast, bins_numba_fast = _compute_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True
+    )
+    result_numba, bins_numba = _compute_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
+    )
+    from numpy.testing import assert_almost_equal
+
+    assert_almost_equal(result_numba_fast, result_numba)
+
+
 @pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
 def test_flat_cross_correlogram(method):
     """

@@ -176,7 +176,7 @@ def install_package_in_container(
     Install a package in a container with different modes:
 
     * pypi: pip install package_name
-    * github: pip install {github_url}/archive/{tag/version}.tar.gz#egg=package_name
+    * github: pip install "package_name @ {github_url}/archive/{tag/version}.tar.gz"
     * folder: pip install folder
 
     Parameters
@@ -237,9 +237,10 @@ def install_package_in_container(
         if github_url is None:
             github_url = "https://github.com/SpikeInterface/spikeinterface"
 
-        cmd = f"pip install --user --upgrade --no-input {github_url}/archive/{tag_or_version}.tar.gz#egg={package_name}"
+        pkg = package_name
         if extra is not None:
-            cmd += f"{extra}"
+            pkg += extra
+        cmd = f'pip install --user --upgrade --no-input "{pkg} @ {github_url}/archive/{tag_or_version}.tar.gz"'
         res_output = container_client.run_command(cmd)
 
     elif installation_mode == "folder":
@@ -265,5 +266,8 @@ def install_package_in_container(
         res_output = container_client.run_command(cmd)
     else:
         raise ValueError(f"install_package_incontainer, wrong installation_mode={installation_mode}")
+
+    if isinstance(res_output, str) and "ERROR" in res_output.upper():
+        warnings.warn(f"pip install of {package_name} in container may have failed. " f"pip output:\n{res_output}")
 
     return res_output
