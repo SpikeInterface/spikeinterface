@@ -1,11 +1,10 @@
 import pytest
 
 from spikeinterface.core import generate_recording
-
+from spikeinterface.core import get_noise_levels
+from spikeinterface.core.base import base_period_dtype
 from spikeinterface.preprocessing import silence_periods
 
-
-from spikeinterface.core import get_noise_levels
 
 import numpy as np
 
@@ -18,17 +17,20 @@ def test_silence(create_cache_folder):
 
     rec = generate_recording()
 
-    rec0 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="zeros", seed=2308)
-    rec0.save(verbose=False)
+    periods = np.array([(0, 0, 1000), (0, 5000, 6000)], dtype=base_period_dtype)
+    rec0 = silence_periods(rec, periods=periods, mode="zeros", seed=2308)
+    rec0.save(format="memory", verbose=False)
     traces_in0 = rec0.get_traces(segment_index=0, start_frame=0, end_frame=1000)
-    traces_in1 = rec0.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
-    traces_out0 = rec0.get_traces(segment_index=0, start_frame=2000, end_frame=3000)
     assert np.all(traces_in0 == 0)
+    traces_half0 = rec0.get_traces(segment_index=0, start_frame=900, end_frame=1100)
+    assert np.all(traces_half0[:100] == 0)
+    traces_in1 = rec0.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     assert np.all(traces_in1 == 0)
+    traces_out0 = rec0.get_traces(segment_index=0, start_frame=2000, end_frame=3000)
     assert not np.all(traces_out0 == 0)
 
-    rec1 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="noise", seed=2308)
-    rec1 = rec1.save(folder=cache_folder / "rec_w_noise", verbose=False, overwrite=True)
+    rec1 = silence_periods(rec, periods=periods, mode="noise", seed=2308)
+    rec1 = rec1.save(format="memory", verbose=False, overwrite=True)
     noise_levels = get_noise_levels(rec, return_in_uV=False)
     traces_in0 = rec1.get_traces(segment_index=0, start_frame=0, end_frame=1000)
     traces_in1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
