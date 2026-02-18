@@ -38,7 +38,7 @@ def model_path_of_trained_pca(folder_to_save_pca_model, generated_recording, chu
     n_components = 3
     n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
     peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
-    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
+    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5)
     TemporalPCAProjection.fit(
         recording=recording,
         model_folder_path=model_folder_path,
