@@ -126,8 +126,8 @@ class FilterRecording(BasePreprocessor):
                 f"chunking. Consider increasing the chunk_size or chunk_duration to minimize margin overhead."
             )
         self.margin_samples = margin
-        for parent_segment in recording._recording_segments:
-            self.add_recording_segment(
+        for parent_segment in recording.segments:
+            self.add_segment(
                 FilterRecordingSegment(
                     parent_segment,
                     filter_coeff,
@@ -399,6 +399,7 @@ class NotchFilterRecording(FilterRecording):
             self, recording, coeff=coeff, filter_mode="ba", margin_ms=margin_ms, dtype=dtype, **filter_kwargs
         )
         self.annotate(is_filtered=True)
+
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
 

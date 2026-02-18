@@ -9,7 +9,7 @@ from importlib.metadata import version
 import numpy as np
 
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 
 
@@ -144,7 +144,7 @@ class PyKilosortSorter(BaseSorter):
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         if not recording.binary_compatible_with(time_axis=0, file_paths_length=1):
             # local copy needed
-            write_binary_recording(
+            write_binary(
                 recording,
                 file_paths=sorter_output_folder / "recording.dat",
                 **get_job_kwargs(params, verbose),

@@ -7,12 +7,12 @@ import zarr
 
 from probeinterface import ProbeGroup
 
-from .base import minimum_spike_dtype
+from .base import minimum_spike_dtype, BaseExtractor
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
-from .core_tools import define_function_from_class, check_json
+from .core_tools import define_function_from_class, check_json, is_path_remote
 from .job_tools import split_job_kwargs
-from .core_tools import is_path_remote
+from .chunkable_tools import write_chunkable_to_zarr
 
 
 def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
@@ -165,7 +165,7 @@ class ZarrRecordingExtractor(BaseRecording):
             time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
             if load_compression_ratio:
                 nbytes_segment = self._root[trace_name].nbytes
@@ -300,7 +300,7 @@ class ZarrSortingExtractor(BaseSorting):
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
-            self.add_sorting_segment(soring_segment)
+            self.add_segment(soring_segment)
 
         # load properties
         if "properties" in self._root:
@@ -400,18 +400,18 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
+def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, extractor: BaseExtractor):
     # save properties
     prop_group = zarr_group.create_group("properties")
-    for key in recording_or_sorting.get_property_keys():
-        values = recording_or_sorting.get_property(key)
+    for key in extractor.get_property_keys():
+        values = extractor.get_property(key)
         if values.dtype.kind == "O":
             warnings.warn(f"Property {key} not saved because it is a python Object type")
             continue
         prop_group.create_dataset(name=key, data=values, compressor=None)
 
     # save annotations
-    zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
+    zarr_group.attrs["annotations"] = check_json(extractor._annotations)
 
 
 def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.Group, **kwargs):
@@ -480,17 +480,21 @@ def add_recording_to_zarr_group(
     compressor_by_dataset = zarr_kwargs.pop("compressor_by_dataset", {})
     global_filters = zarr_kwargs.pop("filters", None)
     filters_by_dataset = zarr_kwargs.pop("filters_by_dataset", {})
-
     compressor_traces = compressor_by_dataset.get("traces", global_compressor)
     filters_traces = filters_by_dataset.get("traces", global_filters)
-    add_traces_to_zarr(
-        recording=recording,
+    compressor_times = compressor_by_dataset.get("times", global_compressor)
+    filters_times = filters_by_dataset.get("times", global_filters)
+
+    write_chunkable_to_zarr(
+        chunkable=recording,
         zarr_group=zarr_group,
         dataset_paths=dataset_paths,
-        compressor=compressor_traces,
-        filters=filters_traces,
+        compressor_data=compressor_traces,
+        filters_data=filters_traces,
+        compressor_times=compressor_times,
+        filters_times=filters_times,
         dtype=dtype,
-        channel_chunk_size=channel_chunk_size,
+        extra_chunks=(channel_chunk_size,) if channel_chunk_size is not None else None,
         verbose=verbose,
         **job_kwargs,
     )
@@ -500,142 +504,4 @@ def add_recording_to_zarr_group(
         probegroup = recording.get_probegroup()
         zarr_group.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
 
-    # save time vector if any
-    t_starts = np.zeros(recording.get_num_segments(), dtype="float64") * np.nan
-    for segment_index, rs in enumerate(recording._recording_segments):
-        d = rs.get_times_kwargs()
-        time_vector = d["time_vector"]
-
-        compressor_times = compressor_by_dataset.get("times", global_compressor)
-        filters_times = filters_by_dataset.get("times", global_filters)
-
-        if time_vector is not None:
-            _ = zarr_group.create_dataset(
-                name=f"times_seg{segment_index}",
-                data=time_vector,
-                filters=filters_times,
-                compressor=compressor_times,
-            )
-        elif d["t_start"] is not None:
-            t_starts[segment_index] = d["t_start"]
-
-    if np.any(~np.isnan(t_starts)):
-        zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
-
     add_properties_and_annotations(zarr_group, recording)
-
-
-def add_traces_to_zarr(
-    recording,
-    zarr_group,
-    dataset_paths,
-    channel_chunk_size=None,
-    dtype=None,
-    compressor=None,
-    filters=None,
-    verbose=False,
-    **job_kwargs,
-):
-    """
-    Save the trace of a recording extractor in several zarr format.
-
-    Parameters
-    ----------
-    recording : RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    zarr_group : zarr.Group
-        The zarr group to add traces to
-    dataset_paths : list
-        List of paths to traces datasets in the zarr group
-    channel_chunk_size : int or None, default: None (chunking in time only)
-        Channels per chunk
-    dtype : dtype, default: None
-        Type of the saved data
-    compressor : zarr compressor or None, default: None
-        Zarr compressor
-    filters : list, default: None
-        List of zarr filters
-    verbose : bool, default: False
-        If True, output is verbose (when chunks are used)
-    {}
-    """
-    from .job_tools import (
-        ensure_chunk_size,
-        fix_job_kwargs,
-        ChunkRecordingExecutor,
-    )
-
-    assert dataset_paths is not None, "Provide 'file_path'"
-
-    if not isinstance(dataset_paths, list):
-        dataset_paths = [dataset_paths]
-    assert len(dataset_paths) == recording.get_num_segments()
-
-    if dtype is None:
-        dtype = recording.get_dtype()
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-
-    # create zarr datasets files
-    zarr_datasets = []
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
-        dset_name = dataset_paths[segment_index]
-        shape = (num_frames, num_channels)
-        dset = zarr_group.create_dataset(
-            name=dset_name,
-            shape=shape,
-            chunks=(chunk_size, channel_chunk_size),
-            dtype=dtype,
-            filters=filters,
-            compressor=compressor,
-        )
-        zarr_datasets.append(dset)
-        # synchronizer=zarr.ThreadSynchronizer())
-
-    # use executor (loop or workers)
-    func = _write_zarr_chunk
-    init_func = _init_zarr_worker
-    init_args = (recording, zarr_datasets, dtype)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
-    )
-    executor.run()
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_datasets, dtype):
-    import zarr
-
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["zarr_datasets"] = zarr_datasets
-    worker_ctx["dtype"] = np.dtype(dtype)
-
-    return worker_ctx
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    import gc
-
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame,
-        end_frame=end_frame,
-        segment_index=segment_index,
-    )
-    traces = traces.astype(dtype)
-    zarr_dataset[start_frame:end_frame, :] = traces
-
-    # fix memory leak by forcing garbage collection
-    del traces
-    gc.collect()

@@ -98,12 +98,12 @@ class SilencedPeriodsRecording(BasePreprocessor):
             noise_generator = None
 
         BasePreprocessor.__init__(self, recording)
-        for seg_index, parent_segment in enumerate(recording._recording_segments):
+        for seg_index, parent_segment in enumerate(recording.segments):
             periods = list_periods[seg_index]
             periods = np.asarray(periods, dtype="int64")
             periods = np.sort(periods, axis=0)
             rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_generator, seg_index)
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs = dict(
             recording=recording, list_periods=list_periods, mode=mode, seed=seed, noise_levels=noise_levels

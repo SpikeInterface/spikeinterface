@@ -193,12 +193,12 @@ def get_prototype_and_waveforms_from_recording(
 
     nodes = [node0, node1]
 
-    recording_slices = get_shuffled_recording_slices(recording, job_kwargs=job_kwargs, seed=seed)
+    slices = get_shuffled_slices(recording, job_kwargs=job_kwargs, seed=seed)
     # res = detect_peaks(
     #     recording,
     #     pipeline_nodes=pipeline_nodes,
     #     skip_after_n_peaks=n_peaks,
-    #     recording_slices=recording_slices,
+    #     slices=slices,
     #     method="locally_exclusive",
     #     method_kwargs=detection_kwargs,
     #     job_kwargs=job_kwargs,
@@ -209,7 +209,7 @@ def get_prototype_and_waveforms_from_recording(
         job_kwargs,
         job_name="get protoype waveforms",
         skip_after_n_peaks=n_peaks,
-        recording_slices=recording_slices,
+        slices=slices,
     )
 
     rng = np.random.default_rng(seed)
@@ -567,23 +567,23 @@ def create_sorting_analyzer_with_existing_templates(
     return sa
 
 
-def get_shuffled_recording_slices(recording, job_kwargs=None, seed=None):
+def get_shuffled_slices(recording, job_kwargs=None, seed=None):
     from spikeinterface.core.job_tools import ensure_chunk_size
     from spikeinterface.core.job_tools import divide_segment_into_chunks
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
-    recording_slices = []
+    slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+        slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
 
     rng = np.random.default_rng(seed)
-    recording_slices = rng.permutation(recording_slices)
+    slices = rng.permutation(slices)
 
-    return recording_slices
+    return slices
 
 
 def clean_templates(

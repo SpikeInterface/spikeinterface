@@ -48,9 +48,9 @@ class FrameSliceRecording(BaseRecording):
         )
 
         # link recording segment
-        parent_segment = parent_recording._recording_segments[0]
+        parent_segment = parent_recording.segments[0]
         sub_segment = FrameSliceRecordingSegment(parent_segment, start_frame=int(start_frame), end_frame=int(end_frame))
-        self.add_recording_segment(sub_segment)
+        self.add_segment(sub_segment)
 
         # copy properties and annotations
         parent_recording.copy_metadata(self)

@@ -39,8 +39,8 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         censored_period = int(round(censored_period_ms * 1e-3 * sorting.get_sampling_frequency()))
         seed = np.random.randint(low=0, high=np.iinfo(np.int32).max)
 
-        for segment in sorting._sorting_segments:
-            self.add_sorting_segment(
+        for segment in sorting.segments:
+            self.add_segment(
                 RemoveDuplicatedSpikesSortingSegment(segment, censored_period, sorting.unit_ids, method, seed)
             )
 

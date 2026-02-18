@@ -7,7 +7,6 @@ import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .core_tools import define_function_from_class
-from .recording_tools import write_binary_recording
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -99,7 +98,7 @@ class BinaryRecordingExtractor(BaseRecording):
             rec_segment = BinaryRecordingSegment(
                 file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         if is_filtered is not None:
             self.annotate(is_filtered=is_filtered)
@@ -139,7 +138,9 @@ class BinaryRecordingExtractor(BaseRecording):
             Type of the saved data
         {}
         """
-        write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
+        from .chunkable_tools import write_binary
+
+        write_binary(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     def is_binary_compatible(self) -> bool:
         return True
@@ -160,8 +161,8 @@ class BinaryRecordingExtractor(BaseRecording):
         Closes any open file handles in the recording segments.
         """
         # Close all recording segments
-        if hasattr(self, "_recording_segments"):
-            for segment in self._recording_segments:
+        if hasattr(self, "segments"):
+            for segment in self.segments:
                 # This will trigger the __del__ method of the BinaryRecordingSegment
                 # which will close the file handle
                 del segment

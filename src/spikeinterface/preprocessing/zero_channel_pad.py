@@ -36,7 +36,7 @@ class TracePaddedRecording(BasePreprocessor):
         self.padding_start = padding_start
         self.padding_end = padding_end
         self.fill_value = fill_value
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = TracePaddedRecordingSegment(
                 segment,
                 recording.get_num_channels(),
@@ -45,7 +45,7 @@ class TracePaddedRecording(BasePreprocessor):
                 self.padding_end,
                 self.fill_value,
             )
-            self.add_recording_segment(recording_segment)
+            self.add_segment(recording_segment)
 
         self._kwargs = dict(
             parent_recording=recording,
@@ -168,9 +168,9 @@ class ZeroChannelPaddedRecording(BaseRecording):
 
         self.parent_recording = recording
         self.num_channels = num_channels
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = ZeroChannelPaddedRecordingSegment(segment, self.num_channels, self.channel_mapping)
-            self.add_recording_segment(recording_segment)
+            self.add_segment(recording_segment)
 
         # only copy relevant metadata and properties
         recording.copy_metadata(self, only_main=True)

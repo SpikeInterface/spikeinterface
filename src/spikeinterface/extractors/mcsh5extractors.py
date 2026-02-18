@@ -54,7 +54,7 @@ class MCSH5RecordingExtractor(BaseRecording):
         recording_segment = MCSH5RecordingSegment(
             self._rf, stream_id, mcs_info["num_frames"], sampling_frequency=mcs_info["sampling_frequency"]
         )
-        self.add_recording_segment(recording_segment)
+        self.add_segment(recording_segment)
 
         # set gain
         self.set_channel_gains(mcs_info["gain"])

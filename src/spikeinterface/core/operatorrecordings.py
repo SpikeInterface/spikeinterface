@@ -25,9 +25,9 @@ class BaseOperatorRecording(BaseRecording):
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
-        for segment1, segment2 in zip(recording1._recording_segments, recording2._recording_segments):
+        for segment1, segment2 in zip(recording1.segments, recording2.segments):
             add_segment = OperatorRecordingSegment(segment1, segment2, operator)
-            self.add_recording_segment(add_segment)
+            self.add_segment(add_segment)
 
         self._kwargs = dict(recording1=recording1, recording2=recording2, operator=operator)
 
@@ -35,8 +35,8 @@ class BaseOperatorRecording(BaseRecording):
         import numpy as np
 
         for segment_index in range(recording1.get_num_segments()):
-            time_kwargs1 = recording1._recording_segments[segment_index].get_times_kwargs()
-            time_kwargs2 = recording2._recording_segments[segment_index].get_times_kwargs()
+            time_kwargs1 = recording1.segments[segment_index].get_times_kwargs()
+            time_kwargs2 = recording2.segments[segment_index].get_times_kwargs()
             for key in time_kwargs1.keys():
                 val1 = time_kwargs1[key]
                 val2 = time_kwargs2[key]

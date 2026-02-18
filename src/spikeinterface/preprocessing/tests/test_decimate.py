@@ -66,7 +66,7 @@ def test_decimate_with_times():
     # test with t_start
     rec = generate_recording(durations=[5, 10])
     t_starts = [10, 20]
-    for t_start, rec_segment in zip(t_starts, rec._recording_segments):
+    for t_start, rec_segment in zip(t_starts, rec.segments):
         rec_segment.t_start = t_start
     decimated_rec = DecimateRecording(rec, decimation_factor, decimation_offset=decimation_offset)
     for segment_index in range(rec.get_num_segments()):

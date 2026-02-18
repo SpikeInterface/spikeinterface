@@ -366,8 +366,8 @@ class TestWhiten:
         whitened_recording = whiten(recording, W=test_W, M=test_M)
 
         for seg_idx in [0, 1]:
-            assert np.array_equal(whitened_recording._recording_segments[seg_idx].W, test_W)
-            assert np.array_equal(whitened_recording._recording_segments[seg_idx].M, test_M)
+            assert np.array_equal(whitened_recording.segments[seg_idx].W, test_W)
+            assert np.array_equal(whitened_recording.segments[seg_idx].M, test_M)
 
         assert whitened_recording._kwargs["W"] == test_W.tolist()
         assert whitened_recording._kwargs["M"] == test_M.tolist()

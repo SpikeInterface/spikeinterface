@@ -12,7 +12,7 @@ import numpy as np
 
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import ChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
 
 
@@ -520,7 +520,7 @@ def run_node_pipeline(
     names=None,
     verbose=False,
     skip_after_n_peaks=None,
-    recording_slices=None,
+    slices=None,
 ):
     """
     Machinery to compute in parallel operations on peaks and traces.
@@ -572,7 +572,7 @@ def run_node_pipeline(
     skip_after_n_peaks : None | int
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
-    recording_slices : None | list[tuple]
+    slices : None | list[tuple]
         Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
         If None (default), the function iterates over the entire duration of the recording.
@@ -603,7 +603,7 @@ def run_node_pipeline(
 
     init_args = (recording, nodes, skip_after_n_peaks_per_worker)
 
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording,
         _compute_peak_pipeline_chunk,
         _init_peak_pipeline,
@@ -614,7 +614,7 @@ def run_node_pipeline(
         **job_kwargs,
     )
 
-    processor.run(recording_slices=recording_slices)
+    processor.run(slices=slices)
 
     outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
     return outs
@@ -637,7 +637,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     nodes = worker_ctx["nodes"]
     skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
-    recording_segment = recording._recording_segments[segment_index]
+    recording_segment = recording.segments[segment_index]
     retrievers = find_parents_of_type(nodes, (SpikeRetriever, PeakRetriever))
     # get peak slices once for all retrievers
     peak_slice_by_retriever = {}

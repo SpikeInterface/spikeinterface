@@ -1,4 +1,5 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
 from typing import Any, Iterable, List, Optional, Sequence, Union
@@ -85,6 +86,9 @@ class BaseExtractor:
                 self._main_ids.dtype.kind in "uiSU"
             ), f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
 
+        # segments
+        self._segments: List[BaseSegment] = []
+
         # dict at object level
         self._annotations = {}
 
@@ -140,9 +144,16 @@ class BaseExtractor:
             # we remove the annotation if it exists
             _ = self._annotations.pop("name", None)
 
+    @property
+    def segments(self) -> list:
+        return self._segments
+
+    def add_segment(self, segment: BaseSegment) -> None:
+        self._segments.append(segment)
+        segment.set_parent_extractor(self)
+
     def get_num_segments(self) -> int:
-        # This is implemented in BaseRecording or BaseSorting
-        raise NotImplementedError
+        return len(self._segments)
 
     def get_parent(self) -> Optional[BaseExtractor]:
         """Returns parent object if it exists, otherwise None"""
@@ -233,13 +244,6 @@ class BaseExtractor:
                 self._annotations[annotation_key] = value
             else:
                 raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
-
-    def get_preferred_mp_context(self):
-        """
-        Get the preferred context for multiprocessing.
-        If None, the context is set by the multiprocessing package.
-        """
-        return self._preferred_mp_context
 
     def get_annotation(self, key: str, copy: bool = True) -> Any:
         """
@@ -429,8 +433,9 @@ class BaseExtractor:
 
         other.extra_requirements.extend(self.extra_requirements)
 
-        if self._preferred_mp_context is not None:
-            other._preferred_mp_context = self._preferred_mp_context
+        # call all extra copy metadata if it exists (e.g., with chunkable mixin)
+        if hasattr(self, "_extra_copy_metadata"):
+            self._extra_copy_metadata(other, only_main=only_main, ids=ids, skip_properties=skip_properties)
 
     def to_dict(
         self,

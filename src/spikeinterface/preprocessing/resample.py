@@ -68,9 +68,9 @@ class ResampleRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
         # in case there was a time_vector, it will be dropped for sanity.
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             parent_segment.time_vector = None
-            self.add_recording_segment(
+            self.add_segment(
                 ResampleRecordingSegment(
                     parent_segment,
                     resample_rate,

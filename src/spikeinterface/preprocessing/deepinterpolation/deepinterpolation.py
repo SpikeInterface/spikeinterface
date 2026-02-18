@@ -49,6 +49,8 @@ class DeepInterpolatedRecording(BasePreprocessor):
         The deepinterpolated recording extractor object
     """
 
+    _preferred_mp_context = "spawn"
+
     def __init__(
         self,
         recording,
@@ -92,7 +94,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
 
         self.model = model
         # add segment
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = DeepInterpolatedRecordingSegment(
                 segment,
                 self.model,
@@ -103,9 +105,8 @@ class DeepInterpolatedRecording(BasePreprocessor):
                 batch_size,
                 predict_workers,
             )
-            self.add_recording_segment(recording_segment)
+            self.add_segment(recording_segment)
 
-        self._preferred_mp_context = "spawn"
         self._kwargs = dict(
             recording=recording,
             model_path=str(model_path),

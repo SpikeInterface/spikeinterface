@@ -393,7 +393,7 @@ class TransformSorting(BaseSorting):
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
             segment = SpikeVectorSortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
-            self.add_sorting_segment(segment)
+            self.add_segment(segment)
 
         if self.refractory_period_ms is not None:
             self.clean_refractory_period()
@@ -1141,7 +1141,7 @@ class SortingGenerator(BaseSorting):
                 unit_ids=unit_ids,
                 t_start=None,
             )
-            self.add_sorting_segment(segment)
+            self.add_segment(segment)
 
         self._kwargs = {
             "num_units": num_units,
@@ -1327,7 +1327,7 @@ class NoiseGeneratorRecording(BaseRecording):
                 segments_seeds[i],
                 strategy,
             )
-            self.add_recording_segment(rec_segment)
+            self.add_segment(rec_segment)
 
         self._kwargs = {
             "num_channels": num_channels,
@@ -1994,9 +1994,7 @@ class InjectTemplatesRecording(BaseRecording):
             amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
             upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
-            parent_recording_segment = (
-                None if parent_recording is None else parent_recording._recording_segments[segment_index]
-            )
+            parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectTemplatesRecordingSegment(
                 self.sampling_frequency,
                 self.dtype,
@@ -2008,7 +2006,7 @@ class InjectTemplatesRecording(BaseRecording):
                 parent_recording_segment,
                 num_samples[segment_index],
             )
-            self.add_recording_segment(recording_segment)
+            self.add_segment(recording_segment)
 
         # to discuss: maybe we could set json serializability to False always
         # because templates could be large!

@@ -34,11 +34,9 @@ class RemoveExcessSpikesSorting(BaseSorting):
         self._parent_sorting = sorting
         self._num_samples = np.empty(sorting.get_num_segments(), dtype=np.int64)
         for segment_index in range(sorting.get_num_segments()):
-            sorting_segment = sorting._sorting_segments[segment_index]
+            sorting_segment = sorting.segments[segment_index]
             self._num_samples[segment_index] = recording.get_num_samples(segment_index=segment_index)
-            self.add_sorting_segment(
-                RemoveExcessSpikesSortingSegment(sorting_segment, self._num_samples[segment_index])
-            )
+            self.add_segment(RemoveExcessSpikesSortingSegment(sorting_segment, self._num_samples[segment_index]))
 
         sorting.copy_metadata(self, only_main=False)
         self._parent = sorting

@@ -11,7 +11,7 @@ from spikeinterface.core import (
     BinaryRecordingExtractor,
     BaseSorting,
     BaseSortingSegment,
-    write_binary_recording,
+    write_binary,
 )
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -123,7 +123,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # write recording
         recording_fn = (save_path / recording_name).absolute()
-        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, **job_kwargs)
+        write_binary(recording, file_paths=recording_fn, dtype=dtype, **job_kwargs)
 
         # write probe file
         probe_fn = (save_path / probe_name).absolute()
@@ -179,7 +179,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, unit_ids=spike_clusters.keys(), sampling_frequency=sampling_frequency)
 
         sorting_segment = SHYBRIDSortingSegment(spike_clusters)
-        self.add_sorting_segment(sorting_segment)
+        self.add_segment(sorting_segment)
 
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),
