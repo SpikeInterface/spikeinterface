@@ -18,6 +18,7 @@ from .job_tools import (
 def write_binary(
     chunkable: "ChunkableMixin",
     file_paths: list[Path | str] | Path | str,
+    file_timestamps_paths: list[Path | str] | Path | str | None = None,
     dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
@@ -35,8 +36,10 @@ def write_binary(
     ----------
     chunkable : ChunkableMixin
         The chunkable object to be saved to binary file
-    file_path : str or list[str]
-        The path to the file.
+    file_paths : list[Path | str] | Path | str
+        The path to the files to save data for each segment.
+    file_timestamps_paths : list[Path | str] | Path | str | None, default: None
+        The path to the timestamps file. If None, timestamps are not saved.
     dtype : dtype or None, default: None
         Type of the saved data
     add_file_extension, bool, default: True
@@ -64,6 +67,12 @@ def write_binary(
     sample_size_bytes = chunkable.get_sample_size_in_bytes()
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
+    if file_timestamps_paths is not None:
+        file_timestamps_path_dict = {
+            segment_index: file_path for segment_index, file_path in enumerate(file_timestamps_paths)
+        }
+    else:
+        file_timestamps_path_dict = None
     for segment_index, file_path in file_path_dict.items():
         num_samples = chunkable.get_num_samples(segment_index=segment_index)
         data_size_bytes = sample_size_bytes * num_samples
@@ -75,12 +84,18 @@ def write_binary(
             file.seek(file_size_bytes - 1)
             file.write(b"\0")
 
+        if file_timestamps_path_dict is not None:
+            file_timestamps_path = file_timestamps_path_dict[segment_index]
+            with open(file_timestamps_path, "wb+") as file:
+                file.seek(num_samples * 8 - 1)  # 8 bytes for float64 timestamps
+                file.write(b"\0")
+
         assert Path(file_path).is_file()
 
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (chunkable, file_path_dict, dtype, byte_offset)
+    init_args = (chunkable, file_path_dict, dtype, byte_offset, file_timestamps_path_dict)
     executor = ChunkExecutor(
         chunkable, func, init_func, init_args, job_name="write_binary", verbose=verbose, **job_kwargs
     )
@@ -88,7 +103,7 @@ def write_binary(
 
 
 # used by write_binary + ChunkExecutor
-def _init_binary_worker(chunkable, file_path_dict, dtype, byte_offset):
+def _init_binary_worker(chunkable, file_path_dict, dtype, byte_offset, file_timestamps_path_dict=None):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["chunkable"] = chunkable
@@ -97,6 +112,7 @@ def _init_binary_worker(chunkable, file_path_dict, dtype, byte_offset):
 
     file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
     worker_ctx["file_dict"] = file_dict
+    worker_ctx["file_timestamps_dict"] = file_timestamps_path_dict
 
     return worker_ctx
 
@@ -108,19 +124,28 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     dtype = worker_ctx["dtype"]
     byte_offset = worker_ctx["byte_offset"]
     file = worker_ctx["file_dict"][segment_index]
-
+    file_timestamps_dict = worker_ctx["file_timestamps_dict"]
     sample_size_bytes = chunkable.get_sample_size_in_bytes()
 
     # Calculate byte offsets for the start frames relative to the entire recording
     start_byte = byte_offset + start_frame * sample_size_bytes
 
-    traces = chunkable.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
-    traces = traces.astype(dtype, order="c", copy=False)
+    data = chunkable.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    data = data.astype(dtype, order="c", copy=False)
 
     file.seek(start_byte)
-    file.write(traces.data)
+    file.write(data.data)
     # flush is important!!
     file.flush()
+
+    if file_timestamps_dict is not None:
+        file_timestamps = file_timestamps_dict[segment_index]
+        timestamps = chunkable.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+        timestamps = timestamps.astype("float64", order="c", copy=False)
+        timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
+        file.seek(timestamp_byte_offset)
+        file.write(timestamps.data)
+        file.flush()
 
 
 write_binary.__doc__ = write_binary.__doc__.format(_shared_job_kwargs_doc)
@@ -232,6 +257,170 @@ def write_memory(chunkable, dtype=None, verbose=False, buffer_type="auto", job_n
 
 
 write_memory.__doc__ = write_memory.__doc__.format(_shared_job_kwargs_doc)
+
+
+def write_chunkable_to_zarr(
+    chunkable: "ChunkableMixin",
+    zarr_group,
+    dataset_paths,
+    extra_chunks=None,
+    dtype=None,
+    compressor_data=None,
+    filters_data=None,
+    compressor_times=None,
+    filters_times=None,
+    verbose=False,
+    **job_kwargs,
+):
+    """
+    Save the trace of a chunkable object in several zarr format.
+
+    Parameters
+    ----------
+    chunkable : ChunkableMixin
+        The chunkable object to be saved in .dat format
+    zarr_group : zarr.Group
+        The zarr group to add traces to
+    dataset_paths : list
+        List of paths to traces datasets in the zarr group
+    extra_chunks : tuple or None, default: None
+        Extra chunking dimensions to use for the zarr dataset.
+        The first dimension is always time and controlled by the job_kwargs.
+        This is for example useful to chunk by channel, with `extra_chunks=(channel_chunk_size,)`.
+    dtype : dtype, default: None
+        Type of the saved data
+    compressor_data : zarr compressor or None, default: None
+        Zarr compressor for data
+    filters_data : list, default: None
+        List of zarr filters for data
+    compressor_times : zarr compressor or None, default: None
+        Zarr compressor for timestamps
+    filters_times : list, default: None
+        List of zarr filters for timestamps
+    verbose : bool, default: False
+        If True, output is verbose (when chunks are used)
+    {}
+    """
+    from .job_tools import (
+        ensure_chunk_size,
+        fix_job_kwargs,
+        ChunkExecutor,
+    )
+
+    assert dataset_paths is not None, "Provide 'file_path'"
+
+    if not isinstance(dataset_paths, list):
+        dataset_paths = [dataset_paths]
+    assert len(dataset_paths) == chunkable.get_num_segments()
+
+    if dtype is None:
+        dtype = chunkable.get_dtype()
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    chunk_size = ensure_chunk_size(chunkable, **job_kwargs)
+
+    if extra_chunks is not None:
+        assert len(extra_chunks) == len(chunkable.get_shape(0)[1:]), (
+            "extra_chunks should have the same length as the number of dimensions "
+            "of the chunkable minus one (time axis)"
+        )
+
+    # create zarr datasets files
+    zarr_datasets = []
+    zarr_timestamps_datasets = []
+
+    for segment_index in range(chunkable.get_num_segments()):
+        num_frames = chunkable.get_num_samples(segment_index)
+        num_channels = chunkable.get_num_channels()
+        dset_name = dataset_paths[segment_index]
+        shape = (num_frames, num_channels)
+        dset = zarr_group.create_dataset(
+            name=dset_name,
+            shape=shape,
+            chunks=(chunk_size,) + extra_chunks if extra_chunks is not None else (chunk_size,),
+            dtype=dtype,
+            filters=filters_data,
+            compressor=compressor_data,
+        )
+        zarr_datasets.append(dset)
+        if chunkable.has_time_vector(segment_index):
+            zarr_timestamps_datasets.append(
+                zarr_group.create_dataset(
+                    name=f"times_seg{segment_index}",
+                    shape=(num_frames,),
+                    chunks=(chunk_size,),
+                    dtype="float64",
+                    filters=filters_times,
+                    compressor=compressor_times,
+                )
+            )
+
+    # use executor (loop or workers)
+    func = _write_zarr_chunk
+    init_func = _init_zarr_worker
+    init_args = (chunkable, zarr_datasets, dtype, zarr_timestamps_datasets)
+    executor = ChunkExecutor(
+        chunkable, func, init_func, init_args, verbose=verbose, job_name="write_zarr", **job_kwargs
+    )
+    executor.run()
+
+    # save t_starts
+    t_starts = np.zeros(chunkable.get_num_segments(), dtype="float64") * np.nan
+    for segment_index in range(chunkable.get_num_segments()):
+        time_info = chunkable.get_time_info(segment_index)
+        if time_info["t_start"] is not None:
+            t_starts[segment_index] = time_info["t_start"]
+
+    if np.any(~np.isnan(t_starts)):
+        zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
+
+
+# used by write_zarr_recording + ChunkExecutor
+def _init_zarr_worker(chunkable, zarr_datasets, dtype, zarr_timestamps_datasets=None):
+    import zarr
+
+    # create a local dict per worker
+    worker_ctx = {}
+    worker_ctx["chunkable"] = chunkable
+    worker_ctx["zarr_datasets"] = zarr_datasets
+    if zarr_timestamps_datasets is not None and len(zarr_timestamps_datasets) > 0:
+        worker_ctx["zarr_timestamps_datasets"] = zarr_timestamps_datasets
+    else:
+        worker_ctx["zarr_timestamps_datasets"] = None
+    worker_ctx["dtype"] = np.dtype(dtype)
+
+    return worker_ctx
+
+
+# used by write_zarr_recording + ChunkExecutor
+def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    import gc
+
+    # recover variables of the worker
+    chunkable = worker_ctx["chunkable"]
+    dtype = worker_ctx["dtype"]
+    zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
+    if worker_ctx["zarr_timestamps_datasets"] is not None:
+        zarr_timestamps_dataset = worker_ctx["zarr_timestamps_datasets"][segment_index]
+    else:
+        zarr_timestamps_dataset = None
+
+    # apply function
+    data = chunkable.get_data(
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
+    )
+    data = data.astype(dtype)
+    zarr_dataset[start_frame:end_frame, :] = data
+
+    if zarr_timestamps_dataset is not None:
+        timestamps = chunkable.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+        zarr_timestamps_dataset[start_frame:end_frame] = timestamps
+
+    # fix memory leak by forcing garbage collection
+    del data
+    gc.collect()
 
 
 def get_random_sample_slices(

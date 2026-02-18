@@ -311,6 +311,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
+
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
@@ -330,6 +331,13 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
             cached = BinaryFolderRecording(folder_path=folder)
 
+            # timestamps are not saved in binary, so we have to set them explicitly
+            for segment_index in range(self.get_num_segments()):
+                if self.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = self.get_times(segment_index=segment_index)
+                    cached.set_times(time_vector, segment_index=segment_index)
+
         elif format == "memory":
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording
@@ -339,6 +347,13 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
                 from spikeinterface.core import NumpyRecording
 
                 cached = NumpyRecording.from_recording(self, **job_kwargs)
+
+            # timestamps are not saved in memory, so we have to set them explicitly
+            for segment_index in range(self.get_num_segments()):
+                if self.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = self.get_times(segment_index=segment_index)
+                    cached.set_times(time_vector, segment_index=segment_index)
 
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
@@ -350,6 +365,8 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             )
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
 
+            # timestamps are saved and restored in zarr, so no need to set them explicitly
+
         elif format == "nwb":
             # TODO implement a format based on zarr
             raise NotImplementedError
@@ -360,12 +377,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         if self.get_property("contact_vector") is not None:
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
-
-        for segment_index in range(self.get_num_segments()):
-            if self.has_time_vector(segment_index):
-                # the use of get_times is preferred since timestamps are converted to array
-                time_vector = self.get_times(segment_index=segment_index)
-                cached.set_times(time_vector, segment_index=segment_index)
 
         return cached
 
