@@ -7,17 +7,96 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
+def detect_and_filter_peaks(
+    template,
+    prominence,
+    edge_samples,
+    num_samples,
+    width=0,
+    main_trough_loc=None,
+    min_peak_trough_dist=None,
+    correct_trough_loc=False,
+):
+    """Detect peaks and filter based on edges and proximity to trough.
+
+    Parameters
+    ----------
+    template : np.ndarray
+        The 1D template to analyze for peaks.
+    prominence : float
+        Minimum prominence for peak detection.
+    edge_samples : int
+        Number of samples to exclude from start and end when filtering peaks.
+    num_samples : int
+        Total number of samples in the template.
+    width : float or int, optional
+        Required width of peaks in samples. Default is 0 (no width requirement).
+    main_trough_loc : int or None, optional
+        Sample index of the main trough to use for proximity filtering. If None, no proximity filtering is applied.
+    min_peak_trough_dist : int or None, optional
+        Minimum distance in samples between detected peaks and the main trough. Only applied if main_trough_loc is provided.
+    correct_trough_loc : bool, optional
+        If True, main_trough_loc is in template-relative coordinates and will be adjusted for filtering. If False, main_trough_loc is in the same coordinate system as locs. Default is False.
+
+    Returns
+    -------
+    locs : np.ndarray
+        Sample indices of detected peaks that passed filtering.
+    props : dict
+        Properties of the detected peaks (e.g., prominences, widths) that passed filtering.
+    """
+    from scipy.signal import find_peaks
+
+    locs, props = find_peaks(template, prominence=prominence, width=width)
+    if correct_trough_loc and main_trough_loc is not None:
+        locs = locs + main_trough_loc  # Convert to template-relative coordinates for filtering
+    locs, props = filter_peaks_at_edges(locs, props, num_samples, edge_samples)
+    if main_trough_loc is not None and min_peak_trough_dist is not None:
+        locs, props = filter_peaks_near_trough(locs, props, min_peak_trough_dist, main_trough_loc)
+
+    return locs, props
+
+
+def filter_peaks_at_edges(locs, props, n_samples, edge_samples):
+    """Remove peaks within edge_samples of the start or end."""
+    if edge_samples == 0 or len(locs) == 0:
+        return locs, props
+    mask = (locs >= edge_samples) & (locs < n_samples - edge_samples)
+    filtered_props = {k: v[mask] for k, v in props.items()}
+    return locs[mask], filtered_props
+
+
+def filter_peaks_near_trough(locs, props, min_peak_trough_dist, main_trough_loc):
+    """Remove peak_before detections too close to trough."""
+    if len(locs) == 0 or min_peak_trough_dist <= 0:
+        return locs, props
+    mask = (main_trough_loc - locs) >= min_peak_trough_dist
+    return locs[mask], {k: v[mask] for k, v in props.items()}
+
+
 def get_trough_and_peak_idx(
     template,
     sampling_frequency,
     min_thresh_detect_peaks_troughs=0.4,
     edge_exclusion_ms=0.1,
+    min_peak_trough_distance_ratio=0.2,
+    min_extremum_distance_samples=3,
 ):
     """
     Detect troughs and peaks in a template waveform and return detailed information
     about each detected feature.
-
     Trough are defined as "minimum" points (negative peaks) and peaks as "maximum" points (positive peaks).
+
+    The function will detect troughs first (by inverting the template and using find_peaks), then peaks before and after
+    the main trough. For each detection, three attempts are made:
+
+    1. Use the specified prominence threshold to detect peaks/troughs.
+       If multiple are found, the most prominent is selected as the main extremum.
+    2. If no peaks/troughs are found at the initial threshold, the threshold is halved and detection is attempted again.
+       If multiple "peaks" are found at the half threshold, a scoring system based on prominence and distance from the
+       trough is used to select the best candidate.
+    3. If still no peaks/troughs are found, a last resort method is used: for troughs, the global minimum in the
+       interior of the template is selected; for peaks, the nearest local maximum to the trough is selected.
 
     Parameters
     ----------
@@ -27,23 +106,27 @@ def get_trough_and_peak_idx(
         The sampling frequency in Hz
     min_thresh_detect_peaks_troughs : float, default: 0.3
         Minimum prominence threshold as a fraction of the template's absolute max value
-    edge_exclusion_ms : float, default: 0.09
-        Duration in milliseconds to exclude from the start and end of the template
+    edge_exclusion_ms : float, default: 0.1
+        Duration in ms to exclude from the start and end of the template
         when detecting peaks/troughs. Prevents spurious edge detections.
+    min_peak_trough_distance_ratio : float, default: 0.2
+        Minimum peak-trough distance as a fraction of trough half-width. Used to filter out peaks too close to trough.
+    min_extremum_distance_samples : int, default: 3
+        Minimum distance between consecutive extrema (peaks and troughs) and between extrema and edges in samples.
 
     Returns
     -------
     peaks_info : dict
         Dictionary containing various information about detected extrema in "peak_before", "trough", "peak_after":
-        - "{extremum}_sample_indices": array of all extrema sample indices
-        - "{extremum}_prominences": array of all extrema prominences
-        - "{extremum}_widths": array of all extrema widths
-        - "{extremum}_index": location (sample index) of the main extremum in template
+        - "{extremum}_sample_indices": array of all extrema sample indices using main prominence threshold
+        - "{extremum}_prominences": array of all extrema prominences using main prominence threshold
+        - "{extremum}_widths": array of all extrema widths using main prominence threshold
+        - "{extremum}_index": sample index of the main extremum in template
         - "{extremum}_width": width of the main extremum in samples
-        - "{extremum}_width_left": left intersection point of the main with its prominence level
-        - "{extremum}_width_right": right intersection point of the main with its prominence level
-        - "{extremum}_half_width_left": left intersection point of the main with half of amplitude
-        - "{extremum}_half_width_right": right intersection point of the main with half of amplitude
+        - "{extremum}_width_left": sample index of the left intersection point of the main with its prominence level
+        - "{extremum}_width_right": sample index of the right intersection point of the main with its prominence level
+        - "{extremum}_half_width_left": sample index of the left intersection point of the main with half of amplitude
+        - "{extremum}_half_width_right": sample index of the right intersection point of the main with half of amplitude
     """
     from scipy.signal import find_peaks
 
@@ -54,43 +137,38 @@ def get_trough_and_peak_idx(
     min_prominence = min_thresh_detect_peaks_troughs * np.nanmax(np.abs(template))
 
     # Compute edge exclusion zone in samples
+    num_samples = len(template)
     edge_samples = int(edge_exclusion_ms / 1000 * sampling_frequency) if edge_exclusion_ms > 0 else 0
 
-    def _filter_edge(locs, props, n_samples):
-        """Remove detections within edge_samples of the start or end."""
-        if edge_samples == 0 or len(locs) == 0:
-            return locs, props
-        mask = (locs >= edge_samples) & (locs < n_samples - edge_samples)
-        filtered_props = {k: v[mask] for k, v in props.items()}
-        return locs[mask], filtered_props
-
     # Interior region for edge exclusion
-    lo_edge = edge_samples if edge_samples > 0 else 0
-    hi_edge = len(template) - edge_samples if edge_samples > 0 else len(template)
+    left_edge = edge_samples if edge_samples > 0 else 0
+    right_edge = num_samples - edge_samples if edge_samples > 0 else num_samples
 
     # --- Find troughs (by inverting waveform and using find_peaks) ---
-    # Step 1: full threshold
-    trough_locs, trough_props = find_peaks(-template, prominence=min_prominence, width=0)
-    trough_locs, trough_props = _filter_edge(trough_locs, trough_props, len(template))
-
-    # Store threshold-passing detections for secondary counts (before fallback)
-    trough_locs_detected = trough_locs.copy()
-    trough_props_detected = {k: v.copy() for k, v in trough_props.items()}
-
-    if len(trough_locs) == 0:
-        # Step 2: half threshold, pick deepest
+    # Attempt 1: use full threshold
+    # Attempt 2: if no trough found, half threshold, pick deepest
+    # Attempt 3: if still no trough found, use global minimum in interior (last resort)
+    trough_locs_main, trough_props_main = detect_and_filter_peaks(
+        -template, prominence=min_prominence, width=0, edge_samples=edge_samples, num_samples=num_samples
+    )
+    if len(trough_locs_main) == 0:
         lower_prominence = 0.5 * min_prominence
-        trough_locs, trough_props = find_peaks(-template, prominence=lower_prominence, width=0)
-        trough_locs, trough_props = _filter_edge(trough_locs, trough_props, len(template))
-        if len(trough_locs) > 1:
-            deepest_idx = np.argmin(template[trough_locs])
-            trough_locs = np.array([trough_locs[deepest_idx]])
-            trough_props = {k: np.array([v[deepest_idx]]) for k, v in trough_props.items()}
-
-    if len(trough_locs) == 0:
-        # Step 4: global minimum in interior (last resort)
-        trough_locs = np.array([lo_edge + int(np.nanargmin(template[lo_edge:hi_edge]))], dtype=int)
-        trough_props = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+        trough_locs_half, trough_props_half = detect_and_filter_peaks(
+            -template, prominence=lower_prominence, width=0, edge_samples=edge_samples, num_samples=num_samples
+        )
+        if len(trough_locs_half) > 1:
+            deepest_idx = np.argmin(template[trough_locs_half])
+            trough_locs = np.array([trough_locs_half[deepest_idx]])
+            trough_props = {k: np.array([v[deepest_idx]]) for k, v in trough_props_half.items()}
+        elif len(trough_locs_half) == 0:
+            trough_locs = np.array([left_edge + int(np.nanargmin(template[left_edge:right_edge]))], dtype=int)
+            trough_props = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+        else:  # exactly 1 trough found at half threshold, use it
+            trough_locs = trough_locs_half
+            trough_props = trough_props_half
+    else:
+        trough_locs = trough_locs_main
+        trough_props = trough_props_main
 
     # Determine main trough (most prominent, or first if no valid prominences)
     trough_prominences = trough_props.get("prominences", np.array([]))
@@ -98,115 +176,113 @@ def get_trough_and_peak_idx(
         main_trough_idx = np.nanargmax(trough_prominences)
     else:
         main_trough_idx = 0
-
     main_trough_loc = trough_locs[main_trough_idx]
 
-    # Secondary: only threshold-passing detections; Main: includes fallback
-    peaks_info["trough_sample_indices"] = trough_locs_detected
-    peaks_info["trough_prominences"] = trough_props_detected.get(
-        "prominences", np.full(len(trough_locs_detected), np.nan)
-    )
-    peaks_info["trough_widths"] = trough_props_detected.get("widths", np.full(len(trough_locs_detected), np.nan))
+    # sample_indices, prominences, widths for all detections at main threshold
+    peaks_info["trough_sample_indices"] = trough_locs_main
+    peaks_info["trough_prominences"] = trough_props_main.get("prominences", np.full(len(trough_locs_main), np.nan))
+    peaks_info["trough_widths"] = trough_props_main.get("widths", np.full(len(trough_locs_main), np.nan))
+    # main index, width, and width edges for the selected main peak (using fallback strategies if needed)
     peaks_info["trough_index"] = trough_locs[main_trough_idx]
     peaks_info["trough_width"] = trough_props.get("widths", np.array([np.nan]))[main_trough_idx]
     peaks_info["trough_width_left"] = int(np.round(trough_props.get("left_ips", np.array([-1]))[main_trough_idx]))
     peaks_info["trough_width_right"] = int(np.round(trough_props.get("right_ips", np.array([-1]))[main_trough_idx]))
+
     # Trough base: nearest local maximum on each side (where the trough truly starts/ends)
     all_maxima = find_peaks(template)[0]
-    all_maxima = all_maxima[(all_maxima >= lo_edge) & (all_maxima < hi_edge)]
+    all_maxima = all_maxima[(all_maxima >= left_edge) & (all_maxima < right_edge)]
     left_maxima = all_maxima[all_maxima < main_trough_loc]
     right_maxima = all_maxima[all_maxima > main_trough_loc]
-    peaks_info["trough_base_left"] = int(left_maxima[-1]) if len(left_maxima) > 0 else lo_edge
-    peaks_info["trough_base_right"] = int(right_maxima[0]) if len(right_maxima) > 0 else hi_edge - 1
+    trough_base_left = int(left_maxima[-1]) if len(left_maxima) > 0 else left_edge
+    trough_base_right = int(right_maxima[0]) if len(right_maxima) > 0 else right_edge - 1
 
-    # Minimum peak-trough distance: 0.2x the trough half-width (floor of 3 samples)
     # Prevents detecting spurious peaks right next to the trough
     _, hw_l, hw_r = _compute_halfwidth(-template, main_trough_loc, sampling_frequency)
     if hw_l >= 0 and hw_r >= 0:
         trough_hw_samples = hw_r - hw_l
-        min_peak_trough_dist = max(3, int(0.2 * trough_hw_samples))
+        min_peak_trough_dist = max(
+            min_extremum_distance_samples, int(min_peak_trough_distance_ratio * trough_hw_samples)
+        )
     else:
-        min_peak_trough_dist = 3
-
-    def _filter_near_trough_before(locs, props):
-        """Remove peak_before detections too close to trough."""
-        if len(locs) == 0 or min_peak_trough_dist <= 0:
-            return locs, props
-        mask = (main_trough_loc - locs) >= min_peak_trough_dist
-        return locs[mask], {k: v[mask] for k, v in props.items()}
-
-    def _filter_near_trough_after(locs, props):
-        """Remove peak_after detections too close to trough (locs relative to trough)."""
-        if len(locs) == 0 or min_peak_trough_dist <= 0:
-            return locs, props
-        mask = locs >= min_peak_trough_dist
-        return locs[mask], {k: v[mask] for k, v in props.items()}
+        min_peak_trough_dist = min_extremum_distance_samples
 
     # --- Find peaks before the main trough ---
-    if main_trough_loc > 3:
+    if main_trough_loc > min_extremum_distance_samples:
         template_before = template[:main_trough_loc]
 
-        # Step 1: full threshold
-        peak_locs_before, peak_props_before = find_peaks(template_before, prominence=min_prominence, width=0)
-        peak_locs_before, peak_props_before = _filter_edge(peak_locs_before, peak_props_before, len(template))
-        peak_locs_before, peak_props_before = _filter_near_trough_before(peak_locs_before, peak_props_before)
+        peak_before_locs_main, peak_before_props_main = detect_and_filter_peaks(
+            template_before,
+            prominence=min_prominence,
+            width=0,
+            edge_samples=edge_samples,
+            num_samples=num_samples,
+            main_trough_loc=main_trough_loc,
+            min_peak_trough_dist=min_peak_trough_dist,
+            correct_trough_loc=False,
+        )
 
-        # Store threshold-passing detections for secondary counts (before fallback)
-        peak_locs_before_detected = peak_locs_before.copy()
-        peak_props_before_detected = {k: v.copy() for k, v in peak_props_before.items()}
-
-        # Step 2: half threshold, score by prominence weighted by proximity to trough
-        if len(peak_locs_before) == 0:
+        if len(peak_before_locs_main) == 0:
             lower_prominence = 0.5 * min_prominence
-            peak_locs_before, peak_props_before = find_peaks(template_before, prominence=lower_prominence, width=0)
-            peak_locs_before, peak_props_before = _filter_edge(peak_locs_before, peak_props_before, len(template))
-            peak_locs_before, peak_props_before = _filter_near_trough_before(peak_locs_before, peak_props_before)
-            if len(peak_locs_before) > 1:
-                prominences = peak_props_before.get("prominences", np.zeros(len(peak_locs_before)))
-                distances = main_trough_loc - peak_locs_before  # all positive since before trough
+            peak_before_locs_half, peak_before_props_half = detect_and_filter_peaks(
+                template_before,
+                prominence=lower_prominence,
+                width=0,
+                edge_samples=edge_samples,
+                num_samples=num_samples,
+                main_trough_loc=main_trough_loc,
+                min_peak_trough_dist=min_peak_trough_dist,
+                correct_trough_loc=False,
+            )
+            if len(peak_before_locs_half) > 1:
+                prominences = peak_before_props_half.get("prominences", np.zeros(len(peak_before_locs_half)))
+                distances = main_trough_loc - peak_before_locs_half  # all positive since before trough
                 # Score: prominence / (distance + 1) — strongly favors closer peaks
                 scores = prominences / (distances.astype(float) + 1.0)
                 best_idx = np.argmax(scores)
-                peak_locs_before = np.array([peak_locs_before[best_idx]])
-                peak_props_before = {k: np.array([v[best_idx]]) for k, v in peak_props_before.items()}
-
-        # Step 3: trough left base — where the trough actually starts (prominence base)
-        if len(peak_locs_before) == 0:
-            trough_left = peaks_info.get("trough_base_left", -1)
-            if trough_left >= 0 and (main_trough_loc - trough_left) >= min_peak_trough_dist:
-                peak_locs_before = np.array([trough_left], dtype=int)
-            else:
-                # Absolute last resort: global max in before region
-                search_start = lo_edge
-                if search_start < len(template_before):
-                    peak_locs_before = np.array(
-                        [search_start + int(np.nanargmax(template_before[search_start:]))], dtype=int
-                    )
+                peak_before_locs = np.array([peak_before_locs_half[best_idx]])
+                peak_before_props = {k: np.array([v[best_idx]]) for k, v in peak_before_props_half.items()}
+            elif len(peak_before_locs_half) == 0:
+                if trough_base_left >= 0 and (main_trough_loc - trough_base_left) >= min_peak_trough_dist:
+                    peak_before_locs = np.array([trough_base_left], dtype=int)
                 else:
-                    peak_locs_before = np.array([int(np.nanargmax(template_before))], dtype=int)
-            peak_props_before = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+                    # Absolute last resort: global max in before region
+                    search_start = left_edge
+                    if search_start < len(template_before):
+                        peak_before_locs = np.array(
+                            [search_start + int(np.nanargmax(template_before[search_start:]))], dtype=int
+                        )
+                    else:
+                        peak_before_locs = np.array([int(np.nanargmax(template_before))], dtype=int)
+                peak_before_props = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+            else:  # exactly 1 peak found at half threshold, use it
+                peak_before_locs = peak_before_locs_half
+                peak_before_props = peak_before_props_half
+        else:
+            peak_before_locs = peak_before_locs_main
+            peak_before_props = peak_before_props_main
 
-        peak_prominences_before = peak_props_before.get("prominences", np.array([]))
-        if len(peak_prominences_before) > 0 and not np.all(np.isnan(peak_prominences_before)):
-            main_peak_before_idx = np.nanargmax(peak_prominences_before)
+        peak_before_prominences = peak_before_props.get("prominences", np.array([]))
+        if len(peak_before_prominences) > 0 and not np.all(np.isnan(peak_before_prominences)):
+            main_peak_before_idx = np.nanargmax(peak_before_prominences)
         else:
             main_peak_before_idx = 0
 
-        # Secondary: only threshold-passing detections; Main: includes fallback
-        peaks_info["peak_before_sample_indices"] = peak_locs_before_detected
-        peaks_info["peak_before_prominences"] = peak_props_before_detected.get(
-            "prominences", np.full(len(peak_locs_before_detected), np.nan)
+        # sample_indices, prominences, widths for all detections at main threshold
+        peaks_info["peak_before_sample_indices"] = peak_before_locs_main
+        peaks_info["peak_before_prominences"] = peak_before_props_main.get(
+            "prominences", np.full(len(peak_before_locs_main), np.nan)
         )
-        peaks_info["peak_before_widths"] = peak_props_before_detected.get(
-            "widths", np.full(len(peak_locs_before_detected), np.nan)
+        peaks_info["peak_before_widths"] = peak_before_props_main.get(
+            "widths", np.full(len(peak_before_locs_main), np.nan)
         )
-        peaks_info["peak_before_index"] = peak_locs_before[main_peak_before_idx]
-        peaks_info["peak_before_width"] = peak_props_before.get("widths", np.array([np.nan]))[main_peak_before_idx]
+        # main index, width, and width edges for the selected main peak (using fallback strategies if needed)
+        peaks_info["peak_before_index"] = peak_before_locs[main_peak_before_idx]
+        peaks_info["peak_before_width"] = peak_before_props.get("widths", np.array([np.nan]))[main_peak_before_idx]
         peaks_info["peak_before_width_left"] = int(
-            np.round(peak_props_before.get("left_ips", np.array([-1]))[main_peak_before_idx])
+            np.round(peak_before_props.get("left_ips", np.array([-1]))[main_peak_before_idx])
         )
         peaks_info["peak_before_width_right"] = int(
-            np.round(peak_props_before.get("right_ips", np.array([-1]))[main_peak_before_idx])
+            np.round(peak_before_props.get("right_ips", np.array([-1]))[main_peak_before_idx])
         )
     else:
         peaks_info["peak_before_sample_indices"] = np.array([], dtype=int)
@@ -218,79 +294,81 @@ def get_trough_and_peak_idx(
         peaks_info["peak_before_width_right"] = -1
 
     # --- Find peaks after the main trough (repolarization peaks) ---
-    if main_trough_loc < len(template) - 3:
+    if main_trough_loc < len(template) - min_extremum_distance_samples:
         template_after = template[main_trough_loc:]
 
-        def _filter_edge_after(locs, props):
-            """Edge-filter for peak_locs_after (relative to template_after)."""
-            if edge_samples == 0 or len(locs) == 0:
-                return locs, props
-            abs_locs = locs + main_trough_loc
-            mask = abs_locs < len(template) - edge_samples
-            return locs[mask], {k: v[mask] for k, v in props.items()}
+        peak_after_locs_main, peak_after_props_main = detect_and_filter_peaks(
+            template_after,
+            prominence=min_prominence,
+            width=0,
+            edge_samples=edge_samples,
+            num_samples=num_samples,
+            main_trough_loc=main_trough_loc,
+            min_peak_trough_dist=min_peak_trough_dist,
+            correct_trough_loc=True,
+        )
 
-        # Step 1: full threshold
-        peak_locs_after, peak_props_after = find_peaks(template_after, prominence=min_prominence, width=0)
-        peak_locs_after, peak_props_after = _filter_edge_after(peak_locs_after, peak_props_after)
-        peak_locs_after, peak_props_after = _filter_near_trough_after(peak_locs_after, peak_props_after)
-
-        # Store threshold-passing detections for secondary counts (before fallback)
-        peak_locs_after_detected = peak_locs_after.copy()
-        peak_props_after_detected = {k: v.copy() for k, v in peak_props_after.items()}
-
-        # Step 2: half threshold, score by prominence weighted by proximity to trough
-        if len(peak_locs_after) == 0:
+        if len(peak_after_locs_main) == 0:
             lower_prominence = 0.5 * min_prominence
-            peak_locs_after, peak_props_after = find_peaks(template_after, prominence=lower_prominence, width=0)
-            peak_locs_after, peak_props_after = _filter_edge_after(peak_locs_after, peak_props_after)
-            peak_locs_after, peak_props_after = _filter_near_trough_after(peak_locs_after, peak_props_after)
-            if len(peak_locs_after) > 1:
-                prominences = peak_props_after.get("prominences", np.zeros(len(peak_locs_after)))
-                distances = peak_locs_after  # relative to trough, so already = distance
+            peak_after_locs_half, peak_after_props_half = detect_and_filter_peaks(
+                template_after,
+                prominence=lower_prominence,
+                width=0,
+                edge_samples=edge_samples,
+                num_samples=num_samples,
+                main_trough_loc=main_trough_loc,
+                min_peak_trough_dist=min_peak_trough_dist,
+                correct_trough_loc=True,
+            )
+            if len(peak_after_locs_half) > 1:
+                prominences = peak_after_props_half.get("prominences", np.zeros(len(peak_after_locs_half)))
+                distances = peak_after_locs_half - main_trough_loc
                 # Score: prominence / (distance + 1) — strongly favors closer peaks
                 scores = prominences / (distances.astype(float) + 1.0)
                 best_idx = np.argmax(scores)
-                peak_locs_after = np.array([peak_locs_after[best_idx]])
-                peak_props_after = {k: np.array([v[best_idx]]) for k, v in peak_props_after.items()}
+                peak_after_locs = np.array([peak_after_locs_half[best_idx]])
+                peak_after_props = {k: np.array([v[best_idx]]) for k, v in peak_after_props_half.items()}
+            elif len(peak_after_locs_half) == 0:
+                if trough_base_right >= 0 and (trough_base_right - main_trough_loc) >= min_peak_trough_dist:
+                    # Convert to template_after-relative coordinate
+                    peak_after_locs = np.array([trough_base_right], dtype=int)
+                else:
+                    # Absolute last resort: global max in after region
+                    search_end = right_edge - main_trough_loc
+                    search_end = max(1, min(search_end, len(template_after)))
+                    peak_after_locs = np.array(
+                        [main_trough_loc + int(np.nanargmax(template_after[:search_end]))], dtype=int
+                    )
+                peak_after_props = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
+            else:  # exactly 1 peak found at half threshold, use it
+                peak_after_locs = peak_after_locs_half
+                peak_after_props = peak_after_props_half
+        else:
+            peak_after_locs = peak_after_locs_main
+            peak_after_props = peak_after_props_main
 
-        # Step 3: trough right base — where the trough actually ends (prominence base)
-        if len(peak_locs_after) == 0:
-            trough_right = peaks_info.get("trough_base_right", -1)
-            if trough_right >= 0 and (trough_right - main_trough_loc) >= min_peak_trough_dist:
-                # Convert to template_after-relative coordinate
-                peak_locs_after = np.array([trough_right - main_trough_loc], dtype=int)
-            else:
-                # Absolute last resort: global max in after region
-                search_end = hi_edge - main_trough_loc
-                search_end = max(1, min(search_end, len(template_after)))
-                peak_locs_after = np.array([int(np.nanargmax(template_after[:search_end]))], dtype=int)
-            peak_props_after = {"prominences": np.array([np.nan]), "widths": np.array([np.nan])}
-
-        # Convert to original template coordinates
-        peak_locs_after_abs = peak_locs_after + main_trough_loc
-        peak_locs_after_detected_abs = peak_locs_after_detected + main_trough_loc
-
-        peak_prominences_after = peak_props_after.get("prominences", np.array([]))
-        if len(peak_prominences_after) > 0 and not np.all(np.isnan(peak_prominences_after)):
-            main_peak_after_idx = np.nanargmax(peak_prominences_after)
+        peak_after_prominences = peak_after_props.get("prominences", np.array([]))
+        if len(peak_after_prominences) > 0 and not np.all(np.isnan(peak_after_prominences)):
+            main_peak_after_idx = np.nanargmax(peak_after_prominences)
         else:
             main_peak_after_idx = 0
 
-        # Secondary: only threshold-passing detections; Main: includes fallback
-        peaks_info["peak_after_sample_indices"] = peak_locs_after_detected_abs
-        peaks_info["peak_after_prominences"] = peak_props_after_detected.get(
-            "prominences", np.full(len(peak_locs_after_detected), np.nan)
+        # sample_indices, prominences, widths for all detections at main threshold
+        peaks_info["peak_after_sample_indices"] = peak_after_locs_main
+        peaks_info["peak_after_prominences"] = peak_after_props_main.get(
+            "prominences", np.full(len(peak_after_locs_main), np.nan)
         )
-        peaks_info["peak_after_widths"] = peak_props_after_detected.get(
-            "widths", np.full(len(peak_locs_after_detected), np.nan)
+        peaks_info["peak_after_widths"] = peak_after_props_main.get(
+            "widths", np.full(len(peak_after_locs_main), np.nan)
         )
-        peaks_info["peak_after_index"] = peak_locs_after_abs[main_peak_after_idx]
-        peaks_info["peak_after_width"] = peak_props_after.get("widths", np.array([np.nan]))[main_peak_after_idx]
+        # main index, width, and width edges for the selected main peak (using fallback strategies if needed)
+        peaks_info["peak_after_index"] = peak_after_locs[main_peak_after_idx]
+        peaks_info["peak_after_width"] = peak_after_props.get("widths", np.array([np.nan]))[main_peak_after_idx]
         peaks_info["peak_after_width_left"] = int(
-            np.round(peak_props_after.get("left_ips", np.array([-1]))[main_peak_after_idx] + main_trough_loc)
+            np.round(peak_after_props.get("left_ips", np.array([-1]))[main_peak_after_idx] + main_trough_loc)
         )
         peaks_info["peak_after_width_right"] = int(
-            np.round(peak_props_after.get("right_ips", np.array([-1]))[main_peak_after_idx] + main_trough_loc)
+            np.round(peak_after_props.get("right_ips", np.array([-1]))[main_peak_after_idx] + main_trough_loc)
         )
     else:
         peaks_info["peak_after_sample_indices"] = np.array([], dtype=int)
