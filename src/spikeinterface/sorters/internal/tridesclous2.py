@@ -38,7 +38,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "clustering_ms_after": 1.5,
         "detection_radius_um": 150.0,
         "features_radius_um": 120.0,
-        "split_radius_um" : 60.0,
+        "split_radius_um": 60.0,
         "template_radius_um": 100.0,
         "merge_similarity_lag_ms": 0.5,
         "freq_min": 150.0,
@@ -73,7 +73,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "radius_um": "Radius for sparsity",
         "detection_radius_um": "Radius for peak detection",
         "features_radius_um": "Radius for sparsity in SVD features",
-        "split_radius_um" : "Radius for the local split clustering",
+        "split_radius_um": "Radius for the local split clustering",
         "template_radius_um": "Radius for the sparsity of template before template matching",
         "freq_min": "Low frequency for bandpass filter",
         "freq_max": "High frequency for bandpass filter",
@@ -199,9 +199,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             recording_for_analyzer = recording
             cache_info = None
 
-
         recording_for_clustering = recording
-        noise_levels = get_noise_levels(recording_for_clustering, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs)
+        noise_levels = get_noise_levels(
+            recording_for_clustering, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs
+        )
 
         # detection
         detection_params = dict(
@@ -215,7 +216,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         all_peaks = detect_peaks(
             # recording,
             recording_for_clustering,
-            method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+            method="locally_exclusive",
+            method_kwargs=detection_params,
+            job_kwargs=job_kwargs,
         )
 
         if verbose:
@@ -228,9 +231,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
-
         # Clustering
-        num_shifts_merging = int(sampling_frequency * params["merge_similarity_lag_ms"] / 1000.)
+        num_shifts_merging = int(sampling_frequency * params["merge_similarity_lag_ms"] / 1000.0)
 
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
         clustering_kwargs["peaks_svd"]["ms_before"] = params["clustering_ms_before"]
@@ -251,8 +253,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
-
-
 
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
             # recording,
@@ -277,11 +277,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
-        
         # here the idea was to be able to use other preprocessing for peeler
         # but at teh moment it is the same for clustering and peeling
         recording_for_peeler = recording
-        noise_levels = get_noise_levels(recording_for_peeler, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs)
+        noise_levels = get_noise_levels(
+            recording_for_peeler, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs
+        )
 
         # preestimate the sparsity unsing peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)

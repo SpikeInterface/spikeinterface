@@ -43,7 +43,7 @@ class LupinSorter(ComponentsBasedSorter):
         "whitening_radius_um": 100.0,
         "detection_radius_um": 50.0,
         "features_radius_um": 120.0,
-        "split_radius_um" : 60.0,
+        "split_radius_um": 60.0,
         "template_radius_um": 100.0,
         "merge_similarity_lag_ms": 0.5,
         "freq_min": 150.0,
@@ -57,7 +57,7 @@ class LupinSorter(ComponentsBasedSorter):
         "clustering_recursive_depth": 3,
         "ms_before": 1.0,
         "ms_after": 2.5,
-        "template_sparsify_threshold": 1.,
+        "template_sparsify_threshold": 1.0,
         "template_min_snr_ptp": 4.0,
         "template_max_jitter_ms": 0.2,
         "template_matching_engine": "circus-omp",
@@ -80,7 +80,7 @@ class LupinSorter(ComponentsBasedSorter):
         "whitening_radius_um": "Radius for whitening",
         "detection_radius_um": "Radius for peak detection",
         "features_radius_um": "Radius for sparsity in SVD features",
-        "split_radius_um" : "Radius for the local split clustering",
+        "split_radius_um": "Radius for the local split clustering",
         "template_radius_um": "Radius for the sparsity of template before template matching",
         "freq_min": "Low frequency",
         "freq_max": "High frequency",
@@ -240,7 +240,7 @@ class LupinSorter(ComponentsBasedSorter):
             recording = recording_raw.astype("float32")
             recording_for_analyzer = recording
             cache_info = None
-        
+
         noise_levels = get_noise_levels(
             recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs
         )
@@ -278,7 +278,7 @@ class LupinSorter(ComponentsBasedSorter):
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
-        num_shifts_merging = int(sampling_frequency * params["merge_similarity_lag_ms"] / 1000.)
+        num_shifts_merging = int(sampling_frequency * params["merge_similarity_lag_ms"] / 1000.0)
 
         # Clustering
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)

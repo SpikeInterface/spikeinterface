@@ -107,8 +107,8 @@ class IterativeISOSPLITClustering:
 
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
-        nbefore = int(ms_before * recording.sampling_frequency / 1000.)
-        nafter = int(ms_after * recording.sampling_frequency / 1000.)
+        nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+        nafter = int(ms_after * recording.sampling_frequency / 1000.0)
 
         # radius_um = params["waveforms"]["radius_um"]
         verbose = params["verbose"]
