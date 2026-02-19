@@ -1603,6 +1603,42 @@ class SortingAnalyzer:
     def get_num_units(self) -> int:
         return self.sorting.get_num_units()
 
+    def frame_slice(self, start_frame=None, end_frame=None, slice_mode="hard", **job_kwargs):
+        """
+        Do a frame slice.
+        """
+
+        assert slice_mode in ["soft", "hard"]
+
+        sorting = self.sorting.frame_slice(start_frame=start_frame, end_frame=end_frame)
+        recording = self.recording.frame_slice(start_frame=start_frame, end_frame=end_frame)
+        sparsity = self.sparsity
+
+        new_sorting_analyzer = SortingAnalyzer.create_memory(
+            sorting, recording, sparsity, self.return_in_uV, self.rec_attributes
+        )
+
+        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
+        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
+        if qm_extension_params is not None:
+            sorted_extensions["quality_metrics"] = qm_extension_params
+
+        if slice_mode == "hard":
+            extensions_dict = {
+                extension_name: extension.params for extension_name, extension in sorted_extensions.items()
+            }
+            new_sorting_analyzer.compute(extensions_dict)
+        elif slice_mode == "soft":
+            for extension_name, extension in sorted_extensions.items():
+                new_sorting_analyzer.extensions[extension_name] = extension.frame_slice(
+                    new_sorting_analyzer,
+                    start_frame=start_frame,
+                    end_frame=end_frame,
+                    **job_kwargs,
+                )
+
+        return new_sorting_analyzer
+
     ## extensions zone
     def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "AnalyzerExtension | None":
         """
@@ -2318,6 +2354,10 @@ class AnalyzerExtension:
         # must be implemented in subclass
         raise NotImplementedError
 
+    def _frame_slice_extension_data(self, start_frame, end_frame, **job_kwargs):
+        # must be implemented in subclass
+        raise NotImplementedError
+
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # must be implemented in subclass
         raise NotImplementedError
@@ -2612,6 +2652,20 @@ class AnalyzerExtension:
         new_extension.data = self._merge_extension_data(
             merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask, verbose=verbose, **job_kwargs
         )
+        new_extension.run_info = copy(self.run_info)
+        new_extension.save()
+        return new_extension
+
+    def frame_slice(
+        self,
+        new_sorting_analyzer,
+        start_frame,
+        end_frame,
+        **job_kwargs,
+    ):
+        new_extension = self.__class__(new_sorting_analyzer)
+        new_extension.params = self.params.copy()
+        new_extension.data = self._frame_slice_extension_data(start_frame, end_frame, **job_kwargs)
         new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension

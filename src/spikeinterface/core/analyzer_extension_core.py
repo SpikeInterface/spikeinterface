@@ -97,6 +97,22 @@ class ComputeRandomSpikes(AnalyzerExtension):
             new_data["random_spikes_indices"] = np.flatnonzero(selected_mask[keep_mask])
         return new_data
 
+    def _frame_slice_extension_data(
+        self,
+        start_frame,
+        end_frame,
+    ):
+
+        new_data = dict()
+        random_spikes_indices = self.data["random_spikes_indices"]
+        spike_vector = self.sorting_analyzer.sorting.to_spike_vector()
+        first_spike_in_sliced_range = np.searchsorted(spike_vector["sample_index"], start_frame)
+        sample_indices = spike_vector[random_spikes_indices]["sample_index"]
+        indices_of_kept_spikes = np.where((sample_indices < end_frame) & (sample_indices > start_frame))
+        new_data["random_spikes_indices"] = random_spikes_indices[indices_of_kept_spikes] - first_spike_in_sliced_range
+
+        return new_data
+
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
         new_data["random_spikes_indices"] = self.data["random_spikes_indices"].copy()
