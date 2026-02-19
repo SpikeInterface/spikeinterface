@@ -351,6 +351,13 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     probe = None
 
                 if probe is not None:
+                    # Ensure device channel index corresponds to channel_ids
+                    channel_names = probe.contact_annotations.get("channel_name", None)
+                    if channel_names is not None and not np.array_equal(channel_names, self.channel_ids):
+                        index_map = {value: idx for idx, value in enumerate(channel_names)}
+                        device_channel_indices = np.array([index_map[x] for x in self.channel_ids])
+                        probe.set_device_channel_indices(device_channel_indices)
+
                     if probe.shank_ids is not None:
                         self.set_probe(probe, in_place=True, group_mode="by_shank")
                     else:
