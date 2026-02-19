@@ -50,7 +50,7 @@ class LupinSorter(ComponentsBasedSorter):
         "freq_max": 7000.0,
         "cache_preprocessing_mode": "auto",
         "peak_sign": "neg",
-        "detect_threshold": 5,
+        "detect_threshold": 5.0,
         "n_peaks_per_channel": 5000,
         "n_svd_components_per_channel": 5,
         "n_pca_features": 4,
@@ -228,7 +228,7 @@ class LupinSorter(ComponentsBasedSorter):
 
             # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
-            recording_pre_cache = recording
+            recording_for_analyzer = recording
             recording, cache_info = cache_preprocessing(
                 recording,
                 mode=params["cache_preprocessing_mode"],
@@ -236,12 +236,14 @@ class LupinSorter(ComponentsBasedSorter):
                 job_kwargs=job_kwargs,
             )
 
-            
         else:
             recording = recording_raw.astype("float32")
+            recording_for_analyzer = recording
             cache_info = None
         
-        noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed))
+        noise_levels = get_noise_levels(
+            recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs
+        )
 
         # detection
         ms_before = params["ms_before"]
@@ -413,7 +415,7 @@ class LupinSorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "spikes.npy", spikes)
             templates.to_zarr(sorter_output_folder / "templates.zarr")
             if analyzer_final is not None:
-                analyzer_final._recording = recording_pre_cache
+                analyzer_final._recording = recording_for_analyzer
                 analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")

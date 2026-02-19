@@ -50,8 +50,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "n_svd_components_per_channel": 5,
         "n_pca_features": 6,
         "clustering_recursive_depth": 3,
-        "ms_before": 2.0,
-        "ms_after": 3.0,
+        "ms_before": 1.0,
+        "ms_after": 2.5,
         "template_sparsify_threshold": 1.5,
         "template_min_snr_ptp": 3.5,
         "template_max_jitter_ms": 0.2,
@@ -168,6 +168,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 recording = apply_preprocessing_pipeline(recording_raw, params["preprocessing_dict"])
                 recording = recording.astype("float32")
 
+            recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
+
             if params["apply_motion_correction"]:
                 interpolate_motion_kwargs = dict(
                     border_mode="force_extrapolate",
@@ -182,13 +184,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                     **interpolate_motion_kwargs,
                 )
 
-            recording = zscore(recording, dtype="float32")
-            # whitening is really bad when dirft correction is applied and this changd nothing when no dirft
-            # recording = whiten(recording, dtype="float32", mode="local", radius_um=100.0)
-
             # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
-            recording_pre_cache = recording
+            recording_for_analyzer = recording
             recording, cache_info = cache_preprocessing(
                 recording,
                 mode=params["cache_preprocessing_mode"],
@@ -196,15 +194,18 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 job_kwargs=job_kwargs,
             )
 
-            noise_levels = np.ones(num_chans, dtype="float32")
         else:
-            recording_pre_cache = recording
             recording = recording_raw.astype("float32")
-            noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed))
+            recording_for_analyzer = recording
             cache_info = None
+
+
+        recording_for_clustering = recording
+        noise_levels = get_noise_levels(recording_for_clustering, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs)
 
         # detection
         detection_params = dict(
+            noise_levels=noise_levels,
             peak_sign=params["peak_sign"],
             detect_threshold=params["detect_threshold"],
             exclude_sweep_ms=1.5,
@@ -212,7 +213,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         )
 
         all_peaks = detect_peaks(
-            recording, method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
+            # recording,
+            recording_for_clustering,
+            method="locally_exclusive", method_kwargs=detection_params, job_kwargs=job_kwargs
         )
 
         if verbose:
@@ -225,12 +228,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
-        # if clustering_kwargs["clustering"]["clusterer"] == "isosplit6":
-        #    have_sisosplit6 = importlib.util.find_spec("isosplit6") is not None
-        #    if not have_sisosplit6:
-        #        raise ValueError(
-        #            "You want to run tridesclous2 with the isosplit6 (the C++) implementation, but this is not installed, please `pip install isosplit6`"
-        #        )
 
         # Clustering
         num_shifts_merging = int(sampling_frequency * params["merge_similarity_lag_ms"] / 1000.)
@@ -240,6 +237,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         clustering_kwargs["peaks_svd"]["ms_after"] = params["clustering_ms_after"]
         clustering_kwargs["peaks_svd"]["radius_um"] = params["features_radius_um"]
         clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components_per_channel"]
+        clustering_kwargs["split"]["split_radius_um"] = params["split_radius_um"]
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
         clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
@@ -254,8 +252,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
 
+
+
         unit_ids, clustering_label, more_outs = find_clusters_from_peaks(
-            recording,
+            # recording,
+            recording_for_clustering,
             peaks,
             method="iterative-isosplit",
             method_kwargs=clustering_kwargs,
@@ -276,7 +277,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
+        
+        # here the idea was to be able to use other preprocessing for peeler
+        # but at teh moment it is the same for clustering and peeling
         recording_for_peeler = recording
+        noise_levels = get_noise_levels(recording_for_peeler, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs)
 
         # preestimate the sparsity unsing peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
@@ -343,8 +348,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
-        # auto_merge = True
-        auto_merge = False
+        auto_merge = True
         analyzer_final = None
         if auto_merge:
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
@@ -375,7 +379,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "spikes.npy", spikes)
             templates.to_zarr(sorter_output_folder / "templates.zarr")
             if analyzer_final is not None:
-                analyzer_final._recording = recording_pre_cache
+                analyzer_final._recording = recording_for_analyzer
                 analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
