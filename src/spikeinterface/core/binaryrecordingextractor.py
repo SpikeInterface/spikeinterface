@@ -180,7 +180,6 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.file_offset = file_offset
         self.time_axis = time_axis
         self.file_path = file_path
-        self.file = open(self.file_path, "rb")
         self.bytes_per_sample = self.num_channels * self.dtype.itemsize
         self.data_size_in_bytes = Path(file_path).stat().st_size - file_offset
         self.num_samples = self.data_size_in_bytes // self.bytes_per_sample
@@ -215,31 +214,32 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         # the memmap offset to a multiple of ALLOCATIONGRANULARITY
         length += start_offset
 
-        # Create the mmap object
-        memmap_obj = mmap.mmap(self.file.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
+        with open(self.file_path, "rb") as file:
+            # Create the mmap object
+            memmap_obj = mmap.mmap(file.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
 
-        # Create a numpy array using the mmap object as the buffer
-        # Note that the shape must be recalculated based on the new data chunk
-        if self.time_axis == 0:
-            shape = ((end_frame - start_frame), self.num_channels)
-        else:
-            shape = (self.num_channels, (end_frame - start_frame))
+            # Create a numpy array using the mmap object as the buffer
+            # Note that the shape must be recalculated based on the new data chunk
+            if self.time_axis == 0:
+                shape = ((end_frame - start_frame), self.num_channels)
+            else:
+                shape = (self.num_channels, (end_frame - start_frame))
 
-        # Now the entire array should correspond to the data between start_frame and end_frame, so we can use it directly
-        traces = np.ndarray(
-            shape=shape,
-            dtype=self.dtype,
-            buffer=memmap_obj,
-            offset=start_offset,
-        )
+            # Now the entire array should correspond to the data between start_frame and end_frame, so we can use it directly
+            traces = np.ndarray(
+                shape=shape,
+                dtype=self.dtype,
+                buffer=memmap_obj,
+                offset=start_offset,
+            )
 
-        if self.time_axis == 1:
-            traces = traces.T
+            if self.time_axis == 1:
+                traces = traces.T
 
-        if channel_indices is not None:
-            traces = traces[:, channel_indices]
+            if channel_indices is not None:
+                traces = traces[:, channel_indices]
 
-        return traces
+            return traces
 
     def __del__(self):
         # Ensure that the file handle is closed when the segment is garbage-collected
