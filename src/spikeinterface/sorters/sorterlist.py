@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .external.combinato import CombinatoSorter
+from .external.dartsort import DartsortSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
 from .external.ironclust import IronClustSorter
@@ -29,6 +30,7 @@ from .internal.lupin import LupinSorter
 sorter_full_list = [
     # external
     CombinatoSorter,
+    DartsortSorter,
     HDSortSorter,
     HerdingspikesSorter,
     IronClustSorter,
