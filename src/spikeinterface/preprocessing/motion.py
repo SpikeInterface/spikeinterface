@@ -332,11 +332,16 @@ def compute_motion(
     """
 
     # local import are important because "sortingcomponents" is not important by default
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+    from spikeinterface.sortingcomponents.motion import estimate_motion, InterpolateMotionRecording
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, peak_localization_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
-    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion, estimate_motion_methods
+    from spikeinterface.sortingcomponents.motion import (
+        InterpolateMotionRecording,
+    )
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion_methods, estimate_motion
 
     # get preset params and update if necessary
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
@@ -375,43 +380,12 @@ def compute_motion(
     if no_selection_kwargs:
         # maybe do this directly in the folder when not None, but might be slow on external storage
         gather_mode = "memory"
-        # node detect
-        detect_peaks_method = detect_kwargs["method"]
-        method_class = detect_peak_methods[detect_peaks_method]
-        detect_kwargs_without_method = {
-            key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"
-        }
-        if method_class.need_noise_levels:
-            detect_kwargs_without_method["noise_levels"] = noise_levels
 
-        node0 = method_class(recording, **detect_kwargs_without_method)
-
-        node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
-
-        # node detect + localize
-        method = localize_peaks_kwargs["method"]
-        method_class = peak_localization_methods[method]
-        localize_peaks_kwargs_without_method = {
-            key: localize_peaks_kwarg for key, localize_peaks_kwarg in localize_peaks_kwargs.items() if key != "method"
-        }
-        node2 = method_class(
-            recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method
+        peaks, peak_locations, peaks_run_time = run_peak_detection_pipeline_node(
+            recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
         )
-        pipeline_nodes = [node0, node1, node2]
-        t0 = time.perf_counter()
-        peaks, peak_locations = run_node_pipeline(
-            recording,
-            pipeline_nodes,
-            job_kwargs,
-            job_name="detect and localize",
-            gather_mode=gather_mode,
-            gather_kwargs=None,
-            squeeze_output=False,
-            folder=None,
-            names=None,
-        )
-        t1 = time.perf_counter()
-        run_times = dict(detect_and_localize=t1 - t0)
+        run_times = dict(detect_and_localize=peaks_run_time)
+
     else:
         # localization is done after select_peaks()
         pipeline_nodes = None
@@ -569,6 +543,62 @@ def correct_motion(
     if output_motion_info:
         out += (motion_info,)
     return out
+
+
+# TODO: carefully recheck this against main version after merge
+def run_peak_detection_pipeline_node(
+    recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
+):
+    """
+    TODO: add docstring
+    """
+    from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
+    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
+    from spikeinterface.sortingcomponents.peak_localization import peak_localization_methods
+
+    # Don't modify the kwargs in place in case the caller requires them
+    detect_kwargs = copy.deepcopy(detect_kwargs)
+    localize_peaks_kwargs = copy.deepcopy(localize_peaks_kwargs)
+
+    detect_peaks_method = detect_kwargs["method"]
+    method_class = detect_peak_methods[detect_peaks_method]
+
+    # TODO: here I think we can above use detect_peaks_method = detect_kwargs.pop("method") and drop the next line
+    detect_kwargs_without_method = {key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"}
+    if method_class.need_noise_levels:
+        detect_kwargs_without_method["noise_levels"] = noise_levels
+
+    node0 = method_class(recording, **detect_kwargs_without_method)
+
+    node1 = ExtractDenseWaveforms(recording, parents=[node0], ms_before=0.1, ms_after=0.3)
+
+    # node detect + localize
+    method = localize_peaks_kwargs["method"]
+    method_class = peak_localization_methods[method]
+
+    # TODO: can pop again
+    localize_peaks_kwargs_without_method = {
+        key: localize_peaks_kwarg for key, localize_peaks_kwarg in localize_peaks_kwargs.items() if key != "method"
+    }
+
+    node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method)
+    pipeline_nodes = [node0, node1, node2]
+    t0 = time.perf_counter()
+    peaks, peak_locations = run_node_pipeline(
+        recording,
+        pipeline_nodes,
+        job_kwargs,
+        job_name="detect and localize",
+        gather_mode=gather_mode,
+        gather_kwargs=None,
+        squeeze_output=False,
+        folder=None,
+        names=None,
+    )
+    t1 = time.perf_counter()
+    run_times = dict(detect_and_localize=t1 - t0)
+
+    return peaks, peak_locations, run_times
 
 
 def save_motion_info(motion_info, folder, overwrite=False):

@@ -262,10 +262,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 amps /= q_95
                 c = cmap_obj(amps)
             else:
-                from matplotlib.colors import Normalize
-
                 norm_function = Normalize(vmin=clim[0], vmax=clim[1], clip=True)
                 c = cmap_obj(norm_function(amps))
+
             color_kwargs = dict(
                 color=None,
                 c=c,
@@ -387,7 +386,6 @@ class MotionInfoWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from .utils_matplotlib import make_mpl_figure
-
         from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
         dp = to_attr(data_plot)

@@ -153,6 +153,8 @@ test = [
     "pytest<8.4.0",
     "pytest-cov",
     "psutil",
+    "pytest-mock",
+    "huggingface_hub",
 
     # preprocessing
     "ibllib>=3.4.1;python_version>='3.10'",

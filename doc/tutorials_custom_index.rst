@@ -85,10 +85,24 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
       :class-card: gallery-card
       :text-align: center
 
+Preprocessing tutorials
+-----------------------
+
+.. grid:: 1 2 2 3
+   :gutter: 2
+
    .. grid-item-card:: Build full pipeline with dicts
       :link: how_to/build_pipeline_with_dicts.html
       :img-top: /images/logo.png
       :img-alt: Build full pipeline with dicts
+      :class-card: gallery-card
+      :text-align: center
+
+   .. grid-item-card:: Inter-session Alignment
+      :link-type: ref
+      :link: sphx_glr_tutorials_preprocessing_plot_7_inter_session_alignment.py
+      :img-top: /tutorials/preprocessing/images/thumb/sphx_glr_plot_7_inter_session_alignment_thumb.png
+      :img-alt: Inter-session Alignment
       :class-card: gallery-card
       :text-align: center
 
