@@ -146,6 +146,9 @@ test_extractors = [
 test_preprocessing = [
     "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "torch",
+    # for IBL data fetching
+    "pooch",
+    "datalad"
 ]
 
 
