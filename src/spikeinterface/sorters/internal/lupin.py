@@ -240,8 +240,6 @@ class LupinSorter(ComponentsBasedSorter):
             recording = recording_raw.astype("float32")
             recording_for_analyzer = recording
             cache_info = None
-        
-        noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed))
 
         noise_levels = get_noise_levels(
             recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs

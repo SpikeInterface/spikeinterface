@@ -195,7 +195,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             )
 
         else:
-            recording_pre_cache = recording
             recording = recording_raw.astype("float32")
             recording_for_analyzer = recording
             cache_info = None
@@ -350,8 +349,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
-        # auto_merge = True
-        auto_merge = False
+        auto_merge = True
+        
         analyzer_final = None
         if auto_merge:
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
