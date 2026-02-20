@@ -186,6 +186,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         periods=None,
         # common extension kwargs
         peak_sign="both",
+        template_operator="average",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
         depth_direction="y",
@@ -220,6 +221,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             periods=periods,  # template metrics do not use periods
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
+            template_operator=template_operator,
             include_multi_channel_metrics=include_multi_channel_metrics,
             depth_direction=depth_direction,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
@@ -255,8 +257,11 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-        extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
-        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
+        operator = self.params["template_operator"]
+        extremum_channel_indices = get_template_extremum_channel(
+            sorting_analyzer, peak_sign=peak_sign, outputs="index", operator=operator
+        )
+        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
@@ -275,6 +280,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             else:
                 template_upsampled = template_single
 
+            print(
+                f"unit {unit_id}: detecting peaks and troughs on main channel (channel {extremum_channel_indices[unit_id]})"
+            )
             peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
                 sampling_frequency_up,
