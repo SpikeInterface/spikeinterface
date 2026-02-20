@@ -401,7 +401,7 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
     return segment_indices
 
 
-def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> list[float]:
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None) -> list[float]:
     """
     Calculate the duration of each segment in a sorting object.
 
@@ -410,11 +410,17 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> l
     sorting : BaseSorting
         The sorting object containing spike data
 
+    segment_indices : list[int] | None
+        List of the segment indices to process. Default to None.
+
     Returns
     -------
     list[float]
         List of segment durations in seconds
     """
+    if segment_indices is None:
+        segment_indices = range(sorting.get_num_segments())
+
     spikes = sorting.to_spike_vector()
 
     segment_boundaries = [
