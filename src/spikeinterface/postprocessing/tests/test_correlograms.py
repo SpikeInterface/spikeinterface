@@ -18,13 +18,15 @@ import pytest
 from pytest import param
 
 from spikeinterface import NumpySorting, generate_sorting
-from spikeinterface.postprocessing import ComputeACG3D, ComputeCorrelograms
+from spikeinterface.postprocessing import ComputeACG3D, ComputeCorrelograms, ComputeAutoCorrelograms
 from spikeinterface.postprocessing.correlograms import (
     _compute_3d_acg_one_unit,
     _compute_correlograms_on_sorting,
+    _compute_auto_correlograms_on_sorting,
     _make_bins,
     compute_acgs_3d,
     compute_correlograms,
+    compute_auto_correlograms,
 )
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
@@ -55,10 +57,39 @@ class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
 
         params = dict(method=method, window_ms=100, bin_ms=6.5)
         ext_numpy = sorting_analyzer.compute(ComputeCorrelograms.extension_name, **params)
-
         result_sorting, bins_sorting = compute_correlograms(self.sorting, **params)
 
         assert np.array_equal(result_sorting, ext_numpy.data["ccgs"])
+        assert np.array_equal(bins_sorting, ext_numpy.data["bins"])
+
+
+class TestComputeAutoCorrelograms(AnalyzerExtensionCommonTestSuite):
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(method="numpy"),
+            dict(method="auto"),
+            param(dict(method="numba"), marks=SKIP_NUMBA),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeAutoCorrelograms, params)
+
+    @pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
+    def test_sortinganalyzer_auto_correlograms(self, method):
+        """
+        Test the outputs when using SortingAnalyzer against
+        the output passing sorting directly to `compute_auto_correlograms`.
+        Sorting to `compute_auto_correlograms` is tested extensively below
+        so if these match it means `SortingAnalyzer` is working.
+        """
+        sorting_analyzer = self._prepare_sorting_analyzer("memory", sparse=False, extension_class=ComputeCorrelograms)
+
+        params = dict(method=method, window_ms=100, bin_ms=6.5)
+        ext_numpy = sorting_analyzer.compute(ComputeAutoCorrelograms.extension_name, **params)
+        result_sorting, bins_sorting = compute_auto_correlograms(self.sorting, **params)
+
+        assert np.array_equal(result_sorting, ext_numpy.data["acgs"])
         assert np.array_equal(bins_sorting, ext_numpy.data["bins"])
 
 
@@ -124,6 +155,70 @@ def test_equal_results_fast_correlograms(window_and_bin_ms):
     from numpy.testing import assert_almost_equal
 
     assert_almost_equal(result_numba_fast, result_numba)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_fast_auto_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numba_fast, bins_numba_fast = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True
+    )
+    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
+    )
+    from numpy.testing import assert_almost_equal
+
+    assert_almost_equal(result_numba_fast, result_numba)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_auto_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numpy, bins_numpy = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
+    )
+    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
+    )
+
+    assert np.array_equal(result_numpy, result_numba)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_auto_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numpy, bins_numpy = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
+    )
+    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
+    )
+
+    assert np.array_equal(result_numpy, result_numba)
 
 
 @pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
@@ -283,6 +378,38 @@ def test_compute_correlograms_different_units(method):
     assert np.array_equal(result[1, 0], np.array([0, 0, 0, 1, 1, 1, 0, 1]))
 
     assert np.array_equal(result[0, 1], np.array([1, 0, 1, 1, 1, 0, 0, 0]))
+
+
+@pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
+def test_compute_auto_correlograms_different_units(method):
+    """
+    Make a supplementary test to `test_compute_correlograms` in which all
+    units had the same spike train. Test here a simpler and accessible
+    test case with only two neurons with different spike time differences
+    within and across units.
+
+    This case is simple enough to validate by hand, for example for the
+    result[1, 1] case we are looking at the autocorrelogram of the unit '1'.
+    The spike times are 4 and 16 s, therefore we expect to see a count in
+    the +/- 10 to 15 s bin.
+    """
+    sampling_frequency = 30000
+    spike_times = np.array([0, 4, 8, 16]) / 1000 * sampling_frequency
+    spike_times.astype(int)
+
+    spike_unit_indices = np.array([0, 1, 0, 1])
+
+    window_ms = 40
+    bin_ms = 5
+
+    sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
+    )
+
+    result, bins = compute_auto_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+    assert np.array_equal(result[0], np.array([0, 0, 1, 0, 0, 1, 0, 0]))
+    assert np.array_equal(result[1], np.array([0, 1, 0, 0, 0, 0, 1, 0]))
 
 
 def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin_edge):

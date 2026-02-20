@@ -2898,6 +2898,7 @@ _builtin_extensions = {
     # from postprocessing
     "amplitude_scalings": "spikeinterface.postprocessing",
     "correlograms": "spikeinterface.postprocessing",
+    "auto_correlograms": "spikeinterface.postprocessing",
     "isi_histograms": "spikeinterface.postprocessing",
     "principal_components": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",
