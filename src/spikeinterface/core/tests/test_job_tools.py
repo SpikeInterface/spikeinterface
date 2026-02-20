@@ -242,8 +242,9 @@ def func2(segment_index, start_frame, end_frame, worker_dict):
     return worker_dict["worker_index"]
 
 
-def init_func2():
+def init_func2(worker_index):
     # this leave time for other thread/process to start
+    # print('in init_func2 with worker_index', worker_index)
     time.sleep(0.010)
     worker_dict = {}
     return worker_dict
@@ -256,6 +257,7 @@ def test_worker_index():
     for i in range(2):
         # making this 2 times ensure to test that global variables are correctly reset
         for pool_engine in ("process", "thread"):
+            # print(pool_engine)
             processor = ChunkRecordingExecutor(
                 recording,
                 func2,
@@ -323,7 +325,7 @@ if __name__ == "__main__":
     # test_ChunkRecordingExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
-    # test_worker_index()
-    test_get_best_job_kwargs()
+    test_worker_index()
+    # test_get_best_job_kwargs()
 
     # quick_becnhmark()
