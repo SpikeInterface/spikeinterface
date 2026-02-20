@@ -293,7 +293,7 @@ class IterativeISOSPLITClustering:
             num_shifts = params_merge_from_templates["num_shifts"]
             num_shifts = min((num_shifts, nbefore, nafter))
             params_merge_from_templates["num_shifts"] = num_shifts
-            post_merge_label2, templates_array, template_sparse_mask, unit_ids = merge_peak_labels_from_templates(
+            post_merge_label2, templates_array, template_sparse_mask, unit_ids, time_shifts = merge_peak_labels_from_templates(
                 peaks,
                 post_merge_label1,
                 unit_ids,
@@ -303,6 +303,7 @@ class IterativeISOSPLITClustering:
             )
         else:
             post_merge_label2 = post_merge_label1.copy()
+            time_shifts = None
 
         dense_templates = Templates(
             templates_array=templates_array,

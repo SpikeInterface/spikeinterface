@@ -166,7 +166,7 @@ class IterativeHDBSCANClustering:
             print("Kept %d raw clusters" % len(labels))
 
         if params["merge_from_templates"] is not None:
-            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids = merge_peak_labels_from_templates(
+            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids, time_shifts = merge_peak_labels_from_templates(
                 peaks,
                 peak_labels,
                 templates.unit_ids,
@@ -185,6 +185,8 @@ class IterativeHDBSCANClustering:
                 probe=recording.get_probe(),
                 is_in_uV=False,
             )
+        else:
+            time_shifts = None
 
         # clean very small cluster before peeler
         if (
@@ -212,6 +214,7 @@ class IterativeHDBSCANClustering:
         more_outs = dict(
             svd_model=svd_model,
             peaks_svd=peaks_svd,
+            time_shifts=time_shifts,
             peak_svd_sparse_mask=sparse_mask,
         )
         return labels, peak_labels, more_outs
