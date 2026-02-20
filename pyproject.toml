@@ -94,7 +94,7 @@ preprocessing = [
 
 full = [
     "h5py",
-    "pandas",
+    "pandas<3",
     "scipy",
     "scikit-learn<1.8",
     "networkx",
@@ -110,19 +110,19 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.12.0",
+    "figpack",
+    "figpack-spike-sorting"
 ]
 
 metrics = [
     "scikit-learn<1.8",
     "scipy",
-    "pandas",
+    "pandas<3",
     "numba",
 ]
 
 test_core = [
     "pytest<8.4.0",
-    "pytest-dependency",
     "psutil",
 
     # for github test : probeinterface and neo from master
@@ -146,12 +146,14 @@ test_extractors = [
 test_preprocessing = [
     "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "torch",
+    # for IBL data fetching
+    "pooch",
+    "datalad"
 ]
 
 
 test = [
     "pytest<8.4.0",
-    "pytest-dependency",
     "pytest-cov",
     "psutil",
 
@@ -183,6 +185,9 @@ test = [
     "skops",
     "huggingface_hub",
 
+    # widgets
+    "sortingview",
+
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
@@ -204,7 +209,7 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
-    "pandas", # in the modules gallery comparison tutorial
+    "pandas<3", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",

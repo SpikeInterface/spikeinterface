@@ -14,6 +14,9 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
     name = "nearest"
     need_noise_levels = True
+    # this is because numba
+    need_first_call_before_pipeline = True
+
     params_doc = """
     peak_sign : 'neg' | 'pos' | 'both'
         The peak sign to use for detection
