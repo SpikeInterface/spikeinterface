@@ -3,7 +3,6 @@ from typing import Optional
 import numpy as np
 from spikeinterface import SortingAnalyzer
 
-
 try:
     import numba
 
@@ -13,6 +12,15 @@ except ModuleNotFoundError as err:
 
 _methods = ("keep_first", "random", "keep_last", "keep_first_iterative", "keep_last_iterative")
 _methods_numpy = ("keep_first", "random", "keep_last")
+
+
+def is_threshold_disabled(value):
+    """Check if a threshold value is disabled (None or np.nan)."""
+    if value is None:
+        return True
+    if isinstance(value, float) and np.isnan(value):
+        return True
+    return False
 
 
 def _find_duplicated_spikes_numpy(

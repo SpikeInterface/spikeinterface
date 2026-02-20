@@ -444,10 +444,13 @@ class TracesWidget(BaseWidget):
         _layer_keys = data_plot["layer_keys"]
         if len(_layer_keys) > 1:
             _layer_keys = ["ALL"] + _layer_keys
-        self.layer_selector = W.Dropdown(
-            options=_layer_keys,
-            layout=W.Layout(width="95%"),
-        )
+            self.layer_selector = W.Dropdown(
+                options=_layer_keys,
+                layout=W.Layout(width="95%"),
+            )
+        else:
+            self.layer_selector = None
+
         self.mode_selector = W.Dropdown(
             options=["line", "map"],
             value=data_plot["mode"],
@@ -458,9 +461,12 @@ class TracesWidget(BaseWidget):
         self.channel_selector = ChannelSelector(self.rec0.channel_ids)
         self.channel_selector.value = list(data_plot["channel_ids"])
 
-        left_sidebar_elements = [
-            W.Label(value="layer"),
-            self.layer_selector,
+        if self.layer_selector is None:
+            left_sidebar_elements = []
+        else:
+            left_sidebar_elements = [W.Label(value="layer"), self.layer_selector]
+
+        left_sidebar_elements += [
             W.Label(value="mode"),
             self.mode_selector,
             self.scaler,
@@ -494,9 +500,10 @@ class TracesWidget(BaseWidget):
         self._update_plot()
 
         # callbacks:
+        if self.layer_selector is not None:
+            self.layer_selector.observe(self._retrieve_traces, names="value", type="change")
         # some widgets generate a full retrieve  + refresh
         self.time_slider.observe(self._retrieve_traces, names="value", type="change")
-        self.layer_selector.observe(self._retrieve_traces, names="value", type="change")
         self.channel_selector.observe(self._retrieve_traces, names="value", type="change")
         # other widgets only refresh
         self.scaler.observe(self._update_plot, names="value", type="change")
@@ -513,6 +520,8 @@ class TracesWidget(BaseWidget):
             display(self.widget)
 
     def _get_layers(self):
+        if self.layer_selector is None:
+            return self.data_plot["layer_keys"]
         layer = self.layer_selector.value
         if layer == "ALL":
             layer_keys = self.data_plot["layer_keys"]
@@ -523,8 +532,11 @@ class TracesWidget(BaseWidget):
         return layer_keys
 
     def _mode_changed(self, change=None):
-        if self.mode_selector.value == "map" and self.layer_selector.value == "ALL":
-            self.layer_selector.value = self.data_plot["layer_keys"][0]
+        if self.mode_selector.value == "map":
+            if self.layer_selector is not None and self.layer_selector.value == "ALL":
+                self.layer_selector.value = self.data_plot["layer_keys"][0]
+            else:
+                self._update_plot()
         else:
             self._update_plot()
 
@@ -614,15 +626,25 @@ class TracesWidget(BaseWidget):
 
         self.ax.clear()
         self.plot_matplotlib(data_plot, **backend_kwargs)
-        self.ax.set_title(layer_keys[0] if len(layer_keys) == 1 else "ALL")
+        if self.layer_selector is not None:
+            self.ax.set_title(layer_keys[0] if len(layer_keys) == 1 else "ALL")
 
         fig = self.ax.figure
         fig.canvas.draw()
         fig.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
+
         import importlib.util
 
         spec = importlib.util.find_spec("pyvips")
@@ -650,9 +672,9 @@ class TracesWidget(BaseWidget):
                 sampling_frequency=dp.recordings[layer_key].get_sampling_frequency(),
             )
 
-            tiled_layers.append(vv.TiledImageLayer(layer_key, img))
+            tiled_layers.append(vv_views.TiledImageLayer(layer_key, img))
 
-        self.view = vv.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
+        self.view = vv_views.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
 
         # traces currently doesn't display on the jupyter backend
         backend_kwargs["display"] = False

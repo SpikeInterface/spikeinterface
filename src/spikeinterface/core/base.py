@@ -26,6 +26,30 @@ from .core_tools import (
 )
 from .job_tools import _shared_job_kwargs_doc
 
+# base dtypes used throughout spikeinterface
+base_peak_dtype = [
+    ("sample_index", "int64"),
+    ("channel_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+]
+
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+
+base_period_dtype = [
+    ("segment_index", "int64"),
+    ("start_sample_index", "int64"),
+    ("end_sample_index", "int64"),
+]
+
+unit_period_dtype = base_period_dtype + [
+    ("unit_index", "int64"),
+]
+
 
 class BaseExtractor:
     """
@@ -1113,11 +1137,15 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    if not _check_same_version(class_name, dic["version"]):
+    is_old_version = not _check_same_version(class_name, dic["version"])
+    if is_old_version:
         warnings.warn(
             f"Versions are not the same. This might lead to compatibility errors. "
             f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
         )
+
+        if hasattr(extractor_class, "_handle_backward_compatibility"):
+            new_kwargs = extractor_class._handle_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
     extractor = extractor_class(**new_kwargs)

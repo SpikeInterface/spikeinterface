@@ -36,7 +36,6 @@ from spikeinterface.sorters.container_tools import (
     install_package_in_container,
 )
 
-
 REGISTRY = "spikeinterface"
 
 SORTER_DOCKER_MAP = dict(

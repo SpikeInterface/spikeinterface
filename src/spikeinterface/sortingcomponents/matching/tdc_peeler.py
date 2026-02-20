@@ -19,7 +19,6 @@ from .base import BaseTemplateMatching, _base_matching_dtype
 
 from spikeinterface.generation.drift_tools import DriftingTemplates
 
-
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
@@ -96,7 +95,7 @@ class TridesclousPeeler(BaseTemplateMatching):
         templates,
         return_output=True,
         peak_sign="neg",
-        exclude_sweep_ms=0.5,
+        exclude_sweep_ms=0.8,
         peak_shift_ms=0.2,
         detect_threshold=5,
         noise_levels=None,

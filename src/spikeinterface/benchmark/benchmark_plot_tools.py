@@ -842,6 +842,7 @@ def plot_performances_comparison(
     performance_colors={"accuracy": "g", "recall": "b", "precision": "r"},
     levels_to_group_by=None,
     ylim=(-0.1, 1.1),
+    axs=None,
 ):
     """
     Plot performances comparison for a study.
@@ -881,7 +882,8 @@ def plot_performances_comparison(
         [key in performance_colors for key in performance_names]
     ), f"performance_colors must have a color for each performance name: {performance_names}"
 
-    fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=figsize, squeeze=False)
+    if axs is None:
+        fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=figsize, squeeze=False)
     for i, key1 in enumerate(case_keys):
         for j, key2 in enumerate(case_keys):
             if i < j:
@@ -897,7 +899,8 @@ def plot_performances_comparison(
                         comp1 = study.get_result(sub_key1)["gt_comparison"]
                         comp2 = study.get_result(sub_key2)["gt_comparison"]
 
-                        for performance_name, color in performance_colors.items():
+                        for performance_name in performance_names:
+                            color = performance_colors[performance_name]
                             perf1 = comp1.get_performance()[performance_name]
                             perf2 = comp2.get_performance()[performance_name]
                             ax.scatter(perf2, perf1, marker=".", label=performance_name, color=color)
@@ -923,9 +926,11 @@ def plot_performances_comparison(
     patches = []
     from matplotlib.patches import Patch
 
-    for name, color in performance_colors.items():
-        patches.append(Patch(color=color, label=name))
+    for performance_name in performance_names:
+        color = performance_colors[performance_name]
+        patches.append(Patch(color=color, label=performance_name))
     ax.legend(handles=patches)
+    fig = ax.figure
     fig.subplots_adjust(hspace=0.1, wspace=0.1)
     return fig
 
@@ -964,7 +969,7 @@ def plot_performances_vs_depth_and_snr(
     fig : matplotlib.figure.Figure
         The resulting figure containing the plots.
     """
-    import pylab as plt
+    import matplotlib.pyplot as plt
 
     if case_keys is None:
         case_keys = list(study.cases.keys())
@@ -1082,3 +1087,102 @@ def plot_performance_losses(
     despine(axs)
 
     return fig
+
+
+def plot_some_over_merged(study, case_keys=None, overmerged_score=0.05, max_units=5, figsize=None):
+    """
+    Plot some waveforms of overmerged units.
+    """
+
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+    import matplotlib.pyplot as plt
+
+    figs = []
+    for count, key in enumerate(case_keys):
+        label = study.cases[key]["label"]
+        comp = study.get_result(key)["gt_comparison"]
+
+        unit_index = np.flatnonzero(np.sum(comp.agreement_scores.values > overmerged_score, axis=0) > 1)
+        overmerged_ids = comp.sorting2.unit_ids[unit_index]
+
+        n = min(len(overmerged_ids), max_units)
+        if n > 0:
+            fig, axs = plt.subplots(nrows=n, figsize=figsize, squeeze=False)
+            axs = axs[:, 0]
+            for i, unit_id in enumerate(overmerged_ids[:n]):
+                gt_unit_indices = np.flatnonzero(comp.agreement_scores.loc[:, unit_id].values > overmerged_score)
+                gt_unit_ids = comp.sorting1.unit_ids[gt_unit_indices]
+                ax = axs[i]
+                ax.set_title(f"unit {unit_id} - GTids {gt_unit_ids}")
+
+                analyzer = study.get_sorting_analyzer(key)
+
+                wf_template = analyzer.get_extension("templates")
+                templates = wf_template.get_templates(unit_ids=gt_unit_ids)
+                if analyzer.sparsity is not None:
+                    chan_mask = np.any(analyzer.sparsity.mask[gt_unit_indices, :], axis=0)
+                    templates = templates[:, :, chan_mask]
+                ax.plot(templates.swapaxes(1, 2).reshape(templates.shape[0], -1).T)
+                ax.set_xticks([])
+
+            fig.suptitle(label)
+            figs.append(fig)
+        else:
+            print(key, "no overmerged")
+
+    return figs
+
+
+def plot_some_over_splited(study, case_keys=None, oversplit_score=0.05, max_units=5, figsize=None):
+    """
+    Plot some waveforms of over-splitted units.
+    """
+    if case_keys is None:
+        case_keys = list(study.cases.keys())
+    import matplotlib.pyplot as plt
+
+    print(case_keys)
+    figs = []
+    for count, key in enumerate(case_keys):
+        print(key)
+        label = study.cases[key]["label"]
+        comp = study.get_result(key)["gt_comparison"]
+
+        gt_unit_indices = np.flatnonzero(np.sum(comp.agreement_scores.values > oversplit_score, axis=1) > 1)
+        oversplit_ids = comp.sorting1.unit_ids[gt_unit_indices]
+
+        n = min(len(oversplit_ids), max_units)
+        if n > 0:
+            fig, axs = plt.subplots(nrows=n, figsize=figsize, squeeze=False)
+            axs = axs[:, 0]
+            for i, unit_id in enumerate(oversplit_ids[:n]):
+                unit_indices = np.flatnonzero(comp.agreement_scores.loc[unit_id, :].values > oversplit_score)
+                unit_ids = comp.sorting2.unit_ids[unit_indices]
+                ax = axs[i]
+                ax.set_title(f"Gt unit {unit_id} - unit_ids: {unit_ids}")
+
+                results = study.get_result(key)
+                if "clustering_templates" in results:
+                    # ClusteringBenchmark has this
+                    templates = results["clustering_templates"]
+                elif "sorter_analyzer" in results:
+                    # SorterBenchmark has this
+                    templates = results["sorter_analyzer"].get_extension("templates").get_data(outputs="Templates")
+                else:
+                    raise ValueError("This benchmark do not have templates computed")
+
+                template_arrays = templates.get_dense_templates()[unit_indices, :, :]
+                if templates.sparsity is not None:
+                    chan_mask = np.any(templates.sparsity.mask[gt_unit_indices, :], axis=0)
+                    template_arrays = template_arrays[:, :, chan_mask]
+
+                ax.plot(template_arrays.swapaxes(1, 2).reshape(template_arrays.shape[0], -1).T)
+                ax.set_xticks([])
+
+            fig.suptitle(label)
+            figs.append(fig)
+        else:
+            print(key, "no over splited")
+
+    return figs

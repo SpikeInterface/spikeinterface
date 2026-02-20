@@ -7,8 +7,9 @@ import zarr
 
 from probeinterface import ProbeGroup
 
+from .base import minimum_spike_dtype
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
+from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
 from .core_tools import is_path_remote
@@ -294,6 +295,8 @@ class ZarrSortingExtractor(BaseSorting):
         spikes["unit_index"] = spikes_group["unit_index"][:]
         for i, (start, end) in enumerate(segment_slices_list):
             spikes["segment_index"][start:end] = i
+        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        self._cached_spike_vector = spikes
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)

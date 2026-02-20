@@ -12,7 +12,7 @@ from spikeinterface.core import (
     BaseSnippets,
     BaseSnippetsSegment,
 )
-from .basesorting import minimum_spike_dtype
+from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
@@ -387,7 +387,7 @@ class NumpySorting(BaseSorting):
         """
         Construct NumpySorting from a list of dict.
         The list length is the segment count.
-        Each dict have unit_ids as keys and spike times as values.
+        Each dict have unit_ids as keys and spike sample indices as values.
 
         Parameters
         ----------
@@ -406,10 +406,9 @@ class NumpySorting(BaseSorting):
             sample_indices = []
             unit_indices = []
             for u, unit_id in enumerate(unit_ids):
-                spike_times = units_dict[unit_id]
-                sample_indices.append(spike_times)
-
-                unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
+                spike_sample_indices = units_dict[unit_id]
+                sample_indices.append(spike_sample_indices)
+                unit_indices.append(np.full(spike_sample_indices.size, u, dtype="int64"))
             if len(sample_indices) > 0:
                 sample_indices = np.concatenate(sample_indices)
                 unit_indices = np.concatenate(unit_indices)
@@ -426,9 +425,6 @@ class NumpySorting(BaseSorting):
         spikes = np.concatenate(spikes)
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
-
-        # Trick : populate the cache with dict that already exists
-        sorting._cached_spike_trains = {seg_ind: d for seg_ind, d in enumerate(units_dict_list)}
 
         return sorting
 

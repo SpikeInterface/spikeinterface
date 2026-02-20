@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 # most important extractor are in spikeinterface.core
 from spikeinterface.core import (
     BinaryFolderRecording,
@@ -73,10 +72,8 @@ from .shybridextractors import (
 # snippers
 from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclus_snippets
 
-
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
-
 
 ###############################################################################################
 # the following code is necessary for controlling what the end user imports from spikeinterface.
