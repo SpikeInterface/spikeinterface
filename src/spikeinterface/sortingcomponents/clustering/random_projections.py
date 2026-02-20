@@ -134,7 +134,7 @@ class RandomProjectionClustering:
             print("Kept %d raw clusters" % len(labels))
 
         if params["merge_from_templates"] is not None:
-            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids = merge_peak_labels_from_templates(
+            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids, time_shifts = merge_peak_labels_from_templates(
                 peaks,
                 peak_labels,
                 unit_ids,
@@ -153,6 +153,8 @@ class RandomProjectionClustering:
                 probe=recording.get_probe(),
                 is_in_uV=False,
             )
+        else:
+            time_shifts = None
 
         labels = templates.unit_ids
 
@@ -162,4 +164,4 @@ class RandomProjectionClustering:
         if verbose:
             print("Kept %d non-duplicated clusters" % len(labels))
 
-        return labels, peak_labels, dict()
+        return labels, peak_labels, dict(time_shifts=time_shifts, templates=templates)
