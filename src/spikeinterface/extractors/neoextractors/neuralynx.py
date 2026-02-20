@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional
 from pathlib import Path
 
 from importlib.metadata import version
@@ -104,9 +101,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     def __init__(
         self,
         folder_path: str,
-        sampling_frequency: Optional[float] = None,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
+        sampling_frequency: float | None = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
     ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseSortingExtractor.__init__(

@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import numpy as np
-from typing import Union
 
 from .base import BaseWidget, to_attr
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
@@ -38,7 +35,7 @@ class CrossCorrelogramsWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_analyzer_or_sorting: Union[SortingAnalyzer, BaseSorting],
+        sorting_analyzer_or_sorting: SortingAnalyzer | BaseSorting,
         unit_ids=None,
         min_similarity_for_correlograms=0.2,
         window_ms=100.0,

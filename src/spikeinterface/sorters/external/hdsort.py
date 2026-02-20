@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from pathlib import Path
 import os
-from typing import Union
 import shutil
 import sys
 
@@ -12,13 +9,10 @@ from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.sorters.utils import ShellScript
 
-# from spikeinterface.extractors import MaxOneRecordingExtractor
 from spikeinterface.extractors.extractor_classes import HDSortSortingExtractor
 
-PathType = Union[str, Path]
 
-
-def check_if_installed(hdsort_path: Union[str, None]):
+def check_if_installed(hdsort_path: str | None):
     if hdsort_path is None:
         return False
     assert isinstance(hdsort_path, str)
@@ -37,7 +31,7 @@ class HDSortSorter(BaseSorter):
 
     sorter_name: str = "hdsort"
     compiled_name: str = "hdsort_compiled"
-    hdsort_path: Union[str, None] = os.getenv("HDSORT_PATH", None)
+    hdsort_path: str | None = os.getenv("HDSORT_PATH", None)
     requires_locations = False
     _default_params = {
         "detect_threshold": 4.2,
@@ -101,12 +95,12 @@ class HDSortSorter(BaseSorter):
         if p is None:
             return "unknown"
         else:
-            with open(str(Path(p) / "version.txt"), mode="r", encoding="utf8") as f:
+            with open(str(Path(p) / "version.txt"), encoding="utf8") as f:
                 version = f.readline()
         return version
 
     @staticmethod
-    def set_hdsort_path(hdsort_path: PathType):
+    def set_hdsort_path(hdsort_path: str | Path):
         HDSortSorter.hdsort_path = str(Path(hdsort_path).absolute())
         try:
             print("Setting HDSORT_PATH environment variable for subprocess calls to:", hdsort_path)
@@ -201,7 +195,7 @@ class HDSortSorter(BaseSorter):
         samplerate = recording.get_sampling_frequency()
         samplerate_fname = str(sorter_output_folder / "samplerate.txt")
         with open(samplerate_fname, "w") as f:
-            f.write("{}".format(samplerate))
+            f.write(f"{samplerate}")
 
         source_dir = Path(Path(__file__).parent)
         shutil.copy(str(source_dir / "hdsort_master.m"), str(sorter_output_folder))

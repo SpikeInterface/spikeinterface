@@ -1,6 +1,3 @@
-from __future__ import annotations
-from typing import Union
-
 import numpy as np
 from copy import deepcopy
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
@@ -134,8 +131,8 @@ class SplitSortingUnitSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         if unit_id in self._new_unit_ids:
             if start_frame is None:

@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import warnings
 import numpy as np
-from typing import Optional
 
 from probeinterface import Probe
 
@@ -60,7 +57,7 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
 
 
 def get_neuropixels_sample_shifts(
-    num_channels: int = 384, num_channels_per_adc: int = 12, num_cycles: Optional[int] = None
+    num_channels: int = 384, num_channels_per_adc: int = 12, num_cycles: int | None = None
 ) -> np.ndarray:
     """
     DEPRECATED

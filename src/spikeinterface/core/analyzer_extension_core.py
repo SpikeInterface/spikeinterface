@@ -677,7 +677,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         Returns
         -------
-        templates : np.array | Templates
+        templates :np.ndarray | Templates
             The returned templates (num_units, num_samples, num_channels)
         """
         if operator != "percentile":

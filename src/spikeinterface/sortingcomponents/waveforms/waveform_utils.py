@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 def to_temporal_representation(waveforms):
     """
     Transform waveforms to temporal representation. Collapses the channel dimension (spatial) leaving only

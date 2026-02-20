@@ -1,12 +1,9 @@
-from __future__ import annotations
-
 import os
 import json
 import struct
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Union, List
 
 import numpy as np
 
@@ -162,9 +159,9 @@ class MdaRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         if start_frame is None:
             start_frame = 0
@@ -279,8 +276,8 @@ class MdaSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         # must be implemented in subclass
         if start_frame is None:
@@ -407,7 +404,7 @@ class DiskReadMda:
             return self._read_chunk_1d(i1, N1)
         elif i3 < 0:
             if N1 != self.N1():
-                print("Unable to support N1 {} != {}".format(N1, self.N1()))
+                print(f"Unable to support N1 {N1} != {self.N1()}")
                 return None
             X = self._read_chunk_1d(i1 + N1 * i2, N1 * N2)
 
@@ -420,10 +417,10 @@ class DiskReadMda:
             return np.reshape(X, (N1, N2), order="F")
         else:
             if N1 != self.N1():
-                print("Unable to support N1 {} != {}".format(N1, self.N1()))
+                print(f"Unable to support N1 {N1} != {self.N1()}")
                 return None
             if N2 != self.N2():
-                print("Unable to support N2 {} != {}".format(N2, self.N2()))
+                print(f"Unable to support N2 {N2} != {self.N2()}")
                 return None
             if self._npy_mode:
                 A = np.load(self._path, mmap_mode="r")
@@ -500,7 +497,7 @@ def _read_header(path):
             uses64bitdims = True
             num_dims = -num_dims
         if num_dims < 1 or num_dims > 6:  # allow single dimension as of 12/6/17
-            print("Invalid number of dimensions: {}".format(num_dims))
+            print(f"Invalid number of dimensions: {num_dims}")
             f.close()
             return None
         dims = []
@@ -517,7 +514,7 @@ def _read_header(path):
                 dims.append(tmp0)
         dt = _dt_from_dt_code(dt_code)
         if dt is None:
-            print("Invalid data type code: {}".format(dt_code))
+            print(f"Invalid data type code: {dt_code}")
             f.close()
             return None
         H = MdaHeader(dt, dims)
@@ -623,7 +620,7 @@ def readmda(path):
         return readnpy(path)
     H = _read_header(path)
     if H is None:
-        print("Problem reading header of: {}".format(path))
+        print(f"Problem reading header of: {path}")
         return None
     f = open(path, "rb")
     try:
@@ -689,7 +686,7 @@ def _writemda(X, fname, dt):
     num_bytes_per_entry = get_num_bytes_per_entry_from_dt(dt)
     dt_code = _dt_code_from_dt(dt)
     if dt_code is None:
-        print("Unexpected data type: {}".format(dt))
+        print(f"Unexpected data type: {dt}")
         return False
 
     if type(fname) == str:
@@ -768,7 +765,7 @@ def appendmda(X, path):
         raise Exception("appendmda not yet implemented for .npy files")
     H = _read_header(path)
     if H is None:
-        print("Problem reading header of: {}".format(path))
+        print(f"Problem reading header of: {path}")
         return None
     if len(H.dims) != len(X.shape):
         print("Incompatible number of dimensions in appendmda", H.dims, X.shape)
@@ -827,7 +824,7 @@ def _header_from_file(f):
             uses64bitdims = True
             num_dims = -num_dims
         if num_dims < 1 or num_dims > 6:  # allow single dimension as of 12/6/17
-            print("Invalid number of dimensions: {}".format(num_dims))
+            print(f"Invalid number of dimensions: {num_dims}")
             return None
         dims = []
         dimprod = 1
@@ -843,7 +840,7 @@ def _header_from_file(f):
                 dims.append(tmp0)
         dt = _dt_from_dt_code(dt_code)
         if dt is None:
-            print("Invalid data type code: {}".format(dt_code))
+            print(f"Invalid data type code: {dt_code}")
             return None
         H = MdaHeader(dt, dims)
         if uses64bitdims:

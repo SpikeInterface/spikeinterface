@@ -1,4 +1,3 @@
-from __future__ import annotations
 from pathlib import Path
 import inspect
 from spikeinterface.core import BaseRecording

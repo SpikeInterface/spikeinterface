@@ -1,9 +1,6 @@
-from __future__ import annotations
-
 import warnings
 
 from pathlib import Path
-from typing import List, Union
 import numpy as np
 from spikeinterface.core import (
     BaseRecording,
@@ -65,13 +62,13 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         self,
         parent_recording: BaseRecording,
         templates: np.ndarray,
-        injected_sorting: Union[BaseSorting, None] = None,
-        nbefore: Union[List[int], int, None] = None,
+        injected_sorting: BaseSorting | None = None,
+        nbefore: list[int] | int | None = None,
         firing_rate: float = 10,
-        amplitude_factor: Union[np.ndarray, None] = None,
+        amplitude_factor: np.ndarray | None = None,
         amplitude_std: float = 0.0,
         refractory_period_ms: float = 2.0,
-        injected_sorting_folder: Union[str, Path, None] = None,
+        injected_sorting_folder: str | Path | None = None,
         seed=None,
     ):
 
@@ -172,12 +169,12 @@ class HybridSpikesRecording(InjectTemplatesRecording):
     def __init__(
         self,
         wvf_extractor,
-        injected_sorting: Union[BaseSorting, None] = None,
-        unit_ids: Union[List[int], None] = None,
+        injected_sorting: BaseSorting | None = None,
+        unit_ids: list[int] | None = None,
         max_injected_per_unit: int = 1000,
         injected_rate: float = 0.05,
         refractory_period_ms: float = 1.5,
-        injected_sorting_folder: Union[str, Path, None] = None,
+        injected_sorting_folder: str | Path | None = None,
     ) -> None:
 
         warnings.warn(

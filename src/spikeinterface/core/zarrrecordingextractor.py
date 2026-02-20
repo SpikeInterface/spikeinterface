@@ -2,8 +2,6 @@
 This file is for backwards compatibility with the old zarr extractor file structure.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from .zarrextractors import ZarrRecordingExtractor as ZarrRecordingExtractorNew
 

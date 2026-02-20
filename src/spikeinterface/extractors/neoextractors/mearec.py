@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 
@@ -45,7 +42,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
     NeoRawIOClass = "MEArecRawIO"
 
-    def __init__(self, file_path: Union[str, Path], all_annotations: bool = False, use_names_as_ids: bool = False):
+    def __init__(self, file_path: str | Path, all_annotations: bool = False, use_names_as_ids: bool = False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -84,7 +81,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     NeoRawIOClass = "MEArecRawIO"
     neo_returns_frames = False
 
-    def __init__(self, file_path: Union[str, Path]):
+    def __init__(self, file_path: str | Path):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
 
         sampling_frequency = self.read_sampling_frequency(file_path=file_path)
@@ -103,7 +100,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
 
         return neo_kwargs
 
-    def read_sampling_frequency(self, file_path: Union[str, Path]) -> float:
+    def read_sampling_frequency(self, file_path: str | Path) -> float:
         from h5py import File
 
         with File(file_path, "r") as f:

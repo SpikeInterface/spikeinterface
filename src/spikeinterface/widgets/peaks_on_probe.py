@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 
@@ -22,13 +20,13 @@ class PeaksOnProbeWidget(BaseWidget):
     ----------
     recording : Recording
         A SpikeInterface recording object.
-    peaks : np.array | list[np.ndarray]
+    peaks : np.ndarray | list[np.ndarray]
         SpikeInterface 'peaks' array created with `detect_peaks()`,
         an array of length num_peaks with entries:
             (sample_index, channel_index, amplitude, segment_index)
         To plot different sets of peaks in subplots, pass a list of peaks, each
         with a corresponding entry in a list passed to `peak_locations`.
-    peak_locations : np.array | list[np.ndarray]
+    peak_locations : np.ndarray | list[np.ndarray]
         A SpikeInterface 'peak_locations' array created with `localize_peaks()`.
         an array of length num_peaks with entries: (x, y)
         To plot multiple peaks in subplots, pass a list of `peak_locations`

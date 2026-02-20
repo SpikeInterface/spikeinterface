@@ -1,18 +1,11 @@
-from __future__ import annotations
-
-from pathlib import Path
-from typing import Union
 import warnings
 from packaging import version
-
 
 from spikeinterface.core import write_binary_recording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
 from spikeinterface.sorters.basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
-
-PathType = Union[str, Path]
 
 
 class Kilosort4Sorter(BaseSorter):
@@ -124,7 +117,7 @@ class Kilosort4Sorter(BaseSorter):
                 f"The sorter {cls.sorter_name} is not installed. Please install it with:\n{cls.installation_mesg}"
             )
         cls.check_sorter_version()
-        return super(Kilosort4Sorter, cls).initialize_folder(recording, output_folder, verbose, remove_existing_folder)
+        return super().initialize_folder(recording, output_folder, verbose, remove_existing_folder)
 
     @classmethod
     def check_sorter_version(cls):

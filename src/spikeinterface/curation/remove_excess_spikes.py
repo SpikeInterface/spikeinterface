@@ -1,5 +1,3 @@
-from __future__ import annotations
-from typing import Optional
 import numpy as np
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment, BaseRecording
@@ -75,9 +73,7 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
         self._parent_segment = parent_segment
         self._num_samples = num_samples
 
-    def get_unit_spike_train(
-        self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None
-    ) -> np.ndarray:
+    def get_unit_spike_train(self, unit_id, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=start_frame, end_frame=end_frame)
         max_spike = np.searchsorted(spike_train, self._num_samples, side="left")
         min_spike = np.searchsorted(spike_train, 0, side="left")

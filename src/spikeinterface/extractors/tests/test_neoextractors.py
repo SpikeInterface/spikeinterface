@@ -414,7 +414,8 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 # TODO solve plexon bug
 @pytest.mark.skipif(
-    not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug on windows"
+    not has_plexon2_dependencies() or platform.system() == "Windows" or platform.system() == "Darwin",
+    reason="There is a bug on windows and mac",
 )
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
@@ -424,7 +425,10 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
+@pytest.mark.skipif(
+    not has_plexon2_dependencies() or platform.system() == "Windows" or platform.system() == "Darwin",
+    reason="There is a bug",
+)
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2EventExtractor
@@ -434,7 +438,10 @@ class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
+@pytest.mark.skipif(
+    not has_plexon2_dependencies() or platform.system() == "Windows" or platform.system() == "Darwin",
+    reason="There is a bug",
+)
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]

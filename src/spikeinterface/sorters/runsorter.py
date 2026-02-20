@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import shutil
 import os
 from pathlib import Path
@@ -7,7 +5,6 @@ import json
 import pickle
 import platform
 from warnings import warn
-from typing import Optional, Union
 
 from spikeinterface import DEV_MODE
 import spikeinterface
@@ -106,13 +103,13 @@ _common_param_doc = """
 def run_sorter(
     sorter_name: str,
     recording: BaseRecording | dict,
-    folder: Optional[str] = None,
+    folder: str | None = None,
     remove_existing_folder: bool = False,
     delete_output_folder: bool = False,
     verbose: bool = False,
     raise_error: bool = True,
-    docker_image: Optional[Union[bool, str]] = False,
-    singularity_image: Optional[Union[bool, str]] = False,
+    docker_image: bool | str | None = False,
+    singularity_image: bool | str | None = False,
     delete_container_files: bool = True,
     with_output: bool = True,
     **sorter_params,
@@ -323,8 +320,8 @@ def run_sorter_container(
     sorter_name: str,
     recording: BaseRecording,
     mode: str,
-    container_image: Optional[str] = None,
-    folder: Optional[str] = None,
+    container_image: str | None = None,
+    folder: str | None = None,
     remove_existing_folder: bool = True,
     delete_output_folder: bool = False,
     verbose: bool = False,

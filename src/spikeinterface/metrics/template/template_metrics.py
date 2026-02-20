@@ -4,8 +4,6 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 22/04/2020
 """
 
-from __future__ import annotations
-
 import numpy as np
 import warnings
 from copy import deepcopy

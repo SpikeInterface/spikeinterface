@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment

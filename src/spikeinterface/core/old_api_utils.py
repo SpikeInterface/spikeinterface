@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Union
-
 import numpy as np
 import warnings
 from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
@@ -298,8 +294,8 @@ class OldToNewSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         return self._oldapi_sorting_extractor.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame

@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Union
-
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
@@ -137,7 +133,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
 class ZeroChannelPaddedRecording(BaseRecording):
 
-    def __init__(self, recording: BaseRecording, num_channels: int, channel_mapping: Union[list, None] = None):
+    def __init__(self, recording: BaseRecording, num_channels: int, channel_mapping: list | None = None):
         """Pads a recording with channels that contain only zero.
 
         Parameters
@@ -146,7 +142,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             recording to zero-pad
         num_channels : int
             Total number of channels in the zero-channel-padded recording
-        channel_mapping : Union[list, None], default: None
+        channel_mapping : list | None, default: None
             Mapping from the channel index in the original recording to the zero-channel-padded recording.
             If None, sorts the channel indices in ascending y channel location and puts them at the
             beginning of the zero-channel-padded recording.

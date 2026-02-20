@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from multiprocessing import get_context

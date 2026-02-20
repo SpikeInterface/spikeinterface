@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Optional
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -93,10 +90,10 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     def __init__(
         self,
         file_path,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
-        sampling_frequency: Optional[float] = None,
-        nsx_to_load: Optional[int | list | str] = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
+        sampling_frequency: float | None = None,
+        nsx_to_load: int | list | str | None = None,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseSortingExtractor.__init__(

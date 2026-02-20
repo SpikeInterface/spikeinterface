@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.core import SortingAnalyzer
 from .unit_waveforms import UnitWaveformsWidget
 from .base import to_attr

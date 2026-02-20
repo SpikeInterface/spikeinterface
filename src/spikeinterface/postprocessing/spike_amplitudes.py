@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
