@@ -244,7 +244,7 @@ class ChannelSelector(W.VBox):
             value=self.channel_ids[::-1],
             disabled=False,
             # layout=W.Layout(width=f"{width_cm}cm", height=f"{height_cm}cm"),
-            layout=W.Layout(height="100%", width="2cm"),
+            layout=W.Layout(height="100%", width="2.8cm"),
         )
         hbox = W.HBox(children=[self.slider, self.selector])
 
