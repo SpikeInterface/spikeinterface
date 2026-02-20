@@ -280,9 +280,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             else:
                 template_upsampled = template_single
 
-            print(
-                f"unit {unit_id}: detecting peaks and troughs on main channel (channel {extremum_channel_indices[unit_id]})"
-            )
             peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
                 sampling_frequency_up,
