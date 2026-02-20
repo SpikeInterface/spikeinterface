@@ -47,6 +47,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
     name = "tdc-peeler"
     need_noise_levels = True
+    # this is because numba
+    need_first_call_before_pipeline = True
     params_doc = """
         peak_sign : str
             'neg', 'pos' or 'both'
@@ -901,7 +903,7 @@ def fit_one_amplitude_with_neighbors(
 if HAVE_NUMBA:
     from numba import jit, prange
 
-    @jit(nopython=True)
+    @jit(nopython=True, nogil=True)
     def construct_prediction_sparse(
         spikes, traces, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, nbefore, additive
     ):
@@ -931,7 +933,7 @@ if HAVE_NUMBA:
                     if template_sparsity_mask[cluster_index, chan]:
                         chan_in_template += 1
 
-    @jit(nopython=True)
+    @jit(nopython=True, nogil=True)
     def numba_sparse_distance(
         wf, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, possible_clusters
     ):
@@ -967,7 +969,7 @@ if HAVE_NUMBA:
             distances[i] = sum_dist
         return distances
 
-    @jit(nopython=True)
+    @jit(nopython=True, nogil=True)
     def numba_best_shift_sparse(
         traces, sparse_template, sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity
     ):

@@ -2264,6 +2264,7 @@ class AnalyzerExtension:
       * _run()
       * _select_extension_data()
       * _merge_extension_data()
+      * _split_extension_data()
       * _get_data()
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
