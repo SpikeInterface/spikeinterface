@@ -412,7 +412,7 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
 
             for pos in in_chunk_pos:
                 sample_index = sample_indices[inds[pos]]
-                wf = traces[sample_index:sample_index+offset, :]
+                wf = traces[sample_index : sample_index + offset, :]
 
                 if sparsity_mask is None:
                     wfs[pos, :, :] = wf
@@ -658,12 +658,12 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
 
         onset = start + nbefore
         offset = nbefore + nafter
-        sample_indices = sub_spikes["sample_index"] - onset        
+        sample_indices = sub_spikes["sample_index"] - onset
         unit_indices = sub_spikes["unit_index"]
         spike_indices = s0 + np.arange(i0, i1)
 
         for sample_index, unit_index, spike_index in zip(sample_indices, unit_indices, spike_indices):
-            wf = traces[sample_index:sample_index+offset, :]
+            wf = traces[sample_index : sample_index + offset, :]
 
             if sparsity_mask is None:
                 all_waveforms[spike_index, :, :] = wf
@@ -1076,12 +1076,12 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
 
         onset = start + nbefore
         offset = nbefore + nafter
-        sample_indices = sub_spikes["sample_index"] - onset        
+        sample_indices = sub_spikes["sample_index"] - onset
         unit_indices = sub_spikes["unit_index"]
 
         for sample_index, unit_index in zip(sample_indices, unit_indices):
-            
-            wf = traces[sample_index:sample_index+offset, :]
+
+            wf = traces[sample_index : sample_index + offset, :]
 
             if sparsity_mask is None:
                 waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf
