@@ -56,7 +56,7 @@ SpikeInterface is a Python package designed to unify preexisting spike sorting t
 - MEDiCINe. [MEDiCINe: Motion Correction for Neural Electrophysiology Recordings](https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/handle_drift.html))
 - UnitRefine. [UnitRefine: A Community Toolbox for Automated Spike Sorting Curation](https://www.biorxiv.org/content/10.1101/2025.03.30.645770v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/tutorials_custom_index.html#automated-curation-tutorials))
 
-If you would like us to add another tool, or you would like to integrate your project with our package, please open an issue.
+If you would like us to add another tool, or you would like to integrate your project with our package, please [open an issue](https://github.com/SpikeInterface/spikeinterface/issues).
 
 With SpikeInterface, users can:
 
