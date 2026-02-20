@@ -324,7 +324,7 @@ class MockWaveformExtractor:
         ext = self.sorting_analyzer.get_extension("templates")
 
         if mode == "percentile":
-            key = f"pencentile_{percentile}"
+            key = f"percentile_{percentile}"
         else:
             key = mode
 

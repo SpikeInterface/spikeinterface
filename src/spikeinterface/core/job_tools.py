@@ -433,8 +433,14 @@ class ChunkRecordingExecutor:
             preferred_mp_context = recording.get_preferred_mp_context()
             if preferred_mp_context is not None and preferred_mp_context != mp_context:
                 warnings.warn(
+<<<<<<< HEAD
                     f"You processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
                     f"So use mp_context='{preferred_mp_context}' instead")
+=======
+                    f"Your processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
+                    f"So use mp_context='{preferred_mp_context}' instead"
+                )
+>>>>>>> 2bc90064897125b0d7d9bc936c119fa5415b3ec2
                 mp_context = preferred_mp_context
 
         self.mp_context = mp_context
@@ -498,9 +504,14 @@ class ChunkRecordingExecutor:
                     recording_slices, desc=f"{self.job_name} (no parallelization)", total=len(recording_slices)
                 )
 
-            worker_dict = self.init_func(*self.init_args)
+            init_args = self.init_args
             if self.need_worker_index:
-                worker_dict["worker_index"] = 0
+                worker_index = 0
+                init_args = init_args + (worker_index,)
+
+            worker_dict = self.init_func(*init_args)
+            if self.need_worker_index:
+                worker_dict["worker_index"] = worker_index
 
             for segment_index, frame_start, frame_stop in recording_slices:
                 res = self.func(segment_index, frame_start, frame_stop, worker_dict)
@@ -544,7 +555,13 @@ class ChunkRecordingExecutor:
 
                     if self.progress_bar:
                         results = tqdm(
+<<<<<<< HEAD
                             results, desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})", total=len(recording_slices)
+=======
+                            results,
+                            desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})",
+                            total=len(recording_slices),
+>>>>>>> 2bc90064897125b0d7d9bc936c119fa5415b3ec2
                         )
 
                     for res in results:
@@ -633,11 +650,6 @@ global _process_func_wrapper
 
 def process_worker_initializer(func, init_func, init_args, max_threads_per_worker, need_worker_index, lock, array_pid):
     global _process_func_wrapper
-    if max_threads_per_worker is None:
-        worker_dict = init_func(*init_args)
-    else:
-        with threadpool_limits(limits=max_threads_per_worker):
-            worker_dict = init_func(*init_args)
 
     if need_worker_index:
         child_process = multiprocessing.current_process()
@@ -648,8 +660,18 @@ def process_worker_initializer(func, init_func, init_args, max_threads_per_worke
                 worker_index = i
                 array_pid[i] = child_process.ident
                 break
-        worker_dict["worker_index"] = worker_index
         lock.release()
+
+        init_args = init_args + (worker_index,)
+
+    if max_threads_per_worker is None:
+        worker_dict = init_func(*init_args)
+    else:
+        with threadpool_limits(limits=max_threads_per_worker):
+            worker_dict = init_func(*init_args)
+
+    if need_worker_index:
+        worker_dict["worker_index"] = worker_index
 
     _process_func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_worker)
 
@@ -666,6 +688,15 @@ global _thread_started
 def thread_worker_initializer(
     func, init_func, init_args, max_threads_per_worker, thread_local_data, need_worker_index, lock
 ):
+
+    if need_worker_index:
+        lock.acquire()
+        global _thread_started
+        worker_index = _thread_started
+        _thread_started += 1
+        lock.release()
+        init_args = init_args + (worker_index,)
+
     if max_threads_per_worker is None:
         worker_dict = init_func(*init_args)
     else:
@@ -673,12 +704,7 @@ def thread_worker_initializer(
             worker_dict = init_func(*init_args)
 
     if need_worker_index:
-        lock.acquire()
-        global _thread_started
-        worker_index = _thread_started
-        _thread_started += 1
         worker_dict["worker_index"] = worker_index
-        lock.release()
 
     thread_local_data.func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_worker)
 

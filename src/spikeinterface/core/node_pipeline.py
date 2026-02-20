@@ -618,11 +618,7 @@ def run_node_pipeline(
         # See need_first_call_before_pipeline : this trigger numba compilation before the run
         node0._first_call_before_pipeline()
 
-    if job_kwargs["n_jobs"] != 1 and job_kwargs["pool_engine"] == "thread":
-        need_shallow_copy = True
-    else:
-        need_shallow_copy = False
-    init_args = (recording, nodes, need_shallow_copy, skip_after_n_peaks_per_worker)
+    init_args = (recording, nodes, skip_after_n_peaks_per_worker)
 
     processor = ChunkRecordingExecutor(
         recording,

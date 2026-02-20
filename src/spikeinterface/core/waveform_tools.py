@@ -1003,6 +1003,7 @@ def _init_worker_estimate_templates(
     nafter,
     return_in_uV,
     sparsity_mask,
+    worker_index,
 ):
     worker_dict = {}
     worker_dict["recording"] = recording

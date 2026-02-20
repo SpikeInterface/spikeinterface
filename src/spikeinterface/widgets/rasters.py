@@ -53,7 +53,7 @@ class BaseRasterWidget(BaseWidget):
     y_ticks : dict | None, default: None
         Ticks on y-axis, passed to `set_yticks`. If None, default ticks are used.
     hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
+        For figpack backend, if True the unit selector is not displayed
     segment_boundary_kwargs : dict | None, default: None
         Additional arguments for the segment boundary lines, passed to `matplotlib.axvline`
     backend : str | None, default None
@@ -327,7 +327,6 @@ class BaseRasterWidget(BaseWidget):
 
         backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
-        self._update_plot()
 
     def _update_plot(self, change=None):
         for ax in self.axes.flatten():
@@ -344,9 +343,6 @@ class BaseRasterWidget(BaseWidget):
 
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
-
-
-import numpy as np
 
 
 class RasterWidget(BaseRasterWidget):

@@ -64,6 +64,10 @@ jobs:
           pip install -e .[test]
         shell: bash
 
+      - name: Install legacy setuptools for KS4 < 4.0.19
+        if: matrix.ks_version == '4.0.16' || matrix.ks_version == '4.0.17' || matrix.ks_version == '4.0.18'
+        run: pip install setuptools==78.0.2
+
       - name: Install Kilosort
         run: |
           pip install kilosort==${{ matrix.ks_version }}
