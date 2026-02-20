@@ -303,7 +303,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
 
         arr = self.data["acgs"]
-        num_dims = len(self.data["bins"])
+        num_dims = arr.shape[1]
         all_new_units = new_sorting_analyzer.unit_ids
         new_acgs = np.zeros((len(all_new_units), num_dims), dtype=arr.dtype)
 
