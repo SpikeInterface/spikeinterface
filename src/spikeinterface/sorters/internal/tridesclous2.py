@@ -350,6 +350,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
         auto_merge = True
+
         analyzer_final = None
         if auto_merge:
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus
