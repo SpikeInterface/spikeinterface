@@ -7,7 +7,7 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
-def detect_peaks(
+def detect_peaks_on_templates(
     template,
     extremum_name,
     prominence,
@@ -171,7 +171,7 @@ def get_trough_and_peak_idx(
 
     # --- Detect troughs ---
     peaks_info = {}
-    peaks_info_trough = detect_peaks(
+    peaks_info_trough = detect_peaks_on_templates(
         template=-template,
         extremum_name="trough",
         start_search_index=left_edge,
@@ -192,7 +192,7 @@ def get_trough_and_peak_idx(
         min_peak_trough_dist = min_extremum_distance_samples
 
     # --- Find peaks before the main trough ---
-    peaks_info_before = detect_peaks(
+    peaks_info_before = detect_peaks_on_templates(
         template=template,
         extremum_name="peak_before",
         prominence=min_prominence,
@@ -202,7 +202,7 @@ def get_trough_and_peak_idx(
     peaks_info.update(peaks_info_before)
 
     # --- Find peaks after the main trough (repolarization peaks) ---
-    peaks_info_after = detect_peaks(
+    peaks_info_after = detect_peaks_on_templates(
         template=template,
         extremum_name="peak_after",
         prominence=min_prominence,
