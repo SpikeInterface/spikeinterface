@@ -9,11 +9,11 @@ state-of-the-art spike sorters, post-process and curate the output, compute qual
 
 If you use SpikeInterface, you are also using code and ideas from many other projects. Our codebase would be tiny without the amazing algorithms and formats that we interface with. See them all, and how to cite them, on our [references page](https://spikeinterface.readthedocs.io/en/latest/references.html). In the past year, we have added support for the following tools:
 
-- SLAy. [SLAy-ing oversplitting errors in high-density electrophysiology spike sorting](https://www.biorxiv.org/content/10.1101/2025.06.20.660590v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/modules/curation.html#auto-merging-units))
-- Lupin, spkykingcicus2 and tridesclous2. [Opening the black box: a modular approach to spike sorting](https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
-- rtsort. [RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
-- MEDiCINe. [MEDiCINe: Motion Correction for Neural Electrophysiology Recordings](https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/handle_drift.html))
-- UnitRefine. [UnitRefine: A Community Toolbox for Automated Spike Sorting Curation](https://www.biorxiv.org/content/10.1101/2025.03.30.645770v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/tutorials_custom_index.html#automated-curation-tutorials))
+- SLAy. `SLAy-ing oversplitting errors in high-density electrophysiology spike sorting <https://www.biorxiv.org/content/10.1101/2025.06.20.660590v2>`_ (`docs <https://spikeinterface.readthedocs.io/en/latest/modules/curation.html#auto-merging-units>`_)
+- Lupin, Spykingcicus2 and Tridesclous2. `Opening the black box: a modular approach to spike sorting <https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1>`_ (`docs <https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters>`_)
+- RT-Sort. `RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438>`_ (`docs <https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters>`_)
+- MEDiCINe. `MEDiCINe: Motion Correction for Neural Electrophysiology Recordings <https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025>`_ (`docs <https://spikeinterface.readthedocs.io/en/latest/how_to/handle_drift.html>`_)
+- UnitRefine. `UnitRefine: A Community Toolbox for Automated Spike Sorting Curation <https://www.biorxiv.org/content/10.1101/2025.03.30.645770v2>`_ (`docs <https://spikeinterface.readthedocs.io/en/latest/tutorials_custom_index.html#automated-curation-tutorials>`_)
 
 If you would like us to add another tool, or you would like to integrate your project with our package, please [open an issue](https://github.com/SpikeInterface/spikeinterface/issues).
 
@@ -30,7 +30,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 - pre-process extracellular recordings.
 - run many popular, semi-automatic spike sorters (kilosort1-4, mountainsort4-5, spykingcircus,
   tridesclous, ironclust, herdingspikes, yass, waveclus)
-- run sorters developed in house (lupin, spkykingcicus2, tridesclous2, simple) that compete with
+- run sorters developed in house (lupin, spykingcicus2, tridesclous2, simple) that compete with
   kilosort4
 - run theses polar sorters without installation using containers (Docker/Singularity).
 - post-process sorted datasets using th SortingAnalyzer
