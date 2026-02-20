@@ -2025,10 +2025,14 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 
         all_metrics_data = []
-        for extension_name, ext in self.extensions.items():
-            if isinstance(ext, BaseMetricExtension):
-                metric_data = ext.get_data()
-                all_metrics_data.append(metric_data)
+        for extension_name in get_available_analyzer_extensions():
+            extension_class = get_extension_class(extension_name)
+            if issubclass(extension_class, BaseMetricExtension):
+                # load available metric extensions even if not yet loaded
+                if self.has_extension(extension_name):
+                    ext = self.get_extension(extension_name)
+                    metric_data = ext.get_data()
+                    all_metrics_data.append(metric_data)
 
         if len(all_metrics_data) > 0:
             metrics_df = pd.concat(all_metrics_data, axis=1)

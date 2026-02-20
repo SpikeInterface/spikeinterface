@@ -6,8 +6,7 @@ Amplitude median (:code:`amplitude_median`)
 Calculation
 -----------
 
-Geometric median amplitude is computed in the log domain.
-The metric is then converted back to original units.
+Computed simply as the median of the amplitudes for each unit.
 
 Expectation and use
 -------------------

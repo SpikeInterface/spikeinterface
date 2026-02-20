@@ -40,6 +40,8 @@ def unitrefine_label_units(
     The approach is described in [Jain]_.
     """
     import pandas as pd
+    import warnings
+    from sklearn.exceptions import InconsistentVersionWarning
 
     if noise_neural_classifier is None and sua_mua_classifier is None:
         raise ValueError(
@@ -51,11 +53,13 @@ def unitrefine_label_units(
 
     if noise_neural_classifier is not None:
         # 1. apply the noise/neural classification and remove noise
-        noise_neuron_labels = model_based_label_units(
-            sorting_analyzer=sorting_analyzer,
-            trust_model=True,
-            **get_model_based_classification_kwargs(noise_neural_classifier),
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+            noise_neuron_labels = model_based_label_units(
+                sorting_analyzer=sorting_analyzer,
+                trust_model=True,
+                **get_model_based_classification_kwargs(noise_neural_classifier),
+            )
         if set(noise_neuron_labels["prediction"]) != {"noise", "neural"}:
             warnings.warn(
                 "The noise/neural classifier did not return the expected labels 'noise' and 'neural'. "
@@ -70,11 +74,13 @@ def unitrefine_label_units(
     if sua_mua_classifier is not None:
         # 2. apply the sua/mua classification and aggregate results
         if len(sorting_analyzer.unit_ids) > len(noise_units):
-            sua_mua_labels = model_based_label_units(
-                sorting_analyzer=sorting_analyzer_neural,
-                trust_model=True,
-                **get_model_based_classification_kwargs(sua_mua_classifier),
-            )
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+                sua_mua_labels = model_based_label_units(
+                    sorting_analyzer=sorting_analyzer_neural,
+                    trust_model=True,
+                    **get_model_based_classification_kwargs(sua_mua_classifier),
+                )
             if set(sua_mua_labels["prediction"]) != {"sua", "mua"}:
                 warnings.warn(
                     "The sua/mua classifier did not return the expected labels 'sua' and 'mua'. "

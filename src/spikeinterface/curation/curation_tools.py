@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional
+
 import numpy as np
-from spikeinterface import SortingAnalyzer
 
 try:
     import numba
@@ -21,6 +21,41 @@ def is_threshold_disabled(value):
     if isinstance(value, float) and np.isnan(value):
         return True
     return False
+
+
+def get_labeling_summary(unit_labels: np.ndarray, possible_labels=None) -> dict:
+    """Get counts and percentages for each unit label.
+
+    Parameters
+    ----------
+    unit_labels : np.ndarray
+        Array of unit labels (strings).
+    possible_labels : list of str, optional
+        List of possible labels to include in the summary. If None, all unique labels in unit_labels are used.
+
+    Returns
+    -------
+    summary : dict
+        Dictionary with total_units, counts, and percentages for each label.
+    """
+    n_total = len(unit_labels)
+    unique_labels, counts = np.unique(unit_labels, return_counts=True)
+    if possible_labels is None:
+        possible_labels = unique_labels
+    else:
+        # check all unique labels are in possible_labels
+        for label in unique_labels:
+            if label not in possible_labels:
+                raise ValueError(f"Label {label} not in possible_labels")
+
+    empty_label_dict = {label: 0 for label in possible_labels}
+
+    summary = {"total_units": n_total, "counts": empty_label_dict.copy(), "percentages": empty_label_dict.copy()}
+    for label, count in zip(unique_labels, counts):
+        summary["counts"][label] = int(count)
+        summary["percentages"][label] = round(100 * count / n_total, 1)
+
+    return summary
 
 
 def _find_duplicated_spikes_numpy(

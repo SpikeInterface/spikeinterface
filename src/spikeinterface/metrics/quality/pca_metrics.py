@@ -555,7 +555,7 @@ def nearest_neighbors_isolation(
     n_components : int, default: 10
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
-        The radius, in um, that channels need to be within the peak channel to be included.
+        The radius, in µm, that channels need to be within the peak channel to be included.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
@@ -769,7 +769,7 @@ def nearest_neighbors_noise_overlap(
     n_components : int, default: 10
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
-        The radius, in um, that channels need to be within the peak channel to be included.
+        The radius, in µm, that channels need to be within the peak channel to be included.
     peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.

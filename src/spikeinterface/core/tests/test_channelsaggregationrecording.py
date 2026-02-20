@@ -189,7 +189,7 @@ def test_aggregation_labeling_for_lists():
     assert np.all(user_group_property == [6, 6, 7, 7])
 
 
-def test_aggretion_labelling_for_dicts():
+def test_aggretion_labeling_for_dicts():
     """Aggregated dicts of recordings get different labels depending on their underlying `property`s"""
 
     recording1 = generate_recording(num_channels=4, durations=[20], set_probe=False)
