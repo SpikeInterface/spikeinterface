@@ -58,19 +58,17 @@ def detect_peaks(
             locs_half, props_half = find_peaks(template_for_search, prominence=lower_prominence, width=width)
             locs_half = locs_half + start_search_index
 
-            props = {}
-            if len(locs_half) > 1:
+            if len(locs_half) == 1:  # Exactly 1 peak found at half threshold, use it
+                locs = locs_half
+                props = props_half
+            elif len(locs_half) > 1:  # Multiple peaks found at half threshold, select most prominent
                 prominences = props_half.get("prominences", np.zeros(len(locs_half)))
-
                 best_idx = np.nanargmax(prominences)
                 locs = np.array([locs_half[best_idx]])
                 props = {k: np.array([v[best_idx]]) for k, v in props_half.items()}
-            elif len(locs_half) == 0:
+            else:  # No peaks found at half threshold, use global maximum
                 locs = np.array([start_search_index + np.argmax(template_for_search)], dtype=int)
-
-            else:  # Exactly 1 peak found at half threshold, use it
-                locs = locs_half
-                props = props_half
+                props = {}
         else:
             locs = locs_main
             props = props_main
