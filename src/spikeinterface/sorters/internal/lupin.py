@@ -310,8 +310,8 @@ class LupinSorter(ComponentsBasedSorter):
             job_kwargs=job_kwargs,
         )
 
-        if more_outs['time_shifts'] is not None:
-            time_shifts = more_outs['time_shifts']
+        if more_outs["time_shifts"] is not None:
+            time_shifts = more_outs["time_shifts"]
             peaks["sample_index"] += time_shifts
 
         mask = clustering_label >= 0
