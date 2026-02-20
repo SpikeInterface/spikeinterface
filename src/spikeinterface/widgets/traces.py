@@ -404,6 +404,7 @@ class TracesWidget(BaseWidget):
                 self.figure, self.ax = plt.subplots(
                     figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm), layout="constrained"
                 )
+                self.figure.canvas.header_visible = False
                 plt.show()
 
         if not self.rec0.has_time_vector(segment_index=data_plot["segment_index"]):
@@ -467,7 +468,7 @@ class TracesWidget(BaseWidget):
             left_sidebar_elements = [W.Label(value="layer"), self.layer_selector]
 
         left_sidebar_elements += [
-            W.Label(value="mode"),
+            W.Label(value="Mode"),
             self.mode_selector,
             self.scaler,
             self.colorbar,
@@ -475,6 +476,7 @@ class TracesWidget(BaseWidget):
         left_sidebar = W.VBox(
             children=left_sidebar_elements,
             align_items="center",
+            layout=W.Layout(width="2.2cm"),
         )
         if self.event_selector is None:
             right_sidebar = self.channel_selector

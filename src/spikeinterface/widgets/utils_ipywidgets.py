@@ -90,13 +90,13 @@ class TimeSlider(W.HBox):
             step=1,
             min=0.01,
             max=30.0,
-            description="win (s)",
+            description="Window (s)",
             layout=W.Layout(width="auto"),
             # layout=W.Layout(width=f'10%')
         )
         self.window_sizer.observe(self.win_size_changed, names="value", type="change")
 
-        self.segment_selector = W.Dropdown(description="segment", options=list(range(self.num_segments)))
+        self.segment_selector = W.Dropdown(description="Segment", options=list(range(self.num_segments)))
         self.segment_selector.observe(self.segment_changed, names="value", type="change")
 
         super(W.HBox, self).__init__(
