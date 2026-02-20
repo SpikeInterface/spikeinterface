@@ -20,7 +20,7 @@ class CrossCorrelogramsWidget(BaseWidget):
     unit_ids  list or None, default: None
         List of unit ids
     min_similarity_for_correlograms : float, default: 0.2
-        For sortingview backend. Threshold for computing pair-wise cross-correlograms.
+        For figpack backend. Threshold for computing pair-wise cross-correlograms.
         If template similarity between two units is below this threshold, the cross-correlogram is not displayed.
         For auto-correlograms plot, this is automatically set to None.
     window_ms : float, default: 100.0
@@ -30,7 +30,7 @@ class CrossCorrelogramsWidget(BaseWidget):
         Bin size in ms. If correlograms are already computed (e.g. with SortingAnalyzer),
         this argument is ignored
     hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
+        For figpack backend, if True the unit selector is not displayed
     unit_colors : dict | None, default: None
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
@@ -127,8 +127,18 @@ class CrossCorrelogramsWidget(BaseWidget):
             self.axes[-1, i].set_xlabel("CCG (ms)")
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
@@ -144,14 +154,12 @@ class CrossCorrelogramsWidget(BaseWidget):
             for j in range(i, len(unit_ids)):
                 if similarity[i, j] >= dp.min_similarity_for_correlograms:
                     cc_items.append(
-                        vv.CrossCorrelogramItem(
+                        vv_views.CrossCorrelogramItem(
                             unit_id1=unit_ids[i],
                             unit_id2=unit_ids[j],
                             bin_edges_sec=(dp.bins / 1000.0).astype("float32"),
                             bin_counts=dp.correlograms[i, j].astype("int32"),
                         )
                     )
-
-        self.view = vv.CrossCorrelograms(cross_correlograms=cc_items, hide_unit_selector=dp.hide_unit_selector)
-
+        self.view = vv_views.CrossCorrelograms(cross_correlograms=cc_items, hide_unit_selector=dp.hide_unit_selector)
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)

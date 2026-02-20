@@ -20,6 +20,7 @@ from .curation_format import validate_curation_dict, curation_label_to_dataframe
 from .sortingview_curation import apply_sortingview_curation
 
 # automated curation
+from .threshold_metrics_curation import threshold_metrics_label_units
 from .model_based_curation import model_based_label_units, load_model, auto_label_units
 from .train_manual_curation import train_model, get_default_classifier_search_spaces
 from .unitrefine_curation import unitrefine_label_units

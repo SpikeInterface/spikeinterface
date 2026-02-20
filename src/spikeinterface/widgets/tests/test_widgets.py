@@ -15,14 +15,23 @@ from spikeinterface import (
     create_sorting_analyzer,
 )
 
-
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
 from spikeinterface.preprocessing import scale, correct_motion
 
+HAS_SORTINGVIEW = importlib.util.find_spec("sortingview") is not None
+HAS_FIGPACK = (
+    importlib.util.find_spec("figpack") is not None and importlib.util.find_spec("figpack_spike_sorting") is not None
+)
+
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
-SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW"))
+SKIP_SORTINGVIEW = bool(os.getenv("SKIP_SORTINGVIEW")) or not HAS_SORTINGVIEW
+SKIP_FIGPACK = bool(os.getenv("SKIP_FIGPACK")) or not HAS_FIGPACK
+FIGPACK_UPLOAD = bool(os.getenv("FIGPACK_API_KEY"))
+
+
+os.environ["FIGPACK_UPLOAD"] = "1" if FIGPACK_UPLOAD else "0"
 
 
 class TestWidgets(unittest.TestCase):
@@ -109,14 +118,17 @@ class TestWidgets(unittest.TestCase):
 
         if (ON_GITHUB and not KACHERY_CLOUD_SET) or (SKIP_SORTINGVIEW):
             cls.skip_backends.append("sortingview")
+        if SKIP_FIGPACK:
+            cls.skip_backends.append("figpack")
 
         print(f"Widgets tests: skipping backends - {cls.skip_backends}")
 
         cls.backend_kwargs = {
             "matplotlib": {},
-            "sortingview": {},
+            "figpack": {"display": False},
             "ipywidgets": {"display": False},
             "spikeinterface_gui": {},
+            "sortingview": {},
         }
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
@@ -128,7 +140,7 @@ class TestWidgets(unittest.TestCase):
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
         for backend in possible_backends:
-            if ON_GITHUB and backend == "sortingview":
+            if ON_GITHUB and backend in ("sortingview", "figpack"):
                 continue
             if backend not in self.skip_backends:
                 sw.plot_traces(
@@ -143,7 +155,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-                if backend != "sortingview":
+                if backend not in ("sortingview", "figpack"):
                     sw.plot_traces(self.recording, mode="auto", backend=backend, **self.backend_kwargs[backend])
                     sw.plot_traces(
                         self.recording,
@@ -300,7 +312,7 @@ class TestWidgets(unittest.TestCase):
                         backend=backend,
                         **self.backend_kwargs[backend],
                     )
-                if backend != "sortingview":
+                if backend not in ("sortingview", "figpack"):
                     sw.plot_unit_templates(
                         self.sorting_analyzer_sparse,
                         unit_ids=unit_ids,
