@@ -379,6 +379,8 @@ class WobbleMatch(BaseTemplateMatching):
     shared_memory : bool, default True
             If True, the overlaps are stored in shared memory, which is more efficient when
             using numerous cores
+    mp_context : multiprocessing context, default None
+        The multiprocessing context to use for shared memory arrays.
     """
 
     def __init__(
@@ -390,6 +392,7 @@ class WobbleMatch(BaseTemplateMatching):
         engine="numpy",
         torch_device="cpu",
         shared_memory=True,
+        mp_context=None,
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
@@ -431,13 +434,21 @@ class WobbleMatch(BaseTemplateMatching):
         self.shared_memory = shared_memory
 
         if self.shared_memory:
+            from spikeinterface.core.globals import get_global_job_kwargs
+            from spikeinterface.core.core_tools import make_shared_array
+
+            # if None, use global context
+            if mp_context is None:
+                mp_context = get_global_job_kwargs()["mp_context"]
+
             self.max_overlaps = max([len(o) for o in pairwise_convolution])
             num_samples = len(pairwise_convolution[0][0])
             num_templates = len(templates_array)
             num_jittered = num_templates * params.jitter_factor
-            from spikeinterface.core.core_tools import make_shared_array
 
-            arr, shm = make_shared_array((num_jittered, self.max_overlaps, num_samples), dtype=np.float32)
+            arr, shm = make_shared_array(
+                (num_jittered, self.max_overlaps, num_samples), dtype=np.float32, mp_context=mp_context
+            )
             for jittered_index in range(num_jittered):
                 units_are_overlapping = sparsity.unit_overlap[jittered_index, :]
                 overlapping_units = np.where(units_are_overlapping)[0]

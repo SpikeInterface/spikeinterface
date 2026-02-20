@@ -214,8 +214,14 @@ def add_suffix(file_path, possible_suffix):
     return file_path
 
 
-def make_shared_array(shape, dtype):
+def make_shared_array(shape, dtype, mp_context=None):
+    import multiprocessing as mp
     from multiprocessing.shared_memory import SharedMemory
+
+    # we need to set the mp context before creating the shared memory, to avoid
+    # SemLock errors
+    if mp_context is not None:
+        mp.set_start_method(mp_context, force=True)
 
     dtype = np.dtype(dtype)
     shape = tuple(int(x) for x in shape)  # We need to be sure that shape comes in int instead of numpy scalars
