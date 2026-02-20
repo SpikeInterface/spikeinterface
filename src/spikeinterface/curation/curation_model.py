@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
-from typing import Literal
+from typing import Literal, List
 from itertools import chain, combinations
 import numpy as np
 
@@ -497,7 +497,7 @@ class SequentialCuration(BaseModel):
                     )
             for split in curation.splits:
                 if split.new_unit_ids is None:
-                    raiseValueError(
+                    raise ValueError(
                         "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
                     )
 
