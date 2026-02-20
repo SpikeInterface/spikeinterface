@@ -134,13 +134,15 @@ class RandomProjectionClustering:
             print("Kept %d raw clusters" % len(labels))
 
         if params["merge_from_templates"] is not None:
-            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids, time_shifts = merge_peak_labels_from_templates(
-                peaks,
-                peak_labels,
-                unit_ids,
-                templates_array,
-                np.ones((len(unit_ids), num_chans), dtype=bool),
-                **params["merge_from_templates"],
+            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids, time_shifts = (
+                merge_peak_labels_from_templates(
+                    peaks,
+                    peak_labels,
+                    unit_ids,
+                    templates_array,
+                    np.ones((len(unit_ids), num_chans), dtype=bool),
+                    **params["merge_from_templates"],
+                )
             )
 
             templates = Templates(
