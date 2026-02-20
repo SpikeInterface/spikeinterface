@@ -433,14 +433,9 @@ class ChunkRecordingExecutor:
             preferred_mp_context = recording.get_preferred_mp_context()
             if preferred_mp_context is not None and preferred_mp_context != mp_context:
                 warnings.warn(
-<<<<<<< HEAD
-                    f"You processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
-                    f"So use mp_context='{preferred_mp_context}' instead")
-=======
                     f"Your processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
                     f"So use mp_context='{preferred_mp_context}' instead"
                 )
->>>>>>> 2bc90064897125b0d7d9bc936c119fa5415b3ec2
                 mp_context = preferred_mp_context
 
         self.mp_context = mp_context
@@ -555,13 +550,9 @@ class ChunkRecordingExecutor:
 
                     if self.progress_bar:
                         results = tqdm(
-<<<<<<< HEAD
-                            results, desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})", total=len(recording_slices)
-=======
                             results,
                             desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})",
                             total=len(recording_slices),
->>>>>>> 2bc90064897125b0d7d9bc936c119fa5415b3ec2
                         )
 
                     for res in results:
