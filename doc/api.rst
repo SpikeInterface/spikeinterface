@@ -226,6 +226,7 @@ spikeinterface.postprocessing
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
+    .. autofunction:: compute_valid_unit_periods
     .. autofunction:: align_sorting
 
 
@@ -373,6 +374,7 @@ spikeinterface.curation
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+    .. autofunction:: threshold_metrics_label_units
     .. autofunction:: model_based_label_units
     .. autofunction:: load_model
     .. autofunction:: train_model

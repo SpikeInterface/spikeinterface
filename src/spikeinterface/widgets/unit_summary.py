@@ -179,6 +179,7 @@ class UnitSummaryWidget(BaseWidget):
                 **unitwaveformdensitymapwidget_kwargs,
             )
             col_counter += 1
+            ax_waveform_density.set_xlabel(None)
             ax_waveform_density.set_ylabel(None)
 
         if sorting_analyzer.has_extension("correlograms"):

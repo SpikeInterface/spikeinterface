@@ -81,8 +81,7 @@ class TimeSlider(W.HBox):
 
         self.slider.observe(self.slider_moved, names="value", type="change")
 
-        delta_s = np.diff(self.frame_range) / sampling_frequency
-
+        delta_s = (self.frame_range[1] - self.frame_range[0]) / sampling_frequency
         self.window_sizer = W.BoundedFloatText(
             value=delta_s,
             step=1,
