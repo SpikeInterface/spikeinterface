@@ -46,11 +46,17 @@
 
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
 
-
-SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
-
 Please [Star](https://github.com/SpikeInterface/spikeinterface/stargazers) the project to support us and [Watch](https://github.com/SpikeInterface/spikeinterface/subscription) to always stay up-to-date!
 
+SpikeInterface is a Python package designed to unify preexisting spike sorting technologies into a single code base. If you use SpikeInterface, you are also using code and ideas from many other projects. Our codebase would be tiny without the amazing algorithms and formats that we interface with. See them all, and how to cite them, on our [references page](https://spikeinterface.readthedocs.io/en/latest/references.html). In the past year, we have added support for the following tools:
+
+- SLAy. [SLAy-ing oversplitting errors in high-density electrophysiology spike sorting](https://www.biorxiv.org/content/10.1101/2025.06.20.660590v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/modules/curation.html#auto-merging-units))
+- Lupin, Spykingcicus2 and Tridesclous2. [Opening the black box: a modular approach to spike sorting](https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
+- rtsort. [RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
+- MEDiCINe. [MEDiCINe: Motion Correction for Neural Electrophysiology Recordings](https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/handle_drift.html))
+- UnitRefine. [UnitRefine: A Community Toolbox for Automated Spike Sorting Curation](https://www.biorxiv.org/content/10.1101/2025.03.30.645770v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/tutorials_custom_index.html#automated-curation-tutorials))
+
+If you would like us to add another tool, or you would like to integrate your project with our package, please [open an issue](https://github.com/SpikeInterface/spikeinterface/issues).
 
 With SpikeInterface, users can:
 
