@@ -20,8 +20,7 @@ from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface.core import SortingAnalyzer, get_noise_levels, NumpySorting
 from spikeinterface.core.template_tools import (
-    get_template_extremum_channel,
-    get_template_extremum_amplitude,
+    get_template_main_channel_amplitude,
     get_dense_templates_array,
 )
 from spikeinterface.metrics.spiketrain.metrics import NumSpikes, FiringRate
@@ -182,16 +181,13 @@ def compute_snrs(
 
     channel_ids = sorting_analyzer.channel_ids
 
-    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
-    unit_amplitudes = get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign, mode=peak_mode)
-
-    # make a dict to access by chan_id
-    noise_levels = dict(zip(channel_ids, noise_levels))
+    main_channel_index = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+    unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=True)
 
     snrs = {}
     for unit_id in unit_ids:
-        chan_id = extremum_channels_ids[unit_id]
-        noise = noise_levels[chan_id]
+        chan_ind = main_channel_index[unit_id]
+        noise = noise_levels[chan_ind]
         amplitude = unit_amplitudes[unit_id]
         snrs[unit_id] = np.abs(amplitude) / noise
 
@@ -1294,7 +1290,8 @@ def compute_sd_ratio(
     noise_levels = get_noise_levels(
         sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )
-    best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", **kwargs)
+    main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+
     n_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 
     if correct_for_template_itself:
@@ -1330,7 +1327,7 @@ def compute_sd_ratio(
             else:
                 unit_std = np.std(spk_amp)
 
-            best_channel = best_channels[unit_id]
+            best_channel = main_channels[unit_id]
             std_noise = noise_levels[best_channel]
 
             n_samples = sorting_analyzer.get_total_samples()

@@ -52,6 +52,12 @@ def dataset():
 
 def test_SortingAnalyzer_memory(tmp_path, dataset):
     recording, sorting = dataset
+
+    # Note the sorting contain already main_channel_index
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+    assert np.array_equal(sorting_analyzer.get_main_channels() , sorting.get_property("main_channel_index"))
+
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -74,6 +80,16 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     sorting_analyzer.set_sorting_property(key="number", values=np.arange(len(sorting_analyzer.unit_ids)))
     assert "quality" in sorting_analyzer.sorting.get_property_keys()
     assert "number" in sorting_analyzer.sorting.get_property_keys()
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # Create when main_channel_index is not given : this is estimated
+    sorting2 = sorting.clone()
+    sorting2._properties.pop("main_channel_index")
+    print(sorting2.get_property("main_channel_index"))
+    sorting_analyzer = create_sorting_analyzer(sorting2, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
 
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
@@ -349,7 +365,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert ext is None
 
     assert sorting_analyzer.has_recording()
-
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -615,12 +630,11 @@ class DummyPipelineAnalyzerExtension(BaseSpikeVectorExtension):
         return params
 
     def _get_pipeline_nodes(self):
-        from spikeinterface.core.template_tools import get_template_extremum_channel
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
+        extremum_channel_inds = self.sorting_analyzer.get_main_channels( outputs="index", with_dict=True)
         spike_retriever_node = SpikeRetriever(
             sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
         )
@@ -718,9 +732,9 @@ if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()
     test_SortingAnalyzer_memory(tmp_path, dataset)
-    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    test_SortingAnalyzer_zarr(tmp_path, dataset)
-    test_SortingAnalyzer_tmp_recording(dataset)
-    test_extension()
-    test_extension_params()
-    test_runtime_dependencies()
+    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    # test_SortingAnalyzer_zarr(tmp_path, dataset)
+    # test_SortingAnalyzer_tmp_recording(dataset)
+    # test_extension()
+    # test_extension_params()
+    # test_runtime_dependencies(dataset)

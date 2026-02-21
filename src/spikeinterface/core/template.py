@@ -483,3 +483,27 @@ class Templates:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations
+
+    def get_main_channels(self,
+        peak_sign: "neg" | "both" | "pos" = "both",
+        peak_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+        outputs="index",
+        with_dict=True
+    ):
+        from .template_tools import _get_main_channel_from_template_array
+
+        templates_array = self.get_dense_templates()
+        main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, self.nbefore)
+
+        if outputs == "index":
+            main_chans = main_channel_index
+        elif outputs == "id":
+            main_chans = self.channel_ids[main_channel_index]
+        else:
+            raise ValueError("wrong outputs")
+        
+        if with_dict:
+            return dict(zip(self.unit_ids, main_chans))
+        else:
+            return main_chans
+

@@ -4,7 +4,6 @@ import warnings
 import numpy as np
 from probeinterface import ProbeGroup
 
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 from .base import BaseWidget, to_attr
@@ -86,10 +85,10 @@ class UnitLocationsWidget(BaseWidget):
 
         if np.any(np.isnan(all_unit_locations[sorting.ids_to_indices(unit_ids)])):
             warnings.warn("Some unit locations contain NaN values. Replacing with extremum channel location.")
-            extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, outputs="index")
+            main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
             for unit_id in unit_ids:
                 if np.any(np.isnan(unit_locations[unit_id])):
-                    unit_locations[unit_id] = channel_locations[extremum_channel_indices[unit_id]]
+                    unit_locations[unit_id] = channel_locations[main_channels[unit_id]]
 
         data_plot = dict(
             all_unit_ids=sorting.unit_ids,

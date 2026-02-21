@@ -6,7 +6,7 @@ import importlib.util
 import numpy as np
 
 from spikeinterface.core import SortingAnalyzer, Templates, compute_sparsity
-from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array, get_template_extremum_channel
+from spikeinterface.core.template_tools import _get_nbefore, get_dense_templates_array
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -99,7 +99,9 @@ def compute_monopolar_triangulation(
             chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
             neighbours_mask[i, chan_inds] = True
         enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-        best_channels = get_template_extremum_channel(sorting_analyzer_or_templates, outputs="index")
+
+        best_channels = sorting_analyzer_or_templates.get_main_channels(outputs="index", with_dict=True)
+
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
@@ -278,7 +280,7 @@ def compute_grid_convolution(
         contact_locations, radius_um, upsampling_um, margin_um, weight_method
     )
 
-    peak_channels = get_template_extremum_channel(sorting_analyzer_or_templates, peak_sign, outputs="index")
+    main_channels = sorting_analyzer_or_templates.get_main_channels(outputs="index", with_dict=True)
 
     weights_sparsity_mask = weights > 0
 
@@ -286,7 +288,7 @@ def compute_grid_convolution(
     unit_location = np.zeros((len(unit_ids), 3), dtype="float64")
 
     for i, unit_id in enumerate(unit_ids):
-        main_chan = peak_channels[unit_id]
+        main_chan = main_channels[unit_id]
         wf = templates[i, :, :]
         nearest_mask = nearest_template_mask[main_chan, :]
         channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
@@ -661,13 +663,9 @@ if HAVE_NUMBA:
 def compute_location_max_channel(
     templates_or_sorting_analyzer: SortingAnalyzer | Templates,
     unit_ids=None,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
 ) -> np.ndarray:
     """
     Localize a unit using max channel.
-
-    This uses internally `get_template_extremum_channel()`
 
 
     Parameters
@@ -689,9 +687,8 @@ def compute_location_max_channel(
     unit_locations: np.ndarray
         2d
     """
-    extremum_channels_index = get_template_extremum_channel(
-        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index"
-    )
+    extremum_channels_index = templates_or_sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+
     contact_locations = templates_or_sorting_analyzer.get_channel_locations()
     if unit_ids is None:
         unit_ids = templates_or_sorting_analyzer.unit_ids

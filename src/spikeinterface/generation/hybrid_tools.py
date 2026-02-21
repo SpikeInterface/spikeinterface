@@ -13,7 +13,6 @@ from spikeinterface.core.generate import (
     InjectTemplatesRecording,
     _ensure_seed,
 )
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 from spikeinterface.core.motion import Motion
 
@@ -128,8 +127,8 @@ def select_templates(
         min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None
     ), "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
     # get template amplitudes and depth
-    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
-    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
+
 
     mask = np.ones(templates.num_units, dtype=bool)
     if min_amplitude is not None or max_amplitude is not None:
@@ -143,7 +142,7 @@ def select_templates(
         amplitudes = np.zeros(templates.num_units)
         templates_array = templates.templates_array
         for i in range(templates.num_units):
-            amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
+            amplitudes[i] = amp_fun(templates_array[i, :, main_channel_indices[i]])
         if min_amplitude is not None:
             mask &= amplitudes >= min_amplitude
         if max_amplitude is not None:
@@ -152,7 +151,7 @@ def select_templates(
         assert templates.probe is not None, "Templates should have a probe to filter based on depth"
         depth_dimension = ["x", "y"].index(depth_direction)
         channel_depths = templates.get_channel_locations()[:, depth_dimension]
-        unit_depths = channel_depths[extremum_channel_indices]
+        unit_depths = channel_depths[main_channel_indices]
         if min_depth is not None:
             mask &= unit_depths >= min_depth
         if max_depth is not None:
@@ -191,8 +190,7 @@ def scale_template_to_range(
     Templates
         The scaled templates.
     """
-    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
-    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
     # get amplitudes
     if amplitude_function == "ptp":
@@ -204,7 +202,7 @@ def scale_template_to_range(
     amplitudes = np.zeros(templates.num_units)
     templates_array = templates.templates_array
     for i in range(templates.num_units):
-        amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
+        amplitudes[i] = amp_fun(templates_array[i, :, main_channel_indices[i]])
 
     # scale templates to meet min_amplitude and max_amplitude range
     min_scale = np.min(amplitudes) / min_amplitude
@@ -265,11 +263,10 @@ def relocate_templates(
     """
     seed = _ensure_seed(seed)
 
-    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
-    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
     depth_dimension = ["x", "y"].index(depth_direction)
     channel_depths = templates.get_channel_locations()[:, depth_dimension]
-    unit_depths = channel_depths[extremum_channel_indices]
+    unit_depths = channel_depths[main_channel_indices]
 
     assert margin >= 0, "margin should be positive"
     top_margin = np.max(channel_depths) + margin

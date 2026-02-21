@@ -8,7 +8,6 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 from .traces import TracesWidget
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.core.basesorting import BaseSorting
@@ -121,9 +120,9 @@ class SpikesOnTracesWidget(BaseWidget):
             sparsity = sorting_analyzer.sparsity
         else:
             if sparsity is None:
-                # in this case, we construct a sparsity dictionary only with the best channel
-                extremum_channel_ids = get_template_extremum_channel(sorting_analyzer)
-                unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
+                # in this case, we construct a sparsity dictionary only with the main channel
+                main_channels = sorting_analyzer.get_main_channels(outputs="id", with_dict=True)
+                unit_id_to_channel_ids = {u: [ch] for u, ch in main_channels.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=sorting_analyzer.unit_ids,
