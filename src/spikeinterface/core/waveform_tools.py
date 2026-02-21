@@ -394,7 +394,6 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
 
         onset = start + nbefore
         offset = nbefore + nafter
-        sample_indices = sub_spikes["sample_index"] - onset
 
         for unit_ind, unit_id in enumerate(unit_ids):
             # find pos
@@ -411,7 +410,7 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
                 wfs = worker_dict["waveforms_by_units"][unit_id]
 
             for pos in in_chunk_pos:
-                sample_index = sample_indices[inds[pos]]
+                sample_index = spikes["sample_index"][inds[pos]] - onset
                 wf = traces[sample_index : sample_index + offset, :]
 
                 if sparsity_mask is None:
