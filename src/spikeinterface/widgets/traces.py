@@ -396,7 +396,7 @@ class TracesWidget(BaseWidget):
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
-        ratios = [0.1, 0.8, 0.2]
+        ratios = [0.07, 0.79, 0.14]
 
         with plt.ioff():
             output = widgets.Output()
@@ -476,7 +476,6 @@ class TracesWidget(BaseWidget):
         left_sidebar = W.VBox(
             children=left_sidebar_elements,
             align_items="center",
-            layout=W.Layout(width="2.2cm"),
         )
         if self.event_selector is None:
             right_sidebar = self.channel_selector
