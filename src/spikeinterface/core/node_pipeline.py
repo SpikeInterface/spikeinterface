@@ -167,7 +167,7 @@ class SpikeRetriever(PeakSource):
     radius_um : float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign : "neg" | "pos", default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
     include_spikes_in_margin : bool, default False
