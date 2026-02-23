@@ -171,16 +171,14 @@ def create_sorting_analyzer(
             **sparsity_kwargs,
         )
 
-    if format != "memory":
+    if format != "memory" and not is_path_remote(folder):
         if format == "zarr":
-            if not is_path_remote(folder):
-                folder = clean_zarr_folder_name(folder)
-        if not is_path_remote(folder):
-            if Path(folder).is_dir():
-                if not overwrite:
-                    raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
-                else:
-                    shutil.rmtree(folder)
+            folder = clean_zarr_folder_name(folder)
+        if Path(folder).is_dir():
+            if overwrite:
+                shutil.rmtree(folder)
+            else:
+                raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
     # handle sparsity
     if sparsity is not None:
