@@ -74,9 +74,6 @@ if HAVE_NUMBA:
         N = len(spike_train)
 
         for i in range(N - 1):
-            if i in indices_of_duplicates:
-                continue
-
             for j in range(i + 1, N):
                 if spike_train[j] - spike_train[i] > censored_period:
                     break
