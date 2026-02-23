@@ -86,10 +86,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         Minimum prominence threshold as a fraction of the template's absolute max value
     edge_exclusion_ms : float, default: 0.09
         Duration in milliseconds to exclude from template edges during peak/trough detection.
-    baseline_window_ms : tuple, default: (0.0, 0.5)
-        (start_ms, end_ms) defining the baseline window for flatness computation.
-    baseline_flatness_thresh : float, default: 0.12
-        Flatness threshold for the waveform_baseline_flatness metric.
 
     Returns
     -------
@@ -190,13 +186,14 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         periods=None,
         # common extension kwargs
         peak_sign="both",
+        template_operator="average",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
         depth_direction="y",
         min_thresh_detect_peaks_troughs=0.3,
         edge_exclusion_ms=0.09,
-        baseline_window_ms=(0.0, 0.5),
-        baseline_flatness_thresh=0.12,
+        min_peak_trough_distance_ratio=0.2,
+        min_extremum_distance_samples=3,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
         num_channels = self.sorting_analyzer.get_num_channels()
@@ -224,12 +221,13 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             periods=periods,  # template metrics do not use periods
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
+            template_operator=template_operator,
             include_multi_channel_metrics=include_multi_channel_metrics,
             depth_direction=depth_direction,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
             edge_exclusion_ms=edge_exclusion_ms,
-            baseline_window_ms=baseline_window_ms,
-            baseline_flatness_thresh=baseline_flatness_thresh,
+            min_peak_trough_distance_ratio=min_peak_trough_distance_ratio,
+            min_extremum_distance_samples=min_extremum_distance_samples,
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
@@ -244,8 +242,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             unit_ids = sorting_analyzer.unit_ids
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
-        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.09)
-
+        min_thresh_detect_peaks_troughs = self.params["min_thresh_detect_peaks_troughs"]
+        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.1)
+        min_peak_trough_distance_ratio = self.params.get("min_peak_trough_distance_ratio", 0.2)
+        min_extremum_distance_samples = self.params.get("min_extremum_distance_samples", 3)
         sampling_frequency = sorting_analyzer.sampling_frequency
         if self.params["upsampling_factor"] > 1:
             sampling_frequency_up = upsampling_factor * sampling_frequency
@@ -257,8 +257,11 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-        extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
-        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
+        operator = self.params["template_operator"]
+        extremum_channel_indices = get_template_extremum_channel(
+            sorting_analyzer, peak_sign=peak_sign, outputs="index", operator=operator
+        )
+        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
@@ -280,8 +283,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             peaks_info_unit = get_trough_and_peak_idx(
                 template_upsampled,
                 sampling_frequency_up,
-                min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
+                min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
                 edge_exclusion_ms=edge_exclusion_ms,
+                min_peak_trough_distance_ratio=min_peak_trough_distance_ratio,
+                min_extremum_distance_samples=min_extremum_distance_samples,
             )
             main_channel_templates.append(template_upsampled)
 
