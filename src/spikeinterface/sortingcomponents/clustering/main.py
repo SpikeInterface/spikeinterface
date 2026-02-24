@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
 
 import copy

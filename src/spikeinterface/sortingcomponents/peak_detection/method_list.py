@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .matched_filtering import MatchedFilteringPeakDetector
 from .by_channel import ByChannelPeakDetector, ByChannelTorchPeakDetector
 from .locally_exclusive import (

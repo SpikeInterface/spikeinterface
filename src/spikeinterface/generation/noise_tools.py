@@ -19,7 +19,7 @@ def generate_noise(
         The duration(s) of the recording segment(s) in seconds.
     dtype : np.dtype
         The dtype of the recording.
-    noise_levels : float | np.array | tuple, default: 15.0
+    noise_levels : float | np.ndarray | tuple, default: 15.0
         If scalar same noises on all channels.
         If array then per channels noise level.
         If tuple, then this represent the range.

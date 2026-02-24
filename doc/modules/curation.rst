@@ -154,6 +154,9 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
     # here we apply the merges
     analyzer_merged = analyzer.merge_units(merge_unit_groups=merge_unit_groups)
 
+Currently, we support the following presets: 'similarity_correlograms', 'temporal_splits', 'x_contaminations',
+'feature_neighbors' and 'slay'. Find out more about SLAy in their preprint: [Koukuntla]_.
+
 There is also the convenient :py:func:`~spikeinterface.curation.auto_merge_units` function that combines the
 :py:func:`~spikeinterface.curation.compute_merge_unit_groups` and :py:func:`~spikeinterface.core.SortingAnalyzer.merge_units` functions.
 This is a high level function that allows you to apply either one or several presets/lists of steps in one go. For example, let's

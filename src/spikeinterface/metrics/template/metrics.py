@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from collections import namedtuple
-
 import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric

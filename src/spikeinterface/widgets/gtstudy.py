@@ -5,8 +5,6 @@ All ploting for the previous GTStudy is now centralized in spikeinterface.benchm
 Please not that GTStudy is replaced by SorterStudy wich is based more generic BenchmarkStudy.
 """
 
-from __future__ import annotations
-
 from .base import BaseWidget
 
 import warnings
