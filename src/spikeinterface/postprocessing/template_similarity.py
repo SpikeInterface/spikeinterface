@@ -259,7 +259,6 @@ def _compute_similarity_matrix_numpy(
     return distances
 
 
-
 if HAVE_NUMBA:
 
     from math import sqrt
@@ -281,9 +280,7 @@ if HAVE_NUMBA:
         other_num_templates = other_templates_array.shape[0]
         num_shifts_both_sides = 2 * num_shifts + 1
 
-        distances = np.ones(
-            (num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32
-        )
+        distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
         same_array = np.array_equal(templates_array, other_templates_array)
 
         if same_array:
@@ -309,7 +306,6 @@ if HAVE_NUMBA:
                 if same_array and tgt_unit < src_unit:
                     continue
 
-
                 if support == "intersection":
                     ch = np.where(sparsity_mask[src_unit] & other_sparsity_mask[tgt_unit])[0].astype(np.uint16)
 
@@ -328,7 +324,7 @@ if HAVE_NUMBA:
                                 ch_list.append(c)
                         ch = np.array(ch_list, dtype=np.uint16)
 
-                else:  
+                else:
                     ch = np.arange(num_channels, dtype=np.uint16)
 
                 if len(ch) > 0:
@@ -341,8 +337,8 @@ if HAVE_NUMBA:
         for count in range(len(shift_loop)):
             shift = shift_loop[count]
 
-            src_sliced = templates_array[:, num_shifts: num_samples - num_shifts]
-            tgt_sliced = other_templates_array[:, num_shifts + shift: num_samples - num_shifts + shift]
+            src_sliced = templates_array[:, num_shifts : num_samples - num_shifts]
+            tgt_sliced = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
 
             for src_unit in numba.prange(num_templates):
                 src_template = src_sliced[src_unit]
@@ -350,7 +346,7 @@ if HAVE_NUMBA:
                 overlapping_chs = active_channels_list[src_unit]
 
                 for pair_idx in range(len(overlapping_ids)):
-                    tgt_unit = np.int64(overlapping_ids[pair_idx])   # cast explicite int64
+                    tgt_unit = np.int64(overlapping_ids[pair_idx])  # cast explicite int64
                     ch = overlapping_chs[pair_idx]
 
                     src_ch = src_template[:, ch]
@@ -363,15 +359,15 @@ if HAVE_NUMBA:
                         distances[count, src_unit, tgt_unit] = dist / (norm_i + norm_j)
 
                     elif metric == 1:
-                        norm_i = sqrt(np.sum(src_ch ** 2))
-                        norm_j = sqrt(np.sum(tgt_ch ** 2))
+                        norm_i = sqrt(np.sum(src_ch**2))
+                        norm_j = sqrt(np.sum(tgt_ch**2))
                         dist = sqrt(np.sum((src_ch - tgt_ch) ** 2))
                         distances[count, src_unit, tgt_unit] = dist / (norm_i + norm_j)
 
                     else:
                         dot = np.sum(src_ch * tgt_ch)
-                        norm_i = sqrt(np.sum(src_ch ** 2))
-                        norm_j = sqrt(np.sum(tgt_ch ** 2))
+                        norm_i = sqrt(np.sum(src_ch**2))
+                        norm_j = sqrt(np.sum(tgt_ch**2))
                         denom = norm_i * norm_j
                         if denom > 0.0:
                             distances[count, src_unit, tgt_unit] = 1.0 - dot / denom
