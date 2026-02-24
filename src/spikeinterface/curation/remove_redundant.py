@@ -10,16 +10,16 @@ _remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
 
 
 def remove_redundant_units(
-    sorting_or_sorting_analyzer,
-    align=True,
-    unit_peak_shifts=None,
-    delta_time=0.4,
-    agreement_threshold=0.2,
-    duplicate_threshold=0.8,
-    remove_strategy="minimum_shift",
-    peak_sign="neg",
-    extra_outputs=False,
-) -> BaseSorting:
+    sorting_or_sorting_analyzer: BaseSorting | SortingAnalyzer,
+    align: bool = True,
+    unit_peak_shifts: dict[int, float] | None = None,
+    delta_time: float = 0.4,
+    agreement_threshold: float = 0.2,
+    duplicate_threshold: float = 0.8,
+    remove_strategy: str = "minimum_shift",
+    peak_sign: bool = "neg",
+    extra_outputs: bool = False,
+) -> BaseSorting | tuple[BaseSorting, list[tuple[int, int]]]:
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
 
@@ -133,7 +133,8 @@ def remove_redundant_units(
         return sorting_clean
 
 
-def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0.2, duplicate_threshold=0.8):
+def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold: float = 0.2,
+                         duplicate_threshold: float = 0.8) -> list[tuple[int, int]]:
     """
     Finds redundant or duplicate units by comparing the sorting output with itself.
 
