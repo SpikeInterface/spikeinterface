@@ -283,7 +283,10 @@ if HAVE_NUMBA:
         distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
         same_array = np.array_equal(templates_array, other_templates_array)
 
+        # We can use the fact that dist[i,j] at lag t is equal to dist[j,i] at time -t
+        # So the matrix can be computed only for negative lags and be transposed
         if same_array:
+            # optimisation when array are the same because of symetry in shift
             shift_loop = list(range(-num_shifts, 1))
         else:
             shift_loop = list(range(-num_shifts, num_shifts + 1))
