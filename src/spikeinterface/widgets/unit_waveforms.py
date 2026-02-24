@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from packaging.version import parse
 from warnings import warn
 import numpy as np

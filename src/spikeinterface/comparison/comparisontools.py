@@ -2,8 +2,6 @@
 Some functions internally use by SortingComparison.
 """
 
-from __future__ import annotations
-
 from spikeinterface.core.basesorting import BaseSorting
 
 import numpy as np

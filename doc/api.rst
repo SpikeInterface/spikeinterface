@@ -226,6 +226,7 @@ spikeinterface.postprocessing
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
+    .. autofunction:: compute_valid_unit_periods
     .. autofunction:: align_sorting
 
 

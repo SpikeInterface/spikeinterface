@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.postprocessing.localization_tools import (
     compute_center_of_mass,
     compute_monopolar_triangulation,
