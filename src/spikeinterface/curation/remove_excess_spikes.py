@@ -90,7 +90,7 @@ def remove_excess_spikes(sorting: BaseSorting, recording: BaseRecording | None =
     ----------
     sorting : BaseSorting
         The parent sorting.
-    recording : BaseRecording | None. Default: None.
+    recording : BaseRecording | None. Default: None
         The recording to use to get the number of samples. If None, it uses the recording registered
         with the sorting object.
 
