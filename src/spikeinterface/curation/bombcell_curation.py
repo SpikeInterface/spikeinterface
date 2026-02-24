@@ -88,7 +88,6 @@ def bombcell_label_units(
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None,
-    implementation: str = "new",
 ) -> "pd.DataFrame":
     """
     Label units based on quality metrics and template metrics using Bombcell logic:
@@ -180,208 +179,104 @@ def bombcell_label_units(
         if metric in combined_metrics.columns:
             combined_metrics[metric] = np.abs(combined_metrics[metric])
 
-    if implementation == "new":
-        noise_thresholds = thresholds_dict.get("noise", {})
-        if len(noise_thresholds) > 0:
-            unit_labels = threshold_metrics_label_units(
+    noise_thresholds = thresholds_dict.get("noise", {})
+    if len(noise_thresholds) > 0:
+        unit_labels = threshold_metrics_label_units(
+            metrics=combined_metrics,
+            thresholds=noise_thresholds,
+            pass_label="good",
+            fail_label="noise",
+            operator="and",
+            nan_policy="fail",
+        )
+        (non_noise_indices,) = np.nonzero(unit_labels["label"] == "good")
+    else:
+        unit_labels = pd.DataFrame(data={"label": np.array(["good"] * n_units)}, index=combined_metrics.index)
+        non_noise_indices = np.arange(n_units)
+    mua_thresholds = thresholds_dict.get("mua", {})
+    if len(mua_thresholds) > 0:
+        neural_metrics = combined_metrics.iloc[non_noise_indices]
+        mua_labels = threshold_metrics_label_units(
+            metrics=neural_metrics,
+            thresholds=mua_thresholds,
+            pass_label="good",
+            fail_label="mua",
+            operator="and",
+            nan_policy="ignore",
+        )
+        unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
+
+    if label_non_somatic:
+        non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
+        width_thresholds = {
+            m: non_somatic_thresholds[m] for m in ["peak_before_width", "trough_width"] if m in non_somatic_thresholds
+        }
+        if len(width_thresholds) > 0:
+            width_condition_labels = threshold_metrics_label_units(
                 metrics=combined_metrics,
-                thresholds=noise_thresholds,
-                pass_label="good",
-                fail_label="noise",
-                operator="and",
-                nan_policy="fail",
+                thresholds=width_thresholds,
+                pass_label="not_narrow_width",
+                fail_label="narrow_width",
+                operator="or",
+                nan_policy="ignore",
             )
-            (non_noise_indices,) = np.nonzero(unit_labels["label"] == "good")
         else:
-            unit_labels = pd.DataFrame(data={"label": np.array(["good"] * n_units)}, index=combined_metrics.index)
-            non_noise_indices = np.arange(n_units)
-        mua_thresholds = thresholds_dict.get("mua", {})
-        if len(mua_thresholds) > 0:
-            neural_metrics = combined_metrics.iloc[non_noise_indices]
-            mua_labels = threshold_metrics_label_units(
-                metrics=neural_metrics,
-                thresholds=mua_thresholds,
-                pass_label="good",
-                fail_label="mua",
+            width_condition_labels = pd.DataFrame(
+                data={"label": np.array(["not_narrow_width"] * len(combined_metrics))}, index=combined_metrics.index
+            )
+
+        ratio_thresholds = {
+            m: non_somatic_thresholds[m]
+            for m in ["peak_before_to_trough_ratio", "peak_before_to_peak_after_ratio"]
+            if m in non_somatic_thresholds
+        }
+        if len(ratio_thresholds) > 0:
+            ratio_condition_labels = threshold_metrics_label_units(
+                metrics=combined_metrics,
+                thresholds=ratio_thresholds,
+                pass_label="not_large_ratio",
+                fail_label="large_ratio",
                 operator="and",
                 nan_policy="ignore",
             )
-            unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
-
-        if label_non_somatic:
-            non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
-            width_thresholds = {
-                m: non_somatic_thresholds[m]
-                for m in ["peak_before_width", "trough_width"]
-                if m in non_somatic_thresholds
-            }
-            if len(width_thresholds) > 0:
-                width_condition_labels = threshold_metrics_label_units(
-                    metrics=combined_metrics,
-                    thresholds=width_thresholds,
-                    pass_label="not_narrow_width",
-                    fail_label="narrow_width",
-                    operator="or",
-                    nan_policy="ignore",
-                )
-            else:
-                width_condition_labels = pd.DataFrame(
-                    data={"label": np.array(["not_narrow_width"] * len(combined_metrics))}, index=combined_metrics.index
-                )
-
-            ratio_thresholds = {
-                m: non_somatic_thresholds[m]
-                for m in ["peak_before_to_trough_ratio", "peak_before_to_peak_after_ratio"]
-                if m in non_somatic_thresholds
-            }
-            if len(ratio_thresholds) > 0:
-                ratio_condition_labels = threshold_metrics_label_units(
-                    metrics=combined_metrics,
-                    thresholds=ratio_thresholds,
-                    pass_label="not_large_ratio",
-                    fail_label="large_ratio",
-                    operator="and",
-                    nan_policy="ignore",
-                )
-            else:
-                ratio_condition_labels = pd.DataFrame(
-                    data={"label": np.array(["not_large_ratio"] * len(combined_metrics))}, index=combined_metrics.index
-                )
-
-            large_main_peak_thresholds = {
-                m: non_somatic_thresholds[m] for m in ["main_peak_to_trough_ratio"] if m in non_somatic_thresholds
-            }
-            if len(large_main_peak_thresholds) > 0:
-                large_main_peak_labels = threshold_metrics_label_units(
-                    metrics=combined_metrics,
-                    thresholds=large_main_peak_thresholds,
-                    pass_label="not_large_main_peak",
-                    fail_label="large_main_peak",
-                    operator="and",
-                    nan_policy="ignore",
-                )
-            else:
-                large_main_peak_labels = pd.DataFrame(
-                    data={"label": np.array(["not_large_main_peak"] * len(combined_metrics))},
-                    index=combined_metrics.index,
-                )
-
-            ratio_conditions = ratio_condition_labels["label"] == "large_ratio"
-            width_conditions = width_condition_labels["label"] == "narrow_width"
-            large_main_peak = large_main_peak_labels["label"] == "large_main_peak"
-
-            # (ratio AND width) OR standalone main_peak_to_trough
-            is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
-
-            if split_non_somatic_good_mua:
-                good_mask = unit_labels["label"] == "good"
-                mua_mask = unit_labels["label"] == "mua"
-                unit_labels.loc[good_mask & is_non_somatic, "label"] = "non_soma_good"
-                unit_labels.loc[mua_mask & is_non_somatic, "label"] = "non_soma_mua"
-            else:
-                noise_mask = unit_labels["label"] == "noise"
-                unit_labels.loc[~noise_mask & is_non_somatic, "label"] = "non_soma"
-    else:
-        # NOISE: waveform failures
-        unit_labels = np.full(n_units, fill_value="good", dtype="U10")
-
-        noise_mask = np.zeros(n_units, dtype=bool)
-        noise_thresholds = thresholds_dict.get("noise", {})
-        for metric_name in noise_thresholds:
-            if metric_name not in combined_metrics.columns:
-                continue
-            values = combined_metrics[metric_name].values
-            if metric_name in absolute_value_metrics:
-                values = np.abs(values)
-            thresh = noise_thresholds[metric_name]
-            noise_mask |= np.isnan(values)
-            if not is_threshold_disabled(thresh["min"]):
-                noise_mask |= values < thresh["min"]
-            if not is_threshold_disabled(thresh["max"]):
-                noise_mask |= values > thresh["max"]
-        unit_labels[noise_mask] = "noise"
-
-        # MUA: spike quality failures
-        valid_mask = unit_labels == "good"
-        mua_mask = np.zeros(np.sum(valid_mask), dtype=bool)
-        mua_thresholds = thresholds_dict.get("mua", {})
-        for metric_name in mua_thresholds:
-            if metric_name not in combined_metrics.columns:
-                continue
-            values = combined_metrics[metric_name].values[valid_mask]
-            # if metric_name in absolute_value_metrics:
-            #     values = np.abs(values)
-            num_mua_before = mua_mask.sum()
-            thresh = mua_thresholds[metric_name]
-            if not is_threshold_disabled(thresh["min"]):
-                mua_mask |= ~np.isnan(values) & (values < thresh["min"])
-            if not is_threshold_disabled(thresh["max"]):
-                mua_mask |= ~np.isnan(values) & (values > thresh["max"])
-        valid_indices = np.flatnonzero(valid_mask)
-        unit_labels[valid_indices[mua_mask]] = "mua"
-
-        # NON-SOMATIC
-        if label_non_somatic:
-            non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
-
-            thresholds_non_somatic = thresholds_dict.get("non-somatic", {})
-
-            def get_metric(name):
-                if name in combined_metrics.columns:
-                    return combined_metrics[name].values
-                return np.full(n_units, np.nan)
-
-            peak_before_width = get_metric("peak_before_width")
-            trough_width = get_metric("trough_width")
-            width_thresh_peak = non_somatic_thresholds.get("peak_before_width", {}).get("min", None)
-            width_thresh_trough = non_somatic_thresholds.get("trough_width", {}).get("min", None)
-
-            narrow_peak = (
-                ~np.isnan(peak_before_width) & (peak_before_width < width_thresh_peak)
-                if not is_threshold_disabled(width_thresh_peak)
-                else np.zeros(n_units, dtype=bool)
-            )
-            narrow_trough = (
-                ~np.isnan(trough_width) & (trough_width < width_thresh_trough)
-                if not is_threshold_disabled(width_thresh_trough)
-                else np.zeros(n_units, dtype=bool)
-            )
-            width_conditions = narrow_peak & narrow_trough
-
-            peak_before_to_trough = get_metric("peak_before_to_trough_ratio")
-            peak_before_to_peak_after = get_metric("peak_before_to_peak_after_ratio")
-            main_peak_to_trough = get_metric("main_peak_to_trough_ratio")
-
-            ratio_thresh_pbt = non_somatic_thresholds.get("peak_before_to_trough_ratio", {}).get("max", None)
-            ratio_thresh_pbpa = non_somatic_thresholds.get("peak_before_to_peak_after_ratio", {}).get("max", None)
-            ratio_thresh_mpt = non_somatic_thresholds.get("main_peak_to_trough_ratio", {}).get("max", None)
-
-            large_initial_peak = (
-                ~np.isnan(peak_before_to_trough) & (peak_before_to_trough > ratio_thresh_pbt)
-                if not is_threshold_disabled(ratio_thresh_pbt)
-                else np.zeros(n_units, dtype=bool)
-            )
-            large_peak_ratio = (
-                ~np.isnan(peak_before_to_peak_after) & (peak_before_to_peak_after > ratio_thresh_pbpa)
-                if not is_threshold_disabled(ratio_thresh_pbpa)
-                else np.zeros(n_units, dtype=bool)
-            )
-            large_main_peak = (
-                ~np.isnan(main_peak_to_trough) & (main_peak_to_trough > ratio_thresh_mpt)
-                if not is_threshold_disabled(ratio_thresh_mpt)
-                else np.zeros(n_units, dtype=bool)
+        else:
+            ratio_condition_labels = pd.DataFrame(
+                data={"label": np.array(["not_large_ratio"] * len(combined_metrics))}, index=combined_metrics.index
             )
 
-            # (ratio AND width) OR standalone main_peak_to_trough
-            ratio_conditions = large_initial_peak | large_peak_ratio
-            is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
+        large_main_peak_thresholds = {
+            m: non_somatic_thresholds[m] for m in ["main_peak_to_trough_ratio"] if m in non_somatic_thresholds
+        }
+        if len(large_main_peak_thresholds) > 0:
+            large_main_peak_labels = threshold_metrics_label_units(
+                metrics=combined_metrics,
+                thresholds=large_main_peak_thresholds,
+                pass_label="not_large_main_peak",
+                fail_label="large_main_peak",
+                operator="and",
+                nan_policy="ignore",
+            )
+        else:
+            large_main_peak_labels = pd.DataFrame(
+                data={"label": np.array(["not_large_main_peak"] * len(combined_metrics))},
+                index=combined_metrics.index,
+            )
 
-            if split_non_somatic_good_mua:
-                unit_labels[(unit_labels == "good") & is_non_somatic] = "non_soma_good"
-                unit_labels[(unit_labels == "mua") & is_non_somatic] = "non_soma_mua"
-            else:
-                unit_labels[(unit_labels != "noise") & is_non_somatic] = "non_soma"
-        unit_labels = pd.DataFrame(data={"label": unit_labels}, index=combined_metrics.index)
+        ratio_conditions = ratio_condition_labels["label"] == "large_ratio"
+        width_conditions = width_condition_labels["label"] == "narrow_width"
+        large_main_peak = large_main_peak_labels["label"] == "large_main_peak"
+
+        # (ratio AND width) OR standalone main_peak_to_trough
+        is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
+
+        if split_non_somatic_good_mua:
+            good_mask = unit_labels["label"] == "good"
+            mua_mask = unit_labels["label"] == "mua"
+            unit_labels.loc[good_mask & is_non_somatic, "label"] = "non_soma_good"
+            unit_labels.loc[mua_mask & is_non_somatic, "label"] = "non_soma_mua"
+        else:
+            noise_mask = unit_labels["label"] == "noise"
+            unit_labels.loc[~noise_mask & is_non_somatic, "label"] = "non_soma"
 
     return unit_labels
 

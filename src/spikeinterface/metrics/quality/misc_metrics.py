@@ -148,6 +148,7 @@ def compute_snrs(
     unit_ids=None,
     peak_sign: str = "both",
     peak_mode: str = "extremum",
+    operator: str = "median",
 ):
     """
     Compute signal to noise ratio.
@@ -164,6 +165,8 @@ def compute_snrs(
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=sorting_analyzer.nbefore.
+    operator : "median" | "average", default: "median"
+        The operator to apply to retrieve templates and amplitudes.
 
     Returns
     -------
@@ -182,7 +185,14 @@ def compute_snrs(
 
     channel_ids = sorting_analyzer.channel_ids
 
-    operator = "median" if sorting_analyzer.has_extension("waveforms") else "average"
+    if operator not in ("median", "average"):
+        raise ValueError(f"Invalid operator: {operator}. Expected 'median' or 'average'.")
+    if operator == "median" and not sorting_analyzer.has_extension("waveforms"):
+        warnings.warn(
+            "Operator 'median' requires 'waveforms' extension. Falling back to 'average'. "
+            "To use 'median', please compute the 'waveforms' extension first with: analyzer.compute('waveforms')"
+        )
+        operator = "average"
 
     extremum_channels_ids = get_template_extremum_channel(
         sorting_analyzer, peak_sign=peak_sign, mode=peak_mode, operator=operator
