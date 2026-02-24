@@ -335,7 +335,9 @@ class MetricsHistogramsWidget(BaseWidget):
         A SortingAnalyzer object with quality_metrics and/or template_metrics extensions computed.
     thresholds : dict, optional
         Dictionary of metric thresholds. Can be a flat dict with metric names as keys and dicts with 'min' and/or 'max'
-        as values, or a nested dict where top-level keys are different categories.
+        as values, or a nested dict where top-level keys are different categories. Optionally, an "abs": True entry
+        can be included in each metric's dict to indicate that the metric should be treated as an absolute value when
+        applying thresholds. If None, default thresholds from `bombcell_get_default_thresholds` will be used.
     metrics_to_plot : list, default: None
         List of metric names to plot. If None, all metrics with thresholds will be plotted.
     """
@@ -412,7 +414,6 @@ class MetricsHistogramsWidget(BaseWidget):
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         colors = plt.cm.tab10(np.linspace(0, 1, 10))
-        absolute_value_metrics = ["amplitude_median"]
 
         axes = self.axes
         for idx, metric_name in enumerate(metrics_to_plot):
@@ -420,7 +421,8 @@ class MetricsHistogramsWidget(BaseWidget):
             ax = axes[row, col]
 
             values = metrics[metric_name].values
-            if metric_name in absolute_value_metrics:
+            abs_value = thresholds.get(metric_name, {}).get("abs", False)
+            if abs_value:
                 values = np.abs(values)
             values = values[~np.isnan(values) & ~np.isinf(values)]
 

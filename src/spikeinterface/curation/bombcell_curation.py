@@ -66,7 +66,7 @@ def bombcell_get_default_thresholds() -> dict:
         "mua": {  # failures -> MUA, only applied to units that passed noise thresholds
             "amplitude_median": {"min": 40, "max": None},  # uV
             "snr": {"min": 5, "max": None},
-            "amplitude_cutoff": {"min": None, "max": 0.2},
+            "amplitude_cutoff": {"min": None, "max": 0.2, "abs": True},
             "num_spikes": {"min": 300, "max": None},
             "rp_contamination": {"min": None, "max": 0.1},
             "presence_ratio": {"min": 0.7, "max": None},
@@ -174,10 +174,6 @@ def bombcell_label_units(
         raise ValueError("thresholds must be a dict, a JSON file path, or None")
 
     n_units = len(combined_metrics)
-    absolute_value_metrics = ["amplitude_median"]
-    for metric in absolute_value_metrics:
-        if metric in combined_metrics.columns:
-            combined_metrics[metric] = np.abs(combined_metrics[metric])
 
     noise_thresholds = thresholds_dict.get("noise", {})
     if len(noise_thresholds) > 0:
