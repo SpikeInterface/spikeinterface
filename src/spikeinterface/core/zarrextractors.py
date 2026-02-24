@@ -128,8 +128,8 @@ class ZarrRecordingExtractor(BaseRecording):
         assert "channel_ids" in self._root.keys(), "'channel_ids' dataset not found!"
         channel_ids = self._root["channel_ids"][:]
 
-        assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
-        assert num_segments is not None, "'num_segments' attiribute not found!"
+        assert sampling_frequency is not None, "'sampling_frequency' attribute not found!"
+        assert num_segments is not None, "'num_segments' attribute not found!"
 
         channel_ids = np.array(channel_ids)
 
