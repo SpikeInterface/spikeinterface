@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Iterable, Union
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -85,9 +83,9 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[Iterable, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: Iterable | None = None,
     ):
         traces, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,

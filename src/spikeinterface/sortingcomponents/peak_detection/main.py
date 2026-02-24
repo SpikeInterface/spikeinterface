@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from .method_list import detect_peak_methods

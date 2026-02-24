@@ -9,7 +9,6 @@ It is a 2-step approach:
 
 """
 
-from __future__ import annotations
 from pathlib import Path
 import warnings
 

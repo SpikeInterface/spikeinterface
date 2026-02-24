@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Literal, Optional, Any, Iterable
 
 from pathlib import Path
