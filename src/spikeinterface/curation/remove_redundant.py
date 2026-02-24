@@ -17,7 +17,7 @@ def remove_redundant_units(
     agreement_threshold: float = 0.2,
     duplicate_threshold: float = 0.8,
     remove_strategy: str = "minimum_shift",
-    peak_sign: bool = "neg",
+    peak_sign: str = "neg",
     extra_outputs: bool = False,
 ) -> BaseSorting | tuple[BaseSorting, list[tuple[int, int]]]:
     """
