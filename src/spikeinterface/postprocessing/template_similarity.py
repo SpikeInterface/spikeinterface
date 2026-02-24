@@ -346,7 +346,7 @@ if HAVE_NUMBA:
                 overlapping_chs = active_channels_list[src_unit]
 
                 for pair_idx in range(len(overlapping_ids)):
-                    tgt_unit = np.int64(overlapping_ids[pair_idx])  # cast explicite int64
+                    tgt_unit = np.uint16(overlapping_ids[pair_idx])   
                     ch = overlapping_chs[pair_idx]
 
                     src_ch = src_template[:, ch]
