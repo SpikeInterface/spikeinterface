@@ -133,8 +133,9 @@ def remove_redundant_units(
         return sorting_clean
 
 
-def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold: float = 0.2,
-                         duplicate_threshold: float = 0.8) -> list[tuple[int, int]]:
+def find_redundant_units(
+    sorting, delta_time: float = 0.4, agreement_threshold: float = 0.2, duplicate_threshold: float = 0.8
+) -> list[tuple[int, int]]:
     """
     Finds redundant or duplicate units by comparing the sorting output with itself.
 
