@@ -117,6 +117,71 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
 We recommend using the ``SortingAnalyzer`` approach, since the ``minimum_shift`` strategy keeps
 the unit (among the redundant ones), with a better template alignment.
 
+Auto-labeling units
+^^^^^^^^^^^^^^^^^^^
+
+The :py:mod:`~spikeinterface.curation` function allows you to automatically label units based on a set of rules.
+The simplest way to do so is to use the :py:func:`~spikeinterface.curation.threshold_metrics_label_units` function,
+which applies a set of thresholds based on the available metrics (template/quality metrics, etc.):
+
+.. code-block:: python
+
+    from spikeinterface.curation import threshold_metrics_label_units
+
+    # auto-label units based on some thresholds
+    labels = threshold_metrics_label_units(
+        sorting_analyzer=sorting_analyzer,
+        thresholds={
+            "snr": {"min": 5},
+            "rp_contamination": {"max": 0.2},
+        },
+        pass_label="good",
+        fail_label="bad",
+        column_name="simple_threshold"
+    )
+The returned ``labels`` is a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the ``simple_threshold`` column.
+
+
+A second and much more powerful way to auto-label units is to run ``Bombcell`` [Fabre]_, a tool that uses a large set of
+metrics and heuristic rules based on metrics to classify units as ``noise``, ``mua`` or ``good`` (and even ``non-soma``).
+To run ``Bombcell``, you can use the :py:func:`~spikeinterface.curation.bombcell_label_units`:
+
+.. code-block:: python
+
+    from spikeinterface.curation import bombcell_label_units, bombcell_get_default_thresholds
+
+    # auto-label units with Bombcell
+    labels = bombcell_label_units(
+        sorting_analyzer=sorting_analyzer,
+        thresholds=bombcell_get_default_thresholds()
+    )
+
+The labels are returned in a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the
+``bombcell_label`` column.
+You can also provide your own set of thresholds to the ``bombcell_label_units`` function.
+
+Finally, a third way to auto-label units is to train machine learning models based on the available metrics and use the
+trained model to predict labels for the units. This is done by the ``UnitRefine`` [Jain]_ tool, which is based on a
+random forest classifier trained on a large dataset of manually curated units.
+Classification is done in two steps: first, the model predicts whether a unit is ``noise`` or ``neural``; then,
+for the non-noise units, the model predicts whether they are ``sua`` (aka good) or ``mua``.
+We provide pre-built models on `HuggingFace <https://huggingface.co/collections/SpikeInterface/curation-models>`_,
+and you can use the :py:func:`~spikeinterface.curation.unitrefine_label_units` function to apply the model to your data:
+
+.. code-block:: python
+
+    from spikeinterface.curation import unitrefine_label_units
+
+    # auto-label units with UnitRefine
+    labels = unitrefine_label_units(
+        sorting_analyzer=sorting_analyzer,
+        noise_neural_model="SpikeInterface/UnitRefine_noise_neural_classifier",
+        sua_mua_model="SpikeInterface/UnitRefine_sua_mua_classifier"
+    )
+
+
+The labels are returned in a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the
+``unitrefine_label`` column.
 
 Auto-merging units
 ^^^^^^^^^^^^^^^^^^

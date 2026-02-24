@@ -16,8 +16,8 @@ def test_unitrefine_label_units_hf(sorting_analyzer_for_curation):
         sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
     )
 
-    assert "label" in labels.columns
-    assert "probability" in labels.columns
+    assert "unitrefine_label" in labels.columns
+    assert "unitrefine_probability" in labels.columns
     assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.unit_ids)
 
     # test only noise neural classifier
@@ -27,8 +27,8 @@ def test_unitrefine_label_units_hf(sorting_analyzer_for_curation):
         sua_mua_classifier=None,
     )
 
-    assert "label" in labels.columns
-    assert "probability" in labels.columns
+    assert "unitrefine_label" in labels.columns
+    assert "unitrefine_probability" in labels.columns
     assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.unit_ids)
 
     # test only sua mua classifier
@@ -38,8 +38,8 @@ def test_unitrefine_label_units_hf(sorting_analyzer_for_curation):
         sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
     )
 
-    assert "label" in labels.columns
-    assert "probability" in labels.columns
+    assert "unitrefine_label" in labels.columns
+    assert "unitrefine_probability" in labels.columns
     assert labels.shape[0] == len(sorting_analyzer_for_curation.sorting.unit_ids)
 
     # test passing none

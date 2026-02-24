@@ -22,7 +22,7 @@ def test_bombcell_label_units(sorting_analyzer_with_metrics):
     labels = bombcell_label_units(sorting_analyzer=sorting_analyzer)
 
     assert len(labels) == sorting_analyzer.unit_ids.size
-    assert set(labels["label"]).issubset({"somatic", "non-somatic", "good", "mua", "noise"})
+    assert set(labels["bombcell_label"]).issubset({"somatic", "non-somatic", "good", "mua", "noise"})
 
 
 def test_bombcell_label_units_with_external_metrics(sorting_analyzer_with_metrics):
@@ -45,7 +45,7 @@ def test_bombcell_label_units_with_external_metrics(sorting_analyzer_with_metric
         sorting_analyzer=sorting_analyzer,
     )
 
-    assert (labels["label"] == labels2["label"]).all()
+    assert (labels["bombcell_label"] == labels2["bombcell_label"]).all()
 
 
 def test_bombcell_label_units_with_threshold_file(sorting_analyzer_with_metrics, tmp_path):

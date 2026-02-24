@@ -33,7 +33,7 @@ def unitrefine_label_units(
     Returns
     -------
     labels : pd.DataFrame
-        A DataFrame with unit ids as index and "label"/"probability" as column.
+        A DataFrame with unit ids as index and "unitrefine_label"/"unitrefine_probability" as columns.
 
     References
     ----------
@@ -92,8 +92,11 @@ def unitrefine_label_units(
     else:
         all_labels = noise_neuron_labels
 
-    # rename prediction column to label
-    all_labels = all_labels.rename(columns={"prediction": "label"})
+    # Rename prediction column to label
+    all_labels = all_labels.rename(columns={"prediction": "unitrefine_label"})
+    # Rename probability column to unitrefine_probability for clarity
+    all_labels = all_labels.rename(columns={"probability": "unitrefine_probability"})
+
     return all_labels
 
 

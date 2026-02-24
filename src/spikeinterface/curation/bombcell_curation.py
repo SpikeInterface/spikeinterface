@@ -278,6 +278,9 @@ def bombcell_label_units(
             noise_mask = unit_labels["label"] == "noise"
             unit_labels.loc[~noise_mask & is_non_somatic, "label"] = "non_soma"
 
+    # Rename label column to bombcell_label for clarity
+    unit_labels.rename(columns={"label": "bombcell_label"}, inplace=True)
+
     return unit_labels
 
 

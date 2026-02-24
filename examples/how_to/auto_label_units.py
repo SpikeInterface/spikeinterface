@@ -64,13 +64,13 @@ qm_thresholds = {
 
 # %%
 all_metrics = sorting_analyzer.get_metrics_extension_data()
-qm_labels = sc.threshold_metrics_label_units(all_metrics, thresholds=qm_thresholds)
+qm_labels = sc.threshold_metrics_label_units(all_metrics, thresholds=qm_thresholds, column_name="simple_threshold")
 
 # %%
-qm_labels["label"].value_counts()
+qm_labels["simple_threshold"].value_counts()
 
 # %%
-w = sw.plot_unit_labels(sorting_analyzer, qm_labels["label"], ylims=(-300, 100))
+w = sw.plot_unit_labels(sorting_analyzer, qm_labels["simple_threshold"], ylims=(-300, 100))
 w.figure.suptitle("Quality-metrics labeling")
 
 # %% [markdown]
@@ -92,13 +92,13 @@ bombcell_default_thresholds = sc.bombcell_get_default_thresholds()
 pprint(bombcell_default_thresholds)
 
 # %%
-bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True, implementation="new")
+bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True)
 
 # %%
-bombcell_labels["label"].value_counts()
+bombcell_labels["bombcell_label"].value_counts()
 
 # %%
-w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["label"], ylims=(-300, 100))
+w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["bombcell_label"], ylims=(-300, 100))
 w.figure.suptitle("Bombcell labeling")
 
 # %% [markdown]
@@ -114,7 +114,7 @@ _ = sw.plot_metric_histograms(sorting_analyzer, bombcell_default_thresholds, fig
 # 19 units were labeled as "mua" for poor SNR and high refractory period contamination (`rp_contamination`).
 
 # %%
-_ = sw.plot_bombcell_labels_upset(sorting_analyzer, unit_labels=bombcell_labels["label"], thresholds=bombcell_default_thresholds, unit_labels_to_plot=["noise", "mua"])
+_ = sw.plot_bombcell_labels_upset(sorting_analyzer, unit_labels=bombcell_labels["bombcell_label"], thresholds=bombcell_default_thresholds, unit_labels_to_plot=["noise", "mua"])
 
 # %% [markdown]
 # ## UnitRefine
@@ -131,10 +131,10 @@ unitrefine_labels = sc.unitrefine_label_units(
 )
 
 # %%
-unitrefine_labels["label"].value_counts()
+unitrefine_labels["unitrefine_label"].value_counts()
 
 # %%
-w = sw.plot_unit_labels(sorting_analyzer, unitrefine_labels["label"], ylims=(-300, 100))
+w = sw.plot_unit_labels(sorting_analyzer, unitrefine_labels["unitrefine_label"], ylims=(-300, 100))
 w.figure.suptitle("UnitRefine labeling")
 
 # %% [markdown]
@@ -151,7 +151,7 @@ w.figure.suptitle("UnitRefine labeling")
 # After auto-labeling, we can easily remove the "noise" units for downstream analysis:
 
 # %%
-non_noisy_units = bombcell_labels["label"] != "noise"
+non_noisy_units = bombcell_labels["bombcell_label"] != "noise"
 sorting_analyzer_clean = sorting_analyzer.select_units(sorting_analyzer.unit_ids[non_noisy_units])
 
 # %%

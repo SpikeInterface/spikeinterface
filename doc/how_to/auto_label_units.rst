@@ -6,9 +6,9 @@ using three different approaches:
 
 1. Simple filter based on quality metrics
 2. Bombcell: heuristic approach to label units based on quality and
-   template metrics [Fabre]_
+   template metrics [Fabre]\_
 3. UnitRefine: pre-trained classifiers to label units as noise or
-   SUA/MUA [Jain]_
+   SUA/MUA [Jain]\_
 
 .. code:: ipython3
 
@@ -96,18 +96,18 @@ function and provide a set of thresholds.
 .. code:: ipython3
 
     all_metrics = sorting_analyzer.get_metrics_extension_data()
-    qm_labels = sc.threshold_metrics_label_units(all_metrics, thresholds=qm_thresholds)
+    qm_labels = sc.threshold_metrics_label_units(all_metrics, thresholds=qm_thresholds, column_name="simple_threshold")
 
 .. code:: ipython3
 
-    qm_labels["label"].value_counts()
+    qm_labels["simple_threshold"].value_counts()
 
 
 
 
 .. parsed-literal::
 
-    label
+    simple_threshold
     noise    115
     good      27
     Name: count, dtype: int64
@@ -116,8 +116,9 @@ function and provide a set of thresholds.
 
 .. code:: ipython3
 
-    w = sw.plot_unit_labels(sorting_analyzer, qm_labels["label"], ylims=(-300, 100))
+    w = sw.plot_unit_labels(sorting_analyzer, qm_labels["simple_threshold"], ylims=(-300, 100))
     w.figure.suptitle("Quality-metrics labeling")
+
 
 
 
@@ -182,18 +183,18 @@ file.
 
 .. code:: ipython3
 
-    bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True, implementation="new")
+    bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True)
 
 .. code:: ipython3
 
-    bombcell_labels["label"].value_counts()
+    bombcell_labels["bombcell_label"].value_counts()
 
 
 
 
 .. parsed-literal::
 
-    label
+    bombcell_label
     mua             70
     noise           50
     good            21
@@ -204,8 +205,9 @@ file.
 
 .. code:: ipython3
 
-    w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["label"], ylims=(-300, 100))
+    w = sw.plot_unit_labels(sorting_analyzer, bombcell_labels["bombcell_label"], ylims=(-300, 100))
     w.figure.suptitle("Bombcell labeling")
+
 
 
 
@@ -221,9 +223,7 @@ Bombcell uses many more metrics!
 
 
 
-
-
-.. image:: auto_label_units_files/auto_label_units_21_1.png
+.. image:: auto_label_units_files/auto_label_units_21_0.png
 
 
 Bombcell also provides a specific widget to inspect the failure mode of
@@ -237,15 +237,15 @@ contamination (``rp_contamination``).
 
 .. code:: ipython3
 
-    _ = sw.plot_bombcell_labels_upset(sorting_analyzer, unit_labels=bombcell_labels["label"], thresholds=bombcell_default_thresholds, unit_labels_to_plot=["noise", "mua"])
+    _ = sw.plot_bombcell_labels_upset(sorting_analyzer, unit_labels=bombcell_labels["bombcell_label"], thresholds=bombcell_default_thresholds, unit_labels_to_plot=["noise", "mua"])
+
+
+
+.. image:: auto_label_units_files/auto_label_units_23_0.png
 
 
 
 .. image:: auto_label_units_files/auto_label_units_23_1.png
-
-
-
-.. image:: auto_label_units_files/auto_label_units_23_2.png
 
 
 UnitRefine
@@ -269,14 +269,14 @@ page <https://huggingface.co/SpikeInterface>`__.
 
 .. code:: ipython3
 
-    unitrefine_labels["label"].value_counts()
+    unitrefine_labels["unitrefine_label"].value_counts()
 
 
 
 
 .. parsed-literal::
 
-    label
+    unitrefine_label
     sua      62
     noise    47
     mua      33
@@ -286,19 +286,18 @@ page <https://huggingface.co/SpikeInterface>`__.
 
 .. code:: ipython3
 
-    w = sw.plot_unit_labels(sorting_analyzer, unitrefine_labels["label"], ylims=(-300, 100))
+    w = sw.plot_unit_labels(sorting_analyzer, unitrefine_labels["unitrefine_label"], ylims=(-300, 100))
     w.figure.suptitle("UnitRefine labeling")
+
 
 
 
 .. image:: auto_label_units_files/auto_label_units_27_1.png
 
 
-
-.. note::
-
-    If you want to train your own models, see the `UnitRefine repo <https://github.com/anoushkajain/UnitRefine>`__ for instructions!
-
+   **NOTE:** If you want to train your own models, see the `UnitRefine
+   repo <%60https://github.com/anoushkajain/UnitRefine%60>`__ for
+   instructions!
 
 This “How To” demonstrated how to automatically label units after spike
 sorting with different strategies. We recommend running **Bombcell** and
@@ -316,7 +315,7 @@ downstream analysis:
 
 .. code:: ipython3
 
-    non_noisy_units = bombcell_labels["label"] != "noise"
+    non_noisy_units = bombcell_labels["bombcell_label"] != "noise"
     sorting_analyzer_clean = sorting_analyzer.select_units(sorting_analyzer.unit_ids[non_noisy_units])
 
 .. code:: ipython3
