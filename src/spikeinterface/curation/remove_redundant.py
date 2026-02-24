@@ -80,7 +80,7 @@ def remove_redundant_units(
 
     if align and unit_peak_shifts is None:
         assert sorting_analyzer is not None, "For align=True must give a SortingAnalyzer or explicit unit_peak_shifts"
-        unit_peak_shifts = get_template_extremum_channel_peak_shift(sorting_analyzer)
+        unit_peak_shifts = get_template_extremum_channel_peak_shift(sorting_analyzer, peak_sign=peak_sign)
 
     if align:
         sorting_aligned = align_sorting(sorting, unit_peak_shifts)
