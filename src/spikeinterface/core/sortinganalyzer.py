@@ -170,27 +170,22 @@ def create_sorting_analyzer(
             **sparsity_kwargs,
         )
 
-    if format != "memory":
-        if format == "zarr":
-            if not is_path_remote(folder):
-                folder = clean_zarr_folder_name(folder)
-        if not is_path_remote(folder):
-            if Path(folder).is_dir():
-                if not overwrite:
-                    raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
-                else:
-                    shutil.rmtree(folder)
+    if format != "memory" and not is_path_remote(folder):
+        folder = clean_zarr_folder_name(folder) if format == "zarr" else folder
+        if Path(folder).is_dir():
+            if overwrite:
+                shutil.rmtree(folder)
+            else:
+                raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
     # handle sparsity
     if sparsity is not None:
         # some checks
         assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
-        assert np.array_equal(
-            sorting.unit_ids, sparsity.unit_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
-        assert np.array_equal(
-            recording.channel_ids, sparsity.channel_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        error_msg = "If external sparsity is given, unit_ids must match sorting"
+        assert np.array_equal(sorting.unit_ids, sparsity.unit_ids), error_msg
+        error_msg = "If external sparsity is given, channel_ids must match recording"
+        assert np.array_equal(recording.channel_ids, sparsity.channel_ids), error_msg
     elif sparse:
         sparsity = estimate_sparsity(sorting, recording, **sparsity_kwargs)
     else:

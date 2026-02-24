@@ -72,7 +72,6 @@ def remove_redundant_units(
         sorting = sorting_or_sorting_analyzer.sorting
         sorting_analyzer = sorting_or_sorting_analyzer
     else:
-        assert not align, "The 'align' option is only available when a SortingAnalyzer is used as input"
         # other remove strategies rely on sorting analyzer looking at templates
         assert remove_strategy == "max_spikes", "For a Sorting input the remove_strategy must be 'max_spikes'"
         sorting = sorting_or_sorting_analyzer
@@ -108,25 +107,15 @@ def remove_redundant_units(
                 remove_unit_ids.append(u1)
             elif np.abs(unit_peak_shifts[u1]) < np.abs(unit_peak_shifts[u2]):
                 remove_unit_ids.append(u2)
-            else:
-                # equal shift use peak values
-                if np.abs(peak_values[u1]) < np.abs(peak_values[u2]):
-                    remove_unit_ids.append(u1)
-                else:
-                    remove_unit_ids.append(u2)
+            else:  # equal shift use peak values
+                remove_unit_ids.append(u1 if peak_values[u1] < peak_values[u2] else u2)
     elif remove_strategy == "highest_amplitude":
         for u1, u2 in redundant_unit_pairs:
-            if np.abs(peak_values[u1]) < np.abs(peak_values[u2]):
-                remove_unit_ids.append(u1)
-            else:
-                remove_unit_ids.append(u2)
+            remove_unit_ids.append(u1 if peak_values[u1] < peak_values[u2] else u2)
     elif remove_strategy == "max_spikes":
         num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
         for u1, u2 in redundant_unit_pairs:
-            if num_spikes[u1] < num_spikes[u2]:
-                remove_unit_ids.append(u1)
-            else:
-                remove_unit_ids.append(u2)
+            remove_unit_ids.append(u1 if num_spikes[u1] < num_spikes[u2] else u2)
     elif remove_strategy == "with_metrics":
         # TODO
         # @aurelien @alessio
@@ -162,9 +151,7 @@ def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0
 
     Returns
     -------
-    list
-        The list of duplicate units
-    list of 2-element lists
+    list of 2-element tuples
         The list of duplicate pairs
     """
     from spikeinterface.comparison import compare_two_sorters
@@ -186,6 +173,6 @@ def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0
         event_counts = comparison.event_counts1
         shared = max(n_coincidents / event_counts[unit_i], n_coincidents / event_counts[unit_j])
         if shared > duplicate_threshold:
-            redundant_unit_pairs.append([unit_i, unit_j])
+            redundant_unit_pairs.append((unit_i, unit_j))
 
     return redundant_unit_pairs
