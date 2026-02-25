@@ -64,7 +64,7 @@ def bombcell_get_default_thresholds() -> dict:
             "exp_decay": {"min": 0.01, "max": 0.1},
         },
         "mua": {  # failures -> MUA, only applied to units that passed noise thresholds
-            "amplitude_median": {"min": 40, "max": None, "abs": True},  # uV
+            "amplitude_median": {"min": 30, "max": None, "abs": True},  # uV
             "snr": {"min": 5, "max": None},
             "amplitude_cutoff": {"min": None, "max": 0.2},
             "num_spikes": {"min": 300, "max": None},
