@@ -79,7 +79,7 @@ class CommonReferenceRecording(BasePreprocessor):
     def __init__(
         self,
         recording: BaseRecording,
-        reference: Literal["global", "single", "local", 'knn'] = "global",
+        reference: Literal["global", "single", "local", "knn"] = "global",
         operator: Literal["median", "average"] = "median",
         groups: list | None = None,
         ref_channel_ids: list | str | int | None = None,
@@ -102,7 +102,7 @@ class CommonReferenceRecording(BasePreprocessor):
             if ref_channel_ids is not None:
                 if not isinstance(ref_channel_ids, list):
                     raise ValueError("With 'global' reference, provide 'ref_channel_ids' as a list")
-        if reference == "single" or reference == 'single':
+        if reference == "single" or reference == "single":
             assert ref_channel_ids is not None, "With 'single' reference, provide 'ref_channel_ids'"
             if groups is not None:
                 assert len(ref_channel_ids) == len(groups), "'ref_channel_ids' and 'groups' must have the same length"
@@ -125,7 +125,7 @@ class CommonReferenceRecording(BasePreprocessor):
                 mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 neighbors[i] = closest_inds[i, mask]
                 # assert len(neighbors[i]) > 0, "No reference channels available in the local annulus for selection."
-        if reference == "knn" or backup_reference == 'knn':
+        if reference == "knn" or backup_reference == "knn":
             assert groups is None, "With 'knn' CAR, the group option should not be used."
             assert nneighbors is not None, "With 'knn' reference, provide 'nneighbors'"
             assert nneighbors > 0, "'nneighbors' must be positive"
@@ -145,7 +145,17 @@ class CommonReferenceRecording(BasePreprocessor):
 
         for parent_segment in recording._recording_segments:
             rec_segment = CommonReferenceRecordingSegment(
-                parent_segment, reference, operator, group_indices, ref_channel_indices, local_radius, neighbors, knearest_neighbors, backup_reference, backup_thr, dtype_
+                parent_segment,
+                reference,
+                operator,
+                group_indices,
+                ref_channel_indices,
+                local_radius,
+                neighbors,
+                knearest_neighbors,
+                backup_reference,
+                backup_thr,
+                dtype_,
             )
             self.add_recording_segment(rec_segment)
 
@@ -219,9 +229,9 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 for i, channel_index in enumerate(channel_indices_array):
                     channel_neighborhood = self.neighbors[channel_index]
                     if len(channel_neighborhood) < self.backup_thr:
-                        if self.backup_reference == 'global':
+                        if self.backup_reference == "global":
                             channel_shift = _global(False)
-                        elif self.backup_reference == 'single':
+                        elif self.backup_reference == "single":
                             channel_shift = _single()
                         else:
                             channel_neighborhood = self.knearest_neighbors[channel_index]
@@ -230,7 +240,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                         channel_shift = self.operator_func(traces[:, channel_neighborhood], axis=1)
                     re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
                 return re_referenced_traces
-
 
             def _knn():
                 channel_indices_array = np.arange(traces.shape[1])[channel_indices]
@@ -241,11 +250,11 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
                 return re_referenced_traces
 
-            if self.reference == 'global':
+            if self.reference == "global":
                 re_referenced_traces = traces[:, channel_indices] - _global()
-            elif self.reference == 'single':
+            elif self.reference == "single":
                 re_referenced_traces = traces[:, channel_indices] - _single()
-            elif self.reference == 'knn':
+            elif self.reference == "knn":
                 re_referenced_traces = _knn()
             else:
                 re_referenced_traces = _local()
