@@ -1014,6 +1014,7 @@ class PeakToTroughDuration(BaseMetric):
         "peak_to_trough_duration": "Duration in seconds between the trough (minimum) and the next peak (maximum) of the template."
     }
     needs_tmp_data = True
+    deprecated_names = ["peak_to_valley"]
 
     @staticmethod
     def _peak_to_trough_duration_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):
@@ -1172,6 +1173,7 @@ class WaveformRatios(BaseMetric):
         "main_peak_to_trough_ratio": "Ratio of main peak amplitude to trough amplitude",
     }
     needs_tmp_data = True
+    deprecated_names = ["peak_trough_ratio"]
 
     @staticmethod
     def _waveform_ratios_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params):

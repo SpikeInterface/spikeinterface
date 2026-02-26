@@ -221,117 +221,120 @@ class SNR(BaseMetric):
     depend_on = ["noise_levels", "templates"]
 
 
-def compute_snrs_versus_baseline(
-    sorting_analyzer,
-    unit_ids=None,
-    peak_sign: str = "neg",
-    baseline_window_ms: float = 0.5,
-):
-    """
-    Compute signal to noise ratio versus baseline.
+# This is from Bombcell, but the "default" SNR metric adapted using median + peak_sign="both" gives more robust results,
+# so we are not including this metric for now. We can add it in the future if there is interest.
 
-    This differs from the standard SNR by using:
-    - Signal: Max absolute value of the median waveform on peak channel
-    - Noise: MAD (Median Absolute Deviation) of baseline samples from waveforms
+# def compute_snrs_versus_baseline(
+#     sorting_analyzer,
+#     unit_ids=None,
+#     peak_sign: str = "neg",
+#     baseline_window_ms: float = 0.5,
+# ):
+#     """
+#     Compute signal to noise ratio versus baseline.
 
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object.
-    unit_ids : list or None
-        The list of unit ids to compute the SNR. If None, all units are used.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the template to compute best channels.
-    baseline_window_ms : float, default: 0.5
-        Duration in ms at the start of the waveform to use as baseline for noise calculation.
+#     This differs from the standard SNR by using:
+#     - Signal: Max absolute value of the median waveform on peak channel
+#     - Noise: MAD (Median Absolute Deviation) of baseline samples from waveforms
 
-    Returns
-    -------
-    snrs : dict
-        Computed signal to noise ratio for each unit.
+#     Parameters
+#     ----------
+#     sorting_analyzer : SortingAnalyzer
+#         A SortingAnalyzer object.
+#     unit_ids : list or None
+#         The list of unit ids to compute the SNR. If None, all units are used.
+#     peak_sign : "neg" | "pos" | "both", default: "neg"
+#         The sign of the template to compute best channels.
+#     baseline_window_ms : float, default: 0.5
+#         Duration in ms at the start of the waveform to use as baseline for noise calculation.
 
-    Notes
-    -----
-    This implementation follows the bombcell methodology [1]:
-    - Signal is the maximum absolute amplitude of the median waveform on the peak channel
-    - Noise is computed as MAD of baseline samples (first N samples of each waveform)
+#     Returns
+#     -------
+#     snrs : dict
+#         Computed signal to noise ratio for each unit.
 
-    Requires the "waveforms" extension to be computed.
+#     Notes
+#     -----
+#     This implementation follows the bombcell methodology [1]:
+#     - Signal is the maximum absolute amplitude of the median waveform on the peak channel
+#     - Noise is computed as MAD of baseline samples (first N samples of each waveform)
 
-    References
-    ----------
-    [1] https://github.com/Julie-Fabre/bombcell
-    """
-    if not sorting_analyzer.has_extension("waveforms"):
-        raise ValueError(
-            "The 'waveforms' extension is required for compute_snrs_versus_baseline. "
-            "Please compute it first with: analyzer.compute('waveforms')"
-        )
+#     Requires the "waveforms" extension to be computed.
 
-    if unit_ids is None:
-        unit_ids = sorting_analyzer.unit_ids
+#     References
+#     ----------
+#     [1] https://github.com/Julie-Fabre/bombcell
+#     """
+#     if not sorting_analyzer.has_extension("waveforms"):
+#         raise ValueError(
+#             "The 'waveforms' extension is required for compute_snrs_versus_baseline. "
+#             "Please compute it first with: analyzer.compute('waveforms')"
+#         )
 
-    waveforms_ext = sorting_analyzer.get_extension("waveforms")
-    nbefore = waveforms_ext.nbefore
-    sampling_frequency = sorting_analyzer.sampling_frequency
+#     if unit_ids is None:
+#         unit_ids = sorting_analyzer.unit_ids
 
-    # Calculate baseline samples from ms
-    baseline_samples = int(baseline_window_ms / 1000 * sampling_frequency)
-    baseline_samples = min(baseline_samples, nbefore)  # Can't exceed nbefore
+#     waveforms_ext = sorting_analyzer.get_extension("waveforms")
+#     nbefore = waveforms_ext.nbefore
+#     sampling_frequency = sorting_analyzer.sampling_frequency
 
-    # Get peak channel for each unit from templates
-    extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
+#     # Calculate baseline samples from ms
+#     baseline_samples = int(baseline_window_ms / 1000 * sampling_frequency)
+#     baseline_samples = min(baseline_samples, nbefore)  # Can't exceed nbefore
 
-    snrs = {}
-    for unit_id in unit_ids:
-        # Get waveforms for this unit (num_spikes, num_samples, num_channels)
-        waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
+#     # Get peak channel for each unit from templates
+#     extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
 
-        if waveforms is None or len(waveforms) == 0:
-            snrs[unit_id] = np.nan
-            continue
+#     snrs = {}
+#     for unit_id in unit_ids:
+#         # Get waveforms for this unit (num_spikes, num_samples, num_channels)
+#         waveforms = waveforms_ext.get_waveforms_one_unit(unit_id, force_dense=False)
 
-        # Get peak channel index
-        peak_chan_id = extremum_channels_ids[unit_id]
-        if sorting_analyzer.is_sparse():
-            chan_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
-            if peak_chan_id not in chan_ids:
-                snrs[unit_id] = np.nan
-                continue
-            peak_chan_idx = np.where(chan_ids == peak_chan_id)[0][0]
-        else:
-            peak_chan_idx = sorting_analyzer.channel_ids_to_indices([peak_chan_id])[0]
+#         if waveforms is None or len(waveforms) == 0:
+#             snrs[unit_id] = np.nan
+#             continue
 
-        # Extract waveforms on peak channel
-        waveforms_peak = waveforms[:, :, peak_chan_idx]  # (num_spikes, num_samples)
+#         # Get peak channel index
+#         peak_chan_id = extremum_channels_ids[unit_id]
+#         if sorting_analyzer.is_sparse():
+#             chan_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
+#             if peak_chan_id not in chan_ids:
+#                 snrs[unit_id] = np.nan
+#                 continue
+#             peak_chan_idx = np.where(chan_ids == peak_chan_id)[0][0]
+#         else:
+#             peak_chan_idx = sorting_analyzer.channel_ids_to_indices([peak_chan_id])[0]
 
-        # Signal: max absolute value of the median waveform
-        median_waveform = np.median(waveforms_peak, axis=0)  # median across spikes
-        signal = np.max(np.abs(median_waveform))
+#         # Extract waveforms on peak channel
+#         waveforms_peak = waveforms[:, :, peak_chan_idx]  # (num_spikes, num_samples)
 
-        # Noise: MAD of baseline samples (first N samples of each waveform)
-        baseline_samples_all = waveforms_peak[:, :baseline_samples].flatten()
-        median_baseline = np.median(baseline_samples_all)
-        noise = np.median(np.abs(baseline_samples_all - median_baseline))
+#         # Signal: max absolute value of the median waveform
+#         median_waveform = np.median(waveforms_peak, axis=0)  # median across spikes
+#         signal = np.max(np.abs(median_waveform))
 
-        # Calculate SNR (avoid division by zero)
-        if noise > 0:
-            snrs[unit_id] = signal / noise
-        else:
-            snrs[unit_id] = np.nan
+#         # Noise: MAD of baseline samples (first N samples of each waveform)
+#         baseline_samples_all = waveforms_peak[:, :baseline_samples].flatten()
+#         median_baseline = np.median(baseline_samples_all)
+#         noise = np.median(np.abs(baseline_samples_all - median_baseline))
 
-    return snrs
+#         # Calculate SNR (avoid division by zero)
+#         if noise > 0:
+#             snrs[unit_id] = signal / noise
+#         else:
+#             snrs[unit_id] = np.nan
+
+#     return snrs
 
 
-class SNRBaseline(BaseMetric):
-    metric_name = "snr_baseline"
-    metric_function = compute_snrs_versus_baseline
-    metric_params = {"peak_sign": "neg", "baseline_window_ms": 0.5}
-    metric_columns = {"snr_baseline": float}
-    metric_descriptions = {
-        "snr_baseline": "Signal to noise ratio versus baseline (median waveform max / baseline MAD). Based on bombcell."
-    }
-    depend_on = ["waveforms", "templates"]
+# class SNRBaseline(BaseMetric):
+#     metric_name = "snr_baseline"
+#     metric_function = compute_snrs_versus_baseline
+#     metric_params = {"peak_sign": "neg", "baseline_window_ms": 0.5}
+#     metric_columns = {"snr_baseline": float}
+#     metric_descriptions = {
+#         "snr_baseline": "Signal to noise ratio versus baseline (median waveform max / baseline MAD). Based on bombcell."
+#     }
+#     depend_on = ["waveforms", "templates"]
 
 
 def compute_isi_violations(sorting_analyzer, unit_ids=None, periods=None, isi_threshold_ms=1.5, min_isi_ms=0):
@@ -1516,7 +1519,6 @@ misc_metrics_list = [
     AmplitudeMedian,
     Drift,
     SDRatio,
-    SNRBaseline,
 ]
 
 

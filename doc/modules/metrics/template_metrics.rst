@@ -5,9 +5,7 @@ This extension computes commonly used template metrics. A *template* is the
 average (or median) spike waveform for each unit.
 
 First, the templates are upsampled (optionally, default 10) to increase the temporal
-resolution for more precise metric computation. Then they are (optionally) smoothed
-(using a Savitzky-Golay filter) to reduce high-frequency noise that could interfere
-with peak/trough detection.
+resolution for more precise metric computation.
 
 We compute the channel where the extremal value of your template occurs.
 Many single channel metrics only depend on the template on this channel,
@@ -22,6 +20,7 @@ their temporal location with respect to the main trough.
 
     Visualization of trough, peaks, and a few metrics.
 
+The detection of the trough, peak before and peak after was adopted from ``Bombcell`` [Fabre]_.
 
 Here is a list of metrics computed using the template on the main extremum channel:
 
@@ -36,11 +35,16 @@ peak_to_trough_duration
 
 Duration in seconds between the main trough and the main peak after the trough.
 
+.. warning::
+
+    This metric was renamed in version 0.104.0 from ``peak_to_valley``.
+
+
 main_to_next_extremum_duration
 ------------------------------
 
 Duration in seconds from the main extremum (peak or trough) to the next (in time) extremum.
-If no next extremum is found, it returns NaN.
+If no next extremum is found, it returns NaN. Ported from ``Bombcell`` [Fabre]_.
 
 repolarization_slope
 --------------------
@@ -67,12 +71,19 @@ in µV/s. If there is no trough, it returns NaN. If there is no peak after the m
 waveform_ratios
 ---------------
 
-This metric includes several ratios between peaks and troughs:
+This metric includes several ratios between peaks and troughs.
+These metrics are ported from ``Bombcell`` [Fabre]_.
 
 main_peak_to_trough_ratio
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Ratio between the amplitude of the main peak (before or after trough) and the absolute amplitude of the largest trough.
 If no troughs, or no peaks are found, it returns NaN.
+
+.. warning::
+
+    This metric was renamed in version 0.104.0 from ``peak_trough_ratio``. The previous implementation returned a
+    negative value, but the current implementation uses absolute values for the calculation,
+    so it returns a positive value.
 
 peak_before_to_trough_ratio
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -93,6 +104,7 @@ waveform_widths
 ---------------
 
 This metric includes the widths of peaks and troughs, given by the ``scipy.signal.find_peaks`` function.
+These metrics are ported from ``Bombcell`` [Fabre]_.
 
 trough_width
 ^^^^^^^^^^^^

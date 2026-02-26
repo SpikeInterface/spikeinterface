@@ -39,6 +39,12 @@ If :ref:`postprocessing_noise_levels` and ``templates`` are computed, add:
 
 - :doc:`qualitymetrics/snr`
 
+.. warning::
+
+    The SNR metric has been updated in version 0.104.0 to use the median instead of the mean,
+    and to use both positive and negative peaks. This gives more robust results, especially for
+    non-somatic units, and closely matches the implementation in ``Bombcell`` [Fabre]_.
+
 If the recording, :ref:`postprocessing_spike_amplitudes` and ``templates`` are available, add:
 
 - :doc:`qualitymetrics/sd_ratio`
