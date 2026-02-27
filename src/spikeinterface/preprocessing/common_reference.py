@@ -119,7 +119,7 @@ class CommonReferenceRecording(BasePreprocessor):
             closest_inds, dist = get_closest_channels(recording)
             neighbors = {}
             for i in range(num_chans):
-                mask = (dist[i, :] > local_radius[0])
+                mask = dist[i, :] > local_radius[0]
                 nn = np.cumsum(mask)
                 mask &= (dist[i, :] <= local_radius[1]) | ((0 < nn) & (nn <= min_local_neighbors))
                 neighbors[i] = closest_inds[i, mask]
