@@ -330,10 +330,9 @@ def write_chunkable_to_zarr(
     zarr_timestamps_datasets = []
 
     for segment_index in range(chunkable.get_num_segments()):
-        num_frames = chunkable.get_num_samples(segment_index)
-        num_channels = chunkable.get_num_channels()
+        num_samples = chunkable.get_num_samples(segment_index)
         dset_name = dataset_paths[segment_index]
-        shape = (num_frames, num_channels)
+        shape = chunkable.get_shape(segment_index)
         dset = zarr_group.create_dataset(
             name=dset_name,
             shape=shape,
@@ -347,7 +346,7 @@ def write_chunkable_to_zarr(
             zarr_timestamps_datasets.append(
                 zarr_group.create_dataset(
                     name=f"times_seg{segment_index}",
-                    shape=(num_frames,),
+                    shape=(num_samples,),
                     chunks=(chunk_size,),
                     dtype="float64",
                     filters=filters_times,

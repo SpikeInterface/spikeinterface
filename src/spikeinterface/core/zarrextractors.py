@@ -10,7 +10,7 @@ from probeinterface import ProbeGroup
 from .base import minimum_spike_dtype, BaseExtractor
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
-from .core_tools import define_function_from_class, check_json, is_path_remote
+from .core_tools import define_function_from_class, check_json, is_path_remote, retrieve_importing_provenance
 from .job_tools import split_job_kwargs
 from .chunkable_tools import write_chunkable_to_zarr
 
@@ -214,6 +214,7 @@ class ZarrRecordingExtractor(BaseRecording):
         recording: BaseRecording, folder_path: str | Path, storage_options: dict | None = None, **kwargs
     ):
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root.attrs["provenance"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_recording_to_zarr_group(recording, zarr_root, **kwargs)
 
 
@@ -322,6 +323,7 @@ class ZarrSortingExtractor(BaseSorting):
         Write a sorting extractor to zarr format.
         """
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root.attrs["provenance"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
 
 
@@ -347,15 +349,25 @@ def read_zarr(
     extractor : ZarrExtractor
         The loaded extractor
     """
-    # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
-    # for the futur SortingAnalyzer we will have this 2 fields!!!
+    from .base import _get_class_from_string
+
     root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
-    if "channel_ids" in root.keys():
-        return read_zarr_recording(folder_path, storage_options=storage_options)
-    elif "unit_ids" in root.keys():
-        return read_zarr_sorting(folder_path, storage_options=storage_options)
+    provenance = root.attrs.get("provenance", None)
+    if provenance is not None:
+        class_name = provenance["class"]
+        extractor_class = _get_class_from_string(class_name)
+        return extractor_class(folder_path, storage_options=storage_options)
     else:
-        raise ValueError("Cannot find 'channel_ids' or 'unit_ids' in zarr root. Not a valid SpikeInterface zarr format")
+        # For v<0.105.0 and old zarr files, revert to old way of loading based on the presence of "channel_ids"
+        # or "unit_ids" in the root
+        if "channel_ids" in root.keys():
+            return read_zarr_recording(folder_path, storage_options=storage_options)
+        elif "unit_ids" in root.keys():
+            return read_zarr_sorting(folder_path, storage_options=storage_options)
+        else:
+            raise ValueError(
+                "Cannot find 'channel_ids' or 'unit_ids' in zarr root. Not a valid SpikeInterface zarr format"
+            )
 
 
 ### UTILITY FUNCTIONS ###
