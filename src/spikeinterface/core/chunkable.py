@@ -128,7 +128,7 @@ class ChunkableMixin(ABC):
 
         return time_kwargs
 
-    def get_times(self, segment_index=None) -> np.ndarray:
+    def get_times(self, segment_index=None, start_frame=None, end_frame=None) -> np.ndarray:
         """Get time vector for a recording segment.
 
         If the segment has a time_vector, then it is returned. Otherwise
@@ -140,6 +140,10 @@ class ChunkableMixin(ABC):
         ----------
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
+        start_frame : int or None, default: None
+            The start frame for the time vector
+        end_frame : int or None, default: None
+            The end frame for the time vector
 
         Returns
         -------
@@ -148,7 +152,7 @@ class ChunkableMixin(ABC):
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
-        times = rs.get_times()
+        times = rs.get_times(start_frame=start_frame, end_frame=end_frame)
         return times
 
     def get_start_time(self, segment_index=None) -> float:
@@ -377,12 +381,16 @@ class ChunkableSegment(BaseSegment):
 
         BaseSegment.__init__(self)
 
-    def get_times(self) -> np.ndarray:
+    def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
         if self.time_vector is not None:
             self.time_vector = np.asarray(self.time_vector)
-            return self.time_vector
+            return self.time_vector[start_frame:end_frame]
         else:
-            time_vector = np.arange(self.get_num_samples(), dtype="float64")
+            time_vector = np.arange(start_frame, end_frame, dtype="float64")
             time_vector /= self.sampling_frequency
             if self.t_start is not None:
                 time_vector += self.t_start
