@@ -214,7 +214,7 @@ class ZarrRecordingExtractor(BaseRecording):
         recording: BaseRecording, folder_path: str | Path, storage_options: dict | None = None, **kwargs
     ):
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
-        zarr_root.attrs["provenance"] = retrieve_importing_provenance(ZarrRecordingExtractor)
+        zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_recording_to_zarr_group(recording, zarr_root, **kwargs)
 
 
@@ -323,7 +323,7 @@ class ZarrSortingExtractor(BaseSorting):
         Write a sorting extractor to zarr format.
         """
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
-        zarr_root.attrs["provenance"] = retrieve_importing_provenance(ZarrRecordingExtractor)
+        zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
 
 
@@ -352,9 +352,9 @@ def read_zarr(
     from .base import _get_class_from_string
 
     root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
-    provenance = root.attrs.get("provenance", None)
-    if provenance is not None:
-        class_name = provenance["class"]
+    zarr_class_info = root.attrs.get("zarr_class_info", None)
+    if zarr_class_info is not None:
+        class_name = zarr_class_info["class"]
         extractor_class = _get_class_from_string(class_name)
         return extractor_class(folder_path, storage_options=storage_options)
     else:

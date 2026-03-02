@@ -8,7 +8,7 @@ from probeinterface import read_probeinterface, write_probeinterface
 
 from .chunkable import ChunkableSegment, ChunkableMixin
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import convert_bytes_to_str, convert_seconds_to_str, retrieve_importing_provenance
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
 
 

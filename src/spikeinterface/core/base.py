@@ -1060,9 +1060,7 @@ class BaseExtractor:
         cached: ZarrExtractor
             Saved copy of the extractor.
         """
-        import zarr
-        from .core_tools import retrieve_importing_provenance
-        from .zarrextractors import read_zarr, super_zarr_open
+        from .zarrextractors import read_zarr
 
         save_kwargs.pop("format", None)
 
