@@ -134,6 +134,12 @@ template across the probe (these are computed by default if the number of channe
 is greater than 64, but can be forced on or off with the :code:`include_multi_channel_metrics`
 parameter).
 
+
+.. code-block:: python
+
+    tm = sorting_analyzer.compute(input="template_metrics", include_multi_channel_metrics=True)
+
+
 These are the multi-channel metrics that can be computed:
 
 velocity_fits
@@ -157,11 +163,6 @@ spread
 Spread in µm of the template amplitudes, defined as the distance between the channels "observing" a template
 above 20% of the maximum amplitude (default). Template amplitudes are normalized to the maximum amplitude
 and optionally smoothed over space using a Gaussian filter (default sigma is 20µm).
-
-
-.. code-block:: python
-
-    tm = sorting_analyzer.compute(input="template_metrics", include_multi_channel_metrics=True)
 
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_metrics`
