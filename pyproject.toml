@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -146,6 +146,9 @@ test_extractors = [
 test_preprocessing = [
     "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "torch",
+    # for IBL data fetching
+    "pooch",
+    "datalad"
 ]
 
 

@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Literal, Optional, Any, Iterable
 
 from pathlib import Path
@@ -171,27 +170,22 @@ def create_sorting_analyzer(
             **sparsity_kwargs,
         )
 
-    if format != "memory":
-        if format == "zarr":
-            if not is_path_remote(folder):
-                folder = clean_zarr_folder_name(folder)
-        if not is_path_remote(folder):
-            if Path(folder).is_dir():
-                if not overwrite:
-                    raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
-                else:
-                    shutil.rmtree(folder)
+    if format != "memory" and not is_path_remote(folder):
+        folder = clean_zarr_folder_name(folder) if format == "zarr" else folder
+        if Path(folder).is_dir():
+            if overwrite:
+                shutil.rmtree(folder)
+            else:
+                raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
     # handle sparsity
     if sparsity is not None:
         # some checks
         assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
-        assert np.array_equal(
-            sorting.unit_ids, sparsity.unit_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
-        assert np.array_equal(
-            recording.channel_ids, sparsity.channel_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        error_msg = "If external sparsity is given, unit_ids must match sorting"
+        assert np.array_equal(sorting.unit_ids, sparsity.unit_ids), error_msg
+        error_msg = "If external sparsity is given, channel_ids must match recording"
+        assert np.array_equal(recording.channel_ids, sparsity.channel_ids), error_msg
     elif sparse:
         sparsity = estimate_sparsity(sorting, recording, **sparsity_kwargs)
     else:
@@ -1944,6 +1938,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         extension_class = get_extension_class(extension_name)
 
+        if extension_class is None:
+            return None
+
         extension_instance = extension_class.load(self)
 
         self.extensions[extension_name] = extension_instance
@@ -2025,10 +2022,14 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 
         all_metrics_data = []
-        for extension_name, ext in self.extensions.items():
-            if isinstance(ext, BaseMetricExtension):
-                metric_data = ext.get_data()
-                all_metrics_data.append(metric_data)
+        for extension_name in get_available_analyzer_extensions():
+            extension_class = get_extension_class(extension_name)
+            if issubclass(extension_class, BaseMetricExtension):
+                # load available metric extensions even if not yet loaded
+                if self.has_extension(extension_name):
+                    ext = self.get_extension(extension_name)
+                    metric_data = ext.get_data()
+                    all_metrics_data.append(metric_data)
 
         if len(all_metrics_data) > 0:
             metrics_df = pd.concat(all_metrics_data, axis=1)
@@ -2199,7 +2200,10 @@ def get_extension_class(extension_name: str, auto_import=True):
                     f"Extension '{extension_name}' is not registered, please import related module before use: 'import {module}'"
                 )
         else:
-            raise ValueError(f"Extension '{extension_name}' is unknown maybe this is an external extension or a typo.")
+            warnings.warn(
+                f"Extension '{extension_name}' is unknown. Maybe this is an external extension, a typo or was computed by a different version of SpikeInterface."
+            )
+        return None
 
     ext_class = extensions_dict[extension_name]
     return ext_class

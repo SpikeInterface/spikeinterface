@@ -9,7 +9,6 @@ It is a 2-step approach:
 
 """
 
-from __future__ import annotations
 from pathlib import Path
 import warnings
 
@@ -996,6 +995,7 @@ def _init_worker_estimate_templates(
     nafter,
     return_in_uV,
     sparsity_mask,
+    worker_index,
 ):
     worker_dict = {}
     worker_dict["recording"] = recording

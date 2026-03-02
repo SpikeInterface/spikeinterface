@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 

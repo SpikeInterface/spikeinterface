@@ -72,6 +72,7 @@ class IterativeISOSPLITClustering:
             "similarity_metric": "l1",
             "num_shifts": 3,
             "similarity_thresh": 0.8,
+            "use_lags": True,
         },
         "merge_from_features": None,
         # "merge_from_features": {"merge_radius_um": 60.0},
@@ -106,13 +107,16 @@ class IterativeISOSPLITClustering:
 
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
+        nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+        nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+
         # radius_um = params["waveforms"]["radius_um"]
         verbose = params["verbose"]
 
         debug_folder = params["debug_folder"]
 
         params_peak_svd = params["peaks_svd"].copy()
-
+        params_peak_svd["seed"] = params["seed"]
         motion = params_peak_svd["motion"]
         motion_aware = motion is not None
 
@@ -285,13 +289,17 @@ class IterativeISOSPLITClustering:
             post_merge_label1 = post_split_label.copy()
 
         if params["merge_from_templates"] is not None:
+            params_merge_from_templates = params["merge_from_templates"].copy()
+            num_shifts = params_merge_from_templates["num_shifts"]
+            num_shifts = min((num_shifts, nbefore, nafter))
+            params_merge_from_templates["num_shifts"] = num_shifts
             post_merge_label2, templates_array, template_sparse_mask, unit_ids = merge_peak_labels_from_templates(
                 peaks,
                 post_merge_label1,
                 unit_ids,
                 templates_array,
                 template_sparse_mask,
-                **params["merge_from_templates"],
+                **params_merge_from_templates,
             )
         else:
             post_merge_label2 = post_merge_label1.copy()
