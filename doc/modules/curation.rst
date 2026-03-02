@@ -284,7 +284,7 @@ This format has two part:
     * "format_version" : format specification
     * "unit_ids" : the list of unit_ds
     * "label_definitions" : list of label categories and possible labels per category.
-                            Every category can be *exclusive=True* onely one label or *exclusive=False* several labels possible
+                            Every category can be *exclusive=True* (only one label) or *exclusive=False* (several labels possible).
 
   * **manual output** curation with the folowing keys:
 
