@@ -116,7 +116,8 @@ class IterativeISOSPLITClustering:
         debug_folder = params["debug_folder"]
 
         params_peak_svd = params["peaks_svd"].copy()
-        params_peak_svd["seed"] = params["seed"]
+        seed = params["seed"]
+        params_peak_svd["seed"] = seed
         motion = params_peak_svd["motion"]
         motion_aware = motion is not None
 
@@ -137,7 +138,12 @@ class IterativeISOSPLITClustering:
             peaks_svd, sparse_mask, svd_model = outs
 
         # Clustering: channel index > split > merge
+        # Clustering: channel index > split > merge
         split_params = params["split"].copy()
+
+        if seed is not None:
+            params_peak_svd.update(seed=seed)
+            split_params["method_kwargs"].update(seed=seed)
 
         split_radius_um = split_params.pop("split_radius_um")
         neighbours_mask = get_channel_distances(recording) <= split_radius_um
