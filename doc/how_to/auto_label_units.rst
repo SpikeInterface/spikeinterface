@@ -249,7 +249,7 @@ contamination (``rp_contamination``).
 
 
 3. UnitRefine
-------------
+-------------
 
 **UnitRefine** ([Jain]_) also uses quality and template metrics, but in
 a different way. It uses pre-trained classifiers to trained on
