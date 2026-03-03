@@ -55,8 +55,8 @@ def test_bombcell_label_units_with_threshold_file(sorting_analyzer_with_metrics,
 
     # Define custom thresholds
     custom_thresholds = {
-        "snr": {"min": 5, "max": 100},
-        "isi_violations": {"min": None, "max": 0.2},
+        "snr": {"greater": 5, "less": 100},
+        "isi_violations": {"greater": None, "less": 0.2},
     }
 
     # Save thresholds to a temporary JSON file

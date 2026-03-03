@@ -334,7 +334,7 @@ class MetricsHistogramsWidget(BaseWidget):
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object with quality_metrics and/or template_metrics extensions computed.
     thresholds : dict, optional
-        Dictionary of metric thresholds. Can be a flat dict with metric names as keys and dicts with 'min' and/or 'max'
+        Dictionary of metric thresholds. Can be a flat dict with metric names as keys and dicts with 'greater' and/or 'less'
         as values, or a nested dict where top-level keys are different categories. Optionally, an "abs": True entry
         can be included in each metric's dict to indicate that the metric should be treated as an absolute value when
         applying thresholds. If None, default thresholds from `bombcell_get_default_thresholds` will be used.
@@ -365,11 +365,11 @@ class MetricsHistogramsWidget(BaseWidget):
 
         assert isinstance(thresholds, dict), (
             "Thresholds should be provided as a dictionary (optionally nested) with metric names as keys and dicts "
-            "with 'min' and/or 'max' as values."
+            "with 'greater' and/or 'less' as values."
         )
         # Flatten thresholds for easier access (if subdicts are present).
-        # We check if all entries have a "min" or "max" key to determine if it's a nested dict of metrics or a flat dict.
-        if all(isinstance(value, dict) and ("min" in value or "max" in value) for value in thresholds.values()):
+        # We check if all entries have a "greater" or "less" key to determine if it's a nested dict of metrics or a flat dict.
+        if all(isinstance(value, dict) and ("greater" in value or "less" in value) for value in thresholds.values()):
             flat_thresholds = thresholds
         else:
             flat_thresholds = {}
@@ -377,8 +377,8 @@ class MetricsHistogramsWidget(BaseWidget):
                 assert isinstance(subdict, dict), "Each category in thresholds should be a dict of metric thresholds."
                 for metric_name, thresh in subdict.items():
                     assert isinstance(thresh, dict) and (
-                        "min" in thresh or "max" in thresh
-                    ), "Each threshold entry should be a dict with 'min' and/or 'max' keys."
+                        "greater" in thresh or "less" in thresh
+                    ), "Each threshold entry should be a dict with 'greater' and/or 'less' keys."
                     flat_thresholds[metric_name] = thresh
 
         if metrics_to_plot is None:
@@ -434,21 +434,15 @@ class MetricsHistogramsWidget(BaseWidget):
 
             thresh = thresholds.get(metric_name, {})
             has_thresh = False
-            if not is_threshold_disabled(thresh.get("min", None)):
-                label = (
-                    f"min={int(thresh['min'])}"
-                    if float(thresh["min"]).is_integer()
-                    else f"min={float(thresh['min']):.2f}"
-                )
-                ax.axvline(thresh["min"], color="red", ls="--", lw=2, label=label)
+            if not is_threshold_disabled(thresh.get("greater", None)):
+                value = float(thresh["greater"])
+                label = f">={int(value)}" if value.is_integer() else f">={value:.2f}"
+                ax.axvline(value, color="red", ls="--", lw=2, label=label)
                 has_thresh = True
-            if not is_threshold_disabled(thresh.get("max", None)):
-                label = (
-                    f"max={int(thresh['max'])}"
-                    if float(thresh["max"]).is_integer()
-                    else f"max={float(thresh['max']):.2f}"
-                )
-                ax.axvline(thresh["max"], color="blue", ls="--", lw=2, label=label)
+            if not is_threshold_disabled(thresh.get("less", None)):
+                value = float(thresh["less"])
+                label = f"<={int(value)}" if value.is_integer() else f"<={value:.2f}"
+                ax.axvline(value, color="blue", ls="--", lw=2, label=label)
                 has_thresh = True
 
             ax.set_xlabel(metric_name)
