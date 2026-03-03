@@ -74,7 +74,7 @@ class Split(BaseModel):
         return full_spike_indices
 
 
-class CurationModel(BaseModel):
+class Curation(BaseModel):
     supported_versions: tuple[Literal["1"], Literal["2"]] = Field(
         default=("1", "2"), description="Supported versions of the curation format"
     )
@@ -484,7 +484,7 @@ class SequentialCuration(BaseModel):
     and that these match the unit ids of the following curation.
     """
 
-    curation_steps: List[CurationModel] = Field(description="List of curation steps applied sequentially")
+    curation_steps: List[Curation] = Field(description="List of curation steps applied sequentially")
 
     @model_validator(mode="after")
     def validate_sequential_curation(self):

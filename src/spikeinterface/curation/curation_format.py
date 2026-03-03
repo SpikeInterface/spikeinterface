@@ -4,7 +4,7 @@ import numpy as np
 from itertools import chain
 
 from spikeinterface.core import BaseSorting, SortingAnalyzer, apply_merges_to_sorting, apply_splits_to_sorting
-from spikeinterface.curation.curation_model import CurationModel, SequentialCuration
+from spikeinterface.curation.curation_model import Curation, SequentialCuration
 
 
 def validate_curation_dict(curation_dict: dict):
@@ -19,10 +19,10 @@ def validate_curation_dict(curation_dict: dict):
 
     """
     # this will validate the format of the curation_dict
-    CurationModel(**curation_dict)
+    Curation(**curation_dict)
 
 
-def curation_label_to_vectors(curation_dict_or_model: dict | CurationModel):
+def curation_label_to_vectors(curation_dict_or_model: dict | Curation):
     """
     Transform the curation dict into dict of vectors.
     For label category with exclusive=True : a column is created and values are the unique label.
@@ -32,7 +32,7 @@ def curation_label_to_vectors(curation_dict_or_model: dict | CurationModel):
 
     Parameters
     ----------
-    curation_dict : dict or CurationModel
+    curation_dict : dict or Curation
         A curation dictionary or model
 
     Returns
@@ -41,7 +41,7 @@ def curation_label_to_vectors(curation_dict_or_model: dict | CurationModel):
 
     """
     if isinstance(curation_dict_or_model, dict):
-        curation_model = CurationModel(**curation_dict_or_model)
+        curation_model = Curation(**curation_dict_or_model)
     else:
         curation_model = curation_dict_or_model
     unit_ids = list(curation_model.unit_ids)
@@ -71,7 +71,7 @@ def curation_label_to_vectors(curation_dict_or_model: dict | CurationModel):
     return labels
 
 
-def curation_label_to_dataframe(curation_dict_or_model: dict | CurationModel):
+def curation_label_to_dataframe(curation_dict_or_model: dict | Curation):
     """
     Transform the curation dict into a pandas dataframe.
     For label category with exclusive=True : a column is created and values are the unique label.
@@ -92,7 +92,7 @@ def curation_label_to_dataframe(curation_dict_or_model: dict | CurationModel):
     import pandas as pd
 
     if isinstance(curation_dict_or_model, dict):
-        curation_model = CurationModel(**curation_dict_or_model)
+        curation_model = Curation(**curation_dict_or_model)
     else:
         curation_model = curation_dict_or_model
 
@@ -100,9 +100,7 @@ def curation_label_to_dataframe(curation_dict_or_model: dict | CurationModel):
     return labels
 
 
-def apply_curation_labels(
-    sorting_or_analyzer: BaseSorting | SortingAnalyzer, curation_dict_or_model: dict | CurationModel
-):
+def apply_curation_labels(sorting_or_analyzer: BaseSorting | SortingAnalyzer, curation_dict_or_model: dict | Curation):
     """
     Apply manual labels after merges/splits.
 
@@ -113,7 +111,7 @@ def apply_curation_labels(
       * for split units, the original label is applied to all split units
     """
     if isinstance(curation_dict_or_model, dict):
-        curation_model = CurationModel(**curation_dict_or_model)
+        curation_model = Curation(**curation_dict_or_model)
     else:
         curation_model = curation_dict_or_model
 
@@ -136,7 +134,7 @@ def apply_curation_labels(
 
 def apply_curation(
     sorting_or_analyzer: BaseSorting | SortingAnalyzer,
-    curation_dict_or_model: dict | list | CurationModel | SequentialCuration,
+    curation_dict_or_model: dict | list | Curation | SequentialCuration,
     censor_ms: float | None = None,
     new_id_strategy: str = "append",
     merging_mode: str = "soft",
@@ -162,7 +160,7 @@ def apply_curation(
     ----------
     sorting_or_analyzer : Sorting | SortingAnalyzer
         The Sorting or SortingAnalyzer object to apply merges.
-    curation_dict : dict | CurationModel | SequentialCuration
+    curation_dict : dict | Curation | SequentialCuration
         The curation dict or model.
     censor_ms : float | None, default: None
         When applying the merges, any consecutive spikes within the `censor_ms` are removed. This can be thought of
@@ -197,10 +195,10 @@ def apply_curation(
         sorting_or_analyzer, (BaseSorting, SortingAnalyzer)
     ), f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
     assert isinstance(
-        curation_dict_or_model, (dict, list, CurationModel, SequentialCuration)
-    ), f"`curation_dict_or_model` must be a dict, CurationModel or a SequentialCuration not an object of type {type(curation_dict_or_model)}"
+        curation_dict_or_model, (dict, list, Curation, SequentialCuration)
+    ), f"`curation_dict_or_model` must be a dict, Curation or a SequentialCuration not an object of type {type(curation_dict_or_model)}"
     if isinstance(curation_dict_or_model, dict):
-        curation_model = CurationModel(**curation_dict_or_model)
+        curation_model = Curation(**curation_dict_or_model)
     elif isinstance(curation_dict_or_model, list):
         curation_model = SequentialCuration(curation_steps=curation_dict_or_model)
     else:
@@ -298,7 +296,7 @@ def apply_curation(
     return curated_sorting_or_analyzer
 
 
-def load_curation(curation_path: str | Path) -> CurationModel:
+def load_curation(curation_path: str | Path) -> Curation:
     """
     Loads a curation from a local json file.
 
@@ -309,9 +307,9 @@ def load_curation(curation_path: str | Path) -> CurationModel:
 
     Returns
     -------
-    curation_model : CurationModel
-        A CurationModel object
+    curation_model : Curation
+        A Curation object
     """
     with open(curation_path) as f:
         curation_dict = json.load(f)
-    return CurationModel(**curation_dict)
+    return Curation(**curation_dict)
