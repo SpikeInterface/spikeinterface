@@ -354,7 +354,7 @@ class SortingAnalyzer:
                     "Sorting and Recording have a small difference in sampling frequency. "
                     "This could be due to rounding of floats. Using the sampling frequency from the Recording."
                 )
-                # we make a copy here to change the smapling frequency
+                # we make a copy here to change the sampling frequency
                 sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
                 sorting._sampling_frequency = recording.sampling_frequency
             else:
@@ -491,7 +491,7 @@ class SortingAnalyzer:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
-            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
+            warnings.warn("Recording not provided, instantiating SortingAnalyzer in recordingless mode.")
 
         if sorting.check_serializability("json"):
             sorting.dump(folder / "sorting_provenance.json", relative_to=folder)
@@ -543,21 +543,16 @@ class SortingAnalyzer:
             NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True
         )
 
-        # load recording if possible
+        # Try to load the recording if not provided
         if recording is None:
-            # try to load the recording if not provided
-            for type in ("json", "pickle"):
-                filename = folder / f"recording.{type}"
+            for file_ext in ("json", "pickle"):
+                filename = folder / f"recording.{file_ext}"
                 if filename.exists():
                     try:
                         recording = load(filename, base_folder=folder)
                         break
                     except:
-                        recording = None
-        else:
-            # TODO maybe maybe not??? : do we need to check  attributes match internal rec_attributes
-            # Note this will make the loading too slow
-            pass
+                        pass
 
         # recording attributes
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
