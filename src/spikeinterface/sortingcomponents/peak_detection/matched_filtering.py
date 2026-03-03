@@ -30,7 +30,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
     prototype : array
         The canonical waveform of action potentials
     ms_before : float
-        The time in ms before the maximial value of the absolute prototype
+        The time in ms before the maximal value of the absolute prototype
     weight_method : dict
         Parameter that should be provided to the get_convolution_weights() function
         in order to know how to estimate the positions. One argument is mode that could

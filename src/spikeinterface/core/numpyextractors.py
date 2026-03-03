@@ -281,6 +281,8 @@ class NumpySorting(BaseSorting):
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
+        if source_sorting.has_recording():
+            sorting._recording = source_sorting._recording
         if with_metadata:
             source_sorting.copy_metadata(sorting)
         return sorting
