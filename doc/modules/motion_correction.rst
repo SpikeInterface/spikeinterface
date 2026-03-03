@@ -19,7 +19,7 @@ of the algorithm is create an "image" via the activity profile of the cells duri
 activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis
 (i.e. depth) so that we can interpolate the traces to compensate for this estimated motion.
 
-There are now several algorithms which try to correct for drift as a preprocessing step: the Paninski
+There are now several algorithms that try to correct for drift as a preprocessing step: the Paninski
 group from Columbia University introduced DREDGE (see [Varol2021]_
 and [Windolf2023]_), and the Jazayeri lab introduced MEDiCINe ([Watters]_).
 
