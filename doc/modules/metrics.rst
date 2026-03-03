@@ -13,7 +13,7 @@ Currently, it contains the following submodules:
 
 All metrics extensions inherit from the :py:class:`~spikeinterface.core.analyzer_extension_core.BaseMetricExtension`
 base class, which provides a common interface for computing and retrieving metrics and has convenience method to access
-metric information. For example, you can get the list of available metrics using the and their descriptions with:
+metric information. For example, you can get the list of available metrics and their descriptions with:
 
 .. code-block:: python
 
@@ -67,18 +67,18 @@ metric information. For example, you can get the list of available metrics using
                  'extremum channel (1/um). Uses exponential or linear fit based '
                  'on linear_fit parameter.',
     'main_peak_to_trough_ratio': 'Ratio of main peak amplitude to trough amplitude',
-    'main_to_next_extremum_duration': 'Duration in seconds from main extremum to  next extremum.',
+    'main_to_next_extremum_duration': 'Duration in seconds from main extremum to next extremum.',
     'num_negative_peaks': 'Number of negative peaks (troughs) in the template',
     'num_positive_peaks': 'Number of positive peaks in the template',
-    'peak_after_to_trough_ratio': 'Ratio of peak after amplitude to trough  amplitude',
+    'peak_after_to_trough_ratio': 'Ratio of peak after amplitude to trough amplitude',
     'peak_after_width': 'Width of the main peak after trough in seconds',
-    'peak_before_to_peak_after_ratio': 'Ratio of peak before amplitude to peak  after amplitude',
-    'peak_before_to_trough_ratio': 'Ratio of peak before amplitude to trough  amplitude',
+    'peak_before_to_peak_after_ratio': 'Ratio of peak before amplitude to peak after amplitude',
+    'peak_before_to_trough_ratio': 'Ratio of peak before amplitude to trough amplitude',
     'peak_before_width': 'Width of the main peak before trough in seconds',
-    'peak_half_width': 'Duration in s at half the amplitude of the peak (maximum)  of the template.',
-    'peak_to_trough_duration': 'Duration in seconds between the trough (minimum)  and the next peak (maximum) of the template.',
-    'recovery_slope': 'Slope of the recovery phase of the template, after the  peak (maximum) returning to baseline in uV/s.',
-    'repolarization_slope': 'Slope of the repolarization phase of the template,  between the trough (minimum) and return to baseline in uV/s.',
+    'peak_half_width': 'Duration in s at half the amplitude of the peak (maximum) of the template.',
+    'peak_to_trough_duration': 'Duration in seconds between the trough (minimum) and the next peak (maximum) of the template.',
+    'recovery_slope': 'Slope of the recovery phase of the template, after the peak (maximum) returning to baseline in uV/s.',
+    'repolarization_slope': 'Slope of the repolarization phase of the template, between the trough (minimum) and return to baseline in uV/s.',
     'spread': 'Spread of the template amplitude in um, calculated as the distance between channels whose templates exceed the spread_threshold.',
     'trough_half_width': 'Duration in s at half the amplitude of the trough (minimum) of the template.',
     'trough_width': 'Width of the main trough in seconds',
