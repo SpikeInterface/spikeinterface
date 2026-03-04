@@ -306,8 +306,6 @@ if HAVE_NUMBA:
             overlapping_chs = numba.typed.List()
 
             for tgt_unit in range(other_num_templates):
-                if same_array and tgt_unit < src_unit:
-                    continue
 
                 if support == "intersection":
                     ch = np.where(sparsity_mask[src_unit] & other_sparsity_mask[tgt_unit])[0].astype(np.uint16)
