@@ -375,6 +375,8 @@ spikeinterface.curation
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
     .. autofunction:: threshold_metrics_label_units
+    .. autofunction:: bombcell_label_units
+    .. autofunction:: bombcell_get_default_thresholds
     .. autofunction:: model_based_label_units
     .. autofunction:: load_model
     .. autofunction:: train_model
