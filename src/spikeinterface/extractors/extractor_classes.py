@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 # most important extractor are in spikeinterface.core
 from spikeinterface.core import (
     BinaryFolderRecording,

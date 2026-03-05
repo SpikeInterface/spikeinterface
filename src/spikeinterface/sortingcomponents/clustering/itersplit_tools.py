@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from multiprocessing import get_context
@@ -74,9 +72,9 @@ def split_clusters(
     peak_labels = peak_labels.copy()
     split_count = np.zeros(peak_labels.size, dtype=int)
     recursion_level = 1
-    Executor = get_poolexecutor(n_jobs)
+    executor = get_poolexecutor(n_jobs)
 
-    with Executor(
+    with executor(
         max_workers=n_jobs,
         initializer=split_worker_init,
         mp_context=get_context(method=mp_context),
@@ -166,7 +164,6 @@ def split_worker_init(
     _ctx = {}
 
     _ctx["recording"] = recording
-    features_dict_or_folder
     _ctx["original_labels"] = original_labels
     _ctx["method"] = method
     _ctx["method_kwargs"] = method_kwargs

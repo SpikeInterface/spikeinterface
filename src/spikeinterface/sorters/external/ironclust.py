@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import os
 from pathlib import Path
-from typing import Union
 import sys
 
 from spikeinterface.sorters.utils import ShellScript
@@ -10,10 +7,8 @@ from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 
 from spikeinterface.extractors.extractor_classes import MdaRecordingExtractor, MdaSortingExtractor
 
-PathType = Union[str, Path]
 
-
-def check_if_installed(ironclust_path: Union[str, None]):
+def check_if_installed(ironclust_path: str | None):
     if ironclust_path is None:
         return False
     assert isinstance(ironclust_path, str)
@@ -33,7 +28,7 @@ class IronClustSorter(BaseSorter):
 
     sorter_name: str = "ironclust"
     compiled_name: str = "p_ironclust"
-    ironclust_path: Union[str, None] = os.getenv("IRONCLUST_PATH", None)
+    ironclust_path: str | None = os.getenv("IRONCLUST_PATH", None)
 
     requires_locations = True
     gpu_capability = "nvidia-optional"
@@ -136,7 +131,7 @@ class IronClustSorter(BaseSorter):
             return "compiled"
         version_filename = Path(os.environ["IRONCLUST_PATH"]) / "matlab" / "version.txt"
         if version_filename.is_file():
-            with open(str(version_filename), mode="r", encoding="utf8") as f:
+            with open(str(version_filename), encoding="utf8") as f:
                 line = f.readline()
                 d = {}
                 exec(line, None, d)
@@ -151,7 +146,7 @@ class IronClustSorter(BaseSorter):
         return cls.default_params()["fGpu"]
 
     @staticmethod
-    def set_ironclust_path(ironclust_path: PathType):
+    def set_ironclust_path(ironclust_path: str | Path):
         ironclust_path = str(Path(ironclust_path).absolute())
         IronClustSorter.ironclust_path = ironclust_path
         try:
@@ -185,8 +180,8 @@ class IronClustSorter(BaseSorter):
             print("Creating argfile.txt..")
         txt = ""
         for key0, val0 in params.items():
-            txt += "{}={}\n".format(key0, val0)
-        txt += "samplerate={}\n".format(samplerate)
+            txt += f"{key0}={val0}\n"
+        txt += f"samplerate={samplerate}\n"
         with (dataset_dir / "argfile.txt").open("w") as f:
             f.write(txt)
 
@@ -195,7 +190,7 @@ class IronClustSorter(BaseSorter):
         tmpdir.mkdir(parents=True, exist_ok=True)
         samplerate_fname = str(tmpdir / "samplerate.txt")
         with open(samplerate_fname, "w") as f:
-            f.write("{}".format(samplerate))
+            f.write(f"{samplerate}")
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -205,7 +200,7 @@ class IronClustSorter(BaseSorter):
         tmpdir = (sorter_output_folder / "tmp").absolute()
 
         if verbose:
-            print("Running ironclust in {tmpdir}..".format(tmpdir=str(tmpdir)))
+            print(f"Running ironclust in {str(tmpdir)}..")
 
         if cls.check_compiled():
             shell_cmd = """
@@ -272,7 +267,7 @@ class IronClustSorter(BaseSorter):
 
         result_fname = str(tmpdir / "firings.mda")
         samplerate_fname = str(tmpdir / "samplerate.txt")
-        with open(samplerate_fname, "r") as f:
+        with open(samplerate_fname) as f:
             samplerate = float(f.read())
 
         sorting = MdaSortingExtractor(file_path=result_fname, sampling_frequency=samplerate)

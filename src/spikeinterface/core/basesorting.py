@@ -1,7 +1,5 @@
 from __future__ import annotations
-
 import warnings
-from typing import Optional
 
 from copy import deepcopy
 
@@ -136,9 +134,9 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train(
         self,
         unit_id: str | int,
-        segment_index: Optional[int] = None,
-        start_frame: Optional[int] = None,
-        end_frame: Optional[int] = None,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
         return_times: bool = False,
         use_cache: bool = True,
     ) -> np.ndarray:
@@ -212,9 +210,9 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train_in_seconds(
         self,
         unit_id: str | int,
-        segment_index: Optional[int] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        segment_index: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
     ) -> np.ndarray:
         """
         Get spike train for a unit in seconds.
@@ -340,7 +338,7 @@ class BaseSorting(BaseExtractor):
     def has_recording(self) -> bool:
         return self._recording is not None
 
-    def has_time_vector(self, segment_index: Optional[int] = None) -> bool:
+    def has_time_vector(self, segment_index: int | None = None) -> bool:
         """
         Check if the segment of the registered recording has a time vector.
         """
@@ -437,7 +435,7 @@ class BaseSorting(BaseExtractor):
         ----------
         outputs : "dict" | "array", default: "dict"
             Control the type of the returned object : a dict (keys are unit_ids) or an numpy array.
-        unit_ids: np.array | None
+        unit_ids: np.ndarray | None
             Compute the number of spikes on a subset unit_ids only
         Returns
         -------
@@ -714,7 +712,7 @@ class BaseSorting(BaseExtractor):
         return sample_index
 
     def sample_index_to_time(
-        self, sample_index: int | np.ndarray, segment_index: Optional[int] = None
+        self, sample_index: int | np.ndarray, segment_index: int | None = None
     ) -> float | np.ndarray:
         """
         Transform sample index into time in seconds
@@ -1087,8 +1085,8 @@ class BaseSortingSegment(BaseSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Optional[int] = None,
-        end_frame: Optional[int] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         """Get the spike train for a unit.
 
