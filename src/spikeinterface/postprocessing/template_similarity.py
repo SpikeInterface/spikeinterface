@@ -376,7 +376,7 @@ if HAVE_NUMBA:
                     if same_array:
                         distances[count, tgt_unit, src_unit] = distances[count, src_unit, tgt_unit]
 
-            if same_array and num_shifts != 0:
+            if same_array and shift != 0:
                 distances[num_shifts_both_sides - count - 1] = distances[count].T
 
         return distances
