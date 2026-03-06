@@ -1264,7 +1264,7 @@ def compute_sd_ratio(
     correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
-    peak_sign : str, ("neg", "pos", "both"), default: "neg"
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The peak sign used to select the template extremum channel.
     **job_kwargs : dict, default: {}
         Keyword arguments sent to get_noise_levels.
