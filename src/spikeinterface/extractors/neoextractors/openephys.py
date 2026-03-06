@@ -73,15 +73,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         block_index=None,
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
-        ignore_timestamps_errors: bool = None,
     ):
-        if ignore_timestamps_errors is not None:
-            dep_msg = "OpenEphysLegacyRecordingExtractor: `ignore_timestamps_errors` is deprecated. It will be removed in version 0.104.0 and is currently ignored"
-            warnings.warn(
-                dep_msg,
-                DeprecationWarning,
-                stacklevel=2,
-            )
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(
             self,
