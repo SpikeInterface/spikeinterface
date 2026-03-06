@@ -36,7 +36,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
     Parameters
     ----------
     method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
-        The method to select the spikes
+        Method to select spikes: "uniform" randomly up to max_spikes_per_unit, "percentage" selects a fraction of spikes, and "maximum_rate" limits selection by spike rate over time.
     max_spikes_per_unit : int, default: 500
         The maximum number of spikes per unit, ignored if method="all"
     margin_size : int, default: None

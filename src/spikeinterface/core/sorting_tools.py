@@ -176,7 +176,7 @@ def random_spikes_selection(
         Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
     method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
-        The method to use.
+        Method to select spikes: "uniform" randomly up to max_spikes_per_unit, "percentage" selects a fraction of spikes, and "maximum_rate" limits selection by spike rate over time.
     max_spikes_per_unit: int, default: 500
         The maximum number of spikes per units
     margin_size: None | int, default: None
