@@ -1021,8 +1021,12 @@ def compute_amplitude_cutoffs(
             amplitudes_bins_min_ratio,
         )
 
-    if np.any(np.isnan(list(all_fraction_missing.values()))):
-        warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
+    units_with_few_spikes = [unit_id for unit_id, amp_cutoff in all_fraction_missing.items() if np.isnan(amp_cutoff)]
+    if len(units_with_few_spikes) > 0:
+        min_num_spikes = amplitudes_bins_min_ratio * num_histogram_bins
+        warnings.warn(
+            f"Amplitude cutoff set to NaN for units {units_with_few_spikes}: too few spikes (< {min_num_spikes})."
+        )
 
     return all_fraction_missing
 
@@ -1031,7 +1035,7 @@ class AmplitudeCutoff(BaseMetric):
     metric_name = "amplitude_cutoff"
     metric_function = compute_amplitude_cutoffs
     metric_params = {
-        "num_histogram_bins": 200,
+        "num_histogram_bins": 100,
         "histogram_smoothing_value": 3,
         "amplitudes_bins_min_ratio": 5,
     }
@@ -1634,7 +1638,7 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
 
 def amplitude_cutoff(
     amplitudes,
-    num_histogram_bins=500,
+    num_histogram_bins=100,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
 ):

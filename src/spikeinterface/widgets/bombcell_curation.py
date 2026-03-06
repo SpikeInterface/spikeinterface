@@ -30,7 +30,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
         "non_soma", "non_soma_good", "non_soma_mua".
     thresholds : dict, optional
         Threshold dictionary with structure "noise", "mua", "non-somatic" as sections. Each section contains
-        metric names keys with "min" and "max" thresholds.
+        metric names keys with "greater" and "less" thresholds.
         If None, uses default thresholds.
     unit_labels_to_plot : list of str, optional
         List of unit labels to include in the plot. If None, defaults to all labels in thresholds.
@@ -197,10 +197,10 @@ class BombcellUpsetPlotWidget(BaseWidget):
                 values = np.abs(values)
 
             failed = np.isnan(values)
-            if not is_threshold_disabled(thresh.get("min", None)):
-                failed |= values < thresh["min"]
-            if not is_threshold_disabled(thresh.get("max", None)):
-                failed |= values > thresh["max"]
+            if not is_threshold_disabled(thresh.get("greater", None)):
+                failed |= values < thresh["greater"]
+            if not is_threshold_disabled(thresh.get("less", None)):
+                failed |= values > thresh["less"]
             failure_data[metric_name] = failed
 
         return pd.DataFrame(failure_data, index=metrics.index)

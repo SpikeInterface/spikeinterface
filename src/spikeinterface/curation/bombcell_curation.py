@@ -50,34 +50,34 @@ def bombcell_get_default_thresholds() -> dict:
     """
     bombcell - Returns default thresholds for unit labeling.
 
-    Each metric has 'min' and 'max' values. Use None to disable a threshold (e.g. to ignore a metric completely
-    or to only have a min or a max threshold)
+    Each metric has 'greater' and 'less' values. Use None to disable a threshold (e.g. to ignore a metric completely
+    or to only have a greater or a less threshold)
     """
     # bombcell
     return {
         "noise": {  # failures -> NOISE
-            "num_positive_peaks": {"min": None, "max": 2},
-            "num_negative_peaks": {"min": None, "max": 1},
-            "peak_to_trough_duration": {"min": 0.0001, "max": 0.00115},  # seconds
-            "waveform_baseline_flatness": {"min": None, "max": 0.5},
-            "peak_after_to_trough_ratio": {"min": None, "max": 0.8},
-            "exp_decay": {"min": 0.01, "max": 0.1},
+            "num_positive_peaks": {"greater": None, "less": 2},
+            "num_negative_peaks": {"greater": None, "less": 1},
+            "peak_to_trough_duration": {"greater": 0.0001, "less": 0.00115},  # seconds
+            "waveform_baseline_flatness": {"greater": None, "less": 0.5},
+            "peak_after_to_trough_ratio": {"greater": None, "less": 0.8},
+            "exp_decay": {"greater": 0.01, "less": 0.1},
         },
         "mua": {  # failures -> MUA, only applied to units that passed noise thresholds
-            "amplitude_median": {"min": 30, "max": None, "abs": True},  # uV
-            "snr": {"min": 5, "max": None},
-            "amplitude_cutoff": {"min": None, "max": 0.2},
-            "num_spikes": {"min": 300, "max": None},
-            "rp_contamination": {"min": None, "max": 0.1},
-            "presence_ratio": {"min": 0.7, "max": None},
-            "drift_ptp": {"min": None, "max": 100},  # um
+            "amplitude_median": {"greater": 30, "less": None, "abs": True},  # uV
+            "snr": {"greater": 5, "less": None},
+            "amplitude_cutoff": {"greater": None, "less": 0.2},
+            "num_spikes": {"greater": 300, "less": None},
+            "rp_contamination": {"greater": None, "less": 0.1},
+            "presence_ratio": {"greater": 0.7, "less": None},
+            "drift_ptp": {"greater": None, "less": 100},  # um
         },
         "non-somatic": {
-            "peak_before_to_trough_ratio": {"min": None, "max": 3},
-            "peak_before_width": {"min": 0.00015, "max": None},  # seconds
-            "trough_width": {"min": 0.0002, "max": None},  # seconds
-            "peak_before_to_peak_after_ratio": {"min": None, "max": 3},
-            "main_peak_to_trough_ratio": {"min": None, "max": 0.8},
+            "peak_before_to_trough_ratio": {"greater": None, "less": 3},
+            "peak_before_width": {"greater": 0.00015, "less": None},  # seconds
+            "trough_width": {"greater": 0.0002, "less": None},  # seconds
+            "peak_before_to_peak_after_ratio": {"greater": None, "less": 3},
+            "main_peak_to_trough_ratio": {"greater": None, "less": 0.8},
         },
     }
 
@@ -123,7 +123,7 @@ def bombcell_label_units(
         If provided, metrics are extracted automatically using get_metrics_extension_data().
     thresholds : dict | str | Path | None
         Threshold dict or JSON file, including a three sections ("noise", "mua", "non-somatic") of
-        {"metric": {"min": val, "max": val}}.
+        {"metric": {"greater": val, "less": val}}.
         If None, default Bombcell thresholds are used.
     label_non_somatic : bool, default: True
         If True, detect non-somatic (dendritic, axonal) units.
@@ -336,8 +336,8 @@ def save_bombcell_results(
                     continue
                 value = metrics.loc[unit_id, metric_name]
                 thresh = flat_thresholds[metric_name]
-                thresh_min = thresh.get("min", None)
-                thresh_max = thresh.get("max", None)
+                thresh_min = thresh.get("greater", None)
+                thresh_max = thresh.get("less", None)
 
                 # Determine pass/fail
                 passed = True
