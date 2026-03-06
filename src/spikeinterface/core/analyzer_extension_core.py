@@ -68,7 +68,9 @@ class ComputeRandomSpikes(AnalyzerExtension):
             **self.params,
         )
 
-    def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None, percentage=None, maximum_rate=None):
+    def _set_params(
+        self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None, percentage=None, maximum_rate=None
+    ):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
         return params
 
