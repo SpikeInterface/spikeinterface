@@ -154,12 +154,10 @@ def get_numba_vector_to_list_of_spiketrain():
 def random_spikes_selection(
     sorting: BaseSorting,
     num_samples: list[int] | None = None,
-    method: Literal["uniform", "all", "percentage", "maximum_rate", "temporal_bins"] = "uniform",
+    method: Literal["uniform", "all", "percentage", "maximum_rate"] = "uniform",
     max_spikes_per_unit: int = 500,
     percentage: float | None = None,
     maximum_rate: float | None = None,
-    bin_size_s: float | None = None,
-    k_per_bin: int | None = None,
     margin_size: int | None = None,
     seed: int | None = None,
 ):
@@ -177,7 +175,7 @@ def random_spikes_selection(
         The number of samples per segment.
         Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    method: "uniform" | "percentage" | "maximum_rate" | "all" | "temporal_bins", default: "uniform"
+    method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
         The method to use.
     max_spikes_per_unit: int, default: 500
         The maximum number of spikes per units
@@ -185,10 +183,6 @@ def random_spikes_selection(
         In case of `percentage` method. The proportion of spikes per units.
     maximum_rate: float | None, default: None
         In case of `maximum_rate` method. The cap rate per units.
-    bin_size_s: float | None, default: None
-        In case of `temporal_bins` method. The duration of a temporal bin.
-    k_per_bin: int | None, default: None
-        In case of `temporal_bins` method. Maximum number of spikes per bins.
     margin_size: None | int, default: None
         A margin on each border of segments to avoid border spikes
     seed: None | int, default: None
@@ -199,7 +193,7 @@ def random_spikes_selection(
     random_spikes_indices: np.array
         Selected spike indices coresponding to the sorting spike vector.
     """
-    rng_methods = ("uniform", "percentage", "maximum_rate", "temporal_bins")
+    rng_methods = ("uniform", "percentage", "maximum_rate")
 
     if method == "all":
         spikes = sorting.to_spike_vector()
@@ -257,42 +251,6 @@ def random_spikes_selection(
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
-            elif method == "temporal_bins":
-                # expressed bin sampling as a dual sub sorting problem to be fully vectorized
-
-                if None in (k_per_bin, bin_size_s):
-                    missing = []
-                    if k_per_bin is None:
-                        missing.append("k_per_bin")
-                    if bin_size_s is None:
-                        missing.append("bin_size_s")
-                    raise ValueError(
-                        f"the following args need to be defined when using the 'temporal bins' method : {', '.join(missing)}"
-                    )
-
-                sampling_frequency = sorting.get_sampling_frequency()
-                bin_size_freq = int(bin_size_s * sampling_frequency)
-
-                unit_spikes = np.concat(spikes)[all_unit_indices]
-
-                # local to segment so will loop and reset
-                bin_index = unit_spikes["sample_index"] // bin_size_freq
-                segment_index = unit_spikes["segment_index"]
-
-                group_values = np.stack((segment_index, bin_index), axis=1)
-                _, group_keys = np.unique(group_values, return_inverse=True, axis=0)
-
-                score = rng.random(all_unit_indices.size)
-                order = np.lexsort((score, group_keys))
-
-                ordered_unit_indices = all_unit_indices[order]
-
-                group_start = np.r_[0, np.flatnonzero(np.diff(group_keys)) + 1]
-                counts = np.diff(np.r_[group_start, ordered_unit_indices.size])
-
-                ranks = np.arange(ordered_unit_indices.size, step=1) - np.repeat(group_start, counts)
-                selection_mask = ranks <= k_per_bin
-                selected_unit_indices = ordered_unit_indices[selection_mask]
 
             random_spikes_indices.append(selected_unit_indices)
 
