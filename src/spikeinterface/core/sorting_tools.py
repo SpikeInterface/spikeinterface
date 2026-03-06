@@ -251,7 +251,6 @@ def random_spikes_selection(
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
-
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
