@@ -156,10 +156,10 @@ def random_spikes_selection(
     num_samples: list[int] | None = None,
     method: Literal["uniform", "all", "percentage", "maximum_rate"] = "uniform",
     max_spikes_per_unit: int = 500,
-    percentage: float | None = None,
-    maximum_rate: float | None = None,
     margin_size: int | None = None,
     seed: int | None = None,
+    percentage: float | None = None,
+    maximum_rate: float | None = None,
 ):
     """
     This replaces `select_random_spikes_uniformly()`.
@@ -179,14 +179,14 @@ def random_spikes_selection(
         The method to use.
     max_spikes_per_unit: int, default: 500
         The maximum number of spikes per units
-    percentage: float | None, default: None
-        In case of `percentage` method. The proportion of spikes per units.
-    maximum_rate: float | None, default: None
-        In case of `maximum_rate` method. The cap rate per units.
     margin_size: None | int, default: None
         A margin on each border of segments to avoid border spikes
     seed: None | int, default: None
         A seed for random generator
+    percentage: float | None, default: None
+        In case of `percentage` method. The proportion of spikes per units.
+    maximum_rate: float | None, default: None
+        In case of `maximum_rate` method. The cap rate per units.
 
     Returns
     -------
