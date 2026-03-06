@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
+import warnings
 from typing import Literal, List
 from itertools import chain, combinations
+from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
+
 import numpy as np
 
 from spikeinterface import BaseSorting
@@ -475,6 +477,15 @@ class Curation(BaseModel):
                         )
 
         return self
+
+
+def CurationModel(*args, **kwargs):
+    warnings.warn(
+        "`CurationModel` is deprecated and will be removed in 0.105.0. Use `Curation` instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Curation(*args, **kwargs)
 
 
 class SequentialCuration(BaseModel):
