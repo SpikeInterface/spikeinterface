@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -106,10 +104,10 @@ class DriftRasterMapWidget(BaseRasterWidget):
 
     Parameters
     ----------
-    peaks : np.array | None, default: None
+    peaks : np.ndarray | None, default: None
         The peaks array, with dtype ("sample_index", "channel_index", "amplitude", "segment_index"),
         as returned by the `detect_peaks` or `correct_motion` functions.
-    peak_locations : np.array | None, default: None
+    peak_locations : np.ndarray | None, default: None
         The peak locations, with dtype ("x", "y") or ("x", "y", "z"), as returned by the
         `localize_peaks` or `correct_motion` functions.
     sorting_analyzer : SortingAnalyzer | None, default: None
@@ -143,8 +141,8 @@ class DriftRasterMapWidget(BaseRasterWidget):
 
     def __init__(
         self,
-        peaks: np.array | None = None,
-        peak_locations: np.array | None = None,
+        peaks: np.ndarray | None = None,
+        peak_locations: np.ndarray | None = None,
         sorting_analyzer: SortingAnalyzer | None = None,
         direction: str = "y",
         recording: BaseRecording | None = None,

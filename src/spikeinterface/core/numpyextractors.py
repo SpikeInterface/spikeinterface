@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 import numpy as np
 from spikeinterface.core import (
@@ -16,9 +14,6 @@ from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
-
-
-from typing import Union
 
 
 class NumpyRecording(BaseRecording):
@@ -157,6 +152,8 @@ class SharedMemoryRecording(BaseRecording):
             shm = SharedMemory(shm_name, create=False)
             self.shms.append(shm)
             traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            # Force read only
+            traces.flags.writeable = False
             traces_list.append(traces)
 
         if channel_ids is None:
@@ -284,6 +281,8 @@ class NumpySorting(BaseSorting):
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
+        if source_sorting.has_recording():
+            sorting._recording = source_sorting._recording
         if with_metadata:
             source_sorting.copy_metadata(sorting)
         return sorting
@@ -694,7 +693,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[list, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -703,7 +702,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default: None
+        channel_indices : list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -718,15 +717,15 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
         Returns
         -------

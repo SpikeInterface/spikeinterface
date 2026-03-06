@@ -1,11 +1,7 @@
-from __future__ import annotations
-
 import importlib.util
 import warnings
 
 import numpy as np
-from typing import Optional
-from copy import deepcopy
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
@@ -115,7 +111,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         minimum_n_spikes: int = 100,
         minimum_valid_period_duration: float = 180,
         min_num_periods_relative: int = 5,
-        user_defined_periods: Optional[object] = None,
+        user_defined_periods: object | None = None,
         refractory_period_ms: float = 0.8,
         censored_period_ms: float = 0.0,
         num_histogram_bins: int = 50,
@@ -575,7 +571,7 @@ def compute_subperiods(
     period_mode: str = "absolute",
     relative_margin_size: float = 1.0,
     min_num_periods_relative: int = 5,
-    unit_ids: Optional[list] = None,
+    unit_ids: list | None = None,
 ) -> dict:
     """
     Computes subperiods per unit based on specified size mode.
