@@ -79,7 +79,7 @@ def get_default_classifier_search_spaces():
     return default_classifier_search_spaces
 
 
-class CurationModelTrainer:
+class CurationTrainer:
     """
     Used to train and evaluate machine learning models for spike sorting curation.
 
@@ -672,7 +672,7 @@ def train_model(
     """
     Trains and evaluates machine learning models for spike sorting curation.
 
-    This function initializes a ``CurationModelTrainer`` object, loads and preprocesses the data,
+    This function initializes a ``CurationTrainer`` object, loads and preprocesses the data,
     and evaluates the specified combinations of imputation strategies, scaling techniques, and classifiers.
     The evaluation results, including the best model and its parameters, are saved to the output folder.
 
@@ -719,8 +719,8 @@ def train_model(
 
     Returns
     -------
-    CurationModelTrainer
-        The ``CurationModelTrainer`` object used for training and evaluation.
+    CurationTrainer
+        The ``CurationTrainer`` object used for training and evaluation.
 
     Notes
     -----
@@ -743,7 +743,7 @@ def train_model(
     if (test_size > 1.0) or (0.0 > test_size):
         raise Exception("`test_size` must be between 0.0 and 1.0")
 
-    trainer = CurationModelTrainer(
+    trainer = CurationTrainer(
         labels=labels,
         folder=folder,
         metric_names=metric_names,
