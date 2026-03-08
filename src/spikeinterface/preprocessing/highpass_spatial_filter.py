@@ -308,7 +308,9 @@ def agc(traces, window, epsilons):
 
     dead_channels = np.sum(gain, axis=0) == 0
 
-    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(epsilons, gain[:, ~dead_channels])
+    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(
+        epsilons[~dead_channels], gain[:, ~dead_channels]
+    )
 
     return traces, gain
 

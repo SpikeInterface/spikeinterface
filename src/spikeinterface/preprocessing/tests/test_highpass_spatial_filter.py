@@ -103,6 +103,25 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
             assert raw_traces.shape == si_filtered.shape
 
 
+def test_highpass_spatial_filter_with_dead_channels():
+    """Regression test: AGC must handle dead (all-zero) channels without broadcast error.
+
+    PR #4286 changed epsilon from a scalar to a per-channel array, but the agc()
+    function indexed gain with ~dead_channels without applying the same mask to
+    epsilons, causing a broadcast error when any channels had zero signal.
+    """
+    num_channels = 32
+    rec = generate_recording(num_channels=num_channels, durations=[0.5])
+    # Materialize traces and zero out 3 channels to make them "dead"
+    traces = rec.get_traces().copy()
+    traces[:, [0, 15, 31]] = 0.0
+    rec_with_dead = rec.save(format="memory")
+    rec_with_dead._recording_segments[0]._traces = traces
+    filtered = spre.highpass_spatial_filter(rec_with_dead, n_channel_pad=2)
+    result = filtered.get_traces()
+    assert result.shape == traces.shape
+
+
 @pytest.mark.parametrize("dtype", [np.int16, np.float32, np.float64])
 def test_dtype_stability(dtype):
     """
