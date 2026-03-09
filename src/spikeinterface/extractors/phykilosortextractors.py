@@ -346,7 +346,7 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
         warnings.warn(
             "No `offset_to_uV` value given. Outputted data may not be offset correctly. If you know the offset factor, please pass it to the `read_kilosort_as_analyzer` function."
         )
-        offset_to_uV = 1.0
+        offset_to_uV = 0.0
 
     phy_path = Path(folder_path)
 
