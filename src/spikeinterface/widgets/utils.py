@@ -407,7 +407,6 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
     ----------
     sorting : BaseSorting
         The sorting object containing spike data
-
     segment_indices : list[int] | None
         List of the segment indices to process. Default to None.
 
