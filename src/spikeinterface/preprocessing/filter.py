@@ -497,7 +497,7 @@ def highpass_check(freq_min, margin_ms, ignore_low_freq_error=False, skip_warnin
                 f"You can set 'ignore_low_freq_error=True' to bypass this error, but make sure you understand the implications. "
                 f"It is recommended to use large chunks when processing/saving your filtered recording to minimize IO overhead."
                 f"Refer to this documentation on LFP filtering and chunking artifacts for more details: "
-                f"https://spikeinterface.readthedocs.io/en/latest/how-to/extract_lfps.html. "
+                f"https://spikeinterface.readthedocs.io/en/latest/forhowto/plot_extract_lfps.html. "
             )
     if margin_ms == "auto":
         margin_ms = adjust_margin_ms_for_highpass(freq_min)
