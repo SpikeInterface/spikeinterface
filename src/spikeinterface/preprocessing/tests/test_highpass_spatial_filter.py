@@ -6,7 +6,7 @@ from copy import deepcopy
 import spikeinterface.core as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, NumpyRecording
 import importlib.util
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
@@ -115,8 +115,10 @@ def test_highpass_spatial_filter_with_dead_channels():
     # Materialize traces and zero out 3 channels to make them "dead"
     traces = rec.get_traces().copy()
     traces[:, [0, 15, 31]] = 0.0
-    rec_with_dead = rec.save(format="memory")
-    rec_with_dead._recording_segments[0]._traces = traces
+    rec_with_dead = NumpyRecording(
+        traces_list=[traces], sampling_frequency=rec.sampling_frequency, channel_ids=rec.channel_ids
+    )
+    rec_with_dead.set_probe(rec.get_probe(), in_place=True)
     filtered = spre.highpass_spatial_filter(rec_with_dead, n_channel_pad=2)
     result = filtered.get_traces()
     assert result.shape == traces.shape

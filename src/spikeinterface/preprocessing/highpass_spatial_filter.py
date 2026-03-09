@@ -131,7 +131,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 rms_values = recording.get_property("noise_level_rms_raw")
             else:
                 random_slice_kwargs = {} if random_slice_kwargs is None else random_slice_kwargs
-                rms_values = get_noise_levels(recording, method="rms", return_scaled=False, **random_slice_kwargs)
+                rms_values = get_noise_levels(recording, method="rms", return_in_uV=False, **random_slice_kwargs)
 
         # Pre-compute spatial filtering parameters
         butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
