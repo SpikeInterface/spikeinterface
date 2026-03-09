@@ -654,8 +654,6 @@ class Benchmark:
                     with open(file, mode="rb") as f:
                         result[k] = pickle.load(f)
             elif format == "sorting":
-                from spikeinterface.core import load_extractor
-
                 sorting_folder = folder / k
                 if sorting_folder.exists():
                     result[k] = load(sorting_folder)
