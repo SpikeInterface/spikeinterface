@@ -729,7 +729,7 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.MetricsHistogramsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                thresholds = {"snr": {"min": 5}, "isi_violation": {"max": 0.5}}
+                thresholds = {"snr": {"greater": 5}, "isi_violation": {"less": 0.5}}
                 sw.plot_metric_histograms(
                     self.sorting_analyzer_dense, thresholds=thresholds, backend=backend, **self.backend_kwargs[backend]
                 )

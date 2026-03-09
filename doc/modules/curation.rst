@@ -132,8 +132,8 @@ which applies a set of thresholds based on the available metrics (template/quali
     labels = threshold_metrics_label_units(
         sorting_analyzer=sorting_analyzer,
         thresholds={
-            "snr": {"min": 5},
-            "rp_contamination": {"max": 0.2},
+            "snr": {"greater": 5},
+            "rp_contamination": {"less": 0.2},
         },
         pass_label="good",
         fail_label="bad",

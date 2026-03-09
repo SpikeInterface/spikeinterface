@@ -79,18 +79,18 @@ curation:
 
 
 1. Quality-metrics based curation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------
 
 A simple solution is to use a filter based on quality metrics. To do so,
-we can use the ``spikeinterface.curation.qualitymetrics_label_units``
+we can use the ``spikeinterface.curation.threshold_metrics_label_units``
 function and provide a set of thresholds.
 
 .. code:: ipython3
 
     qm_thresholds = {
-        "snr": {"min": 5},
-        "firing_rate": {"min": 0.1, "max": 200},
-        "rp_contamination": {"max": 0.5}
+        "snr": {"greater": 5},
+        "firing_rate": {"greater": 0.1, "less": 200},
+        "rp_contamination": {"less": 0.5}
     }
 
 .. code:: ipython3
@@ -143,7 +143,7 @@ across all units:
 .. image:: auto_label_units_files/auto_label_units_14_0.png
 
 
-1. Bombcell
+2. Bombcell
 -----------
 
 **Bombcell** ([Fabre]_) is another threshold-based method that also uses
@@ -161,24 +161,24 @@ file.
 
 .. parsed-literal::
 
-    {'mua': {'amplitude_cutoff': {'max': 0.2, 'min': None},
-             'amplitude_median': {'max': None, 'min': 40},
-             'drift_ptp': {'max': 100, 'min': None},
-             'num_spikes': {'max': None, 'min': 300},
-             'presence_ratio': {'max': None, 'min': 0.7},
-             'rp_contamination': {'max': 0.1, 'min': None},
-             'snr': {'max': None, 'min': 5}},
-     'noise': {'exp_decay': {'max': 0.1, 'min': 0.01},
-               'num_negative_peaks': {'max': 1, 'min': None},
-               'num_positive_peaks': {'max': 2, 'min': None},
-               'peak_after_to_trough_ratio': {'max': 0.8, 'min': None},
-               'peak_to_trough_duration': {'max': 0.00115, 'min': 0.0001},
-               'waveform_baseline_flatness': {'max': 0.5, 'min': None}},
-     'non-somatic': {'main_peak_to_trough_ratio': {'max': 0.8, 'min': None},
-                     'peak_before_to_peak_after_ratio': {'max': 3, 'min': None},
-                     'peak_before_to_trough_ratio': {'max': 3, 'min': None},
-                     'peak_before_width': {'max': None, 'min': 0.00015},
-                     'trough_width': {'max': None, 'min': 0.0002}}}
+    {'mua': {'amplitude_cutoff': {'greater': None, 'less': 0.2},
+            'amplitude_median': {'abs': True, 'greater': 30, 'less': None},
+            'drift_ptp': {'greater': None, 'less': 100},
+            'num_spikes': {'greater': 300, 'less': None},
+            'presence_ratio': {'greater': 0.7, 'less': None},
+            'rp_contamination': {'greater': None, 'less': 0.1},
+            'snr': {'greater': 5, 'less': None}},
+    'noise': {'exp_decay': {'greater': 0.01, 'less': 0.1},
+            'num_negative_peaks': {'greater': None, 'less': 1},
+            'num_positive_peaks': {'greater': None, 'less': 2},
+            'peak_after_to_trough_ratio': {'greater': None, 'less': 0.8},
+            'peak_to_trough_duration': {'greater': 0.0001, 'less': 0.00115},
+            'waveform_baseline_flatness': {'greater': None, 'less': 0.5}},
+    'non-somatic': {'main_peak_to_trough_ratio': {'greater': None, 'less': 0.8},
+                    'peak_before_to_peak_after_ratio': {'greater': None, 'less': 3},
+                    'peak_before_to_trough_ratio': {'greater': None, 'less': 3},
+                    'peak_before_width': {'greater': 0.00015, 'less': None},
+                    'trough_width': {'greater': 0.0002, 'less': None}}}
 
 
 .. code:: ipython3
@@ -248,8 +248,8 @@ contamination (``rp_contamination``).
 .. image:: auto_label_units_files/auto_label_units_23_1.png
 
 
-UnitRefine
-----------
+3. UnitRefine
+-------------
 
 **UnitRefine** ([Jain]_) also uses quality and template metrics, but in
 a different way. It uses pre-trained classifiers to trained on
@@ -305,11 +305,10 @@ sorting with different strategies. We recommend running **Bombcell** and
 **UnitRefine** as part of your pipeline. These methods will facilitate
 further curation and make downstream analysis cleaner.
 
-To remove units from your ``SortingAnalyzer``, you can simply use the
-``select_units`` function:
-
 Remove units from ``SortingAnalyzer``
 -------------------------------------
+
+To remove units from your ``SortingAnalyzer``, you can use the ``select_units`` function.
 
 After auto-labeling, we can easily remove the “noise” units for
 downstream analysis:
