@@ -4,7 +4,7 @@ from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 
-from .loading import load, load_extractor
+from .loading import load
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
