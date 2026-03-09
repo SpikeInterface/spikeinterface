@@ -287,8 +287,6 @@ spikeinterface.comparison
     .. autofunction:: compare_sorter_to_ground_truth
     .. autofunction:: compare_templates
     .. autofunction:: compare_multiple_templates
-    .. autofunction:: create_hybrid_units_recording
-    .. autofunction:: create_hybrid_spikes_recording
 
     .. autoclass:: GroundTruthComparison
         :members:
