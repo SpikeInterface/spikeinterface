@@ -348,16 +348,18 @@ class ChannelSparsity:
         sparsity : ChannelSparsity
             The estimated sparsity
         """
-        from .template_tools import get_template_amplitudes
+        from .template_tools import get_template_extremum_channel
 
         mask = np.zeros(
             (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
         )
         channel_locations = templates_or_sorting_analyzer.get_channel_locations()
         distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
+        best_chan = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign="neg", outputs="index")
 
         for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
-            chan_inds = np.argsort(distances[unit_ind])
+            chan_ind = best_chan[unit_id]
+            chan_inds = np.argsort(distances[chan_ind])
             chan_inds = chan_inds[:num_channels]
             mask[unit_ind, chan_inds] = True
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
