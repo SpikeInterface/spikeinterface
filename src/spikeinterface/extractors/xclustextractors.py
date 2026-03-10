@@ -30,7 +30,13 @@ class XClustSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    def __init__(self, folder_path=None, *, file_path_list=None, sampling_frequency):
+    def __init__(
+        self,
+        folder_path: str | Path | None = None,
+        *,
+        file_path_list: list[str | Path] | None = None,
+        sampling_frequency: float,
+    ):
         if folder_path is not None and file_path_list is not None:
             raise ValueError("Provide either 'folder_path' or 'file_path_list', not both.")
         if folder_path is None and file_path_list is None:
