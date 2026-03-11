@@ -288,7 +288,7 @@ if HAVE_NUMBA:
             metric = 0
         elif method == "l2":
             metric = 1
-        else:
+        elif method == "cosine":
             metric = 2
 
         overlapping_j_list = numba.typed.List()
@@ -319,7 +319,7 @@ if HAVE_NUMBA:
                                 ch_list.append(c)
                         ch = np.array(ch_list, dtype=np.uint16)
 
-                else:
+                elif support == "dense":
                     ch = np.arange(num_channels, dtype=np.uint16)
 
                 if len(ch) > 0:
@@ -348,18 +348,21 @@ if HAVE_NUMBA:
                     tgt_ch = tgt_sliced[j][:, ch]
 
                     if metric == 0:
+                        # l1
                         norm_i = np.sum(np.abs(src_ch))
                         norm_j = np.sum(np.abs(tgt_ch))
                         dist = np.sum(np.abs(src_ch - tgt_ch))
                         distances[count, i, j] = dist / (norm_i + norm_j)
 
                     elif metric == 1:
+                        # l2
                         norm_i = sqrt(np.sum(src_ch**2))
                         norm_j = sqrt(np.sum(tgt_ch**2))
                         dist = sqrt(np.sum((src_ch - tgt_ch) ** 2))
                         distances[count, i, j] = dist / (norm_i + norm_j)
 
-                    else:
+                    elif metric == 2:
+                        # cosine
                         dot = np.sum(src_ch * tgt_ch)
                         norm_i = sqrt(np.sum(src_ch**2))
                         norm_j = sqrt(np.sum(tgt_ch**2))
