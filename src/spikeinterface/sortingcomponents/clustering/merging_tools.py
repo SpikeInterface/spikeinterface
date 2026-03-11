@@ -627,7 +627,7 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                 # with shifts
                 accumulated_template = np.zeros_like(merge_template_array[g0, :, :])
                 for i, l in enumerate(merge_group):
-                    shift = lags[l, g0]
+                    shift = lags[l, g0]  # which is the same as  -lags[g0, l]
                     if shift > 0:
                         # template is shifted to right
                         temp = np.zeros_like(accumulated_template)
