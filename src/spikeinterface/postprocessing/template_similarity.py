@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import warnings
 from itertools import chain
@@ -57,13 +55,6 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.params["support"] = "union"
 
     def _set_params(self, method="cosine", max_lag_ms=0, support="union"):
-        if method == "cosine_similarity":
-            warnings.warn(
-                "The method 'cosine_similarity' is deprecated and will be removed in the next version. Use 'cosine' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            method = "cosine"
         params = dict(method=method, max_lag_ms=max_lag_ms, support=support)
         return params
 

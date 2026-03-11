@@ -26,7 +26,9 @@ def threshold_metrics_label_units(
     thresholds : dict | str | Path
         A dictionary or JSON file path where keys are metric names and values are threshold values for labeling units.
         Each key should correspond to a quality metric present in the analyzer's quality metrics DataFrame. Values
-        should contain at least "min" and/or "max" keys to specify threshold ranges.
+        should contain at least "greater" and/or "less" keys to specify threshold ranges. Thresholds are inclusive, i.e.
+        "greater" is >= and "less" is <=. Optionally, an "abs": True entry can be included to indicate that the metric
+        should be treated as an absolute value when applying thresholds.
     pass_label : str, default: "good"
         The label to assign to units that pass all thresholds.
     fail_label : str, default: "noise"
@@ -73,6 +75,14 @@ def threshold_metrics_label_units(
             f"Available metrics are: {metrics.columns.tolist()}"
         )
 
+    # Check that threshold dictionaries contain only valid keys
+    valid_keys = {"greater", "less", "abs"}
+    for metric_name, threshold in thresholds_dict.items():
+        if not set(threshold).issubset(valid_keys):
+            raise ValueError(
+                f"Threshold for metric '{metric_name}' contains invalid keys {set(threshold) - valid_keys}."
+            )
+
     if operator not in ("and", "or"):
         raise ValueError("operator must be 'and' or 'or'")
 
@@ -87,14 +97,17 @@ def threshold_metrics_label_units(
     any_threshold_applied = False
 
     for metric_name, threshold in thresholds_dict.items():
-        min_value = threshold.get("min", None)
-        max_value = threshold.get("max", None)
+        min_value = threshold.get("greater", None)
+        max_value = threshold.get("less", None)
+        abs_value = threshold.get("abs", False)
 
         # If both disabled, ignore this metric
         if is_threshold_disabled(min_value) and is_threshold_disabled(max_value):
             continue
 
         values = metrics[metric_name].to_numpy()
+        if abs_value:
+            values = np.abs(values)
         is_nan = np.isnan(values)
 
         metric_ok = np.ones(len(values), dtype=bool)

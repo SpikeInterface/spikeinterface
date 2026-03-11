@@ -2,7 +2,6 @@
 Some utils to handle parallel jobs on top of job and/or loky
 """
 
-from __future__ import annotations
 import numpy as np
 import platform
 import os
@@ -119,17 +118,6 @@ def fix_job_kwargs(runtime_job_kwargs):
     if runtime_job_kwargs is None:
         # in this case this will be the global job_kwargs
         runtime_job_kwargs = dict()
-
-    # deprecation with backward compatibility
-    # this can be removed in 0.104.0
-    if "max_threads_per_process" in runtime_job_kwargs:
-        runtime_job_kwargs = runtime_job_kwargs.copy()
-        runtime_job_kwargs["max_threads_per_worker"] = runtime_job_kwargs.pop("max_threads_per_process")
-        warnings.warn(
-            "job_kwargs: max_threads_per_process was changed to max_threads_per_worker, max_threads_per_process will be removed in 0.104",
-            DeprecationWarning,
-            stacklevel=2,
-        )
 
     for k in runtime_job_kwargs:
         assert k in job_keys, (

@@ -1,4 +1,3 @@
-from __future__ import annotations
 import mmap
 import warnings
 from pathlib import Path

@@ -4,11 +4,17 @@ Signal-to-noise ratio (:code:`snr`)
 Calculation
 -----------
 
-- :math:`A_{\mu s}` : maximum amplitude of the mean spike waverform (on the best channel).
+- :math:`A_{\mu s}` : maximum amplitude of the median spike waverform (on the best channel).
 - :math:`\sigma_b` : standard deviation of the background noise on the same channel (usually computed via the `median absolute deviation <https://en.wikipedia.org/wiki/Median_absolute_deviation>`_).
 
 .. math::
     \textrm{SNR} = \frac{A_{\mu s}}{\sigma_b}
+
+The amplitude, bu default, is the amplitude of the largest peak (positive or negative) of the median waveform on the best channel.
+If the ``waveforms`` extension is not available, the amplitude is computedon the average waveform.
+The noise level is computed using the median absolute deviation of the signal on the best channel, which is a robust
+estimator of the standard deviation of the noise.
+
 
 Expectation and use
 -------------------

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import importlib.util
 import subprocess  # TODO: decide best format for this
 from subprocess import CalledProcessError, check_output

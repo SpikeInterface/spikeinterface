@@ -1,8 +1,5 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
 from spikeinterface.core import get_noise_levels, get_channel_distances
 

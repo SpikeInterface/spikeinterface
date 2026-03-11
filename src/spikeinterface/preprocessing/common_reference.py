@@ -1,6 +1,5 @@
-from __future__ import annotations
 import numpy as np
-from typing import Optional, Literal
+from typing import Literal
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
