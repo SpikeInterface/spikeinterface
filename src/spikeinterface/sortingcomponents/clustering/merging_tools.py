@@ -614,7 +614,7 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                     clean_labels[mask] = unit_ids[g0]
                     keep_template[l] = False
                     if lags is not None:
-                        shift = lags[l, g0] # which is the same as  -lags[g0, l]
+                        shift = lags[l, g0]  # which is the same as  -lags[g0, l]
                         time_shifts[mask] += shift
 
             weights /= weights.sum()
