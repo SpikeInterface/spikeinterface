@@ -342,29 +342,29 @@ if HAVE_NUMBA:
             src_sliced = templates_array[:, num_shifts : num_samples - num_shifts]
             tgt_sliced = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
 
-            for src_unit in numba.prange(num_templates):
-                src_template = src_sliced[src_unit]
-                overlapping_ids = overlapping_j_list[src_unit]
-                overlapping_chs = active_channels_list[src_unit]
+            for i in numba.prange(num_templates):
+                src_template = src_sliced[i]
+                overlapping_ids = overlapping_j_list[i]
+                overlapping_chs = active_channels_list[i]
 
                 for pair_idx in range(len(overlapping_ids)):
-                    tgt_unit = np.uint16(overlapping_ids[pair_idx])
+                    j = np.uint16(overlapping_ids[pair_idx])
                     ch = overlapping_chs[pair_idx]
 
                     src_ch = src_template[:, ch]
-                    tgt_ch = tgt_sliced[tgt_unit][:, ch]
+                    tgt_ch = tgt_sliced[j][:, ch]
 
                     if metric == 0:
                         norm_i = np.sum(np.abs(src_ch))
                         norm_j = np.sum(np.abs(tgt_ch))
                         dist = np.sum(np.abs(src_ch - tgt_ch))
-                        distances[count, src_unit, tgt_unit] = dist / (norm_i + norm_j)
+                        distances[count, i, j] = dist / (norm_i + norm_j)
 
                     elif metric == 1:
                         norm_i = sqrt(np.sum(src_ch**2))
                         norm_j = sqrt(np.sum(tgt_ch**2))
                         dist = sqrt(np.sum((src_ch - tgt_ch) ** 2))
-                        distances[count, src_unit, tgt_unit] = dist / (norm_i + norm_j)
+                        distances[count, i, j] = dist / (norm_i + norm_j)
 
                     else:
                         dot = np.sum(src_ch * tgt_ch)
@@ -372,13 +372,10 @@ if HAVE_NUMBA:
                         norm_j = sqrt(np.sum(tgt_ch**2))
                         denom = norm_i * norm_j
                         if denom > 0.0:
-                            distances[count, src_unit, tgt_unit] = 1.0 - dot / denom
+                            distances[count, i, j] = 1.0 - dot / denom
 
                     if same_array:
-                        distances[count, tgt_unit, src_unit] = distances[count, src_unit, tgt_unit]
-
-            if same_array and shift != 0:
-                distances[num_shifts_both_sides - count - 1] = distances[count].T
+                        distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
 
         return distances
 
