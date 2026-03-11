@@ -1,3 +1,4 @@
+import re
 import tempfile
 import unittest
 
@@ -35,5 +36,5 @@ class TestXClustErrors(unittest.TestCase):
 
     def test_empty_folder_raises(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            with pytest.raises(ValueError, match=f"No .CEL files found in {tmp_dir}"):
+            with pytest.raises(ValueError, match=re.escape(f"No .CEL files found in {tmp_dir}")):
                 XClustSortingExtractor(folder_path=tmp_dir, sampling_frequency=30_000.0)
