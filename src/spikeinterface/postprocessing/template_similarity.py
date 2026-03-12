@@ -371,7 +371,11 @@ if HAVE_NUMBA:
                             distances[count, i, j] = 1.0 - dot / denom
 
                     if same_array:
-                        distances[num_shifts_both_sides - count - 1, j, i] = distances[count, i, j]
+                        distances[count, j, i] = distances[count, i, j]
+
+            if same_array and shift != 0:
+                distances[num_shifts_both_sides - count - 1] = distances[count].T
+
 
         return distances
 
