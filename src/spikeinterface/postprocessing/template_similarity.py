@@ -376,7 +376,6 @@ if HAVE_NUMBA:
             if same_array and shift != 0:
                 distances[num_shifts_both_sides - count - 1] = distances[count].T
 
-
         return distances
 
     _compute_similarity_matrix = _compute_similarity_matrix_numba
