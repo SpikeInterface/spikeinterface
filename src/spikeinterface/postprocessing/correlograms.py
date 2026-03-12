@@ -44,9 +44,11 @@ class ComputeCorrelograms(AnalyzerExtension):
         bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
     method : "auto" | "numpy" | "numba", default: "auto"
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
-    fast_mode : "auto" | "on" | "off", default: "auto"
-        If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300.
+    n_jobs : int | float, default: 1.0
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
 
     Returns
     -------
@@ -90,8 +92,8 @@ class ComputeCorrelograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: str = "auto"):
-        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs: int | float = 1.0):
+        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs)
 
         return params
 
@@ -223,9 +225,11 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         bin size 1 ms, the correlation will be binned as -25 ms, -24 ms, ...
     method : "auto" | "numpy" | "numba", default: "auto"
          If "auto" and numba is installed, numba is used, otherwise numpy is used.
-    fast_mode : "auto" | "off" | "on", default: "auto"
-        If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300.
+    n_jobs : int | float, default: 1.0
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
 
     Returns
     -------
@@ -263,8 +267,8 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: str = "auto"):
-        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
+    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs: int | float = 1.0):
+        params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -341,7 +345,7 @@ def compute_correlograms(
     window_ms: float = 50.0,
     bin_ms: float = 1.0,
     method: str = "auto",
-    fast_mode: str = "auto",
+    n_jobs: int | float = 1.0,
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -352,11 +356,11 @@ def compute_correlograms(
 
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_correlograms_sorting_analyzer(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs
         )
     else:
         return _compute_correlograms_on_sorting(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs
         )
 
 
@@ -422,7 +426,7 @@ def _compute_num_bins(window_size, bin_size):
     return num_bins, num_half_bins
 
 
-def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode="auto"):
+def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", n_jobs=1.0):
     """
     Computes cross-correlograms from multiple units.
 
@@ -441,9 +445,11 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     method : str
         To use "numpy" or "numba". "auto" will use numba if available,
         otherwise numpy.
-    fast_mode : "auto" | "on" | "off", default: "auto"
-        If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300.
+    n_jobs : int | float, default: 1.0
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
 
     Returns
     -------
@@ -459,20 +465,12 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
 
-    if method == "numba" and fast_mode == "auto":
-        num_units = len(sorting.unit_ids)
-        fast_mode = num_units > 300
-    elif fast_mode == "off":
-        fast_mode = False
-    elif fast_mode == "on":
-        fast_mode = True
-
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
 
     if method == "numpy":
         correlograms = _compute_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
-        correlograms = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode=fast_mode)
+        correlograms = _compute_correlograms_numba(sorting, window_size, bin_size, n_jobs=n_jobs)
 
     return correlograms, bins
 
@@ -617,7 +615,7 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     return correlograms
 
 
-def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
+def _compute_correlograms_numba(sorting, window_size, bin_size, n_jobs=1.0):
     """
     Computes cross-correlograms between all units in `sorting`.
 
@@ -633,9 +631,11 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
             The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
-    fast_mode : bool
-        If True, use faster implementations (currently only if method is 'numba'),
-        at the cost of possible minor numerical differences.
+    n_jobs : int | float, default: 1.0
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
 
     Returns
     -------
@@ -652,11 +652,12 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
 
     spikes = sorting.to_spike_vector(concatenated=False)
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
-
-    if fast_mode:
-        num_threads = mp.cpu_count()
+    
+    if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
+        import os
+        num_threads = int(n_jobs * os.cpu_count())
     else:
-        num_threads = 1
+        num_threads = n_jobs
 
     for seg_index in range(sorting.get_num_segments()):
         spike_times = spikes[seg_index]["sample_index"]
@@ -829,7 +830,7 @@ if HAVE_NUMBA:
 
 
 def compute_auto_correlograms(
-    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode="auto"
+    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs=1.0
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -840,15 +841,15 @@ def compute_auto_correlograms(
 
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_auto_correlograms_sorting_analyzer(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs
         )
     else:
         return _compute_auto_correlograms_on_sorting(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs
         )
 
 
-def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode=False):
+def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", n_jobs=1.0):
     """
     Computes auto-correlograms from multiple units.
 
@@ -867,9 +868,11 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
     method : str
         To use "numpy" or "numba". "auto" will use numba if available,
         otherwise numpy.
-    fast_mode : "auto" | "off" | "on", default: "auto"
-        If "auto", a faster multithreaded implementations is used if method is "numba" and
-        if the number of units is greater than 300.
+    n_jobs : int | float, default: 1.0
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
 
     Returns
     -------
@@ -884,20 +887,13 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
 
     if method == "auto":
         method = "numba" if HAVE_NUMBA else "numpy"
-    if method == "numba" and fast_mode == "auto":
-        num_units = len(sorting.unit_ids)
-        fast_mode = num_units > 300
-    elif fast_mode == "off":
-        fast_mode = False
-    elif fast_mode == "on":
-        fast_mode = True
 
     bins, window_size, bin_size = _make_bins(sorting, window_ms, bin_ms)
 
     if method == "numpy":
         correlograms = _compute_auto_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
-        correlograms = _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode)
+        correlograms = _compute_auto_correlograms_numba(sorting, window_size, bin_size, n_jobs=n_jobs)
 
     return correlograms, bins
 
@@ -1036,7 +1032,7 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     return correlograms
 
 
-def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=False):
+def _compute_auto_correlograms_numba(sorting, window_size, bin_size, n_jobs=1.0):
     """
     Computes auto-correlograms between all units in `sorting`.
 
@@ -1052,9 +1048,11 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
             The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
-    fast_mode : bool
-        If True, use faster implementations (currently only if method is 'numba'),
-        at the cost of possible minor numerical differences.
+    n_jobs : int | float, default: 1.0
+        Number of workers that will be requested during multiprocessing. Note that
+        the OS determines how this is distributed, but for convenience one can use
+        * -1 the number of workers is the same as number of cores (from os.cpu_count())
+        * float between 0 and 1 uses fraction of total cores (from os.cpu_count())
 
     Returns
     -------
@@ -1072,10 +1070,11 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
     spikes = sorting.to_spike_vector(concatenated=False)
     correlograms = np.zeros((num_units, num_bins), dtype=np.int64)
 
-    if fast_mode:
-        num_threads = mp.cpu_count()
+    if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
+        import os
+        num_threads = int(n_jobs * os.cpu_count())
     else:
-        num_threads = 1
+        num_threads = n_jobs
 
     for seg_index in range(sorting.get_num_segments()):
         spike_times = spikes[seg_index]["sample_index"]
