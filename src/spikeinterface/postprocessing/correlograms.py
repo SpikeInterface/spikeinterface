@@ -92,7 +92,9 @@ class ComputeCorrelograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs: int | float = 1.0):
+    def _set_params(
+        self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs: int | float = 1.0
+    ):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs)
 
         return params
@@ -267,7 +269,9 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs: int | float = 1.0):
+    def _set_params(
+        self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", n_jobs: int | float = 1.0
+    ):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, n_jobs=n_jobs)
         return params
 
@@ -652,9 +656,10 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, n_jobs=1.0):
 
     spikes = sorting.to_spike_vector(concatenated=False)
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
-    
+
     if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
         import os
+
         num_threads = int(n_jobs * os.cpu_count())
     else:
         num_threads = n_jobs
@@ -1072,6 +1077,7 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, n_jobs=1.0)
 
     if isinstance(n_jobs, float) and 0 < n_jobs <= 1:
         import os
+
         num_threads = int(n_jobs * os.cpu_count())
     else:
         num_threads = n_jobs
