@@ -47,6 +47,7 @@ class ComputeCorrelograms(AnalyzerExtension):
     fast_mode : "auto" | "on" | "off", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -226,6 +227,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     fast_mode : "auto" | "off" | "on", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -445,6 +447,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     fast_mode : "auto" | "on" | "off", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -872,6 +875,7 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
     fast_mode : "auto" | "off" | "on", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -1056,7 +1060,9 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
         The size of which to bin lags, in samples.
     fast_mode : bool
         If True, use faster implementations (currently only if method is 'numba'),
-        at the cost of possible minor numerical differences.
+        at the cost of possible minor numerical differences. 
+        This uses job_kwargs to determine the number of threads to use.
+    
 
     Returns
     -------
