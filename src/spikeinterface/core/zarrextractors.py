@@ -485,6 +485,14 @@ def add_recording_to_zarr_group(
     zarr_group.attrs["num_segments"] = int(recording.get_num_segments())
     zarr_group.create_dataset(name="channel_ids", data=recording.get_channel_ids(), compressor=None)
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
+    dataset_timestamps_paths = None
+    if any(recording.has_time_vector(i) for i in range(recording.get_num_segments())):
+        dataset_timestamps_paths = []
+        for i in range(recording.get_num_segments()):
+            if recording.has_time_vector(i):
+                dataset_timestamps_paths.append(f"times_seg{i}")
+            else:
+                dataset_timestamps_paths.append(None)
 
     dtype = recording.get_dtype() if dtype is None else dtype
     channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
@@ -501,6 +509,7 @@ def add_recording_to_zarr_group(
         chunkable=recording,
         zarr_group=zarr_group,
         dataset_paths=dataset_paths,
+        dataset_timestamps_paths=dataset_timestamps_paths,
         compressor_data=compressor_traces,
         filters_data=filters_traces,
         compressor_times=compressor_times,

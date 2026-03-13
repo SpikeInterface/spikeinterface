@@ -263,6 +263,7 @@ def write_chunkable_to_zarr(
     chunkable: "ChunkableMixin",
     zarr_group,
     dataset_paths,
+    dataset_timestamps_paths=None,
     extra_chunks=None,
     dtype=None,
     compressor_data=None,
@@ -283,6 +284,8 @@ def write_chunkable_to_zarr(
         The zarr group to add traces to
     dataset_paths : list
         List of paths to traces datasets in the zarr group
+    dataset_timestamps_paths : list or None, default: None
+        List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
     extra_chunks : tuple or None, default: None
         Extra chunking dimensions to use for the zarr dataset.
         The first dimension is always time and controlled by the job_kwargs.
@@ -307,7 +310,13 @@ def write_chunkable_to_zarr(
         ChunkExecutor,
     )
 
-    assert dataset_paths is not None, "Provide 'file_path'"
+    assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
+    if dataset_timestamps_paths is not None:
+        assert (
+            len(dataset_timestamps_paths) == chunkable.get_num_segments()
+        ), "dataset_timestamps_paths should have the same length as the number of segments in the chunkable"
+    else:
+        dataset_timestamps_paths = [None] * chunkable.get_num_segments()
 
     if not isinstance(dataset_paths, list):
         dataset_paths = [dataset_paths]
@@ -342,10 +351,11 @@ def write_chunkable_to_zarr(
             compressor=compressor_data,
         )
         zarr_datasets.append(dset)
-        if chunkable.has_time_vector(segment_index):
+        if dataset_timestamps_paths[segment_index] is not None:
+            tset_name = dataset_timestamps_paths[segment_index]
             zarr_timestamps_datasets.append(
                 zarr_group.create_dataset(
-                    name=f"times_seg{segment_index}",
+                    name=tset_name,
                     shape=(num_samples,),
                     chunks=(chunk_size,),
                     dtype="float64",
