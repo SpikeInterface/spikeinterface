@@ -150,7 +150,11 @@ def test_equal_results_fast_correlograms(window_and_bin_ms):
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", n_jobs=2
     )
     result_numba, bins_numba = _compute_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", n_jobs=1,
+        sorting,
+        window_ms=window_ms,
+        bin_ms=bin_ms,
+        method="numba",
+        n_jobs=1,
     )
     from numpy.testing import assert_almost_equal
 
