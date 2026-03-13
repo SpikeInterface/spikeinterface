@@ -147,10 +147,10 @@ def test_equal_results_fast_correlograms(window_and_bin_ms):
     sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     result_numba_fast, bins_numba_fast = _compute_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", n_jobs=2
     )
     result_numba, bins_numba = _compute_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", n_jobs=1,
     )
     from numpy.testing import assert_almost_equal
 
@@ -169,10 +169,10 @@ def test_equal_results_fast_auto_correlograms(window_and_bin_ms):
     sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     result_numba_fast, bins_numba_fast = _compute_auto_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", n_jobs=2
     )
     result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", n_jobs=1
     )
     from numpy.testing import assert_almost_equal
 
