@@ -140,7 +140,9 @@ class ComputeCorrelograms(AnalyzerExtension):
                         break
 
         if can_apply_soft_method is False:
-            new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params, **job_kwargs)
+            new_ccgs, new_bins = _compute_correlograms_on_sorting(
+                new_sorting_analyzer.sorting, **self.params, **job_kwargs
+            )
             new_data = dict(ccgs=new_ccgs, bins=new_bins)
         else:
             # Make a transformation dict, which tells us how unit_indices from the
@@ -344,7 +346,7 @@ def compute_correlograms(
     bin_ms: float = 1.0,
     method: str = "auto",
     fast_mode: str = "auto",
-    **job_kwargs
+    **job_kwargs,
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -355,11 +357,21 @@ def compute_correlograms(
 
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_correlograms_sorting_analyzer(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode, **job_kwargs
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
     else:
         return _compute_correlograms_on_sorting(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode, **job_kwargs
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
 
 
@@ -659,7 +671,7 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode, **job
 
     if fast_mode:
         job_kwargs = fix_job_kwargs(job_kwargs)
-        num_threads = job_kwargs['n_jobs']
+        num_threads = job_kwargs["n_jobs"]
     else:
         num_threads = 1
 
@@ -834,7 +846,12 @@ if HAVE_NUMBA:
 
 
 def compute_auto_correlograms(
-    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode="auto", **job_kwargs
+    sorting_analyzer_or_sorting,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
+    method: str = "auto",
+    fast_mode="auto",
+    **job_kwargs,
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -845,11 +862,21 @@ def compute_auto_correlograms(
 
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_auto_correlograms_sorting_analyzer(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode, **job_kwargs
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
     else:
         return _compute_auto_correlograms_on_sorting(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode, **job_kwargs
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
 
 
@@ -1060,9 +1087,9 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
         The size of which to bin lags, in samples.
     fast_mode : bool
         If True, use faster implementations (currently only if method is 'numba'),
-        at the cost of possible minor numerical differences. 
+        at the cost of possible minor numerical differences.
         This uses job_kwargs to determine the number of threads to use.
-    
+
 
     Returns
     -------
@@ -1082,7 +1109,7 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
 
     if fast_mode:
         job_kwargs = fix_job_kwargs(job_kwargs)
-        num_threads = job_kwargs['n_jobs']
+        num_threads = job_kwargs["n_jobs"]
     else:
         num_threads = 1
 
