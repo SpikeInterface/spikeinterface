@@ -363,6 +363,8 @@ def write_chunkable_to_zarr(
                     compressor=compressor_times,
                 )
             )
+        else:
+            zarr_timestamps_datasets.append(None)
 
     # use executor (loop or workers)
     func = _write_zarr_chunk
