@@ -49,6 +49,7 @@ from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 from .silence_artifacts import SilencedArtifactsRecording, silence_artifacts
+from .deautozero import DeAutozeroRecording, deautozero
 
 _all_preprocesser_dict = {
     # filter stuff
@@ -89,6 +90,7 @@ _all_preprocesser_dict = {
     AstypeRecording: astype,
     UnsignedToSignedRecording: unsigned_to_signed,
     SilencedArtifactsRecording: silence_artifacts,
+    DeAutozeroRecording: deautozero,
 }
 # we control import in the preprocessing init by setting an __all__
 
