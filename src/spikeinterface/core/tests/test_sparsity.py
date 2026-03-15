@@ -211,7 +211,9 @@ def test_estimate_sparsity():
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
     # regression for #4126: closest_channels must work even when there are more units than channels
-    recording_small, sorting_many_units = generate_ground_truth_recording(num_channels=4, num_units=6, durations=[10], seed=0)
+    recording_small, sorting_many_units = generate_ground_truth_recording(
+        num_channels=4, num_units=6, durations=[10], seed=0
+    )
     sparsity = estimate_sparsity(
         sorting_many_units,
         recording_small,
