@@ -3,7 +3,7 @@ import shutil
 
 import numpy as np
 
-from spikeinterface.core import NpzFolderSorting, NumpyFolderSorting, load_extractor
+from spikeinterface.core import NpzFolderSorting, NumpyFolderSorting
 from spikeinterface.core import generate_sorting
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 

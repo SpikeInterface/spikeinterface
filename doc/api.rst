@@ -287,8 +287,6 @@ spikeinterface.comparison
     .. autofunction:: compare_sorter_to_ground_truth
     .. autofunction:: compare_templates
     .. autofunction:: compare_multiple_templates
-    .. autofunction:: create_hybrid_units_recording
-    .. autofunction:: create_hybrid_spikes_recording
 
     .. autoclass:: GroundTruthComparison
         :members:
@@ -390,7 +388,7 @@ such as merging and splitting units, as well as defining labels for units.
 
 .. automodule:: spikeinterface.curation.curation_model
 
-    .. autopydantic_model:: CurationModel
+    .. autopydantic_model:: Curation
     .. autopydantic_model:: Merge
     .. autopydantic_model:: Split
     .. autopydantic_model:: ManualLabel

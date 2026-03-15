@@ -121,6 +121,9 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("openephysbinary/v0.5.x_two_nodes", {"stream_id": "0"}),
         ("openephysbinary/v0.5.x_two_nodes", {"stream_id": "1"}),
         ("openephysbinary/v0.6.x_neuropixels_multiexp_multistream", {"stream_id": "0", "block_index": 0}),
+        # TODO: block_indices 1/2 of v0.6.x_neuropixels_multiexp_multistream have a mismatch in the channel names between
+        # the settings files (starting with CH0) and structure.oebin (starting at CH1).
+        # Currently, the extractor will skip remapping to match order in oebin and settings file, raising a warning
         ("openephysbinary/v0.6.x_neuropixels_multiexp_multistream", {"stream_id": "1", "block_index": 1}),
         (
             "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",

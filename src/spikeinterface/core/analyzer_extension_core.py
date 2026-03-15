@@ -35,14 +35,18 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     Parameters
     ----------
-    method : "uniform" | "all", default: "uniform"
-        The method to select the spikes
+    method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
+        Method to select spikes: "uniform" randomly up to max_spikes_per_unit, "percentage" selects a fraction of spikes, and "maximum_rate" limits selection by spike rate over time.
     max_spikes_per_unit : int, default: 500
         The maximum number of spikes per unit, ignored if method="all"
     margin_size : int, default: None
         A margin on each border of segments to avoid border spikes, ignored if method="all"
     seed : int or None, default: None
         A seed for the random generator, ignored if method="all"
+    percentage: float | None, default: None
+        In case of `percentage` method. The proportion of spikes per units.
+    maximum_rate: float | None, default: None
+        In case of `maximum_rate` method. The cap rate per units.
 
     Returns
     -------
@@ -64,7 +68,9 @@ class ComputeRandomSpikes(AnalyzerExtension):
             **self.params,
         )
 
-    def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
+    def _set_params(
+        self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None, percentage=None, maximum_rate=None
+    ):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
         return params
 
