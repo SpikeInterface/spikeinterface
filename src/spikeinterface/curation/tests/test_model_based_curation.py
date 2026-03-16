@@ -17,8 +17,8 @@ else:
 @pytest.fixture
 def model(trained_pipeline_path):
     """A toy model, created using the `sorting_analyzer_for_unitrefine_curation` from `spikeinterface.curation.tests.common`.
-    It has been trained locally and, when applied to `sorting_analyzer_for_unitrefine_curation` will label its 5 units with
-    the following labels: [1,0,1,0,1]."""
+    It has been trained locally and, when applied to `sorting_analyzer_for_unitrefine_curation` will label its 10 units with
+    the following labels: [1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]."""
 
     model = load_model(trained_pipeline_path, trusted=["numpy.dtype"])
     return model
