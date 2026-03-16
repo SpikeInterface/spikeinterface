@@ -68,6 +68,11 @@ def make_sorting_analyzer_with_splits(sorting_analyzer, num_unit_splitted=1, num
 
 @pytest.fixture(scope="module")
 def sorting_analyzer_for_curation():
+    return make_sorting_analyzer(sparse=True)
+
+
+@pytest.fixture(scope="module")
+def sorting_analyzer_for_unitrefine_curation():
     """Makes an analyzer whose first 10 units are good normal units, and 10 which are noise. We make them
     noise by using a spike trains which are uncorrelated with the recording for `sorting2`."""
 
@@ -91,7 +96,7 @@ def sorting_analyzer_with_splits():
 
 
 @pytest.fixture(scope="module")
-def trained_pipeline_path(sorting_analyzer_for_curation):
+def trained_pipeline_path(sorting_analyzer_for_unitrefine_curation):
     """
     Makes a model saved at "./trained_pipeline" which will be used by other tests in the module.
     If the model already exists, this function does nothing.
@@ -100,7 +105,7 @@ def trained_pipeline_path(sorting_analyzer_for_curation):
     if trained_model_folder.is_dir():
         yield trained_model_folder
     else:
-        analyzer = sorting_analyzer_for_curation
+        analyzer = sorting_analyzer_for_unitrefine_curation
         analyzer.compute(
             {
                 "quality_metrics": {"metric_names": ["snr"]},
