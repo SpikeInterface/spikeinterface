@@ -1,8 +1,4 @@
-from __future__ import annotations
-
 import numpy as np
-
-import warnings
 
 from .base import BaseWidget, to_attr
 
@@ -81,18 +77,8 @@ class SortingSummaryWidget(BaseWidget):
         curation_dict=None,
         label_definitions=None,
         backend=None,
-        unit_table_properties=None,
         **backend_kwargs,
     ):
-
-        if unit_table_properties is not None:
-            warnings.warn(
-                "plot_sorting_summary() : `unit_table_properties` is deprecated and will be removed in version 0.104.0, use `displayed_unit_properties` instead",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            displayed_unit_properties = unit_table_properties
-
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(
             sorting_analyzer, ["correlograms", "spike_amplitudes", "unit_locations", "template_similarity"]

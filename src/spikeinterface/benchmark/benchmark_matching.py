@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates

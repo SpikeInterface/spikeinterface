@@ -226,6 +226,7 @@ spikeinterface.postprocessing
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
+    .. autofunction:: compute_valid_unit_periods
     .. autofunction:: align_sorting
 
 
@@ -286,8 +287,6 @@ spikeinterface.comparison
     .. autofunction:: compare_sorter_to_ground_truth
     .. autofunction:: compare_templates
     .. autofunction:: compare_multiple_templates
-    .. autofunction:: create_hybrid_units_recording
-    .. autofunction:: create_hybrid_spikes_recording
 
     .. autoclass:: GroundTruthComparison
         :members:
@@ -373,6 +372,9 @@ spikeinterface.curation
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
+    .. autofunction:: threshold_metrics_label_units
+    .. autofunction:: bombcell_label_units
+    .. autofunction:: bombcell_get_default_thresholds
     .. autofunction:: model_based_label_units
     .. autofunction:: load_model
     .. autofunction:: train_model
@@ -386,7 +388,7 @@ such as merging and splitting units, as well as defining labels for units.
 
 .. automodule:: spikeinterface.curation.curation_model
 
-    .. autopydantic_model:: CurationModel
+    .. autopydantic_model:: Curation
     .. autopydantic_model:: Merge
     .. autopydantic_model:: Split
     .. autopydantic_model:: ManualLabel

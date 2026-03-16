@@ -7,4 +7,4 @@ Currently, the following metrics are implemented:
 - "num_spikes": number of spikes in the spike train.
 - "firing_rate": firing rate of the spike train (spikes per second).
 
-# TODO: Add more metrics such as ISI distribution, CV, etc.
+.. TODO: Add more metrics such as ISI distribution, CV, etc.

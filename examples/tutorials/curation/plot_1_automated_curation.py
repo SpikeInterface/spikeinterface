@@ -239,17 +239,6 @@ sua_mua_labels = sc.model_based_label_units(
 all_labels = pd.concat([sua_mua_labels, noise_units]).sort_index()
 print(all_labels)
 
-##############################################################################
-# Both steps can be done in one go using the ``unitrefine_label_units`` function:
-#
-
-all_labels = sc.unitrefine_label_units(
-    sorting_analyzer,
-    noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier",
-    sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier",
-)
-print(all_labels)
-
 
 ##############################################################################
 # If you run this without the ``trust_model=True`` parameter, you will receive an error:

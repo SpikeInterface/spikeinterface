@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from warnings import warn
 
@@ -377,26 +375,8 @@ class RasterWidget(BaseRasterWidget):
         backend: str | None = None,
         sorting: BaseSorting | None = None,
         sorting_analyzer: SortingAnalyzer | None = None,
-        segment_index: int | None = None,
         **backend_kwargs,
     ):
-
-        import warnings
-
-        # Handle deprecation of segment_index parameter
-        if segment_index is not None:
-            warnings.warn(
-                "The 'segment_index' parameter is deprecated and will be removed in a future version. "
-                "Use 'segment_indices' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if segment_indices is None:
-                if isinstance(segment_index, int):
-                    segment_indices = [segment_index]
-                else:
-                    segment_indices = segment_index
-
         if sorting is not None:
             # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
             deprecation_msg = "`sorting` argument is deprecated and will be removed in version 0.105.0. Please use `sorting_analyzer_or_sorting` instead"

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 import numpy as np
 from spikeinterface.core import (
@@ -16,9 +14,6 @@ from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
-
-
-from typing import Union
 
 
 class NumpyRecording(BaseRecording):
@@ -157,6 +152,8 @@ class SharedMemoryRecording(BaseRecording):
             shm = SharedMemory(shm_name, create=False)
             self.shms.append(shm)
             traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            # Force read only
+            traces.flags.writeable = False
             traces_list.append(traces)
 
         if channel_ids is None:
@@ -284,6 +281,8 @@ class NumpySorting(BaseSorting):
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
+        if source_sorting.has_recording():
+            sorting._recording = source_sorting._recording
         if with_metadata:
             source_sorting.copy_metadata(sorting)
         return sorting
@@ -364,23 +363,6 @@ class NumpySorting(BaseSorting):
 
         sample_list = [np.round(t * sampling_frequency).astype("int64") for t in times_list]
         return NumpySorting.from_samples_and_labels(sample_list, labels_list, sampling_frequency, unit_ids)
-
-    @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
-        warning_msg = (
-            "`from_times_labels` is deprecated and will be removed in 0.104.0. Note this function requires"
-            "samples rather than times so should not be used for clarity purposes. For those working in samples please"
-            "use `from_samples_and_labels` instead. For those working in time units (seconds) please use "
-            "`from_times_and_labels` instead."
-        )
-
-        warnings.warn(
-            warning_msg,
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # despite the naming of the original function this required samples
-        return NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
 
     @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
@@ -694,7 +676,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[list, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -703,7 +685,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default: None
+        channel_indices : list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -718,15 +700,15 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
         Returns
         -------

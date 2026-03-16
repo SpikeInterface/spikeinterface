@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .nearest import NearestTemplatesPeeler, NearestTemplatesSVDPeeler
 from .tdc_peeler import TridesclousPeeler
 from .circus import CircusOMPPeeler

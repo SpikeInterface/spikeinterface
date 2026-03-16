@@ -127,15 +127,6 @@ def load(
         return loaded_object
 
 
-def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
-    warnings.warn(
-        "load_extractor() is deprecated and will be removed in version 0.104.0. Please use load() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return load(file_or_folder_or_dict, base_folder=base_folder)
-
-
 def _guess_object_from_dict(d):
     """
     When an object is read from json or pickle or zarr attr we can guess which object it is

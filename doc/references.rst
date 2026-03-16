@@ -57,7 +57,7 @@ methods:
  - :code:`acgs_3d` [Beau]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`monopolar_triangulation` based on work from [Boussard]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`grid_convolution` based on work from [Pachitariu]_
-
+ - :code:`compute_valid_unit_periods` based on work from [npyx]_ and [Fabre]_
 
 Metrics Module
 --------------
@@ -94,6 +94,8 @@ If you use the "slay" preset in the :code:`compute_merge_unit_groups` method, pl
 
 If you use :code:`unitrefine_label_units`, :code:`model_based_label_units` or :code:`train_model`, please cite [Jain]_
 
+If you use :code:`bombcell_label_units`, please cite [Fabre]_
+
 Benchmark
 ---------
 
@@ -118,7 +120,7 @@ References
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
-.. [Fabre] `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. 2023. <https://doi.org/10.5281/zenodo.8172822>`
+.. [Fabre] `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. 2023. <https://doi.org/10.5281/zenodo.8172822>`_
 
 .. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
 
