@@ -132,11 +132,11 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_unitrefi
     classified_units = model_based_classification.predict_labels()
     predictions = classified_units["prediction"].values
 
-    expected_result = np.array([1] * 10 + [0] * 10)
+    expected_result = np.array([1] * 6 + [0] * 6)
     assert np.all(predictions == expected_result)
 
     conversion = {0: "noise", 1: "good"}
-    expected_result_converted = np.array(["good"] * 10 + ["noise"] * 10)
+    expected_result_converted = np.array(["good"] * 6 + ["noise"] * 6)
     classified_units_labelled = model_based_classification.predict_labels(label_conversion=conversion)
     predictions_labelled = classified_units_labelled["prediction"]
     assert np.all(predictions_labelled == expected_result_converted)
