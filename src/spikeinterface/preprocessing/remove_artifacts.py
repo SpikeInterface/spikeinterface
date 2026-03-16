@@ -274,12 +274,12 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 if pad is None:
                     traces[trig, :] = 0
                 else:
-                    if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
+                    if trig - pad[0] >= 0 and trig + pad[1] < end_frame - start_frame:
                         traces[trig - pad[0] : trig + pad[1] + 1, :] = 0
                     elif trig - pad[0] <= 0 and trig + pad[1] >= end_frame - start_frame:
                         traces[:] = 0
                     elif trig - pad[0] <= 0:
-                        traces[: trig + pad[1], :] = 0
+                        traces[: trig + pad[1] + 1, :] = 0
                     elif trig + pad[1] >= end_frame - start_frame:
                         traces[trig - pad[0] :, :] = 0
         elif self.mode in ["linear", "cubic"]:
