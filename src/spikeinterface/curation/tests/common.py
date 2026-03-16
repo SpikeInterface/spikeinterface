@@ -5,8 +5,6 @@ from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import train_model
 from pathlib import Path
 
-job_kwargs = dict(n_jobs=-1)
-
 extensions = [
     "noise_levels",
     "random_spikes",
@@ -21,7 +19,6 @@ extensions = [
 
 
 def make_sorting_analyzer(sparse=True, num_units=5, durations=[300.0]):
-    job_kwargs = dict(n_jobs=-1)
     recording, sorting = generate_ground_truth_recording(
         durations=durations,
         sampling_frequency=30000.0,
@@ -46,7 +43,6 @@ def make_sorting_analyzer(sparse=True, num_units=5, durations=[300.0]):
 
 
 def make_sorting_analyzer_with_splits(sorting_analyzer, num_unit_splitted=1, num_split=2):
-    job_kwargs = dict(n_jobs=-1)
     sorting = sorting_analyzer.sorting
 
     split_ids = sorting.unit_ids[:num_unit_splitted]
