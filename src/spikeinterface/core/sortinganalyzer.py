@@ -2198,7 +2198,7 @@ def get_extension_class(extension_name: str, auto_import=True):
             warnings.warn(
                 f"Extension '{extension_name}' is unknown. Maybe this is an external extension, a typo or was computed by a different version of SpikeInterface."
             )
-        return None
+            return None
 
     ext_class = extensions_dict[extension_name]
     return ext_class
