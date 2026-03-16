@@ -43,8 +43,10 @@ def test_metric_ordering_independence(sorting_analyzer_for_curation, trained_pip
     """The function `model_based_label_units` needs the correct metrics to have been computed. However,
     it should be independent of the order of computation. We test this here."""
 
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
+    sorting_analyzer_for_curation.compute(
+        "template_metrics", metric_names=["half_width", "peak_to_trough_duration", "number_of_peaks"]
+    )
+    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["snr"])
 
     prediction_prob_dataframe_1 = model_based_label_units(
         sorting_analyzer=sorting_analyzer_for_curation,
@@ -52,7 +54,9 @@ def test_metric_ordering_independence(sorting_analyzer_for_curation, trained_pip
         trusted=["numpy.dtype"],
     )
 
-    sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["snr", "num_spikes"])
+    sorting_analyzer_for_curation.compute(
+        "template_metrics", metric_names=["peak_to_trough_duration", "half_width", "number_of_peaks"]
+    )
 
     prediction_prob_dataframe_2 = model_based_label_units(
         sorting_analyzer=sorting_analyzer_for_curation,
@@ -118,7 +122,9 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
     we expect these labels to be outputted. The test checks this, and also checks
     that label conversion works as expected."""
 
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
+    sorting_analyzer_for_curation.compute(
+        "template_metrics", metric_names=["half_width", "peak_to_trough_duration", "number_of_peaks"]
+    )
     sorting_analyzer_for_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
 
     # Test the predict_labels() method of ModelBasedClassification
@@ -126,12 +132,14 @@ def test_model_based_classification_predict_labels(sorting_analyzer_for_curation
     classified_units = model_based_classification.predict_labels()
     predictions = classified_units["prediction"].values
 
-    assert np.all(predictions == np.array([1, 0, 1, 0, 1]))
+    expected_result = np.array([1] * 10 + [0] * 10)
+    assert np.all(predictions == expected_result)
 
     conversion = {0: "noise", 1: "good"}
+    expected_result_converted = np.array(["good"] * 10 + ["noise"] * 10)
     classified_units_labelled = model_based_classification.predict_labels(label_conversion=conversion)
     predictions_labelled = classified_units_labelled["prediction"]
-    assert np.all(predictions_labelled == ["good", "noise", "good", "noise", "good"])
+    assert np.all(predictions_labelled == expected_result_converted)
 
 
 @pytest.mark.skip(reason="We need to retrain the model to reflect any changes in metric computation")
@@ -142,9 +150,11 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_cura
     be raised depending on the `enforce_metric_params` kwarg. This behaviour is tested here."""
 
     sorting_analyzer_for_curation.compute(
-        "quality_metrics", metric_names=["num_spikes", "snr"], metric_params={"snr": {"peak_mode": "peak_to_peak"}}
+        "quality_metrics", metric_names=["snr"], metric_params={"snr": {"peak_mode": "peak_to_peak"}}
     )
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
+    sorting_analyzer_for_curation.compute(
+        "template_metrics", metric_names=["half_width", "peak_to_trough_duration", "number_of_peaks"]
+    )
 
     model, model_info = load_model(model_folder=trained_pipeline_path, trusted=["numpy.dtype"])
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, model)
@@ -160,10 +170,10 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_cura
     # Now test the positive case. Recompute using the default parameters
     sorting_analyzer_for_curation.compute(
         "quality_metrics",
-        metric_names=["num_spikes", "snr"],
+        metric_names=["snr"],
         metric_params={"snr": {"peak_sign": "neg", "peak_mode": "extremum"}},
     )
-    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width"])
+    sorting_analyzer_for_curation.compute("template_metrics", metric_names=["half_width", "peak_to_trough_duration"])
 
     model, model_info = load_model(model_folder=trained_pipeline_path, trusted=["numpy.dtype"])
     model_based_classification = ModelBasedClassification(sorting_analyzer_for_curation, model)

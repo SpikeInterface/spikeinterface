@@ -68,7 +68,9 @@ def test_unitrefine_label_units_hf(sorting_analyzer_for_curation):
 
 def test_unitrefine_label_units_with_local_models(sorting_analyzer_for_curation, trained_pipeline_path):
     # test with trained local models
-    sorting_analyzer_for_curation.compute("template_metrics", include_multi_channel_metrics=True)
+    sorting_analyzer_for_curation.compute(
+        "template_metrics", metric_names=["half_width", "peak_to_trough_duration", "number_of_peaks"]
+    )
     sorting_analyzer_for_curation.compute("quality_metrics")
 
     # test passing model folder

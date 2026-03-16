@@ -1,6 +1,6 @@
 import pytest
 
-from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
+from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer, aggregate_units
 from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import train_model
 from pathlib import Path
@@ -68,7 +68,15 @@ def make_sorting_analyzer_with_splits(sorting_analyzer, num_unit_splitted=1, num
 
 @pytest.fixture(scope="module")
 def sorting_analyzer_for_curation():
-    return make_sorting_analyzer(sparse=True)
+    """Makes an analyzer whose first 10 units are good normal units, and 10 which are noise. We make them
+    noise by using a spike trains which are uncorrelated with the recording for `sorting2`."""
+
+    recording, sorting_1 = generate_ground_truth_recording(num_channels=4, seed=1, num_units=10)
+    _, sorting_2 = generate_ground_truth_recording(num_channels=4, seed=2, num_units=10)
+    both_sortings = aggregate_units([sorting_1, sorting_2])
+    analyzer = create_sorting_analyzer(sorting=both_sortings, recording=recording)
+    analyzer.compute(["random_spikes", "noise_levels", "templates"])
+    return analyzer
 
 
 @pytest.fixture(scope="module")
@@ -83,7 +91,7 @@ def sorting_analyzer_with_splits():
 
 
 @pytest.fixture(scope="module")
-def trained_pipeline_path():
+def trained_pipeline_path(sorting_analyzer_for_curation):
     """
     Makes a model saved at "./trained_pipeline" which will be used by other tests in the module.
     If the model already exists, this function does nothing.
@@ -92,20 +100,22 @@ def trained_pipeline_path():
     if trained_model_folder.is_dir():
         yield trained_model_folder
     else:
-        analyzer = make_sorting_analyzer(sparse=True)
+        analyzer = sorting_analyzer_for_curation
         analyzer.compute(
             {
-                "quality_metrics": {"metric_names": ["snr", "num_spikes"]},
-                "template_metrics": {"metric_names": ["half_width"]},
+                "quality_metrics": {"metric_names": ["snr"]},
+                "template_metrics": {"metric_names": ["half_width", "peak_to_trough_duration", "number_of_peaks"]},
             }
         )
         train_model(
-            analyzers=[analyzer] * 5,
-            labels=[[1, 0, 1, 0, 1]] * 5,
+            analyzers=[analyzer],
             folder=trained_model_folder,
-            classifiers=["RandomForestClassifier"],
+            labels=[[1] * 10 + [0] * 10],
             imputation_strategies=["median"],
             scaling_techniques=["standard_scaler"],
+            classifiers=["RandomForestClassifier"],
+            overwrite=True,
+            search_kwargs={"cv": 3, "scoring": "balanced_accuracy", "n_iter": 2},
         )
         yield trained_model_folder
 
