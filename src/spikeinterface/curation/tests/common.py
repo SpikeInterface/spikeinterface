@@ -35,9 +35,12 @@ def make_sorting_analyzer(sparse=True, num_units=5, durations=[300.0]):
     sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting=sorting, recording=recording, format="memory", sparse=sparse, **job_kwargs
+        sorting=sorting,
+        recording=recording,
+        format="memory",
+        sparse=sparse,
     )
-    sorting_analyzer.compute(extensions, **job_kwargs)
+    sorting_analyzer.compute(extensions)
 
     return sorting_analyzer
 
@@ -57,7 +60,7 @@ def make_sorting_analyzer_with_splits(sorting_analyzer, num_unit_splitted=1, num
     sorting_analyzer_with_splits = create_sorting_analyzer(
         sorting=sorting_with_split, recording=sorting_analyzer.recording, format="memory", sparse=True
     )
-    sorting_analyzer_with_splits.compute(extensions, **job_kwargs)
+    sorting_analyzer_with_splits.compute(extensions)
 
     return sorting_analyzer_with_splits, num_unit_splitted, other_ids
 
