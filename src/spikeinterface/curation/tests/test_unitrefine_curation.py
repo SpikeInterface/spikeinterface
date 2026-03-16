@@ -6,8 +6,13 @@ from spikeinterface.curation import unitrefine_label_units
 
 def test_unitrefine_label_units_hf(sorting_analyzer_for_curation):
     """Test the `unitrefine_label_units` function."""
-    sorting_analyzer_for_curation.compute("template_metrics", include_multi_channel_metrics=True)
-    sorting_analyzer_for_curation.compute("quality_metrics")
+    sorting_analyzer_for_curation.compute(
+        {
+            "spike_amplitudes": {},
+            "template_metrics": {"include_multi_channel_metrics": True},
+            "quality_metrics": {},
+        }
+    )
 
     # test passing both classifiers
     labels = unitrefine_label_units(
