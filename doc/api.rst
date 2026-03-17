@@ -8,10 +8,33 @@ spikeinterface.core
     .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
+    .. automethod:: BaseRecording.save
+    .. automethod:: BaseRecording.save_to_memory
+    .. automethod:: BaseRecording.save_to_folder
+    .. automethod:: BaseRecording.save_to_zarr
+    .. automethod:: BaseRecording.dump
+    .. automethod:: BaseRecording.dump_to_json
+    .. automethod:: BaseRecording.dump_to_pickle
+    .. automethod:: BaseRecording.remove_channels
     .. autoclass:: BaseSorting
         :members:
+    .. automethod:: BaseSorting.save
+    .. automethod:: BaseSorting.save_to_memory
+    .. automethod:: BaseSorting.save_to_folder
+    .. automethod:: BaseSorting.save_to_zarr
+    .. automethod:: BaseSorting.dump
+    .. automethod:: BaseSorting.dump_to_json
+    .. automethod:: BaseSorting.dump_to_pickle
     .. autoclass:: BaseSnippets
         :members:
+    .. automethod:: BaseSnippets.save
+    .. automethod:: BaseSnippets.save_to_memory
+    .. automethod:: BaseSnippets.save_to_folder
+    .. automethod:: BaseSnippets.save_to_zarr
+    .. automethod:: BaseSnippets.dump
+    .. automethod:: BaseSnippets.dump_to_json
+    .. automethod:: BaseSnippets.dump_to_pickle
+    .. automethod:: BaseSnippets.remove_channels
     .. autoclass:: BaseEvent
         :members:
     .. autoclass:: SortingAnalyzer
@@ -204,6 +227,7 @@ spikeinterface.preprocessing
     .. autofunction:: remove_artifacts
     .. autofunction:: resample
     .. autofunction:: scale
+    .. autofunction:: scale_to_uV
     .. autofunction:: silence_periods
     .. autofunction:: unsigned_to_signed
     .. autofunction:: whiten
