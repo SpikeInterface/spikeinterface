@@ -334,6 +334,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 if Path(settings_file).is_file():
                     # look for oebin file
                     exp_name = node_structure["experiments"][exp_id]["name"]
+                    # we can use the first recording folder to find the oebin file, as the mapping should be the same
+                    # for all recordings within the experiment
                     rec_name = node_structure["experiments"][exp_id]["recordings"][rec_ids[0]]["name"]
                     oebin_file = settings_file.parent / exp_name / rec_name / "structure.oebin"
                     oebin_file = oebin_file if oebin_file.is_file() else None
@@ -345,23 +347,6 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     probe = None
 
                 if probe is not None:
-                    # Ensure device channel index corresponds to channel_ids
-                    probe_channel_names = probe.contact_annotations.get("channel_name", None)
-                    if probe_channel_names is not None and not np.array_equal(probe_channel_names, self.channel_ids):
-                        if set(probe_channel_names) == set(self.channel_ids):
-                            device_channel_indices = []
-                            probe_channel_names = list(probe_channel_names)
-                            device_channel_indices = np.zeros(len(self.channel_ids), dtype=int)
-                            for i, ch in enumerate(self.channel_ids):
-                                index_in_probe = probe_channel_names.index(ch)
-                                device_channel_indices[index_in_probe] = i
-                            probe.set_device_channel_indices(device_channel_indices)
-                        else:
-                            warnings.warn(
-                                "Channel names in the probe do not match the channel ids from Neo. "
-                                "Cannot set device channel indices, but this might lead to incorrect probe geometries"
-                            )
-
                     if probe.shank_ids is not None:
                         self.set_probe(probe, in_place=True, group_mode="by_shank")
                     else:
