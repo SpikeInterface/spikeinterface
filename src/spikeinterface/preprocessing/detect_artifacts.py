@@ -176,6 +176,9 @@ class _DetectSaturation(PipelineNode):
             A one-element tuple containing an array of saturation events with
             dtype ``artifact_dtype``.
         """
+        # cast to float32 to prevent overflow when applying thresholds in unscaled ADC units
+        traces = traces.astype("float32")
+
         saturation = np.mean(np.abs(traces) > self.saturation_threshold_unscaled, axis=1)
         detected_by_value = saturation > self.proportion
 
