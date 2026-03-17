@@ -8,7 +8,6 @@ from spikeinterface.core import get_closest_channels
 from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype
-from functools import cache
 
 
 class CommonReferenceRecording(BasePreprocessor):
