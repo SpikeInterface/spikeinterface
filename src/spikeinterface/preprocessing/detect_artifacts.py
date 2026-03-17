@@ -1,21 +1,19 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 
+from spikeinterface.core import BaseRecording
 from spikeinterface.core.base import base_period_dtype
-
-# from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-# from spikeinterface.preprocessing.silence_periods import SilencedPeriodsRecording
 from spikeinterface.preprocessing.rectify import RectifyRecording
 from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
 from spikeinterface.preprocessing.filter_gaussian import GaussianFilterRecording
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype, run_node_pipeline, PipelineNode
-import numpy as np
 
 artifact_dtype = base_period_dtype
-
 
 # this will be extend with channel boundaries if needed
 # extended_artifact_dtype = artifact_dtype + [
@@ -23,42 +21,30 @@ artifact_dtype = base_period_dtype
 # ]
 
 
-def detect_artifact_periods(
-    recording,
-    method="envelope",
-    method_kwargs=None,
-    job_kwargs=None,
-):
+def _collapse_events(events: np.ndarray, num_samples: list[int], mute_samples: int | None = None) -> np.ndarray:
     """
-    Detect artifacts with several possible methods:
-      * 'saturation' using detect_artifact_periods_by_envelope()
-      * 'envelope' using detect_saturation_periods()
+    Collapse artifact events that were split across chunk boundaries.
 
-    See sub methods for more information on parameters.
-    """
+    When a chunk boundary falls within an artifact period the period is emitted
+    as two adjacent events whose ``end_sample_index`` / ``start_sample_index``
+    values are equal.  This function merges such pairs into a single record.
 
-    if method_kwargs is None:
-        method_kwargs = dict()
+    Parameters
+    ----------
+    events : np.ndarray
+        Array of artifact events with dtype ``artifact_dtype``, containing
+        ``"start_sample_index"``, ``"end_sample_index"``, and
+        ``"segment_index"`` fields.
+    num_samples : list[int]
+        List of the number of samples in each segment of the recording.
+        Used to handle edge cases where an artifact extends to the very end of a segment.
+    mute_samples : int | None, default: None
+        Reserved for future use (not yet implemented).
 
-    if method == "envelope":
-        artifact_periods, envelope = detect_artifact_periods_by_envelope(
-            recording, **method_kwargs, job_kwargs=job_kwargs
-        )
-    elif method == "saturation":
-        artifact_periods = detect_saturation_periods(recording, **method_kwargs, job_kwargs=job_kwargs)
-    else:
-        raise ValueError(f"detect_artifact_periods() method='{method}' is not valid")
-
-    return artifact_periods
-
-
-## detect_period_artifacts_saturation Zone
-
-
-def _collapse_events(events):
-    """
-    If events are detected at a chunk edge, they will be split in two.
-    This detects such cases and collapses them in a single record instead.
+    Returns
+    -------
+    np.ndarray
+        Array of collapsed artifact events with the same dtype as ``events``.
     """
     order = np.lexsort((events["start_sample_index"], events["segment_index"]))
     events = events[order]
@@ -70,16 +56,29 @@ def _collapse_events(events):
         if same:
             to_drop[i] = True
             events["start_sample_index"][i + 1] = events["start_sample_index"][i]
+    collapsed_events = events[~to_drop]
+    if mute_samples is not None:
+        collapsed_events["start_sample_index"] -= mute_samples
+        collapsed_events["end_sample_index"] += mute_samples
+        collapsed_events["start_sample_index"] = np.maximum(collapsed_events["start_sample_index"], 0)
+        for seg_index in np.unique(collapsed_events["segment_index"]):
+            mask = collapsed_events["segment_index"] == seg_index
+            collapsed_events["end_sample_index"][mask] = np.minimum(
+                collapsed_events["end_sample_index"][mask], num_samples[seg_index]
+            )
+        # Rerun the collapsing in case the mute window caused new overlaps
+        collapsed_events = _collapse_events(collapsed_events, num_samples, mute_samples=None)
+    return collapsed_events
 
-    return events[~to_drop].copy()
 
-
+## detect_period_artifacts_saturation zone
 class _DetectSaturation(PipelineNode):
     """
-    A recording node for parallelising saturation detection.
+    A pipeline node for parallelised amplifier-saturation detection.
 
-    Run with `run_node_pipeline`, this computes saturation events
-    for a given chunk. See `detect_saturation()` for details.
+    When run with :func:`run_node_pipeline`, this node computes saturation
+    events for a given data chunk.  See :func:`detect_saturation_periods` for
+    the full algorithm description and parameter semantics.
     """
 
     name = "detect_saturation"
@@ -88,16 +87,30 @@ class _DetectSaturation(PipelineNode):
 
     def __init__(
         self,
-        recording,
-        saturation_threshold_uV,
-        uV_per_ms_threshold,
-        proportion,
-    ):
+        recording: BaseRecording,
+        saturation_threshold_uV: float,
+        diff_threshold_uV: float | None,
+        proportion: float,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording to process.
+        saturation_threshold_uV : float
+            Voltage saturation threshold in μV.
+        diff_threshold_uV : float | None
+            First-derivative threshold in μV/sample, or ``None`` to disable
+            derivative-based detection.
+        proportion : float
+            Fraction of channels that must exceed the threshold for a sample to
+            be labelled as saturated (0 < proportion < 1).
+        """
         PipelineNode.__init__(self, recording, return_output=True)
 
         num_chans = recording.get_num_channels()
 
-        self.uV_per_ms_threshold = uV_per_ms_threshold
+        self.diff_threshold_uV = diff_threshold_uV
         thresh = np.full((num_chans,), saturation_threshold_uV)
         # 0.98 is empirically determined as the true saturating point is
         # slightly lower than the documented saturation point of the probe
@@ -107,38 +120,78 @@ class _DetectSaturation(PipelineNode):
         self.gain = recording.get_channel_gains()
         self.offset = recording.get_channel_offsets()
 
-        self.saturation_threshold_unscaled = (thresh - self.offset) / self.gain * 0.98
+        self.saturation_threshold_unscaled = (thresh - self.offset) / self.gain
 
         # do not apply offset when dealing with the derivative
-        self.uV_per_ms_threshold = (uV_per_ms_threshold * self.sampling_frequency / 1e3) / self.gain
+        if self.diff_threshold_uV is not None:
+            self.diff_threshold_unscaled = diff_threshold_uV / self.gain
+        else:
+            self.diff_threshold_unscaled = None
 
-    def get_trace_margin(self):
+    def get_trace_margin(self) -> int:
+        """Return the number of margin samples required on each side of a chunk."""
         return 0
 
-    def get_dtype(self):
+    def get_dtype(self) -> np.dtype:
+        """Return the NumPy dtype of the output array produced by :meth:`compute`."""
         return self._dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(
+        self,
+        traces: np.ndarray,
+        start_frame: int,
+        end_frame: int,
+        segment_index: int,
+        max_margin: int,
+    ) -> tuple[np.ndarray]:
         """
-        Compute saturation events for a given chunk of data.
-        See `detect_saturation()` for details.
+        Detect saturation events within a single chunk of raw traces.
+
+        A sample is labelled as *saturated by value* when the fraction of
+        channels whose absolute amplitude exceeds
+        ``saturation_threshold_unscaled`` is greater than ``proportion``.
+
+        Optionally, a sample is also labelled as *saturated by derivative* when
+        the fraction of channels whose forward-difference amplitude exceeds
+        ``diff_threshold_unscaled`` is greater than ``proportion``.
+
+        Consecutive saturated samples are grouped into contiguous period events.
+
+        Parameters
+        ----------
+        traces : np.ndarray
+            Raw trace data for the current chunk, shape ``(n_samples, n_channels)``.
+        start_frame : int
+            Index of the first sample of this chunk within its segment.
+        end_frame : int
+            Index one past the last sample of this chunk within its segment.
+        segment_index : int
+            Index of the segment to which this chunk belongs.
+        max_margin : int
+            Maximum trace margin (unused; kept for API compatibility).
+
+        Returns
+        -------
+        tuple[np.ndarray]
+            A one-element tuple containing an array of saturation events with
+            dtype ``artifact_dtype``.
         """
         saturation = np.mean(np.abs(traces) > self.saturation_threshold_unscaled, axis=1)
+        detected_by_value = saturation > self.proportion
 
-        if self.uV_per_ms_threshold is not None:
-            fs = self.sampling_frequency
+        if self.diff_threshold_unscaled is not None:
             # then compute the derivative of the voltage saturation
-
-            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) >= self.uV_per_ms_threshold, axis=1)
+            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) >= self.diff_threshold_unscaled, axis=1)
 
             # Note this means the velocity is not checked for the last sample in the
             # check because we are taking the forward derivative
             n_diff_saturated = np.r_[n_diff_saturated, 0]
 
             # if either of those reaches more than the proportion of channels labels the sample as saturated
-            saturation = np.logical_or(saturation > self.proportion, n_diff_saturated > self.proportion)
+            detected_by_diff = n_diff_saturated > self.proportion
+            saturation = np.logical_or(detected_by_value, detected_by_diff)
         else:
-            saturation = saturation > self.proportion
+            saturation = detected_by_value
 
         intervals = np.flatnonzero(np.diff(saturation, prepend=False, append=False))
         n_events = len(intervals) // 2  # Number of saturation periods
@@ -153,86 +206,139 @@ class _DetectSaturation(PipelineNode):
 
 
 def detect_saturation_periods(
-    recording,
-    saturation_threshold_uV,  # 1200 uV
-    uV_per_ms_threshold=None,  # 1e-8 V.s-1
-    proportion=0.2,
-    job_kwargs=None,
-):
+    recording: BaseRecording,
+    saturation_threshold_uV: float | None = None,
+    diff_threshold_uV: float | None = None,
+    proportion: float = 0.2,
+    mute_window_ms: float = 0,
+    job_kwargs: dict | None = None,
+) -> np.ndarray:
     """
-        Detect amplifier saturation events (either single sample or multi-sample periods) in the data.
-        Saturation detection with this function should be applied to the raw data, before preprocessing.
-        However, saturation periods detected should be zeroed out after preprocessing has been performed.
+    Detect amplifier saturation events (single- or multi-sample periods) in raw data.
 
-        Saturation is detected by a voltage threshold, and optionally a derivative threshold that
-        flags periods of high velocity changes in the voltage. See _DetectSaturation.compute()
-        for details on the algorithm.
+    Saturation detection should be applied to the **raw** recording, before any
+    preprocessing.  The returned periods can then be used to zero out (silence)
+    the corresponding samples **after** preprocessing has been performed.
 
-        Parameters
-        ----------
-        recording : BaseRecording
-            The recording on which to detect the saturation events.
-        saturation_threshold_uV : float
-            The voltage saturation threshold in volts. This will depend on the recording
-            probe and amplifier gain settings. For NP1 the value of 1200 uV is recommended (IBL).
-            Note that NP2 probes are more difficult to saturate than NP1.
-        uV_per_ms_threshold : None | float
-            The first-derivative threshold in volts per second. Periods of the data over which the change
-            in velocity is greater than this threshold will be detected as saturation events. Use `None` to
-            skip this method and only use `saturation_threshold_uV` for detection. Otherwise, the value should be
-            empirically determined (IBL use 1e-8 V.s-1) for NP1 probes.
+    Saturation is identified in two complementary ways:
 
-        proportion : float
-            0 < proportion <1  of channels above threshold to consider the sample as saturated
-        mute_window_samples : int
-            TODO: should we scale this based on the fs?
-        job_kwargs: dict
-            The classical job_kwargs
+    1. **By value**: a sample is saturated when the fraction of channels whose
+       absolute amplitude exceeds ``saturation_threshold_uV`` is greater than
+       ``proportion``.
+    2. **By derivative**: a sample is saturated when the fraction of channels
+       whose forward-difference amplitude exceeds ``diff_threshold_uV`` is
+       greater than ``proportion``.
 
-        most useful for NP1
-        can use ratio as a intuition for the value but dont do it in code
+    If ``diff_threshold_uV`` is not ``None``, a sample is marked as saturated
+    if *either* criterion is met.
 
-        Returns
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording on which to detect saturation events.
+    saturation_threshold_uV : float | None, default: None
+        Voltage saturation threshold in μV.  The appropriate value depends on
+        the probe and amplifier gain settings; for Neuropixels 1.0 probes IBL
+        recommend **1200 μV**.  NP2 probes are harder to saturate than NP1.
+        If ``None``, the value is read from the ``"saturation_threshold_uV"``
+        annotation of ``recording``.
+    diff_threshold_uV : float | None, default: None
+        First-derivative threshold in μV/sample.  Periods where the
+        sample-to-sample voltage change exceeds this value in the required
+        fraction of channels are flagged as saturation.  Pass ``None`` to
+        disable derivative-based detection and rely solely on
+        ``saturation_threshold_uV``.  IBL use **300 μV/sample** for NP1 probes.
+    proportion : float, default: 0.2
+        Fraction of channels (0 < proportion < 1) that must exceed the
+        threshold for a sample to be considered saturated.
+    mute_window_ms : float, default: 0
+        Additional silence window in milliseconds to add symmetrically before
+        and after each detected saturation period.  Useful for capturing
+        ringing or other artefacts that immediately surround a saturation event.
+    job_kwargs : dict | None, default: None
+        Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
+        ``n_jobs``, ``chunk_duration``).
+
+    Returns
     -------
-        collapsed_events : np.recarray
-            A numpy recarray holding information on each saturation event. Has the fields:
-            "start_sample_index", "stop_sample_index", "segment_index", "method_id"
+    np.ndarray
+        Array with dtype ``artifact_dtype`` describing each saturation period.
+        Fields: ``"start_sample_index"``, ``"end_sample_index"``,
+        ``"segment_index"``.
     """
-    if job_kwargs:
+    if job_kwargs is None:
         job_kwargs = {}
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
+    # The saturation threshold can be specified in the recording annotations and loaded automatically
+    # for some acquisition systems (e.g., Neuropixels)
+    if "saturation_threshold_uV" in recording.get_annotation_keys() and saturation_threshold_uV is None:
+        saturation_threshold_uV = recording.get_annotation("saturation_threshold_uV")
+
     node0 = _DetectSaturation(
         recording,
         saturation_threshold_uV=saturation_threshold_uV,
-        uV_per_ms_threshold=uV_per_ms_threshold,
+        diff_threshold_uV=diff_threshold_uV,
         proportion=proportion,
     )
 
     saturation_periods = run_node_pipeline(
         recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts"
     )
+    if mute_window_ms is not None:
+        mute_samples = int(mute_window_ms * recording.get_sampling_frequency() / 1000)
+    else:
+        mute_samples = None
+    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+    return _collapse_events(saturation_periods, num_samples, mute_samples)
 
-    return _collapse_events(saturation_periods)
 
-
-## detect_artifact_periods_by_envelope Zone
-
-
+## detect_artifact_periods_by_envelope zone
 class _DetectThresholdCrossing(PeakDetector):
+    """
+    A pipeline node that detects threshold crossings of a channel-aggregated envelope.
+
+    Each crossing of the global median z-score above 1 is returned as an event
+    with a ``"front"`` flag indicating whether the crossing is a rising edge
+    (``True``) or a falling edge (``False``).  Used internally by
+    :func:`detect_artifact_periods_by_envelope`.
+
+    Attributes
+    ----------
+    abs_thresholds : np.ndarray
+        Per-channel absolute amplitude thresholds in raw ADC units.
+    """
 
     name = "threshold_crossings"
     preferred_mp_context = None
 
     def __init__(
         self,
-        recording,
-        detect_threshold=5,
-        noise_levels=None,
-        seed=None,
-        noise_levels_kwargs=dict(),
-    ):
+        recording: BaseRecording,
+        detect_threshold: float = 5,
+        noise_levels: np.ndarray | None = None,
+        seed: int | None = None,
+        noise_levels_kwargs: dict = dict(),
+    ) -> None:
+        """
+        Parameters
+        ----------
+        recording : BaseRecording
+            The (pre-processed envelope) recording to process.
+        detect_threshold : float, default: 5
+            Detection threshold expressed as a multiple of the estimated noise
+            level per channel.
+        noise_levels : np.ndarray | None, default: None
+            Pre-computed per-channel noise levels in raw ADC units.  If
+            ``None``, they are estimated via
+            :func:`~spikeinterface.core.get_noise_levels`.
+        seed : int | None, default: None
+            Random seed used when estimating noise levels.
+        noise_levels_kwargs : dict, default: {}
+            Additional keyword arguments forwarded to
+            :func:`~spikeinterface.core.get_noise_levels`.
+        """
         PeakDetector.__init__(self, recording, return_output=True)
         if noise_levels is None:
             random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {}).copy()
@@ -242,15 +348,53 @@ class _DetectThresholdCrossing(PeakDetector):
         # internal dtype
         self._dtype = np.dtype([("sample_index", "int64"), ("segment_index", "int64"), ("front", "bool")])
 
-    def get_trace_margin(self):
+    def get_trace_margin(self) -> int:
+        """Return the number of margin samples required on each side of a chunk."""
         return 0
 
-    def get_dtype(self):
+    def get_dtype(self) -> np.dtype:
+        """Return the NumPy dtype of the output array produced by :meth:`compute`."""
         return self._dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(
+        self,
+        traces: np.ndarray,
+        start_frame: int,
+        end_frame: int,
+        segment_index: int,
+        max_margin: int,
+    ) -> tuple[np.ndarray]:
+        """
+        Detect threshold crossings in a single chunk of envelope traces.
+
+        The per-sample signal is the median z-score across channels:
+        ``z = median(traces / abs_thresholds, axis=1)``.  Transitions of
+        ``z > 1`` are located and returned as crossing events.
+
+        Parameters
+        ----------
+        traces : np.ndarray
+            Envelope trace data for the current chunk,
+            shape ``(n_samples, n_channels)``.
+        start_frame : int
+            Index of the first sample of this chunk within its segment.
+        end_frame : int
+            Index one past the last sample of this chunk within its segment.
+        segment_index : int
+            Index of the segment to which this chunk belongs.
+        max_margin : int
+            Maximum trace margin (unused; kept for API compatibility).
+
+        Returns
+        -------
+        tuple[np.ndarray]
+            A one-element tuple containing an array of threshold-crossing
+            events with fields ``"sample_index"``, ``"segment_index"``, and
+            ``"front"`` (``True`` for rising edge, ``False`` for falling edge).
+        """
         z = np.median(traces / self.abs_thresholds, 1)
         threshold_mask = np.diff((z > 1) != 0, axis=0)
+
         indices = np.flatnonzero(threshold_mask)
         threshold_crossings = np.zeros(indices.size, dtype=self._dtype)
         threshold_crossings["sample_index"] = indices
@@ -261,36 +405,72 @@ class _DetectThresholdCrossing(PeakDetector):
 
 
 def detect_artifact_periods_by_envelope(
-    recording,
-    detect_threshold=5,
-    # min_duration_ms=50,
-    freq_max=20.0,
-    seed=None,
-    job_kwargs=None,
-    random_slices_kwargs=None,
-):
+    recording: BaseRecording,
+    detect_threshold: float = 5,
+    apply_envelope_common_reference: bool = False,
+    mute_window_ms: float | None = None,
+    freq_max: float = 20.0,
+    seed: int | None = None,
+    job_kwargs: dict | None = None,
+    random_slices_kwargs: dict | None = None,
+    return_envelope: bool = False,
+) -> np.ndarray | tuple[np.ndarray, BaseRecording]:
     """
-    Function to detect putative artifact periods as threshold crossings of
-    a global envelope of the channels.
+    Detect putative artifact periods as threshold crossings of a global channel envelope.
+
+    The pipeline is:
+
+    1. Rectify the raw recording.
+    2. Low-pass filter with a Gaussian filter up to ``freq_max`` Hz to produce
+       a smooth per-channel amplitude envelope.
+    3. Apply a common-average reference so that only signals correlated across
+       channels (i.e. artefacts) survive.
+    4. Estimate per-channel noise levels on the envelope.
+    5. Detect samples where the median channel z-score exceeds
+       ``detect_threshold``, and convert contiguous runs into period records.
 
     Parameters
     ----------
-    recording : RecordingExtractor
-        The recording extractor to detect putative artifacts
+    recording : BaseRecording
+        The recording extractor from which to detect artefact periods.
     detect_threshold : float, default: 5
-        The threshold to detect artifacts. The threshold is computed as `detect_threshold * noise_level`
-    freq_max : float, default: 20
-        The maximum frequency for the low pass filter used
+        Detection threshold as a multiple of the estimated per-channel noise
+        level of the envelope.
+    freq_max : float, default: 20.0
+        Cut-off frequency (Hz) for the Gaussian low-pass filter applied to the
+        rectified signal when building the envelope.
+    mute_window_ms : float | None, default: None
+        Additional silence window in milliseconds to add symmetrically before
+        and after each detected artifact period.  Useful for capturing ringing or
+        other artefacts that immediately surround a detected event.
+        Pass ``None`` to disable muting.
     seed : int | None, default: None
-        Random seed for `get_noise_levels`.
-        If none, `get_noise_levels` uses `seed=0`.
-    **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
+        Random seed forwarded to :func:`~spikeinterface.core.get_noise_levels`.
+        If ``None``, ``get_noise_levels`` uses ``seed=0``.
+    job_kwargs : dict | None, default: None
+        Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
+        ``n_jobs``, ``chunk_duration``).
+    random_slices_kwargs : dict | None, default: None
+        Additional keyword arguments forwarded to the ``random_slices_kwargs``
+        argument of :func:`~spikeinterface.core.get_noise_levels`.
+    return_envelope : bool, default: False
+        If ``True``, also return the intermediate envelope recording so that it
+        can be inspected or plotted.
 
+    Returns
+    -------
+    artifacts : np.ndarray
+        Array with dtype ``artifact_dtype`` describing each detected artifact
+        period.  Fields: ``"start_sample_index"``, ``"end_sample_index"``,
+        ``"segment_index"``.
+    envelope : BaseRecording
+        Only returned when ``return_envelope=True``.  The processed envelope
+        recording (rectified → Gaussian-filtered → common-average referenced).
     """
-
     envelope = RectifyRecording(recording)
     envelope = GaussianFilterRecording(envelope, freq_min=None, freq_max=freq_max)
-    envelope = CommonReferenceRecording(envelope)
+    if apply_envelope_common_reference:
+        envelope = CommonReferenceRecording(envelope)
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     if random_slices_kwargs is None:
@@ -319,11 +499,52 @@ def detect_artifact_periods_by_envelope(
 
     artifacts = _transform_internal_dtype_to_artifact_dtype(threshold_crossings, recording)
 
-    return artifacts, envelope
+    if mute_window_ms is not None:
+        mute_samples = int(mute_window_ms * recording.get_sampling_frequency() / 1000)
+    else:
+        mute_samples = None
+
+    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+    artifacts = _collapse_events(artifacts, num_samples, mute_samples)
+
+    if return_envelope:
+        return artifacts, envelope
+    else:
+        return artifacts
 
 
-def _transform_internal_dtype_to_artifact_dtype(artifacts, recording):
+def _transform_internal_dtype_to_artifact_dtype(
+    artifacts: np.ndarray,
+    recording: BaseRecording,
+) -> np.ndarray:
+    """
+    Convert threshold-crossing events to the standard ``artifact_dtype`` format.
 
+    Threshold-crossing events are stored as individual rising/falling edge
+    records.  This function pairs them up segment by segment to produce
+    contiguous period records.  Edge cases at segment boundaries are handled:
+
+    * If the first event in a segment is a falling edge, an implicit rising
+      edge at sample 0 is prepended.
+    * If the last event in a segment is a rising edge, an implicit falling edge
+      at the last sample of the segment is appended.
+
+    Parameters
+    ----------
+    artifacts : np.ndarray
+        Array of threshold-crossing events with fields ``"sample_index"``,
+        ``"segment_index"``, and ``"front"`` (``True`` = rising edge).
+        Must be sorted by ``(segment_index, sample_index)``.
+    recording : BaseRecording
+        The original recording, used to determine the number of segments and
+        the number of samples per segment.
+
+    Returns
+    -------
+    np.ndarray
+        Array with dtype ``artifact_dtype`` containing the merged artifact
+        periods.  Returns an empty array if no crossings are found.
+    """
     num_seg = recording.get_num_segments()
 
     final_artifacts = []
@@ -332,19 +553,19 @@ def _transform_internal_dtype_to_artifact_dtype(artifacts, recording):
         sub_thr = artifacts[mask]
         if len(sub_thr) > 0:
             if not sub_thr["front"][0]:
-                local_thr = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("front", "bool")]))
+                local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))
                 local_thr["sample_index"] = 0
                 local_thr["front"] = True
                 sub_thr = np.hstack((local_thr, sub_thr))
             if sub_thr["front"][-1]:
-                local_thr = np.zeros(1, dtype=np.dtype(base_peak_dtype + [("front", "bool")]))
+                local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))
                 local_thr["sample_index"] = recording.get_num_samples(seg_index)
                 local_thr["front"] = False
                 sub_thr = np.hstack((sub_thr, local_thr))
 
-            local_artifact = np.zeros(sub_thr.size / 2, dtype=artifact_dtype)
-            local_artifact["start_index"] = sub_thr["sample_index"][::2]
-            local_artifact["stop_index"] = sub_thr["sample_index"][1::2]
+            local_artifact = np.zeros(int(sub_thr.size / 2), dtype=artifact_dtype)
+            local_artifact["start_sample_index"] = sub_thr["sample_index"][::2]
+            local_artifact["stop_sample_index"] = sub_thr["sample_index"][1::2]
             local_artifact["segment_index"] = seg_index
             final_artifacts.append(local_artifact)
 
@@ -353,3 +574,57 @@ def _transform_internal_dtype_to_artifact_dtype(artifacts, recording):
     else:
         final_artifacts = np.zeros(0, dtype=artifact_dtype)
     return final_artifacts
+
+
+_method_to_function = {
+    "envelope": detect_artifact_periods_by_envelope,
+    "saturation": detect_saturation_periods,
+}
+
+
+def detect_artifact_periods(
+    recording: BaseRecording,
+    method: Literal["envelope", "saturation"] = "envelope",
+    method_kwargs: dict | None = None,
+    job_kwargs: dict | None = None,
+) -> np.ndarray:
+    """
+    Detect artifact periods using one of several available methods.
+
+    Available methods:
+
+    * ``"envelope"``: detects artifacts as threshold crossings of a low-pass-filtered, rectified
+      channel envelope.
+    * ``"saturation"``: detects amplifier saturation events by a voltage threshold and/or a derivative threshold.
+
+    See the documentation of each sub-function for a full description of their
+    parameters, which can be forwarded via ``method_kwargs``.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording on which to detect artifact periods.
+    method : {"envelope", "saturation"}, default: "envelope"
+        Detection method to use.
+    method_kwargs : dict | None, default: None
+        Additional keyword arguments forwarded to the selected detection
+        function.  Pass ``None`` to use that function's defaults.
+    job_kwargs : dict | None, default: None
+        Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
+        ``n_jobs``, ``chunk_duration``).
+
+    Returns
+    -------
+    np.ndarray
+        Array with dtype ``artifact_dtype`` describing each detected artifact
+        period.
+    """
+    assert (
+        method in _method_to_function
+    ), f"Method {method} not recognized. Valid methods are: {_method_to_function.keys()}"
+    if method_kwargs is None:
+        method_kwargs = dict()
+
+    artifact_periods = _method_to_function[method](recording, job_kwargs=job_kwargs, **method_kwargs)
+
+    return artifact_periods

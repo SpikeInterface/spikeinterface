@@ -124,7 +124,7 @@ def _all_period_list_to_periods_vec(list_periods, num_seg):
     periods = np.zeros(size, dtype=base_period_dtype)
     start = 0
     for i in range(num_seg):
-        periods_in_seg = list_periods[i]
+        periods_in_seg = np.array(list_periods[i])
         stop = start + periods_in_seg.shape[0]
         periods[start:stop]["segment_index"] = i
         periods[start:stop]["start_sample_index"] = periods_in_seg[:, 0]
