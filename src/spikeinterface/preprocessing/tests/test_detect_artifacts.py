@@ -212,7 +212,7 @@ def test_detect_saturation_periods(debug_plots):
     assert np.array_equal(periods, periods_entry_function)
 
     # Test that the same result is obtained with multiple jobs
-    job_kwargs = {"chunk_size": chunk_size, "n_jobs": 2, "mp_context": "forkserver"}
+    job_kwargs = {"chunk_size": chunk_size, "n_jobs": 2}
     periods_entry_function_parallel = detect_artifact_periods(
         recording,
         method="saturation",
