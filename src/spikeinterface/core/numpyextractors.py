@@ -281,6 +281,8 @@ class NumpySorting(BaseSorting):
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
+        if source_sorting.has_recording():
+            sorting._recording = source_sorting._recording
         if with_metadata:
             source_sorting.copy_metadata(sorting)
         return sorting
@@ -361,23 +363,6 @@ class NumpySorting(BaseSorting):
 
         sample_list = [np.round(t * sampling_frequency).astype("int64") for t in times_list]
         return NumpySorting.from_samples_and_labels(sample_list, labels_list, sampling_frequency, unit_ids)
-
-    @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
-        warning_msg = (
-            "`from_times_labels` is deprecated and will be removed in 0.104.0. Note this function requires"
-            "samples rather than times so should not be used for clarity purposes. For those working in samples please"
-            "use `from_samples_and_labels` instead. For those working in time units (seconds) please use "
-            "`from_times_and_labels` instead."
-        )
-
-        warnings.warn(
-            warning_msg,
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # despite the naming of the original function this required samples
-        return NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
 
     @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":

@@ -302,9 +302,9 @@ class InterpolateMotionRecording(BasePreprocessor):
             * "nearest" : use neareast channel
 
     sigma_um : float, default: 20.0
-        Used in the "kriging" formula
+        Used in the "kriging" formula.
     p : int, default: 1
-        Used in the "kriging" formula
+        Used in the "kriging" formula to control the decay of the gaussian kernel.
     num_closest : int, default: 3
         Number of closest channels used by "idw" method for interpolation.
     border_mode : "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"

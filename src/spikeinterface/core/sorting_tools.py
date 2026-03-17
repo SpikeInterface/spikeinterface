@@ -1,6 +1,8 @@
 import warnings
 import importlib.util
 
+from typing import Literal
+
 import numpy as np
 
 from spikeinterface.core.base import BaseExtractor, unit_period_dtype
@@ -146,14 +148,16 @@ def get_numba_vector_to_list_of_spiketrain():
     return vector_to_list_of_spiketrain_numba
 
 
-# TODO later : implement other method like "maximum_rate", "by_percent", ...
+# stratified sampling (isi / amplitude / pca distance ? )
 def random_spikes_selection(
     sorting: BaseSorting,
-    num_samples: int | None = None,
-    method: str = "uniform",
+    num_samples: list[int] | None = None,
+    method: Literal["uniform", "all", "percentage", "maximum_rate"] = "uniform",
     max_spikes_per_unit: int = 500,
     margin_size: int | None = None,
     seed: int | None = None,
+    percentage: float | None = None,
+    maximum_rate: float | None = None,
 ):
     """
     This replaces `select_random_spikes_uniformly()`.
@@ -165,41 +169,57 @@ def random_spikes_selection(
     ----------
     sorting: BaseSorting
         The sorting object
-    num_samples: list of int
+    num_samples: list[int] | None, default: None
         The number of samples per segment.
         Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    method: "uniform"  | "all", default: "uniform"
-        The method to use. Only "uniform" is implemented for now
+    method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
+        Method to select spikes: "uniform" randomly up to max_spikes_per_unit, "percentage" selects a fraction of spikes, and "maximum_rate" limits selection by spike rate over time.
     max_spikes_per_unit: int, default: 500
-        The number of spikes per units
+        The maximum number of spikes per units
     margin_size: None | int, default: None
         A margin on each border of segments to avoid border spikes
     seed: None | int, default: None
         A seed for random generator
+    percentage: float | None, default: None
+        In case of `percentage` method. The proportion of spikes per units.
+    maximum_rate: float | None, default: None
+        In case of `maximum_rate` method. The cap rate per units.
 
     Returns
     -------
     random_spikes_indices: np.array
         Selected spike indices coresponding to the sorting spike vector.
     """
+    rng_methods = ("uniform", "percentage", "maximum_rate")
 
-    if method == "uniform":
+    if method == "all":
+        spikes = sorting.to_spike_vector()
+        random_spikes_indices = np.arange(spikes.size)
+
+    elif method in rng_methods:
+        from spikeinterface.widgets.utils import get_segment_durations
+
         rng = np.random.default_rng(seed=seed)
 
+        # since un concatenated
+        # spikes = [ [ (sample_index, unit_index, segment_index), (), ... ], [ (), ... ]]
         spikes = sorting.to_spike_vector(concatenated=False)
         cum_sizes = np.cumsum([0] + [s.size for s in spikes])
 
-        # this fast when numba
+        # this is fast when numba is installed
         spike_indices = spike_vector_to_indices(spikes, sorting.unit_ids, absolute_index=False)
 
         random_spikes_indices = []
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             all_unit_indices = []
             for segment_index in range(sorting.get_num_segments()):
-                # this is local index
+                # this is local segment index
                 inds_in_seg = spike_indices[segment_index][unit_id]
                 if margin_size is not None:
+                    if num_samples is None:
+                        raise ValueError("num_samples must be provided when margin_size is used")
+
                     local_spikes = spikes[segment_index][inds_in_seg]
                     mask = (local_spikes["sample_index"] >= margin_size) & (
                         local_spikes["sample_index"] < (num_samples[segment_index] - margin_size)
@@ -209,19 +229,33 @@ def random_spikes_selection(
                 inds_in_seg_abs = inds_in_seg + cum_sizes[segment_index]
                 all_unit_indices.append(inds_in_seg_abs)
             all_unit_indices = np.concatenate(all_unit_indices)
-            selected_unit_indices = rng.choice(
-                all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size), replace=False, shuffle=False
-            )
+
+            if method == "uniform":
+                rng_size = min(max_spikes_per_unit, all_unit_indices.size)
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+
+            elif method == "percentage":
+                if percentage is None or not (0 < percentage <= 1):
+                    raise ValueError(f"percentage must be in the interval (0, 1]")
+
+                rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+
+            elif method == "maximum_rate":
+                if maximum_rate is None:
+                    raise ValueError(f"maximum_rate must be defined")
+
+                t_duration = np.sum(get_segment_durations(sorting))
+                rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
         random_spikes_indices = np.sort(random_spikes_indices)
 
-    elif method == "all":
-        spikes = sorting.to_spike_vector()
-        random_spikes_indices = np.arange(spikes.size)
     else:
-        raise ValueError(f"random_spikes_selection(): method must be 'all' or 'uniform'")
+        raise ValueError(f"random_spikes_selection(): method must be 'all' or any in {', '.join(rng_methods)}")
 
     return random_spikes_indices
 

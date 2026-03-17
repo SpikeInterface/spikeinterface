@@ -105,7 +105,7 @@ jobs:
         run: echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
       - name: Cache datasets
-        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        if: env.RUN_EXTRACTORS_TESTS == 'true' || env.RUN_PREPROCESSING_TESTS == 'true'
         id: cache-datasets
         uses: actions/cache/restore@v4
         with:
@@ -115,7 +115,7 @@ jobs:
 
       - name: Install git-annex
         shell: bash
-        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        if: env.RUN_EXTRACTORS_TESTS == 'true' || env.RUN_PREPROCESSING_TESTS == 'true'
         run: |
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then

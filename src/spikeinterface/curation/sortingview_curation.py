@@ -9,7 +9,7 @@ from .curation_format import (
     apply_curation,
     curation_label_to_vectors,
 )
-from .curation_model import CurationModel, Merge
+from .curation_model import Curation, Merge
 
 
 def get_kachery():
@@ -83,7 +83,7 @@ def apply_sortingview_curation(
 
     unit_ids = sorting_or_analyzer.unit_ids
     curation_dict["unit_ids"] = unit_ids
-    curation_model = CurationModel(**curation_dict)
+    curation_model = Curation(**curation_dict)
 
     if skip_merge:
         curation_model.merges = []

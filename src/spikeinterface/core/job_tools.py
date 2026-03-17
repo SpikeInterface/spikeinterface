@@ -119,17 +119,6 @@ def fix_job_kwargs(runtime_job_kwargs):
         # in this case this will be the global job_kwargs
         runtime_job_kwargs = dict()
 
-    # deprecation with backward compatibility
-    # this can be removed in 0.104.0
-    if "max_threads_per_process" in runtime_job_kwargs:
-        runtime_job_kwargs = runtime_job_kwargs.copy()
-        runtime_job_kwargs["max_threads_per_worker"] = runtime_job_kwargs.pop("max_threads_per_process")
-        warnings.warn(
-            "job_kwargs: max_threads_per_process was changed to max_threads_per_worker, max_threads_per_process will be removed in 0.104",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
     for k in runtime_job_kwargs:
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
