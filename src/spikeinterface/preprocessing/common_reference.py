@@ -235,7 +235,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                         re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
                 else:  # then it must be local average, use local_kernel
                     re_referenced_traces = (
-                        traces[:, channel_indices] - traces.dot(self.local_kernel)[:, channel_indices]
+                        traces[:, channel_indices] - traces.dot(self.local_kernel.T)[:, channel_indices]
                     )
             return re_referenced_traces.astype(self.dtype, copy=False)
 
