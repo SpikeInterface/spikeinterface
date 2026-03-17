@@ -319,22 +319,27 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             else:
                 record_node = ""
                 oe_stream = stream_name
-            exp_ids = sorted(list(self.neo_reader.folder_structure[record_node]["experiments"].keys()))
+            node_structure = self.neo_reader.folder_structure[record_node]
+            exp_ids = sorted(list(node_structure["experiments"].keys()))
             if block_index is None:
                 exp_id = exp_ids[0]
             else:
                 exp_id = exp_ids[block_index]
-            rec_ids = sorted(
-                list(self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["recordings"].keys())
-            )
+            rec_ids = sorted(list(node_structure["experiments"][exp_id]["recordings"].keys()))
 
             # do not load probe for NIDQ stream or if load_sync_channel is True
             if "NI-DAQmx" not in stream_name and not load_sync_channel:
-                settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
+                settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
                 if Path(settings_file).is_file():
+                    # look for oebin file
+                    exp_name = node_structure["experiments"][exp_id]["name"]
+                    rec_name = node_structure["experiments"][exp_id]["recordings"][rec_ids[0]]["name"]
+                    oebin_file = settings_file.parent / exp_name / rec_name / "structure.oebin"
+                    oebin_file = oebin_file if oebin_file.is_file() else None
+
                     probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=stream_name, raise_error=False
+                        settings_file=settings_file, stream_name=stream_name, oebin_file=oebin_file, raise_error=False
                     )
                 else:
                     probe = None
