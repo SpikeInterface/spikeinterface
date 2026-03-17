@@ -2198,7 +2198,7 @@ def get_extension_class(extension_name: str, auto_import=True):
             warnings.warn(
                 f"Extension '{extension_name}' is unknown. Maybe this is an external extension, a typo or was computed by a different version of SpikeInterface."
             )
-        return None
+            return None
 
     ext_class = extensions_dict[extension_name]
     return ext_class
@@ -2897,6 +2897,7 @@ _builtin_extensions = {
     # from postprocessing
     "amplitude_scalings": "spikeinterface.postprocessing",
     "correlograms": "spikeinterface.postprocessing",
+    "auto_correlograms": "spikeinterface.postprocessing",
     "isi_histograms": "spikeinterface.postprocessing",
     "principal_components": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",

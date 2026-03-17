@@ -181,13 +181,34 @@ def test_min_local_radius():
             recording, reference="local", local_radius=(60, 150), operator="average", min_local_neighbors=5
         )
 
-    # traces = recording.get_traces()
-    # assert np.allclose(traces[:, 0], recording_local_cmr.get_traces()[:, 0] + np.median(traces[:, [1]], axis=1), atol=0.01)
-    # assert np.allclose(traces[:, 1], recording_local_cmr.get_traces()[:, 1] + np.median(traces[:, [0, 2]], axis=1), atol=0.01)
 
-    # assert np.allclose(traces[:, 0], recording_local_car.get_traces()[:, 0] + np.mean(traces[:, [1]], axis=1), atol=0.01)
-    # assert np.allclose(traces[:, 1], recording_local_car.get_traces()[:, 1] +
+@pytest.mark.skip(reason="This test can be used to check local CAR vs local CMR performance")
+def test_local_car_vs_cmr_performance():
+    import time
+
+    # Test that local CAR is faster than local CMR when there are many channels
+    recording = generate_recording(durations=[10.0], num_channels=384)
+
+    rec_local_cmr = common_reference(
+        recording, reference="local", local_radius=(20, 65), operator="median", min_local_neighbors=1
+    )
+    t_start_cmr = time.perf_counter()
+    rec_local_cmr.get_traces()
+    t_end_cmr = time.perf_counter()
+    cmr_time = t_end_cmr - t_start_cmr
+
+    rec_local_car = common_reference(
+        recording, reference="local", local_radius=(20, 65), operator="average", min_local_neighbors=1
+    )
+    t_start_car = time.perf_counter()
+    rec_local_car.get_traces()
+    t_end_car = time.perf_counter()
+    car_time = t_end_car - t_start_car
+
+    print(f"Local CMR time: {cmr_time:.4f} seconds")
+    print(f"Local CAR time: {car_time:.4f} seconds")
+    assert car_time < cmr_time
 
 
 if __name__ == "__main__":
-    test_min_local_radius()
+    test_local_car_vs_cmr_performance()

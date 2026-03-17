@@ -57,9 +57,9 @@ sorting_analyzer.get_metrics_extension_data().columns
 
 # %%
 qm_thresholds = {
-    "snr": {"min": 5},
-    "firing_rate": {"min": 0.1, "max": 200},
-    "rp_contamination": {"max": 0.5}
+    "snr": {"greater": 5},
+    "firing_rate": {"greater": 0.1, "less": 200},
+    "rp_contamination": {"less": 0.5}
 }
 
 # %%

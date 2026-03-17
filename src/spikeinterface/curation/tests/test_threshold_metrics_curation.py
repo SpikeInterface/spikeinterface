@@ -17,8 +17,8 @@ def test_threshold_metrics_label_units_with_dataframe():
         index=[0, 1, 2],
     )
     thresholds = {
-        "snr": {"min": 5.0},
-        "firing_rate": {"min": 0.1, "max": 20.0},
+        "snr": {"greater": 5.0},
+        "firing_rate": {"greater": 0.1, "less": 20.0},
     }
 
     labels = threshold_metrics_label_units(metrics, thresholds)
@@ -39,8 +39,8 @@ def test_threshold_metrics_label_units_with_file(tmp_path):
         index=[0, 1],
     )
     thresholds = {
-        "snr": {"min": 5.0},
-        "firing_rate": {"min": 0.1},
+        "snr": {"greater": 5.0},
+        "firing_rate": {"greater": 0.1},
     }
 
     thresholds_file = tmp_path / "thresholds.json"
@@ -63,8 +63,8 @@ def test_threshold_metrics_label_external_labels():
         index=[0, 1],
     )
     thresholds = {
-        "snr": {"min": 5.0},
-        "firing_rate": {"min": 0.1},
+        "snr": {"greater": 5.0},
+        "firing_rate": {"greater": 0.1},
     }
 
     labels = threshold_metrics_label_units(
@@ -86,7 +86,7 @@ def test_threshold_metrics_label_units_operator_or_with_dataframe():
         },
         index=[0, 1, 2, 3],
     )
-    thresholds = {"m1": {"min": 0.0}, "m2": {"min": 0.0}}
+    thresholds = {"m1": {"greater": 0.0}, "m2": {"greater": 0.0}}
 
     labels_and = threshold_metrics_label_units(
         metrics,
@@ -115,7 +115,7 @@ def test_threshold_metrics_label_units_nan_policy_fail_vs_ignore_and():
         },
         index=[10, 11, 12],
     )
-    thresholds = {"m1": {"min": 0.0}, "m2": {"min": 0.0}}
+    thresholds = {"m1": {"greater": 0.0}, "m2": {"greater": 0.0}}
 
     labels_fail = threshold_metrics_label_units(
         metrics,
@@ -147,7 +147,7 @@ def test_threshold_metrics_label_units_nan_policy_ignore_with_or():
         },
         index=[20, 21],
     )
-    thresholds = {"m1": {"min": 0.0}, "m2": {"min": 0.0}}
+    thresholds = {"m1": {"greater": 0.0}, "m2": {"greater": 0.0}}
 
     labels_ignore_or = threshold_metrics_label_units(
         metrics,
@@ -170,7 +170,7 @@ def test_threshold_metrics_label_units_nan_policy_pass_and_or():
         },
         index=[30, 31, 32, 33],
     )
-    thresholds = {"m1": {"min": 0.0}, "m2": {"min": 0.0}}
+    thresholds = {"m1": {"greater": 0.0}, "m2": {"greater": 0.0}}
 
     labels_and = threshold_metrics_label_units(
         metrics,
@@ -198,7 +198,7 @@ def test_threshold_metrics_label_units_invalid_operator_raises():
     import pandas as pd
 
     metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
-    thresholds = {"m1": {"min": 0.0}}
+    thresholds = {"m1": {"greater": 0.0}}
     with pytest.raises(ValueError, match="operator must be 'and' or 'or'"):
         threshold_metrics_label_units(metrics, thresholds, operator="xor")
 
@@ -207,7 +207,7 @@ def test_threshold_metrics_label_units_invalid_nan_policy_raises():
     import pandas as pd
 
     metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
-    thresholds = {"m1": {"min": 0.0}}
+    thresholds = {"m1": {"greater": 0.0}}
     with pytest.raises(ValueError, match="nan_policy must be"):
         threshold_metrics_label_units(metrics, thresholds, nan_policy="omit")
 
@@ -216,6 +216,15 @@ def test_threshold_metrics_label_units_missing_metric_raises():
     import pandas as pd
 
     metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
-    thresholds = {"does_not_exist": {"min": 0.0}}
+    thresholds = {"does_not_exist": {"greater": 0.0}}
     with pytest.raises(ValueError, match="specified in thresholds are not present"):
+        threshold_metrics_label_units(metrics, thresholds)
+
+
+def test_threshold_metrics_label_units_invalid_threshold_keys_raises():
+    import pandas as pd
+
+    metrics = pd.DataFrame({"m1": [1.0]}, index=[0])
+    thresholds = {"m1": {"greater": 0.0, "invalid_key": 1.0}}
+    with pytest.raises(ValueError, match="contains invalid keys"):
         threshold_metrics_label_units(metrics, thresholds)

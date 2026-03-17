@@ -331,7 +331,7 @@ class ChannelSparsity:
 
     ## Some convinient function to compute sparsity from several strategy
     @classmethod
-    def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels):
+    def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign="neg"):
         """
         Construct sparsity from N closest channels
         Use the "num_channels" argument to specify the number of channels.
@@ -342,24 +342,28 @@ class ChannelSparsity:
             A Templates or a SortingAnalyzer object.
         num_channels : int
             Number of channels for "best_channels" method.
+        peak_sign : "neg" | "pos" | "both"
+            Sign of the template to compute best channels.
 
         Returns
         -------
         sparsity : ChannelSparsity
             The estimated sparsity
         """
-        from .template_tools import get_template_amplitudes
+        from .template_tools import get_template_extremum_channel
 
         mask = np.zeros(
             (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
         )
         channel_locations = templates_or_sorting_analyzer.get_channel_locations()
         distances = np.linalg.norm(channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2)
+        best_chan = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign, outputs="index")
 
         for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
-            chan_inds = np.argsort(distances[unit_ind])
-            chan_inds = chan_inds[:num_channels]
-            mask[unit_ind, chan_inds] = True
+            chan_ind = best_chan[unit_id]
+            chan_inds = np.argsort(distances[chan_ind])
+            closest_chan_inds = chan_inds[:num_channels]
+            mask[unit_ind, closest_chan_inds] = True
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
 
     @classmethod

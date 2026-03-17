@@ -90,11 +90,10 @@ class CommonReferenceRecording(BasePreprocessor):
         dtype: str | np.dtype | None = None,
     ):
         num_chans = recording.get_num_channels()
-        local_neighbors = None
         local_kernel = None
         # some checks
         if reference not in ("global", "single", "local"):
-            raise ValueError("'reference' must be either 'global', 'single' or 'local'")
+            raise ValueError("'reference' must be either 'global', 'single', or 'local'")
         if operator not in ("median", "average"):
             raise ValueError("'operator' must be either 'median', 'average'")
 
@@ -126,21 +125,23 @@ class CommonReferenceRecording(BasePreprocessor):
                 )
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
-            local_neighbors = {}
-            # The neighbor kernel is a matrix that will be used to calculate the local average reference.
-            # It has shape (num_chans, num_chans) and is filled with zeros except for the columns corresponding to the neighbors of each channel, which are filled with 1 / number of neighbors. This way, when we do a dot product between the traces and the neighbor kernel, we get the local average reference for each channel.
+            # The neighbor kernel is a matrix that will be used to calculate the local reference.
+            # It has shape (num_chans, num_chans) and is filled with zeros except for the columns corresponding to the
+            # neighbors of each channel, which are filled with 1 / number of neighbors. This way, when we do a dot
+            # product between the traces and the neighbor kernel, we get the local average reference for each channel.
+            # For the median operator, the neighbors are extracted from the kernel on-the-fly via nonzero.
             local_kernel = np.zeros((num_chans, num_chans))
             not_enough_channels = []
             for i in range(num_chans):
                 annulus_mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 if np.sum(annulus_mask) >= min_local_neighbors:
-                    local_neighbors[i] = closest_inds[i, annulus_mask]
+                    neighbors_i = closest_inds[i, annulus_mask]
                 else:
                     # Not enough channels in the annulus — take the closest ones beyond the inner radius
                     not_enough_channels.append(recording.channel_ids[i])
                     beyond_inner = dist[i, :] > local_radius[0]
-                    local_neighbors[i] = closest_inds[i, beyond_inner][:min_local_neighbors]
-                local_kernel[i, local_neighbors[i]] = 1 / len(local_neighbors[i])
+                    neighbors_i = closest_inds[i, beyond_inner][:min_local_neighbors]
+                local_kernel[i, neighbors_i] = 1 / len(neighbors_i)
             if len(not_enough_channels) > 0:
                 warnings.warn(
                     f"The following channels did not have enough neighbors in the annulus and used the closest "
@@ -166,7 +167,6 @@ class CommonReferenceRecording(BasePreprocessor):
                 operator,
                 group_indices,
                 ref_channel_indices,
-                local_neighbors,
                 local_kernel,
                 dtype_,
             )
@@ -192,7 +192,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         operator,
         group_indices,
         ref_channel_indices,
-        local_neighbors,
         local_kernel,
         dtype,
     ):
@@ -202,7 +201,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.operator = operator
         self.group_indices = group_indices
         self.ref_channel_indices = ref_channel_indices
-        self.local_neighbors = local_neighbors
         self.local_kernel = local_kernel
         self.temp = None
         self.dtype = dtype
@@ -230,7 +228,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     channel_indices_array = np.arange(traces.shape[1])[channel_indices]
                     re_referenced_traces = np.zeros((traces.shape[0], len(channel_indices_array)), dtype="float32")
                     for i, channel_index in enumerate(channel_indices_array):
-                        channel_neighborhood = self.local_neighbors[channel_index]
+                        channel_neighborhood = np.nonzero(self.local_kernel[channel_index])[0]
                         channel_shift = self.operator_func(traces[:, channel_neighborhood], axis=1)
                         re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
                 else:  # then it must be local average, use local_kernel
