@@ -1015,7 +1015,6 @@ class BaseExtractor:
         folder=None,
         overwrite=False,
         storage_options=None,
-        channel_chunk_size=None,
         verbose=True,
         **save_kwargs,
     ):
@@ -1090,7 +1089,6 @@ class BaseExtractor:
             assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
-        save_kwargs["channel_chunk_size"] = channel_chunk_size
         cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
         cached = read_zarr(zarr_path)
 

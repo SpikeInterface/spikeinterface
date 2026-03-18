@@ -263,6 +263,7 @@ def write_chunkable_to_zarr(
     chunkable: "ChunkableMixin",
     zarr_group,
     dataset_paths,
+    dataset_timestamps_paths=None,
     extra_chunks=None,
     dtype=None,
     compressor_data=None,
@@ -283,6 +284,8 @@ def write_chunkable_to_zarr(
         The zarr group to add traces to
     dataset_paths : list
         List of paths to traces datasets in the zarr group
+    dataset_timestamps_paths : list or None, default: None
+        List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
     extra_chunks : tuple or None, default: None
         Extra chunking dimensions to use for the zarr dataset.
         The first dimension is always time and controlled by the job_kwargs.
@@ -307,7 +310,13 @@ def write_chunkable_to_zarr(
         ChunkExecutor,
     )
 
-    assert dataset_paths is not None, "Provide 'file_path'"
+    assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
+    if dataset_timestamps_paths is not None:
+        assert (
+            len(dataset_timestamps_paths) == chunkable.get_num_segments()
+        ), "dataset_timestamps_paths should have the same length as the number of segments in the chunkable"
+    else:
+        dataset_timestamps_paths = [None] * chunkable.get_num_segments()
 
     if not isinstance(dataset_paths, list):
         dataset_paths = [dataset_paths]
@@ -330,10 +339,9 @@ def write_chunkable_to_zarr(
     zarr_timestamps_datasets = []
 
     for segment_index in range(chunkable.get_num_segments()):
-        num_frames = chunkable.get_num_samples(segment_index)
-        num_channels = chunkable.get_num_channels()
+        num_samples = chunkable.get_num_samples(segment_index)
         dset_name = dataset_paths[segment_index]
-        shape = (num_frames, num_channels)
+        shape = chunkable.get_shape(segment_index)
         dset = zarr_group.create_dataset(
             name=dset_name,
             shape=shape,
@@ -343,17 +351,20 @@ def write_chunkable_to_zarr(
             compressor=compressor_data,
         )
         zarr_datasets.append(dset)
-        if chunkable.has_time_vector(segment_index):
+        if dataset_timestamps_paths[segment_index] is not None:
+            tset_name = dataset_timestamps_paths[segment_index]
             zarr_timestamps_datasets.append(
                 zarr_group.create_dataset(
-                    name=f"times_seg{segment_index}",
-                    shape=(num_frames,),
+                    name=tset_name,
+                    shape=(num_samples,),
                     chunks=(chunk_size,),
                     dtype="float64",
                     filters=filters_times,
                     compressor=compressor_times,
                 )
             )
+        else:
+            zarr_timestamps_datasets.append(None)
 
     # use executor (loop or workers)
     func = _write_zarr_chunk
