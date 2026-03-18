@@ -315,10 +315,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
             # find settings file
             if "#" in stream_name:
-                record_node, oe_stream = stream_name.split("#")
+                record_node, oe_stream_name = stream_name.split("#")
             else:
                 record_node = ""
-                oe_stream = stream_name
+                oe_stream_name = stream_name
             node_structure = self.neo_reader.folder_structure[record_node]
             exp_ids = sorted(list(node_structure["experiments"].keys()))
             if block_index is None:
@@ -332,16 +332,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
                 if Path(settings_file).is_file():
-                    # look for oebin file
-                    exp_name = node_structure["experiments"][exp_id]["name"]
-                    # we can use the first recording folder to find the oebin file, as the mapping should be the same
-                    # for all recordings within the experiment
-                    rec_name = node_structure["experiments"][exp_id]["recordings"][rec_ids[0]]["name"]
-                    oebin_file = settings_file.parent / exp_name / rec_name / "structure.oebin"
-                    oebin_file = oebin_file if oebin_file.is_file() else None
-
                     probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=stream_name, oebin_file=oebin_file, raise_error=False
+                        settings_file=settings_file, stream_name=oe_stream_name, raise_error=False
                     )
                 else:
                     probe = None
@@ -352,7 +344,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     else:
                         self.set_probe(probe, in_place=True)
                     # get inter-sample shifts based on the probe information and mux channels
-                    sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
+                    sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
                     if sample_shifts is not None:
                         self.set_property("inter_sample_shift", sample_shifts)
 
@@ -361,7 +353,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             stream_folders = []
             for segment_index, rec_id in enumerate(rec_ids):
                 stream_folder = (
-                    recording_folder / f"experiment{exp_id}" / f"recording{rec_id}" / "continuous" / oe_stream
+                    recording_folder / f"experiment{exp_id}" / f"recording{rec_id}" / "continuous" / oe_stream_name
                 )
                 stream_folders.append(stream_folder)
                 if load_sync_timestamps:

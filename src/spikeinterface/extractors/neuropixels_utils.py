@@ -4,7 +4,7 @@ import numpy as np
 from probeinterface import Probe
 
 
-def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "ap") -> np.ndarray:
+def get_neuropixels_sample_shifts_from_probe(probe: Probe) -> np.ndarray:
     """
     Get the inter-sample shifts for Neuropixels probes based on the probe information.
 
@@ -12,9 +12,6 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe, stream_name: str = "a
     ----------
     probe : Probe
         The probe object containing channel and ADC information.
-    stream_name : str, default: "ap"
-        The name of the stream for which to calculate the sample shifts.
-        This is used for Neuropixels 1.0 technology to correctly set the number of cycles.
 
     Returns
     -------
