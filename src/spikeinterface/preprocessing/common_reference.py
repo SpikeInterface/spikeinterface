@@ -218,7 +218,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     shift = self.operator_func(traces, axis=1, keepdims=True)
                 else:
                     shift = self.operator_func(traces[:, self.ref_channel_indices], axis=1, keepdims=True)
-                re_referenced_traces = traces[:, channel_indices] - shift  # shift[:, channel_indices]
+                re_referenced_traces = traces[:, channel_indices] - shift
             elif self.reference == "single":
                 # single channel -> no need of operator
                 shift = traces[:, self.ref_channel_indices]
