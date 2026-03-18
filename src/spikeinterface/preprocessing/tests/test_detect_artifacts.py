@@ -17,7 +17,7 @@ def test_detect_artifact_by_envelope(debug_plots):
     # Generate some data in uV
     sat_value = 1200
     noise_level = 10
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(42)
     data = noise_level * rng.uniform(low=-0.5, high=0.5, size=(150000, num_chans)) * 10
 
     artifact_starts = rng.choice(np.arange(0, data.shape[0] - 1000), size=10, replace=False)
@@ -28,7 +28,7 @@ def test_detect_artifact_by_envelope(debug_plots):
     recording = NumpyRecording(data, sampling_frequency)
 
     artifacts, envelope = detect_artifact_periods_by_envelope(
-        recording, apply_envelope_common_reference=False, return_envelope=True
+        recording, apply_envelope_common_reference=False, return_envelope=True, random_slices_kwargs={"seed": 2308}
     )
 
     if debug_plots:
@@ -39,8 +39,8 @@ def test_detect_artifact_by_envelope(debug_plots):
         plt.title("data float")
         plt.show()
 
-    # TODO: investigate why not detecting any artifacts in this tests, despite very peaky envelopes!
-    # assert len(artifacts) == len(artifact_starts)
+    # it finds some artifacts
+    assert len(artifacts) > 0
 
 
 def test_detect_saturation_periods(debug_plots):
@@ -237,30 +237,7 @@ def test_detect_saturation_periods(debug_plots):
     )
     assert np.array_equal(periods, periods_entry_with_annotation)
 
-    # Test mute window around detected periods
-    mute_window_ms = 0.1
-    mute_samples = int(mute_window_ms * sampling_frequency / 1000)
-    muted_periods = detect_artifact_periods(
-        recording,
-        method="saturation",
-        method_kwargs=dict(
-            saturation_threshold_uV=sat_value * 0.98,
-            diff_threshold_uV=diff_threshold_uV,
-            mute_window_ms=mute_window_ms,
-        ),
-        job_kwargs=job_kwargs,
-    )
-    seg_1_muted_periods = muted_periods[np.where(muted_periods["segment_index"] == 0)]
-    seg_2_muted_periods = muted_periods[np.where(muted_periods["segment_index"] == 1)]
-    for seg_periods, offset in zip([seg_1_muted_periods, seg_2_muted_periods], offsets):
-        starts = seg_periods["start_sample_index"]
-        stops = seg_periods["end_sample_index"]
-        start_diffs = np.abs(starts - np.clip(all_starts - mute_samples, a_min=0, a_max=data_seg_1.shape[0] - 1))
-        assert np.all(start_diffs <= tolerance_samples)
-        stop_diffs = np.abs(stops - np.clip(all_stops + offset + mute_samples, a_min=0, a_max=data_seg_1.shape[0] - 1))
-        assert np.all(stop_diffs <= tolerance_samples)
-
 
 if __name__ == "__main__":
-    test_detect_artifact_by_envelope(True)
-    # test_detect_saturation_periods()
+    # test_detect_artifact_by_envelope(True)
+    test_detect_saturation_periods(True)

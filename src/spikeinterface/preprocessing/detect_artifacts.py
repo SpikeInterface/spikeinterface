@@ -10,7 +10,7 @@ from spikeinterface.preprocessing.rectify import RectifyRecording
 from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
 from spikeinterface.preprocessing.filter_gaussian import GaussianFilterRecording
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.recording_tools import get_noise_levels
+from spikeinterface.core.recording_tools import get_noise_levels, get_random_data_chunks
 from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype, run_node_pipeline, PipelineNode
 
 artifact_dtype = base_period_dtype
@@ -21,7 +21,7 @@ artifact_dtype = base_period_dtype
 # ]
 
 
-def _collapse_events(events: np.ndarray, num_samples: list[int], mute_samples: int | None = None) -> np.ndarray:
+def _collapse_events(events: np.ndarray) -> np.ndarray:
     """
     Collapse artifact events that were split across chunk boundaries.
 
@@ -35,11 +35,6 @@ def _collapse_events(events: np.ndarray, num_samples: list[int], mute_samples: i
         Array of artifact events with dtype ``artifact_dtype``, containing
         ``"start_sample_index"``, ``"end_sample_index"``, and
         ``"segment_index"`` fields.
-    num_samples : list[int]
-        List of the number of samples in each segment of the recording.
-        Used to handle edge cases where an artifact extends to the very end of a segment.
-    mute_samples : int | None, default: None
-        Reserved for future use (not yet implemented).
 
     Returns
     -------
@@ -57,17 +52,6 @@ def _collapse_events(events: np.ndarray, num_samples: list[int], mute_samples: i
             to_drop[i] = True
             events["start_sample_index"][i + 1] = events["start_sample_index"][i]
     collapsed_events = events[~to_drop]
-    if mute_samples is not None:
-        collapsed_events["start_sample_index"] -= mute_samples
-        collapsed_events["end_sample_index"] += mute_samples
-        collapsed_events["start_sample_index"] = np.maximum(collapsed_events["start_sample_index"], 0)
-        for seg_index in np.unique(collapsed_events["segment_index"]):
-            mask = collapsed_events["segment_index"] == seg_index
-            collapsed_events["end_sample_index"][mask] = np.minimum(
-                collapsed_events["end_sample_index"][mask], num_samples[seg_index]
-            )
-        # Rerun the collapsing in case the mute window caused new overlaps
-        collapsed_events = _collapse_events(collapsed_events, num_samples, mute_samples=None)
     return collapsed_events
 
 
@@ -213,7 +197,6 @@ def detect_saturation_periods(
     saturation_threshold_uV: float | None = None,
     diff_threshold_uV: float | None = None,
     proportion: float = 0.2,
-    mute_window_ms: float = 0,
     job_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
@@ -254,10 +237,6 @@ def detect_saturation_periods(
     proportion : float, default: 0.2
         Fraction of channels (0 < proportion < 1) that must exceed the
         threshold for a sample to be considered saturated.
-    mute_window_ms : float, default: 0
-        Additional silence window in milliseconds to add symmetrically before
-        and after each detected saturation period.  Useful for capturing
-        ringing or other artefacts that immediately surround a saturation event.
     job_kwargs : dict | None, default: None
         Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
         ``n_jobs``, ``chunk_duration``).
@@ -289,12 +268,8 @@ def detect_saturation_periods(
     saturation_periods = run_node_pipeline(
         recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts"
     )
-    if mute_window_ms is not None:
-        mute_samples = int(mute_window_ms * recording.get_sampling_frequency() / 1000)
-    else:
-        mute_samples = None
     num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    return _collapse_events(saturation_periods, num_samples, mute_samples)
+    return _collapse_events(saturation_periods)
 
 
 ## detect_artifact_periods_by_envelope zone
@@ -319,10 +294,9 @@ class _DetectThresholdCrossing(PeakDetector):
     def __init__(
         self,
         recording: BaseRecording,
+        mads: np.ndarray,
+        medians: np.ndarray,
         detect_threshold: float = 5,
-        noise_levels: np.ndarray | None = None,
-        seed: int | None = None,
-        noise_levels_kwargs: dict = dict(),
     ) -> None:
         """
         Parameters
@@ -332,22 +306,17 @@ class _DetectThresholdCrossing(PeakDetector):
         detect_threshold : float, default: 5
             Detection threshold expressed as a multiple of the estimated noise
             level per channel.
-        noise_levels : np.ndarray | None, default: None
-            Pre-computed per-channel noise levels in raw ADC units.  If
-            ``None``, they are estimated via
-            :func:`~spikeinterface.core.get_noise_levels`.
-        seed : int | None, default: None
-            Random seed used when estimating noise levels.
+        mads : np.ndarray
+            Pre-computed per-channel median absolute deviations in raw ADC units.
+        medians : np.ndarray
+            Pre-computed per-channel medians in raw ADC units.
         noise_levels_kwargs : dict, default: {}
             Additional keyword arguments forwarded to
             :func:`~spikeinterface.core.get_noise_levels`.
         """
         PeakDetector.__init__(self, recording, return_output=True)
-        if noise_levels is None:
-            random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {}).copy()
-            random_slices_kwargs["seed"] = seed
-            noise_levels = get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
-        self.abs_thresholds = noise_levels * detect_threshold
+        self.abs_thresholds = (mads * detect_threshold)[np.newaxis, :]
+        self.medians = medians[np.newaxis, :]
         # internal dtype
         self._dtype = np.dtype([("sample_index", "int64"), ("segment_index", "int64"), ("front", "bool")])
 
@@ -395,7 +364,7 @@ class _DetectThresholdCrossing(PeakDetector):
             events with fields ``"sample_index"``, ``"segment_index"``, and
             ``"front"`` (``True`` for rising edge, ``False`` for falling edge).
         """
-        z = np.median(traces / self.abs_thresholds, 1)
+        z = np.median((traces - self.medians) / self.abs_thresholds, axis=1)
         threshold_mask = np.diff((z > 1) != 0, axis=0)
 
         indices = np.flatnonzero(threshold_mask)
@@ -411,7 +380,6 @@ def detect_artifact_periods_by_envelope(
     recording: BaseRecording,
     detect_threshold: float = 5,
     apply_envelope_common_reference: bool = False,
-    mute_window_ms: float | None = None,
     freq_max: float = 20.0,
     seed: int | None = None,
     job_kwargs: dict | None = None,
@@ -442,11 +410,6 @@ def detect_artifact_periods_by_envelope(
     freq_max : float, default: 20.0
         Cut-off frequency (Hz) for the Gaussian low-pass filter applied to the
         rectified signal when building the envelope.
-    mute_window_ms : float | None, default: None
-        Additional silence window in milliseconds to add symmetrically before
-        and after each detected artifact period.  Useful for capturing ringing or
-        other artefacts that immediately surround a detected event.
-        Pass ``None`` to disable muting.
     seed : int | None, default: None
         Random seed forwarded to :func:`~spikeinterface.core.get_noise_levels`.
         If ``None``, ``get_noise_levels`` uses ``seed=0``.
@@ -481,13 +444,16 @@ def detect_artifact_periods_by_envelope(
     else:
         random_slices_kwargs = random_slices_kwargs.copy()
     random_slices_kwargs["seed"] = seed
-    noise_levels = get_noise_levels(envelope, return_in_uV=False, random_slices_kwargs=random_slices_kwargs)
+    random_data = get_random_data_chunks(envelope, **random_slices_kwargs)
+    medians = np.median(random_data, axis=0)
+    mad = np.median(np.abs(random_data - medians), axis=0)
+    mads = mad / 0.6745
 
     node0 = _DetectThresholdCrossing(
         envelope,
         detect_threshold=detect_threshold,
-        noise_levels=noise_levels,
-        seed=seed,
+        mads=mads,
+        medians=medians,
     )
 
     threshold_crossings = run_node_pipeline(
@@ -502,13 +468,8 @@ def detect_artifact_periods_by_envelope(
 
     artifacts = _transform_internal_dtype_to_artifact_dtype(threshold_crossings, recording)
 
-    if mute_window_ms is not None:
-        mute_samples = int(mute_window_ms * recording.get_sampling_frequency() / 1000)
-    else:
-        mute_samples = None
-
     num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    artifacts = _collapse_events(artifacts, num_samples, mute_samples)
+    artifacts = _collapse_events(artifacts)
 
     if return_envelope:
         return artifacts, envelope
@@ -554,6 +515,7 @@ def _transform_internal_dtype_to_artifact_dtype(
     for seg_index in range(num_seg):
         mask = artifacts["segment_index"] == seg_index
         sub_thr = artifacts[mask]
+        print(sub_thr)
         if len(sub_thr) > 0:
             if not sub_thr["front"][0]:
                 local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))
@@ -566,9 +528,9 @@ def _transform_internal_dtype_to_artifact_dtype(
                 local_thr["front"] = False
                 sub_thr = np.hstack((sub_thr, local_thr))
 
-            local_artifact = np.zeros(int(sub_thr.size / 2), dtype=artifact_dtype)
+            local_artifact = np.zeros(int(np.ceil(sub_thr.size / 2)), dtype=artifact_dtype)
             local_artifact["start_sample_index"] = sub_thr["sample_index"][::2]
-            local_artifact["stop_sample_index"] = sub_thr["sample_index"][1::2]
+            local_artifact["end_sample_index"] = sub_thr["sample_index"][1::2]
             local_artifact["segment_index"] = seg_index
             final_artifacts.append(local_artifact)
 
