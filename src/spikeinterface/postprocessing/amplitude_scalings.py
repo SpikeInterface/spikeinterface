@@ -202,7 +202,7 @@ class AmplitudeScalingNode(PipelineNode):
             self._margin = max_margin_collisions
 
         # for some edge cases a template can be zero, leading to problems later
-        template_is_zero = [np.all(template) == 0 for template in all_templates]
+        template_is_zero = [np.all(template == 0) for template in all_templates]
 
         self._all_templates = all_templates
         self._sparsity_mask = sparsity_mask
@@ -224,6 +224,7 @@ class AmplitudeScalingNode(PipelineNode):
             return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
+            template_is_zero=template_is_zero,
         )
 
     def get_dtype(self):
