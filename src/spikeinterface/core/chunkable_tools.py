@@ -13,10 +13,11 @@ from .job_tools import (
     ChunkExecutor,
     _shared_job_kwargs_doc,
 )
+from .chunkable import ChunkableMixin, ChunkableSegment
 
 
 def write_binary(
-    chunkable: "ChunkableMixin",
+    chunkable: ChunkableMixin,
     file_paths: list[Path | str] | Path | str,
     file_timestamps_paths: list[Path | str] | Path | str | None = None,
     dtype: np.typing.DTypeLike = None,
@@ -189,7 +190,9 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     arr[start_frame:end_frame, :] = traces
 
 
-def write_memory(chunkable, dtype=None, verbose=False, buffer_type="auto", job_name="write_memory", **job_kwargs):
+def write_memory(
+    chunkable: ChunkableMixin, dtype=None, verbose=False, buffer_type="auto", job_name="write_memory", **job_kwargs
+):
     """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
@@ -260,7 +263,7 @@ write_memory.__doc__ = write_memory.__doc__.format(_shared_job_kwargs_doc)
 
 
 def write_chunkable_to_zarr(
-    chunkable: "ChunkableMixin",
+    chunkable: ChunkableMixin,
     zarr_group,
     dataset_paths,
     dataset_timestamps_paths=None,
@@ -435,7 +438,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def get_random_sample_slices(
-    chunkable: "ChunkableMixin",
+    chunkable: ChunkableMixin,
     method="full_random",
     num_chunks_per_segment=20,
     chunk_duration="500ms",
@@ -515,7 +518,7 @@ def get_random_sample_slices(
     return slices
 
 
-def get_chunks(chunkable: "ChunkableMixin", concatenated=True, get_data_kwargs=None, **random_slices_kwargs):
+def get_chunks(chunkable: ChunkableMixin, concatenated=True, get_data_kwargs=None, **random_slices_kwargs):
     """
     Extract random chunks across segments.
 
@@ -563,3 +566,124 @@ def get_chunks(chunkable: "ChunkableMixin", concatenated=True, get_data_kwargs=N
         return np.concatenate(chunk_list, axis=0)
     else:
         return chunk_list
+
+
+def get_chunk_with_margin(
+    chunkable_segment: ChunkableSegment,
+    start_frame,
+    end_frame,
+    last_dimension_indices,
+    margin,
+    add_zeros=False,
+    add_reflect_padding=False,
+    window_on_margin=False,
+    dtype=None,
+):
+    """
+    Helper to get chunk with margin
+
+    The margin is extracted from the recording when possible. If
+    at the edge of the recording, no margin is used unless one
+    of `add_zeros` or `add_reflect_padding` is True. In the first
+    case zero padding is used, in the second case np.pad is called
+    with mod="reflect".
+    """
+    length = int(chunkable_segment.get_num_samples())
+
+    if last_dimension_indices is None:
+        last_dimension_indices = slice(None)
+
+    if not (add_zeros or add_reflect_padding):
+        if window_on_margin and not add_zeros:
+            raise ValueError("window_on_margin requires add_zeros=True")
+
+        if start_frame is None:
+            left_margin = 0
+            start_frame = 0
+        elif start_frame < margin:
+            left_margin = start_frame
+        else:
+            left_margin = margin
+
+        if end_frame is None:
+            right_margin = 0
+            end_frame = length
+        elif end_frame > (length - margin):
+            right_margin = length - end_frame
+        else:
+            right_margin = margin
+
+        data_chunk = chunkable_segment.get_data(
+            start_frame - left_margin,
+            end_frame + right_margin,
+            last_dimension_indices,
+        )
+
+    else:
+        # either add_zeros or reflect_padding
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = length
+
+        chunk_size = end_frame - start_frame
+        full_size = chunk_size + 2 * margin
+
+        if start_frame < margin:
+            start_frame2 = 0
+            left_pad = margin - start_frame
+        else:
+            start_frame2 = start_frame - margin
+            left_pad = 0
+
+        if end_frame > (length - margin):
+            end_frame2 = length
+            right_pad = end_frame + margin - length
+        else:
+            end_frame2 = end_frame + margin
+            right_pad = 0
+
+        data_chunk = chunkable_segment.get_data(start_frame2, end_frame2, last_dimension_indices)
+
+        if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
+            need_copy = True
+        else:
+            need_copy = False
+
+        left_margin = margin
+        right_margin = margin
+
+        if need_copy:
+            if dtype is None:
+                dtype = data_chunk.dtype
+
+            left_margin = margin
+            if end_frame < (length + margin):
+                right_margin = margin
+            else:
+                right_margin = end_frame + margin - length
+
+            if add_zeros:
+                data_chunk2 = np.zeros((full_size, data_chunk.shape[1]), dtype=dtype)
+                i0 = left_pad
+                i1 = left_pad + data_chunk.shape[0]
+                data_chunk2[i0:i1, :] = data_chunk
+                if window_on_margin:
+                    # apply inplace taper on border
+                    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
+                    taper = taper[:, np.newaxis]
+                    data_chunk2[:margin] *= taper
+                    data_chunk2[-margin:] *= taper[::-1]
+                data_chunk = data_chunk2
+            elif add_reflect_padding:
+                # in this case, we don't want to taper
+                data_chunk = np.pad(
+                    data_chunk.astype(dtype, copy=False),
+                    [(left_pad, right_pad)] + [(0, 0)] * (data_chunk.ndim - 1),
+                    mode="reflect",
+                )
+            else:
+                # we need a copy to change the dtype
+                data_chunk = np.asarray(data_chunk, dtype=dtype)
+
+    return data_chunk, left_margin, right_margin

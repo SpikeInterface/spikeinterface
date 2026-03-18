@@ -19,7 +19,7 @@ from .job_tools import (
     split_job_kwargs,
 )
 
-from .chunkable_tools import get_random_sample_slices, get_chunks
+from .chunkable_tools import get_random_sample_slices, get_chunks, get_chunk_with_margin
 
 # for back-compatibility imports
 from .chunkable_tools import write_binary as write_binary_recording
@@ -480,127 +480,6 @@ def get_noise_levels(
 
 
 get_noise_levels.__doc__ = get_noise_levels.__doc__.format(_shared_job_kwargs_doc)
-
-
-def get_chunk_with_margin(
-    rec_segment,
-    start_frame,
-    end_frame,
-    channel_indices,
-    margin,
-    add_zeros=False,
-    add_reflect_padding=False,
-    window_on_margin=False,
-    dtype=None,
-):
-    """
-    Helper to get chunk with margin
-
-    The margin is extracted from the recording when possible. If
-    at the edge of the recording, no margin is used unless one
-    of `add_zeros` or `add_reflect_padding` is True. In the first
-    case zero padding is used, in the second case np.pad is called
-    with mod="reflect".
-    """
-    length = int(rec_segment.get_num_samples())
-
-    if channel_indices is None:
-        channel_indices = slice(None)
-
-    if not (add_zeros or add_reflect_padding):
-        if window_on_margin and not add_zeros:
-            raise ValueError("window_on_margin requires add_zeros=True")
-
-        if start_frame is None:
-            left_margin = 0
-            start_frame = 0
-        elif start_frame < margin:
-            left_margin = start_frame
-        else:
-            left_margin = margin
-
-        if end_frame is None:
-            right_margin = 0
-            end_frame = length
-        elif end_frame > (length - margin):
-            right_margin = length - end_frame
-        else:
-            right_margin = margin
-
-        traces_chunk = rec_segment.get_traces(
-            start_frame - left_margin,
-            end_frame + right_margin,
-            channel_indices,
-        )
-
-    else:
-        # either add_zeros or reflect_padding
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = length
-
-        chunk_size = end_frame - start_frame
-        full_size = chunk_size + 2 * margin
-
-        if start_frame < margin:
-            start_frame2 = 0
-            left_pad = margin - start_frame
-        else:
-            start_frame2 = start_frame - margin
-            left_pad = 0
-
-        if end_frame > (length - margin):
-            end_frame2 = length
-            right_pad = end_frame + margin - length
-        else:
-            end_frame2 = end_frame + margin
-            right_pad = 0
-
-        traces_chunk = rec_segment.get_traces(start_frame2, end_frame2, channel_indices)
-
-        if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
-            need_copy = True
-        else:
-            need_copy = False
-
-        left_margin = margin
-        right_margin = margin
-
-        if need_copy:
-            if dtype is None:
-                dtype = traces_chunk.dtype
-
-            left_margin = margin
-            if end_frame < (length + margin):
-                right_margin = margin
-            else:
-                right_margin = end_frame + margin - length
-
-            if add_zeros:
-                traces_chunk2 = np.zeros((full_size, traces_chunk.shape[1]), dtype=dtype)
-                i0 = left_pad
-                i1 = left_pad + traces_chunk.shape[0]
-                traces_chunk2[i0:i1, :] = traces_chunk
-                if window_on_margin:
-                    # apply inplace taper on border
-                    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
-                    taper = taper[:, np.newaxis]
-                    traces_chunk2[:margin] *= taper
-                    traces_chunk2[-margin:] *= taper[::-1]
-                traces_chunk = traces_chunk2
-            elif add_reflect_padding:
-                # in this case, we don't want to taper
-                traces_chunk = np.pad(
-                    traces_chunk.astype(dtype, copy=False),
-                    [(left_pad, right_pad), (0, 0)],
-                    mode="reflect",
-                )
-            else:
-                # we need a copy to change the dtype
-                traces_chunk = np.asarray(traces_chunk, dtype=dtype)
-
-    return traces_chunk, left_margin, right_margin
 
 
 def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), flip=False):
