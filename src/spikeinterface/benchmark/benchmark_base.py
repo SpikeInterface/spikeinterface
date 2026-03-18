@@ -292,7 +292,7 @@ class BenchmarkStudy:
             self.remove_benchmark(key)
         (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
 
-    def run(self, case_keys=None, keep=True, verbose=False, **job_kwargs):
+    def run(self, case_keys=None, keep=True, verbose=False, precomputed_results=None, **job_kwargs):
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
@@ -313,13 +313,21 @@ class BenchmarkStudy:
             if verbose:
                 print("### Run benchmark", key, "###")
             t0 = time.perf_counter()
-            benchmark.run(**job_kwargs)
+            if key not in precomputed_results:
+                benchmark.run(**job_kwargs)
+            else:
+                for k, v in precomputed_results[key].items():
+                    benchmark.result[k] = v
             t1 = time.perf_counter()
             self.benchmarks[key] = benchmark
             bench_folder = self.folder / "results" / self.key_to_str(key)
             bench_folder.mkdir(exist_ok=True)
             benchmark.save_run(bench_folder)
-            benchmark.result["run_time"] = float(t1 - t0)
+            if key not in precomputed_results:
+                benchmark.result["run_time"] = float(t1 - t0)
+            elif "run_time" in precomputed_results[key]:
+                benchmark.result["run_time"] = precomputed_results[key]["run_time"]
+
             benchmark.save_main(bench_folder)
 
     def set_colors(self, colors=None, map_name="tab10", levels_to_group_by=None):
