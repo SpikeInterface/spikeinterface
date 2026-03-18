@@ -6,6 +6,7 @@ from packaging import version
 import importlib.util
 
 import pytest
+import numpy as np
 
 from spikeinterface import get_global_dataset_folder
 from spikeinterface.extractors.extractor_classes import (
