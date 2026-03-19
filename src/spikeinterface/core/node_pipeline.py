@@ -625,7 +625,7 @@ def run_node_pipeline(
         # See need_first_call_before_pipeline : this trigger numba compilation before the run
         node0._first_call_before_pipeline()
 
-    init_args = (recording, nodes, skip_after_n_peaks_per_worker)
+    init_args = (chunkable, nodes, skip_after_n_peaks_per_worker)
 
     processor = ChunkExecutor(
         chunkable,

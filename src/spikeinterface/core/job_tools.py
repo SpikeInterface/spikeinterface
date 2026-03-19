@@ -421,7 +421,7 @@ class ChunkExecutor:
                 else:
                     mp_context = "spawn"
 
-            preferred_mp_context = recording.get_preferred_mp_context()
+            preferred_mp_context = chunkable.get_preferred_mp_context()
             if preferred_mp_context is not None and preferred_mp_context != mp_context:
                 warnings.warn(
                     f"Your processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
@@ -551,7 +551,7 @@ class ChunkExecutor:
                         results = tqdm(
                             results,
                             desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})",
-                            total=len(recording_slices),
+                            total=len(slices),
                         )
 
                     for res in results:
