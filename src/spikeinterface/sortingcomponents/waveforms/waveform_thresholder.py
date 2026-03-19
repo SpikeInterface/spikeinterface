@@ -51,7 +51,7 @@ class WaveformThresholder(WaveformsNode):
     ):
         waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
-            raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
+            raise TypeError(f"WaveformThresholder should have a single {WaveformsNode.__name__} in its parents")
 
         super().__init__(
             recording,
@@ -70,13 +70,13 @@ class WaveformThresholder(WaveformsNode):
 
         self.noise_levels = noise_levels
         if self.noise_levels is None:
-            self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_in_uV=False)
+            self.noise_levels = get_noise_levels(recording, **random_chunk_kwargs, return_in_uV=False)
 
         self._kwargs.update(
             dict(feature=feature, threshold=threshold, operator=operator, noise_levels=self.noise_levels)
         )
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
         if self.feature == "ptp":
             wf_data = np.ptp(waveforms, axis=1) / self.noise_levels
         elif self.feature == "mean":

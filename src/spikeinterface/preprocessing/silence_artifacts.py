@@ -34,13 +34,14 @@ class DetectThresholdCrossing(PeakDetector):
         self.abs_thresholds = noise_levels * detect_threshold
         self._dtype = np.dtype(base_peak_dtype + [("front", "bool")])
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return 0
 
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
+        traces = chunk
         z = np.median(traces / self.abs_thresholds, 1)
         threshold_mask = np.diff((z > 1) != 0, axis=0)
         indices = np.flatnonzero(threshold_mask)

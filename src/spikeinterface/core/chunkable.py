@@ -468,3 +468,21 @@ class ChunkableSegment(BaseSegment):
         """
         # must be implemented in subclass
         raise NotImplementedError
+
+    def get_data(self, start_frame: int, end_frame: int, **kwargs) -> np.ndarray:
+        """Returns the data for this signal segment between start_frame and end_frame
+
+        Parameters
+        ----------
+        start_frame : int
+            The starting frame index (inclusive)
+        end_frame : int
+            The ending frame index (exclusive)
+
+        Returns
+        -------
+        np.ndarray
+            The data for this signal segment between start_frame and end_frame
+        """
+        # must be implemented in subclass
+        raise NotImplementedError

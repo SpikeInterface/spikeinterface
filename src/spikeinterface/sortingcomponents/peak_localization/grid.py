@@ -64,7 +64,7 @@ class LocalizeGridConvolution(LocalizeBase):
         peak_sign="neg",
         weight_method={},
     ):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.radius_um = radius_um
         self.margin_um = margin_um
@@ -72,7 +72,7 @@ class LocalizeGridConvolution(LocalizeBase):
         self.peak_sign = peak_sign
         self.percentile = 100 - percentile
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
-        contact_locations = recording.get_channel_locations()
+        contact_locations = self.recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
         if waveform_extractor is None:
@@ -81,7 +81,7 @@ class LocalizeGridConvolution(LocalizeBase):
         self.nbefore = waveform_extractor.nbefore
         self.nafter = waveform_extractor.nafter
         self.weight_method = weight_method
-        fs = self.recording.get_sampling_frequency()
+        fs = self.recording.sampling_frequency
 
         if prototype is None:
             time_axis = np.arange(-self.nbefore, self.nafter) * 1000 / fs
@@ -123,7 +123,8 @@ class LocalizeGridConvolution(LocalizeBase):
             )
         )
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
+        traces = chunk
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
         nb_weights = self.weights.shape[0]
 

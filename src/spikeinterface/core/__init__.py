@@ -99,14 +99,13 @@ from .job_tools import (
     split_job_kwargs,
     fix_job_kwargs,
 )
-from .chunkable_tools import write_binary, write_memory
+from .chunkable_tools import write_binary, write_memory, get_chunk_with_margin, get_random_sample_slices
 from .recording_tools import (
     write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,
     get_closest_channels,
     get_noise_levels,
-    get_chunk_with_margin,
     order_channels_by_depth,
 )
 from .sorting_tools import (

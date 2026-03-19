@@ -218,14 +218,14 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         self.n_components = self.pca_model.n_components
         self.dtype = np.dtype(dtype)
 
-    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+    def compute(self, chunk: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
         Parameters
         ----------
-        traces : np.ndarray
-            The traces of the recording.
+        chunk : np.ndarray
+            The chunk of the recording.
         peaks : np.ndarray
             The peaks resulting from a peak_detection step.
         waveforms : np.ndarray
@@ -287,14 +287,14 @@ class TemporalPCADenoising(TemporalPCBaseNode):
             model_folder_path=model_folder_path,
         )
 
-    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+    def compute(self, chunk: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
         Parameters
         ----------
-        traces : np.ndarray
-            The traces of the recording.
+        chunk : np.ndarray
+            The chunk of the recording.
         peaks : np.ndarray
             The peaks resulting from a peak_detection step.
         waveforms : np.ndarray
@@ -369,21 +369,21 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         self.final_sparsity_mask = final_sparsity_mask
         self.interpolation_method = interpolation_method
 
-        self.channel_locations = self.recording.get_channel_locations()
+        self.channel_locations = recording.get_channel_locations()
 
         self.wf_sparsity_mask = self.parents[1].neighbours_mask
 
         # this is the final sparse channel count
         self.out_num_channels = max(np.sum(self.final_sparsity_mask, axis=1))
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peaks, waveforms) -> np.ndarray:
+    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin, peaks, waveforms) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
         Parameters
         ----------
-        traces : np.ndarray
-            The traces of the recording.
+        chunk : np.ndarray
+            The chunk of the recording.
         peaks : np.ndarray
             The peaks resulting from a peak_detection step.
         waveforms : np.ndarray
@@ -415,7 +415,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
                 # print(peak["channel_index"], peak["segment_index"])
                 abs_sample_index = peak["sample_index"] + start_frame - max_margin
                 chan_index = peak["channel_index"]
-                peak_time = self.recording.sample_index_to_time(abs_sample_index, segment_index=peak["segment_index"])
+                peak_time = self.chunkable.sample_index_to_time(abs_sample_index, segment_index=peak["segment_index"])
                 peak_depth = self.channel_locations[chan_index, self.motion.dim]
                 peak_motion = self.motion.get_displacement_at_time_and_depth(
                     np.array([peak_time]),

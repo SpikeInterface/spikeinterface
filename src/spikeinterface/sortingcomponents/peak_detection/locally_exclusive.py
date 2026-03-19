@@ -80,12 +80,14 @@ class LocallyExclusivePeakDetector(PeakDetector):
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance <= radius_um
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         # the +1 in the border is important because we need peak in the border
         return self.exclude_sweep_size + 1
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
         assert HAVE_NUMBA, "You need to install numba"
+
+        traces = chunk
 
         peak_sample_ind, peak_chan_ind = detect_peaks_numba_locally_exclusive_on_chunk(
             traces, self.peak_sign, self.abs_thresholds, self.exclude_sweep_size, self.neighbours_mask
@@ -235,11 +237,13 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
         for i, neigh in enumerate(self.neighbour_indices_by_chan):
             self.neighbours_idxs[i, : len(neigh)] = neigh
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return self.exclude_sweep_size
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
         from .by_channel import _torch_detect_peaks
+
+        traces = chunk
 
         peak_sample_ind, peak_chan_ind, peak_amplitude = _torch_detect_peaks(
             traces, self.peak_sign, self.abs_thresholds, self.exclude_sweep_size, self.neighbours_idxs, self.device
@@ -288,10 +292,10 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
             self.abs_thresholds, self.exclude_sweep_size, self.neighbours_mask, self.peak_sign, **opencl_context_kwargs
         )
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-        peak_sample_ind, peak_chan_ind = self.executor.detect_peak(traces)
+    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
+        peak_sample_ind, peak_chan_ind = self.executor.detect_peak(chunk)
         peak_sample_ind += self.exclude_sweep_size
-        peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+        peak_amplitude = chunk[peak_sample_ind, peak_chan_ind]
 
         local_peaks = np.zeros(peak_sample_ind.size, dtype=self.get_dtype())
         local_peaks["sample_index"] = peak_sample_ind

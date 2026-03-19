@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core import get_channel_distances
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.peak_localization.method_list import (
     LocalizeCenterOfMass,
     LocalizeMonopolarTriangulation,
@@ -100,7 +100,8 @@ class AmplitudeFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
+        traces = chunk
         if self.all_channels:
             if self.peak_sign == "neg":
                 amplitudes = np.min(waveforms, axis=1)
@@ -134,7 +135,8 @@ class PeakToPeakFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
+        traces = chunk
         if self.all_channels:
             all_ptps = np.ptp(waveforms, axis=1)
         else:
@@ -185,7 +187,8 @@ class RandomProjectionsFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
+        traces = chunk
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
 
         for main_chan in np.unique(peaks["channel_index"]):

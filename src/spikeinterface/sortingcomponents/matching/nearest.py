@@ -50,14 +50,14 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         self.neighbours_mask = self.channel_distance <= detection_radius_um
 
         num_templates = len(self.templates.unit_ids)
-        num_channels = recording.get_num_channels()
+        num_channels = self.recording.get_num_channels()
 
         if neighborhood_radius_um is not None:
             from spikeinterface.core.template_tools import get_template_extremum_channel
 
             best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
             best_channels = np.array([best_channels[i] for i in templates.unit_ids])
-            channel_locations = recording.get_channel_locations()
+            channel_locations = self.recording.get_channel_locations()
             template_distances = np.linalg.norm(
                 channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :], axis=2
             )
@@ -94,7 +94,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             self.lookup_tables["templates"][i] = np.flatnonzero(self.neighborhood_mask[i])
             self.lookup_tables["channels"][i] = np.flatnonzero(self.sparsity_mask[i])
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -191,7 +191,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         projected_temporal_templates = self.svd_model.transform(temporal_templates)
         self.svd_templates = from_temporal_representation(projected_temporal_templates, self.num_channels)
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

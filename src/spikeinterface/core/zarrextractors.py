@@ -323,7 +323,7 @@ class ZarrSortingExtractor(BaseSorting):
         Write a sorting extractor to zarr format.
         """
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
-        zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrRecordingExtractor)
+        zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrSortingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
 
 

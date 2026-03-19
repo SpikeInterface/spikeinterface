@@ -291,7 +291,7 @@ def add_dead_channels(recording, is_dead):
         data[:, is_dead] = np.random.normal(
             mean, std * 0.1, size=(is_dead.size, recording.get_num_samples(segment_index))
         ).T
-        recording.segments[segment_index]._traces = data
+        recording.segments[segment_index]._traces = chunk
 
 
 if __name__ == "__main__":

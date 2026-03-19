@@ -227,8 +227,10 @@ class AmplitudeScalingNode(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks):
+    def compute(self, chunk, peaks):
         from scipy.stats import linregress
+
+        traces = chunk
 
         # scale traces with margin to match scaling of templates
         if self._gains is not None:
@@ -319,7 +321,7 @@ class AmplitudeScalingNode(PipelineNode):
         # TODO: switch to collision mask and return that (to use concatenation)
         return (scalings, spike_collision_mask)
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return self._margin
 
 

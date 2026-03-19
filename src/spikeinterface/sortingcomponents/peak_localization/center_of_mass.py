@@ -43,7 +43,8 @@ class LocalizeCenterOfMass(LocalizeBase):
         self.nbefore = waveform_extractor.nbefore
         self._kwargs.update(dict(feature=feature))
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
+        traces = chunk
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for main_chan in np.unique(peaks["channel_index"]):
