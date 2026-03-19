@@ -215,7 +215,6 @@ Contributors:
 * @ShijiMi-Soup
 * @ablot
 * @alejoe91
-* @app/pre-commit-ci
 * @b-grimaud
 * @chrishalcrow
 * @ecobost

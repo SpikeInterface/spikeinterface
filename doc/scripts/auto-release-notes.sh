@@ -44,4 +44,4 @@ echo "Contributors:"
 echo ""
 gh pr list --repo SpikeInterface/spikeinterface --limit 1000 --base main --state merged --json number,title,author,mergedAt \
   | jq -r --arg start_date "${START_DATE}T00:00:00Z" --arg end_date "${END_DATE}T00:00:00Z" \
-  '[.[] | select(.mergedAt >= $start_date and .mergedAt <= $end_date) | .author.login] | unique | .[] | "* @" + .'
+  '[.[] | select(.mergedAt >= $start_date and .mergedAt <= $end_date and .author.login != "app/pre-commit-ci") | .author.login] | unique | .[] | "* @" + .'
