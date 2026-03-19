@@ -117,12 +117,6 @@ class CommonReferenceRecording(BasePreprocessor):
                     [ch in recording.channel_ids for ch in ref_channel_ids]
                 ), "Some 'ref_channel_ids' are wrong!"
         elif reference == "local":
-            if operator == "median":
-                warnings.warn(
-                    "Using a local median reference can be very computationally intensive. Consider using a local "
-                    "average reference instead or pre-computing the local median reference and using the 'single' "
-                    "reference option."
-                )
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
             # The neighbor kernel is a matrix that will be used to calculate the local reference.
