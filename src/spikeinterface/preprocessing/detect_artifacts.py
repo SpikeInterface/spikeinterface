@@ -266,7 +266,7 @@ def detect_saturation_periods(
     )
 
     saturation_periods = run_node_pipeline(
-        recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts"
+        recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts", check_for_peak_source=False
     )
     num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
     return _collapse_events(saturation_periods)
@@ -461,6 +461,7 @@ def detect_artifact_periods_by_envelope(
         [node0],
         job_kwargs,
         job_name="detect artifact on  envelope",
+        check_for_peak_source=False,
     )
 
     order = np.lexsort((threshold_crossings["sample_index"], threshold_crossings["segment_index"]))
