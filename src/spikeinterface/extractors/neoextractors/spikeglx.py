@@ -94,7 +94,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_probe(probe, in_place=True)
 
             # get inter-sample shifts based on the probe information and mux channels
-            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
+            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
             if sample_shifts is not None:
                 self.set_property("inter_sample_shift", sample_shifts)
         else:
