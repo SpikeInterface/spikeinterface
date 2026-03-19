@@ -489,13 +489,13 @@ def find_parents_of_type(list_of_parents, parent_type):
     return parents
 
 
-def check_graph(nodes):
+def check_graph(nodes, check_for_peak_source=True):
     """
     Check that node list is orderd in a good (parents are before children)
     """
 
     node0 = nodes[0]
-    if not isinstance(node0, PeakSource):
+    if not isinstance(node0, PeakSource) and check_for_peak_source:
         raise ValueError(
             "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
         )
@@ -526,6 +526,7 @@ def run_node_pipeline(
     verbose: bool = False,
     skip_after_n_peaks: int | None = None,
     slices: list[tuple] | None = None,
+    check_for_peak_source: bool = False,
 ):
     """
     Machinery to compute in parallel operations on peaks and traces.
@@ -582,6 +583,8 @@ def run_node_pipeline(
         Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
         If None (default), the function iterates over the entire duration of the recording.
+    check_for_peak_source : bool, default False
+        Whether to check the graph of PeakSource nodes.
 
     Returns
     -------
@@ -589,8 +592,7 @@ def run_node_pipeline(
         a tuple of vector for the output of nodes having return_output=True.
         If squeeze_output=True and only one output then directly np.array.
     """
-
-    check_graph(nodes)
+    check_graph(nodes, check_for_peak_source=check_for_peak_source)
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(node, PipelineNode) for node in nodes)
