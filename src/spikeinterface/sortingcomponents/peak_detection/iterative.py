@@ -94,8 +94,7 @@ class IterativePeakDetector(PeakDetector):
         tuple of ndarray
             A tuple containing a single ndarray with the detected peaks.
         """
-        traces_chunk = data
-        traces_chunk = np.array(traces_chunk, copy=True, dtype="float32")
+        traces_chunk = np.array(chunk, copy=True, dtype="float32")
         local_peaks_list = []
         all_waveforms = []
 
