@@ -1,0 +1,234 @@
+.. _release0.104.0:
+
+SpikeInterface 0.104.0 release notes
+------------------------------------
+
+Mar 23rd 2026
+
+Main changes:
+
+* Added support for ``Bombcell`` [Fabre]_, for unit curation, including new and updated template metrics (#4306)
+* Added ``LUPIN`` [Garcia2024]_ as an internal sorter (#4192)
+* Added support for ``SLAy`` [Koukuntla]_, for automated unit merges (#4190)
+* Added ``valid_unit_periods`` postprocessing extension, based on NeuroPyxles [npyx]_ (#4299, #4302)
+* Added ``AutoCorrelograms`` postprocessing extension (#4307)
+* Added support for double-sided probes (#4272)
+* Added ``SequentialCuration``, allowing for chains of curations to be applied to analyzers (#4298)
+* Added support for FigPack, to eventually superseed SortingView (#4364)
+* Major refactor and debugging of the ``Metrics`` postprocessing module (#4183, #4362, #4355, #4353, #4342, #4292) (see: :doc:`/modules/metrics`)
+* Significant speedups in ``Metrics`` (#4308, #4363) and ``SortingComponents`` (#4402, #4341) modules, and in correlograms (#4305) and template similarity (#4343) computations.
+
+* API and breaking changes:
+
+    * Specific metrics functions now imported from different sub module (see: :doc:`/modules/metrics/`)
+    * ``snr`` quality metric calculation now uses median rather than mean (see: :doc:`/modules/metrics/quality_metrics`)
+    * Metric name "peak_to_valley" has been renamed to "peak_to_trough_duration" for clarity. This name change will be applied automatically on load of older analzyers. (see: :doc:`/modules/metrics/template_metrics`)
+    * The function to do UnitRefine curation has been renamed from ``auto_label_units`` to ``unitrefine_label_units`` (see :py:func:`~spikeinterface.curation.unitrefine_label_units`)
+    * Remove support for Python 3.9
+
+core:
+
+* Fix closest_channels sparsity estimation when n_units > n_channels (#4443)
+* Copy the recording from original sorting during NumpySorting.from_sorting() (#4417)
+* Don't raise when extension is unknown (#4406)
+* Make NumpySorting.from_unit_dict docs and code consistent (#4382)
+* Improve extension dependency management in SortingAnalyzer (#4321)
+* Implement `select_sorting_periods` in core (#4316)
+* Implement the cached_lexsorted_spike_vector. (#4315)
+* Move structured dtypes to base (#4314)
+* Implement `select_sorting_periods` in metrics (#4302)
+* Fix `get_probe` `set_probe` annotations propagation (#4300)
+* using `spike_vector` on `core/check_sortings_equal` test (#4282)
+* Random spike selection new methods (#4276)
+* Implement the by_side grouping with probes (#4272)
+* Fix gaussian filter with time vector (#4268)
+* Delete some unused references to channel_slice (deprecated in v0.103.0) (#4246)
+* Fix probable sharedmem (#4239)
+* Implement Add/SubtractRecording classes and +- operators (#4238)
+* Warn about non-mergeable units instead of raising an error (#4219)
+* Implementing sparsity for ComputeTemplates (#4212)
+
+extractors:
+
+* Add XClustSortingExtractor (#4433)
+* Add gain and offset for `read_kilosort_as_analyzer` (#4428)
+* Fix openephys tests (#4426)
+* Fix Open Ephys probe channel order (#4396)
+* Improve NWB Extractor `__del__` method to avoid import errors (#4369)
+* Fix IBL test with probe representation (#4335)
+* Remove check of `len(inter_sample_shifts)` matching `num_readout_channels` (#4317)
+* Update to SiNAPS extractor (#4263)
+* Support for using event names as IDs in PL2 files (#4049)
+* Get unit locations from HerdingspikesSortingExtractor (#3525)
+
+preprocessing:
+
+* Slice epsilons with dead channels to match gains during agc. (#4430)
+* Support time_vector in resample() (#4429)
+* Implementing KNN referencing and a backup referencing mechanism for common_reference (#4412)
+* Use a truncated median filter near edges when detecting bad channels (#4391)
+* Make anyone happy about warnings and margin in filtering. (#4384)
+* Fix bug spatial filter #4175 (#4286)
+* Fix gaussian filter with time vector (#4268)
+* Fixes Issue4180 (#4247)
+* Fix artifact removal padding logic (#4245)
+* Auto-estimate margins based on freq_min/f0+Q for filters (#4227)
+* Fix silence period and job_kwargs (#4071)
+* Remove artefacts based of an envelope (#3715)
+
+sorters:
+
+* Add the option for clustering methods to return temporal shifts for peaks while clustering (#4401)
+* Add plotting functions for drift and diagnostics to KS4 (#4387)
+* lupin and tdc2 : improvements (#4349)
+* Improve multithreading and multi processing : lock + nogil + mp_context (#4333)
+* Fix typo in lupin/tdc2 (#4284)
+* Make "simple" sorters params simpler. (#4281)
+* Improvements for internal sorters (#4279)
+* kilosort4 may fail due to the undesirable instantiation of `logger` (#4277)
+* Flatten params for tridesclous2 sorter (#4254)
+* Add isosplit in simple sorter (#4249)
+* Final cleaning of mixtures for lupin/tdc/sc (#4244)
+* Cosmetic logging messages for SC2 (#4242)
+* A new sorter : Lupin sorter (#4192)
+
+postprocessing:
+
+* Set amplitude scalings equal zero for zero template units (#4455)
+* Add gain and offset for `read_kilosort_as_analyzer` (#4428)
+* Don't raise when extension is unknown (#4406)
+* Fix valid period amplitudes (#4361)
+* Patch lag similarities (#4345)
+* Speed up template similarity computing using numba (#4343)
+* Change ComputeSpikeLocations to use only peak_sign (#4330)
+* Ensure compute unit locations respects order of unit ids (#4329)
+* Auto correlograms (#4307)
+* Option to turn on parallel computation for CCG in numba (#4305)
+* Valid unit periods extension (#4299)
+* Add `BaseSpikeVectorExtension` (#4189)
+
+metrics:
+
+* Set num_histogram_bins in amplitude_cutoff (back) to 100 (#4415)
+* Fix metrics test for numba correlograms fast_mode (#4377)
+* Remove multiprocessing from NearestNeigbhor metric (#4363)
+* Add peak_sign to sd_ratio (#4362)
+* Improve error message for deprecated metric names (#4358)
+* Correct formula for mad (and std) in drift quality metrics (#4355)
+* Compute missing spikes on the right tail of amplitude distributions  (#4353)
+* Improve stability of velocity fits in template metrics (#4342)
+* Timing the computations of quality metrics and some optimizations (#4308)
+* Bombcell integration and template metrics refactoring (#4306)
+* Fix rp violations bug  (#4292)
+* Refactor metrics into its own module (#4183)
+
+curation:
+
+* Improve robustness of model classifier tests (#4447)
+* Rename `CurationModel` to `Curation` (#4421)
+* Change 'min'/'max' to 'greater'/'less' when defining thresholds for `threshold_metrics_label_units` (#4416)
+*  Send peak_sign to `get_template_extremum_channel_peak_shift` in remove_redundant_units (#4408)
+* Use `sorting._recording` (if available) in `remove_excess_spikes` (#4407)
+* Add `threshold_metrics` curation (#4365)
+* Ensure default supported_versions is a tuple, as in type (#4348)
+* Refactor API for `auto_label_units` (#4338)
+* Bombcell integration and template metrics refactoring (#4306)
+* Sequential curation (#4298)
+* Fix failing tests due to scikit-learn versions (#4253)
+* Warn about non-mergeable units instead of raising an error (#4219)
+* Add SLAy auto-merge preset (#4190)
+
+widgets:
+
+* Enlarge channel textbox in plot_traces (#4400)
+* Send a float (rather than 1-element array) to BoundedFloatText (#4399)
+* Figpack integration (replacement of sortingview) (#4364)
+* Remove layer selector from `plot_traces` ipywidgets backend if single layer (#4325)
+* Fix edges of 2d-histogram in UnitWaveformDensityMapWidget (#4283)
+* Protect unit summary and unit locations plots against NaNs (#4128)
+
+generators:
+
+* More possibilities for gt generation (#4289)
+* Update generate.py (#4163)
+
+sortingcomponents:
+
+* Optimizations: faster waveforms/templates and seeding iterative_isosplit properly (#4402)
+* Add the option for clustering methods to return temporal shifts for peaks while clustering (#4401)
+* Make peak detection (locally_exclussive, matched_filtering) faster and more accurate. (#4341)
+* Needed by Olivier to create an analyzer with precomputed data (#4303)
+* Final cleaning of mixtures for lupin/tdc/sc (#4244)
+* Cosmetic logging messages for SC2 (#4242)
+* Update nearest peeler (#4223)
+
+documentation:
+
+* Add missing API doc entries for `save*`, `dump*`, `remove_channels`, and `scale_to_uV` (#4451)
+* Extend unsigned to signed docs (#4448)
+* Fix link to LFP docs in error message (#4424)
+* Fix some typos in documentation (#4419)
+* Add a why integrate your software with spikeinterface section (#4393)
+* Add `compute_valid_unit_periods` to api and add credit in postprocessing module (#4390)
+* Add metric_descriptions and BaseMetricExtension.get_metric_colum_descriptions (#4278)
+* Doc sorters (#4275)
+* Clean auto-release script: use metrics + only print changed modules (#4265)
+
+continuous integration:
+
+* Update setuptools version for legacy kilosort (#4386)
+* Get rid of pytest-dependency and use fixtures (#4381)
+* Free up space in codecov CI (#4252)
+
+packaging:
+
+* Update lower bound python support to 3.10 (#4383)
+
+testing:
+
+* Further Improve robustness of model classifier tests (#4450)
+* Remove `n_jobs=-1` from curation tests (#4449)
+* Improve robustness of model classifier tests (#4447)
+* Fix openephys tests (#4426)
+* Rename `neurodsp` to `ibldsp` to ensure IBL tests run (#4392)
+* Update setuptools version for legacy kilosort (#4386)
+* Get rid of pytest-dependency and use fixtures (#4381)
+* Test IBL extractors tests failing for PI update (#4285)
+* using `spike_vector` on `core/check_sortings_equal` test (#4282)
+* fix tdc2 failing tests (#4271)
+* Fix failing tests due to scikit-learn versions (#4253)
+
+deprecations:
+
+* Remove deprecations for 0.104.0 (#4425)
+* Make anyone happy about warnings and margin in filtering. (#4384)
+* Improve error message for deprecated metric names (#4358)
+* Binary recording bacward-compatibility (#4357)
+
+Contributors:
+
+* @CodyCBakerPhD
+* @JoeZiminski
+* @Julie-Fabre
+* @MGAMZ
+* @OleBialas
+* @ShijiMi-Soup
+* @ablot
+* @alejoe91
+* @app/pre-commit-ci
+* @b-grimaud
+* @chrishalcrow
+* @ecobost
+* @esutlie
+* @grahamfindlay
+* @h-mayorquin
+* @m-beau
+* @mhhennig
+* @oliche
+* @pas-calc
+* @raffaele222
+* @samuelgarcia
+* @tayheau
+* @ueeseer
+* @yger
+* @zzhmark

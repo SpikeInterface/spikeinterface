@@ -8,7 +8,7 @@ START_DATE="$1"
 END_DATE="$2"
 
 if [ -z "$3" ] || [ "$3" = "all" ]; then
-    LABELS=("core" "extractors" "preprocessing" "sorters" "postprocessing" "metrics" "curation" "widgets" "generators" "hybrid" "sortingcomponents" "motion correction" "documentation" "continuous integration" "packaging" "testing" "deprecations")
+    LABELS=("core" "extractors" "preprocessing" "sorters" "postprocessing" "metrics" "curation" "widgets" "generators" "hybrid" "sortingcomponents" "motion correction" "documentation" "continuous integration" "packaging" "testing" "deprecations" "qualitymetrics")
 else
     LABELS=("$3")
 fi
