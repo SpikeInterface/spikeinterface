@@ -43,7 +43,6 @@ def test_common_reference(recording):
     assert np.allclose(traces[:, 0], rec_local_cmr.get_traces()[:, 0] + np.median(traces[:, [2, 3]], axis=1), atol=0.01)
     assert np.allclose(traces[:, 1], rec_local_cmr.get_traces()[:, 1] + np.median(traces[:, [3]], axis=1), atol=0.01)
 
-    # TODO: fix this!!!
     assert np.allclose(traces[:, 0], rec_local_car.get_traces()[:, 0] + np.mean(traces[:, [2, 3]], axis=1), atol=0.01)
     assert np.allclose(traces[:, 1], rec_local_car.get_traces()[:, 1] + np.mean(traces[:, [3]], axis=1), atol=0.01)
 
