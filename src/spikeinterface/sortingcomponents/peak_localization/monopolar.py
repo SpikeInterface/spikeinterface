@@ -1,6 +1,5 @@
 """Sorting components: peak localization."""
 
-from __future__ import annotations
 import numpy as np
 
 from .base import LocalizeBase

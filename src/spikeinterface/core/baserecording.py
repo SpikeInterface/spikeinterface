@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import warnings
 from pathlib import Path
 
@@ -209,7 +208,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         segment_index: int | None = None,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_ids: list | np.array | tuple | None = None,
+        channel_ids: list | np.ndarray | tuple | None = None,
         order: "C" | "F" | None = None,
         return_scaled: bool | None = None,
         return_in_uV: bool = False,
@@ -224,7 +223,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             The start frame. If None, 0 is used, default: None
         end_frame : int | None, default: None
             The end frame. If None, the number of samples in the segment is used, default: None
-        channel_ids : list | np.array | tuple | None, default: None
+        channel_ids : list | np.ndarray | tuple | None, default: None
             The channel ids. If None, all channels are used, default: None
         order : "C" | "F" | None, default: None
             The order of the traces ("C" | "F"). If None, traces are returned as they are
@@ -407,7 +406,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseRecording":
+    def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.
 
@@ -422,7 +421,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
         return ChannelSliceRecording(self, channel_ids)
 
-    def rename_channels(self, new_channel_ids: list | np.array | tuple) -> "BaseRecording":
+    def rename_channels(self, new_channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """
         Returns a new recording object with renamed channel ids.
 
@@ -633,7 +632,7 @@ class BaseRecordingSegment(ChunkableSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: list | np.array | tuple | None = None,
+        channel_indices: list | np.ndarray | tuple | None = None,
     ) -> np.ndarray:
         """
         Return the raw traces, optionally for a subset of samples and/or channels
@@ -644,7 +643,7 @@ class BaseRecordingSegment(ChunkableSegment):
             start sample index, or zero if None
         end_frame : int | None, default: None
             end_sample, or number of samples if None
-        channel_indices : list | np.array | tuple | None, default: None
+        channel_indices : list | np.ndarray | tuple | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns

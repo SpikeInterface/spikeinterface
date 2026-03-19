@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from io import StringIO
-from typing import List, Optional, Union
 from contextlib import redirect_stderr
 from pathlib import Path
 import importlib.util
@@ -78,7 +75,7 @@ class IblRecordingExtractor(BaseRecording):
     installation_mesg = "To use the IblRecordingSegment, install ibllib: \n\n pip install ONE-api\npip install ibllib\n"
 
     @staticmethod
-    def _get_default_one(cache_folder: Optional[Union[Path, str]] = None):
+    def _get_default_one(cache_folder: Path | str | None = None):
         if HAVE_ONE and HAVE_BRAINBOX:
             from one.api import ONE
         else:
@@ -92,7 +89,7 @@ class IblRecordingExtractor(BaseRecording):
         return one
 
     @staticmethod
-    def get_stream_names(eid: str, cache_folder: Optional[Union[Path, str]] = None, one=None) -> List[str]:
+    def get_stream_names(eid: str, cache_folder: Path | str | None = None, one=None) -> list[str]:
         """
         Convenient retrieval of available stream names.
 
@@ -146,7 +143,7 @@ class IblRecordingExtractor(BaseRecording):
         pid: str | None = None,
         stream_name: str | None = None,
         load_sync_channel: bool = False,
-        cache_folder: Optional[Path | str] = None,
+        cache_folder: Path | str | None = None,
         remove_cached: bool = True,
         stream: bool = True,
         one: "one.api.OneAlyx" = None,

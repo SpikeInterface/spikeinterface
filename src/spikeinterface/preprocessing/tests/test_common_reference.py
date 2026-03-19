@@ -26,7 +26,12 @@ def test_common_reference(recording):
     rec_cmr_ref = common_reference(recording, reference="global", operator="median", ref_channel_ids=["a", "b", "c"])
     rec_car = common_reference(recording, reference="global", operator="average")
     rec_sin = common_reference(recording, reference="single", ref_channel_ids=["a"])
-    rec_local_car = common_reference(recording, reference="local", local_radius=(20, 65), operator="median")
+    rec_local_cmr = common_reference(
+        recording, reference="local", local_radius=(25, 65), operator="median", min_local_neighbors=1
+    )
+    rec_local_car = common_reference(
+        recording, reference="local", local_radius=(25, 65), operator="average", min_local_neighbors=1
+    )
 
     traces = recording.get_traces()
     assert np.allclose(traces, rec_cmr.get_traces() + np.median(traces, axis=1, keepdims=True), atol=0.01)
@@ -35,13 +40,17 @@ def test_common_reference(recording):
     assert not np.all(rec_sin.get_traces()[0])
     assert np.allclose(rec_sin.get_traces()[:, 1], traces[:, 1] - traces[:, 0])
 
-    assert np.allclose(traces[:, 0], rec_local_car.get_traces()[:, 0] + np.median(traces[:, [2, 3]], axis=1), atol=0.01)
-    assert np.allclose(traces[:, 1], rec_local_car.get_traces()[:, 1] + np.median(traces[:, [3]], axis=1), atol=0.01)
+    assert np.allclose(traces[:, 0], rec_local_cmr.get_traces()[:, 0] + np.median(traces[:, [2, 3]], axis=1), atol=0.01)
+    assert np.allclose(traces[:, 1], rec_local_cmr.get_traces()[:, 1] + np.median(traces[:, [3]], axis=1), atol=0.01)
+
+    assert np.allclose(traces[:, 0], rec_local_car.get_traces()[:, 0] + np.mean(traces[:, [2, 3]], axis=1), atol=0.01)
+    assert np.allclose(traces[:, 1], rec_local_car.get_traces()[:, 1] + np.mean(traces[:, [3]], axis=1), atol=0.01)
 
     # Saving tests
     rec_cmr.save(verbose=False)
     rec_car.save(verbose=False)
     rec_sin.save(verbose=False)
+    rec_local_cmr.save(verbose=False)
     rec_local_car.save(verbose=False)
 
 
@@ -49,7 +58,8 @@ def test_common_reference_channel_slicing(recording):
     recording_cmr = common_reference(recording, reference="global", operator="median")
     recording_car = common_reference(recording, reference="global", operator="average")
     recording_single_reference = common_reference(recording, reference="single", ref_channel_ids=["b"])
-    recording_local_car = common_reference(recording, reference="local", local_radius=(20, 65), operator="median")
+    recording_local_cmr = common_reference(recording, reference="local", local_radius=(20, 65), operator="median")
+    recording_local_car = common_reference(recording, reference="local", local_radius=(20, 65), operator="average")
 
     channel_ids = ["b", "d"]
     indices = recording.ids_to_indices(channel_ids)
@@ -73,9 +83,12 @@ def test_common_reference_channel_slicing(recording):
 
     assert np.allclose(single_reference_trace, expected_trace, atol=0.01)
 
+    local_trace = recording_local_cmr.get_traces(channel_ids=all_channel_ids)
+    local_trace_sub = recording_local_cmr.get_traces(channel_ids=channel_ids)
+    assert np.all(local_trace[:, indices] == local_trace_sub)
+
     local_trace = recording_local_car.get_traces(channel_ids=all_channel_ids)
     local_trace_sub = recording_local_car.get_traces(channel_ids=channel_ids)
-
     assert np.all(local_trace[:, indices] == local_trace_sub)
 
     # test segment slicing
@@ -157,8 +170,44 @@ def test_common_reference_groups(recording):
     assert np.allclose(traces[:, 1], 0)
 
 
+def test_min_local_radius():
+    # Test that local radius smaller than the number of channels is handled correctly
+    recording = generate_recording(durations=[1.0], num_channels=32)
+    # remove closest channel to first channel
+    recording = recording.remove_channels(recording.channel_ids[1:5])
+    with pytest.warns(UserWarning):
+        recording_local_car = common_reference(
+            recording, reference="local", local_radius=(60, 150), operator="average", min_local_neighbors=5
+        )
+
+
+@pytest.mark.skip(reason="This test can be used to check local CAR vs local CMR performance")
+def test_local_car_vs_cmr_performance():
+    import time
+
+    # Test that local CAR is faster than local CMR when there are many channels
+    recording = generate_recording(durations=[10.0], num_channels=384)
+
+    rec_local_cmr = common_reference(
+        recording, reference="local", local_radius=(20, 65), operator="median", min_local_neighbors=1
+    )
+    t_start_cmr = time.perf_counter()
+    rec_local_cmr.get_traces()
+    t_end_cmr = time.perf_counter()
+    cmr_time = t_end_cmr - t_start_cmr
+
+    rec_local_car = common_reference(
+        recording, reference="local", local_radius=(20, 65), operator="average", min_local_neighbors=1
+    )
+    t_start_car = time.perf_counter()
+    rec_local_car.get_traces()
+    t_end_car = time.perf_counter()
+    car_time = t_end_car - t_start_car
+
+    print(f"Local CMR time: {cmr_time:.4f} seconds")
+    print(f"Local CAR time: {car_time:.4f} seconds")
+    assert car_time < cmr_time
+
+
 if __name__ == "__main__":
-    recording = _generate_test_recording()
-    test_common_reference(recording)
-    test_common_reference_channel_slicing(recording)
-    test_common_reference_groups(recording)
+    test_local_car_vs_cmr_performance()

@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import warnings
 from pathlib import Path
-from typing import Union, Optional
 from xml.etree import ElementTree as Etree
 
 import numpy as np
@@ -11,9 +8,6 @@ from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
-
-PathType = Union[str, Path]
-OptionalPathType = Optional[PathType]
 
 
 class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
@@ -185,12 +179,12 @@ class NeuroScopeSortingExtractor(BaseSorting):
 
     def __init__(
         self,
-        folder_path: OptionalPathType = None,
-        resfile_path: OptionalPathType = None,
-        clufile_path: OptionalPathType = None,
+        folder_path: str | Path | None = None,
+        resfile_path: str | Path | None = None,
+        clufile_path: str | Path | None = None,
         keep_mua_units: bool = True,
-        exclude_shanks: Optional[list] = None,
-        xml_file_path: OptionalPathType = None,
+        exclude_shanks: list | None = None,
+        xml_file_path: str | Path | None = None,
     ):
         from lxml import etree as et
 
@@ -344,7 +338,7 @@ class NeuroScopeSortingSegment(BaseSortingSegment):
         return times
 
 
-def _find_xml_file_path(folder_path: PathType):
+def _find_xml_file_path(folder_path: str | Path):
     xml_files = [f for f in folder_path.iterdir() if f.is_file() if f.suffix == ".xml"]
     assert any(xml_files), "No .xml files found in the folder_path."
     assert len(xml_files) == 1, "More than one .xml file found in the folder_path! Specify xml_file_path."
@@ -352,7 +346,7 @@ def _find_xml_file_path(folder_path: PathType):
     return xml_file_path
 
 
-def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType):
+def _handle_xml_file_path(folder_path: str | Path, initial_xml_file_path: str | Path):
     if initial_xml_file_path is None:
         xml_file_path = _find_xml_file_path(folder_path=folder_path)
     else:

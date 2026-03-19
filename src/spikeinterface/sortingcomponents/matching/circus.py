@@ -1,8 +1,5 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
 import importlib.util
 

@@ -1,6 +1,5 @@
 """Sorting components: peak detection."""
 
-from __future__ import annotations
 from typing import Tuple, List, Optional
 
 import numpy as np

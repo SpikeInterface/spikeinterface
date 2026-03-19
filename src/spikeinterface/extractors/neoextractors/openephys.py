@@ -8,9 +8,6 @@ See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
 """
 
-from __future__ import annotations
-
-
 from pathlib import Path
 
 import numpy as np
@@ -76,15 +73,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         block_index=None,
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
-        ignore_timestamps_errors: bool = None,
     ):
-        if ignore_timestamps_errors is not None:
-            dep_msg = "OpenEphysLegacyRecordingExtractor: `ignore_timestamps_errors` is deprecated. It will be removed in version 0.104.0 and is currently ignored"
-            warnings.warn(
-                dep_msg,
-                DeprecationWarning,
-                stacklevel=2,
-            )
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -326,26 +315,25 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
             # find settings file
             if "#" in stream_name:
-                record_node, oe_stream = stream_name.split("#")
+                record_node, oe_stream_name = stream_name.split("#")
             else:
                 record_node = ""
-                oe_stream = stream_name
-            exp_ids = sorted(list(self.neo_reader.folder_structure[record_node]["experiments"].keys()))
+                oe_stream_name = stream_name
+            node_structure = self.neo_reader.folder_structure[record_node]
+            exp_ids = sorted(list(node_structure["experiments"].keys()))
             if block_index is None:
                 exp_id = exp_ids[0]
             else:
                 exp_id = exp_ids[block_index]
-            rec_ids = sorted(
-                list(self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["recordings"].keys())
-            )
+            rec_ids = sorted(list(node_structure["experiments"][exp_id]["recordings"].keys()))
 
             # do not load probe for NIDQ stream or if load_sync_channel is True
             if "NI-DAQmx" not in stream_name and not load_sync_channel:
-                settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
+                settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
                 if Path(settings_file).is_file():
                     probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=stream_name, raise_error=False
+                        settings_file=settings_file, stream_name=oe_stream_name, raise_error=False
                     )
                 else:
                     probe = None
@@ -356,7 +344,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     else:
                         self.set_probe(probe, in_place=True)
                     # get inter-sample shifts based on the probe information and mux channels
-                    sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
+                    sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
                     if sample_shifts is not None:
                         self.set_property("inter_sample_shift", sample_shifts)
 
@@ -365,7 +353,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             stream_folders = []
             for segment_index, rec_id in enumerate(rec_ids):
                 stream_folder = (
-                    recording_folder / f"experiment{exp_id}" / f"recording{rec_id}" / "continuous" / oe_stream
+                    recording_folder / f"experiment{exp_id}" / f"recording{rec_id}" / "continuous" / oe_stream_name
                 )
                 stream_folders.append(stream_folder)
                 if load_sync_timestamps:

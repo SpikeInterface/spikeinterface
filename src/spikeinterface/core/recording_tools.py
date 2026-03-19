@@ -1,11 +1,10 @@
-from __future__ import annotations
 from copy import deepcopy
 from typing import Literal
 import warnings
 from pathlib import Path
 import os
 import tqdm
-
+import numpy.typing as npt
 
 import numpy as np
 
@@ -271,7 +270,7 @@ def get_random_data_chunks(
 
     Returns
     -------
-    chunk_list : np.array | list of np.array
+    chunk_list : np.ndarray | list of np.array
         Array of concatenate chunks per segment
     """
     # Handle deprecated return_scaled parameter
