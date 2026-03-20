@@ -50,8 +50,9 @@ def _collapse_events(events: np.ndarray) -> np.ndarray:
         # We use the + 1 because the end sample index is inclusive
         # so if the next start sample index is exactly 1 more than the end sample index,
         # then they are part of the same artifact period
-        same = events["end_sample_index"][i] + 1 >= events["start_sample_index"][i + 1]
-        if same:
+        overlapping = events["end_sample_index"][i] + 1 >= events["start_sample_index"][i + 1]
+        same_segment = events["segment_index"][i] == events["segment_index"][i + 1]
+        if overlapping and same_segment:
             to_drop[i] = True
             events["start_sample_index"][i + 1] = events["start_sample_index"][i]
     collapsed_events = events[~to_drop]

@@ -240,4 +240,4 @@ def test_detect_saturation_periods(debug_plots):
 
 if __name__ == "__main__":
     # test_detect_artifact_by_envelope(True)
-    test_detect_saturation_periods(True)
+    test_detect_saturation_periods(False)
