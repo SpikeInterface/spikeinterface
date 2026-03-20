@@ -47,7 +47,10 @@ def _collapse_events(events: np.ndarray) -> np.ndarray:
 
     # compute if duplicate
     for i in np.arange(events.size - 1):
-        same = events["end_sample_index"][i] == events["start_sample_index"][i + 1]
+        # We use the + 1 because the end sample index is inclusive
+        # so if the next start sample index is exactly 1 more than the end sample index,
+        # then they are part of the same artifact period
+        same = events["end_sample_index"][i] + 1 >= events["start_sample_index"][i + 1]
         if same:
             to_drop[i] = True
             events["start_sample_index"][i + 1] = events["start_sample_index"][i]
