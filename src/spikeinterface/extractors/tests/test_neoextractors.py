@@ -6,6 +6,7 @@ from packaging import version
 import importlib.util
 
 import pytest
+import numpy as np
 
 from spikeinterface import get_global_dataset_folder
 from spikeinterface.extractors.extractor_classes import (
@@ -121,9 +122,6 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("openephysbinary/v0.5.x_two_nodes", {"stream_id": "0"}),
         ("openephysbinary/v0.5.x_two_nodes", {"stream_id": "1"}),
         ("openephysbinary/v0.6.x_neuropixels_multiexp_multistream", {"stream_id": "0", "block_index": 0}),
-        # TODO: block_indices 1/2 of v0.6.x_neuropixels_multiexp_multistream have a mismatch in the channel names between
-        # the settings files (starting with CH0) and structure.oebin (starting at CH1).
-        # Currently, the extractor will skip remapping to match order in oebin and settings file, raising a warning
         ("openephysbinary/v0.6.x_neuropixels_multiexp_multistream", {"stream_id": "1", "block_index": 1}),
         (
             "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
@@ -134,7 +132,29 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
             "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
             {"stream_id": "2", "block_index": 2, "load_sync_timestamps": True},
         ),
+        (
+            "openephysbinary/v0.6.x_onebox_neuropixels",
+            {"stream_name": "Record Node 101#OneBox-100.ProbeA-AP", "block_index": 0},
+        ),
+        (
+            "openephysbinary/v0.6.x_onebox_neuropixels_nontrivial_wiring",
+            {"stream_name": "Record Node 101#OneBox-111.ProbeA", "block_index": 0},
+        ),
     ]
+
+    def test_non_trivial_wiring(self):
+        """
+        Test that we can load the probe information and sample shifts for a one box neuropixels recording with
+        non trivial wiring.
+        """
+        folder_path = local_folder / "openephysbinary/v0.6.x_onebox_neuropixels_nontrivial_wiring"
+        stream_name = "Record Node 101#OneBox-111.ProbeA"
+        block_index = 0
+
+        recording = self.ExtractorClass(folder_path, stream_name=stream_name, block_index=block_index)
+        # check that channel_ids and settings_channel_key contact annotations are correctly loaded
+        probe = recording.get_probe()
+        np.testing.assert_array_equal(recording.channel_ids, probe.contact_annotations["settings_channel_key"])
 
 
 class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
