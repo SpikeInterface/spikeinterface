@@ -258,6 +258,11 @@ def detect_saturation_periods(
     if "saturation_threshold_uV" in recording.get_annotation_keys() and saturation_threshold_uV is None:
         saturation_threshold_uV = recording.get_annotation("saturation_threshold_uV")
 
+    if saturation_threshold_uV is None:
+        raise ValueError(
+            "Cannot read `saturation_threshold_uV` from recording. Please pass `saturation_threshold_uV` manually."
+        )
+
     node0 = _DetectSaturation(
         recording,
         saturation_threshold_uV=saturation_threshold_uV,
@@ -268,7 +273,6 @@ def detect_saturation_periods(
     saturation_periods = run_node_pipeline(
         recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts", check_for_peak_source=False
     )
-    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
     return _collapse_events(saturation_periods)
 
 
