@@ -292,6 +292,22 @@ class BenchmarkStudy:
             self.remove_benchmark(key)
         (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
 
+    def set_precomputed_results(self, precomputed_results, verbose=False):
+        for key in precomputed_results.keys():
+            assert key in self.cases, f"Key {key} in precomputed_results is not in cases"
+            benchmark = self.create_benchmark(key)
+            if verbose:
+                print("### Set benchmark", key, "###")
+            
+            for k, v in precomputed_results[key].items():
+                benchmark.result[k] = v
+                
+            self.benchmarks[key] = benchmark
+            bench_folder = self.folder / "results" / self.key_to_str(key)
+            bench_folder.mkdir(exist_ok=True)
+            benchmark.save_run(bench_folder)
+            benchmark.save_main(bench_folder)
+
     def run(self, case_keys=None, keep=True, verbose=False, precomputed_results=None, **job_kwargs):
         if case_keys is None:
             case_keys = list(self.cases.keys())
