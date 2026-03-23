@@ -65,7 +65,7 @@ class ResampleRecording(BasePreprocessor):
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000)
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             self.add_recording_segment(
                 ResampleRecordingSegment(
                     parent_segment,

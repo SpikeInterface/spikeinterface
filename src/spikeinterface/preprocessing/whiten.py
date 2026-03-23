@@ -101,7 +101,7 @@ class WhitenRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_, int_scale)
             self.add_recording_segment(rec_segment)
 
