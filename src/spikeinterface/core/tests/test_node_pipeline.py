@@ -5,7 +5,7 @@ import shutil
 
 from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
 from spikeinterface.core.base import spike_peak_dtype
-from spikeinterface.core.job_tools import divide_recording_into_chunks
+from spikeinterface.core.job_tools import divide_chunkable_into_chunks
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core.node_pipeline import (
@@ -27,12 +27,12 @@ class AmplitudeExtractionNode(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks):
+    def compute(self, chunk, peaks):
         amps = np.zeros(peaks.size, dtype=self._dtype)
         amps["abs_amplitude"] = np.abs(peaks["amplitude"])
         return amps
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return 5
 
 
@@ -44,7 +44,7 @@ class WaveformDenoiser(PipelineNode):
     def get_dtype(self):
         return np.dtype("float32")
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
         kernel = np.array([0.1, 0.8, 0.1])
         denoised_waveforms = np.apply_along_axis(lambda m: np.convolve(m, kernel, mode="same"), axis=1, arr=waveforms)
         return denoised_waveforms
@@ -57,7 +57,7 @@ class WaveformsRootMeanSquare(PipelineNode):
     def get_dtype(self):
         return np.dtype("float32")
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
         rms_by_channels = np.sum(waveforms**2, axis=1)
         return rms_by_channels
 
@@ -220,11 +220,9 @@ def test_skip_after_n_peaks_and_recording_slices():
     assert some_amplitudes.size < spikes.size
 
     # slices : 1 every 4
-    recording_slices = divide_recording_into_chunks(recording, 10_000)
+    recording_slices = divide_chunkable_into_chunks(recording, 10_000)
     recording_slices = recording_slices[::4]
-    some_amplitudes = run_node_pipeline(
-        recording, nodes, job_kwargs, gather_mode="memory", recording_slices=recording_slices
-    )
+    some_amplitudes = run_node_pipeline(recording, nodes, job_kwargs, gather_mode="memory", slices=recording_slices)
     tolerance = 1.2
     assert some_amplitudes.size < (spikes.size // 4) * tolerance
 

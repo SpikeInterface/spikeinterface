@@ -91,7 +91,7 @@ class SingleChannelToyDenoiser(WaveformsNode):
 
         return denoiser
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
         num_channels = waveforms.shape[2]
 
         # Collapse channels and transform to torch tensor

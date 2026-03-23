@@ -1,4 +1,3 @@
-from __future__ import annotations
 from pathlib import Path
 import warnings
 
@@ -549,7 +548,7 @@ def get_chunks(chunkable: ChunkableMixin, concatenated=True, get_data_kwargs=Non
 
     Returns
     -------
-    chunk_list : np.array | list of np.array
+    chunk_list : np.ndarray | list of np.array
         Array of concatenate chunks per segment
     """
     slices = get_random_sample_slices(chunkable, **random_slices_kwargs)

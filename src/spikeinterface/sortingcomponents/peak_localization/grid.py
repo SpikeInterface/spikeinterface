@@ -61,7 +61,7 @@ class LocalizeGridConvolution(LocalizeBase):
         peak_sign="neg",
         weight_method={},
     ):
-        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.radius_um = radius_um
         self.margin_um = margin_um
@@ -120,7 +120,7 @@ class LocalizeGridConvolution(LocalizeBase):
             )
         )
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, chunk, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
         nb_weights = self.weights.shape[0]
 

@@ -90,10 +90,12 @@ class SpikeAmplitudeNode(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks):
+    def compute(self, chunk, peaks):
         sample_indices = peaks["sample_index"].copy()
         unit_index = peaks["unit_index"]
         chan_inds = peaks["channel_index"]
+
+        traces = chunk
 
         # apply shifts per spike
         sample_indices += self._peak_shifts[unit_index]
@@ -110,5 +112,5 @@ class SpikeAmplitudeNode(PipelineNode):
 
         return amplitudes
 
-    def get_trace_margin(self):
+    def get_data_margin(self):
         return self._margin

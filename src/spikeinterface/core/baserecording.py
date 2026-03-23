@@ -464,7 +464,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
-    def frame_slice(self, start_frame: int | None, end_frame: int | None) -> BaseRecording:
+    def frame_slice(self, start_frame: int | None, end_frame: int | None) -> "BaseRecording":
         """
         Returns a new recording with sliced frames. Note that this operation is not in place.
 
@@ -486,7 +486,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
-    def time_slice(self, start_time: float | None, end_time: float | None) -> BaseRecording:
+    def time_slice(self, start_time: float | None, end_time: float | None) -> "BaseRecording":
         """
         Returns a new recording object, restricted to the time interval [start_time, end_time].
 
@@ -544,7 +544,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
     def get_channel_locations(
         self,
         channel_ids: list | np.ndarray | tuple | None = None,
-        axes: "xy" | "yz" | "xz" | "xyz" = "xy",
+        axes: Literal["xy", "yz", "xz", "xyz"] = "xy",
     ) -> np.ndarray:
         """
         Get the physical locations of specified channels.
@@ -664,7 +664,9 @@ class BaseRecordingSegment(ChunkableSegment):
         # must be implemented in subclass
         raise NotImplementedError
 
-    def get_data(self, start_frame: int, end_frame: int, indices: list | np.array | tuple | None = None) -> np.ndarray:
+    def get_data(
+        self, start_frame: int, end_frame: int, indices: list | np.ndarray | tuple | None = None
+    ) -> np.ndarray:
         """
         General retrieval function for chunkable objects
         """
