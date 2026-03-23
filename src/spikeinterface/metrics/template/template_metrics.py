@@ -1,15 +1,22 @@
-import warnings
+"""
+Functions based on
+https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/waveform_metrics.py
+22/04/2020
+"""
+
+from __future__ import annotations
+
 import numpy as np
+import warnings
+from copy import deepcopy
+from scipy.signal import find_peaks 
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
 
-from .metrics import (
-    get_trough_and_peak_idx,
-    single_channel_metrics,
-    multi_channel_metrics,
-)
+from .metrics import get_trough_and_peak_idx, single_channel_metrics, multi_channel_metrics
+
 
 MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
 MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS = 64
@@ -28,8 +35,6 @@ def get_template_metric_list():
 
 
 def get_template_metric_names():
-    import warnings
-
     warnings.warn(
         "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
         "Please use get_template_metric_list instead.",
@@ -42,18 +47,17 @@ def get_template_metric_names():
 class ComputeTemplateMetrics(BaseMetricExtension):
     """
     Compute template metrics including:
-        * peak_to_trough_duration
-        * main_to_next_extremum_duration
-        * half_width
+        * peak_to_valley
+        * peak_trough_ratio
+        * halfwidth
         * repolarization_slope
         * recovery_slope
-        * number_of_peaks
-        * waveform_ratios
-        * waveform_widths
-        * waveform_baseline_flatness
+        * num_positive_peaks
+        * num_negative_peaks
 
     Optionally, the following multi-channel metrics can be computed (when include_multi_channel_metrics=True):
-        * velocity_fits
+        * velocity_above
+        * velocity_below
         * exp_decay
         * spread
 
@@ -68,16 +72,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
         Default parameters can be obtained with: `si.metrics.template_metrics.get_default_template_metrics_params()`
-    peak_sign : {"neg", "pos", "both"}, default: "both"
-        Whether to use the positive ("pos"), negative ("neg"), or both ("both") peaks to estimate extremum channels.
+    peak_sign : {"neg", "pos"}, default: "neg"
+        Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
     include_multi_channel_metrics : bool, default: False
         Whether to compute multi-channel metrics
-    min_thresh_detect_peaks_troughs : float, default: 0.3
-        Minimum prominence threshold as a fraction of the template's absolute max value
-    edge_exclusion_ms : float, default: 0.09
-        Duration in milliseconds to exclude from template edges during peak/trough detection.
 
     Returns
     -------
@@ -95,11 +95,8 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     depend_on = ["templates"]
     need_backward_compatibility_on_load = True
     metric_list = single_channel_metrics + multi_channel_metrics
-    tmp_data_to_save = ["peaks_data", "main_channel_templates"]
 
     def _handle_backward_compatibility_on_load(self):
-        from copy import deepcopy
-
         # For backwards compatibility - this reformats metrics_kwargs as metric_params
         if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
 
@@ -111,63 +108,24 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             del self.params["metrics_kwargs"]
 
         # handle metric names change:
+        # num_positive_peaks/num_negative_peaks merged into number_of_peaks
         if "num_positive_peaks" in self.params["metric_names"]:
             self.params["metric_names"].remove("num_positive_peaks")
             if "number_of_peaks" not in self.params["metric_names"]:
                 self.params["metric_names"].append("number_of_peaks")
-            if "num_positive_peaks" in self.params["metric_params"]:
-                del self.params["metric_params"]["num_positive_peaks"]
         if "num_negative_peaks" in self.params["metric_names"]:
             self.params["metric_names"].remove("num_negative_peaks")
             if "number_of_peaks" not in self.params["metric_names"]:
                 self.params["metric_names"].append("number_of_peaks")
-            if "num_negative_peaks" in self.params["metric_params"]:
-                del self.params["metric_params"]["num_negative_peaks"]
         # velocity_above/velocity_below merged into velocity_fits
         if "velocity_above" in self.params["metric_names"]:
             self.params["metric_names"].remove("velocity_above")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
-            self.params["metric_params"]["velocity_fits"] = self.params["metric_params"]["velocity_above"]
-            self.params["metric_params"]["velocity_fits"]["min_channels"] = self.params["metric_params"][
-                "velocity_above"
-            ]["min_channels_for_velocity"]
-            self.params["metric_params"]["velocity_fits"]["min_r2"] = self.params["metric_params"]["velocity_above"][
-                "min_r2_velocity"
-            ]
-            del self.params["metric_params"]["velocity_above"]
         if "velocity_below" in self.params["metric_names"]:
             self.params["metric_names"].remove("velocity_below")
             if "velocity_fits" not in self.params["metric_names"]:
                 self.params["metric_names"].append("velocity_fits")
-            # parameters are already updated from velocity_above
-            if "velocity_below" in self.params["metric_params"]:
-                del self.params["metric_params"]["velocity_below"]
-        # exp_decay parameters changes
-        if "exp_decay" in self.params["metric_names"]:
-            if "exp_peak_function" in self.params["metric_params"]["exp_decay"]:
-                self.params["metric_params"]["exp_decay"]["peak_function"] = self.params["metric_params"]["exp_decay"][
-                    "exp_peak_function"
-                ]
-            if "min_r2_exp_decay" in self.params["metric_params"]["exp_decay"]:
-                self.params["metric_params"]["exp_decay"]["min_r2"] = self.params["metric_params"]["exp_decay"][
-                    "min_r2_exp_decay"
-                ]
-        if "depth_direction" not in self.params:
-            self.params["depth_direction"] = "y"
-
-        # peak_to_valley -> peak_to_trough_duration
-        if "peak_to_valley" in self.params["metric_names"]:
-            self.params["metric_names"].remove("peak_to_valley")
-            if "peak_to_trough_duration" not in self.params["metric_names"]:
-                self.params["metric_names"].append("peak_to_trough_duration")
-        # peak_trough ratio -> main peak to trough ratio
-        # note that the new implementation correctly uses the absolute peak values,
-        # which is different from the old implementation.
-        if "peak_trough_ratio" in self.params["metric_names"]:
-            self.params["metric_names"].remove("peak_trough_ratio")
-            if "waveform_ratios" not in self.params["metric_names"]:
-                self.params["metric_names"].append("waveform_ratios")
 
     def _set_params(
         self,
@@ -175,17 +133,15 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         metric_params: dict | None = None,
         delete_existing_metrics: bool = False,
         metrics_to_compute: list[str] | None = None,
-        periods=None,
         # common extension kwargs
-        peak_sign="both",
-        template_operator="average",
+        peak_sign="neg",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
         depth_direction="y",
-        min_thresh_detect_peaks_troughs=0.3,
-        edge_exclusion_ms=0.09,
-        min_peak_trough_distance_ratio=0.2,
-        min_extremum_distance_samples=3,
+        min_thresh_detect_peaks_troughs=0.4,
+        smooth=True,
+        smooth_window_frac=0.1,
+        smooth_polyorder=3,
     ):
         # Auto-detect if multi-channel metrics should be included based on number of channels
         num_channels = self.sorting_analyzer.get_num_channels()
@@ -210,34 +166,26 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
-            periods=periods,  # template metrics do not use periods
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
-            template_operator=template_operator,
             include_multi_channel_metrics=include_multi_channel_metrics,
             depth_direction=depth_direction,
             min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
-            edge_exclusion_ms=edge_exclusion_ms,
-            min_peak_trough_distance_ratio=min_peak_trough_distance_ratio,
-            min_extremum_distance_samples=min_extremum_distance_samples,
+            smooth=smooth,
+            smooth_window_frac=smooth_window_frac,
+            smooth_polyorder=smooth_polyorder,
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids):
-        import warnings
-        import pandas as pd
         from scipy.signal import resample_poly
 
-        # compute main_channel_templates and multi_channel_templates (if include_multi_channel_metrics is True)
+        # compute templates_single and templates_multi (if include_multi_channel_metrics is True)
         tmp_data = {}
 
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
-        min_thresh_detect_peaks_troughs = self.params["min_thresh_detect_peaks_troughs"]
-        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.1)
-        min_peak_trough_distance_ratio = self.params.get("min_peak_trough_distance_ratio", 0.2)
-        min_extremum_distance_samples = self.params.get("min_extremum_distance_samples", 3)
         sampling_frequency = sorting_analyzer.sampling_frequency
         if self.params["upsampling_factor"] > 1:
             sampling_frequency_up = upsampling_factor * sampling_frequency
@@ -249,17 +197,18 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-        operator = self.params["template_operator"]
-        extremum_channel_indices = get_template_extremum_channel(
-            sorting_analyzer, peak_sign=peak_sign, outputs="index", operator=operator
-        )
-        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
+        extremum_channel_indices = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="index")
+        all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True)
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
-        main_channel_templates = []
-        peaks_info = []
-        multi_channel_templates = []
+        templates_single = []
+        troughs = {}
+        peaks = {}
+        troughs_info = {}
+        peaks_before_info = {}
+        peaks_after_info = {}
+        templates_multi = []
         channel_locations_multi = []
         for unit_id in unit_ids:
             unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
@@ -271,18 +220,23 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
             else:
                 template_upsampled = template_single
-
-            peaks_info_unit = get_trough_and_peak_idx(
+                sampling_frequency_up = sampling_frequency
+            troughs_dict, peaks_before_dict, peaks_after_dict = get_trough_and_peak_idx(
                 template_upsampled,
-                sampling_frequency_up,
-                min_thresh_detect_peaks_troughs=min_thresh_detect_peaks_troughs,
-                edge_exclusion_ms=edge_exclusion_ms,
-                min_peak_trough_distance_ratio=min_peak_trough_distance_ratio,
-                min_extremum_distance_samples=min_extremum_distance_samples,
+                min_thresh_detect_peaks_troughs=self.params['min_thresh_detect_peaks_troughs'],
+                smooth=self.params['smooth'],
+                smooth_window_frac=self.params['smooth_window_frac'],
+                smooth_polyorder=self.params['smooth_polyorder'],
             )
-            main_channel_templates.append(template_upsampled)
 
-            peaks_info.append(peaks_info_unit)
+            templates_single.append(template_upsampled)
+            # Store main locations for backward compatibility
+            troughs[unit_id] = troughs_dict["main_loc"]
+            peaks[unit_id] = peaks_after_dict["main_loc"]
+            # Store full dicts for new metrics
+            troughs_info[unit_id] = troughs_dict
+            peaks_before_info[unit_id] = peaks_before_dict
+            peaks_after_info[unit_id] = peaks_after_dict
 
             if include_multi_channel_metrics:
                 if sorting_analyzer.is_sparse():
@@ -302,36 +256,26 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                     template_multi_upsampled = resample_poly(template_multi, up=upsampling_factor, down=1, axis=0)
                 else:
                     template_multi_upsampled = template_multi
-                multi_channel_templates.append(template_multi_upsampled)
+                templates_multi.append(template_multi_upsampled)
                 channel_locations_multi.append(channel_location_multi)
 
-        tmp_data["peaks_info"] = peaks_info
-        tmp_data["main_channel_templates"] = np.array(main_channel_templates)
+        tmp_data["troughs"] = troughs
+        tmp_data["peaks"] = peaks
+        tmp_data["troughs_info"] = troughs_info
+        tmp_data["peaks_before_info"] = peaks_before_info
+        tmp_data["peaks_after_info"] = peaks_after_info
+        tmp_data["templates_single"] = np.array(templates_single)
 
         if include_multi_channel_metrics:
-            # multi_channel_templates is a list of 2D arrays of shape (n_times, n_channels)
-            tmp_data["multi_channel_templates"] = multi_channel_templates
+            # templates_multi is a list of 2D arrays of shape (n_times, n_channels)
+            tmp_data["templates_multi"] = templates_multi
             tmp_data["channel_locations_multi"] = channel_locations_multi
             tmp_data["depth_direction"] = self.params["depth_direction"]
 
-        # Add peaks_info and preprocessed templates to self.data for storage in extension
-        columns = []
-        for k in ("trough", "peak_before", "peak_after"):
-            for suffix in (
-                "index",
-                "width_left",
-                "width_right",
-                "half_width_left",
-                "half_width_right",
-            ):
-                columns.append(f"{k}_{suffix}")
-        tmp_data["peaks_data"] = pd.DataFrame(
-            index=unit_ids,
-            data=peaks_info,
-            columns=columns,
-            dtype=int,
-        )
-
+        # store trough and peak dicts for GUI use 
+        self.data['troughs_info'] = troughs_dict
+        self.data['peaks_before_info'] = peaks_before_dict
+        self.data['peaks_after_info'] = troughs_dict, peaks_before_dict, peaks_after_dict
         return tmp_data
 
 
@@ -358,8 +302,6 @@ def get_default_tm_params(metric_names=None):
     metric_params : dict
         Dictionary with default parameters for template metrics.
     """
-    import warnings
-
     warnings.warn(
         "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
         "Please use get_default_template_metrics_params instead.",

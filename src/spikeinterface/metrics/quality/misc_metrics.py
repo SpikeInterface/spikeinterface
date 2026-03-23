@@ -553,11 +553,12 @@ def compute_sliding_rp_violations(
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
+    confidence_threshold=0.9,
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
     contamination by using a sliding refractory period.
-    This metric computes the minimum contamination with at least 90% confidence.
+    This metric computes the minimum contamination with at least ``confidence_threshold`` confidence.
 
     Parameters
     ----------
@@ -581,11 +582,14 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
+    confidence_threshold : float, default: 0.9
+        Confidence threshold (between 0 and 1) for determining the minimum contamination.
+        A higher value requires stronger statistical evidence. Default is 0.9 (90% confidence).
 
     Returns
     -------
     contamination : dict of floats
-        The minimum contamination at 90% confidence.
+        The minimum contamination at the specified confidence level.
 
     References
     ----------
@@ -632,6 +636,7 @@ def compute_sliding_rp_violations(
             exclude_ref_period_below_ms,
             max_ref_period_ms,
             contamination_values,
+            confidence_threshold=confidence_threshold,
         )
 
     return contamination
@@ -647,10 +652,11 @@ class SlidingRPViolation(BaseMetric):
         "exclude_ref_period_below_ms": 0.5,
         "max_ref_period_ms": 10,
         "contamination_values": None,
+        "confidence_threshold": 0.9,
     }
     metric_columns = {"sliding_rp_violation": float}
     metric_descriptions = {
-        "sliding_rp_violation": "Minimum contamination at 90% confidence using sliding refractory period method."
+        "sliding_rp_violation": "Minimum contamination at specified confidence using sliding refractory period method."
     }
     supports_periods = True
 
@@ -1697,6 +1703,7 @@ def slidingRP_violations(
     max_ref_period_ms=10,
     contamination_values=None,
     return_conf_matrix=False,
+    confidence_threshold=0.9,
 ):
     """
     A metric developed by IBL which determines whether the refractory period violations
@@ -1720,14 +1727,16 @@ def slidingRP_violations(
         The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
     return_conf_matrix : bool, default: False
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
+    confidence_threshold : float, default: 0.9
+        Confidence threshold (between 0 and 1). Default is 0.9 (90% confidence).
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
 
     Returns
     -------
-    min_cont_with_90_confidence : dict of floats
-        The minimum contamination with confidence > 90%.
+    min_contamination : dict of floats
+        The minimum contamination with confidence above the specified threshold.
     """
     if contamination_values is None:
         contamination_values = np.arange(0.5, 35, 0.5) / 100  # vector of contamination values to test
@@ -1768,17 +1777,17 @@ def slidingRP_violations(
     test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000.0  # (in seconds)
 
     # only test for refractory period durations greater than 'exclude_ref_period_below_ms'
-    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
+    inds_above_threshold = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > confidence_threshold))
 
-    if len(inds_confidence90[0]) > 0:
-        minI = np.min(inds_confidence90[0][0])
-        min_cont_with_90_confidence = contamination_values[minI]
+    if len(inds_above_threshold[0]) > 0:
+        minI = np.min(inds_above_threshold[0][0])
+        min_contamination = contamination_values[minI]
     else:
-        min_cont_with_90_confidence = np.nan
+        min_contamination = np.nan
     if return_conf_matrix:
-        return min_cont_with_90_confidence, conf_matrix
+        return min_contamination, conf_matrix
     else:
-        return min_cont_with_90_confidence
+        return min_contamination
 
 
 def _compute_rp_contamination_one_unit(

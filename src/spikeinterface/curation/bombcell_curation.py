@@ -11,6 +11,7 @@ Unit Labels:
 from __future__ import annotations
 
 import operator
+import warnings
 from pathlib import Path
 import json
 import numpy as np
@@ -32,10 +33,15 @@ DEFAULT_MUA_METRICS = [
     "snr",
     "amplitude_cutoff",
     "num_spikes",
-    "rp_contamination",
+    "rpv",  # maps to rp_contamination or sliding_rp_violation
     "presence_ratio",
     "drift_ptp",
+    "isolation_distance",
+    "l_ratio",
 ]
+
+# RPV metric column names (bombcell accepts "rpv" as threshold key and maps to whichever exists)
+RPV_METRIC_COLUMNS = ["rp_contamination", "sliding_rp_violation"]
 
 DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_trough_ratio",
@@ -44,6 +50,15 @@ DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_peak_after_ratio",
     "main_peak_to_trough_ratio",
 ]
+
+# Metrics belonging to the built-in non-somatic groups.
+# The compound logic is: (width_group AND ratio_group) OR main_peak_group
+# Any metric in the "non-somatic" threshold section that is NOT listed here
+# is treated as a standalone condition OR'd into the final result.
+_NON_SOMATIC_WIDTH_GROUP = {"peak_before_width", "trough_width"}
+_NON_SOMATIC_RATIO_GROUP = {"peak_before_to_trough_ratio", "peak_before_to_peak_after_ratio"}
+_NON_SOMATIC_MAIN_PEAK_GROUP = {"main_peak_to_trough_ratio"}
+_NON_SOMATIC_BUILTIN_METRICS = _NON_SOMATIC_WIDTH_GROUP | _NON_SOMATIC_RATIO_GROUP | _NON_SOMATIC_MAIN_PEAK_GROUP
 
 
 def bombcell_get_default_thresholds() -> dict:
@@ -68,9 +83,11 @@ def bombcell_get_default_thresholds() -> dict:
             "snr": {"greater": 5, "less": None},
             "amplitude_cutoff": {"greater": None, "less": 0.2},
             "num_spikes": {"greater": 300, "less": None},
-            "rp_contamination": {"greater": None, "less": 0.1},
+            "rpv": {"greater": None, "less": 0.1},  # applies to rp_contamination or sliding_rp_violation
             "presence_ratio": {"greater": 0.7, "less": None},
             "drift_ptp": {"greater": None, "less": 100},  # um
+            "isolation_distance": {"greater": 20, "less": None},
+            "l_ratio": {"greater": None, "less": 0.3},
         },
         "non-somatic": {
             "peak_before_to_trough_ratio": {"greater": None, "less": 3},
@@ -113,7 +130,11 @@ def bombcell_label_units(
         - Large main peak to trough ratio (using "main_peak_to_trough_ratio" metric)
 
         If units have a narrow peak and a large ratio OR a large main peak to trough ratio,
-        they are labeled as non-somatic. If `split_non_somatic_good_mua` is True, non-somatic units are further split
+        they are labeled as non-somatic. Custom metrics can also be added to the "non-somatic"
+        threshold section — any metric not part of the built-in groups (width, ratio, main_peak)
+        is treated as a standalone condition OR'd into the non-somatic detection.
+
+        If `split_non_somatic_good_mua` is True, non-somatic units are further split
         into "non_soma_good" and "non_soma_mua", otherwise they are all labeled as "non_soma".
 
     Parameters
@@ -172,6 +193,31 @@ def bombcell_label_units(
         thresholds_dict = thresholds
     else:
         raise ValueError("thresholds must be a dict, a JSON file path, or None")
+
+    # Map "rpv" threshold to actual column name (rp_contamination or sliding_rp_violation)
+    if "mua" in thresholds_dict and "rpv" in thresholds_dict["mua"]:
+        rpv_thresh = thresholds_dict["mua"].pop("rpv")
+        for col in RPV_METRIC_COLUMNS:
+            if col in combined_metrics.columns:
+                thresholds_dict["mua"][col] = rpv_thresh
+                break
+
+    # Filter out threshold metrics that are not present in the metrics DataFrame.
+    # This allows optional metrics (e.g. isolation_distance, l_ratio) to be included
+    # in the default thresholds without crashing when they haven't been computed.
+    available_columns = set(combined_metrics.columns)
+    for section in ("noise", "mua", "non-somatic"):
+        if section not in thresholds_dict:
+            continue
+        missing = [m for m in thresholds_dict[section] if m not in available_columns]
+        if missing:
+            warnings.warn(
+                f"Bombcell thresholds reference metrics not found in the metrics DataFrame "
+                f"(section '{section}'): {missing}. These will be skipped. "
+                f"Compute them first if you want them included in the labeling."
+            )
+            for m in missing:
+                del thresholds_dict[section][m]
 
     n_units = len(combined_metrics)
 
@@ -264,6 +310,24 @@ def bombcell_label_units(
 
         # (ratio AND width) OR standalone main_peak_to_trough
         is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
+
+        # Standalone custom metrics: any metric in non-somatic thresholds that is not
+        # part of the built-in groups is OR'd in as its own independent condition.
+        standalone_metrics = {
+            m: non_somatic_thresholds[m]
+            for m in non_somatic_thresholds
+            if m not in _NON_SOMATIC_BUILTIN_METRICS
+        }
+        for metric_name, thresh in standalone_metrics.items():
+            standalone_labels = threshold_metrics_label_units(
+                metrics=combined_metrics,
+                thresholds={metric_name: thresh},
+                pass_label="pass",
+                fail_label="fail",
+                operator="and",
+                nan_policy="ignore",
+            )
+            is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
 
         if split_non_somatic_good_mua:
             good_mask = unit_labels["label"] == "good"

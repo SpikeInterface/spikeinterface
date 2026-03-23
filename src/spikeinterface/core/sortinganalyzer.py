@@ -45,6 +45,26 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, s
 from .node_pipeline import run_node_pipeline
 
 
+def _safe_zarr_consolidate(store):
+    """Consolidate zarr metadata, warning instead of crashing on failure.
+
+    Consolidation is a read-performance optimization. The store is fully
+    functional without it (``super_zarr_open`` falls back to ``zarr.open``).
+    Failures happen on some network/cloud-synced filesystems where the written
+    ``.zmetadata`` file is not immediately readable.
+    """
+    import zarr
+
+    try:
+        zarr.consolidate_metadata(store)
+    except Exception:
+        warnings.warn(
+            "zarr.consolidate_metadata failed — the store will still work "
+            "but may be slower to open. If you see this repeatedly, consider "
+            "saving the SortingAnalyzer on a local filesystem."
+        )
+
+
 # high level function
 def create_sorting_analyzer(
     sorting,
@@ -693,7 +713,7 @@ class SortingAnalyzer:
 
         recording_info = zarr_root.create_group("extensions")
 
-        zarr.consolidate_metadata(zarr_root.store)
+        _safe_zarr_consolidate(zarr_root.store)
 
         return cls.load_from_zarr(folder, recording=recording, backend_options=backend_options)
 
@@ -850,7 +870,7 @@ class SortingAnalyzer:
                     else:
                         zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
                     # IMPORTANT: we need to re-consolidate the zarr store!
-                    zarr.consolidate_metadata(zarr_root.store)
+                    _safe_zarr_consolidate(zarr_root.store)
 
     def get_sorting_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
         """
@@ -2648,9 +2668,7 @@ class AnalyzerExtension:
             self._save_run_info()
             self._save_data()
             if self.format == "zarr":
-                import zarr
-
-                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
+                _safe_zarr_consolidate(self.sorting_analyzer._get_zarr_root().store)
 
     def save(self):
         self._save_params()
@@ -2659,9 +2677,7 @@ class AnalyzerExtension:
         self._save_data()
 
         if self.format == "zarr":
-            import zarr
-
-            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
+            _safe_zarr_consolidate(self.sorting_analyzer._get_zarr_root().store)
 
     def _save_data(self):
         if self.format == "memory":
@@ -2760,8 +2776,11 @@ class AnalyzerExtension:
             import zarr
 
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
-            _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
-            zarr.consolidate_metadata(zarr_root.store)
+            # Use init_group directly instead of create_group to avoid the
+            # read-back that can fail on network/synced filesystems.
+            ext_path = "/".join([zarr_root["extensions"].path, self.extension_name])
+            zarr.storage.init_group(zarr_root.store, path=ext_path, overwrite=True)
+            _safe_zarr_consolidate(zarr_root.store)
 
     def _delete_extension_folder(self):
         """
@@ -2773,12 +2792,10 @@ class AnalyzerExtension:
                 shutil.rmtree(extension_folder)
 
         elif self.format == "zarr":
-            import zarr
-
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             if self.extension_name in zarr_root["extensions"]:
                 del zarr_root["extensions"][self.extension_name]
-                zarr.consolidate_metadata(zarr_root.store)
+                _safe_zarr_consolidate(zarr_root.store)
 
     def delete(self):
         """

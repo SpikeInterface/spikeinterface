@@ -147,3 +147,10 @@ test_folder/
 .DS_Store
 test_data.json
 uv.lock
+
+
+# Julie's mess
+playground.ipynb
+playground2.ipynb
+examples/how_to/full_pipeline_with_bombcell.ipynb
+examples/how_to/compare_bombcell_unitrefine.ipynb
