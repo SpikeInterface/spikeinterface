@@ -23,7 +23,9 @@ Main changes:
 
     * Specific metrics functions now imported from different sub module (see: :doc:`/modules/metrics/`)
     * ``snr`` quality metric calculation now uses median rather than mean (see: :doc:`/modules/metrics/quality_metrics`)
-    * Metric name "peak_to_valley" has been renamed to "peak_to_trough_duration" for clarity. This name change will be applied automatically on load of older analzyers. (see: :doc:`/modules/metrics/template_metrics`)
+    * Template metric renaming: "peak_to_valley" -> "peak_to_trough_duration" / "peak_trough_ratio" -> "peak_to_trough_ratio". This name change will be applied automatically on load of older analzyers. (see: :doc:`/modules/metrics/template_metrics`)
+    * The computation of "peak_to_trough_ratio" now uses absolute values of peak and trough, so it's always positive.
+    
     * The function to do UnitRefine curation has been renamed from ``auto_label_units`` to ``unitrefine_label_units`` (see :py:func:`~spikeinterface.curation.unitrefine_label_units`)
     * Remove support for Python 3.9
 
