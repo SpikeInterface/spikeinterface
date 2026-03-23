@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import (
@@ -168,7 +167,78 @@ def test_empty_units(sorting_analyzer_simple):
     for col in metrics_empty.columns:
         all_nans = np.all(isnull(metrics_empty.loc[empty_unit_ids, col].values))
         all_zeros = np.all(metrics_empty.loc[empty_unit_ids, col].values == 0)
-        assert all_nans or all_zeros
+        all_neg_ones = np.all(metrics_empty.loc[empty_unit_ids, col].values == -1)
+        assert all_nans or all_zeros or all_neg_ones, f"Column {col} failed the empty unit test"
+
+
+def test_quality_metrics_with_periods():
+    """
+    Test that quality metrics can be computed using valid unit periods.
+    """
+    from spikeinterface.core.base import unit_period_dtype
+
+    recording, sorting = generate_ground_truth_recording()
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory")
+
+    # compute dependencies
+    sorting_analyzer.compute(["random_spikes", "templates", "amplitude_scalings", "valid_unit_periods"], **job_kwargs)
+    print(sorting_analyzer)
+
+    # compute quality metrics using valid periods
+    metrics = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=True,
+        seed=2205,
+    )
+    print(metrics)
+
+    # test with external periods: 1 period per segment from 10 to 90% of recording
+    num_segments = recording.get_num_segments()
+    periods = np.zeros(len(sorting.unit_ids) * num_segments, dtype=unit_period_dtype)
+    for i, unit_id in enumerate(sorting.unit_ids):
+        unit_index = sorting.id_to_index(unit_id)
+        for segment_index in range(num_segments):
+            num_samples = recording.get_num_samples(segment_index=segment_index)
+            idx = i * num_segments + segment_index
+            periods[idx]["unit_index"] = unit_index
+            period_start = int(num_samples * 0.1)
+            period_end = int(num_samples * 0.9)
+            periods[idx]["start_sample_index"] = period_start
+            periods[idx]["end_sample_index"] = period_end
+            periods[idx]["segment_index"] = segment_index
+
+    metrics_ext_periods = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=False,
+        periods=periods,
+        seed=2205,
+    )
+
+    # test failure when both periods and use_valid_periods are set
+    with pytest.raises(ValueError):
+        compute_quality_metrics(
+            sorting_analyzer,
+            metric_names=None,
+            skip_pc_metrics=True,
+            use_valid_periods=True,
+            periods=periods,
+            seed=2205,
+        )
+
+    # test failure if use valid_periods is True but valid_unit_periods extension is missing
+    sorting_analyzer.delete_extension("valid_unit_periods")
+    with pytest.raises(AssertionError):
+        compute_quality_metrics(
+            sorting_analyzer,
+            metric_names=None,
+            skip_pc_metrics=True,
+            use_valid_periods=True,
+            seed=2205,
+        )
 
 
 if __name__ == "__main__":

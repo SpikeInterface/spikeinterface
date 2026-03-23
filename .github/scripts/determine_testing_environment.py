@@ -77,6 +77,7 @@ for changed_file in changed_files_in_the_pull_request_paths:
             sorters_external_changed = True
         elif "internal" in changed_file.parts:
             sorters_internal_changed = True
+            sorters_changed = True
         else:
             sorters_changed = True
     elif ".github" in changed_file.parts:

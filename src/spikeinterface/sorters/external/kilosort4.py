@@ -1,18 +1,11 @@
-from __future__ import annotations
-
-from pathlib import Path
-from typing import Union
 import warnings
 from packaging import version
-
 
 from spikeinterface.core import write_binary_recording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
 from spikeinterface.sorters.basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
-
-PathType = Union[str, Path]
 
 
 class Kilosort4Sorter(BaseSorter):
@@ -124,7 +117,7 @@ class Kilosort4Sorter(BaseSorter):
                 f"The sorter {cls.sorter_name} is not installed. Please install it with:\n{cls.installation_mesg}"
             )
         cls.check_sorter_version()
-        return super(Kilosort4Sorter, cls).initialize_folder(recording, output_folder, verbose, remove_existing_folder)
+        return super().initialize_folder(recording, output_folder, verbose, remove_existing_folder)
 
     @classmethod
     def check_sorter_version(cls):
@@ -168,6 +161,12 @@ class Kilosort4Sorter(BaseSorter):
         from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered, save_preprocessing
         from kilosort.parameters import DEFAULT_SETTINGS
 
+        if version.parse(ks_version) >= version.parse("4.0.33"):
+            HAS_DIAGNOSTIC_PLOTS = True
+            import kilosort.plots as kplots
+        else:
+            HAS_DIAGNOSTIC_PLOTS = False
+
         import time
         import torch
         import numpy as np
@@ -191,17 +190,17 @@ class Kilosort4Sorter(BaseSorter):
             # v4.0.16, v4.0.17, v4.0.18
             setup_logger(sorter_output_folder)
 
+        if logger_is_named:
+            # v4.0.21 and above
+            logger = logging.getLogger("kilosort")
+        else:
+            # v4.0.16, v4.0.17, v4.0.18, v4.0.19, v4.0.20
+            logger = logging.getLogger("")
+
         # if verbose is False, set the stream handler's log
         # level to logging.WARNING to preserve original
         # behavior prior to addition of setup_logger() above
         if not verbose:
-            if logger_is_named:
-                # v4.0.21 and above
-                logger = logging.getLogger("kilosort")
-            else:
-                # v4.0.16, v4.0.17, v4.0.18, v4.0.19, v4.0.20
-                logger = logging.getLogger("")
-
             # find the stream handler
             stream_handler = None
             for handler in logger.handlers:
@@ -392,6 +391,10 @@ class Kilosort4Sorter(BaseSorter):
         if save_preprocessed_copy:
             save_preprocessing(results_dir / "temp_wh.dat", ops, bfile)
 
+        if HAS_DIAGNOSTIC_PLOTS and ops["dshift"] is not None:
+            kplots.plot_drift_amount(ops, results_dir)
+            kplots.plot_drift_scatter(st0, results_dir)
+
         # Sort spikes and save results
         detect_spikes_kwargs = dict(
             ops=ops,
@@ -403,7 +406,12 @@ class Kilosort4Sorter(BaseSorter):
         )
         if version.parse(ks_version) >= version.parse("4.0.28"):
             detect_spikes_kwargs.update(dict(verbose=verbose))
-        st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
+
+        if HAS_DIAGNOSTIC_PLOTS:
+            st, tF, Wall0, clu0 = detect_spikes(**detect_spikes_kwargs)
+            kplots.plot_diagnostics(Wall0, clu0, ops, results_dir)
+        else:
+            st, tF, _, _ = detect_spikes(**detect_spikes_kwargs)
 
         cluster_spikes_kwargs = dict(
             st=st,

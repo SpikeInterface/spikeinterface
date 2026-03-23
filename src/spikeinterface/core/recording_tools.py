@@ -1,4 +1,3 @@
-from __future__ import annotations
 from copy import deepcopy
 from typing import Literal
 import warnings
@@ -6,7 +5,7 @@ from pathlib import Path
 import os
 import mmap
 import tqdm
-
+import numpy.typing as npt
 
 import numpy as np
 
@@ -70,7 +69,7 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest):
 def write_binary_recording(
     recording: "BaseRecording",
     file_paths: list[Path | str] | Path | str,
-    dtype: np.typing.DTypeLike = None,
+    dtype: npt.DTypeLike | None = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
     verbose: bool = False,
@@ -214,13 +213,7 @@ def write_binary_recording_file_handle(
 def _init_memory_worker(recording, arrays, shm_names, shapes, dtype):
     # create a local dict per worker
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load
-
-        worker_ctx["recording"] = load(recording)
-    else:
-        worker_ctx["recording"] = recording
-
+    worker_ctx["recording"] = recording
     worker_ctx["dtype"] = np.dtype(dtype)
 
     if arrays is None:
@@ -581,7 +574,7 @@ def get_random_data_chunks(
 
     Returns
     -------
-    chunk_list : np.array | list of np.array
+    chunk_list : np.ndarray | list of np.array
         Array of concatenate chunks per segment
     """
     # Handle deprecated return_scaled parameter
@@ -908,6 +901,9 @@ def get_chunk_with_margin(
                     taper = taper[:, np.newaxis]
                     traces_chunk2[:margin] *= taper
                     traces_chunk2[-margin:] *= taper[::-1]
+                # enforce non writable when original was not
+                # (this help numba to have the same signature and not compile twice)
+                traces_chunk2.flags.writeable = traces_chunk.flags.writeable
                 traces_chunk = traces_chunk2
             elif add_reflect_padding:
                 # in this case, we don't want to taper

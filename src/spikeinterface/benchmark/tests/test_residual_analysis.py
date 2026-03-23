@@ -7,7 +7,6 @@ from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
 
 from spikeinterface.benchmark import analyse_residual
 
-
 job_kwargs = dict(n_jobs=-1, progress_bar=True)
 
 

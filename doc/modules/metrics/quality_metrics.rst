@@ -12,7 +12,7 @@ Completeness metrics (or 'false negative'/'type II' metrics) aim to identify whe
 Examples include: presence ratio, amplitude cutoff, NN-miss rate.
 Drift metrics aim to identify changes in waveforms which occur when spike sorters fail to successfully track neurons in the case of electrode drift.
 
-The quality metrics are saved as an extension of a :doc:`SortingAnalyzer <../postprocessing>`. Some metrics can only be computed if certain extensions have been computed first. For example the drift metrics can only be computed the spike locations extension has been computed. By default, as many metrics as possible are computed. Which ones are computed depends on which other extensions have
+The quality metrics are saved as an extension of a :doc:`SortingAnalyzer <../postprocessing>`. Some metrics can only be computed if certain extensions have been computed first. For example the drift metrics can only be computed if the spike locations extension has been computed. By default, as many metrics as possible are computed. Which ones are computed depends on which other extensions have
 been computed.
 
 In detail, the default metrics are (click on each metric to find out more about them!):
@@ -38,6 +38,12 @@ If :ref:`postprocessing_spike_amplitudes` and ``templates`` are computed, add:
 If :ref:`postprocessing_noise_levels` and ``templates`` are computed, add:
 
 - :doc:`qualitymetrics/snr`
+
+.. warning::
+
+    The SNR metric has been updated in version 0.104.0 to use the median instead of the mean,
+    and to use both positive and negative peaks. This gives more robust results, especially for
+    non-somatic units, and closely matches the implementation in ``Bombcell`` [Fabre]_.
 
 If the recording, :ref:`postprocessing_spike_amplitudes` and ``templates`` are available, add:
 
@@ -113,8 +119,7 @@ from the Allen Institute.
   qualitymetrics/firing_range
   qualitymetrics/firing_rate
   qualitymetrics/isi_violations
-  qualitymetrics/isolation_distance
-  qualitymetrics/l_ratio
+  qualitymetrics/mahalanobis
   qualitymetrics/nearest_neighbor
   qualitymetrics/noise_cutoff
   qualitymetrics/presence_ratio

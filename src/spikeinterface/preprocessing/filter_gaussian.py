@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Iterable, Union
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -50,14 +48,22 @@ class GaussianFilterRecording(BasePreprocessor):
             raise ValueError("At least one of `freq_min`,`freq_max` should be specified.")
 
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd))
+            # Sampling frequency is taken from recording since segments may not have it set (in case of time_vector)
+            self.add_recording_segment(
+                GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd, self.sampling_frequency)
+            )
 
         self._kwargs = {"recording": recording, "freq_min": freq_min, "freq_max": freq_max}
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
     def __init__(
-        self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float, margin_sd: float = 5.0
+        self,
+        parent_recording_segment: BaseRecordingSegment,
+        freq_min: float,
+        freq_max: float,
+        margin_sd: float = 5.0,
+        parent_sampling_frequency: float = None,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
@@ -65,21 +71,21 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         self.freq_max = freq_max
         self.cached_gaussian = dict()
 
-        sf = parent_recording_segment.sampling_frequency
+        self.parent_sampling_frequency = parent_sampling_frequency
 
         # Margin from widest gaussian
         sigmas = []
         if freq_min is not None:
-            sigmas.append(sf / (2 * np.pi * freq_min))
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_min))
         if freq_max is not None:
-            sigmas.append(sf / (2 * np.pi * freq_max))
+            sigmas.append(self.parent_sampling_frequency / (2 * np.pi * freq_max))
         self.margin = 1 + int(max(sigmas) * margin_sd)
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[Iterable, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: Iterable | None = None,
     ):
         traces, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
@@ -117,11 +123,12 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         if cutoff_f in self.cached_gaussian and N in self.cached_gaussian[cutoff_f]:
             return self.cached_gaussian[cutoff_f][N]
 
-        sf = self.parent_recording_segment.sampling_frequency
-        faxis = np.fft.fftfreq(N, d=1 / sf)
+        faxis = np.fft.fftfreq(N, d=1 / self.parent_sampling_frequency)
 
-        if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
-            sigma = sf / (2 * np.pi * cutoff_f)
+        if (
+            cutoff_f > self.parent_sampling_frequency / 8
+        ):  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
+            sigma = self.parent_sampling_frequency / (2 * np.pi * cutoff_f)
             limit = int(round(5 * sigma)) + 1
             xaxis = np.arange(-limit, limit + 1) / sigma
             gaussian = normal_pdf(xaxis) / sigma

@@ -3,9 +3,7 @@ test for BaseSorting are done with NpzSortingExtractor.
 but check only for BaseRecording general methods.
 """
 
-import shutil
-from pathlib import Path
-
+import time
 import numpy as np
 import pytest
 from numpy.testing import assert_raises
@@ -17,15 +15,14 @@ from spikeinterface.core import (
     SharedMemorySorting,
     NpzFolderSorting,
     NumpyFolderSorting,
+    generate_ground_truth_recording,
+    generate_sorting,
     create_sorting_npz,
     generate_sorting,
     load,
 )
-from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
-from spikeinterface.core.generate import generate_sorting
-
-from spikeinterface.core import generate_recording, generate_ground_truth_recording
 
 
 def test_BaseSorting(create_cache_folder):
@@ -101,6 +98,25 @@ def test_BaseSorting(create_cache_folder):
     assert sorting._cached_spike_vector is not None
     spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
     # print(spikes)
+
+    spikes = sorting.to_spike_vector()
+    ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
+        lexsort=("sample_index", "segment_index", "unit_index"),
+        return_order=True,
+        return_slices=True,
+    )
+    assert np.array_equal(spikes[order], ordered_spikes)
+
+    ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
+        lexsort=(
+            "sample_index",
+            "unit_index",
+            "segment_index",
+        ),
+        return_order=True,
+        return_slices=True,
+    )
+    assert np.array_equal(spikes[order], ordered_spikes)
 
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="dict")
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="array")
@@ -226,7 +242,81 @@ def test_time_slice():
     )
 
 
+def test_select_periods():
+    sampling_frequency = 10_000.0
+    duration = 100
+    num_samples = int(sampling_frequency * duration)
+    num_units = 1000
+    sorting = generate_sorting(
+        durations=[duration, duration], sampling_frequency=sampling_frequency, num_units=num_units
+    )
+
+    rng = np.random.default_rng()
+
+    # number of random periods
+    n_periods = 1_000
+    # generate random periods
+    segment_indices = rng.integers(0, sorting.get_num_segments(), n_periods)
+    start_samples = rng.integers(0, num_samples, n_periods)
+    durations = rng.integers(100, 100_000, n_periods)
+    end_samples = start_samples + durations
+    valid_periods = end_samples < num_samples
+    segment_indices = segment_indices[valid_periods]
+    start_samples = start_samples[valid_periods]
+    end_samples = end_samples[valid_periods]
+    unit_index = rng.integers(0, num_units - 1, len(segment_indices))
+
+    periods = np.zeros(len(segment_indices), dtype=unit_period_dtype)
+    periods["segment_index"] = segment_indices
+    periods["start_sample_index"] = start_samples
+    periods["end_sample_index"] = end_samples
+    periods["unit_index"] = unit_index
+    periods = np.sort(periods, order=["segment_index", "start_sample_index"])
+
+    t_start = time.perf_counter()
+    sliced_sorting = sorting.select_periods(periods=periods)
+    t_stop = time.perf_counter()
+    elapsed = t_stop - t_start
+    print(f"select_periods took {elapsed:.2f} seconds for {len(periods)} periods")
+
+    # Check that all spikes in the sliced sorting are within the periods
+    for segment_index in range(sorting.get_num_segments()):
+        periods_in_segment = periods[periods["segment_index"] == segment_index]
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            spiketrain = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+
+            periods_for_unit = periods_in_segment[periods_in_segment["unit_index"] == unit_index]
+            spiketrain_in_periods = []
+            for period in periods_for_unit:
+                start_sample = period["start_sample_index"]
+                end_sample = period["end_sample_index"]
+                spiketrain_in_periods.append(spiketrain[(spiketrain >= start_sample) & (spiketrain < end_sample)])
+            if len(spiketrain_in_periods) == 0:
+                spiketrain_in_periods = np.array([], dtype=spiketrain.dtype)
+            else:
+                spiketrain_in_periods = np.unique(np.concatenate(spiketrain_in_periods))
+
+            spiketrain_sliced = sliced_sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+            assert len(spiketrain_in_periods) == len(spiketrain_sliced)
+
+    # now test with input as numpy array with shape (n_periods, 4)
+    periods_array = np.zeros((len(periods), 4), dtype="int64")
+    periods_array[:, 0] = periods["segment_index"]
+    periods_array[:, 1] = periods["start_sample_index"]
+    periods_array[:, 2] = periods["end_sample_index"]
+    periods_array[:, 3] = periods["unit_index"]
+
+    sliced_sorting_array = sorting.select_periods(periods=periods_array)
+    np.testing.assert_array_equal(sliced_sorting.to_spike_vector(), sliced_sorting_array.to_spike_vector())
+
+
 if __name__ == "__main__":
-    test_BaseSorting()
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        cache_folder = Path(tmpdirname)
+
+    test_BaseSorting(cache_folder)
     test_npy_sorting()
     test_empty_sorting()
+    test_select_periods()

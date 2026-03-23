@@ -2,31 +2,31 @@ Benchmark module
 ================
 
 
-Historically, this module was used to compare/benchmark sorters against ground truth
+Historically, this module was used to compare/benchmark sorters against ground truth.
 With this, sorters can be challenge in multiple situations (noise, drift, small/high snr,
 small/high spike rate, high/small probe density, ...).
 
 The main idea is to generate a synthetic recording using the internal generators
 :py:func:`~spikeinterface.generation.generate_drifting_recording` or external tools
-like ***mearec**. And then to compare the output of each sorter to the ground truth sorting.
-Then, theses comparisons can be plotted in various ways to explore all strengths and weakness of
+like **mearec**. And then to compare the output of each sorter to the ground truth sorting.
+Then, these comparisons can be plotted in various ways to explore all strengths and weakness of
 sorters tools. The very first paper of spikeinterface was about that, see [Buccino]_.
 
 Since version, 0.102.0 the concept of *benchmark* has been extended to challenge/study specific
-steps of the sorting pipeline, for instance the motion estimation methods has been carrfully studied
+steps of the sorting pipeline, for instance the motion estimation methods has been carefully studied
 in [Garcia2024]_ or some localisation methods has been compared in [Scopin2024]_.
-Also, very specific details (the ability for a sorting to recover collision spike) has been
+Also, very specific details (the ability for a sorting to recover collision spikes) has been
 studied in [Garcia2022]_.
 
-Now, almost all steps of the spike sorting step has implemented in spikeinterface and then
-all this steps can be benchmarked more or less the same way with dedicated classes:
+Now, almost all steps of the spike sorting pipeline have been implemented in spikeinterface and then
+all these steps can be benchmarked more or less the same way with dedicated classes:
 
   * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()`
     methods can be compared with :py:class:`~spikeinterface.benchmark.benchmark_peak_detection.PeakDetectionStudy`
   * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()`
     methods can be compared with :py:class:`~spikeinterface.benchmark.benchmark_peak_localization.PeakLocalizationStudy`
   * :py:func:`~spikeinterface.sortingcomponents.motion.estimate_motion()`
-    methods can be compared with :py:class:`~spikeinterface.benchmark.benchmark_motion_estimation.MotionEstimationStudyStudy`
+    methods can be compared with :py:class:`~spikeinterface.benchmark.benchmark_motion_estimation.MotionEstimationStudy`
   * :py:func:`~spikeinterface.sortingcomponents.clustering.find_clusters_from_peaks()`
     methods can be compared with :py:class:`~spikeinterface.benchmark.benchmark_clustering.ClusteringStudy`
   * :py:func:`~spikeinterface.sortingcomponents.matching.find_spikes_from_templates()`
@@ -41,19 +41,19 @@ All theses benchmark study classes share the same design :
 
   * They accept as input a dict of "cases". A case being a mix of **one method** (or one sorter)
     in a **particular situation** (drift or not, low/high snr, ...) with **some parameters**.
-    With this in mind, this is very easy to test either algorithm but also there parameters.
-  * Study classes has 4 steps : create cases, run methods, compute results and plot results.
+    With this in mind, it is very easy to test either algorithms or their parameters.
+  * Study classes have 4 steps : create cases, run methods, compute results and plot results.
   * Study classes have dedicated plot functions or more general plotting (for instance accuracy vs snr)
-  * Study classes also cases handle the concept of "levels" : this allows you to compare several
+  * Study classes also handle the concept of "levels" : this allows you to compare several
     complexities at the same time. For instance, compare kilosort4 vs kilsort2.5 (level 0) for
     different noises amplitudes (level 1) combined with several motion vectors (level 2).
   * When plotting levels can be grouped to make averages.
   * Internally, they almost all use the :py:mod:`~spikeinterface.comparison` module.
-    In short this module can compare a set of spiketrains against ground truth spiketrains.
-    The van diagram (True Posistive, False positive, False negative) against each ground truth units is
+    In short, this module can compare a set of spiketrains against ground truth spiketrains.
+    The van diagram (True positive, False positive, False negative) against each ground truth units is
     performed.
     An internal agreement matrix is also constructed. With this machinery many metrics can be taken
-    to estimate the quality of a methods : accuracy, recall, precision
+    to estimate the quality of the methods : accuracy, recall, precision.
   * Study classes are persistent on disk. The mechanism is based on an intrinsic
     organization into a "study_folder" with several subfolders: results, sorting_analyzer, run_logs,
     cases...
@@ -158,8 +158,8 @@ Here a simple code block to generate
 The :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks()` function
 propose mainly (with some variants) 2 main methods :
 
-  * "locally_exclussive" : a multichannel peak detection by threhold crossing that taken
-    in account the neighbor channels
+  * "locally_exclusive" : a multichannel peak detection by threhold crossing that takes into
+    account the neighbor channels.
   * "matched_filtering" : a method based on convolution by a kernel that "looks like a spike"
     at several spatial scales.
 
@@ -256,9 +256,9 @@ version of spikeinterface for benchmark but re-generating the same figures shoul
 new version of spikeinterface.
 
 Note that since this puplication, new methods has been published (DREDGe and MEDiCINe) and implemented in spikeinterface
-so runnning a new comparison could make sens.
+so runnning a new comparison could make sense.
 
-Lets be *open-and-reproducible-science*, this is so trendy. This 120 lines script will make the same
+Let's be *open-and-reproducible-science*, this is so trendy. This 120 lines script will make the same
 job done [Garcia2024]_.
 
 

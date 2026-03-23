@@ -1,11 +1,8 @@
-from __future__ import annotations
-
 import numpy as np
 from itertools import chain
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from .localization_tools import _unit_location_methods
-
 
 # this dict is for peak location
 dtype_localize_by_method = {

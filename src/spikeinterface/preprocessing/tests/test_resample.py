@@ -210,6 +210,98 @@ def test_resample_by_chunks():
                     plt.show()
 
 
+def test_resample_preserves_t_start():
+    """Resampling should preserve t_start when the parent has one."""
+    sampling_frequency = 30000
+    t_start = 100.5
+    traces = np.random.randn(sampling_frequency * 2, 2).astype(np.float32)
+    parent_rec = NumpyRecording(traces, sampling_frequency)
+    parent_rec._recording_segments[0].t_start = t_start
+
+    resampled = resample(parent_rec, 500)
+    assert resampled._recording_segments[0].t_start == t_start
+    assert not resampled.has_time_vector()
+    assert np.isclose(resampled.get_times()[0], t_start)
+
+
+def test_resample_does_not_mutate_parent():
+    """Resampling should not modify the parent recording's time_vector."""
+    sampling_frequency = 30000
+    n_samples = sampling_frequency * 2
+    traces = np.random.randn(n_samples, 2).astype(np.float32)
+    parent_rec = NumpyRecording(traces, sampling_frequency)
+    time_vector = np.arange(n_samples, dtype="float64") / sampling_frequency + 50.0
+    parent_rec.set_times(time_vector)
+
+    assert parent_rec.has_time_vector()
+    resample(parent_rec, 500)
+    assert parent_rec.has_time_vector(), "Parent time_vector was mutated by resample!"
+    np.testing.assert_array_equal(parent_rec.get_times(), time_vector)
+
+
+def test_resample_preserves_time_vector_integer_ratio():
+    """Resampling with integer ratio should slice the parent time_vector."""
+    sampling_frequency = 30000
+    resample_rate = 500
+    n_samples = sampling_frequency * 2
+    traces = np.random.randn(n_samples, 2).astype(np.float32)
+    parent_rec = NumpyRecording(traces, sampling_frequency)
+
+    # Create a time_vector with a gap (simulating artifact removal)
+    time_vector = np.arange(n_samples, dtype="float64") / sampling_frequency
+    # Insert a 5-second gap at the midpoint
+    midpoint = n_samples // 2
+    time_vector[midpoint:] += 5.0
+    parent_rec.set_times(time_vector)
+
+    resampled = resample(parent_rec, resample_rate)
+
+    assert resampled.has_time_vector()
+    resampled_times = resampled.get_times()
+    n_out = resampled.get_num_samples()
+
+    # Output length should be consistent
+    assert len(resampled_times) == n_out
+
+    # The gap should be preserved: check that the jump exists in the resampled times
+    diffs = np.diff(resampled_times)
+    normal_dt = 1.0 / resample_rate
+    gap_indices = np.where(diffs > normal_dt * 2)[0]
+    assert len(gap_indices) == 1, "The gap should appear exactly once in resampled times"
+    assert np.isclose(diffs[gap_indices[0]], normal_dt + 5.0, atol=normal_dt)
+
+    # Start time should match
+    assert np.isclose(resampled_times[0], time_vector[0])
+
+
+def test_resample_preserves_time_vector_non_integer_ratio():
+    """Resampling with non-integer ratio should interpolate the time_vector."""
+    sampling_frequency = 30000
+    resample_rate = 700  # 30000 / 700 is not integer
+    n_samples = sampling_frequency * 2
+    traces = np.random.randn(n_samples, 2).astype(np.float32)
+    parent_rec = NumpyRecording(traces, sampling_frequency)
+
+    time_vector = np.arange(n_samples, dtype="float64") / sampling_frequency + 10.0
+    parent_rec.set_times(time_vector)
+
+    import warnings as _warnings
+
+    with _warnings.catch_warnings(record=True) as w:
+        _warnings.simplefilter("always")
+        resampled = resample(parent_rec, resample_rate)
+        assert any("non-integer ratio" in str(warning.message).lower() for warning in w)
+
+    assert resampled.has_time_vector()
+    resampled_times = resampled.get_times()
+    assert len(resampled_times) == resampled.get_num_samples()
+    assert np.isclose(resampled_times[0], 10.0, atol=1.0 / sampling_frequency)
+
+
 if __name__ == "__main__":
     test_resample_freq_domain()
     test_resample_by_chunks()
+    test_resample_preserves_t_start()
+    test_resample_does_not_mutate_parent()
+    test_resample_preserves_time_vector_integer_ratio()
+    test_resample_preserves_time_vector_non_integer_ratio()

@@ -105,7 +105,7 @@ jobs:
         run: echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
 
       - name: Cache datasets
-        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        if: env.RUN_EXTRACTORS_TESTS == 'true' || env.RUN_PREPROCESSING_TESTS == 'true'
         id: cache-datasets
         uses: actions/cache/restore@v4
         with:
@@ -115,7 +115,7 @@ jobs:
 
       - name: Install git-annex
         shell: bash
-        if: env.RUN_EXTRACTORS_TESTS == 'true'
+        if: env.RUN_EXTRACTORS_TESTS == 'true' || env.RUN_PREPROCESSING_TESTS == 'true'
         run: |
           pip install datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
@@ -223,7 +223,7 @@ jobs:
         run: |
           pip install -e .[full,widgets]
           pip list
-          ./.github/run_tests.sh widgets --no-virtual-env
+          ./.github/run_tests.sh widgets --no-virtual-env -s
 
       - name: Test exporters
         shell: bash
@@ -239,6 +239,19 @@ jobs:
         run: |
           pip install -e .[full]
           pip list
+
+          # Internal shell check for platform and env var
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            # Locate the binary dynamically
+            SHM_BINARY=$(python -c "import torch; from pathlib import Path; print(Path(torch.__file__).parent / 'bin' / 'torch_shm_manager')")
+            if [ -f "$SHM_BINARY" ]; then
+              echo "Applying chmod +x to $SHM_BINARY"
+              chmod +x "$SHM_BINARY"
+            else
+              echo "Warning: torch_shm_manager not found at $SHM_BINARY"
+            fi
+          fi
+
           ./.github/run_tests.sh sortingcomponents --no-virtual-env
 
       - name: Test generation

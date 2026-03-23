@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 
 from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
+from spikeinterface.core.base import spike_peak_dtype
 from spikeinterface.core.job_tools import divide_recording_into_chunks
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -14,7 +15,6 @@ from spikeinterface.core.node_pipeline import (
     PipelineNode,
     ExtractDenseWaveforms,
     sorting_to_peaks,
-    spike_peak_dtype,
 )
 
 

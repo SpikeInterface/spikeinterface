@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from warnings import warn
 
@@ -53,7 +51,7 @@ class BaseRasterWidget(BaseWidget):
     y_ticks : dict | None, default: None
         Ticks on y-axis, passed to `set_yticks`. If None, default ticks are used.
     hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
+        For figpack backend, if True the unit selector is not displayed
     segment_boundary_kwargs : dict | None, default: None
         Additional arguments for the segment boundary lines, passed to `matplotlib.axvline`
     backend : str | None, default None
@@ -327,7 +325,6 @@ class BaseRasterWidget(BaseWidget):
 
         backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
-        self._update_plot()
 
     def _update_plot(self, change=None):
         for ax in self.axes.flatten():
@@ -344,9 +341,6 @@ class BaseRasterWidget(BaseWidget):
 
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
-
-
-import numpy as np
 
 
 class RasterWidget(BaseRasterWidget):
@@ -381,26 +375,8 @@ class RasterWidget(BaseRasterWidget):
         backend: str | None = None,
         sorting: BaseSorting | None = None,
         sorting_analyzer: SortingAnalyzer | None = None,
-        segment_index: int | None = None,
         **backend_kwargs,
     ):
-
-        import warnings
-
-        # Handle deprecation of segment_index parameter
-        if segment_index is not None:
-            warnings.warn(
-                "The 'segment_index' parameter is deprecated and will be removed in a future version. "
-                "Use 'segment_indices' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if segment_indices is None:
-                if isinstance(segment_index, int):
-                    segment_indices = [segment_index]
-                else:
-                    segment_indices = segment_index
-
         if sorting is not None:
             # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
             deprecation_msg = "`sorting` argument is deprecated and will be removed in version 0.105.0. Please use `sorting_analyzer_or_sorting` instead"

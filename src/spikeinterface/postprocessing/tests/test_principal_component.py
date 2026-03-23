@@ -99,9 +99,9 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         some_channel_ids = sorting_analyzer.channel_ids[::2]
 
-        random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
-        all_num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
-        unit_ids_num_spikes = np.sum(all_num_spikes[unit_id] for unit_id in some_unit_ids)
+        random_spikes_ext = sorting_analyzer.get_extension("random_spikes")
+        random_spikes_indices = random_spikes_ext.get_data()
+        unit_ids_num_random_spikes = np.sum(random_spikes_ext.params["max_spikes_per_unit"] for _ in some_unit_ids)
 
         # this should be all spikes all channels
         some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)
@@ -113,7 +113,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         # this should be some spikes all channels
         some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=some_unit_ids)
         assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == unit_ids_num_spikes
+        assert spike_unit_index.shape[0] == unit_ids_num_random_spikes
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == num_chans
         assert 1 not in spike_unit_index
@@ -123,7 +123,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
             channel_ids=some_channel_ids, unit_ids=some_unit_ids
         )
         assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == unit_ids_num_spikes
+        assert spike_unit_index.shape[0] == unit_ids_num_random_spikes
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == some_channel_ids.size
         assert 1 not in spike_unit_index

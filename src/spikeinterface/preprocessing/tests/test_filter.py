@@ -159,7 +159,7 @@ def test_filter():
     trace1 = rec2_cached1.get_traces(segment_index=0)
 
     # other filtering types
-    rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2)
+    rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2, margin_ms=5.0)
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
     rec5 = causal_filter(rec, direction="forward")
     rec6 = causal_filter(rec, direction="backward")
@@ -168,7 +168,7 @@ def test_filter():
     from scipy.signal import iirfilter
 
     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
-    rec5 = filter(rec, coeff=coeff, filter_mode="sos")
+    rec5 = filter(rec, coeff=coeff, filter_mode="sos", margin_ms=5.0)
 
     # compute by chunk
     rec5_cached0 = rec5.save(chunk_size=100000, verbose=False, progress_bar=True)

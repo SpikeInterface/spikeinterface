@@ -64,8 +64,11 @@ def split_sorting_by_times(
         new_index = int(unit_id) * np.ones(len(mask), dtype=bool)
         new_index[mask] = max_index + 1
         new_spikes["unit_index"][ind_mask] = new_index
-        new_unit_ids += [max_index + 1]
-        splitted_pairs += [(unit_id, new_unit_ids[-1])]
+        new_unit_id = max_index + 1
+        if sorting_analyzer.unit_ids.dtype.kind in "US":
+            new_unit_id = str(new_unit_id)
+        new_unit_ids += [new_unit_id]
+        splitted_pairs += [(unit_id, new_unit_id)]
         max_index += 1
 
     new_sorting = NumpySorting(new_spikes, sampling_frequency=fs, unit_ids=new_unit_ids)

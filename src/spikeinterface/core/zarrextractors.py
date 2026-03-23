@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 from pathlib import Path
 import numpy as np
@@ -7,12 +5,12 @@ import zarr
 
 from probeinterface import ProbeGroup
 
+from .base import minimum_spike_dtype
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
+from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import define_function_from_class, check_json
 from .job_tools import split_job_kwargs
 from .core_tools import is_path_remote
-
 
 zarr.config.set({"default_zarr_version": 3})
 
@@ -196,7 +194,7 @@ class ZarrRecordingExtractor(BaseRecording):
                     if np.isnan(t_start):
                         t_start = None
                 time_kwargs["t_start"] = t_start
-                time_kwargs["sampling_frequency"] = sampling_frequency
+            time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
             self.add_recording_segment(rec_segment)
@@ -329,6 +327,8 @@ class ZarrSortingExtractor(BaseSorting):
         spikes["unit_index"] = spikes_group["unit_index"][:]
         for i, (start, end) in enumerate(segment_slices_list):
             spikes["segment_index"][start:end] = i
+        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        self._cached_spike_vector = spikes
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
@@ -432,6 +432,70 @@ def get_default_zarr_compressor(clevel: int = 5):
     return BloscCodec(cname="zstd", clevel=clevel, shuffle=BloscShuffle.bitshuffle)
 
 
+def build_codec_pipeline(filters=None, compressors=None):
+    """
+    Build a zarr v3 codecs list from filters and compressors.
+
+    Assembles a valid zarr v3 codec pipeline in the required order:
+      1. ArrayArrayCodec  (filters, e.g. Delta)
+      2. ArrayBytesCodec  (serializer, e.g. WavPack, BytesCodec)
+      3. BytesBytesCodec  (compressors, e.g. BloscCodec, ZstdCodec)
+
+    This allows callers to pass an ArrayBytesCodec (e.g. WavPack) as a
+    compressor and have it placed in the correct serializer slot automatically.
+
+    Parameters
+    ----------
+    filters : ArrayArrayCodec or list of ArrayArrayCodec or None
+        Codec(s) applied before serialization.
+    compressors : codec or list of codecs or None
+        Can be a mix of ArrayBytesCodec (serializer) and BytesBytesCodec
+        (byte-level compressors). At most one ArrayBytesCodec is allowed.
+
+    Returns
+    -------
+    list of codecs or None
+        Full codec pipeline suitable for the ``codecs=`` parameter of
+        ``zarr.create()``. Returns None when both inputs are empty/None,
+        letting zarr use its defaults.
+
+    Raises
+    ------
+    ValueError
+        If filters contain non-ArrayArrayCodec instances, if more than one
+        ArrayBytesCodec is provided, or if an unrecognised codec type is passed.
+    """
+    from zarr.abc.codec import ArrayArrayCodec, ArrayBytesCodec, BytesBytesCodec
+
+    if filters is None:
+        filters = []
+    if not isinstance(filters, (list, tuple)):
+        filters = [filters]
+
+    if compressors is None:
+        compressors = []
+    if not isinstance(compressors, (list, tuple)):
+        compressors = [compressors]
+
+    for f in filters:
+        if not isinstance(f, ArrayArrayCodec):
+            raise ValueError(f"All filters must be ArrayArrayCodec instances, got {type(f)}")
+
+    serializers = [c for c in compressors if isinstance(c, ArrayBytesCodec)]
+    byte_compressors = [c for c in compressors if isinstance(c, BytesBytesCodec)]
+    invalid = [c for c in compressors if not isinstance(c, (ArrayBytesCodec, BytesBytesCodec))]
+
+    if invalid:
+        raise ValueError(
+            f"Compressors must be ArrayBytesCodec or BytesBytesCodec instances, got {[type(c) for c in invalid]}"
+        )
+    if len(serializers) > 1:
+        raise ValueError("Only one ArrayBytesCodec (serializer) is allowed in the codec pipeline.")
+
+    codecs = filters + serializers + byte_compressors
+    return codecs if codecs else None
+
+
 def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
@@ -477,12 +541,9 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
         if field != "segment_index":
             dtype = spikes[field].dtype
             spikes_data = spikes[field]
-            spikes_group.create_array(
-                name=field,
-                data=spikes_data,
-                compressors=compressor,
-                filters=[Delta(dtype=spikes[field].dtype.str)],
-            )
+            codecs = build_codec_pipeline(filters=[Delta(dtype=spikes[field].dtype.str)], compressors=compressor)
+            arr = spikes_group.create(name=field, shape=spikes_data.shape, dtype=spikes_data.dtype, codecs=codecs)
+            arr[:] = spikes_data
         else:
             segment_slices = []
             for segment_index in range(num_segments):
@@ -549,12 +610,14 @@ def add_recording_to_zarr_group(
         filters_times = filters_by_dataset.get("times", global_filters)
 
         if time_vector is not None:
-            _ = zarr_group.create_array(
+            codecs = build_codec_pipeline(filters=filters_times, compressors=compressor_times)
+            arr = zarr_group.create(
                 name=f"times_seg{segment_index}",
-                data=time_vector,
-                filters=filters_times,
-                compressors=compressor_times,
+                shape=time_vector.shape,
+                dtype=time_vector.dtype,
+                codecs=codecs,
             )
+            arr[:] = time_vector
         elif d["t_start"] is not None:
             t_starts[segment_index] = d["t_start"]
 
@@ -616,8 +679,7 @@ def add_traces_to_zarr(
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
-    if not isinstance(compressors, (list, tuple)):
-        compressors = [compressors]
+    codecs = build_codec_pipeline(filters=filters, compressors=compressors)
 
     # create zarr datasets files
     zarr_datasets = []
@@ -628,9 +690,7 @@ def add_traces_to_zarr(
         shape = (num_frames, num_channels)
         # In zarr v3, chunks must be a tuple of integers (no None allowed)
         chunks = (chunk_size, channel_chunk_size if channel_chunk_size is not None else num_channels)
-        dset = zarr_group.create(
-            name=dset_name, shape=shape, chunks=chunks, dtype=dtype, filters=filters, codecs=compressors, zarr_format=3
-        )
+        dset = zarr_group.create(name=dset_name, shape=shape, chunks=chunks, dtype=dtype, codecs=codecs, zarr_format=3)
         zarr_datasets.append(dset)
         # synchronizer=zarr.ThreadSynchronizer())
 

@@ -9,7 +9,6 @@ from spikeinterface.core import generate_sorting
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
-
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
