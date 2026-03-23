@@ -163,7 +163,8 @@ class ZarrRecordingExtractor(BaseRecording):
         assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
         assert num_segments is not None, "'num_segments' attiribute not found!"
 
-        channel_ids = np.array(channel_ids)
+        # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+        channel_ids = np.array(channel_ids.tolist())
 
         dtype = self._root["traces_seg0"].dtype
 
@@ -201,7 +202,7 @@ class ZarrRecordingExtractor(BaseRecording):
 
             if load_compression_ratio:
                 nbytes_segment = self._root[trace_name].nbytes
-                nbytes_stored_segment = self._root[trace_name].nbytes_stored
+                nbytes_stored_segment = self._root[trace_name].nbytes_stored()
                 if nbytes_stored_segment > 0:
                     cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
                 else:
@@ -220,7 +221,11 @@ class ZarrRecordingExtractor(BaseRecording):
         if "properties" in self._root:
             prop_group = self._root["properties"]
             for key in prop_group.keys():
-                values = self._root["properties"][key]
+                values = self._root["properties"][key][:]
+                # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+                if hasattr(values.dtype, "na_object") or values.dtype.kind == "O":
+                    if values.size > 0 and isinstance(values.tolist()[0], str):
+                        values = np.array(values.tolist())
                 self.set_property(key, values)
 
         # load annotations
@@ -338,7 +343,11 @@ class ZarrSortingExtractor(BaseSorting):
         if "properties" in self._root:
             prop_group = self._root["properties"]
             for key in prop_group.keys():
-                values = self._root["properties"][key]
+                values = self._root["properties"][key][:]
+                # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+                if hasattr(values.dtype, "na_object") or values.dtype.kind == "O":
+                    if values.size > 0 and isinstance(values.tolist()[0], str):
+                        values = np.array(values.tolist())
                 self.set_property(key, values)
 
         # load annotations
@@ -434,12 +443,12 @@ def get_default_zarr_compressor(clevel: int = 5):
 
 def build_codec_pipeline(filters=None, compressors=None):
     """
-    Build a zarr v3 codecs list from filters and compressors.
+    Build zarr v3 codec kwargs from filters and compressors.
 
-    Assembles a valid zarr v3 codec pipeline in the required order:
-      1. ArrayArrayCodec  (filters, e.g. Delta)
-      2. ArrayBytesCodec  (serializer, e.g. WavPack, BytesCodec)
-      3. BytesBytesCodec  (compressors, e.g. BloscCodec, ZstdCodec)
+    Classifies codecs into the three slots accepted by ``zarr.Group.create_array()``:
+      1. ``filters``    — ArrayArrayCodec  (e.g. Delta)
+      2. ``serializer`` — ArrayBytesCodec  (e.g. WavPack, BytesCodec)
+      3. ``compressors``— BytesBytesCodec  (e.g. BloscCodec, ZstdCodec)
 
     This allows callers to pass an ArrayBytesCodec (e.g. WavPack) as a
     compressor and have it placed in the correct serializer slot automatically.
@@ -454,10 +463,10 @@ def build_codec_pipeline(filters=None, compressors=None):
 
     Returns
     -------
-    list of codecs or None
-        Full codec pipeline suitable for the ``codecs=`` parameter of
-        ``zarr.create()``. Returns None when both inputs are empty/None,
-        letting zarr use its defaults.
+    dict
+        Keyword arguments to unpack into ``zarr.Group.create_array()``.
+        Only keys with explicit values are included; omitted keys let zarr
+        use its defaults.
 
     Raises
     ------
@@ -492,8 +501,18 @@ def build_codec_pipeline(filters=None, compressors=None):
     if len(serializers) > 1:
         raise ValueError("Only one ArrayBytesCodec (serializer) is allowed in the codec pipeline.")
 
-    codecs = filters + serializers + byte_compressors
-    return codecs if codecs else None
+    codec_kwargs = {}
+    codec_kwargs["filters"] = filters
+    codec_kwargs["serializer"] = serializers[0]
+    codec_kwargs["compressors"] = byte_compressors
+    return codec_kwargs
+
+
+def _has_string_fields(dtype: np.dtype) -> bool:
+    """Return True if dtype is or contains fixed-length unicode (U) sub-fields."""
+    if dtype.names:
+        return any(_has_string_fields(dtype.fields[name][0]) for name in dtype.names)
+    return dtype.kind == "U"
 
 
 def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting: BaseRecording | BaseSorting):
@@ -504,7 +523,20 @@ def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting:
         if values.dtype.kind == "O":
             warnings.warn(f"Property {key} not saved because it is a python Object type")
             continue
-        prop_group.create_array(name=key, data=values, compressors=None)
+        if values.dtype.names and _has_string_fields(values.dtype):
+            # Structured arrays with unicode sub-fields have no stable zarr v3 spec; skip them.
+            # Probe geometry (contact_vector) is already persisted via zarr_group.attrs["probe"].
+            warnings.warn(
+                f"Property '{key}' not saved because it is a structured array with unicode fields, "
+                "which do not have a stable zarr V3 specification."
+            )
+            continue
+        # Use variable-length UTF-8 (stable zarr v3 spec) for unicode arrays.
+        if values.dtype.kind == "U":
+            arr = prop_group.create_array(name=key, shape=values.shape, dtype=str, compressors=None)
+            arr[:] = values
+        else:
+            prop_group.create_array(name=key, data=values, compressors=None)
 
     # save annotations
     zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
@@ -541,9 +573,8 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
         if field != "segment_index":
             dtype = spikes[field].dtype
             spikes_data = spikes[field]
-            codecs = build_codec_pipeline(filters=[Delta(dtype=spikes[field].dtype.str)], compressors=compressor)
-            arr = spikes_group.create(name=field, shape=spikes_data.shape, dtype=spikes_data.dtype, codecs=codecs)
-            arr[:] = spikes_data
+            codec_kwargs = build_codec_pipeline(filters=[Delta(dtype=spikes[field].dtype.str)], compressors=compressor)
+            spikes_group.create_array(name=field, data=spikes_data, **codec_kwargs)
         else:
             segment_slices = []
             for segment_index in range(num_segments):
@@ -567,7 +598,10 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group
     # save data (done the subclass)
     zarr_group.attrs["sampling_frequency"] = float(recording.get_sampling_frequency())
     zarr_group.attrs["num_segments"] = int(recording.get_num_segments())
-    zarr_group.create_array(name="channel_ids", data=recording.get_channel_ids(), compressors=None)
+    # Use variable-length UTF-8 (stable zarr v3 spec) instead of fixed-length unicode.
+    channel_ids = recording.get_channel_ids()
+    arr = zarr_group.create_array(name="channel_ids", shape=channel_ids.shape, dtype=str, compressors=None)
+    arr[:] = channel_ids
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
 
     dtype = recording.get_dtype() if dtype is None else dtype
@@ -608,14 +642,8 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group
         filters_times = filters_by_dataset.get("times", global_filters)
 
         if time_vector is not None:
-            codecs = build_codec_pipeline(filters=filters_times, compressors=compressor_times)
-            arr = zarr_group.create(
-                name=f"times_seg{segment_index}",
-                shape=time_vector.shape,
-                dtype=time_vector.dtype,
-                codecs=codecs,
-            )
-            arr[:] = time_vector
+            codec_kwargs = build_codec_pipeline(filters=filters_times, compressors=compressor_times)
+            zarr_group.create_array(name=f"times_seg{segment_index}", data=time_vector, **codec_kwargs)
         elif d["t_start"] is not None:
             t_starts[segment_index] = d["t_start"]
 
@@ -677,7 +705,7 @@ def add_traces_to_zarr(
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
-    codecs = build_codec_pipeline(filters=filters, compressors=compressors)
+    codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
 
     # create zarr datasets files
     zarr_datasets = []
@@ -688,7 +716,7 @@ def add_traces_to_zarr(
         shape = (num_frames, num_channels)
         # In zarr v3, chunks must be a tuple of integers (no None allowed)
         chunks = (chunk_size, channel_chunk_size if channel_chunk_size is not None else num_channels)
-        dset = zarr_group.create(name=dset_name, shape=shape, chunks=chunks, dtype=dtype, codecs=codecs, zarr_format=3)
+        dset = zarr_group.create_array(name=dset_name, shape=shape, chunks=chunks, dtype=dtype, **codec_kwargs)
         zarr_datasets.append(dset)
         # synchronizer=zarr.ThreadSynchronizer())
 
