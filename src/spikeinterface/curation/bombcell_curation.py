@@ -314,9 +314,7 @@ def bombcell_label_units(
         # Standalone custom metrics: any metric in non-somatic thresholds that is not
         # part of the built-in groups is OR'd in as its own independent condition.
         standalone_metrics = {
-            m: non_somatic_thresholds[m]
-            for m in non_somatic_thresholds
-            if m not in _NON_SOMATIC_BUILTIN_METRICS
+            m: non_somatic_thresholds[m] for m in non_somatic_thresholds if m not in _NON_SOMATIC_BUILTIN_METRICS
         }
         for metric_name, thresh in standalone_metrics.items():
             standalone_labels = threshold_metrics_label_units(
