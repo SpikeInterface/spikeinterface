@@ -154,3 +154,6 @@ playground.ipynb
 playground2.ipynb
 examples/how_to/full_pipeline_with_bombcell.ipynb
 examples/how_to/compare_bombcell_unitrefine.ipynb
+in_container_params.json
+in_container_recording.json
+in_container_sorter_script.py
