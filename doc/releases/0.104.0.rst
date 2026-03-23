@@ -50,6 +50,7 @@ core:
 
 extractors:
 
+* Update read_openephys and add OneBox tests (#4456)
 * Add XClustSortingExtractor (#4433)
 * Add gain and offset for `read_kilosort_as_analyzer` (#4428)
 * Fix openephys tests (#4426)
@@ -63,6 +64,8 @@ extractors:
 
 preprocessing:
 
+* Refactor artifacts detection + add saturation detection (#4297)
+* Switch to kernel for local CAR (#4454)
 * Slice epsilons with dead channels to match gains during agc. (#4430)
 * Support time_vector in resample() (#4429)
 * Implementing KNN referencing and a backup referencing mechanism for common_reference (#4412)

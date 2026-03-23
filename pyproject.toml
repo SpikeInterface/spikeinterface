@@ -25,7 +25,7 @@ dependencies = [
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
-    "neo>=0.14.3",
+    "neo>=0.14.4",
     "probeinterface>=0.3.2",
     "packaging",
     "pydantic",
