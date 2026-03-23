@@ -298,10 +298,10 @@ class BenchmarkStudy:
             benchmark = self.create_benchmark(key)
             if verbose:
                 print("### Set benchmark", key, "###")
-            
+
             for k, v in precomputed_results[key].items():
                 benchmark.result[k] = v
-                
+
             self.benchmarks[key] = benchmark
             bench_folder = self.folder / "results" / self.key_to_str(key)
             bench_folder.mkdir(exist_ok=True)
