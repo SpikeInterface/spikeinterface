@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import warnings
 import numpy as np
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
@@ -19,6 +19,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseExtractor.__init__(self, channel_ids)
         self._sampling_frequency = float(sampling_frequency)
         self._dtype = np.dtype(dtype)
+        self._probegroup = None
 
     @property
     def channel_ids(self):
@@ -51,14 +52,30 @@ class BaseRecordingSnippets(BaseExtractor):
             return True
 
     def has_probe(self) -> bool:
-        return "contact_vector" in self.get_property_keys()
+        if self._probegroup is None and self.get_property("contact_vector") is not None:
+            # if contact_vector is present we can reconstruct the probe
+            self._probegroup = self._build_probegroup_from_properties()
+        return self._probegroup is not None
+
+    def has_3d_probe(self) -> bool:
+        if self.has_probe():
+            probe = self.get_probegroup().probes[0]
+            return probe.ndim == 3
+        else:
+            return False
 
     def has_channel_location(self) -> bool:
-        return self.has_probe() or "location" in self.get_property_keys()
+        return self.has_probe()
 
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
+
+    def reset_probe(self):
+        """
+        Removes probe information
+        """
+        self._probegroup = None
 
     def set_probe(self, probe, group_mode="auto", in_place=False):
         """
@@ -85,18 +102,14 @@ class BaseRecordingSnippets(BaseExtractor):
         probegroup.add_probe(probe)
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probegroup(self, probegroup, group_mode="auto", in_place=False):
-        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
-
-    def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False):
+    def set_probegroup(self, probegroup, group_mode="auto", in_place=False, raise_if_overlapping_probes=True):
         """
-        Attach a list of Probe objects to a recording.
-        For this Probe.device_channel_indices is used to link contacts to recording channels.
-        If some contacts of the Probe are not connected (device_channel_indices=-1)
+        Attach a ProbeGroup to a recording.
+        For this ProbeGroup.get_global_device_channel_indices() is used to link contacts to recording channels.
+        If some contacts of the probe group are not connected (device_channel_indices=-1)
         then the recording is "sliced" and only connected channel are kept.
 
-        The probe order is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
-
+        The probe group order is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
 
         Parameters
         ----------
@@ -108,6 +121,43 @@ class BaseRecordingSnippets(BaseExtractor):
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
+        raise_if_overlapping_probes: bool
+            If True, raises an error if the probes overlap. If False, it will just warn
+
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself)
+        """
+        return self._set_probes(
+            probegroup,
+            group_mode=group_mode,
+            in_place=in_place,
+            raise_if_overlapping_probes=raise_if_overlapping_probes,
+        )
+
+    def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False, raise_if_overlapping_probes=True):
+        """
+        Attach a list of Probe objects or a ProbeGroup to a recording.
+        For this Probe.device_channel_indices is used to link contacts to recording channels.
+        If some contacts of the Probe are not connected (device_channel_indices=-1)
+        then the recording is "sliced" and only connected channel are kept.
+
+        The probe order is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
+
+
+        Parameters
+        ----------
+        probe_or_probegroup: Probe, list of Probes, ProbeGroup, or dict
+            The probe(s) to be attached to the recording
+        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
+            How to add the "group" property.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
+        in_place: bool
+            False by default.
+            Useful internally when extractor do self.set_probegroup(probe)
+        raise_if_overlapping_probes: bool
+            If True, raises an error if the probes overlap. If False, it will just warn
 
         Returns
         -------
@@ -132,12 +182,14 @@ class BaseRecordingSnippets(BaseExtractor):
             probegroup = ProbeGroup()
             for probe in probe_or_probegroup:
                 probegroup.add_probe(probe)
+        elif isinstance(probe_or_probegroup, dict):
+            probegroup = ProbeGroup.from_dict(probe_or_probegroup)
         else:
             raise ValueError("must give Probe or ProbeGroup or list of Probe")
 
         # check that the probe do not overlap
         num_probes = len(probegroup.probes)
-        if num_probes > 1:
+        if num_probes > 1 and raise_if_overlapping_probes:
             check_probe_do_not_overlap(probegroup.probes)
 
         # handle not connected channels
@@ -145,36 +197,37 @@ class BaseRecordingSnippets(BaseExtractor):
             probe.device_channel_indices is not None for probe in probegroup.probes
         ), "Probe must have device_channel_indices"
 
-        # this is a vector with complex fileds (dataframe like) that handle all contact attr
+        # TODO: add get_slice for probegroup to handle not connected channels
         probe_as_numpy_array = probegroup.to_numpy(complete=True)
-
-        # keep only connected contact ( != -1)
-        keep = probe_as_numpy_array["device_channel_indices"] >= 0
+        device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
+        keep = device_channel_indices >= 0
         if np.any(~keep):
             warn("The given probes have unconnected contacts: they are removed")
-
+        device_channel_indices = device_channel_indices[keep]
         probe_as_numpy_array = probe_as_numpy_array[keep]
+        if len(device_channel_indices) > 0:
+            probegroup = probegroup.get_slice(device_channel_indices)
+            order = np.argsort(device_channel_indices)
+            device_channel_indices = device_channel_indices[order]
+            probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices)))
 
-        device_channel_indices = probe_as_numpy_array["device_channel_indices"]
-        order = np.argsort(device_channel_indices)
-        device_channel_indices = device_channel_indices[order]
+            # check TODO: Where did this came from?
+            number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
+            if number_of_device_channel_indices >= self.get_num_channels():
+                error_msg = (
+                    f"The given Probe either has 'device_channel_indices' that does not match channel count \n"
+                    f"{len(device_channel_indices)} vs {self.get_num_channels()} \n"
+                    f"or it's max index {number_of_device_channel_indices} is the same as the number of channels {self.get_num_channels()} \n"
+                    f"If using all channels remember that python is 0-indexed so max device_channel_index should be {self.get_num_channels() - 1} \n"
+                    f"device_channel_indices are the following: {device_channel_indices} \n"
+                    f"recording channels are the following: {self.get_channel_ids()} \n"
+                )
+                raise ValueError(error_msg)
+        else:
+            warn("No connected channel in the probe! The probe will be attached but no channel will be selected.")
+            probegroup = ProbeGroup()  # empty probegroup
 
-        # check TODO: Where did this came from?
-        number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
-        if number_of_device_channel_indices >= self.get_num_channels():
-            error_msg = (
-                f"The given Probe either has 'device_channel_indices' that does not match channel count \n"
-                f"{len(device_channel_indices)} vs {self.get_num_channels()} \n"
-                f"or it's max index {number_of_device_channel_indices} is the same as the number of channels {self.get_num_channels()} \n"
-                f"If using all channels remember that python is 0-indexed so max device_channel_index should be {self.get_num_channels() - 1} \n"
-                f"device_channel_indices are the following: {device_channel_indices} \n"
-                f"recording channels are the following: {self.get_channel_ids()} \n"
-            )
-            raise ValueError(error_msg)
-
-        new_channel_ids = self.get_channel_ids()[device_channel_indices]
-        probe_as_numpy_array = probe_as_numpy_array[order]
-        probe_as_numpy_array["device_channel_indices"] = np.arange(probe_as_numpy_array.size, dtype="int64")
+        new_channel_ids = self.channel_ids[device_channel_indices]
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -187,21 +240,9 @@ class BaseRecordingSnippets(BaseExtractor):
             else:
                 sub_recording = self.select_channels(new_channel_ids)
 
-        # create a vector that handle all contacts in property
-        sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
-
-        # planar_contour is saved in annotations
-        for probe_index, probe in enumerate(probegroup.probes):
-            contour = probe.probe_planar_contour
-            if contour is not None:
-                sub_recording.set_annotation(f"probe_{probe_index}_planar_contour", contour, overwrite=True)
-
-        # duplicate positions to "locations" property
-        ndim = probegroup.ndim
-        locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
-        for i, dim in enumerate(["x", "y", "z"][:ndim]):
-            locations[:, i] = probe_as_numpy_array[dim]
-        sub_recording.set_property("location", locations, ids=None)
+        # # create a vector that handle all contacts in property
+        # sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
+        sub_recording._probegroup = probegroup
 
         # handle groups
         has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
@@ -232,17 +273,11 @@ class BaseRecordingSnippets(BaseExtractor):
             groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
-        # add probe annotations to recording
-        probes_info = []
-        for probe in probegroup.probes:
-            probes_info.append(probe.annotations)
-        sub_recording.annotate(probes_info=probes_info)
-
         return sub_recording
 
     def get_probe(self):
         probes = self.get_probes()
-        assert len(probes) == 1, "there are several probe use .get_probes() or get_probegroup()"
+        assert len(probes) == 1, "There are several probe use .get_probes() or get_probegroup()"
         return probes[0]
 
     def get_probes(self):
@@ -250,11 +285,22 @@ class BaseRecordingSnippets(BaseExtractor):
         return probegroup.probes
 
     def get_probegroup(self):
+        if self._probegroup is not None:
+            return self._probegroup
+        else:  # Backward compatibility: if contact_vector is present we reconstruct the probe, otherwise we look for
+            probegroup = self._build_probegroup_from_properties()
+            if probegroup is None:
+                raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
+            self._probegroup = probegroup
+            return probegroup
+
+    def _build_probegroup_from_properties(self):
+        # location and create a dummy probe
         arr = self.get_property("contact_vector")
         if arr is None:
             positions = self.get_property("location")
             if positions is None:
-                raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
+                return None
             else:
                 warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
                 probe = self.create_dummy_probe_from_locations(positions)
@@ -273,7 +319,14 @@ class BaseRecordingSnippets(BaseExtractor):
                 contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
                 if contour is not None:
                     probe.set_planar_contour(contour)
+                self.delete_annotation(f"probe_{probe_index}_planar_contour")
+            # delete contact_vector as it is not needed anymore
+            self.delete_property("contact_vector")
         return probegroup
+
+    def _extra_metadata_copy(self, other):
+        if self._probegroup is not None:
+            other._probegroup = self._probegroup.copy()
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
@@ -284,9 +337,21 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def _extra_metadata_to_folder(self, folder):
         # save probe
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
+
+    def _extra_metadata_from_dict(self, dump_dict):
+        # load probe
+        if "probegroup" in dump_dict:
+            probegroup = dump_dict["probegroup"]
+            self.set_probegroup(probegroup, in_place=True)
+
+    def _extra_metadata_to_dict(self, dump_dict):
+        # save probe
+        if self.has_probe():
+            probegroup = self.get_probegroup()
+            dump_dict["probegroup"] = probegroup
 
     def create_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
         """
@@ -330,51 +395,55 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         locations : np.array
             Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
-        shape : str, default: default: "circle"
+        shape : str, default: "circle"
             Electrode shapes
         shape_params : dict, default: {"radius": 1}
             Shape parameters
         axes : "xy" | "yz" | "xz", default: "xy"
             If ndim is 3, indicates the axes that define the plane of the electrodes
         """
-        probe = self.create_dummy_probe_from_locations(locations, shape=shape, shape_params=shape_params, axes=axes)
+        probe = self.create_dummy_probe_from_locations(
+            np.array(locations), shape=shape, shape_params=shape_params, axes=axes
+        )
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
-        if self.get_property("contact_vector") is not None:
-            raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
-        self.set_property("location", locations, ids=channel_ids)
+        warnings.warn(
+            (
+                "set_channel_locations() is deprecated and will be removed in version 0.106.0. "
+                "If you want to set probe information, use `set_dummy_probe_from_locations()`."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.set_dummy_probe_from_locations(locations, axes="xy")
 
     def get_channel_locations(self, channel_ids=None, axes: str = "xy") -> np.ndarray:
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
-        contact_vector = self.get_property("contact_vector")
-        if contact_vector is not None:
-            # here we bypass the probe reconstruction so this works both for probe and probegroup
-            ndim = len(axes)
-            all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
-            for i, dim in enumerate(axes):
-                all_positions[:, i] = contact_vector[dim]
-            positions = all_positions[channel_indices]
-            return positions
-        else:
-            locations = self.get_property("location")
-            if locations is None:
-                raise Exception("There are no channel locations")
-            locations = np.asarray(locations)[channel_indices]
-            return select_axes(locations, axes)
+        if not self.has_probe():
+            raise ValueError("get_channel_locations(..) needs a probe to be attached to the recording")
+        probegroup = self.get_probegroup()
+        contact_positions = probegroup.get_global_contact_positions()
+        return select_axes(contact_positions, axes)[channel_indices]
 
-    def has_3d_locations(self) -> bool:
-        return self.get_property("location").shape[1] == 3
+    def is_probe_3d(self) -> bool:
+        if not self.has_probe():
+            raise ValueError("is_probe_3d() needs a probe to be attached to the recording")
+        probe = self.get_probegroup().probes[0]
+        return probe.ndim == 3
 
     def clear_channel_locations(self, channel_ids=None):
-        if channel_ids is None:
-            n = self.get_num_channel()
-        else:
-            n = len(channel_ids)
-        locations = np.zeros((n, 2)) * np.nan
-        self.set_property("location", locations, ids=channel_ids)
+        warnings.warn(
+            (
+                "clear_channel_locations() is deprecated and will be removed in version 0.106.0. "
+                "If you want to remove probe information, use `reset_probe()`."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.reset_probe()
 
     def set_channel_groups(self, groups, channel_ids=None):
         if "probes" in self._annotations:
@@ -429,7 +498,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecording
             The recording with 2D positions
         """
-        assert self.has_3d_locations, "The 'planarize' function needs a recording with 3d locations"
+        assert self.has_3d_probe(), "The 'planarize' function needs a recording with 3d locations"
         assert len(axes) == 2, "You need to specify 2 dimensions (e.g. 'xy', 'zy')"
 
         probe2d = self.get_probe().to_2d(axes=axes)

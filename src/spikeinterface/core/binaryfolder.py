@@ -3,6 +3,8 @@ import json
 
 import numpy as np
 
+from probeinterface import read_probeinterface
+
 from .binaryrecordingextractor import BinaryRecordingExtractor
 from .core_tools import define_function_from_class, make_paths_absolute
 

@@ -213,6 +213,14 @@ class BaseExtractor:
         return ind
 
     def annotate(self, **new_annotations) -> None:
+        """Adds annotations.
+
+        Parameters
+        ----------
+        **new_annotations : dict
+            Key-value pairs of annotations to add. If an annotation key already exists,
+            it will be overwritten.
+        """
         self._annotations.update(new_annotations)
 
     def set_annotation(self, annotation_key: str, value: Any, overwrite=False) -> None:
@@ -235,6 +243,24 @@ class BaseExtractor:
                 self._annotations[annotation_key] = value
             else:
                 raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
+
+    def delete_annotation(self, annotation_key: str) -> None:
+        """Deletes existing annotation.
+
+        Parameters
+        ----------
+        annotation_key : str
+            The annotation key to delete
+
+        Raises
+        ------
+        ValueError
+            If the annotation key does not exist
+        """
+        if annotation_key in self._annotations.keys():
+            del self._annotations[annotation_key]
+        else:
+            raise ValueError(f"{annotation_key} is not an annotation key")
 
     def get_preferred_mp_context(self):
         """
@@ -434,6 +460,15 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
+        self._extra_metadata_copy(other)
+
+    def _extra_metadata_copy(self, other: BaseExtractor):
+        """
+        This is a hook to copy extra metadata that is not in the annotations/properties dict.
+        It is used for instance to copy the probe in the FrameSliceRecording.
+        """
+        pass
+
     def to_dict(
         self,
         include_annotations: bool = False,
@@ -566,6 +601,8 @@ class BaseExtractor:
             if relative_to is not None:
                 folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
+
+        self._extra_metadata_to_dict(dump_dict)
 
         return dump_dict
 
@@ -852,6 +889,14 @@ class BaseExtractor:
         pass
 
     def _extra_metadata_to_folder(self, folder):
+        # This implemented in BaseRecording for probe
+        pass
+
+    def _extra_metadata_from_dict(self, dump_dict):
+        # This implemented in BaseRecording for probe
+        pass
+
+    def _extra_metadata_to_dict(self, dump_dict):
         # This implemented in BaseRecording for probe
         pass
 
@@ -1153,6 +1198,8 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
         extractor.set_property(k, v)
+
+    extractor._extra_metadata_from_dict(dic)
 
     return extractor
 

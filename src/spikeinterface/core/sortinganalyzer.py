@@ -365,7 +365,6 @@ class SortingAnalyzer:
                 )
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
-        check_probe_do_not_overlap(all_probes)
 
         if has_exceeding_spikes(sorting=sorting, recording=recording):
             warnings.warn(

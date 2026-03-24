@@ -21,7 +21,6 @@ class BaseRecording(BaseRecordingSnippets):
     _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
     _main_properties = [
         "group",
-        "location",
         "gain_to_uV",
         "offset_to_uV",
         "gain_to_physical_unit",
@@ -591,14 +590,15 @@ class BaseRecording(BaseRecordingSnippets):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
+            from .binaryfolder import BinaryFolderRecording
+            from .binaryrecordingextractor import BinaryRecordingExtractor
+
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
             t_starts = self._get_t_starts()
 
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
-
-            from .binaryrecordingextractor import BinaryRecordingExtractor
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
@@ -616,8 +616,9 @@ class BaseRecording(BaseRecordingSnippets):
                 offset_to_uV=self.get_channel_offsets(),
             )
             binary_rec.dump(folder / "binary.json", relative_to=folder)
-
-            from .binaryfolder import BinaryFolderRecording
+            if self.has_probe():
+                probegroup = self.get_probegroup()
+                write_probeinterface(folder / "probe.json", probegroup)
 
             cached = BinaryFolderRecording(folder_path=folder)
 
@@ -648,10 +649,7 @@ class BaseRecording(BaseRecordingSnippets):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
-
+        # TODO: write binary should save timestamps too
         for segment_index in range(self.get_num_segments()):
             if self.has_time_vector(segment_index):
                 # the use of get_times is preferred since timestamps are converted to array
@@ -676,7 +674,7 @@ class BaseRecording(BaseRecordingSnippets):
 
     def _extra_metadata_to_folder(self, folder):
         # save probe
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
 
