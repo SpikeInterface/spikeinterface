@@ -465,7 +465,6 @@ class BaseExtractor:
     def _extra_metadata_copy(self, other: BaseExtractor):
         """
         This is a hook to copy extra metadata that is not in the annotations/properties dict.
-        It is used for instance to copy the probe in the FrameSliceRecording.
         """
         pass
 
