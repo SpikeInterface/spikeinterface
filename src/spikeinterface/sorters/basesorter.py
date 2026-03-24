@@ -2,9 +2,6 @@
 base class for sorters implementation.
 """
 
-from __future__ import annotations
-
-
 import time
 import copy
 from pathlib import Path
@@ -20,7 +17,6 @@ from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
-
 
 default_job_kwargs_description = {
     "n_jobs": "Number of jobs (when saving to binary) - default global",

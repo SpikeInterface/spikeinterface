@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 # most important extractor are in spikeinterface.core
 from spikeinterface.core import (
     BinaryFolderRecording,
@@ -47,6 +44,7 @@ from .cellexplorersortingextractor import CellExplorerSortingExtractor, read_cel
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .mclustextractors import MClustSortingExtractor, read_mclust
+from .xclustextractors import XClustSortingExtractor, read_xclust
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclus
 from .yassextractors import YassSortingExtractor, read_yass
 from .combinatoextractors import CombinatoSortingExtractor, read_combinato
@@ -73,10 +71,8 @@ from .shybridextractors import (
 # snippers
 from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclus_snippets
 
-
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
-
 
 ###############################################################################################
 # the following code is necessary for controlling what the end user imports from spikeinterface.
@@ -136,6 +132,7 @@ _sorting_extractor_full_dict = {
     KlustaSortingExtractor: dict(wrapper_string="read_klusta", wrapper_class=read_klusta),
     HDSortSortingExtractor: dict(wrapper_string="read_hdsort", wrapper_class=read_hdsort),
     MClustSortingExtractor: dict(wrapper_string="read_mclust", wrapper_class=read_mclust),
+    XClustSortingExtractor: dict(wrapper_string="read_xclust", wrapper_class=read_xclust),
     WaveClusSortingExtractor: dict(wrapper_string="read_waveclus", wrapper_class=read_waveclus),
     YassSortingExtractor: dict(wrapper_string="read_yass", wrapper_class=read_yass),
     CombinatoSortingExtractor: dict(wrapper_string="read_combinato", wrapper_class=read_combinato),

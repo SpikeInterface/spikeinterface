@@ -2,9 +2,6 @@
 This gather some function usefull for some clusetring algos.
 """
 
-from __future__ import annotations
-
-
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
@@ -642,7 +639,7 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
                         similar_templates[1] += [unit_ids[i]]
 
                     if DEBUG:
-                        import pylab as plt
+                        import matplotlib.pyplot as plt
 
                         fig, axes = plt.subplots(1, 2)
                         from spikeinterface.widgets import plot_traces

@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 import warnings
 import importlib.util
 
+from typing import Literal
+
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -148,14 +148,16 @@ def get_numba_vector_to_list_of_spiketrain():
     return vector_to_list_of_spiketrain_numba
 
 
-# TODO later : implement other method like "maximum_rate", "by_percent", ...
+# stratified sampling (isi / amplitude / pca distance ? )
 def random_spikes_selection(
     sorting: BaseSorting,
-    num_samples: int | None = None,
-    method: str = "uniform",
+    num_samples: list[int] | None = None,
+    method: Literal["uniform", "all", "percentage", "maximum_rate"] = "uniform",
     max_spikes_per_unit: int = 500,
     margin_size: int | None = None,
     seed: int | None = None,
+    percentage: float | None = None,
+    maximum_rate: float | None = None,
 ):
     """
     This replaces `select_random_spikes_uniformly()`.
@@ -167,41 +169,57 @@ def random_spikes_selection(
     ----------
     sorting: BaseSorting
         The sorting object
-    num_samples: list of int
+    num_samples: list[int] | None, default: None
         The number of samples per segment.
         Can be retrieved from recording with
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-    method: "uniform"  | "all", default: "uniform"
-        The method to use. Only "uniform" is implemented for now
+    method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
+        Method to select spikes: "uniform" randomly up to max_spikes_per_unit, "percentage" selects a fraction of spikes, and "maximum_rate" limits selection by spike rate over time.
     max_spikes_per_unit: int, default: 500
-        The number of spikes per units
+        The maximum number of spikes per units
     margin_size: None | int, default: None
         A margin on each border of segments to avoid border spikes
     seed: None | int, default: None
         A seed for random generator
+    percentage: float | None, default: None
+        In case of `percentage` method. The proportion of spikes per units.
+    maximum_rate: float | None, default: None
+        In case of `maximum_rate` method. The cap rate per units.
 
     Returns
     -------
     random_spikes_indices: np.array
         Selected spike indices coresponding to the sorting spike vector.
     """
+    rng_methods = ("uniform", "percentage", "maximum_rate")
 
-    if method == "uniform":
+    if method == "all":
+        spikes = sorting.to_spike_vector()
+        random_spikes_indices = np.arange(spikes.size)
+
+    elif method in rng_methods:
+        from spikeinterface.widgets.utils import get_segment_durations
+
         rng = np.random.default_rng(seed=seed)
 
+        # since un concatenated
+        # spikes = [ [ (sample_index, unit_index, segment_index), (), ... ], [ (), ... ]]
         spikes = sorting.to_spike_vector(concatenated=False)
         cum_sizes = np.cumsum([0] + [s.size for s in spikes])
 
-        # this fast when numba
+        # this is fast when numba is installed
         spike_indices = spike_vector_to_indices(spikes, sorting.unit_ids, absolute_index=False)
 
         random_spikes_indices = []
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             all_unit_indices = []
             for segment_index in range(sorting.get_num_segments()):
-                # this is local index
+                # this is local segment index
                 inds_in_seg = spike_indices[segment_index][unit_id]
                 if margin_size is not None:
+                    if num_samples is None:
+                        raise ValueError("num_samples must be provided when margin_size is used")
+
                     local_spikes = spikes[segment_index][inds_in_seg]
                     mask = (local_spikes["sample_index"] >= margin_size) & (
                         local_spikes["sample_index"] < (num_samples[segment_index] - margin_size)
@@ -211,21 +229,135 @@ def random_spikes_selection(
                 inds_in_seg_abs = inds_in_seg + cum_sizes[segment_index]
                 all_unit_indices.append(inds_in_seg_abs)
             all_unit_indices = np.concatenate(all_unit_indices)
-            selected_unit_indices = rng.choice(
-                all_unit_indices, size=min(max_spikes_per_unit, all_unit_indices.size), replace=False, shuffle=False
-            )
+
+            if method == "uniform":
+                rng_size = min(max_spikes_per_unit, all_unit_indices.size)
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+
+            elif method == "percentage":
+                if percentage is None or not (0 < percentage <= 1):
+                    raise ValueError(f"percentage must be in the interval (0, 1]")
+
+                rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+
+            elif method == "maximum_rate":
+                if maximum_rate is None:
+                    raise ValueError(f"maximum_rate must be defined")
+
+                t_duration = np.sum(get_segment_durations(sorting))
+                rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
+                selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
+
             random_spikes_indices.append(selected_unit_indices)
 
         random_spikes_indices = np.concatenate(random_spikes_indices)
         random_spikes_indices = np.sort(random_spikes_indices)
 
-    elif method == "all":
-        spikes = sorting.to_spike_vector()
-        random_spikes_indices = np.arange(spikes.size)
     else:
-        raise ValueError(f"random_spikes_selection(): method must be 'all' or 'uniform'")
+        raise ValueError(f"random_spikes_selection(): method must be 'all' or any in {', '.join(rng_methods)}")
 
     return random_spikes_indices
+
+
+def select_sorting_periods_mask(sorting: BaseSorting, periods):
+    """
+    Returns a boolean mask for the spikes in the sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object.
+    periods : numpy.array of unit_period_dtype
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to restrict the sorting.
+
+    Returns
+    -------
+    numpy.array
+        A boolean mask of the spikes in the sorting object, with True for spikes within the specified periods.
+    """
+    spike_vector = sorting.to_spike_vector()
+    keep_mask = np.zeros(len(spike_vector), dtype=bool)
+    all_global_indices = sorting.get_spike_vector_to_indices()
+    for segment_index in range(sorting.get_num_segments()):
+        global_indices_segment = all_global_indices[segment_index]
+        # filter periods by segment
+        periods_in_segment = periods[periods["segment_index"] == segment_index]
+        for unit_index, unit_id in enumerate(sorting.unit_ids):
+            # filter by unit index
+            periods_for_unit = periods_in_segment[periods_in_segment["unit_index"] == unit_index]
+            global_indices = global_indices_segment[unit_id]
+            spiketrains = spike_vector[global_indices]["sample_index"]
+            if len(periods_for_unit) > 0:
+                for period in periods_for_unit:
+                    mask = (spiketrains >= period["start_sample_index"]) & (spiketrains < period["end_sample_index"])
+                    keep_mask[global_indices[mask]] = True
+    return keep_mask
+
+
+def cast_periods_to_unit_period_dtype(periods):
+    if not periods.dtype == unit_period_dtype:
+        if periods.ndim != 2 or periods.shape[1] != 4:
+            raise ValueError(
+                "If periods is not of dtype unit_period_dtype, it must be a 2D array with shape (num_periods, 4)"
+            )
+        warnings.warn(
+            "periods is not of dtype unit_period_dtype. Assuming fields are in order: "
+            "(segment_index, start_sample_index, end_sample_index, unit_index).",
+            UserWarning,
+        )
+        # convert to structured array
+        periods_converted = np.empty(periods.shape[0], dtype=unit_period_dtype)
+        periods_converted["segment_index"] = periods[:, 0]
+        periods_converted["start_sample_index"] = periods[:, 1]
+        periods_converted["end_sample_index"] = periods[:, 2]
+        periods_converted["unit_index"] = periods[:, 3]
+        periods = periods_converted
+    else:
+        required = set(np.dtype(unit_period_dtype).names)
+        if not required.issubset(periods.dtype.names):
+            raise ValueError(f"Period must have the following fields: {required}")
+    return periods
+
+
+def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
+    """
+    Returns a new sorting object, restricted to the given periods of dtype unit_period_dtype.
+
+    Parameters
+    ----------
+    periods : numpy.ndarray
+        Periods (segment_index, start_sample_index, end_sample_index, unit_index)
+        on which to restrict the sorting. Periods can be either a numpy array of unit_period_dtype
+        or an array with (num_periods, 4) shape. In the latter case, the fields are assumed to be
+        in the order: segment_index, start_sample_index, end_sample_index, unit_index.
+
+    Returns
+    -------
+    BaseSorting
+        A new sorting object with only samples between start_sample_index and end_sample_index
+        for the given segment_index.
+    """
+    from spikeinterface.core.numpyextractors import NumpySorting
+
+    if periods is not None:
+        if not isinstance(periods, np.ndarray):
+            raise ValueError("periods must be a numpy array")
+        periods = cast_periods_to_unit_period_dtype(periods)
+
+        spike_vector = sorting.to_spike_vector()
+        keep_mask = select_sorting_periods_mask(sorting, periods)
+        sliced_spike_vector = spike_vector[keep_mask]
+
+        # important: we keep the original unit ids so the unit_index field in spike vector is still valid
+        sorting = NumpySorting(
+            sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
+        )
+        sorting.copy_metadata(sorting)
+        return sorting
+    else:
+        return sorting
 
 
 ### MERGING ZONE ###
@@ -291,10 +423,9 @@ def apply_merges_to_sorting(
     all_unit_ids = list(all_unit_ids)
 
     num_seg = sorting.get_num_segments()
-    seg_lims = np.searchsorted(spikes["segment_index"], np.arange(0, num_seg + 2))
-    segment_slices = [(seg_lims[i], seg_lims[i + 1]) for i in range(num_seg)]
+    segment_slices = sorting._get_spike_vector_segment_slices()
 
-    # using this function vaoid to use the mask approach and simplify a lot the algo
+    # using this function avoids to use the mask approach and simplify a lot the algo
     spike_vector_list = [spikes[s0:s1] for s0, s1 in segment_slices]
     spike_indices = spike_vector_to_indices(spike_vector_list, sorting.unit_ids, absolute_index=True)
 
@@ -808,3 +939,60 @@ def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
         all_unit_ids.remove(split_unit)
         all_unit_ids.extend(split_new_units)
     return np.array(all_unit_ids, dtype=dtype)
+
+
+def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, keep_old_unit_ids=None):
+    """
+    Remap the "unit_index" field in a spike vector (or period vector) according to new unit ids.
+
+    This is useful for instance when you:
+      * select unit and recompute quickly the "unit_index" in the spike vector
+      * merging/spliting periods or spikes and update the "unit_index" in the vector
+
+
+    Parameters
+    ----------
+    vector : numpy.array
+        The spike vector with a "unit_index" field.
+    all_old_unit_ids : numpy.array
+        The array of all old unit ids.
+    all_new_unit_ids : list
+        The list of all new unit ids.
+    keep_old_unit_ids : list | None, default: None
+        The list of old unit ids to keep. If None, all old unit ids are kept.
+        This is useful when some units are merged or split during curation,
+        since we don't want to keep them in the remapping
+    return
+    """
+    all_old_unit_ids = np.asarray(all_old_unit_ids)
+    all_new_unit_ids = np.asarray(all_new_unit_ids)
+    assert (
+        all_old_unit_ids.size == np.unique(all_old_unit_ids).size
+    ), "remap_unit_indices_in_vector: all_old_unit_ids not unique"
+    assert (
+        all_new_unit_ids.size == np.unique(all_new_unit_ids).size
+    ), "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+
+    if keep_old_unit_ids is None:
+        keep_old_unit_ids = all_old_unit_ids
+
+    # this mask has shape all_old_unit_ids.shape
+    mask_keep_unit = np.isin(all_old_unit_ids, keep_old_unit_ids) & np.isin(all_old_unit_ids, all_new_unit_ids)
+
+    all_new_unit_ids = list(all_new_unit_ids)
+    mapping = np.zeros(all_old_unit_ids.size, dtype=int)
+    mapping[:] = -1
+    # keep = np.zeros(all_old_unit_ids.size, dtype=bool)
+    for old_unit_ind, old_unit_id in enumerate(all_old_unit_ids):
+        if not mask_keep_unit[old_unit_ind]:
+            continue
+        new_unit_index = all_new_unit_ids.index(old_unit_id)
+        mapping[old_unit_ind] = new_unit_index
+        # keep[old_unit_ind] = True
+
+    # this mask has shape vector.shape
+    keep_mask_vector = mask_keep_unit[vector["unit_index"]]
+    new_vector = vector[keep_mask_vector]
+    new_vector["unit_index"] = mapping[new_vector["unit_index"]]
+
+    return new_vector, keep_mask_vector

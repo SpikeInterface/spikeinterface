@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
@@ -12,7 +10,7 @@ from spikeinterface.widgets import (
 
 import numpy as np
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 
 class MatchingBenchmark(Benchmark):

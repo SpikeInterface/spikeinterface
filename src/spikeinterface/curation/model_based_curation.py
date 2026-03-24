@@ -3,11 +3,10 @@ from pathlib import Path
 import json
 import warnings
 import re
+from packaging.version import parse
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import (
-    try_to_get_metrics_from_analyzer,
-    _get_computed_metrics,
     _format_metric_dataframe,
 )
 from copy import deepcopy
@@ -30,8 +29,6 @@ class ModelBasedClassification:
         The sorting analyzer object containing the spike sorting data.
     pipeline : Pipeline
         The pipeline object representing the trained classification model.
-    required_metrics : Sequence[str]
-        The list of required metrics for classification, extracted from the pipeline.
 
     Methods
     -------
@@ -81,11 +78,12 @@ class ModelBasedClassification:
 
         # Get metrics DataFrame for classification
         if input_data is None:
-            input_data = _get_computed_metrics(self.sorting_analyzer)
+            input_data = self.sorting_analyzer.get_metrics_extension_data()
         else:
             if not isinstance(input_data, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
 
+        input_data = self.handle_backwards_compatibility_in_metrics(input_data, model_info=model_info)
         input_data = self._check_required_metrics_are_present(input_data)
 
         if model_info is not None:
@@ -119,16 +117,53 @@ class ModelBasedClassification:
         )
 
         # Set predictions and probability as sorting properties
-        self.sorting_analyzer.sorting.set_property("classifier_label", predictions)
-        self.sorting_analyzer.sorting.set_property("classifier_probability", probabilities)
+        self.sorting_analyzer.set_sorting_property("classifier_label", predictions)
+        self.sorting_analyzer.set_sorting_property("classifier_probability", probabilities)
 
         if export_to_phy:
             self._export_to_phy(classified_units)
 
         return classified_units
 
-    def _check_required_metrics_are_present(self, calculated_metrics):
+    def handle_backwards_compatibility_in_metrics(self, calculated_metrics, model_info):
+        """
+        Handles backwards compatibility in metric names for models trained with older versions of SpikeInterface.
+        In recent versions, some metric names have been changed for clarity. In addition, the sign of some metrics
+        has been inverted to maintain consistency.
 
+        Parameters
+        ----------
+        calculated_metrics : pd.DataFrame
+            The DataFrame containing the calculated metrics.
+        model_info : dict or None
+            Dictionary of model info containing provenance of the model.
+
+        Returns
+        -------
+        pd.DataFrame
+            The DataFrame with updated metric names for compatibility.
+        """
+        if model_info is None:
+            return calculated_metrics
+        si_version = model_info["requirements"].get("spikeinterface", None)
+        if si_version is not None and parse(si_version) < parse("0.103.2"):
+            # if the model was trained with SI version < 0.103.2, we need to rename some metrics
+            calculated_metrics = calculated_metrics.copy()
+            # peak_to_trough_duration was named peak_to_valley
+            if "peak_to_trough_duration" in calculated_metrics.columns:
+                calculated_metrics = calculated_metrics.rename(columns={"peak_to_trough_duration": "peak_to_valley"})
+            # peak_after_to_trough_ratio was named peak_trough_ratio and had inverted sign
+            if "peak_after_to_trough_ratio" in calculated_metrics.columns:
+                calculated_metrics = calculated_metrics.rename(
+                    columns={"peak_after_to_trough_ratio": "peak_trough_ratio"}
+                )
+                calculated_metrics["peak_trough_ratio"] = -1 * calculated_metrics["peak_trough_ratio"]
+            # trough_half_width was named half_width
+            if "trough_half_width" in calculated_metrics.columns:
+                calculated_metrics = calculated_metrics.rename(columns={"trough_half_width": "half_width"})
+        return calculated_metrics
+
+    def _check_required_metrics_are_present(self, calculated_metrics):
         # Check all the required metrics have been calculated
         required_metrics = set(self.required_metrics)
         if required_metrics.issubset(set(calculated_metrics)):
@@ -204,11 +239,11 @@ class ModelBasedClassification:
         classified_df.to_csv(f"{sorting_path}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
 
 
-def auto_label_units(
+def model_based_label_units(
     sorting_analyzer: SortingAnalyzer,
     model_folder=None,
-    model_name=None,
     repo_id=None,
+    model_name=None,
     label_conversion=None,
     trust_model=False,
     trusted=None,
@@ -227,11 +262,11 @@ def auto_label_units(
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    model_folder : str or Path, defualt: None
+    model_folder : str or Path, default: None
         The path to the folder containing the model
-    repo_id : str | Path, default: None
+    repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
-    model_name: str | Path, default: None
+    model_name: str, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     label_conversion : dic | None, default: None
         A dictionary for converting the predicted labels (which are integers) to custom labels. If None,
@@ -281,6 +316,19 @@ def auto_label_units(
     return classified_units
 
 
+def auto_label_units(*args, **kwargs):
+    """
+    Deprecated function. Please use `model_based_label_units` instead.
+    """
+    warnings.warn(
+        "`auto_label_units` is deprecated and will be removed in v0.105.0. "
+        "Please use `model_based_label_units` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return model_based_label_units(*args, **kwargs)
+
+
 def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model and model_info from a HuggingFaceHub repo or a local folder.
@@ -289,9 +337,9 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=Fal
     ----------
     model_folder : str or Path, defualt: None
         The path to the folder containing the model
-    repo_id : str | Path, default: None
+    repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'
-    model_name: str | Path, default: None
+    model_name: str, default: None
         Filename of model e.g. 'my_model.skops'. If None, uses first model found.
     trust_model : bool, default: False
         Whether to trust the model. If True, the `trusted` parameter that is passed to `skops.load` to load the model will be

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from packaging.version import parse
 from warnings import warn
 import numpy as np
@@ -41,6 +39,8 @@ class UnitWaveformsWidget(BaseWidget):
         displayed per waveform, (matplotlib backend)
     scale : float, default: 1
         Scale factor for the waveforms/templates (matplotlib backend)
+    abs_y_scale : None | float, default None
+        Absolut y_scale that override the auto y scale mechanism
     widen_narrow_scale : float, default: 1
         Scale factor for the x-axis of the waveforms/templates (matplotlib backend)
     axis_equal : bool, default: False
@@ -93,6 +93,7 @@ class UnitWaveformsWidget(BaseWidget):
         sparsity=None,
         ncols=5,
         scale=1,
+        abs_y_scale=None,
         widen_narrow_scale=1,
         lw_waveforms=1,
         lw_templates=2,
@@ -207,6 +208,7 @@ class UnitWaveformsWidget(BaseWidget):
             unit_colors=unit_colors,
             channel_locations=channel_locations,
             scale=scale,
+            abs_y_scale=abs_y_scale,
             widen_narrow_scale=widen_narrow_scale,
             templates=templates,
             templates_shading=templates_shading,
@@ -256,6 +258,8 @@ class UnitWaveformsWidget(BaseWidget):
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
             dp.templates, dp.channel_locations, dp.nbefore, dp.x_offset_units, dp.widen_narrow_scale
         )
+        if dp.abs_y_scale is not None:
+            y_scale = dp.abs_y_scale
 
         for i, unit_id in enumerate(dp.unit_ids):
             if dp.same_axis:

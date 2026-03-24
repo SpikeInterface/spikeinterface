@@ -43,35 +43,39 @@
 </tr>
 </table>
 
+
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
-
-
-> :rocket::rocket::rocket:
-> **New features!**: after months of development and testing, we are happy to announce that
-> the latest release (0.101.0) includes a major API improvement: the `SortingAnalyzer`!
-> To read more about why we did this, checkout the
-> [SpikeInterface Enhancement Proposal](https://github.com/SpikeInterface/spikeinterface/issues/2282).
-> Please follow this guide to transition from the old API to the new one:
-> [Updating from legacy](https://spikeinterface.readthedocs.io/en/0.101.0/tutorials/waveform_extractor_to_sorting_analyzer.html).
-
-
-SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
 
 Please [Star](https://github.com/SpikeInterface/spikeinterface/stargazers) the project to support us and [Watch](https://github.com/SpikeInterface/spikeinterface/subscription) to always stay up-to-date!
 
+SpikeInterface is a Python package designed to unify preexisting spike sorting technologies into a single code base. If you use SpikeInterface, you are also using code and ideas from many other projects. Our codebase would be tiny without the amazing algorithms and formats that we interface with. See them all, and how to cite them, on our [references page](https://spikeinterface.readthedocs.io/en/latest/references.html). In the past year, we have added support for the following tools:
+
+- Bombcell [Bombcell: automated curation and cell classification of spike-sorted electrophysiology data](https://doi.org/10.5281/zenodo.8172822>) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/auto_label_units.html#bombcell))
+- SLAy. [SLAy-ing oversplitting errors in high-density electrophysiology spike sorting](https://www.biorxiv.org/content/10.1101/2025.06.20.660590v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/modules/curation.html#auto-merging-units))
+- Lupin, Spykingcicus2 and Tridesclous2. [Opening the black box: a modular approach to spike sorting](https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
+- rtsort. [RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
+- MEDiCINe. [MEDiCINe: Motion Correction for Neural Electrophysiology Recordings](https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/handle_drift.html))
+- UnitRefine. [UnitRefine: A Community Toolbox for Automated Spike Sorting Curation](https://www.biorxiv.org/content/10.1101/2025.03.30.645770v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/tutorials_custom_index.html#automated-curation-tutorials))
+
+If you would like us to add another tool, or you would like to integrate your project with our package, please [open an issue](https://github.com/SpikeInterface/spikeinterface/issues).
 
 With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
 - pre-process extracellular recordings.
-- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
-- post-process sorted datasets.
+- run many popular, semi-automatic spike sorters (kilosort1-4, mountainsort4-5, spykingcircus,
+  tridesclous, ironclust, herdingspikes, yass, waveclus)
+- run sorters developed in house (lupin, spkykingcicus2, tridesclous2, simple) that compete with kilosort4
+- run theses polar sorters without installation using containers (Docker/Singularity).
+- post-process sorted datasets using th SortingAnalyzer
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
 - export a report and/or export to phy
-- offer a powerful Qt-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
+- curate your sorting with several strategies (ml-based, metrics based, manual, ...)
+- offer a powerful Qt-based or we-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui) for manual curation that replace phy.
 - have powerful sorting components to build your own sorter.
+- have a full motion/drift correction framework
 
 
 ## Documentation

@@ -1,17 +1,15 @@
 """Sorting components: peak detection."""
 
-from __future__ import annotations
 from typing import Tuple, List, Optional
 
 import numpy as np
 
-
+from spikeinterface.core.base import base_peak_dtype
 from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.core.node_pipeline import (
     PeakDetector,
     WaveformsNode,
     ExtractSparseWaveforms,
-    base_peak_dtype,
 )
 
 expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])

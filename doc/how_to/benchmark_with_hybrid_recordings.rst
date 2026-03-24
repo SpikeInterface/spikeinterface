@@ -170,7 +170,7 @@ rescaling, relocating, or further selections with the
 ``sgen.select_templates`` functions.
 
 In our case, let’s rescale the amplitudes between 50 and 150
-:math:`\mu`\ V and relocate them towards the bottom half of the probe,
+µV and relocate them towards the bottom half of the probe,
 where the activity looks interesting!
 
 .. code:: ipython3

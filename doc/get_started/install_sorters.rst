@@ -284,7 +284,7 @@ working not only at peak times but at all times, recovering more spikes close to
 
         pip install hdbscan
         pip install spikeinterface
-        pip install numba  (or conda install numba as recommended by conda authors)
+        pip install numba (or conda install numba as recommended by conda authors)
 
 
 Tridesclous2
@@ -294,11 +294,25 @@ This is an upgraded version of Tridesclous, natively written in SpikeInterface.
 
 
 * Python
-* Requires: HDBSCAN and Numba
+* Requires: Numba
 * Authors: Samuel Garcia
 * Installation::
 
-      pip install hdbscan
+      pip install spikeinterface
+      pip install numba
+
+
+Lupin
+^^^^^
+
+This is a representative spike sorting pipeline, natively written in SpikeInterface.
+
+
+* Python
+* Requires: Numba
+* Authors: Samuel Garcia & Pierre Yger
+* Installation::
+
       pip install spikeinterface
       pip install numba
 

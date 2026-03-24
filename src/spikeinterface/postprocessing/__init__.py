@@ -15,9 +15,12 @@ from .spike_amplitudes import compute_spike_amplitudes, ComputeSpikeAmplitudes
 from .correlograms import (
     ComputeACG3D,
     ComputeCorrelograms,
+    ComputeAutoCorrelograms,
     compute_acgs_3d,
     compute_correlograms,
+    compute_auto_correlograms,
     correlogram_for_one_segment,
+    auto_correlogram_for_one_segment,
 )
 
 from .isi import (
@@ -43,4 +46,9 @@ from .noise_level import compute_noise_levels, ComputeNoiseLevels
 from .template_metrics import (
     ComputeTemplateMetrics,
     compute_template_metrics,
+)
+
+from .valid_unit_periods import (
+    ComputeValidUnitPeriods,
+    compute_valid_unit_periods,
 )

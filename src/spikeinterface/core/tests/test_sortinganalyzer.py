@@ -17,8 +17,11 @@ from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     _sort_extensions_by_dependency,
 )
+from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
-import numpy as np
+# to test basespikevectorextension with node pipeline
+from spikeinterface.core.node_pipeline import SpikeRetriever
+from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
 
 
 def get_dataset():
@@ -592,6 +595,45 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 compute_dummy = DummyAnalyzerExtension.function_factory()
 
 
+class DummyPipelineAnalyzerExtension(BaseSpikeVectorExtension):
+    extension_name = "dummy_pipeline"
+    depend_on = ["templates"]
+    need_recording = True
+    use_nodepipeline = True
+    nodepipeline_variables = ["amp"]
+
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        param0 = params.get("param0", 5.5)
+        if param0 > 10:
+            return ["dummy"]
+        else:
+            return []
+
+    def _set_params(self, param0=5.5):
+        params = dict(param0=param0)
+        return params
+
+    def _get_pipeline_nodes(self):
+        from spikeinterface.core.template_tools import get_template_extremum_channel
+
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
+
+        extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
+        spike_retriever_node = SpikeRetriever(
+            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
+        )
+        spike_amplitudes_node = AmplitudeExtractionNode(
+            recording,
+            parents=[spike_retriever_node],
+            return_output=True,
+            param0=self.params["param0"],
+        )
+        nodes = [spike_retriever_node, spike_amplitudes_node]
+        return nodes
+
+
 class DummyAnalyzerExtension2(AnalyzerExtension):
     extension_name = "dummy"
 
@@ -640,6 +682,38 @@ def test_extensions_sorting():
     assert list(sorted_extensions_4.keys()) == list(extensions_qm_correct.keys())
 
 
+def test_runtime_dependencies(dataset):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+
+    # param0 <=10 : no dependency
+    deps = DummyPipelineAnalyzerExtension.get_required_dependencies(param0=5)
+    assert deps == []
+
+    # param0 >10 : depend on dummy
+    deps = DummyPipelineAnalyzerExtension.get_required_dependencies(param0=15)
+    assert deps == ["dummy"]
+
+    register_result_extension(DummyPipelineAnalyzerExtension)
+    register_result_extension(DummyAnalyzerExtension)
+
+    sorting_analyzer.compute(["random_spikes", "templates"])
+    # no dependency
+    sorting_analyzer.compute("dummy_pipeline", param0=5)
+
+    # raise if dependency not computed
+    with pytest.raises(AssertionError):
+        sorting_analyzer.compute("dummy_pipeline", param0=15)
+
+    # run fine if dependency computed
+    sorting_analyzer.compute(["dummy", "dummy_pipeline"], extension_params=dict(dummy_pipeline=dict(param0=11)))
+
+    # check deletion dependency: since now dummy_pipeline depends on dummy,
+    # recomputing dummy also deletes dummy_pipeline
+    sorting_analyzer.compute("dummy")
+    assert not sorting_analyzer.has_extension("dummy_pipeline")
+
+
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()
@@ -648,5 +722,5 @@ if __name__ == "__main__":
     test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
-    test_SortingAnalyzer_merge_all_extensions()
     test_extension_params()
+    test_runtime_dependencies()

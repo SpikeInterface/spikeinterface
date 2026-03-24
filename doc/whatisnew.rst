@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.104.0.rst
   releases/0.103.2.rst
   releases/0.103.1.rst
   releases/0.103.0.rst
@@ -51,6 +52,28 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+Version 0.104.0
+===============
+
+* Added support for ``Bombcell`` [Fabre]_, for unit curation, including new and updated template metrics (#4306)
+* Added ``LUPIN`` [Garcia2024]_ as an internal sorter (#4192)
+* Added support for ``SLAy`` [Koukuntla]_, for automated unit merges (#4190)
+* Added ``valid_unit_periods`` postprocessing extension, based on NeuroPyxles [npyx]_ (#4299, #4302)
+* Added ``AutoCorrelograms`` postprocessing extension (#4307)
+* Added support for double-sided probes (#4272)
+* Added ``SequentialCuration``, allowing for chains of curations to be applied to analyzers (#4298)
+* Added support for FigPack, to eventually superseed SortingView (#4364)
+* Added ``detect_saturation_periods`` and ``detect_artifact_periods_by_envelope`` preprocessing steps (#3715, #4297)
+* Major refactor and debugging of the ``Metrics`` postprocessing module (#4183, #4362, #4355, #4353, #4342, #4292) (see: :doc:`/modules/metrics`)
+* Significant speedups in ``Metrics`` (#4308, #4363) and ``SortingComponents`` (#4402, #4341) modules, and in correlograms (#4305) and template similarity (#4343) computations.
+
+* API and breaking changes:
+
+    * Specific metrics functions now imported from different sub module (see: :doc:`/modules/metrics/`)
+    * ``snr`` quality metric calculation now uses median rather than mean (see: :doc:`/modules/metrics/quality_metrics`)
+    * Metric name "peak_to_valley" has been renamed to "peak_to_trough_duration" for clarity. This name change will be applied automatically on load of older analzyers. (see: :doc:`/modules/metrics/template_metrics`)
+    * The function to do UnitRefine curation has been renamed from ``auto_label_units`` to ``unitrefine_label_units`` (see :py:func:`~spikeinterface.curation.unitrefine_label_units`)
+    * Remove support for Python 3.9
 
 Version 0.103.2
 ===============

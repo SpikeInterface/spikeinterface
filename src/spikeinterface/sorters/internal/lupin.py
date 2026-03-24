@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .si_based import ComponentsBasedSorter
 
 from copy import deepcopy
@@ -15,7 +13,7 @@ from spikeinterface.core import (
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
 
@@ -35,28 +33,32 @@ class LupinSorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
+        "preprocessing_dict": None,
         "apply_motion_correction": False,
         "motion_correction_preset": "dredge_fast",
         "clustering_ms_before": 0.3,
         "clustering_ms_after": 1.3,
         "whitening_radius_um": 100.0,
         "detection_radius_um": 50.0,
-        "features_radius_um": 75.0,
+        "features_radius_um": 120.0,
+        "split_radius_um": 60.0,
         "template_radius_um": 100.0,
+        "merge_similarity_lag_ms": 0.5,
         "freq_min": 150.0,
         "freq_max": 7000.0,
         "cache_preprocessing_mode": "auto",
         "peak_sign": "neg",
-        "detect_threshold": 5,
+        "detect_threshold": 5.0,
         "n_peaks_per_channel": 5000,
         "n_svd_components_per_channel": 5,
         "n_pca_features": 4,
         "clustering_recursive_depth": 3,
         "ms_before": 1.0,
         "ms_after": 2.5,
-        "template_sparsify_threshold": 1.5,
+        "template_sparsify_threshold": 1.0,
         "template_min_snr_ptp": 4.0,
         "template_max_jitter_ms": 0.2,
+        "template_matching_engine": "circus-omp",
         "min_firing_rate": 0.1,
         "gather_mode": "memory",
         "job_kwargs": {},
@@ -67,11 +69,17 @@ class LupinSorter(ComponentsBasedSorter):
 
     _params_description = {
         "apply_preprocessing": "Apply internal preprocessing or not",
-        "apply_motion_correction": "Apply motion correction or not",
+        "preprocessing_dict": "Inject customized preprocessing chain via a dict, instead of the internal one",
+        "apply_motion_correction": "Apply motion correction or not (only used when apply_preprocessing=True)",
         "motion_correction_preset": "Motion correction preset",
         "clustering_ms_before": "Milliseconds before the spike peak for clustering",
         "clustering_ms_after": "Milliseconds after the spike peak  for clustering",
         "radius_um": "Radius for sparsity",
+        "whitening_radius_um": "Radius for whitening",
+        "detection_radius_um": "Radius for peak detection",
+        "features_radius_um": "Radius for sparsity in SVD features",
+        "split_radius_um": "Radius for the local split clustering",
+        "template_radius_um": "Radius for the sparsity of template before template matching",
         "freq_min": "Low frequency",
         "freq_max": "High frequency",
         "peak_sign": "Sign of peaks neg/pos/both",
@@ -97,7 +105,7 @@ class LupinSorter(ComponentsBasedSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        return "2025.12"
+        return "2026.01"
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -107,10 +115,10 @@ class LupinSorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering.main import find_clusters_from_peaks, clustering_methods
-        from spikeinterface.sortingcomponents.tools import remove_empty_templates
         from spikeinterface.preprocessing import correct_motion
         from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
         from spikeinterface.sortingcomponents.tools import clean_templates, compute_sparsity_from_peaks_and_label
+        from spikeinterface.preprocessing import apply_preprocessing_pipeline
 
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -125,45 +133,81 @@ class LupinSorter(ComponentsBasedSorter):
 
         apply_cmr = num_chans >= 32
 
+        if verbose:
+            version = cls.get_sorter_version()
+            lupin_ascii_art = f"""
+                            .::----::..
+                 ..:-+#%*+#%@@@@@@@+..:+#+.
+                .+@%%@@@@@@@@@@@@@@#:  .=@=
+                -@@@@@@@@@@@@@@@@@@%-. .=@*
+                .@@@@@@@@@@@@@@@@@@@*. .-%#
+                 %@@@@@@@@@@@@@@@@@@*.  :#%
+                 =%%@@@@@@@@@@@@@@%%+:  .+@.
+                 -%#@@@@@@@@@@@@@@%*==  .-@.
+                 :#%@@@@@@@@@@@@@@%#+#  .=@.
+                 .+%@@@@@@@@@@@@@@@%#@. .+@.
+                 .+*#@@@@@@@@@@@@@@@%@. .+@:
+                 .=%+@@@@@@@@@@@@@@@@*.  =%-.
+                  :#%##@@@@@@@@@@@@%%-.  :%+.
+               ..:=**%@@@@@@@@@@@@@@@:.  .%%......
+             .+#@%%%@**@%@@@@@@@@@@@*....=%@%@@@@@%=..
+            .*@@@@@@@@@@@=#@@@@@@@@@@*=:.:.#@@@@@@%%-.
+           .-%%@@@@@@@@@@@@@#+%@+-::-+=:=::+@@@@@@##-.
+           .:%@@@@@@@@@@@@@@@@@%+%##*%%%**%@@@@@@##+.
+            .+@@@@@@@@@@@@@@@@#***++***@@@@@@@@%%%=.
+             .:*@@@@@@@@%=-.....   ....:-*%%%%%+-.
+                 ..:-:..
+                        LUPIN version {version}
+            """
+            print(lupin_ascii_art)
+
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
+
                 rec_for_motion = recording_raw
-                if params["apply_preprocessing"]:
+                if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(
                         rec_for_motion, freq_min=300.0, freq_max=6000.0, ftype="bessel", dtype="float32"
                     )
                     if apply_cmr:
                         rec_for_motion = common_reference(rec_for_motion)
-                    if verbose:
-                        print("Start correct_motion()")
-                    _, motion_info = correct_motion(
-                        rec_for_motion,
-                        folder=sorter_output_folder / "motion",
-                        output_motion_info=True,
-                        preset=params["motion_correction_preset"],
-                    )
-                    if verbose:
-                        print("Done correct_motion()")
+                else:
+                    rec_for_motion = apply_preprocessing_pipeline(rec_for_motion, params["preprocessing_dict"])
 
-            recording = bandpass_filter(
-                recording_raw,
-                freq_min=params["freq_min"],
-                freq_max=params["freq_max"],
-                ftype="bessel",
-                filter_order=2,
-                margin_ms=20.0,
-                dtype="float32",
-            )
+                if verbose:
+                    print("Start correct_motion()")
+                _, motion_info = correct_motion(
+                    rec_for_motion,
+                    folder=sorter_output_folder / "motion",
+                    output_motion_info=True,
+                    preset=params["motion_correction_preset"],
+                )
+                if verbose:
+                    print("Done correct_motion()")
 
-            if apply_cmr:
-                recording = common_reference(recording)
+            if params["preprocessing_dict"] is None:
+                recording = bandpass_filter(
+                    recording_raw,
+                    freq_min=params["freq_min"],
+                    freq_max=params["freq_max"],
+                    ftype="bessel",
+                    filter_order=2,
+                    dtype="float32",
+                )
+
+                if apply_cmr:
+                    recording = common_reference(recording)
+            else:
+                recording = apply_preprocessing_pipeline(recording_raw, params["preprocessing_dict"])
+                recording = recording.astype("float32")
 
             recording = whiten(
                 recording,
                 dtype="float32",
                 mode="local",
                 radius_um=params["whitening_radius_um"],
+                seed=seed,
             )
 
             if params["apply_motion_correction"]:
@@ -182,6 +226,7 @@ class LupinSorter(ComponentsBasedSorter):
 
             # Cache in mem or folder
             cache_folder = sorter_output_folder / "cache_preprocessing"
+            recording_for_analyzer = recording
             recording, cache_info = cache_preprocessing(
                 recording,
                 mode=params["cache_preprocessing_mode"],
@@ -189,11 +234,14 @@ class LupinSorter(ComponentsBasedSorter):
                 job_kwargs=job_kwargs,
             )
 
-            noise_levels = get_noise_levels(recording, return_in_uV=False)
         else:
-            recording = recording_raw
-            noise_levels = get_noise_levels(recording, return_in_uV=False)
+            recording = recording_raw.astype("float32")
+            recording_for_analyzer = recording
             cache_info = None
+
+        noise_levels = get_noise_levels(
+            recording, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs
+        )
 
         # detection
         ms_before = params["ms_before"]
@@ -228,20 +276,26 @@ class LupinSorter(ComponentsBasedSorter):
         if verbose:
             print(f"select_peaks(): {len(peaks)} peaks kept for clustering")
 
+        num_shifts_merging = int(sampling_frequency * params["merge_similarity_lag_ms"] / 1000.0)
+
         # Clustering
         clustering_kwargs = deepcopy(clustering_methods["iterative-isosplit"]._default_params)
         clustering_kwargs["peaks_svd"]["ms_before"] = params["clustering_ms_before"]
         clustering_kwargs["peaks_svd"]["ms_after"] = params["clustering_ms_after"]
         clustering_kwargs["peaks_svd"]["radius_um"] = params["features_radius_um"]
         clustering_kwargs["peaks_svd"]["n_components"] = params["n_svd_components_per_channel"]
+        clustering_kwargs["split"]["split_radius_um"] = params["split_radius_um"]
         clustering_kwargs["split"]["recursive_depth"] = params["clustering_recursive_depth"]
         clustering_kwargs["split"]["method_kwargs"]["n_pca_features"] = params["n_pca_features"]
         clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
         clustering_kwargs["clean_templates"]["min_snr"] = params["template_min_snr_ptp"]
         clustering_kwargs["clean_templates"]["max_jitter_ms"] = params["template_max_jitter_ms"]
+        clustering_kwargs["merge_from_templates"]["use_lags"] = True
+        clustering_kwargs["merge_from_templates"]["num_shifts"] = num_shifts_merging
         clustering_kwargs["noise_levels"] = noise_levels
         clustering_kwargs["clean_low_firing"]["min_firing_rate"] = params["min_firing_rate"]
         clustering_kwargs["clean_low_firing"]["subsampling_factor"] = all_peaks.size / peaks.size
+        clustering_kwargs["seed"] = seed
 
         if params["debug"]:
             clustering_kwargs["debug_folder"] = sorter_output_folder
@@ -253,6 +307,10 @@ class LupinSorter(ComponentsBasedSorter):
             extra_outputs=True,
             job_kwargs=job_kwargs,
         )
+
+        if more_outs["time_shifts"] is not None:
+            time_shifts = more_outs["time_shifts"]
+            peaks["sample_index"] += time_shifts
 
         mask = clustering_label >= 0
         kept_peaks = peaks[mask]
@@ -316,7 +374,7 @@ class LupinSorter(ComponentsBasedSorter):
         spikes = find_spikes_from_templates(
             recording,
             templates,
-            method="wobble",
+            method=params["template_matching_engine"],
             method_kwargs={},
             pipeline_kwargs=pipeline_kwargs,
             job_kwargs=job_kwargs,
@@ -338,7 +396,9 @@ class LupinSorter(ComponentsBasedSorter):
                 recording,
                 sorting,
                 templates,
-                similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": 0.1},
+                amplitude_scalings=spikes["amplitude"],
+                noise_levels=noise_levels,
+                similarity_kwargs={"method": "l1", "support": "union", "max_lag_ms": params["merge_similarity_lag_ms"]},
                 sparsity_overlap=0.5,
                 censor_ms=3.0,
                 max_distance_um=50,
@@ -357,6 +417,7 @@ class LupinSorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / "spikes.npy", spikes)
             templates.to_zarr(sorter_output_folder / "templates.zarr")
             if analyzer_final is not None:
+                analyzer_final._recording = recording_for_analyzer
                 analyzer_final.save_as(format="binary_folder", folder=sorter_output_folder / "analyzer")
 
         sorting = sorting.save(folder=sorter_output_folder / "sorting")

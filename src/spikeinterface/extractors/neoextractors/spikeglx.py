@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import warnings
 
@@ -96,15 +94,8 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_probe(probe, in_place=True)
 
             # get inter-sample shifts based on the probe information and mux channels
-            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe, stream_name=self.stream_name)
+            sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
             if sample_shifts is not None:
-                num_readout_channels = probe.annotations.get("num_readout_channels")
-                if self.get_num_channels() != num_readout_channels:
-                    # need slice because not all channels are saved
-                    chans = probeinterface.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
-                    # lets clip to num_readout_channels because this contains also the synchro channel
-                    chans = chans[chans < num_readout_channels]
-                    sample_shifts = sample_shifts[chans]
                 self.set_property("inter_sample_shift", sample_shifts)
         else:
             warning_message = (

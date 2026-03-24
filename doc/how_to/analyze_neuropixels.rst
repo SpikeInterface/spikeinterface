@@ -516,7 +516,7 @@ pipeline, in SpikeInterface this is dead-simple: one function.
 -  most of sorters are wrapped from external tools (kilosort,
    kisolort2.5, spykingcircus, montainsort4 …) that often also need
    other requirements (e.g., MATLAB, CUDA)
--  some sorters are internally developed (spyekingcircus2)
+-  some sorters are internally developed (spykingcircus2, tridesclous2, lupin)
 -  external sorter can be run inside a container (docker, singularity)
    WITHOUT pre-installation
 

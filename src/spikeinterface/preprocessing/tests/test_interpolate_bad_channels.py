@@ -50,7 +50,7 @@ def test_detect_and_interpolate_bad_channel():
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") or ON_GITHUB,
+    importlib.util.find_spec("ibldsp") is None,
     reason="Only local. Requires ibl-neuropixel install",
 )
 def test_compare_real_data_with_ibl():
@@ -66,7 +66,7 @@ def test_compare_real_data_with_ibl():
     """
     # Download and load data
     import spikeglx
-    import neurodsp.voltage as voltage
+    import ibldsp.voltage as voltage
 
     local_path = si.download_dataset(remote_path="spikeglx/Noise4Sam_g0")
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
@@ -107,7 +107,7 @@ def test_compare_real_data_with_ibl():
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("neurodsp") is not None or importlib.util.find_spec("spikeglx") is not None,
+    importlib.util.find_spec("ibldsp") is None,
     reason="Requires ibl-neuropixel install",
 )
 @pytest.mark.parametrize("num_channels", [32, 64])
@@ -119,7 +119,7 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     Perform an extended test across a range of function inputs to check
     IBL and SI interpolation results match.
     """
-    import neurodsp.voltage as voltage
+    import ibldsp.voltage as voltage
 
     recording = generate_recording(num_channels=num_channels, durations=[1])
 
@@ -130,7 +130,7 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
         recording._properties["contact_vector"][idx][1] = x[idx]
 
     # generate random bad channel locations
-    bad_channel_indexes = rng.choice(num_channels, rng.randint(1, int(num_channels / 5)), replace=False)
+    bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
     bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
     # Run SI and IBL interpolation and check against eachother

@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 import numpy as np
 from copy import deepcopy
 import csv
@@ -12,24 +11,14 @@ from spikeinterface.core import (
     synthesize_random_firings,
 )
 
-from spikeinterface.metrics.quality.utils import create_ground_truth_pc_distributions
+from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, create_regular_periods
 
-# from spikeinterface.metrics.quality_metric_list import (
-#     _misc_metric_name_to_func,
-# )
-
-from spikeinterface.metrics.quality import (
-    get_quality_metric_list,
-    get_quality_pca_metric_list,
-    compute_quality_metrics,
-)
+from spikeinterface.metrics.quality import get_quality_metric_list, compute_quality_metrics, ComputeQualityMetrics
 from spikeinterface.metrics.quality.misc_metrics import (
     misc_metrics_list,
     compute_amplitude_cutoffs,
     compute_presence_ratios,
     compute_isi_violations,
-    # compute_firing_rates,
-    # compute_num_spikes,
     compute_snrs,
     compute_refrac_period_violations,
     compute_sliding_rp_violations,
@@ -41,10 +30,10 @@ from spikeinterface.metrics.quality.misc_metrics import (
     compute_sd_ratio,
     _noise_cutoff,
     _get_synchrony_counts,
+    amplitude_cutoff,
 )
 
 from spikeinterface.metrics.quality.pca_metrics import (
-    pca_metrics_list,
     mahalanobis_metrics,
     d_prime_metric,
     nearest_neighbors_metrics,
@@ -53,255 +42,10 @@ from spikeinterface.metrics.quality.pca_metrics import (
 )
 
 
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype, unit_period_dtype
 
 
-job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
-
-
-def test_noise_cutoff():
-    """
-    Generate two artifical gaussian, one truncated and one not. Check the metrics are higher for the truncated one.
-    """
-    np.random.seed(1)
-    amps = np.random.normal(0, 1, 1000)
-    amps_trunc = amps[amps > -1]
-
-    cutoff1, ratio1 = _noise_cutoff(amps=amps)
-    cutoff2, ratio2 = _noise_cutoff(amps=amps_trunc)
-
-    assert cutoff1 <= cutoff2
-    assert ratio1 <= ratio2
-
-
-def test_compute_new_quality_metrics(small_sorting_analyzer):
-    """
-    Computes quality metrics then computes a subset of quality metrics, and checks
-    that the old quality metrics are not deleted.
-    """
-
-    qm_params = {
-        "presence_ratio": {"bin_duration_s": 0.1},
-        "amplitude_cutoff": {"num_histogram_bins": 3},
-        "firing_range": {"bin_size_s": 1},
-    }
-
-    small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
-    qm_extension = small_sorting_analyzer.get_extension("quality_metrics")
-    calculated_metrics = list(qm_extension.get_data().keys())
-
-    assert calculated_metrics == ["snr"]
-
-    small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": list(qm_params.keys()), "metric_params": qm_params}}
-    )
-    small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
-
-    quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
-
-    # Check old metrics are not deleted and the new one is added to the data and metadata
-    assert set(list(quality_metric_extension.get_data().keys())) == set(
-        [
-            "amplitude_cutoff",
-            "firing_range",
-            "presence_ratio",
-            "snr",
-        ]
-    )
-    assert set(list(quality_metric_extension.params.get("metric_names"))) == set(
-        [
-            "amplitude_cutoff",
-            "firing_range",
-            "presence_ratio",
-            "snr",
-        ]
-    )
-
-    # check that, when parameters are changed, the data and metadata are updated
-    old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
-    small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
-    )
-    new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
-    new_snr_data = new_quality_metric_extension.get_data()["snr"].values
-
-    assert np.all(old_snr_data != new_snr_data)
-    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
-
-
-def test_metric_names_in_same_order(small_sorting_analyzer):
-    """
-    Computes sepecified quality metrics and checks order is propagated.
-    """
-    specified_metric_names = ["firing_range", "snr", "amplitude_cutoff"]
-    small_sorting_analyzer.compute("quality_metrics", metric_names=specified_metric_names)
-    qm_keys = small_sorting_analyzer.get_extension("quality_metrics").get_data().keys()
-    for i in range(3):
-        assert specified_metric_names[i] == qm_keys[i]
-
-
-def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
-    """
-    Computes quality metrics in binary folder format. Then computes subsets of quality
-    metrics and checks if they are saved correctly.
-    """
-
-    # can't use _misc_metric_name_to_func as some functions compute several qms
-    # e.g. isi_violation and synchrony
-    quality_metrics = [
-        "num_spikes",
-        "firing_rate",
-        "presence_ratio",
-        "snr",
-        "isi_violations_ratio",
-        "isi_violations_count",
-        "rp_contamination",
-        "rp_violations",
-        "sliding_rp_violation",
-        "amplitude_cutoff",
-        "amplitude_median",
-        "amplitude_cv_median",
-        "amplitude_cv_range",
-        "sync_spike_2",
-        "sync_spike_4",
-        "sync_spike_8",
-        "firing_range",
-        "drift_ptp",
-        "drift_std",
-        "drift_mad",
-        "sd_ratio",
-        "isolation_distance",
-        "l_ratio",
-        "d_prime",
-        "silhouette",
-        "nn_hit_rate",
-        "nn_miss_rate",
-    ]
-
-    small_sorting_analyzer.compute("quality_metrics")
-
-    cache_folder = create_cache_folder
-    output_folder = cache_folder / "sorting_analyzer"
-
-    folder_analyzer = small_sorting_analyzer.save_as(format="binary_folder", folder=output_folder)
-    quality_metrics_filename = output_folder / "extensions" / "quality_metrics" / "metrics.csv"
-
-    with open(quality_metrics_filename) as metrics_file:
-        saved_metrics = csv.reader(metrics_file)
-        metric_names = next(saved_metrics)
-
-    for metric_name in quality_metrics:
-        assert metric_name in metric_names
-
-    folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=False)
-
-    with open(quality_metrics_filename) as metrics_file:
-        saved_metrics = csv.reader(metrics_file)
-        metric_names = next(saved_metrics)
-
-    for metric_name in quality_metrics:
-        assert metric_name in metric_names
-
-    folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=True)
-
-    with open(quality_metrics_filename) as metrics_file:
-        saved_metrics = csv.reader(metrics_file)
-        metric_names = next(saved_metrics)
-
-    for metric_name in quality_metrics:
-        if metric_name == "snr":
-            assert metric_name in metric_names
-        else:
-            assert metric_name not in metric_names
-
-
-def test_unit_structure_in_output(small_sorting_analyzer):
-
-    qm_params = {
-        "presence_ratio": {"bin_duration_s": 0.1},
-        "amplitude_cutoff": {"num_histogram_bins": 3},
-        "amplitude_cv": {"average_num_spikes_per_bin": 7, "min_num_bins": 3},
-        "firing_range": {"bin_size_s": 1},
-        "isi_violation": {"isi_threshold_ms": 10},
-        "drift": {"interval_s": 1, "min_spikes_per_interval": 5},
-        "sliding_rp_violation": {"max_ref_period_ms": 50, "bin_size_ms": 0.15},
-        "rp_violation": {"refractory_period_ms": 10.0, "censored_period_ms": 0.0},
-    }
-
-    for metric in misc_metrics_list:
-        metric_name = metric.metric_name
-        metric_fun = metric.metric_function
-        try:
-            qm_param = qm_params[metric_name]
-        except:
-            qm_param = {}
-
-        result_all = metric_fun(sorting_analyzer=small_sorting_analyzer, **qm_param)
-        result_sub = metric_fun(sorting_analyzer=small_sorting_analyzer, unit_ids=["#4", "#9"], **qm_param)
-
-        if isinstance(result_all, dict):
-            assert list(result_all.keys()) == ["#3", "#9", "#4"]
-            assert list(result_sub.keys()) == ["#4", "#9"]
-            assert result_sub["#9"] == result_all["#9"]
-            assert result_sub["#4"] == result_all["#4"]
-
-        else:
-            for result_ind, result in enumerate(result_sub):
-
-                assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"]
-                assert result_sub[result_ind].keys() == set(["#4", "#9"])
-
-                assert result_sub[result_ind]["#9"] == result_all[result_ind]["#9"]
-                assert result_sub[result_ind]["#4"] == result_all[result_ind]["#4"]
-
-
-def test_unit_id_order_independence(small_sorting_analyzer):
-    """
-    Takes two almost-identical sorting_analyzers, whose unit_ids are in different orders and have different labels,
-    and checks that their calculated quality metrics are independent of the ordering and labelling.
-    """
-
-    recording = small_sorting_analyzer.recording
-    sorting = small_sorting_analyzer.sorting.select_units(["#4", "#9", "#3"], [1, 7, 2])
-
-    small_sorting_analyzer_2 = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
-
-    extensions_to_compute = {
-        "random_spikes": {"seed": 1205},
-        "noise_levels": {"seed": 1205},
-        "waveforms": {},
-        "templates": {},
-        "spike_amplitudes": {},
-        "spike_locations": {},
-        "principal_components": {},
-    }
-
-    small_sorting_analyzer_2.compute(extensions_to_compute)
-
-    # need special params to get non-nan results on a short recording
-    qm_params = {
-        "presence_ratio": {"bin_duration_s": 0.1},
-        "amplitude_cutoff": {"num_histogram_bins": 3},
-        "amplitude_cv": {"average_num_spikes_per_bin": 7, "min_num_bins": 3},
-        "firing_range": {"bin_size_s": 1},
-        "isi_violation": {"isi_threshold_ms": 10},
-        "drift": {"interval_s": 1, "min_spikes_per_interval": 5},
-        "sliding_rp_violation": {"max_ref_period_ms": 50, "bin_size_ms": 0.15},
-    }
-
-    quality_metrics_1 = compute_quality_metrics(
-        small_sorting_analyzer, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
-    )
-    quality_metrics_2 = compute_quality_metrics(
-        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
-    )
-
-    for metric, metric_2_data in quality_metrics_2.items():
-        assert quality_metrics_1[metric]["#3"] == metric_2_data[2]
-        assert quality_metrics_1[metric]["#9"] == metric_2_data[7]
-        assert quality_metrics_1[metric]["#4"] == metric_2_data[1]
-
-
+### HELPER FUNCTIONS AND FIXTURES ###
 def _sorting_violation():
     max_time = 100.0
     sampling_frequency = 30000
@@ -332,7 +76,6 @@ def _sorting_violation():
 
 
 def _sorting_analyzer_violations():
-
     sorting = _sorting_violation()
     duration = (sorting.to_spike_vector()["sample_index"][-1] + 1) / sorting.sampling_frequency
 
@@ -352,6 +95,54 @@ def _sorting_analyzer_violations():
 @pytest.fixture(scope="module")
 def sorting_analyzer_violations():
     return _sorting_analyzer_violations()
+
+
+@pytest.fixture
+def periods_simple(sorting_analyzer_simple):
+    sorting_analyzer = sorting_analyzer_simple
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
+    return periods
+
+
+@pytest.fixture
+def periods_violations(sorting_analyzer_violations):
+    sorting_analyzer = sorting_analyzer_violations
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
+    return periods
+
+
+# Common job kwargs
+job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
+
+
+### LOW-LEVEL TESTS ###
+def test_noise_cutoff():
+    """
+    Generate two artifical gaussian, one truncated and one not. Check the metrics are higher for the truncated one.
+    """
+    np.random.seed(1)
+    amps = np.random.normal(0, 1, 1000)
+    amps_trunc = amps[amps > -1]
+
+    cutoff1, ratio1 = _noise_cutoff(amps=amps)
+    cutoff2, ratio2 = _noise_cutoff(amps=amps_trunc)
+
+    assert cutoff1 <= cutoff2
+    assert ratio1 <= ratio2
+
+
+def test_amplitude_cutoff():
+    """
+    Generate two artificial gaussians, one truncated and one not. Check the metrics are higher for the truncated one.
+    """
+    np.random.seed(1)
+    amps = np.random.normal(0, 1, 1000)
+    amps_trunc = amps[amps > -1]
+
+    fraction_missing_1 = amplitude_cutoff(amplitudes=amps, num_histogram_bins=20)
+    fraction_missing_2 = amplitude_cutoff(amplitudes=amps_trunc, num_histogram_bins=20)
+
+    assert fraction_missing_1 < fraction_missing_2
 
 
 def test_synchrony_counts_no_sync():
@@ -486,22 +277,17 @@ def test_simplified_silhouette_score_metrics():
     assert sim_sil_score1 < sim_sil_score2
 
 
-# def test_calculate_firing_rate_num_spikes(sorting_analyzer_simple):
-#     sorting_analyzer = sorting_analyzer_simple
-#     firing_rates = compute_firing_rates(sorting_analyzer)
-#     num_spikes = compute_num_spikes(sorting_analyzer)
-
-# testing method accuracy with magic number is not a good pratcice, I remove this.
-# firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
-# num_spikes_gt = {0: 1001, 1: 503, 2: 509}
-# assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
-# np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
-
-
+### TEST METRICS FUNCTIONS ###
 def test_calculate_firing_range(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
-    firing_ranges = compute_firing_ranges(sorting_analyzer)
-    print(firing_ranges)
+    firing_ranges = compute_firing_ranges(sorting_analyzer, bin_size_s=1)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5, bin_size_s=1)
+    firing_ranges_periods = compute_firing_ranges(sorting_analyzer, periods=periods, bin_size_s=1)
+    assert firing_ranges == firing_ranges_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    firing_ranges_empty = compute_firing_ranges(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(firing_ranges_empty.values()))))
 
     with pytest.warns(UserWarning) as w:
         firing_ranges_nan = compute_firing_ranges(
@@ -514,6 +300,13 @@ def test_calculate_amplitude_cutoff(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     amp_cuts = compute_amplitude_cutoffs(sorting_analyzer, num_histogram_bins=10)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
+    amp_cuts_periods = compute_amplitude_cutoffs(sorting_analyzer, periods=periods, num_histogram_bins=10)
+    assert amp_cuts == amp_cuts_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    amp_cuts_empty = compute_amplitude_cutoffs(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(amp_cuts_empty.values()))))
     # print(amp_cuts)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -525,18 +318,39 @@ def test_calculate_amplitude_median(sorting_analyzer_simple):
     sorting_analyzer = sorting_analyzer_simple
     # spike_amps = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     amp_medians = compute_amplitude_medians(sorting_analyzer)
-    # print(amp_medians)
+    periods = create_regular_periods(sorting_analyzer, num_periods=5)
+    amp_medians_periods = compute_amplitude_medians(sorting_analyzer, periods=periods)
+    assert amp_medians == amp_medians_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    amp_medians_empty = compute_amplitude_medians(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(amp_medians_empty.values()))))
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
 
 
-def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple):
+def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple, periods_simple):
     sorting_analyzer = sorting_analyzer_simple
     amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(sorting_analyzer, average_num_spikes_per_bin=20)
-    print(amp_cv_median)
-    print(amp_cv_range)
+    periods = periods_simple
+    amp_cv_median_periods, amp_cv_range_periods = compute_amplitude_cv_metrics(
+        sorting_analyzer,
+        periods=periods,
+        average_num_spikes_per_bin=20,
+    )
+    assert amp_cv_median == amp_cv_median_periods
+    assert amp_cv_range == amp_cv_range_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    amp_cv_median_empty, amp_cv_range_empty = compute_amplitude_cv_metrics(
+        sorting_analyzer,
+        periods=empty_periods,
+        average_num_spikes_per_bin=20,
+    )
+    assert np.all(np.isnan(np.array(list(amp_cv_median_empty.values()))))
+    assert np.all(np.isnan(np.array(list(amp_cv_range_empty.values()))))
 
     # amps_scalings = compute_amplitude_scalings(sorting_analyzer)
     sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
@@ -546,34 +360,56 @@ def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple):
         amplitude_extension="amplitude_scalings",
         min_num_bins=5,
     )
-    print(amp_cv_median_scalings)
-    print(amp_cv_range_scalings)
+    amp_cv_median_scalings_periods, amp_cv_range_scalings_periods = compute_amplitude_cv_metrics(
+        sorting_analyzer,
+        periods=periods,
+        average_num_spikes_per_bin=20,
+        amplitude_extension="amplitude_scalings",
+        min_num_bins=5,
+    )
+    assert amp_cv_median_scalings == amp_cv_median_scalings_periods
+    assert amp_cv_range_scalings == amp_cv_range_scalings_periods
 
 
-def test_calculate_snrs(sorting_analyzer_simple):
+def test_calculate_snrs(sorting_analyzer_simple, periods_simple):
     sorting_analyzer = sorting_analyzer_simple
     snrs = compute_snrs(sorting_analyzer)
-    print(snrs)
+    # SNR doesn't support periods
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # snrs_gt = {0: 12.92, 1: 12.99, 2: 12.99}
     # assert np.allclose(list(snrs_gt.values()), list(snrs.values()), rtol=0.05)
 
 
-def test_calculate_presence_ratio(sorting_analyzer_simple):
+def test_calculate_presence_ratio(sorting_analyzer_simple, periods_simple):
     sorting_analyzer = sorting_analyzer_simple
     ratios = compute_presence_ratios(sorting_analyzer, bin_duration_s=10)
-    print(ratios)
+    periods = periods_simple
+    ratios_periods = compute_presence_ratios(sorting_analyzer, periods=periods, bin_duration_s=10)
+    assert ratios == ratios_periods
 
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    ratios_periods_empty = compute_presence_ratios(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(ratios_periods_empty.values()))))
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # ratios_gt = {0: 1.0, 1: 1.0, 2: 1.0}
     # np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
 
 
-def test_calculate_isi_violations(sorting_analyzer_violations):
+def test_calculate_isi_violations(sorting_analyzer_violations, periods_violations):
     sorting_analyzer = sorting_analyzer_violations
     isi_viol, counts = compute_isi_violations(sorting_analyzer, isi_threshold_ms=1, min_isi_ms=0.0)
-    print(isi_viol)
+    periods = periods_violations
+    isi_viol_periods, counts_periods = compute_isi_violations(
+        sorting_analyzer, isi_threshold_ms=1, min_isi_ms=0.0, periods=periods
+    )
+    assert isi_viol == isi_viol_periods
+    assert counts == counts_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    isi_viol_empty, isi_counts_empty = compute_isi_violations(sorting_analyzer, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(isi_viol_empty.values()))))
+    assert np.array_equal(np.array(list(isi_counts_empty.values())), -1 * np.ones(len(sorting_analyzer.unit_ids)))
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # isi_viol_gt = {0: 0.0998002996004994, 1: 0.7904857139469347, 2: 1.929898371551754}
@@ -582,22 +418,44 @@ def test_calculate_isi_violations(sorting_analyzer_violations):
     # np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
 
-def test_calculate_sliding_rp_violations(sorting_analyzer_violations):
+def test_calculate_sliding_rp_violations(sorting_analyzer_violations, periods_violations):
     sorting_analyzer = sorting_analyzer_violations
     contaminations = compute_sliding_rp_violations(sorting_analyzer, bin_size_ms=0.25, window_size_s=1)
-    print(contaminations)
+    periods = periods_violations
+    contaminations_periods = compute_sliding_rp_violations(
+        sorting_analyzer, periods=periods, bin_size_ms=0.25, window_size_s=1
+    )
+    assert contaminations == contaminations_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    contaminations_periods_empty = compute_sliding_rp_violations(
+        sorting_analyzer, periods=empty_periods, bin_size_ms=0.25, window_size_s=1
+    )
+    assert np.all(np.isnan(np.array(list(contaminations_periods_empty.values()))))
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # contaminations_gt = {0: 0.03, 1: 0.185, 2: 0.325}
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 
-def test_calculate_rp_violations(sorting_analyzer_violations):
+def test_calculate_rp_violations(sorting_analyzer_violations, periods_violations):
     sorting_analyzer = sorting_analyzer_violations
     rp_contamination, counts = compute_refrac_period_violations(
         sorting_analyzer, refractory_period_ms=1, censored_period_ms=0.0
     )
-    print(rp_contamination, counts)
+    periods = periods_violations
+    rp_contamination_periods, counts_periods = compute_refrac_period_violations(
+        sorting_analyzer, refractory_period_ms=1, censored_period_ms=0.0, periods=periods
+    )
+    assert rp_contamination == rp_contamination_periods
+    assert counts == counts_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    rp_contamination_empty, counts_empty = compute_refrac_period_violations(
+        sorting_analyzer, refractory_period_ms=1, censored_period_ms=0.0, periods=empty_periods
+    )
+    assert np.all(np.isnan(np.array(list(rp_contamination_empty.values()))))
+    assert np.array_equal(np.array(list(counts_empty.values())), -1 * np.ones(len(sorting_analyzer.unit_ids)))
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # counts_gt = {0: 2, 1: 4, 2: 10}
@@ -617,13 +475,27 @@ def test_calculate_rp_violations(sorting_analyzer_violations):
     assert np.isnan(rp_contamination[1])
 
 
-def test_synchrony_metrics(sorting_analyzer_simple):
+def test_synchrony_metrics(sorting_analyzer_simple, periods_simple):
     sorting_analyzer = sorting_analyzer_simple
     sorting = sorting_analyzer.sorting
     synchrony_metrics = compute_synchrony_metrics(sorting_analyzer)
+    periods = periods_simple
+    synchrony_metrics_periods = compute_synchrony_metrics(sorting_analyzer, periods=periods)
+    assert synchrony_metrics == synchrony_metrics_periods
+
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    synchrony_metrics_empty = compute_synchrony_metrics(sorting_analyzer, periods=empty_periods)
+    assert np.array_equal(
+        np.array(list(synchrony_metrics_empty.sync_spike_2.values())), -1 * np.ones(len(sorting_analyzer.unit_ids))
+    )
+    assert np.array_equal(
+        np.array(list(synchrony_metrics_empty.sync_spike_4.values())), -1 * np.ones(len(sorting_analyzer.unit_ids))
+    )
+    assert np.array_equal(
+        np.array(list(synchrony_metrics_empty.sync_spike_8.values())), -1 * np.ones(len(sorting_analyzer.unit_ids))
+    )
 
     synchrony_sizes = np.array([2, 4, 8])
-
     # check returns
     for size in synchrony_sizes:
         assert f"sync_spike_{size}" in synchrony_metrics._fields
@@ -676,6 +548,22 @@ def test_calculate_drift_metrics(sorting_analyzer_simple):
     drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(
         sorting_analyzer, interval_s=10, min_spikes_per_interval=10
     )
+    periods = create_regular_periods(sorting_analyzer, num_periods=5, bin_size_s=10)
+    drifts_ptps_periods, drifts_stds_periods, drift_mads_periods = compute_drift_metrics(
+        sorting_analyzer, periods=periods, min_spikes_per_interval=10, interval_s=10
+    )
+    assert drifts_ptps == drifts_ptps_periods
+    assert drifts_stds == drifts_stds_periods
+    assert drift_mads == drift_mads_periods
+
+    # calculate num spikes with empty periods
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    drifts_ptps_empty, drifts_stds_empty, drift_mads_empty = compute_drift_metrics(
+        sorting_analyzer_simple, periods=empty_periods
+    )
+    assert np.all(np.isnan(np.array(list(drifts_ptps_empty.values()))))
+    assert np.all(np.isnan(np.array(list(drifts_stds_empty.values()))))
+    assert np.all(np.isnan(np.array(list(drift_mads_empty.values()))))
 
     # print(drifts_ptps, drifts_stds, drift_mads)
 
@@ -688,25 +576,234 @@ def test_calculate_drift_metrics(sorting_analyzer_simple):
     # assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
-def test_calculate_sd_ratio(sorting_analyzer_simple):
+def test_calculate_sd_ratio(sorting_analyzer_simple, periods_simple):
     sd_ratio = compute_sd_ratio(
         sorting_analyzer_simple,
     )
+    periods = periods_simple
+    sd_ratio_periods = compute_sd_ratio(sorting_analyzer_simple, periods=periods)
+    assert sd_ratio == sd_ratio_periods
 
     assert np.all(list(sd_ratio.keys()) == sorting_analyzer_simple.unit_ids)
+
+    # calculate num spikes with empty periods
+    empty_periods = np.empty(0, dtype=unit_period_dtype)
+    sd_ratios_empty_periods = compute_sd_ratio(sorting_analyzer_simple, periods=empty_periods)
+    assert np.all(np.isnan(np.array(list(sd_ratios_empty_periods.values()))))
     # @aurelien can you check this, this is not working anymore
     # assert np.allclose(list(sd_ratio.values()), 1, atol=0.25, rtol=0)
 
 
+### MACHINERY TESTS ###
+def test_compute_new_quality_metrics(small_sorting_analyzer):
+    """
+    Computes quality metrics then computes a subset of quality metrics, and checks
+    that the old quality metrics are not deleted.
+    """
+
+    qm_params = {
+        "presence_ratio": {"bin_duration_s": 0.1},
+        "amplitude_cutoff": {"num_histogram_bins": 3},
+        "firing_range": {"bin_size_s": 1},
+    }
+
+    small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
+    qm_extension = small_sorting_analyzer.get_extension("quality_metrics")
+    calculated_metrics = list(qm_extension.get_data().keys())
+
+    assert calculated_metrics == ["snr"]
+
+    small_sorting_analyzer.compute(
+        {"quality_metrics": {"metric_names": list(qm_params.keys()), "metric_params": qm_params}}
+    )
+    small_sorting_analyzer.compute({"quality_metrics": {"metric_names": ["snr"]}})
+
+    quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
+
+    # Check old metrics are not deleted and the new one is added to the data and metadata
+    assert set(list(quality_metric_extension.get_data().keys())) == set(
+        [
+            "amplitude_cutoff",
+            "firing_range",
+            "presence_ratio",
+            "snr",
+        ]
+    )
+    assert set(list(quality_metric_extension.params.get("metric_names"))) == set(
+        [
+            "amplitude_cutoff",
+            "firing_range",
+            "presence_ratio",
+            "snr",
+        ]
+    )
+
+    # check that, when parameters are changed, the data and metadata are updated
+    old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
+    small_sorting_analyzer.compute(
+        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+    )
+    new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
+    new_snr_data = new_quality_metric_extension.get_data()["snr"].values
+
+    assert np.all(old_snr_data != new_snr_data)
+    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
+
+
+def test_metric_names_in_same_order(small_sorting_analyzer):
+    """
+    Computes sepecified quality metrics and checks order is propagated.
+    """
+    specified_metric_names = ["firing_range", "snr", "amplitude_cutoff"]
+    small_sorting_analyzer.compute("quality_metrics", metric_names=specified_metric_names)
+    qm_keys = small_sorting_analyzer.get_extension("quality_metrics").get_data().keys()
+    for i in range(3):
+        assert specified_metric_names[i] == qm_keys[i]
+
+
+def test_save_quality_metrics(small_sorting_analyzer, create_cache_folder):
+    """
+    Computes quality metrics in binary folder format. Then computes subsets of quality
+    metrics and checks if they are saved correctly.
+    """
+
+    # can't use _misc_metric_name_to_func as some functions compute several qms
+    # e.g. isi_violation and synchrony
+    quality_metric_columns = ComputeQualityMetrics.get_metric_columns()
+    all_metrics = ComputeQualityMetrics.get_available_metric_names()
+    small_sorting_analyzer.compute("quality_metrics", metric_names=all_metrics)
+
+    cache_folder = create_cache_folder
+    output_folder = cache_folder / "sorting_analyzer"
+
+    folder_analyzer = small_sorting_analyzer.save_as(format="binary_folder", folder=output_folder)
+    quality_metrics_filename = output_folder / "extensions" / "quality_metrics" / "metrics.csv"
+
+    with open(quality_metrics_filename) as metrics_file:
+        saved_metrics = csv.reader(metrics_file)
+        metric_names = next(saved_metrics)
+
+    for metric_name in quality_metric_columns:
+        assert metric_name in metric_names
+
+    folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=False)
+
+    with open(quality_metrics_filename) as metrics_file:
+        saved_metrics = csv.reader(metrics_file)
+        metric_names = next(saved_metrics)
+
+    for metric_name in quality_metric_columns:
+        assert metric_name in metric_names
+
+    folder_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=True)
+
+    with open(quality_metrics_filename) as metrics_file:
+        saved_metrics = csv.reader(metrics_file)
+        metric_names = next(saved_metrics)
+
+    for metric_name in quality_metric_columns:
+        if metric_name == "snr":
+            assert metric_name in metric_names
+        else:
+            assert metric_name not in metric_names
+
+
+def test_unit_structure_in_output(small_sorting_analyzer):
+
+    qm_params = {
+        "presence_ratio": {"bin_duration_s": 0.1},
+        "amplitude_cutoff": {"num_histogram_bins": 3},
+        "amplitude_cv": {"average_num_spikes_per_bin": 7, "min_num_bins": 3},
+        "firing_range": {"bin_size_s": 1},
+        "isi_violation": {"isi_threshold_ms": 10},
+        "drift": {"interval_s": 1, "min_spikes_per_interval": 5, "min_fraction_valid_intervals": 0.2},
+        "sliding_rp_violation": {"max_ref_period_ms": 50, "bin_size_ms": 0.15},
+        "rp_violation": {"refractory_period_ms": 10.0, "censored_period_ms": 0.0},
+    }
+
+    for metric in misc_metrics_list:
+        metric_name = metric.metric_name
+        metric_fun = metric.metric_function
+        try:
+            qm_param = qm_params[metric_name]
+        except:
+            qm_param = {}
+
+        result_all = metric_fun(sorting_analyzer=small_sorting_analyzer, **qm_param)
+        result_sub = metric_fun(sorting_analyzer=small_sorting_analyzer, unit_ids=["#4", "#9"], **qm_param)
+
+        error = "Problem with metric: " + metric_name
+
+        if isinstance(result_all, dict):
+            assert list(result_all.keys()) == ["#3", "#9", "#4"], error
+            assert list(result_sub.keys()) == ["#4", "#9"], error
+            assert result_sub["#9"] == result_all["#9"], error
+            assert result_sub["#4"] == result_all["#4"], error
+
+        else:
+            for result_ind, result in enumerate(result_sub):
+
+                assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"], error
+                assert result_sub[result_ind].keys() == set(["#4", "#9"]), error
+
+                assert result_sub[result_ind]["#9"] == result_all[result_ind]["#9"], error
+                assert result_sub[result_ind]["#4"] == result_all[result_ind]["#4"], error
+
+
+def test_unit_id_order_independence(small_sorting_analyzer):
+    """
+    Takes two almost-identical sorting_analyzers, whose unit_ids are in different orders and have different labels,
+    and checks that their calculated quality metrics are independent of the ordering and labelling.
+    """
+
+    recording = small_sorting_analyzer.recording
+    sorting = small_sorting_analyzer.sorting.select_units(["#4", "#9", "#3"], [1, 7, 2])
+
+    small_sorting_analyzer_2 = create_sorting_analyzer(recording=recording, sorting=sorting, format="memory")
+
+    extensions_to_compute = {
+        "random_spikes": {"seed": 1205},
+        "noise_levels": {"seed": 1205},
+        "waveforms": {},
+        "templates": {},
+        "spike_amplitudes": {},
+        "spike_locations": {},
+        "principal_components": {},
+    }
+
+    small_sorting_analyzer_2.compute(extensions_to_compute)
+
+    # need special params to get non-nan results on a short recording
+    qm_params = {
+        "presence_ratio": {"bin_duration_s": 0.1},
+        "amplitude_cutoff": {"num_histogram_bins": 3},
+        "amplitude_cv": {"average_num_spikes_per_bin": 7, "min_num_bins": 3},
+        "firing_range": {"bin_size_s": 1},
+        "isi_violation": {"isi_threshold_ms": 10},
+        "drift": {"interval_s": 1, "min_spikes_per_interval": 5},
+        "sliding_rp_violation": {"max_ref_period_ms": 50, "bin_size_ms": 0.15},
+    }
+
+    quality_metrics_1 = compute_quality_metrics(
+        small_sorting_analyzer, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
+    )
+    quality_metrics_2 = compute_quality_metrics(
+        small_sorting_analyzer_2, metric_names=get_quality_metric_list(), metric_params=qm_params, skip_pc_metrics=True
+    )
+
+    for metric, metric_2_data in quality_metrics_2.items():
+        error = "Problem with the metric " + metric
+        assert quality_metrics_1[metric]["#3"] == metric_2_data[2], error
+        assert quality_metrics_1[metric]["#9"] == metric_2_data[7], error
+        assert quality_metrics_1[metric]["#4"] == metric_2_data[1], error
+
+
 if __name__ == "__main__":
-
-    sorting_analyzer = _sorting_analyzer_simple()
-    print(sorting_analyzer)
-
-    test_unit_structure_in_output(_small_sorting_analyzer())
-
+    pass
+    # sorting_analyzer = _sorting_analyzer_simple()
+    # print(sorting_analyzer)
+    # test_unit_structure_in_output(_small_sorting_analyzer())
     # test_calculate_firing_rate_num_spikes(sorting_analyzer)
-
     # test_calculate_snrs(sorting_analyzer)
     # test_calculate_amplitude_cutoff(sorting_analyzer)
     # test_calculate_presence_ratio(sorting_analyzer)

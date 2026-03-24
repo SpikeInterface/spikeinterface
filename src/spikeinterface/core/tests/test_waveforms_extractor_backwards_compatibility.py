@@ -11,7 +11,6 @@ from spikeinterface.core.waveforms_extractor_backwards_compatibility import Mock
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import extract_waveforms as mock_extract_waveforms
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import load_waveforms as load_waveforms_backwards
 
-
 # remove this when WaveformsExtractor will be removed
 from spikeinterface.core import extract_waveforms as old_extract_waveforms
 

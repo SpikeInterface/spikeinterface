@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import subprocess
 import tempfile
 import shutil
@@ -8,17 +6,15 @@ import os
 from pathlib import Path
 import time
 import sys
-from typing import Optional, List, Any, Union
-
-PathType = Union[str, Path]
+from typing import Any
 
 
 class ShellScript:
     def __init__(
         self,
         script: str,
-        script_path: Optional[PathType] = None,
-        log_path: Optional[PathType] = None,
+        script_path: str | Path | None = None,
+        log_path: str | Path | None = None,
         keep_temp_files: bool = False,
         verbose: bool = False,
     ):
@@ -37,19 +33,19 @@ class ShellScript:
         self._script_path = script_path
         self._log_path = log_path
         self._keep_temp_files = keep_temp_files
-        self._process: Optional[subprocess.Popen] = None
-        self._files_to_remove: List[str] = []
-        self._dirs_to_remove: List[str] = []
-        self._start_time: Optional[float] = None
+        self._process: subprocess.Popen | None = None
+        self._files_to_remove: list[str] = []
+        self._dirs_to_remove: list[str] = []
+        self._start_time: float | None = None
         self._verbose = verbose
 
     def __del__(self):
         self.cleanup()
 
     def substitute(self, old: str, new: Any) -> None:
-        self._script = self._script.replace(old, "{}".format(new))
+        self._script = self._script.replace(old, f"{new}")
 
-    def write(self, script_path: Optional[str] = None) -> None:
+    def write(self, script_path: str | None = None) -> None:
         if script_path is None:
             script_path = self._script_path
         if script_path is None:
@@ -97,7 +93,7 @@ class ShellScript:
                     # Print onto console depending on the verbose property passed on from the sorter class
                     print(line)
 
-    def wait(self, timeout=None) -> Optional[int]:
+    def wait(self, timeout=None) -> int | None:
         if not self.isRunning():
             return self.returnCode()
         assert self._process is not None, "Unexpected self._process is None even though it is running."
@@ -158,7 +154,7 @@ class ShellScript:
         except:
             return False
 
-    def elapsedTimeSinceStart(self) -> Optional[float]:
+    def elapsedTimeSinceStart(self) -> float | None:
         if self._start_time is None:
             return None
 
@@ -177,16 +173,16 @@ class ShellScript:
             return False
         return not self.isRunning()
 
-    def returnCode(self) -> Optional[int]:
+    def returnCode(self) -> int | None:
         if not self.isFinished():
             raise Exception("Cannot get return code before process is finished.")
         assert self._process is not None, "Unexpected self._process is None even though it is finished."
         return self._process.returncode
 
-    def scriptPath(self) -> Optional[str]:
+    def scriptPath(self) -> str | None:
         return self._script_path
 
-    def _remove_initial_blank_lines(self, lines: List[str]) -> List[str]:
+    def _remove_initial_blank_lines(self, lines: list[str]) -> list[str]:
         ii = 0
         while ii < len(lines) and len(lines[ii].strip()) == 0:
             ii = ii + 1
@@ -208,7 +204,7 @@ def _rmdir_with_retries(dirname, num_retries, delay_between_tries=1):
             break
         except:
             if retry_num < num_retries:
-                print("Retrying to remove directory: {}".format(dirname))
+                print(f"Retrying to remove directory: {dirname}")
                 time.sleep(delay_between_tries)
             else:
-                raise Exception("Unable to remove directory after {} tries: {}".format(num_retries, dirname))
+                raise Exception(f"Unable to remove directory after {num_retries} tries: {dirname}")

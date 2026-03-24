@@ -4,7 +4,6 @@ from spikeinterface.extractors.tests.common_tests import SortingCommonTestSuite
 from spikeinterface.extractors.cellexplorersortingextractor import CellExplorerSortingExtractor
 from spikeinterface.core.globals import get_global_dataset_folder
 
-
 local_folder = get_global_dataset_folder() / "ephy_testing_data"
 
 
