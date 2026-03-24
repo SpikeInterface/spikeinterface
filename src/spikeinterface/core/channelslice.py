@@ -155,7 +155,9 @@ class ChannelSliceSnippets(BaseSnippets):
         # change the wiring of the probe
         if self._parent_snippets.has_probe():
             parent_probegroup = self._parent_snippets.get_probegroup()
-            self.set_probe(parent_probegroup.get_slice(self._parent_channel_indices))
+            sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
+            sliced_probegroup.set_global_device_channel_indices(np.arange(len(self._channel_ids)))
+            self.set_probegroup(sliced_probegroup, in_place=True)
 
         # update dump dict
         self._kwargs = {

@@ -197,7 +197,6 @@ class BaseRecordingSnippets(BaseExtractor):
             probe.device_channel_indices is not None for probe in probegroup.probes
         ), "Probe must have device_channel_indices"
 
-        # TODO: add get_slice for probegroup to handle not connected channels
         probe_as_numpy_array = probegroup.to_numpy(complete=True)
         device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
         keep = device_channel_indices >= 0
@@ -240,8 +239,7 @@ class BaseRecordingSnippets(BaseExtractor):
             else:
                 sub_recording = self.select_channels(new_channel_ids)
 
-        # # create a vector that handle all contacts in property
-        # sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
+        # Set probegroup
         sub_recording._probegroup = probegroup
 
         # handle groups
@@ -431,8 +429,8 @@ class BaseRecordingSnippets(BaseExtractor):
     def is_probe_3d(self) -> bool:
         if not self.has_probe():
             raise ValueError("is_probe_3d() needs a probe to be attached to the recording")
-        probe = self.get_probegroup().probes[0]
-        return probe.ndim == 3
+        probegroup = self.get_probegroup()
+        return probegroup.ndim == 3
 
     def clear_channel_locations(self, channel_ids=None):
         warnings.warn(
