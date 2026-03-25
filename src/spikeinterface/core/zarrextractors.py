@@ -5,12 +5,11 @@ import zarr
 
 from probeinterface import ProbeGroup
 
-from .base import minimum_spike_dtype
+from .base import minimum_spike_dtype, _get_class_from_string
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
-from .core_tools import define_function_from_class, check_json, retrieve_importing_provenance
-from .job_tools import split_job_kwargs
-from .core_tools import is_path_remote
+from .core_tools import define_function_from_class, check_json, is_path_remote, retrieve_importing_provenance
+from .job_tools import split_job_kwargs, fix_job_kwargs, ensure_chunk_size, ChunkRecordingExecutor
 
 zarr.config.set({"default_zarr_version": 3})
 
@@ -94,34 +93,6 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
             f"Cannot open {folder_path} in mode {mode} with storage_options {storage_options}.\nException: {exception}"
         )
     return root
-
-
-def check_compressors_match(comp1, comp2, skip_typesize=True):
-    """
-    Check if two compressor objects match.
-
-    Parameters
-    ----------
-    comp1 : zarr.Codec | Tuple[zarr.Codec]
-        The first compressor object to compare.
-    comp2 : zarr.Codec | Tuple[zarr.Codec]
-        The second compressor object to compare.
-    skip_typesize : bool, optional
-        Whether to skip the typesize check, default: True
-    """
-    if not isinstance(comp1, (list, tuple)):
-        assert not isinstance(comp2, list)
-        comp1 = [comp1]
-        comp2 = [comp2]
-    for i in range(len(comp1)):
-        comp1_dict = comp1[i].to_dict()
-        comp2_dict = comp2[i].to_dict()
-        if skip_typesize:
-            if "typesize" in comp1_dict["configuration"]:
-                comp1_dict["configuration"].pop("typesize", None)
-        if "typesize" in comp2_dict["configuration"]:
-            comp2_dict["configuration"].pop("typesize", None)
-        assert comp1_dict == comp2_dict
 
 
 class ZarrRecordingExtractor(BaseRecording):
@@ -513,7 +484,7 @@ def build_codec_pipeline(filters=None, compressors=None):
 
     codec_kwargs = {}
     codec_kwargs["filters"] = filters
-    codec_kwargs["serializer"] = serializers[0]
+    codec_kwargs["serializer"] = serializers[0] if len(serializers) == 1 else "auto"
     codec_kwargs["compressors"] = byte_compressors
     return codec_kwargs
 
@@ -576,14 +547,22 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
     if compressor is None:
         compressor = get_default_zarr_compressor()
 
-    # save sub fields
+    # Save sub fields of spikes as separate arrays to allow for more efficient compression and to
+    # avoid issues with structured arrays with unicode fields in zarr v3.
+    # The "segment_index" field is saved as "segment_slices" which contains the start and end indices of spikes for
+    # each segment, to avoid having a large array of segment indices when there are many spikes.
     spikes_group = zarr_group.create_group(name="spikes")
     spikes = sorting.to_spike_vector()
     for field in spikes.dtype.fields:
         if field != "segment_index":
             dtype = spikes[field].dtype
             spikes_data = spikes[field]
-            codec_kwargs = build_codec_pipeline(filters=[Delta(dtype=spikes[field].dtype.str)], compressors=compressor)
+            if field == "sample_index":
+                # Delta filter is very effective for spike times (sample_index)
+                filters = [Delta(dtype=spikes[field].dtype.str)]
+            else:
+                filters = None
+            codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressor)
             spikes_group.create_array(name=field, data=spikes_data, **codec_kwargs)
         else:
             segment_slices = []
@@ -599,6 +578,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
 # Recording
 def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group, verbose=False, dtype=None, **kwargs):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     if recording.check_if_json_serializable():
         zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True))
@@ -614,17 +594,53 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group
     arr[:] = channel_ids
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
 
+    num_channels = recording.get_num_channels()
     dtype = recording.get_dtype() if dtype is None else dtype
-    channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
+
+    # Compressors and filters
     global_compressor = kwargs.get("compressors") or kwargs.get("compressor")
     if global_compressor is None:
         global_compressor = get_default_zarr_compressor()
     compressor_by_dataset = zarr_kwargs.pop("compressor_by_dataset", {})
     global_filters = zarr_kwargs.pop("filters", None)
     filters_by_dataset = zarr_kwargs.pop("filters_by_dataset", {})
-
     compressor_traces = compressor_by_dataset.get("traces", global_compressor)
     filters_traces = filters_by_dataset.get("traces", global_filters)
+
+    # Chunking and sharding
+    chunks = zarr_kwargs.get("chunks", None)
+    channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
+    shards = zarr_kwargs.get("shards", None)
+    shard_factor = zarr_kwargs.get("shard_factor", None)
+    if shards is not None and shard_factor is not None:
+        raise ValueError("Cannot specify both 'shards' and 'shard_factor' in zarr_kwargs")
+    if chunks is not None and channel_chunk_size is not None:
+        raise ValueError("Cannot specify both 'chunks' and 'channel_chunk_size' in zarr_kwargs")
+
+    # If not specified by chunk, we set the chunk size in the first dimension (time) to be the chunk size that we use
+    # for the job executor, and the chunk size in the second dimension (channels) to be either the provided
+    # channel_chunk_size or the total number of channels (no chunking in channels).
+    if chunks is not None:
+        job_kwargs["chunk_size"] = chunks[0]
+    else:
+        chunk_size = ensure_chunk_size(recording, **job_kwargs)
+        chunks = (chunk_size, channel_chunk_size if channel_chunk_size is not None else num_channels)
+
+    if shards is not None:
+        assert len(shards) == len(chunks), "Shards and chunks must have the same number of dimensions"
+        for dim in range(len(chunks)):
+            assert (
+                shards[dim] >= chunks[dim] and shards[dim] % chunks[dim] == 0
+            ), "Shard size must be a multiple of chunk size"
+        # When sharding is used, chunk_size in job_kwargs is used to determine the number of samples per chunk to
+        # write in each job. Each process will write all chunks in a shard.
+        job_kwargs["chunk_size"] = shards[0]
+    elif shard_factor is not None:
+        # If shard_factor is provided, we set the shard size to be chunk_size * shard_factor in the first dimension (time),
+        # and to be the at most the total number of channels in the second dimension.
+        shards = (chunks[0] * shard_factor, min(chunks[1] * shard_factor, num_channels))
+        job_kwargs["chunk_size"] = shards[0]
+
     add_traces_to_zarr(
         recording=recording,
         zarr_group=zarr_group,
@@ -632,7 +648,8 @@ def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group
         compressors=compressor_traces,
         filters=filters_traces,
         dtype=dtype,
-        channel_chunk_size=channel_chunk_size,
+        chunks=chunks,
+        shards=shards,
         verbose=verbose,
         **job_kwargs,
     )
@@ -667,7 +684,8 @@ def add_traces_to_zarr(
     recording,
     zarr_group,
     dataset_paths,
-    channel_chunk_size=None,
+    chunks=None,
+    shards=None,
     dtype=None,
     compressors=None,
     filters=None,
@@ -685,8 +703,10 @@ def add_traces_to_zarr(
         The zarr group to add traces to
     dataset_paths : list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size : int or None, default: None (chunking in time only)
+    chunks : tuple or None, default: None (chunking in time only)
         Channels per chunk
+    shards : tuple or None, default: None
+        If not None, a tuple of (time, num_chunks_per_shard) to
     dtype : dtype, default: None
         Type of the saved data
     compressors : zarr compressor or None, default: None
@@ -697,12 +717,6 @@ def add_traces_to_zarr(
         If True, output is verbose (when chunks are used)
     {}
     """
-    from .job_tools import (
-        ensure_chunk_size,
-        fix_job_kwargs,
-        ChunkRecordingExecutor,
-    )
-
     assert dataset_paths is not None, "Provide 'file_path'"
 
     if not isinstance(dataset_paths, list):
@@ -711,9 +725,6 @@ def add_traces_to_zarr(
 
     if dtype is None:
         dtype = recording.get_dtype()
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
 
     codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
 
@@ -725,8 +736,9 @@ def add_traces_to_zarr(
         dset_name = dataset_paths[segment_index]
         shape = (num_frames, num_channels)
         # In zarr v3, chunks must be a tuple of integers (no None allowed)
-        chunks = (chunk_size, channel_chunk_size if channel_chunk_size is not None else num_channels)
-        dset = zarr_group.create_array(name=dset_name, shape=shape, chunks=chunks, dtype=dtype, **codec_kwargs)
+        dset = zarr_group.create_array(
+            name=dset_name, shape=shape, chunks=chunks, shards=shards, dtype=dtype, **codec_kwargs
+        )
         zarr_datasets.append(dset)
         # synchronizer=zarr.ThreadSynchronizer())
 

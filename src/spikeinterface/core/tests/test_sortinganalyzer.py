@@ -17,7 +17,7 @@ from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     _sort_extensions_by_dependency,
 )
-from spikeinterface.core.zarrextractors import check_compressors_match
+from spikeinterface.core.zarr_utils import check_compressors_match
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
 # to test basespikevectorextension with node pipeline

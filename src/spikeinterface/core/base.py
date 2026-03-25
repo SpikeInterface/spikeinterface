@@ -873,6 +873,8 @@ class BaseExtractor:
             * dump_ext: "json" or "pkl", default "json" (if format is "folder")
             * verbose: if True output is verbose
             * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
+              (check `save_to_memory()`, `save_to_folder()`, `save_to_zarr()` for more details on format-dependent
+              kwargs)
             {}
 
         Returns
@@ -892,13 +894,27 @@ class BaseExtractor:
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, sharedmem=True, **save_kwargs) -> BaseExtractor:
+        """
+        Save the object to memory.
+
+        Parameters
+        ----------
+        sharedmem : bool, default: True
+            If True, the object is saved to shared memory, allowing it to be accessed by multiple processes without
+            copying. If False, the object is saved to regular memory, which may involve copying when accessed by
+            multiple processes.
+
+        Returns
+        -------
+        BaseExtractor
+            A saved copy of the extractor in memory.
+        """
         save_kwargs.pop("format", None)
 
         cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
         self.copy_metadata(cached)
         return cached
 
-    # TODO rename to saveto_binary_folder
     def save_to_folder(
         self,
         name: str | None = None,
@@ -944,8 +960,7 @@ class BaseExtractor:
             If True, an existing folder at the specified path will be deleted before saving.
         verbose : bool, default: True
             If True, print information about the cache folder being used.
-        **save_kwargs
-            Additional keyword arguments to be passed to the underlying save method.
+        {}
 
         Returns
         -------
@@ -1010,7 +1025,6 @@ class BaseExtractor:
         folder=None,
         overwrite=False,
         storage_options=None,
-        channel_chunk_size=None,
         verbose=True,
         **save_kwargs,
     ):
@@ -1030,26 +1044,9 @@ class BaseExtractor:
         storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-        channel_chunk_size: int or None, default: None
-            Channels per chunk (only for BaseRecording)
-        compressor: numcodecs.Codec or None, default: None
-            Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
-        filters: list[numcodecs.Codec] or None, default: None
-            Global filters for zarr (global)
-        compressor_by_dataset: dict or None, default: None
-            Optional compressor per dataset:
-                - traces
-                - times
-            If None, the global compressor is used
-        filters_by_dataset: dict or None, default: None
-            Optional filters per dataset:
-                - traces
-                - times
-            If None, the global filters are used
         verbose: bool, default: True
             If True, the output is verbose
-        auto_cast_uint: bool, default: True
-            If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
+        {}
 
         Returns
         -------
@@ -1085,7 +1082,6 @@ class BaseExtractor:
             assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
-        save_kwargs["channel_chunk_size"] = channel_chunk_size
         cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
         cached = read_zarr(zarr_path)
 
