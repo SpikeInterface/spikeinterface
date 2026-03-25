@@ -460,7 +460,8 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
-        self._extra_metadata_copy(other)
+        if not only_main:
+            self._extra_metadata_copy(other)
 
     def _extra_metadata_copy(self, other: BaseExtractor):
         """
