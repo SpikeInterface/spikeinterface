@@ -5,7 +5,7 @@ import zarr
 
 from probeinterface import ProbeGroup
 
-from .base import minimum_spike_dtype
+from .base import minimum_spike_dtype, _get_class_from_string
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import define_function_from_class, check_json, retrieve_importing_provenance
