@@ -84,7 +84,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
         expected_property_keys = [
             "gain_to_uV",
             "offset_to_uV",
-            "location",
             "group",
             "shank",
             "shank_row",
