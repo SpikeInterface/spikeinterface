@@ -413,6 +413,8 @@ class SortingAnalyzer:
         backend_options=None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
+        assert main_channel_index is not None, "To create a SortingAnalyzer you need to specify the main_channel_index"
+
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
             if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
@@ -443,8 +445,8 @@ class SortingAnalyzer:
             sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
         
         # This will ensure that the sorting saved always will have this main_channel
-        assert main_channel_index is not None
-        sorting.set_property("main_channel_index", main_channel_index)
+        
+        
         
         if format == "memory":
             sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV,
@@ -480,6 +482,8 @@ class SortingAnalyzer:
             )
         else:
             raise ValueError("SortingAnalyzer.create: wrong format")
+
+        sorting_analyzer.set_sorting_property.set_sorting_property("main_channel_index", main_channel_index, save=True)
 
         return sorting_analyzer
 

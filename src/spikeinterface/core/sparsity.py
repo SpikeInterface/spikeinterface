@@ -406,8 +406,6 @@ class ChannelSparsity:
             A Templates or a SortingAnalyzer object.
         radius_um : float
             Radius in um for "radius" method.
-        peak_sign : "neg" | "pos" | "both"
-            Sign of the template to compute best channels.
 
         Returns
         -------
@@ -860,7 +858,7 @@ def estimate_sparsity(
             sparsity = ChannelSparsity.from_closest_channels(templates, num_channels)
         elif method == "radius":
             assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
-            sparsity = ChannelSparsity.from_radius(templates, radius_um, peak_sign=peak_sign)
+            sparsity = ChannelSparsity.from_radius(templates, radius_um)
         elif method == "snr":
             assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
             assert noise_levels is not None, (

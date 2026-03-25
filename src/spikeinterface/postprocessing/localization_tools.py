@@ -674,13 +674,6 @@ def compute_location_max_channel(
         A SortingAnalyzer or Templates object
     unit_ids: list[str] | list[int] | None
         A list of unit_id to restrict the computation
-    peak_sign :  "neg" | "pos" | "both"
-        Sign of the template to find extremum channels
-    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
-        Where the amplitude is computed
-        * "extremum" : take the peak value (max or min depending on `peak_sign`)
-        * "at_index" : take value at `nbefore` index
-        * "peak_to_peak" : take the peak-to-peak amplitude
 
     Returns
     -------

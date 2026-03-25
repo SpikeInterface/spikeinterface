@@ -15,22 +15,20 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
     Parameters
     ----------
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Sign of the template to compute extremum channel used to retrieve spike amplitudes.
+    
     """
 
     extension_name = "spike_amplitudes"
     depend_on = ["templates"]
     nodepipeline_variables = ["amplitudes"]
 
-    def _set_params(self, peak_sign="neg"):
-        return super()._set_params(peak_sign=peak_sign)
+    def _set_params(self):
+        return super()._set_params()
 
     def _get_pipeline_nodes(self):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        peak_sign = self.params["peak_sign"]
         return_in_uV = self.sorting_analyzer.return_in_uV
 
         extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)

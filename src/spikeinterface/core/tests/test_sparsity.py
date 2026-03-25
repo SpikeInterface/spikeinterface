@@ -325,6 +325,6 @@ def test_compute_sparsity():
 
 
 if __name__ == "__main__":
-    # test_ChannelSparsity()
-    # test_estimate_sparsity()
+    test_ChannelSparsity()
+    test_estimate_sparsity()
     test_compute_sparsity()

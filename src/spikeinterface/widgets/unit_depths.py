@@ -20,12 +20,10 @@ class UnitDepthsWidget(BaseWidget):
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     depth_axis : int, default: 1
         The dimension of unit_locations that is depth
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Sign of peak for amplitudes
     """
 
     def __init__(
-        self, sorting_analyzer, unit_colors=None, depth_axis=1, peak_sign="neg", backend=None, **backend_kwargs
+        self, sorting_analyzer, unit_colors=None, depth_axis=1, backend=None, **backend_kwargs
     ):
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
