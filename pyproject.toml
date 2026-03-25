@@ -126,7 +126,9 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs,
@@ -138,7 +140,9 @@ test_extractors = [
     "pooch>=1.8.2",
     "datalad>=1.0.2",
     # Commenting out for release
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
@@ -189,7 +193,9 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs
@@ -218,7 +224,9 @@ docs = [
     "huggingface_hub", # For automated curation
 
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 ]
 

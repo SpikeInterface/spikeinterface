@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import spikeinterface as si
+
 FIXTURES_PATH = os.environ.get("ZARR_V2_FIXTURES_PATH")
 
 pytestmark = pytest.mark.skipif(
@@ -38,9 +40,7 @@ def expected(fixtures_dir: Path) -> dict:
 
 
 def test_load_recording(fixtures_dir, expected):
-    from spikeinterface.core import read_zarr_recording
-
-    recording = read_zarr_recording(fixtures_dir / "recording.zarr")
+    recording = si.load(fixtures_dir / "recording.zarr")
     exp = expected["recording"]
 
     assert recording.get_num_channels() == exp["num_channels"]
@@ -49,7 +49,7 @@ def test_load_recording(fixtures_dir, expected):
     assert str(recording.get_dtype()) == exp["dtype"]
 
     for seg in range(recording.get_num_segments()):
-        assert recording.get_num_frames(seg) == exp["num_frames_per_segment"][seg]
+        assert recording.get_num_samples(seg) == exp["num_samples_per_segment"][seg]
 
     assert list(recording.get_channel_ids()) == exp["channel_ids"]
 
@@ -58,9 +58,7 @@ def test_load_recording(fixtures_dir, expected):
 
 
 def test_load_sorting(fixtures_dir, expected):
-    from spikeinterface.core import read_zarr_sorting
-
-    sorting = read_zarr_sorting(fixtures_dir / "sorting.zarr")
+    sorting = si.load(fixtures_dir / "sorting.zarr")
     exp = expected["sorting"]
 
     assert sorting.get_num_segments() == exp["num_segments"]
@@ -73,9 +71,7 @@ def test_load_sorting(fixtures_dir, expected):
 
 
 def test_load_sorting_analyzer(fixtures_dir, expected):
-    from spikeinterface.core import load_sorting_analyzer
-
-    analyzer = load_sorting_analyzer(fixtures_dir / "analyzer.zarr")
+    analyzer = si.load(fixtures_dir / "analyzer.zarr")
     exp = expected["analyzer"]
 
     assert analyzer.get_num_units() == exp["num_units"]

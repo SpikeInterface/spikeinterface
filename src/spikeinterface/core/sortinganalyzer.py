@@ -1887,8 +1887,14 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
-            if "extensions" in zarr_root.keys():
+            # Avoid iterating zarr_root.keys() because legacy v2 stores may contain
+            # object-dtype arrays (e.g. "recording", "sorting_provenance") that zarr v3
+            # cannot parse, causing ValueError on enumeration.
+            try:
                 extension_group = zarr_root["extensions"]
+            except KeyError:
+                extension_group = None
+            if extension_group is not None:
                 for extension_name in extension_group.keys():
                     if "params" in extension_group[extension_name].attrs.keys():
                         saved_extension_names.append(extension_name)

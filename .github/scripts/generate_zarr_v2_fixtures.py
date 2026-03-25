@@ -12,64 +12,61 @@ The script saves:
   - expected_values.json : key values used to verify correct loading
 """
 import argparse
+import shutil
 import json
 from pathlib import Path
 
 import numpy as np
+import zarr
+
+import spikeinterface as si
 
 
 def main(output_dir: Path) -> None:
-    import spikeinterface
-
-    print(f"spikeinterface version : {spikeinterface.__version__}")
-
-    import zarr
-
+    print(f"spikeinterface version : {si.__version__}")
     print(f"zarr version           : {zarr.__version__}")
 
-    from spikeinterface.core import generate_recording, generate_sorting
-    from spikeinterface.core import ZarrRecordingExtractor, ZarrSortingExtractor
-    from spikeinterface.core import create_sorting_analyzer, load_sorting_analyzer
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    recording = generate_recording(num_channels=4, num_segments=2, seed=0)
-    sorting = generate_sorting(num_units=3, num_segments=2, seed=0)
-
+    recording, sorting = si.generate_ground_truth_recording(durations=[10, 5],num_channels=32, num_units=10, seed=0)
+    # save to binary to make them JSON serializable for later expected values extraction
+    recording = recording.save(folder=output_dir / "recording_binary", overwrite=True)
+    sorting = sorting.save(folder=output_dir / "sorting_binary", overwrite=True)
     # --- save recording ---
     recording_path = output_dir / "recording.zarr"
-    ZarrRecordingExtractor.write_recording(recording, recording_path)
+    recording_zarr = recording.save(format="zarr", folder=recording_path, overwrite=True)
     print(f"Saved recording  -> {recording_path}")
 
     # --- save sorting ---
     sorting_path = output_dir / "sorting.zarr"
-    ZarrSortingExtractor.write_sorting(sorting, sorting_path)
+    sorting_zarr = sorting.save(format="zarr", folder=sorting_path, overwrite=True)
     print(f"Saved sorting    -> {sorting_path}")
 
     # --- save SortingAnalyzer ---
     # Reload the recording from zarr so it is a serializable ZarrRecordingExtractor,
     # which the analyzer can store as provenance.
-    recording_zarr = ZarrRecordingExtractor(recording_path)
     analyzer_path = output_dir / "analyzer.zarr"
-    analyzer = create_sorting_analyzer(
-        sorting, recording_zarr, format="zarr", folder=analyzer_path, sparse=False, sparsity=None
+    if analyzer_path.is_dir():
+        shutil.rmtree(analyzer_path)
+    analyzer = si.create_sorting_analyzer(
+        sorting_zarr, recording_zarr, format="zarr", folder=analyzer_path, overwrite=True
     )
     analyzer.compute(["random_spikes", "templates"])
     print(f"Saved analyzer   -> {analyzer_path}")
 
     # Reload to verify templates are accessible before writing expected values
-    analyzer = load_sorting_analyzer(analyzer_path)
     templates_array = analyzer.get_extension("templates").get_data()
 
     # --- capture expected values for later assertion ---
     expected = {
-        "spikeinterface_version": spikeinterface.__version__,
+        "spikeinterface_version": si.__version__,
         "zarr_version": zarr.__version__,
         "recording": {
             "num_channels": int(recording.get_num_channels()),
             "num_segments": int(recording.get_num_segments()),
             "sampling_frequency": float(recording.get_sampling_frequency()),
-            "num_frames_per_segment": [int(recording.get_num_frames(seg)) for seg in range(recording.get_num_segments())],
+            "num_samples_per_segment": [int(recording.get_num_samples(seg)) for seg in range(recording.get_num_segments())],
             "channel_ids": recording.get_channel_ids().tolist(),
             "dtype": str(recording.get_dtype()),
             # first 10 frames of segment 0 for all channels
