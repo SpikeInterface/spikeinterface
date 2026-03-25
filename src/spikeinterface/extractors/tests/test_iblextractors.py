@@ -84,7 +84,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
         expected_property_keys = [
             "gain_to_uV",
             "offset_to_uV",
-            "contact_vector",
             "location",
             "group",
             "shank",
@@ -96,6 +95,9 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
             "index_on_probe",
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
+
+    def test_has_probe(self):
+        assert self.recording.has_probe() is True
 
     def test_trace_shape(self):
         expected_shape = (21, 384)
