@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 import os
 
+import probeinterface as pi
+
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
@@ -125,9 +127,12 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
 
     # distribute default probe locations across 4 shanks if set
     rng = np.random.default_rng(seed=None)
-    x = rng.choice(shanks, num_channels)
-    for idx, __ in enumerate(recording._properties["contact_vector"]):
-        recording._properties["contact_vector"][idx][1] = x[idx]
+    x_new = rng.choice(shanks, num_channels)
+    probe = recording.get_probe()
+    new_positions = probe.contact_positions.copy()
+    new_positions[:, 0] = x_new  # column 0 is x
+    recording._probegroup.probes[0]._contact_positions = new_positions
+    recording.set_probe(probe, in_place=True)
 
     # generate random bad channel locations
     bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
@@ -161,18 +166,21 @@ def test_output_values():
     the non-interpolated channels is also an implicit test
     these were not accidently changed.
     """
-    recording = generate_recording(num_channels=5, durations=[1])
+    recording = generate_recording(num_channels=5, durations=[1], set_probe=False)
     bad_channel_indexes = np.array([0])
     bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
-    new_probe_locs = [
-        [5, 7, 3, 5, 5],  # 5 channels, a in the center ('bad channel', zero index)
-        [5, 5, 5, 7, 3],
-    ]  # all others equal distance away.
-    # Overwrite the probe information with the new locations
-    for idx, (x, y) in enumerate(zip(*new_probe_locs)):
-        recording._properties["contact_vector"][idx][1] = x
-        recording._properties["contact_vector"][idx][2] = y
+    probe_locs = np.array(
+        [
+            [5, 7, 3, 5, 5],  # 5 channels, a in the center ('bad channel', zero index)
+            [5, 5, 5, 7, 3],
+        ]  # all others equal distance away.
+    ).T
+    # Set the probe information with the new locations
+    probe = pi.Probe(ndim=2)
+    probe.set_contacts(positions=probe_locs)
+    probe.set_device_channel_indices(np.arange(len(probe_locs)))
+    recording.set_probe(probe, in_place=True)
 
     # Run interpolation in SI and check the interpolated channel
     # 0 is a linear combination of other channels
@@ -186,8 +194,7 @@ def test_output_values():
     # Shift the last channel position so that it is 4 units, rather than 2
     # away. Setting sigma_um = p = 1 allows easy calculation of the expected
     # weights.
-    recording._properties["contact_vector"][-1][1] = 5
-    recording._properties["contact_vector"][-1][2] = 9
+    recording._probegroup.probes[0]._contact_positions[-1] = [5, 9]
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)
 
