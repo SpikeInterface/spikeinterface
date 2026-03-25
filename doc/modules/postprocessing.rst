@@ -307,11 +307,7 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
         input="spike_locations",
         ms_before=0.5,
         ms_after=0.5,
-        spike_retriver_kwargs=dict(
-            channel_from_template=True,
-            radius_um=50,
-            peak_sign="neg"
-        ),
+        peak_sign="neg",
         method="center_of_mass"
     )
 
@@ -391,6 +387,10 @@ This extension computes the histograms of inter-spike-intervals. The computed ou
 
 valid_unit_periods
 ^^^^^^^^^^^^^^^^^^
+
+Based on code and ideas originally developed in the NeuroPyxles [npyx]_ and Bombcell [Fabre]_ packages.
+The code is not an exact replica of the original, and extensive comparison tests have not yet been performed. Hence
+differences in results may occur.
 
 This extension computes the valid unit periods for each unit based on the estimation of false positive rates
 (using RP violation - see ::doc:`metrics/qualitymetrics/isi_violations`) and false negative rates

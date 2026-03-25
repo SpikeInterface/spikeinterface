@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import copy
 import warnings
 import json
@@ -81,7 +79,7 @@ motion_options_preset = {
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
-    # This preset is the encestor of dredge
+    # This preset is the ancestor of dredge
     "nonrigid_accurate": {
         "doc": "method by Paninski lab (monopolar_triangulation + decentralized)",
         "detect_kwargs": dict(

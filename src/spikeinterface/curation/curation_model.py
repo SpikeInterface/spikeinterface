@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
-from typing import List, Dict, Union, Optional, Literal, Tuple
+import warnings
+from typing import Literal, List
 from itertools import chain, combinations
+from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
+
 import numpy as np
 
 from spikeinterface import BaseSorting
@@ -9,22 +11,22 @@ from spikeinterface.core.sorting_tools import _get_ids_after_merging, _get_ids_a
 
 class LabelDefinition(BaseModel):
     name: str = Field(description="Name of the label")
-    label_options: List[str] = Field(description="List of possible label options", min_length=2)
+    label_options: list[str] = Field(description="List of possible label options", min_length=2)
     exclusive: bool = Field(description="Whether the label is exclusive")
 
 
 class ManualLabel(BaseModel):
-    unit_id: Union[int, str] = Field(description="ID of the unit")
-    labels: Dict[str, List[str]] = Field(description="Dictionary of labels for the unit")
+    unit_id: int | str = Field(description="ID of the unit")
+    labels: dict[str, list[str]] = Field(description="Dictionary of labels for the unit")
 
 
 class Merge(BaseModel):
-    unit_ids: List[Union[int, str]] = Field(description="List of unit ids to be merged")
-    new_unit_id: Optional[Union[int, str]] = Field(default=None, description="New unit IDs for the merge group")
+    unit_ids: list[int | str] = Field(description="List of unit ids to be merged")
+    new_unit_id: int | str | None = Field(default=None, description="New unit IDs for the merge group")
 
 
 class Split(BaseModel):
-    unit_id: Union[int, str] = Field(description="ID of the unit")
+    unit_id: int | str = Field(description="ID of the unit")
     mode: Literal["indices", "labels"] = Field(
         default="indices",
         description=(
@@ -34,17 +36,15 @@ class Split(BaseModel):
             "If labels, the split is defined by a list of labels for each spike (`labels`). "
         ),
     )
-    indices: Optional[List[List[int]]] = Field(
+    indices: list[list[int]] | None = Field(
         default=None,
         description=(
             "List of indices for the split. The unit is split in multiple groups (one for each list of indices), "
             "plus an optional extra if the spike train has more spikes than the sum of the indices in the lists."
         ),
     )
-    labels: Optional[List[int]] = Field(default=None, description="List of labels for the split")
-    new_unit_ids: Optional[List[Union[int, str]]] = Field(
-        default=None, description="List of new unit IDs for each split"
-    )
+    labels: list[int] | None = Field(default=None, description="List of labels for the split")
+    new_unit_ids: list[int | str] | None = Field(default=None, description="List of new unit IDs for each split")
 
     def get_full_spike_indices(self, sorting: BaseSorting):
         """
@@ -76,19 +76,19 @@ class Split(BaseModel):
         return full_spike_indices
 
 
-class CurationModel(BaseModel):
-    supported_versions: Tuple[Literal["1"], Literal["2"]] = Field(
+class Curation(BaseModel):
+    supported_versions: tuple[Literal["1"], Literal["2"]] = Field(
         default=("1", "2"), description="Supported versions of the curation format"
     )
     format_version: str = Field(description="Version of the curation format")
-    unit_ids: List[Union[int, str]] = Field(description="List of unit IDs")
-    label_definitions: Optional[Dict[str, LabelDefinition]] = Field(
+    unit_ids: list[int | str] = Field(description="List of unit IDs")
+    label_definitions: dict[str, LabelDefinition] | None = Field(
         default=None, description="Dictionary of label definitions"
     )
-    manual_labels: Optional[List[ManualLabel]] = Field(default=None, description="List of manual labels")
-    removed: Optional[List[Union[int, str]]] = Field(default=None, description="List of removed unit IDs")
-    merges: Optional[List[Merge]] = Field(default=None, description="List of merges")
-    splits: Optional[List[Split]] = Field(default=None, description="List of splits")
+    manual_labels: list[ManualLabel] | None = Field(default=None, description="List of manual labels")
+    removed: list[int | str] | None = Field(default=None, description="List of removed unit IDs")
+    merges: list[Merge] | None = Field(default=None, description="List of merges")
+    splits: list[Split] | None = Field(default=None, description="List of splits")
 
     @field_validator("label_definitions", mode="before")
     def add_label_definition_name(cls, label_definitions):
@@ -431,9 +431,9 @@ class CurationModel(BaseModel):
                 f"Format version {self.format_version} not supported. Only {self.supported_versions} are valid"
             )
 
-        labeled_unit_set = set([lbl.unit_id for lbl in self.manual_labels]) if self.manual_labels else set()
+        labeled_unit_set = {lbl.unit_id for lbl in self.manual_labels} if self.manual_labels else set()
         merged_units_set = set(chain.from_iterable(merge.unit_ids for merge in self.merges)) if self.merges else set()
-        split_units_set = set(split.unit_id for split in self.splits) if self.splits else set()
+        split_units_set = {split.unit_id for split in self.splits} if self.splits else set()
         removed_set = set(self.removed) if self.removed else set()
         unit_ids = self.unit_ids
 
@@ -479,6 +479,15 @@ class CurationModel(BaseModel):
         return self
 
 
+def CurationModel(*args, **kwargs):
+    warnings.warn(
+        "`CurationModel` is deprecated and will be removed in 0.105.0. Use `Curation` instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Curation(*args, **kwargs)
+
+
 class SequentialCuration(BaseModel):
     """
     A Pydantic model which defines a sequence of curation steps. If using sequential curations,
@@ -486,7 +495,7 @@ class SequentialCuration(BaseModel):
     and that these match the unit ids of the following curation.
     """
 
-    curation_steps: List[CurationModel] = Field(description="List of curation steps applied sequentially")
+    curation_steps: List[Curation] = Field(description="List of curation steps applied sequentially")
 
     @model_validator(mode="after")
     def validate_sequential_curation(self):
@@ -499,7 +508,7 @@ class SequentialCuration(BaseModel):
                     )
             for split in curation.splits:
                 if split.new_unit_ids is None:
-                    raiseValueError(
+                    raise ValueError(
                         "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
                     )
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 
@@ -140,15 +138,15 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
         import scipy
 
         dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric=distance_metric)
-        kernal_dist = np.exp(-((dist / sigma_um) ** p))
+        kernel_dist = np.exp(-((dist / sigma_um) ** p))
     else:
         # this mimic the kilosort case where a sigma on x and y are diffrents.
         # note that in that case the distance metric become a cityblock
         sigma_x, sigma_y = sigma_um
         distx = np.abs(locations_1[:, 0][:, np.newaxis] - locations_2[:, 0][np.newaxis, :])
         disty = np.abs(locations_1[:, 1][:, np.newaxis] - locations_2[:, 1][np.newaxis, :])
-        kernal_dist = np.exp(-((distx / sigma_x) ** p) - (disty / sigma_y) ** p)
-    return kernal_dist
+        kernel_dist = np.exp(-((distx / sigma_x) ** p) - (disty / sigma_y) ** p)
+    return kernel_dist
 
 
 def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p, weight_threshold=0.005):
