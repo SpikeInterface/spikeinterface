@@ -63,7 +63,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         # my geometry
         channel_locations = np.zeros(
             (n_pos_unique, parent_channel_locations.shape[1]),
-            dtype=parent_channel_locations.dtype,
+            dtype=np.float32,
         )
         # average other dimensions in the geometry
         other_dim = np.arange(parent_channel_locations.shape[1]) != dim
