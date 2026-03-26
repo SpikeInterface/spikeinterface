@@ -509,7 +509,7 @@ def add_recording_to_zarr_group(
 
     # save time vector if any
     t_starts = np.zeros(recording.get_num_segments(), dtype="float64") * np.nan
-    for segment_index, rs in enumerate(recording._recording_segments):
+    for segment_index, rs in enumerate(recording.segments):
         d = rs.get_times_kwargs()
         time_vector = d["time_vector"]
 
