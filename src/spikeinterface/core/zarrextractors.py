@@ -368,8 +368,7 @@ def read_zarr(
         extractor_class = _get_class_from_string(class_name)
         return extractor_class(folder_path, storage_options=storage_options)
     else:
-        # For v<0.105.0 and old zarr files, revert to old way of loading based on the presence of "channel_ids"
-        # or "unit_ids" in the root
+        # For version<0.105.0 zarr files, revert to old way of loading based on the presence of "channel_ids"/"unit_ids"
         if "channel_ids" in root.keys():
             return read_zarr_recording(folder_path, storage_options=storage_options)
         elif "unit_ids" in root.keys():
