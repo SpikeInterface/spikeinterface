@@ -46,7 +46,7 @@ preproc_params["cmr_operator"] = "median"               # "median" (robust to ou
 # --- Waveform extraction ---
 preproc_params["max_spikes_per_unit"] = 500             # spikes to extract per unit (more = accurate but slower)
 preproc_params["ms_before"] = 3.0                       # ms before spike peak to include in waveform
-preproc_params["ms_after"] = 3.0                        # ms after spike peak to include in waveform 
+preproc_params["ms_after"] = 3.0                        # ms after spike peak to include in waveform
 
 # %% QC parameters
 qc_params = sc.get_default_qc_params()
