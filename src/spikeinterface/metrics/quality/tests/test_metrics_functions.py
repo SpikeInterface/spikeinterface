@@ -423,9 +423,7 @@ def test_calculate_sliding_rp_violations(sorting_analyzer_violations, periods_vi
     result = compute_sliding_rp_violations(sorting_analyzer, bin_size_ms=0.25, window_size_s=1)
     contaminations = result.sliding_rp_violation
     periods = periods_violations
-    result_periods = compute_sliding_rp_violations(
-        sorting_analyzer, periods=periods, bin_size_ms=0.25, window_size_s=1
-    )
+    result_periods = compute_sliding_rp_violations(sorting_analyzer, periods=periods, bin_size_ms=0.25, window_size_s=1)
     assert contaminations == result_periods.sliding_rp_violation
 
     empty_periods = np.empty(0, dtype=unit_period_dtype)
