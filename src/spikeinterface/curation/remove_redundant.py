@@ -3,7 +3,7 @@ from spikeinterface import BaseSorting
 
 from spikeinterface import SortingAnalyzer
 
-from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
+from spikeinterface.core.template_tools import get_template_main_channel_peak_shift, get_template_amplitudes
 from spikeinterface.postprocessing import align_sorting
 
 _remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
@@ -79,7 +79,8 @@ def remove_redundant_units(
 
     if align and unit_peak_shifts is None:
         assert sorting_analyzer is not None, "For align=True must give a SortingAnalyzer or explicit unit_peak_shifts"
-        unit_peak_shifts = get_template_extremum_channel_peak_shift(sorting_analyzer, peak_sign=peak_sign)
+
+        unit_peak_shifts = get_template_main_channel_peak_shift(sorting_analyzer, with_dict=True)
 
     if align:
         sorting_aligned = align_sorting(sorting, unit_peak_shifts)

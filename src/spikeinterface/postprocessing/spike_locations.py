@@ -1,5 +1,4 @@
 from spikeinterface.core.sortinganalyzer import register_result_extension
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
@@ -14,8 +13,6 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         The left window, before a peak, in milliseconds
     ms_after : float, default: 0.5
         The right window, after a peak, in milliseconds
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The peak sign to use when looking for the template extremum channel.
     spike_retriever_kwargs : dict
         Arguments to control the spike retriever behavior. See
         `spikeinterface.sortingcomponents.peak_localization.SpikeRetriever`.
@@ -38,14 +35,12 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
     def _handle_backward_compatibility_on_load(self):
         # For backwards compatibility - this renames spike_retriver_kwargs to spike_retriever_kwargs
         if "spike_retriver_kwargs" in self.params:
-            self.params["peak_sign"] = self.params["spike_retriver_kwargs"].get("peak_sign", "neg")
             self.params["spike_retriever_kwargs"] = self.params.pop("spike_retriver_kwargs")
 
     def _set_params(
         self,
         ms_before=0.5,
         ms_after=0.5,
-        peak_sign="neg",
         spike_retriever_kwargs=None,
         method="center_of_mass",
         method_kwargs={},
@@ -55,7 +50,6 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         return super()._set_params(
             ms_before=ms_before,
             ms_after=ms_after,
-            peak_sign=peak_sign,
             spike_retriever_kwargs=spike_retriever_kwargs,
             method=method,
             method_kwargs=method_kwargs,
@@ -66,10 +60,8 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        peak_sign = self.params["peak_sign"]
-        extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
-        )
+
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         retriever_kwargs = {
             "channel_from_template": True,

@@ -6,7 +6,6 @@ from pathlib import Path
 from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
 from spikeinterface.benchmark.benchmark_peak_detection import PeakDetectionStudy
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 
 @pytest.mark.skip()
@@ -30,7 +29,7 @@ def test_benchmark_peak_detection(create_cache_folder):
         sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False, **job_kwargs)
         sorting_analyzer.compute("random_spikes")
         sorting_analyzer.compute("templates", **job_kwargs)
-        extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
+        extremum_channel_inds = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
         spikes = gt_sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
         peaks[dataset] = spikes
 

@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 from .metrics import (
     get_trough_and_peak_idx,
@@ -249,11 +249,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
+
+        extremum_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+
         operator = self.params["template_operator"]
-        extremum_channel_indices = get_template_extremum_channel(
-            sorting_analyzer, peak_sign=peak_sign, outputs="index", operator=operator
-        )
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
+
 
         channel_locations = sorting_analyzer.get_channel_locations()
 
