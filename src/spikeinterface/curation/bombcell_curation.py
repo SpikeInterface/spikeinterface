@@ -104,7 +104,7 @@ def bombcell_label_units(
     thresholds: dict | str | Path | None = None,
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
-    external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None,
+    external_metrics: "pd.DataFrame | list[pd.DataFrame] | None" = None,
     use_valid_periods: bool = False,
     valid_periods_params: dict | None = None,
     recompute_quality_metrics: bool = True,
