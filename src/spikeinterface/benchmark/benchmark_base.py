@@ -293,7 +293,7 @@ class BenchmarkStudy:
         (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
 
     def set_precomputed_results(self, precomputed_results, verbose=False):
-        """Set precomputed results for some cases. This is usefull when you want to compute results outside of the benchmark and
+        """Set precomputed results for some cases. This is useful when you want to compute results outside of the benchmark and
         then set them in the benchmark.
 
         Parameters
