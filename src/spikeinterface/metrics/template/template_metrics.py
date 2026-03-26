@@ -9,14 +9,13 @@ from __future__ import annotations
 import numpy as np
 import warnings
 from copy import deepcopy
-from scipy.signal import find_peaks 
+from scipy.signal import find_peaks
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
 
 from .metrics import get_trough_and_peak_idx, single_channel_metrics, multi_channel_metrics
-
 
 MIN_SPARSE_CHANNELS_FOR_MULTI_CHANNEL_WARNING = 10
 MIN_CHANNELS_FOR_MULTI_CHANNEL_METRICS = 64
@@ -223,10 +222,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
                 sampling_frequency_up = sampling_frequency
             troughs_dict, peaks_before_dict, peaks_after_dict = get_trough_and_peak_idx(
                 template_upsampled,
-                min_thresh_detect_peaks_troughs=self.params['min_thresh_detect_peaks_troughs'],
-                smooth=self.params['smooth'],
-                smooth_window_frac=self.params['smooth_window_frac'],
-                smooth_polyorder=self.params['smooth_polyorder'],
+                min_thresh_detect_peaks_troughs=self.params["min_thresh_detect_peaks_troughs"],
+                smooth=self.params["smooth"],
+                smooth_window_frac=self.params["smooth_window_frac"],
+                smooth_polyorder=self.params["smooth_polyorder"],
             )
 
             templates_single.append(template_upsampled)
@@ -272,10 +271,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             tmp_data["channel_locations_multi"] = channel_locations_multi
             tmp_data["depth_direction"] = self.params["depth_direction"]
 
-        # store trough and peak dicts for GUI use 
-        self.data['troughs_info'] = troughs_dict
-        self.data['peaks_before_info'] = peaks_before_dict
-        self.data['peaks_after_info'] = troughs_dict, peaks_before_dict, peaks_after_dict
+        # store trough and peak dicts for GUI use
+        self.data["troughs_info"] = troughs_dict
+        self.data["peaks_before_info"] = peaks_before_dict
+        self.data["peaks_after_info"] = troughs_dict, peaks_before_dict, peaks_after_dict
         return tmp_data
 
 
