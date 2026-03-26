@@ -61,6 +61,11 @@ class BaseSorting(BaseExtractor):
         return html_repr
 
     @property
+    def segments(self) -> list["BaseSortingSegment"]:
+        """List of sorting segments."""
+        return self._segments
+
+    @property
     def unit_ids(self):
         return self._main_ids
 
