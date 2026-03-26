@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Literal
 
 import warnings
 import importlib.util
@@ -661,8 +661,9 @@ if HAVE_NUMBA:
 def compute_location_max_channel(
     templates_or_sorting_analyzer: SortingAnalyzer | Templates,
     unit_ids=None,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+    operator: Literal["average", "median"] = "average",
 ) -> np.ndarray:
     """
     Localize a unit using max channel.
@@ -690,7 +691,7 @@ def compute_location_max_channel(
         2d
     """
     extremum_channels_index = get_template_extremum_channel(
-        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index"
+        templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index", operator=operator
     )
     contact_locations = templates_or_sorting_analyzer.get_channel_locations()
     if unit_ids is None:

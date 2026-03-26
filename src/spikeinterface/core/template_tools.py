@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Literal
 
 import numpy as np
 
@@ -62,8 +62,8 @@ def _get_nbefore(one_object):
 
 def get_template_amplitudes(
     templates_or_sorting_analyzer,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
     return_in_uV: bool = True,
     abs_value: bool = True,
     operator: str = "average",
@@ -135,9 +135,9 @@ def get_template_amplitudes(
 
 def get_template_extremum_channel(
     templates_or_sorting_analyzer,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
-    outputs: "id" | "index" = "id",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+    outputs: Literal["id", "index"] = "id",
     operator: str = "average",
 ):
     """
@@ -202,7 +202,9 @@ def get_template_extremum_channel(
 
 
 def get_template_extremum_channel_peak_shift(
-    templates_or_sorting_analyzer, peak_sign: "neg" | "pos" | "both" = "neg", operator: str = "average"
+    templates_or_sorting_analyzer,
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    operator: Literal["average", "median"] = "average",
 ):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
@@ -228,7 +230,9 @@ def get_template_extremum_channel_peak_shift(
     channel_ids = templates_or_sorting_analyzer.channel_ids
     nbefore = _get_nbefore(templates_or_sorting_analyzer)
 
-    extremum_channels_ids = get_template_extremum_channel(templates_or_sorting_analyzer, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(
+        templates_or_sorting_analyzer, peak_sign=peak_sign, operator=operator
+    )
 
     shifts = {}
 
@@ -265,10 +269,10 @@ def get_template_extremum_channel_peak_shift(
 
 def get_template_extremum_amplitude(
     templates_or_sorting_analyzer,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    mode: "extremum" | "at_index" | "peak_to_peak" = "at_index",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    mode: Literal["extremum", "at_index", "peak_to_peak"] = "at_index",
     abs_value: bool = True,
-    operator: str = "average",
+    operator: Literal["average", "median"] = "average",
 ):
     """
     Computes amplitudes on the best channel.

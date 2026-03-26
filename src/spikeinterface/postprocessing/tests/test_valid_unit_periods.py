@@ -34,8 +34,8 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
                 periods[idx]["unit_index"] = unit_index
                 period_start = num_samples // 4
                 period_duration = num_samples // 2
-                periods[idx]["start_sample_index"] = period_start
-                periods[idx]["end_sample_index"] = period_start + period_duration
+                periods[idx]["start_sample_index"] = period_start - unit_index * 10
+                periods[idx]["end_sample_index"] = period_start + period_duration + unit_index * 10
                 periods[idx]["segment_index"] = segment_index
 
         sorting_analyzer = self._prepare_sorting_analyzer(
@@ -48,8 +48,17 @@ class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
             minimum_valid_period_duration=1,
         )
         # check that valid periods correspond to user defined periods
-        ext_periods = ext.get_data(outputs="numpy")
-        np.testing.assert_array_equal(ext_periods, periods)
+        ext_periods_numpy = ext.get_data(outputs="numpy")
+        np.testing.assert_array_equal(ext_periods_numpy, periods)
+
+        # check that `numpy` and `by_unit` outputs are the same
+        ext_periods_by_unit = ext.get_data(outputs="by_unit")
+        for segment_index in range(num_segments):
+            for unit_index, unit_id in enumerate(unit_ids):
+                periods_numpy_seg0 = ext_periods_numpy[ext_periods_numpy["segment_index"] == segment_index]
+                periods_numpy_unit = periods_numpy_seg0[periods_numpy_seg0["unit_index"] == unit_index]
+                period = [(periods_numpy_unit["start_sample_index"][0], periods_numpy_unit["end_sample_index"][0])]
+                assert period == ext_periods_by_unit[segment_index][unit_id]
 
     def test_user_defined_periods_as_arrays(self):
         unit_ids = self.sorting.unit_ids

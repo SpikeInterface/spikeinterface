@@ -495,16 +495,17 @@ def find_parents_of_type(list_of_parents, parent_type):
     return parents
 
 
-def check_graph(nodes):
+def check_graph(nodes, check_for_peak_source=True):
     """
     Check that node list is orderd in a good (parents are before children)
     """
 
-    node0 = nodes[0]
-    if not isinstance(node0, PeakSource):
-        raise ValueError(
-            "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
-        )
+    if check_for_peak_source:
+        node0 = nodes[0]
+        if not isinstance(node0, PeakSource):
+            raise ValueError(
+                "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
+            )
 
     for i, node in enumerate(nodes):
         assert isinstance(node, PipelineNode), f"Node {node} is not an instance of PipelineNode"
@@ -532,6 +533,7 @@ def run_node_pipeline(
     verbose=False,
     skip_after_n_peaks=None,
     recording_slices=None,
+    check_for_peak_source=True,
 ):
     """
     Machinery to compute in parallel operations on peaks and traces.
@@ -587,6 +589,8 @@ def run_node_pipeline(
         Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
         If None (default), the function iterates over the entire duration of the recording.
+    check_for_peak_source : bool, default True
+        Whether to check that the first node is a PeakSource (PeakDetector or PeakRetriever or
 
     Returns
     -------
@@ -595,7 +599,7 @@ def run_node_pipeline(
         If squeeze_output=True and only one output then directly np.array.
     """
 
-    check_graph(nodes)
+    check_graph(nodes, check_for_peak_source=check_for_peak_source)
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(node, PipelineNode) for node in nodes)
@@ -653,7 +657,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     nodes = worker_ctx["nodes"]
     skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
-    recording_segment = recording._recording_segments[segment_index]
+    recording_segment = recording.segments[segment_index]
     retrievers = find_parents_of_type(nodes, (SpikeRetriever, PeakRetriever))
     # get peak slices once for all retrievers
     peak_slice_by_retriever = {}
