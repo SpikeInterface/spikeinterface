@@ -420,22 +420,19 @@ def test_calculate_isi_violations(sorting_analyzer_violations, periods_violation
 
 def test_calculate_sliding_rp_violations(sorting_analyzer_violations, periods_violations):
     sorting_analyzer = sorting_analyzer_violations
-    contaminations = compute_sliding_rp_violations(sorting_analyzer, bin_size_ms=0.25, window_size_s=1)
+    result = compute_sliding_rp_violations(sorting_analyzer, bin_size_ms=0.25, window_size_s=1)
+    contaminations = result.sliding_rp_violation
     periods = periods_violations
-    contaminations_periods = compute_sliding_rp_violations(
+    result_periods = compute_sliding_rp_violations(
         sorting_analyzer, periods=periods, bin_size_ms=0.25, window_size_s=1
     )
-    assert contaminations == contaminations_periods
+    assert contaminations == result_periods.sliding_rp_violation
 
     empty_periods = np.empty(0, dtype=unit_period_dtype)
-    contaminations_periods_empty = compute_sliding_rp_violations(
+    result_empty = compute_sliding_rp_violations(
         sorting_analyzer, periods=empty_periods, bin_size_ms=0.25, window_size_s=1
     )
-    assert np.all(np.isnan(np.array(list(contaminations_periods_empty.values()))))
-
-    # testing method accuracy with magic number is not a good pratcice, I remove this.
-    # contaminations_gt = {0: 0.03, 1: 0.185, 2: 0.325}
-    # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
+    assert np.all(np.isnan(np.array(list(result_empty.sliding_rp_violation.values()))))
 
 
 def test_calculate_rp_violations(sorting_analyzer_violations, periods_violations):

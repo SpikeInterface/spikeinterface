@@ -915,6 +915,9 @@ class BaseMetricExtension(AnalyzerExtension):
     need_job_kwargs = True
     need_backward_compatibility_on_load = False
     metric_list: list[BaseMetric] = None  # list of BaseMetric
+    # dict mapping data key -> bool (True = per-unit array indexed on axis 0,
+    # False = global data passed through unchanged on select/merge/split).
+    # Set to None to disable.
     tmp_data_to_save = None
 
     def __init__(self, sorting_analyzer):
@@ -1340,7 +1343,11 @@ class BaseMetricExtension(AnalyzerExtension):
 
         if self.tmp_data_to_save is not None:
             for k in self.tmp_data_to_save:
-                self.data[k] = tmp_data[k]
+                if k in tmp_data:
+                    self.data[k] = tmp_data[k]
+                elif extension is not None and k in extension.data:
+                    # Propagate previously saved tmp_data for metrics not recomputed
+                    self.data[k] = extension.data[k]
 
     def _get_data(self):
         # convert to correct dtype
@@ -1358,10 +1365,22 @@ class BaseMetricExtension(AnalyzerExtension):
         Returns
         -------
         dict
-            Dictionary containing the selected metrics DataFrame.
+            Dictionary containing the selected metrics DataFrame and any tmp_data arrays.
         """
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
-        return dict(metrics=new_metrics)
+        result = dict(metrics=new_metrics)
+
+        if self.tmp_data_to_save is not None:
+            keep_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+            for k, is_per_unit in self.tmp_data_to_save.items():
+                if k not in self.data:
+                    continue
+                if is_per_unit:
+                    result[k] = self.data[k][keep_indices]
+                else:
+                    result[k] = self.data[k]
+
+        return result
 
     def _merge_extension_data(
         self,
@@ -1411,11 +1430,15 @@ class BaseMetricExtension(AnalyzerExtension):
         new_data["metrics"] = self._cast_metrics(metrics)
 
         if self.tmp_data_to_save is not None:
-            for k in self.tmp_data_to_save:
-                new_arr = _update_data_after_merge_or_split(
-                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
-                )
-                new_data[k] = new_arr
+            for k, is_per_unit in self.tmp_data_to_save.items():
+                if k not in self.data or k not in new_tmp_data:
+                    continue
+                if is_per_unit:
+                    new_data[k] = _update_data_after_merge_or_split(
+                        self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
+                    )
+                else:
+                    new_data[k] = new_tmp_data[k]
 
         return new_data
 
@@ -1459,11 +1482,15 @@ class BaseMetricExtension(AnalyzerExtension):
         new_data["metrics"] = self._cast_metrics(metrics)
 
         if self.tmp_data_to_save is not None:
-            for k in self.tmp_data_to_save:
-                new_arr = _update_data_after_merge_or_split(
-                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
-                )
-                new_data[k] = new_arr
+            for k, is_per_unit in self.tmp_data_to_save.items():
+                if k not in self.data or k not in new_tmp_data:
+                    continue
+                if is_per_unit:
+                    new_data[k] = _update_data_after_merge_or_split(
+                        self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
+                    )
+                else:
+                    new_data[k] = new_tmp_data[k]
 
         return new_data
 
