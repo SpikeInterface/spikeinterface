@@ -168,6 +168,11 @@ class BaseRecording(BaseRecordingSnippets):
 
         return SubtractRecordings(self, other)
 
+    @property
+    def segments(self) -> list["BaseRecordingSegment"]:
+        """List of recording segments."""
+        return self._segments
+
     def add_recording_segment(self, recording_segment: "BaseRecordingSegment") -> None:
         """Adds a recording segment.
 
