@@ -80,9 +80,13 @@ important for your research:
 - :code:`silhouette`  [Rousseeuw]_ [Hruschka]_
 
 If you use the :code:`metrics.template` module, i.e. you use the :code:`analyzer.compute("template_metrics")` method,
-please following citations:
+please include the following citations:
 
-- [Jia]_
+- [Jia]_ [Fabre]_
+- :code:`half_width`, :code:`peak_to_trough_duration`, :code:`number_of_peaks` [Jia]_ [Fabre]_
+- :code:`main_to_next_extremum_duration`, :code:`waveform_ratios`, :code:`waveform_widths` [Fabre]_
+- :code:`repolarization_slope`, :code:`recovery_slope` [Jia]_
+- :code:`exp_decay` [Jia]_ [Fabre]_
 
 
 Curation Module
