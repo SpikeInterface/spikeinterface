@@ -41,7 +41,7 @@ DEFAULT_MUA_METRICS = [
 ]
 
 # RPV metric column names (bombcell accepts "rpv" as threshold key and maps to whichever exists)
-RPV_METRIC_COLUMNS = ["rp_contamination", "sliding_rp_violation"]
+RPV_METRIC_COLUMNS = ["sliding_rp_violation", "rp_contamination"]
 
 DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_trough_ratio",
