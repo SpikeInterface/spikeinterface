@@ -210,7 +210,7 @@ class MdaSortingExtractor(BaseSorting):
         # Every spike assigned to a unit (label) has the same max channel
         # ref: https://github.com/SpikeInterface/spikeinterface/issues/3695#issuecomment-2663329006
         max_channels = []
-        segment = self._sorting_segments[0]
+        segment = self.segments[0]
         for unit_id in self.unit_ids:
             label_mask = segment._labels == unit_id
             # since all max channels are the same, we can just grab the first occurrence for the unit

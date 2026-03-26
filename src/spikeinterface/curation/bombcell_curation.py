@@ -8,8 +8,6 @@ Unit Labels:
     non_soma: Non-somatic units (axonal)
 """
 
-from __future__ import annotations
-
 import operator
 import warnings
 from pathlib import Path

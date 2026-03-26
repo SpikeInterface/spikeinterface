@@ -422,7 +422,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
             )
 
-        for segment_index, parent_segment in enumerate(recording._recording_segments):
+        for segment_index, parent_segment in enumerate(recording.segments):
             # finish the per-segment part of the time bin logic
             if interpolation_time_bin_centers_s is None:
                 # in this case, interpolation_time_bin_size_s is set.
