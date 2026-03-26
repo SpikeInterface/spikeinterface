@@ -103,7 +103,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording)
 
         seg_limits = np.searchsorted(periods["segment_index"], np.arange(num_seg + 1))
-        for seg_index, parent_segment in enumerate(recording._recording_segments):
+        for seg_index, parent_segment in enumerate(recording.segments):
             i0 = seg_limits[seg_index]
             i1 = seg_limits[seg_index + 1]
             periods_in_seg = periods[i0:i1]
