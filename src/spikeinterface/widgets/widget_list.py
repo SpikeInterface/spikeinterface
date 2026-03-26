@@ -39,6 +39,7 @@ from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCol
 from .unit_labels import WaveformOverlayByLabelWidget
 from .unit_valid_periods import ValidUnitPeriodsWidget
 from .bombcell_curation import BombcellUpsetPlotWidget, plot_bombcell_unit_labeling_all
+from .template_peak_trough import TemplatePeakTroughWidget
 
 widget_list = [
     AgreementMatrixWidget,
@@ -81,6 +82,7 @@ widget_list = [
     UnitWaveformsWidget,
     ValidUnitPeriodsWidget,
     WaveformOverlayByLabelWidget,
+    TemplatePeakTroughWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
@@ -171,6 +173,7 @@ plot_study_performances = StudyPerformances
 plot_study_agreement_matrix = StudyAgreementMatrix
 plot_study_summary = StudySummary
 plot_study_comparison_collision_by_similarity = StudyComparisonCollisionBySimilarityWidget
+plot_template_peak_trough = TemplatePeakTroughWidget
 
 
 def plot_timeseries(*args, **kwargs):

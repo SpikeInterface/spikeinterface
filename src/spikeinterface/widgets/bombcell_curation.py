@@ -105,7 +105,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
             ax.text(
                 0.5,
                 0.5,
-                "UpSet plots require 'upsetplot' package.\n\npip install upsetplot",
+                "UpSet plots require 'upsetplot' package.\n\npip install upsetplot-bombcell",
                 ha="center",
                 va="center",
                 fontsize=14,
