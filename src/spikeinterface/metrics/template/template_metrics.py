@@ -9,7 +9,6 @@ from __future__ import annotations
 import numpy as np
 import warnings
 from copy import deepcopy
-from scipy.signal import find_peaks
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 from collections import namedtuple
-from scipy.signal import find_peaks, savgol_filter
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 
 
@@ -53,6 +52,8 @@ def get_trough_and_peak_idx(
         - "main_idx": index of the main peak (most prominent)
         - "main_loc": location (sample index) of the main peak in template
     """
+    from scipy.signal import find_peaks, savgol_filter
+
     assert template.ndim == 1
 
     # Save original for plotting

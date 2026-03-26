@@ -105,6 +105,10 @@ def bombcell_label_units(
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None,
+    use_valid_periods: bool = False,
+    valid_periods_params: dict | None = None,
+    recompute_quality_metrics: bool = True,
+    **job_kwargs,
 ) -> "pd.DataFrame":
     """
     Label units based on quality metrics and template metrics using Bombcell logic:
@@ -152,6 +156,25 @@ def bombcell_label_units(
         If True, split non-somatic into "non_soma_good" and "non_soma_mua".
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
+    use_valid_periods : bool, default: False
+        If True, compute valid time periods per unit and recompute quality metrics restricted to
+        those periods before labeling. This uses the ``valid_unit_periods`` extension to identify
+        chunks with acceptable false positive (refractory violations) and false negative (amplitude
+        cutoff) rates. The FP/FN thresholds are derived from the bombcell thresholds
+        (``rpv`` → ``fp_threshold``, ``amplitude_cutoff`` → ``fn_threshold``).
+        Requires ``amplitude_scalings`` extension and Numba.
+    valid_periods_params : dict or None, default: None
+        Additional parameters passed to the ``valid_unit_periods`` extension computation.
+        Use this to set ``refractory_period_ms``, ``censored_period_ms``, ``period_mode``,
+        ``period_duration_s_absolute``, etc. Parameters ``fp_threshold`` and ``fn_threshold``
+        are automatically derived from bombcell thresholds if not explicitly provided here.
+    recompute_quality_metrics : bool, default: True
+        If ``use_valid_periods`` is True, whether to recompute quality metrics restricted to valid
+        periods. If False, the existing quality metrics are used as-is (useful if you already
+        computed them with ``use_valid_periods=True``).
+    **job_kwargs
+        Job keyword arguments (n_jobs, chunk_duration, progress_bar) passed to
+        ``valid_unit_periods`` and ``quality_metrics`` computation when ``use_valid_periods=True``.
 
     Returns
     -------
@@ -165,6 +188,61 @@ def bombcell_label_units(
     See [Fabre]_ for more details on the original implementation and rationale behind the thresholds.
     """
     import pandas as pd
+
+    # Parse thresholds early so we can derive valid_periods params from them
+    if thresholds is None:
+        thresholds_dict = bombcell_get_default_thresholds()
+    elif isinstance(thresholds, (str, Path)):
+        with open(thresholds, "r") as f:
+            thresholds_dict = json.load(f)
+    elif isinstance(thresholds, dict):
+        thresholds_dict = thresholds
+    else:
+        raise ValueError("thresholds must be a dict, a JSON file path, or None")
+
+    # Compute valid periods and recompute quality metrics if requested
+    if use_valid_periods:
+        if sorting_analyzer is None:
+            raise ValueError("use_valid_periods=True requires a sorting_analyzer")
+
+        # Derive fp/fn thresholds from bombcell thresholds
+        vp_params = dict(valid_periods_params) if valid_periods_params is not None else {}
+
+        if "fp_threshold" not in vp_params:
+            rpv_thresh = thresholds_dict.get("mua", {}).get("rpv", {}).get("less", None)
+            if rpv_thresh is not None:
+                vp_params["fp_threshold"] = rpv_thresh
+
+        if "fn_threshold" not in vp_params:
+            ac_thresh = thresholds_dict.get("mua", {}).get("amplitude_cutoff", {}).get("less", None)
+            if ac_thresh is not None:
+                vp_params["fn_threshold"] = ac_thresh
+
+        # Compute valid_unit_periods
+        if sorting_analyzer.has_extension("valid_unit_periods"):
+            sorting_analyzer.delete_extension("valid_unit_periods")
+        sorting_analyzer.compute("valid_unit_periods", **vp_params, **job_kwargs)
+
+        # Recompute quality metrics restricted to valid periods
+        if recompute_quality_metrics:
+            # Preserve existing quality metric settings (metric_names, metric_params)
+            qm_ext = sorting_analyzer.get_extension("quality_metrics")
+            if qm_ext is not None:
+                existing_params = qm_ext.params.copy()
+                existing_params.pop("periods", None)
+                existing_params.pop("use_valid_periods", None)
+                sorting_analyzer.delete_extension("quality_metrics")
+                sorting_analyzer.compute(
+                    "quality_metrics",
+                    use_valid_periods=True,
+                    **existing_params,
+                    **job_kwargs,
+                )
+            else:
+                raise ValueError(
+                    "use_valid_periods=True with recompute_quality_metrics=True requires "
+                    "quality_metrics to have been computed at least once."
+                )
 
     if sorting_analyzer is not None:
         combined_metrics = sorting_analyzer.get_metrics_extension_data()
@@ -183,16 +261,6 @@ def bombcell_label_units(
             combined_metrics = pd.concat(external_metrics, axis=1)
         else:
             combined_metrics = external_metrics
-
-    if thresholds is None:
-        thresholds_dict = bombcell_get_default_thresholds()
-    elif isinstance(thresholds, (str, Path)):
-        with open(thresholds, "r") as f:
-            thresholds_dict = json.load(f)
-    elif isinstance(thresholds, dict):
-        thresholds_dict = thresholds
-    else:
-        raise ValueError("thresholds must be a dict, a JSON file path, or None")
 
     # Map "rpv" threshold to actual column name (rp_contamination or sliding_rp_violation)
     if "mua" in thresholds_dict and "rpv" in thresholds_dict["mua"]:

@@ -124,19 +124,33 @@ compute_distance_metrics = False  # needs PCA; best for stable/chronic recording
 compute_drift = True
 label_non_somatic = True
 split_non_somatic_good_mua = False
+use_valid_periods = False  # compute quality metrics only on good time chunks
 
 # RPV method: "sliding_rp" (default, sweeps RP range) or "llobet" (single RP value)
 rp_violation_method = "sliding_rp"
 
+refractory_period_ms = 2.0
+censored_period_ms = 0.1
+
 qm_params = {
     "presence_ratio": {"bin_duration_s": 60},
-    "rp_violation": {"refractory_period_ms": 2.0, "censored_period_ms": 0.1},
+    "rp_violation": {"refractory_period_ms": refractory_period_ms, "censored_period_ms": censored_period_ms},
     "sliding_rp_violation": {
         "exclude_ref_period_below_ms": 0.5,
         "max_ref_period_ms": 10.0,
         "confidence_threshold": 0.9,
     },
     "drift": {"interval_s": 60, "min_spikes_per_interval": 100},
+}
+
+# Valid time periods parameters (only used if use_valid_periods = True)
+# fp_threshold and fn_threshold are auto-derived from bombcell thresholds
+valid_periods_params = {
+    "refractory_period_ms": refractory_period_ms,
+    "censored_period_ms": censored_period_ms,
+    "period_mode": "absolute",
+    "period_duration_s_absolute": 30.0,
+    "minimum_valid_period_duration": 180,
 }
 
 metric_names = ["amplitude_median", "snr", "amplitude_cutoff", "num_spikes", "presence_ratio", "firing_rate"]
@@ -154,9 +168,8 @@ if compute_distance_metrics:
     if not analyzer.has_extension("principal_components"):
         analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
 
-# To add more metrics, append here and add a threshold below:
-# metric_names.append("silhouette")    # requires principal_components
-# metric_names.append("d_prime")       # requires principal_components
+if use_valid_periods and not analyzer.has_extension("amplitude_scalings"):
+    analyzer.compute("amplitude_scalings", **job_kwargs)
 
 if analyzer.has_extension("quality_metrics"):
     analyzer.delete_extension("quality_metrics")
@@ -193,6 +206,9 @@ bombcell_labels = sc.bombcell_label_units(
     thresholds=thresholds,
     label_non_somatic=label_non_somatic,
     split_non_somatic_good_mua=split_non_somatic_good_mua,
+    use_valid_periods=use_valid_periods,
+    valid_periods_params=valid_periods_params if use_valid_periods else None,
+    **job_kwargs,
 )
 
 print(f"\nLabeled {len(bombcell_labels)} units")
