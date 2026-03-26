@@ -241,7 +241,7 @@ class TemplatePeakTroughWidget(BaseWidget):
             for j in range(n_chans):
                 offset = j * -spacer
                 waveform = traces[:, j]
-                is_peak = (chan_inds[j] == best_chan)
+                is_peak = chan_inds[j] == best_chan
                 color = "k" if is_peak else "gray"
                 lw = 1.2 if is_peak else 0.7
                 alpha = 1.0 if is_peak else 0.5
@@ -270,9 +270,7 @@ def _overlay_peak_trough_markers(ax, waveform, thresh, y_offset=0.0, min_peak_be
     """
     from spikeinterface.metrics.template.metrics import get_trough_and_peak_idx
 
-    troughs, peaks_before, peaks_after = get_trough_and_peak_idx(
-        waveform, min_thresh_detect_peaks_troughs=thresh
-    )
+    troughs, peaks_before, peaks_after = get_trough_and_peak_idx(waveform, min_thresh_detect_peaks_troughs=thresh)
 
     # Check whether peak_before passes the ratio threshold
     show_peak_before = True
@@ -291,13 +289,24 @@ def _overlay_peak_trough_markers(ax, waveform, thresh, y_offset=0.0, min_peak_be
             secondary_mask[troughs["main_idx"]] = False
         if secondary_mask.any():
             ax.scatter(
-                troughs["indices"][secondary_mask], troughs["values"][secondary_mask] + y_offset,
-                c="blue", s=30, marker="v", zorder=5, label="trough",
+                troughs["indices"][secondary_mask],
+                troughs["values"][secondary_mask] + y_offset,
+                c="blue",
+                s=30,
+                marker="v",
+                zorder=5,
+                label="trough",
             )
         if troughs["main_loc"] is not None:
             ax.scatter(
-                troughs["main_loc"], waveform[troughs["main_loc"]] + y_offset,
-                c="blue", s=100, marker="v", edgecolors="red", linewidths=1.5, zorder=6,
+                troughs["main_loc"],
+                waveform[troughs["main_loc"]] + y_offset,
+                c="blue",
+                s=100,
+                marker="v",
+                edgecolors="red",
+                linewidths=1.5,
+                zorder=6,
                 label="trough" if not secondary_mask.any() else None,
             )
 
@@ -308,13 +317,24 @@ def _overlay_peak_trough_markers(ax, waveform, thresh, y_offset=0.0, min_peak_be
             secondary_mask[peaks_before["main_idx"]] = False
         if secondary_mask.any():
             ax.scatter(
-                peaks_before["indices"][secondary_mask], peaks_before["values"][secondary_mask] + y_offset,
-                c="green", s=30, marker="^", zorder=5, label="peak before",
+                peaks_before["indices"][secondary_mask],
+                peaks_before["values"][secondary_mask] + y_offset,
+                c="green",
+                s=30,
+                marker="^",
+                zorder=5,
+                label="peak before",
             )
         if peaks_before["main_loc"] is not None:
             ax.scatter(
-                peaks_before["main_loc"], waveform[peaks_before["main_loc"]] + y_offset,
-                c="green", s=100, marker="^", edgecolors="red", linewidths=1.5, zorder=6,
+                peaks_before["main_loc"],
+                waveform[peaks_before["main_loc"]] + y_offset,
+                c="green",
+                s=100,
+                marker="^",
+                edgecolors="red",
+                linewidths=1.5,
+                zorder=6,
                 label="peak before" if not secondary_mask.any() else None,
             )
 
@@ -325,12 +345,23 @@ def _overlay_peak_trough_markers(ax, waveform, thresh, y_offset=0.0, min_peak_be
             secondary_mask[peaks_after["main_idx"]] = False
         if secondary_mask.any():
             ax.scatter(
-                peaks_after["indices"][secondary_mask], peaks_after["values"][secondary_mask] + y_offset,
-                c="orange", s=30, marker="^", zorder=5, label="peak after",
+                peaks_after["indices"][secondary_mask],
+                peaks_after["values"][secondary_mask] + y_offset,
+                c="orange",
+                s=30,
+                marker="^",
+                zorder=5,
+                label="peak after",
             )
         if peaks_after["main_loc"] is not None:
             ax.scatter(
-                peaks_after["main_loc"], waveform[peaks_after["main_loc"]] + y_offset,
-                c="orange", s=100, marker="^", edgecolors="red", linewidths=1.5, zorder=6,
+                peaks_after["main_loc"],
+                waveform[peaks_after["main_loc"]] + y_offset,
+                c="orange",
+                s=100,
+                marker="^",
+                edgecolors="red",
+                linewidths=1.5,
+                zorder=6,
                 label="peak after" if not secondary_mask.any() else None,
             )
