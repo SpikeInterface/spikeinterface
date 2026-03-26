@@ -62,6 +62,8 @@ qc_params["rp_method"] = "sliding_rp"                   # refractory period meth
 # --- BombCell classification options ---
 qc_params["label_non_somatic"] = True                   # detect axonal/dendritic units via waveform shape
 qc_params["split_non_somatic_good_mua"] = False         # if True, non-somatic split into good/mua subcategories
+qc_params["use_valid_periods"] = False                  # if True, identify valid time chunks per unit and recompute
+                                                        # quality metrics only on those periods (see below for details)
 
 # --- Presence ratio ---
 qc_params["presence_ratio_bin_duration_s"] = 60         # bin size (s) for checking if unit fires throughout recording
@@ -205,3 +207,71 @@ print(f"MUA units ({len(mua_units)}): {mua_units[:10]}...")
 print(f"\nMetrics for first good unit:")
 if good_units:
     print(metrics.loc[good_units[0]])
+
+# %% Output files
+# BombCell saves the following files to output_folder:
+#
+# labeling_results_wide.csv
+#   - One row per unit, all metrics as columns, plus "label" column
+#   - Format: unit_id (index), label, metric1, metric2, ...
+#   - Use for quick overview of all units and their metrics
+#
+# labeling_results_narrow.csv
+#   - One row per unit-metric combination (tidy/long format)
+#   - Columns: unit_id, label, metric_name, value, threshold_min, threshold_max, passed
+#   - Use to see exactly which metrics failed for each unit
+#
+# valid_periods.tsv (only if use_valid_periods=True)
+#   - Valid time periods per unit for downstream analysis
+#   - Columns: unit_id, segment_index, start_time_s, end_time_s, duration_s
+#   - Use to filter spikes to stable periods in your analysis
+#
+# metric_histograms.png
+#   - Histogram of each metric with threshold lines marked
+#   - Useful for adjusting thresholds based on your data distribution
+#
+# waveforms_by_label.png
+#   - Waveform overlays grouped by label (good, mua, noise, non_soma)
+#   - Verify that labels match expected waveform shapes
+#
+# upset_plot_*.png
+#   - UpSet plots showing which metrics fail together
+#   - Understand why units are labeled noise/mua
+
+# %% Using valid time periods
+# Valid periods identify chunks of time where each unit has stable amplitude
+# and low refractory period violations. This is useful when recordings have
+# unstable periods (e.g., drift, probe movement, or electrode noise).
+#
+# When use_valid_periods=True:
+#   1. Recording is divided into chunks (default 30s or ~300 spikes per unit)
+#   2. For each chunk, false positive rate (RP violations) and false negative
+#      rate (amplitude cutoff) are computed
+#   3. Chunks where BOTH rates are below threshold are marked as "valid"
+#   4. Overlapping valid chunks are merged; short periods (<180s) are removed
+#   5. Quality metrics are recomputed using only spikes within valid periods
+#   6. BombCell labeling is applied to these restricted metrics
+#   7. valid_periods.tsv is saved with the valid time windows per unit
+#
+# Example: Enable valid periods
+# qc_params["use_valid_periods"] = True
+#
+# Example: Customize valid period parameters
+# valid_periods_params = {
+#     "period_duration_s_absolute": 30.0,      # chunk size in seconds (if period_mode="absolute")
+#     "period_target_num_spikes": 300,         # target spikes per chunk (if period_mode="relative")
+#     "period_mode": "absolute",               # "absolute" (fixed duration) or "relative" (fixed spike count)
+#     "minimum_valid_period_duration": 180,    # min duration to keep a valid period (seconds)
+#     "fp_threshold": 0.1,                     # max false positive rate (derived from rpv threshold if not set)
+#     "fn_threshold": 0.1,                     # max false negative rate (derived from amplitude_cutoff if not set)
+# }
+# labels, metrics, figures = sc.run_bombcell_qc(
+#     analyzer, params=qc_params, valid_periods_params=valid_periods_params
+# )
+#
+# Example: Load valid_periods.tsv for downstream analysis
+# import pandas as pd
+# valid_periods = pd.read_csv(output_folder / "valid_periods.tsv", sep="\t")
+# # Filter to get valid periods for a specific unit
+# unit_periods = valid_periods[valid_periods["unit_id"] == good_units[0]]
+# print(f"Unit {good_units[0]} has {len(unit_periods)} valid period(s)")

@@ -492,3 +492,84 @@ def save_bombcell_results(
 
         narrow_df = pd.DataFrame(rows)
         narrow_df.to_csv(folder / "labeling_results_narrow.csv", index=False)
+
+
+def save_valid_periods(
+    sorting_analyzer,
+    folder,
+) -> None:
+    """
+    Save valid time periods per unit to a TSV file for downstream analysis.
+
+    This function extracts the valid_unit_periods extension data and saves it
+    in a simple, human-readable TSV format with times in seconds.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        Analyzer with the valid_unit_periods extension computed.
+    folder : str or Path
+        Folder to save the TSV file.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    The output file `valid_periods.tsv` contains one row per valid period with columns:
+
+    - unit_id: The unit identifier
+    - segment_index: Recording segment (0-indexed)
+    - start_time_s: Start of valid period in seconds
+    - end_time_s: End of valid period in seconds
+    - duration_s: Duration of valid period in seconds
+
+    This file can be easily loaded with pandas or any TSV reader for downstream
+    analysis, filtering spikes to valid periods, or visualization.
+    """
+    from pathlib import Path
+    import pandas as pd
+
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    if not sorting_analyzer.has_extension("valid_unit_periods"):
+        return
+
+    vp_ext = sorting_analyzer.get_extension("valid_unit_periods")
+    valid_periods = vp_ext.get_data(outputs="numpy")
+
+    if len(valid_periods) == 0:
+        # No valid periods found - save empty file with header
+        df = pd.DataFrame(columns=["unit_id", "segment_index", "start_time_s", "end_time_s", "duration_s"])
+        df.to_csv(folder / "valid_periods.tsv", sep="\t", index=False)
+        return
+
+    fs = sorting_analyzer.sampling_frequency
+    unit_ids = sorting_analyzer.unit_ids
+
+    rows = []
+    for period in valid_periods:
+        unit_index = period["unit_index"]
+        unit_id = unit_ids[unit_index]
+        segment_index = period["segment_index"]
+        start_sample = period["start_sample_index"]
+        end_sample = period["end_sample_index"]
+
+        start_time_s = start_sample / fs
+        end_time_s = end_sample / fs
+        duration_s = end_time_s - start_time_s
+
+        rows.append(
+            {
+                "unit_id": unit_id,
+                "segment_index": segment_index,
+                "start_time_s": round(start_time_s, 6),
+                "end_time_s": round(end_time_s, 6),
+                "duration_s": round(duration_s, 6),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    df.to_csv(folder / "valid_periods.tsv", sep="\t", index=False)

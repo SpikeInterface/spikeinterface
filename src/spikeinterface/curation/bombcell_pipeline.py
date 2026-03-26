@@ -518,6 +518,8 @@ def run_bombcell_qc(
     ------------------------------
     - labeling_results_wide.csv: One row per unit with all metrics and label.
     - labeling_results_narrow.csv: One row per unit-metric with pass/fail status.
+    - valid_periods.tsv: Valid time periods per unit (only if use_valid_periods=True).
+      Columns: unit_id, segment_index, start_time_s, end_time_s, duration_s.
     - metric_histograms.png: Histogram of each metric with threshold lines.
     - waveforms_by_label.png: Waveform overlays for each label category.
     - upset_plot_*.png: UpSet plots showing metric failure combinations.
@@ -550,7 +552,12 @@ def run_bombcell_qc(
     >>> good_units = labels[labels["bombcell_label"] == "good"].index.tolist()
     >>> mua_units = labels[labels["bombcell_label"] == "mua"].index.tolist()
     """
-    from .bombcell_curation import bombcell_get_default_thresholds, bombcell_label_units, save_bombcell_results
+    from .bombcell_curation import (
+        bombcell_get_default_thresholds,
+        bombcell_label_units,
+        save_bombcell_results,
+        save_valid_periods,
+    )
 
     if params is None:
         params = get_default_qc_params()
@@ -661,6 +668,8 @@ def run_bombcell_qc(
             thresholds=thresholds,
             folder=output_folder,
         )
+        if params["use_valid_periods"]:
+            save_valid_periods(sorting_analyzer, output_folder)
         if "histograms" in figures:
             figures["histograms"].savefig(output_folder / "metric_histograms.png", dpi=150, bbox_inches="tight")
         if "waveforms" in figures:
