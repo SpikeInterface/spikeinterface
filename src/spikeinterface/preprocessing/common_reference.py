@@ -154,7 +154,7 @@ class CommonReferenceRecording(BasePreprocessor):
         else:
             ref_channel_indices = None
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = CommonReferenceRecordingSegment(
                 parent_segment,
                 reference,

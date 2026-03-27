@@ -125,7 +125,7 @@ class FilterRecording(BasePreprocessor):
                 f"chunking. Consider increasing the chunk_size or chunk_duration to minimize margin overhead."
             )
         self.margin_samples = margin
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             self.add_recording_segment(
                 FilterRecordingSegment(
                     parent_segment,

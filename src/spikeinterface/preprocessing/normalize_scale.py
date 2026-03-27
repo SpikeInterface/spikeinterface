@@ -103,7 +103,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
@@ -166,7 +166,7 @@ class ScaleRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, self._dtype)
             self.add_recording_segment(rec_segment)
 
@@ -211,7 +211,7 @@ class CenterRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
@@ -313,7 +313,7 @@ class ZScoreRecording(BasePreprocessor):
         self.set_property(key="gain_to_uV", values=np.ones(num_chans, dtype="float32"))
         self.set_property(key="offset_to_uV", values=np.zeros(num_chans, dtype="float32"))
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 

@@ -548,12 +548,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             for segment_index in range(self.sorting_analyzer.get_num_segments()):
                 segment_mask = good_periods_array["segment_index"] == segment_index
                 periods_dict = {}
-                for unit_index in unit_ids:
-                    periods_dict[unit_index] = []
+                for unit_index, unit_id in enumerate(unit_ids):
+                    periods_dict[unit_id] = []
                     unit_mask = good_periods_array["unit_index"] == unit_index
                     good_periods_unit_segment = good_periods_array[segment_mask & unit_mask]
                     for start, end in good_periods_unit_segment[["start_sample_index", "end_sample_index"]]:
-                        periods_dict[unit_index].append((start, end))
+                        periods_dict[unit_id].append((start, end))
                 good_periods.append(periods_dict)
 
         return good_periods
