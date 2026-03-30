@@ -171,7 +171,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         # If original analyzer doesn't have "peaks_data" or "main_channel_templates",
         # then we can't save this tmp data (important for merges/splits)
-        if "peaks_data" in self.tmp_data_to_save:
+        if "peaks_data" not in self.data:
             self.tmp_data_to_save = []
 
     def _set_params(
