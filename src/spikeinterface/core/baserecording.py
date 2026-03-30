@@ -42,7 +42,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
-
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
