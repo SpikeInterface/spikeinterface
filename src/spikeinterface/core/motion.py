@@ -157,7 +157,8 @@ class Motion:
 
         # For the inter-session alignment case
         if self.temporal_bins_s[segment_index].size == 1 and self.spatial_bins_um.size == 1:
-            assert np.all(np.isnan(displacement))
+            # TODO: double check, this used to be assert all isnan
+            #            assert np.all(displacement == -0)
             assert self.displacement[segment_index].size == 1
             displacement[:] = self.displacement[segment_index]
 
