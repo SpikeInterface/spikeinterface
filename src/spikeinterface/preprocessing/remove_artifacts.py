@@ -197,7 +197,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
             time_pad = None
 
         BasePreprocessor.__init__(self, recording)
-        for seg_index, parent_segment in enumerate(recording._recording_segments):
+        for seg_index, parent_segment in enumerate(recording.segments):
             triggers = list_triggers[seg_index]
             labels = list_labels[seg_index]
             rec_segment = RemoveArtifactsRecordingSegment(

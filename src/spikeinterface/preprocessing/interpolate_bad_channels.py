@@ -65,7 +65,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
             locations_bad = locations[self._bad_channel_idxs]
             weights = preprocessing_tools.get_kriging_channel_weights(locations_good, locations_bad, sigma_um, p)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = InterpolateBadChannelsSegment(
                 parent_segment, self._good_channel_idxs, self._bad_channel_idxs, weights
             )
