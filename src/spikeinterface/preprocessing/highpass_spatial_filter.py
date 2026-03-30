@@ -221,7 +221,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             self.parent_recording_segment,
             start_frame=start_frame,
             end_frame=end_frame,
-            channel_indices=slice(None),
+            last_dimension_indices=slice(None),
             margin=margin,
         )
         # apply sorting by depth
