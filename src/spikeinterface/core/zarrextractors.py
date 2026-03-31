@@ -66,14 +66,15 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
     root = None
     exception = None
     if is_path_remote(str(folder_path)):
+        from zarr.storage import FsspecStore
+
         for use_consolidated in use_consolidated_options:
             if root is not None:
                 break
             for storage_options in storage_options_to_test:
                 try:
-                    root = zarr.open(
-                        str(folder_path), mode=mode, storage_options=storage_options, use_consolidated=use_consolidated
-                    )
+                    store = FsspecStore.from_url(str(folder_path), storage_options=storage_options)
+                    root = zarr.open(store, mode=mode, use_consolidated=use_consolidated)
                     break
                 except Exception as e:
                     exception = e
