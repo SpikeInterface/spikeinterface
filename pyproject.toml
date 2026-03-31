@@ -86,7 +86,7 @@ streaming_extractors = [
     "hdmf-zarr @ git+https://github.com/hdmf-dev/hdmf-zarr.git@zarr-v3-migration",
     # "hdmf-zarr>=0.11.0",
     "remfile",
-    "s3fs"
+    "s3fs>=2025.7.0"
 ]
 
 
@@ -168,7 +168,7 @@ test = [
     "ibllib>=3.4.1;python_version>='3.10'",
 
     # streaming templates
-    "s3fs",
+    "s3fs>=2025.7.0",
 
     # exporters
     "pynapple",
