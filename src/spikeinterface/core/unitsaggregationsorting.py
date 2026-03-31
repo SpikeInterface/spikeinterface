@@ -134,7 +134,7 @@ class UnitsAggregationSorting(BaseSorting):
 
         # add segments
         for i_seg in range(num_segments):
-            parent_segments = [sort._sorting_segments[i_seg] for sort in sorting_list]
+            parent_segments = [sort.segments[i_seg] for sort in sorting_list]
             sub_segment = UnitsAggregationSortingSegment(unit_map, parent_segments)
             self.add_sorting_segment(sub_segment)
 

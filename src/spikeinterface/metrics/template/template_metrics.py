@@ -169,6 +169,11 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             if "waveform_ratios" not in self.params["metric_names"]:
                 self.params["metric_names"].append("waveform_ratios")
 
+        # If original analyzer doesn't have "peaks_data" or "main_channel_templates",
+        # then we can't save this tmp data (important for merges/splits)
+        if "peaks_data" not in self.data:
+            self.tmp_data_to_save = []
+
     def _set_params(
         self,
         metric_names: list[str] | None = None,
@@ -234,12 +239,12 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             unit_ids = sorting_analyzer.unit_ids
         peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
-        min_thresh_detect_peaks_troughs = self.params["min_thresh_detect_peaks_troughs"]
-        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.1)
+        min_thresh_detect_peaks_troughs = self.params.get("min_thresh_detect_peaks_troughs", 0.3)
+        edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.09)
         min_peak_trough_distance_ratio = self.params.get("min_peak_trough_distance_ratio", 0.2)
         min_extremum_distance_samples = self.params.get("min_extremum_distance_samples", 3)
         sampling_frequency = sorting_analyzer.sampling_frequency
-        if self.params["upsampling_factor"] > 1:
+        if upsampling_factor > 1:
             sampling_frequency_up = upsampling_factor * sampling_frequency
         else:
             sampling_frequency_up = sampling_frequency
@@ -249,7 +254,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-        operator = self.params["template_operator"]
+        operator = self.params.get("template_operator", "average")
         extremum_channel_indices = get_template_extremum_channel(
             sorting_analyzer, peak_sign=peak_sign, outputs="index", operator=operator
         )
@@ -312,7 +317,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             # multi_channel_templates is a list of 2D arrays of shape (n_times, n_channels)
             tmp_data["multi_channel_templates"] = multi_channel_templates
             tmp_data["channel_locations_multi"] = channel_locations_multi
-            tmp_data["depth_direction"] = self.params["depth_direction"]
+            tmp_data["depth_direction"] = self.params.get("depth_direction", "y")
 
         # Add peaks_info and preprocessed templates to self.data for storage in extension
         columns = []
