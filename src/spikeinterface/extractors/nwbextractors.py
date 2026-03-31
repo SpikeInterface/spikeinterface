@@ -1254,7 +1254,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         spike_times_index_data = units_table["spike_times_index"]
 
         if "unit_name" in units_table:
-            unit_ids = units_table["unit_name"]
+            unit_ids = np.asarray(units_table["unit_name"][:].tolist())
         else:
             unit_ids = units_table["id"]
 
