@@ -3,6 +3,7 @@ import importlib
 import numpy as np
 
 from spikeinterface.core import get_channel_distances, Templates, ChannelSparsity
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 
 # from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
@@ -107,8 +108,8 @@ class IterativeISOSPLITClustering:
 
         ms_before = params["peaks_svd"]["ms_before"]
         ms_after = params["peaks_svd"]["ms_after"]
-        nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-        nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+        nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
         # radius_um = params["waveforms"]["radius_um"]
         verbose = params["verbose"]
