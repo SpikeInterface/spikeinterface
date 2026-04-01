@@ -1648,7 +1648,11 @@ def _apply_temporal_psd(
     ffts will vary slightly. If you can tolerate errors of 5e-7 or if you'll only ever call get_traces() with
     the same args in non-overlapping chunks, you can use_overlap_add=True.
     """
-    from scipy.signal import oaconvolve, convolve
+    try:
+        from scipy.signal import oaconvolve, convolve
+        have_scipy = True
+    except ImportError:
+        have_scipy = False
 
     klen = psd.shape[0]
     block_len = 2 * klen - 1
@@ -1665,7 +1669,9 @@ def _apply_temporal_psd(
     # stack and convolve
     chunk_conv = np.concatenate([pad_left.T, chunk.T, pad_right.T], axis=1)
     kernel = np.fft.fftshift(np.fft.irfft(psd, n=block_len))
-    if use_overlap_add:
+    if not have_scipy:
+        conv = np.convolve(chunk_conv, kernel[None], mode="valid")
+    elif use_overlap_add:
         conv = oaconvolve(chunk_conv, kernel[None], mode="valid", axes=1)
     else:
         conv = convolve(chunk_conv, kernel[None], mode="valid", method="direct")
