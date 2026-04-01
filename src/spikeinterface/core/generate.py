@@ -159,13 +159,9 @@ def generate_sorting(
         spikes.append(spikes_in_seg)
 
         if add_spikes_on_borders:
-            spikes_on_borders = np.zeros(
-                2 * num_spikes_per_border, dtype=minimum_spike_dtype
-            )
+            spikes_on_borders = np.zeros(2 * num_spikes_per_border, dtype=minimum_spike_dtype)
             spikes_on_borders["segment_index"] = segment_index
-            spikes_on_borders["unit_index"] = rng.choice(
-                num_units, size=2 * num_spikes_per_border, replace=True
-            )
+            spikes_on_borders["unit_index"] = rng.choice(num_units, size=2 * num_spikes_per_border, replace=True)
             # at start
             spikes_on_borders["sample_index"][:num_spikes_per_border] = rng.integers(
                 0, border_size_samples, num_spikes_per_border
@@ -177,11 +173,7 @@ def generate_sorting(
             spikes.append(spikes_on_borders)
 
     spikes = np.concatenate(spikes)
-    spikes = spikes[
-        np.lexsort(
-            (spikes["unit_index"], spikes["sample_index"], spikes["segment_index"])
-        )
-    ]
+    spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
@@ -225,26 +217,18 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
         sample_index = spike["sample_index"]
         if sample_index not in units_used_for_spike:
             units_used_for_spike[sample_index] = np.array([spike["unit_index"]])
-        units_not_used = unit_ids[
-            ~np.isin(unit_ids, units_used_for_spike[sample_index])
-        ]
+        units_not_used = unit_ids[~np.isin(unit_ids, units_used_for_spike[sample_index])]
 
         if len(units_not_used) == 0:
             continue
         new_unit_indices[i] = rng.choice(units_not_used)
-        units_used_for_spike[sample_index] = np.append(
-            units_used_for_spike[sample_index], new_unit_indices[i]
-        )
+        units_used_for_spike[sample_index] = np.append(units_used_for_spike[sample_index], new_unit_indices[i])
 
     spikes_duplicated["unit_index"] = new_unit_indices
-    sort_idxs = np.lexsort(
-        [spikes_duplicated["sample_index"], spikes_duplicated["segment_index"]]
-    )
+    sort_idxs = np.lexsort([spikes_duplicated["sample_index"], spikes_duplicated["segment_index"]])
     spikes_duplicated = spikes_duplicated[sort_idxs]
 
-    synchronous_spikes = NumpySorting(
-        spikes_duplicated, sorting.get_sampling_frequency(), unit_ids
-    )
+    synchronous_spikes = NumpySorting(spikes_duplicated, sorting.get_sampling_frequency(), unit_ids)
     sorting = TransformSorting.add_from_sorting(sorting, synchronous_spikes)
 
     return sorting
@@ -292,18 +276,12 @@ def generate_sorting_to_inject(
 
     for segment_index in range(sorting.get_num_segments()):
         for unit_id in sorting.unit_ids:
-            spike_train = sorting.get_unit_spike_train(
-                unit_id, segment_index=segment_index
-            )
-            n_injection = min(
-                max_injected_per_unit, int(round(injected_rate * len(spike_train)))
-            )
+            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+            n_injection = min(max_injected_per_unit, int(round(injected_rate * len(spike_train))))
             # Inject more, then take out all that violate the refractory period.
             n = int(n_injection + 10 * np.sqrt(n_injection))
             injected_spike_train = np.sort(
-                np.random.uniform(
-                    low=0, high=num_samples[segment_index], size=n
-                ).astype(np.int64)
+                np.random.uniform(low=0, high=num_samples[segment_index], size=n).astype(np.int64)
             )
 
             # Remove spikes that are in the refractory period.
@@ -312,22 +290,16 @@ def generate_sorting_to_inject(
 
             # Remove spikes that violate the refractory period of the real spikes.
             # TODO: Need a better & faster way than this.
-            min_diff = np.min(
-                np.abs(injected_spike_train[:, None] - spike_train[None, :]), axis=1
-            )
+            min_diff = np.min(np.abs(injected_spike_train[:, None] - spike_train[None, :]), axis=1)
             violations = min_diff < t_r
             injected_spike_train = injected_spike_train[~violations]
 
             if len(injected_spike_train) > n_injection:
-                injected_spike_train = np.sort(
-                    rng.choice(injected_spike_train, n_injection, replace=False)
-                )
+                injected_spike_train = np.sort(rng.choice(injected_spike_train, n_injection, replace=False))
 
             injected_spike_trains[segment_index][unit_id] = injected_spike_train
 
-    return NumpySorting.from_unit_dict(
-        injected_spike_trains, sorting.get_sampling_frequency()
-    )
+    return NumpySorting.from_unit_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
 class TransformSorting(BaseSorting):
@@ -371,13 +343,11 @@ class TransformSorting(BaseSorting):
 
         if new_unit_ids is not None:
             new_unit_ids = list(new_unit_ids)
-            assert ~np.any(np.isin(new_unit_ids, sorting.unit_ids)), (
-                "some units ids are already present. Consider using added_spikes_existing_units"
-            )
+            assert ~np.any(
+                np.isin(new_unit_ids, sorting.unit_ids)
+            ), "some units ids are already present. Consider using added_spikes_existing_units"
             if len(new_unit_ids) > 0:
-                assert type(unit_ids[0]) == type(new_unit_ids[0]), (
-                    "unit_ids should have the same type"
-                )
+                assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
                 unit_ids = unit_ids + list(new_unit_ids)
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
@@ -386,24 +356,15 @@ class TransformSorting(BaseSorting):
         self._cached_spike_vector = sorting.to_spike_vector().copy()
         self.refractory_period_ms = refractory_period_ms
 
-        self.added_spikes_from_existing_mask = np.zeros(
-            len(self._cached_spike_vector), dtype=bool
-        )
-        self.added_spikes_from_new_mask = np.zeros(
-            len(self._cached_spike_vector), dtype=bool
-        )
+        self.added_spikes_from_existing_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
+        self.added_spikes_from_new_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
 
-        if (
-            added_spikes_existing_units is not None
-            and len(added_spikes_existing_units) > 0
-        ):
-            assert added_spikes_existing_units.dtype == minimum_spike_dtype, (
-                "added_spikes_existing_units should be a spike vector"
-            )
+        if added_spikes_existing_units is not None and len(added_spikes_existing_units) > 0:
+            assert (
+                added_spikes_existing_units.dtype == minimum_spike_dtype
+            ), "added_spikes_existing_units should be a spike vector"
             added_unit_indices = np.arange(len(self.parent_unit_ids))
-            self._cached_spike_vector = np.concatenate(
-                (self._cached_spike_vector, added_spikes_existing_units)
-            )
+            self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (
                     self.added_spikes_from_existing_mask,
@@ -418,12 +379,10 @@ class TransformSorting(BaseSorting):
             )
 
         if added_spikes_new_units is not None and len(added_spikes_new_units) > 0:
-            assert added_spikes_new_units.dtype == minimum_spike_dtype, (
-                "added_spikes_new_units should be a spike vector"
-            )
-            self._cached_spike_vector = np.concatenate(
-                (self._cached_spike_vector, added_spikes_new_units)
-            )
+            assert (
+                added_spikes_new_units.dtype == minimum_spike_dtype
+            ), "added_spikes_new_units should be a spike vector"
+            self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (
                     self.added_spikes_from_existing_mask,
@@ -444,16 +403,12 @@ class TransformSorting(BaseSorting):
             ]
         )
         self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
-        self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[
-            sort_idxs
-        ]
+        self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[sort_idxs]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[sort_idxs]
 
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
-            segment = SpikeVectorSortingSegment(
-                self._cached_spike_vector, segment_index, unit_ids=self.unit_ids
-            )
+            segment = SpikeVectorSortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
             self.add_sorting_segment(segment)
 
         if self.refractory_period_ms is not None:
@@ -469,9 +424,7 @@ class TransformSorting(BaseSorting):
 
     @property
     def added_spikes_mask(self):
-        return np.logical_or(
-            self.added_spikes_from_existing_mask, self.added_spikes_from_new_mask
-        )
+        return np.logical_or(self.added_spikes_from_existing_mask, self.added_spikes_from_new_mask)
 
     def get_added_spikes_indices(self):
         return np.nonzero(self.added_spikes_mask)[0]
@@ -486,9 +439,7 @@ class TransformSorting(BaseSorting):
         return self.unit_ids[len(self.parent_unit_ids) :]
 
     @staticmethod
-    def add_from_sorting(
-        sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None
-    ) -> "TransformSorting":
+    def add_from_sorting(sorting1: BaseSorting, sorting2: BaseSorting, refractory_period_ms=None) -> "TransformSorting":
         """
         Construct TransformSorting by adding one sorting to one other.
 
@@ -503,12 +454,10 @@ class TransformSorting(BaseSorting):
             of spikes. Any spike times in added_spikes violating the refractory period will be
             discarded.
         """
-        assert sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency(), (
-            "sampling_frequency should be the same"
-        )
-        assert type(sorting1.unit_ids[0]) == type(sorting2.unit_ids[0]), (
-            "unit_ids should have the same type"
-        )
+        assert (
+            sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency()
+        ), "sampling_frequency should be the same"
+        assert type(sorting1.unit_ids[0]) == type(sorting2.unit_ids[0]), "unit_ids should have the same type"
         # We detect the indices that are shared by the two sortings
         mask1 = np.isin(sorting2.unit_ids, sorting1.unit_ids)
         common_ids = sorting2.unit_ids[mask1]
@@ -573,12 +522,8 @@ class TransformSorting(BaseSorting):
             of spikes. Any spike times in added_spikes violating the refractory period will be
             discarded.
         """
-        sorting2 = NumpySorting.from_unit_dict(
-            units_dict_list, sorting1.get_sampling_frequency()
-        )
-        sorting = TransformSorting.add_from_sorting(
-            sorting1, sorting2, refractory_period_ms
-        )
+        sorting2 = NumpySorting.from_unit_dict(units_dict_list, sorting1.get_sampling_frequency())
+        sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
     @staticmethod
@@ -615,12 +560,8 @@ class TransformSorting(BaseSorting):
             discarded.
         """
 
-        sorting2 = NumpySorting.from_samples_and_labels(
-            times_list, labels_list, sampling_frequency, unit_ids
-        )
-        sorting = TransformSorting.add_from_sorting(
-            sorting1, sorting2, refractory_period_ms
-        )
+        sorting2 = NumpySorting.from_samples_and_labels(times_list, labels_list, sampling_frequency, unit_ids)
+        sorting = TransformSorting.add_from_sorting(sorting1, sorting2, refractory_period_ms)
         return sorting
 
     def clean_refractory_period(self):
@@ -642,9 +583,7 @@ class TransformSorting(BaseSorting):
                 )
 
         self._cached_spike_vector = self._cached_spike_vector[to_keep]
-        self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[
-            to_keep
-        ]
+        self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[to_keep]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[to_keep]
 
 
@@ -837,9 +776,7 @@ def synthesize_poisson_spike_vector(
     refractory_period_seconds = refractory_period_ms / 1000.0
     refractory_period_frames = int(refractory_period_seconds * sampling_frequency)
 
-    is_refractory_period_too_long = np.any(
-        refractory_period_seconds >= 1.0 / firing_rates
-    )
+    is_refractory_period_too_long = np.any(refractory_period_seconds >= 1.0 / firing_rates)
     if is_refractory_period_too_long:
         raise ValueError(
             f"The given refractory period {refractory_period_ms} is too long for the firing rates {firing_rates}"
@@ -860,9 +797,7 @@ def synthesize_poisson_spike_vector(
     binomial_p_modified = np.minimum(binomial_p_modified, 1.0)
 
     # Generate inter spike frames, add the refractory samples and accumulate for sorted spike frames
-    inter_spike_frames = rng.geometric(
-        p=binomial_p_modified[:, np.newaxis], size=(num_units, num_spikes_max)
-    )
+    inter_spike_frames = rng.geometric(p=binomial_p_modified[:, np.newaxis], size=(num_units, num_spikes_max))
     inter_spike_frames[:, 1:] += refractory_period_frames
     spike_frames = np.cumsum(inter_spike_frames, axis=1, out=inter_spike_frames)
     spike_frames = spike_frames.ravel()
@@ -878,9 +813,7 @@ def synthesize_poisson_spike_vector(
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
-    sort_indices = np.argsort(
-        spike_frames, kind="stable"
-    )  # I profiled the different kinds, this is the fastest.
+    sort_indices = np.argsort(spike_frames, kind="stable")  # I profiled the different kinds, this is the fastest.
 
     unit_indices = unit_indices[sort_indices]
     spike_frames = spike_frames[sort_indices]
@@ -1026,9 +959,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     """
     rng = np.random.default_rng(seed)
 
-    other_ids = np.arange(
-        np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1
-    )
+    other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
     shifts = rng.integers(low=-max_shift, high=max_shift, size=num)
 
     shifts[shifts == 0] += max_shift
@@ -1038,8 +969,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     for segment_index in range(sorting.get_num_segments()):
         # sorting to dict
         d = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-            for unit_id in sorting.unit_ids
+            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
         }
 
         r = {}
@@ -1060,17 +990,13 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
             r[unit_id] = times
         spiketrains.append(r)
 
-    sorting_new_units = NumpySorting.from_unit_dict(
-        spiketrains, sampling_frequency=sorting.get_sampling_frequency()
-    )
+    sorting_new_units = NumpySorting.from_unit_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
     sorting_with_dup = TransformSorting.add_from_sorting(sorting, sorting_new_units)
 
     return sorting_with_dup
 
 
-def inject_some_split_units(
-    sorting, split_ids: list, num_split=2, output_ids=False, seed=None
-):
+def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=False, seed=None):
     """
     Inject some split units in a sorting.
 
@@ -1108,8 +1034,7 @@ def inject_some_split_units(
     for segment_index in range(sorting.get_num_segments()):
         # sorting to dict
         d = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-            for unit_id in sorting.unit_ids
+            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
         }
 
         new_units = {}
@@ -1125,18 +1050,14 @@ def inject_some_split_units(
                 new_units[unit_id] = original_times
         spiketrains.append(new_units)
 
-    sorting_with_split = NumpySorting.from_unit_dict(
-        spiketrains, sampling_frequency=sorting.get_sampling_frequency()
-    )
+    sorting_with_split = NumpySorting.from_unit_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
     if output_ids:
         return sorting_with_split, other_ids
     else:
         return sorting_with_split
 
 
-def synthetize_spike_train_bad_isi(
-    duration, baseline_rate, num_violations, violation_delta=1e-5
-):
+def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, violation_delta=1e-5):
     """Create a spike train. Has uniform inter-spike intervals, except where isis violations occur.
 
     Parameters
@@ -1231,9 +1152,7 @@ class SortingGenerator(BaseSorting):
         self.durations = durations
         self.refractory_period_seconds = refractory_period_ms / 1000.0
 
-        is_refractory_period_too_long = np.any(
-            self.refractory_period_seconds >= 1.0 / firing_rates
-        )
+        is_refractory_period_too_long = np.any(self.refractory_period_seconds >= 1.0 / firing_rates)
         if is_refractory_period_too_long:
             raise ValueError(
                 f"The given refractory period {refractory_period_ms} is too long for the firing rates {firing_rates}"
@@ -1289,21 +1208,15 @@ class SortingGeneratorSegment(BaseSortingSegment):
         self.firing_rates = firing_rates
 
         if np.isscalar(self.refractory_period_seconds):
-            self.refractory_period_seconds = np.full(
-                num_units, self.refractory_period_seconds, dtype="float64"
-            )
+            self.refractory_period_seconds = np.full(num_units, self.refractory_period_seconds, dtype="float64")
 
         self.segment_seed = seed
-        self.units_seed = {
-            unit_id: abs(self.segment_seed + hash(unit_id)) for unit_id in unit_ids
-        }
+        self.units_seed = {unit_id: abs(self.segment_seed + hash(unit_id)) for unit_id in unit_ids}
 
         self.num_samples = math.ceil(sampling_frequency * duration)
         super().__init__(t_start)
 
-    def get_unit_spike_train(
-        self, unit_id, start_frame: int | None = None, end_frame: int | None = None
-    ) -> np.ndarray:
+    def get_unit_spike_train(self, unit_id, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
         unit_seed = self.units_seed[unit_id]
         unit_index = self.parent_extractor.id_to_index(unit_id)
 
@@ -1338,9 +1251,7 @@ class SortingGeneratorSegment(BaseSortingSegment):
             start_index = 0
 
         if end_frame is not None:
-            end_index = np.searchsorted(
-                spike_frames[start_index:], end_frame, side="left"
-            )
+            end_index = np.searchsorted(spike_frames[start_index:], end_frame, side="left")
         else:
             end_index = int(self.duration * self.sampling_frequency)
 
@@ -1422,9 +1333,7 @@ class NoiseGeneratorRecording(BaseRecording):
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
-        assert strategy in ("tile_pregenerated", "on_the_fly"), (
-            "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
-        )
+        assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
         if np.isscalar(noise_levels):
             noise_levels = np.ones((1, num_channels)) * noise_levels
@@ -1433,9 +1342,7 @@ class NoiseGeneratorRecording(BaseRecording):
             if len(noise_levels.shape) < 2:
                 noise_levels = noise_levels[np.newaxis, :]
 
-        assert len(noise_levels[0]) == num_channels, (
-            "Noise levels should have a size of num_channels"
-        )
+        assert len(noise_levels[0]) == num_channels, "Noise levels should have a size of num_channels"
 
         BaseRecording.__init__(
             self,
@@ -1447,9 +1354,9 @@ class NoiseGeneratorRecording(BaseRecording):
         num_segments = len(durations)
 
         if cov_matrix is not None:
-            assert cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels, (
-                "cov_matrix should have a size (num_channels, num_channels)"
-            )
+            assert (
+                cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels
+            ), "cov_matrix should have a size (num_channels, num_channels)"
 
         # very important here when multiprocessing and dump/load
         seed = _ensure_seed(seed)
@@ -1597,10 +1504,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
                     pos += end_first_block
                 else:
                     # special case when unique block
-                    traces[:] = noise_block[
-                        start_frame_within_block : start_frame_within_block
-                        + num_samples
-                    ]
+                    traces[:] = noise_block[start_frame_within_block : start_frame_within_block + num_samples]
             elif block_index == last_block_index:
                 if end_frame_within_block > 0:
                     traces[pos:] = noise_block[:end_frame_within_block]
@@ -1646,28 +1550,20 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         pad_end_frame = end_frame + right_pad_len
         print(f"{pad_start_frame=} {pad_end_frame=}")
         assert 0 <= pad_start_frame < pad_end_frame <= n_samples
-        chunk = self.get_traces_spatial_only(
-            pad_start_frame, pad_end_frame, channel_indices
-        )
+        chunk = self.get_traces_spatial_only(pad_start_frame, pad_end_frame, channel_indices)
         empty = np.zeros_like(chunk[:0])
         if left_circ_len:
-            circ_left = self.get_traces_spatial_only(
-                n_samples - left_circ_len, n_samples, channel_indices
-            )
+            circ_left = self.get_traces_spatial_only(n_samples - left_circ_len, n_samples, channel_indices)
         else:
             circ_left = empty
         if right_circ_len:
-            circ_right = self.get_traces_spatial_only(
-                0, right_circ_len, channel_indices
-            )
+            circ_right = self.get_traces_spatial_only(0, right_circ_len, channel_indices)
         else:
             circ_right = empty
 
         chunk_main = chunk[left_pad_len : chunk.shape[0] - right_pad_len]
         pad_left = np.concatenate([circ_left, chunk[:left_pad_len]])
-        pad_right = np.concatenate(
-            [chunk[chunk.shape[0] - right_pad_len : chunk.shape[0]], circ_right]
-        )
+        pad_right = np.concatenate([chunk[chunk.shape[0] - right_pad_len : chunk.shape[0]], circ_right])
         return _apply_temporal_psd(
             chunk_main,
             self.spectral_density,
@@ -1796,9 +1692,7 @@ def exp_growth(start_amp, end_amp, duration_ms, tau_ms, sampling_frequency, flip
     return y[:-1]
 
 
-def get_ellipse(
-    positions, center, x_factor=1, y_factor=1, x_angle=0, y_angle=0, z_angle=0
-):
+def get_ellipse(positions, center, x_factor=1, y_factor=1, x_angle=0, y_angle=0, z_angle=0):
     """
     Compute the distances to a particular ellipsoid in order to take into account
     spatial inhomogeneities while generating the template. In a carthesian, centered
@@ -1855,9 +1749,7 @@ def get_ellipse(
     rot_matrix = Rx @ Ry @ Rz
     P = rot_matrix @ p
 
-    distances = np.sqrt(
-        (P[0] / x_factor) ** 2 + (P[1] / y_factor) ** 2 + (P[2] / 1) ** 2
-    )
+    distances = np.sqrt((P[0] / x_factor) ** 2 + (P[1] / y_factor) ** 2 + (P[2] / 1) ** 2)
 
     return distances
 
@@ -1967,9 +1859,7 @@ def _ensure_unit_params(unit_params, num_units, seed):
         elif isinstance(v, (list, np.ndarray)):
             # already vector
             values = np.asarray(v)
-            assert values.shape == (num_units,), (
-                f"generate_templates: wrong shape for {k} in unit_params"
-            )
+            assert values.shape == (num_units,), f"generate_templates: wrong shape for {k} in unit_params"
         elif v is None:
             values = [None] * num_units
         else:
@@ -2061,9 +1951,7 @@ def generate_templates(
 
     # channel_locations to 3D
     if channel_locations.shape[1] == 2:
-        channel_locations = np.hstack(
-            [channel_locations, np.zeros((channel_locations.shape[0], 1))]
-        )
+        channel_locations = np.hstack([channel_locations, np.zeros((channel_locations.shape[0], 1))])
 
     num_units = units_locations.shape[0]
     num_channels = channel_locations.shape[0]
@@ -2074,9 +1962,7 @@ def generate_templates(
     if upsample_factor is not None:
         upsample_factor = int(upsample_factor)
         assert upsample_factor >= 1
-        templates = np.zeros(
-            (num_units, width, num_channels, upsample_factor), dtype=dtype
-        )
+        templates = np.zeros((num_units, width, num_channels, upsample_factor), dtype=dtype)
         fs = sampling_frequency * upsample_factor
     else:
         templates = np.zeros((num_units, width, num_channels), dtype=dtype)
@@ -2221,17 +2107,9 @@ class InjectTemplatesRecording(BaseRecording):
             check_borders = False
         self.templates = templates
 
-        channel_ids = (
-            parent_recording.channel_ids
-            if parent_recording is not None
-            else list(range(templates.shape[2]))
-        )
-        dtype = (
-            parent_recording.dtype if parent_recording is not None else templates.dtype
-        )
-        BaseRecording.__init__(
-            self, sorting.get_sampling_frequency(), channel_ids, dtype
-        )
+        channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
+        dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
+        BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
         # Important : self._serializability is not change here because it will depend on the sorting parents itself.
 
@@ -2263,9 +2141,7 @@ class InjectTemplatesRecording(BaseRecording):
         if amplitude_factor is None:
             amplitude_vector = None
         elif np.isscalar(amplitude_factor):
-            amplitude_vector = np.full(
-                self.spike_vector.size, amplitude_factor, dtype="float32"
-            )
+            amplitude_vector = np.full(self.spike_vector.size, amplitude_factor, dtype="float32")
         else:
             amplitude_factor = np.asarray(amplitude_factor)
             assert amplitude_factor.shape == self.spike_vector.shape
@@ -2273,18 +2149,13 @@ class InjectTemplatesRecording(BaseRecording):
 
         if parent_recording is not None:
             assert parent_recording.get_num_segments() == sorting.get_num_segments()
-            assert (
-                parent_recording.get_sampling_frequency()
-                == sorting.get_sampling_frequency()
-            )
+            assert parent_recording.get_sampling_frequency() == sorting.get_sampling_frequency()
             assert parent_recording.get_num_channels() == templates.shape[2]
             parent_recording.copy_metadata(self)
 
         if num_samples is None:
             if parent_recording is None:
-                num_samples = [
-                    self.spike_vector["sample_index"][-1] + templates.shape[1]
-                ]
+                num_samples = [self.spike_vector["sample_index"][-1] + templates.shape[1]]
             else:
                 num_samples = [
                     parent_recording.get_num_frames(segment_index)
@@ -2295,25 +2166,13 @@ class InjectTemplatesRecording(BaseRecording):
             num_samples = [num_samples]
 
         for segment_index in range(sorting.get_num_segments()):
-            start = np.searchsorted(
-                self.spike_vector["segment_index"], segment_index, side="left"
-            )
-            end = np.searchsorted(
-                self.spike_vector["segment_index"], segment_index, side="right"
-            )
+            start = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="left")
+            end = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="right")
             spikes = self.spike_vector[start:end]
-            amplitude_vec = (
-                amplitude_vector[start:end] if amplitude_vector is not None else None
-            )
-            upsample_vec = (
-                upsample_vector[start:end] if upsample_vector is not None else None
-            )
+            amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
+            upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
-            parent_recording_segment = (
-                None
-                if parent_recording is None
-                else parent_recording.segments[segment_index]
-            )
+            parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectTemplatesRecordingSegment(
                 self.sampling_frequency,
                 self.dtype,
@@ -2353,10 +2212,7 @@ class InjectTemplatesRecording(BaseRecording):
         max_value = np.max(np.abs(templates))
         threshold = 0.01 * max_value
 
-        if (
-            max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1])))
-            > threshold
-        ):
+        if max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1]))) > threshold:
             warnings.warn(
                 "Warning! Your templates do not go to 0 on the edges in InjectTemplatesRecording. Please make your window bigger."
             )
@@ -2378,9 +2234,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(
             self,
             sampling_frequency,
-            t_start=0
-            if parent_recording_segment is None
-            else parent_recording_segment.t_start,
+            t_start=0 if parent_recording_segment is None else parent_recording_segment.t_start,
         )
         assert not (parent_recording_segment is None and num_samples is None)
 
@@ -2391,11 +2245,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         self.amplitude_vector = amplitude_vector
         self.upsample_vector = upsample_vector
         self.parent_recording = parent_recording_segment
-        self.num_samples = (
-            parent_recording_segment.get_num_frames()
-            if num_samples is None
-            else num_samples
-        )
+        self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
 
     def get_traces(
         self,
@@ -2406,11 +2256,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         if channel_indices is None:
             n_channels = self.templates.shape[2]
         elif isinstance(channel_indices, slice):
-            stop = (
-                channel_indices.stop
-                if channel_indices.stop is not None
-                else self.templates.shape[2]
-            )
+            stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)
@@ -2418,9 +2264,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             n_channels = len(channel_indices)
 
         if self.parent_recording is not None:
-            traces = self.parent_recording.get_traces(
-                start_frame, end_frame, channel_indices
-            ).copy()
+            traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices).copy()
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
@@ -2476,9 +2320,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-inject_templates = define_function_from_class(
-    source_class=InjectTemplatesRecording, name="inject_templates"
-)
+inject_templates = define_function_from_class(source_class=InjectTemplatesRecording, name="inject_templates")
 
 
 ## toy example zone ##
@@ -2492,9 +2334,7 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
         num_contact_per_column = num_channels // num_columns
         j = 0
         for i in range(num_columns):
-            channel_locations[j : j + num_contact_per_column, 0] = (
-                i * contact_spacing_um
-            )
+            channel_locations[j : j + num_contact_per_column, 0] = i * contact_spacing_um
             channel_locations[j : j + num_contact_per_column, 1] = (
                 np.arange(num_contact_per_column) * contact_spacing_um
             )
@@ -2513,9 +2353,7 @@ def _generate_multimodal(rng, size, num_modes, lim0, lim1):
         prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
     prob /= np.sum(prob)
     choices = rng.choice(np.arange(bins.size), size, p=prob)
-    values = bins[choices] + rng.uniform(
-        low=-bin_step / 2, high=bin_step / 2, size=size
-    )
+    values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
     return values
 
 
@@ -2603,22 +2441,16 @@ def generate_unit_locations(
     if distribution == "uniform":
         units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
     elif distribution == "multimodal":
-        units_locations[:, 1] = _generate_multimodal(
-            rng, num_units, num_modes, minimum_y, maximum_y
-        )
+        units_locations[:, 1] = _generate_multimodal(rng, num_units, num_modes, minimum_y, maximum_y)
     else:
-        raise ValueError(
-            "generate_unit_locations has wrong distribution must be 'uniform' or "
-        )
+        raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or ")
     units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
 
     if minimum_distance is not None:
         solution_found = False
         renew_inds = None
         for i in range(max_iteration):
-            distances = np.linalg.norm(
-                units_locations[:, np.newaxis] - units_locations[np.newaxis, :], axis=2
-            )
+            distances = np.linalg.norm(units_locations[:, np.newaxis] - units_locations[np.newaxis, :], axis=2)
             inds0, inds1 = np.nonzero(distances < minimum_distance)
             mask = inds0 != inds1
             inds0 = inds0[mask]
@@ -2631,21 +2463,15 @@ def generate_unit_locations(
                     # random only bad ones in the previous set
                     renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
 
-                units_locations[:, 0][renew_inds] = rng.uniform(
-                    minimum_x, maximum_x, size=renew_inds.size
-                )
+                units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
                 if distribution == "uniform":
-                    units_locations[:, 1][renew_inds] = rng.uniform(
-                        minimum_y, maximum_y, size=renew_inds.size
-                    )
+                    units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
 
                 elif distribution == "multimodal":
                     units_locations[:, 1][renew_inds] = _generate_multimodal(
                         rng, renew_inds.size, num_modes, minimum_y, maximum_y
                     )
-                units_locations[:, 2][renew_inds] = rng.uniform(
-                    minimum_z, maximum_z, size=renew_inds.size
-                )
+                units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
 
             else:
                 solution_found = True
@@ -2658,9 +2484,7 @@ def generate_unit_locations(
                     "You can use distance_strict=False or reduce minimum distance"
                 )
             else:
-                warnings.warn(
-                    f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}"
-                )
+                warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
     return units_locations
 
@@ -2686,9 +2510,7 @@ def generate_ground_truth_recording(
     upsample_vector=None,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
     noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
-    generate_unit_locations_kwargs=dict(
-        margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20
-    ),
+    generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=None,
     dtype="float32",
     seed=None,
@@ -2787,9 +2609,7 @@ def generate_ground_truth_recording(
             num_contact_per_column[mid] += num_channels % prb_kwargs["num_columns"]
             prb_kwargs["num_contact_per_column"] = num_contact_per_column
         else:
-            raise ValueError(
-                "num_columns should be provided in dict generate_probe_kwargs"
-            )
+            raise ValueError("num_columns should be provided in dict generate_probe_kwargs")
 
         probe = generate_multi_columns_probe(**prb_kwargs)
         probe.set_device_channel_indices(np.arange(num_channels))
