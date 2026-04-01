@@ -1650,6 +1650,7 @@ def _apply_temporal_psd(
     """
     try:
         from scipy.signal import oaconvolve, convolve
+
         have_scipy = True
     except ImportError:
         have_scipy = False
