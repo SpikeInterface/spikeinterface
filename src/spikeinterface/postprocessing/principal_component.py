@@ -653,37 +653,42 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     sample_indices = valid_offsets[:, None] + np.arange(nsamples)[None, :]  # (n_valid, nsamples)
     all_wfs = traces[sample_indices]  # (n_valid, nsamples, n_channels)
 
-    # Vectorized PCA: batch by channel across all spikes in the chunk
-    # Build a mapping: for each channel, which spikes use it and at what position
+    # Vectorized PCA: batch by channel across all spikes in the chunk.
+    # For each unique channel, find all spikes that use it (via their unit's
+    # sparsity), extract waveforms, and call transform once.
     valid_labels = spike_labels[valid_indices]
 
-    # Collect (spike_local_idx, channel_position, channel_index) for all spike-channel pairs
-    chan_to_spikes: dict[int, list[tuple[int, int]]] = {}
-    for local_idx in range(n_valid):
-        unit_index = valid_labels[local_idx]
+    # Build a set of all channels used by spikes in this chunk
+    unique_unit_indices = np.unique(valid_labels)
+    chan_info: dict[int, list[tuple[np.ndarray, int]]] = {}
+    for unit_index in unique_unit_indices:
         chan_inds = unit_channels[unit_index]
+        unit_mask = valid_labels == unit_index
+        unit_local_idxs = np.nonzero(unit_mask)[0]
         for c, chan_ind in enumerate(chan_inds):
-            if chan_ind not in chan_to_spikes:
-                chan_to_spikes[chan_ind] = []
-            chan_to_spikes[chan_ind].append((local_idx, c))
+            if chan_ind not in chan_info:
+                chan_info[chan_ind] = []
+            chan_info[chan_ind].append((unit_local_idxs, c))
 
-    for chan_ind, spike_chan_pairs in chan_to_spikes.items():
-        local_idxs = np.array([p[0] for p in spike_chan_pairs])
-        chan_positions = np.array([p[1] for p in spike_chan_pairs])
-        global_idxs = valid_indices[local_idxs]
+    for chan_ind, unit_groups in chan_info.items():
+        # Concatenate all spike indices for this channel across units
+        all_local_idxs = np.concatenate([g[0] for g in unit_groups])
+        global_idxs = valid_indices[all_local_idxs]
 
         # Batch waveforms for this channel: (n_spikes, nsamples)
-        wfs_batch = all_wfs[local_idxs, :, chan_ind]
+        wfs_batch = all_wfs[all_local_idxs, :, chan_ind]
 
         if wfs_batch.size == 0:
             continue
 
         try:
-            pcs_batch = pca_model[chan_ind].transform(wfs_batch)  # (n_spikes, n_components)
-            # Write results — group by channel position to use vectorized indexing
-            for c_pos in np.unique(chan_positions):
-                mask = chan_positions == c_pos
-                all_pcs[global_idxs[mask], :, c_pos] = pcs_batch[mask]
+            pcs_batch = pca_model[chan_ind].transform(wfs_batch)
+            # Write results back — each unit group has a fixed channel position
+            offset = 0
+            for unit_local_idxs, c_pos in unit_groups:
+                n = len(unit_local_idxs)
+                all_pcs[global_idxs[offset : offset + n], :, c_pos] = pcs_batch[offset : offset + n]
+                offset += n
         except Exception:
             # this could happen if len(wfs) is less than n_comp for a channel
             pass
