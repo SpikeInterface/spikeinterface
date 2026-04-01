@@ -463,6 +463,26 @@ def test_generate_templates():
         dtype="float32",
         unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
+
+    # power case
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=None,
+        seed=42,
+        dtype="float32",
+        spatial_profile="power",
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
+    )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
 
     # upsampling case
     templates = generate_templates(
