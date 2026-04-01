@@ -1758,7 +1758,7 @@ def generate_templates(
         to Euclidean distance.
     spatial_profile : "exponential" | "power", default: "exponential"
         Spatial footpring decay curve family.
-        
+
             * "exponential": alpha * exp(-r / spatial_decay)
             * "power": alpha / (spatial_base + (r/spatial_decay) ** spatial_power)
 
@@ -1839,7 +1839,9 @@ def generate_templates(
         if spatial_profile == "exponential":
             channel_factors = alpha * np.exp(-distances / spatial_decay)
         elif spatial_profile == "power":
-            channel_factors = alpha / (params["spatial_base"][u] + (distances / spatial_decay) ** params["spatial_power"][u])
+            channel_factors = alpha / (
+                params["spatial_base"][u] + (distances / spatial_decay) ** params["spatial_power"][u]
+            )
 
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
