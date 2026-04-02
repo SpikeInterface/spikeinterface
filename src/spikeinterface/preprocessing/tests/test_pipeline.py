@@ -165,6 +165,11 @@ def test_loading_provenance(create_cache_folder):
         # when several run
         seed=2205,
     )
+
+    print(f"Target Path: {cache_folder}")
+    print(f"Path Length: {len(str(cache_folder))}")
+    print(f"Exists? {cache_folder.exists()}")
+
     pp_rec.save_to_folder(folder=cache_folder)
 
     loaded_pp_dict = get_preprocessing_dict_from_file(cache_folder / "provenance.pkl")
