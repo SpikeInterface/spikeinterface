@@ -232,6 +232,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = ["src"]
 markers = [
     "core",
     "generation",
