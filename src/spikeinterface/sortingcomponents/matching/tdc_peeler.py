@@ -5,6 +5,7 @@ from spikeinterface.core import (
     get_channel_distances,
     get_template_extremum_channel,
 )
+from spikeinterface.core.core_tools import ms_to_samples
 
 from spikeinterface.sortingcomponents.peak_detection.method_list import (
     LocallyExclusivePeakDetector,
@@ -132,8 +133,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         self.peak_sign = peak_sign
 
-        nbefore_short = int(ms_before * sr / 1000.0)
-        nafter_short = int(ms_after * sr / 1000.0)
+        nbefore_short = ms_to_samples(ms_before, sr)
+        nafter_short = ms_to_samples(ms_after, sr)
         assert nbefore_short <= templates.nbefore
         assert nafter_short <= templates.nafter
         self.nbefore_short = nbefore_short
