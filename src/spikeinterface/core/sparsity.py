@@ -7,6 +7,7 @@ from .baserecording import BaseRecording
 from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates_with_accumulator
+from .core_tools import ms_to_samples
 
 _sparsity_doc = """
     method : str
@@ -784,8 +785,8 @@ def estimate_sparsity(
         probe = recording.create_dummy_probe_from_locations(chan_locs)
 
     if method != "by_property":
-        nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-        nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+        nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
         random_spikes_indices = random_spikes_selection(

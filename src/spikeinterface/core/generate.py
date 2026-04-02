@@ -12,7 +12,7 @@ from probeinterface import Probe, generate_linear_probe, generate_multi_columns_
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from .snippets_tools import snippets_from_sorting
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, ms_to_samples
 
 
 def _ensure_seed(seed):
@@ -1598,8 +1598,8 @@ def generate_single_fake_waveform(
     assert ms_after > depolarization_ms + repolarization_ms
     assert ms_before > depolarization_ms
 
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
-    nafter = int(sampling_frequency * ms_after / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
     width = nbefore + nafter
     wf = np.zeros(width, dtype=dtype)
 
@@ -1776,8 +1776,8 @@ def generate_templates(
 
     num_units = units_locations.shape[0]
     num_channels = channel_locations.shape[0]
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
-    nafter = int(sampling_frequency * ms_after / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
     width = nbefore + nafter
 
     if upsample_factor is not None:
@@ -2451,8 +2451,8 @@ def generate_ground_truth_recording(
             upsample_factor = templates.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
 
-    nbefore = int(ms_before * sampling_frequency / 1000.0)
-    nafter = int(ms_after * sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
     assert (nbefore + nafter) == templates.shape[1]
 
     # construct recording
