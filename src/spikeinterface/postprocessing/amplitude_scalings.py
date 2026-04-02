@@ -1,6 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
@@ -87,7 +88,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
 
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
-            cut_out_before = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_before = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_before <= nbefore
             ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
@@ -95,7 +96,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             cut_out_before = nbefore
 
         if self.params["ms_after"] is not None:
-            cut_out_after = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_after = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_after <= nafter
             ), f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
