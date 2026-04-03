@@ -546,6 +546,7 @@ class RPViolation(BaseMetric):
 def compute_sliding_rp_violations(
     sorting_analyzer,
     unit_ids=None,
+    tmp_data=None,
     periods=None,
     min_spikes=0,
     bin_size_ms=0.25,
@@ -553,11 +554,12 @@ def compute_sliding_rp_violations(
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
+    confidence_threshold=0.9,
 ):
     """
     Compute sliding refractory period violations, a metric developed by IBL which computes
     contamination by using a sliding refractory period.
-    This metric computes the minimum contamination with at least 90% confidence.
+    This metric computes the minimum contamination with at least ``confidence_threshold`` confidence.
 
     Parameters
     ----------
@@ -565,6 +567,9 @@ def compute_sliding_rp_violations(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the sliding RP violations. If None, all units are used.
+    tmp_data : dict or None
+        Shared data dict from the metric extension. When provided, per-tauR contamination
+        curves and rp_centers are written to it for persistent storage.
     periods : array of unit_period_dtype | None, default: None
         Periods (segment_index, start_sample_index, end_sample_index, unit_index)
         on which to compute the metric. If None, the entire recording duration is used.
@@ -581,11 +586,17 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
+    confidence_threshold : float, default: 0.9
+        Confidence threshold (between 0 and 1) for determining the minimum contamination.
+        A higher value requires stronger statistical evidence. Default is 0.9 (90% confidence).
 
     Returns
     -------
-    contamination : dict of floats
-        The minimum contamination at 90% confidence.
+    result : namedtuple
+        Named tuple with fields:
+
+        - ``sliding_rp_violation`` : dict of floats — minimum contamination per unit.
+        - ``sliding_rp_estimated_tauR`` : dict of floats — estimated refractory period (s) per unit.
 
     References
     ----------
@@ -593,6 +604,8 @@ def compute_sliding_rp_violations(
     This code was adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
+    res = namedtuple("sliding_rp_result", ["sliding_rp_violation", "sliding_rp_estimated_tauR"])
+
     total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
     sorting = sorting_analyzer.sorting
     sorting = sorting.select_periods(periods=periods)
@@ -602,7 +615,18 @@ def compute_sliding_rp_violations(
 
     fs = sorting_analyzer.sampling_frequency
 
+    # Pre-compute rp_centers so we know the array size even if all units are skipped
+    if contamination_values is None:
+        contamination_values_arr = np.arange(0.5, 35, 0.5) / 100
+    else:
+        contamination_values_arr = np.asarray(contamination_values)
+    rp_bin_size = bin_size_ms / 1000
+    rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)
+    rp_centers = rp_edges + rp_bin_size / 2
+
     contamination = {}
+    estimated_tauR = {}
+    per_tauR_contam_list = []
 
     spikes, slices = sorting.to_reordered_spike_vector(
         ["sample_index", "segment_index", "unit_index"], return_order=False
@@ -618,13 +642,15 @@ def compute_sliding_rp_violations(
         unit_n_spikes = len(sub_spikes)
         if unit_n_spikes <= min_spikes:
             contamination[unit_id] = np.nan
+            estimated_tauR[unit_id] = np.nan
+            per_tauR_contam_list.append(np.full(len(rp_centers), np.nan))
             continue
 
         duration = total_durations[unit_id]
 
         sub_sorting = NumpySorting(sub_spikes, fs, unit_ids=[unit_id])
 
-        contamination[unit_id] = slidingRP_violations(
+        min_contam, est_tauR, contam_at_each_tauR, _ = slidingRP_violations(
             sub_sorting,
             duration,
             bin_size_ms,
@@ -632,9 +658,18 @@ def compute_sliding_rp_violations(
             exclude_ref_period_below_ms,
             max_ref_period_ms,
             contamination_values,
+            confidence_threshold=confidence_threshold,
         )
+        contamination[unit_id] = min_contam
+        estimated_tauR[unit_id] = est_tauR
+        per_tauR_contam_list.append(contam_at_each_tauR)
 
-    return contamination
+    # Store per-tauR data in tmp_data for persistent storage by the extension
+    if tmp_data is not None:
+        tmp_data["sliding_rp_per_tauR_contamination"] = np.array(per_tauR_contam_list)
+        tmp_data["sliding_rp_rp_centers"] = rp_centers
+
+    return res(contamination, estimated_tauR)
 
 
 class SlidingRPViolation(BaseMetric):
@@ -647,11 +682,14 @@ class SlidingRPViolation(BaseMetric):
         "exclude_ref_period_below_ms": 0.5,
         "max_ref_period_ms": 10,
         "contamination_values": None,
+        "confidence_threshold": 0.9,
     }
-    metric_columns = {"sliding_rp_violation": float}
+    metric_columns = {"sliding_rp_violation": float, "sliding_rp_estimated_tauR": float}
     metric_descriptions = {
-        "sliding_rp_violation": "Minimum contamination at 90% confidence using sliding refractory period method."
+        "sliding_rp_violation": "Minimum contamination at specified confidence using sliding refractory period method.",
+        "sliding_rp_estimated_tauR": "Estimated refractory period (seconds) at which the minimum contamination was found.",
     }
+    needs_tmp_data = True
     supports_periods = True
 
 
@@ -1696,7 +1734,7 @@ def slidingRP_violations(
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
-    return_conf_matrix=False,
+    confidence_threshold=0.9,
 ):
     """
     A metric developed by IBL which determines whether the refractory period violations
@@ -1706,8 +1744,10 @@ def slidingRP_violations(
 
     Parameters
     ----------
-    spike_samples : ndarray_like or list (for multi-segment)
-        The spike times in samples.
+    sorting : BaseSorting
+        A sorting object (typically single-unit).
+    duration : float
+        Total duration in seconds.
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
@@ -1718,16 +1758,23 @@ def slidingRP_violations(
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
         The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
-    return_conf_matrix : bool, default: False
-        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
+    confidence_threshold : float, default: 0.9
+        Confidence threshold (between 0 and 1). Default is 0.9 (90% confidence).
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
 
     Returns
     -------
-    min_cont_with_90_confidence : dict of floats
-        The minimum contamination with confidence > 90%.
+    min_contamination : float
+        The minimum contamination with confidence above the specified threshold.
+    estimated_tauR : float
+        The refractory period (in seconds) at which the minimum contamination was found.
+    contamination_at_each_tauR : np.ndarray
+        1D array of length ``n_rp_centers``. For each tauR tested, the minimum
+        contamination with confidence above the threshold (NaN where none passes).
+    rp_centers : np.ndarray
+        1D array of the refractory period centers tested (in seconds).
     """
     if contamination_values is None:
         contamination_values = np.arange(0.5, 35, 0.5) / 100  # vector of contamination values to test
@@ -1767,18 +1814,26 @@ def slidingRP_violations(
     )
     test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000.0  # (in seconds)
 
-    # only test for refractory period durations greater than 'exclude_ref_period_below_ms'
-    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
+    # For each tauR, find the minimum contamination where confidence exceeds threshold
+    contamination_at_each_tauR = np.full(len(rp_centers), np.nan)
+    for j in range(len(rp_centers)):
+        passing = np.where(conf_matrix[:, j] > confidence_threshold)[0]
+        if len(passing) > 0:
+            contamination_at_each_tauR[j] = contamination_values[passing[0]]
 
-    if len(inds_confidence90[0]) > 0:
-        minI = np.min(inds_confidence90[0][0])
-        min_cont_with_90_confidence = contamination_values[minI]
+    # Only test for refractory period durations greater than 'exclude_ref_period_below_ms'
+    masked_contam = contamination_at_each_tauR.copy()
+    masked_contam[~test_rp_centers_mask] = np.nan
+
+    if np.any(~np.isnan(masked_contam)):
+        best_idx = np.nanargmin(masked_contam)
+        min_contamination = masked_contam[best_idx]
+        estimated_tauR = rp_centers[best_idx]
     else:
-        min_cont_with_90_confidence = np.nan
-    if return_conf_matrix:
-        return min_cont_with_90_confidence, conf_matrix
-    else:
-        return min_cont_with_90_confidence
+        min_contamination = np.nan
+        estimated_tauR = np.nan
+
+    return min_contamination, estimated_tauR, contamination_at_each_tauR, rp_centers
 
 
 def _compute_rp_contamination_one_unit(

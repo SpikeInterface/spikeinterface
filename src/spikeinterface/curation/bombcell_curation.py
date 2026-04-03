@@ -9,6 +9,7 @@ Unit Labels:
 """
 
 import operator
+import warnings
 from pathlib import Path
 import json
 import numpy as np
@@ -30,10 +31,15 @@ DEFAULT_MUA_METRICS = [
     "snr",
     "amplitude_cutoff",
     "num_spikes",
-    "rp_contamination",
+    "rpv",  # maps to rp_contamination or sliding_rp_violation
     "presence_ratio",
     "drift_ptp",
+    "isolation_distance",
+    "l_ratio",
 ]
+
+# RPV metric column names (bombcell accepts "rpv" as threshold key and maps to whichever exists)
+RPV_METRIC_COLUMNS = ["sliding_rp_violation", "rp_contamination"]
 
 DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_trough_ratio",
@@ -42,6 +48,15 @@ DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_peak_after_ratio",
     "main_peak_to_trough_ratio",
 ]
+
+# Metrics belonging to the built-in non-somatic groups.
+# The compound logic is: (width_group AND ratio_group) OR main_peak_group
+# Any metric in the "non-somatic" threshold section that is NOT listed here
+# is treated as a standalone condition OR'd into the final result.
+_NON_SOMATIC_WIDTH_GROUP = {"peak_before_width", "trough_width"}
+_NON_SOMATIC_RATIO_GROUP = {"peak_before_to_trough_ratio", "peak_before_to_peak_after_ratio"}
+_NON_SOMATIC_MAIN_PEAK_GROUP = {"main_peak_to_trough_ratio"}
+_NON_SOMATIC_BUILTIN_METRICS = _NON_SOMATIC_WIDTH_GROUP | _NON_SOMATIC_RATIO_GROUP | _NON_SOMATIC_MAIN_PEAK_GROUP
 
 
 def bombcell_get_default_thresholds() -> dict:
@@ -66,9 +81,11 @@ def bombcell_get_default_thresholds() -> dict:
             "snr": {"greater": 5, "less": None},
             "amplitude_cutoff": {"greater": None, "less": 0.2},
             "num_spikes": {"greater": 300, "less": None},
-            "rp_contamination": {"greater": None, "less": 0.1},
+            "rpv": {"greater": None, "less": 0.1},  # applies to rp_contamination or sliding_rp_violation
             "presence_ratio": {"greater": 0.7, "less": None},
             "drift_ptp": {"greater": None, "less": 100},  # um
+            "isolation_distance": {"greater": 20, "less": None},
+            "l_ratio": {"greater": None, "less": 0.3},
         },
         "non-somatic": {
             "peak_before_to_trough_ratio": {"greater": None, "less": 3},
@@ -86,6 +103,10 @@ def bombcell_label_units(
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame] | None" = None,
+    use_valid_periods: bool = False,
+    valid_periods_params: dict | None = None,
+    recompute_quality_metrics: bool = True,
+    **job_kwargs,
 ) -> "pd.DataFrame":
     """
     Label units based on quality metrics and template metrics using Bombcell logic:
@@ -111,7 +132,11 @@ def bombcell_label_units(
         - Large main peak to trough ratio (using "main_peak_to_trough_ratio" metric)
 
         If units have a narrow peak and a large ratio OR a large main peak to trough ratio,
-        they are labeled as non-somatic. If `split_non_somatic_good_mua` is True, non-somatic units are further split
+        they are labeled as non-somatic. Custom metrics can also be added to the "non-somatic"
+        threshold section — any metric not part of the built-in groups (width, ratio, main_peak)
+        is treated as a standalone condition OR'd into the non-somatic detection.
+
+        If `split_non_somatic_good_mua` is True, non-somatic units are further split
         into "non_soma_good" and "non_soma_mua", otherwise they are all labeled as "non_soma".
 
     Parameters
@@ -129,6 +154,25 @@ def bombcell_label_units(
         If True, split non-somatic into "non_soma_good" and "non_soma_mua".
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
+    use_valid_periods : bool, default: False
+        If True, compute valid time periods per unit and recompute quality metrics restricted to
+        those periods before labeling. This uses the ``valid_unit_periods`` extension to identify
+        chunks with acceptable false positive (refractory violations) and false negative (amplitude
+        cutoff) rates. The FP/FN thresholds are derived from the bombcell thresholds
+        (``rpv`` → ``fp_threshold``, ``amplitude_cutoff`` → ``fn_threshold``).
+        Requires ``amplitude_scalings`` extension and Numba.
+    valid_periods_params : dict or None, default: None
+        Additional parameters passed to the ``valid_unit_periods`` extension computation.
+        Use this to set ``refractory_period_ms``, ``censored_period_ms``, ``period_mode``,
+        ``period_duration_s_absolute``, etc. Parameters ``fp_threshold`` and ``fn_threshold``
+        are automatically derived from bombcell thresholds if not explicitly provided here.
+    recompute_quality_metrics : bool, default: True
+        If ``use_valid_periods`` is True, whether to recompute quality metrics restricted to valid
+        periods. If False, the existing quality metrics are used as-is (useful if you already
+        computed them with ``use_valid_periods=True``).
+    **job_kwargs
+        Job keyword arguments (n_jobs, chunk_duration, progress_bar) passed to
+        ``valid_unit_periods`` and ``quality_metrics`` computation when ``use_valid_periods=True``.
 
     Returns
     -------
@@ -142,6 +186,61 @@ def bombcell_label_units(
     See [Fabre]_ for more details on the original implementation and rationale behind the thresholds.
     """
     import pandas as pd
+
+    # Parse thresholds early so we can derive valid_periods params from them
+    if thresholds is None:
+        thresholds_dict = bombcell_get_default_thresholds()
+    elif isinstance(thresholds, (str, Path)):
+        with open(thresholds, "r") as f:
+            thresholds_dict = json.load(f)
+    elif isinstance(thresholds, dict):
+        thresholds_dict = thresholds
+    else:
+        raise ValueError("thresholds must be a dict, a JSON file path, or None")
+
+    # Compute valid periods and recompute quality metrics if requested
+    if use_valid_periods:
+        if sorting_analyzer is None:
+            raise ValueError("use_valid_periods=True requires a sorting_analyzer")
+
+        # Derive fp/fn thresholds from bombcell thresholds
+        vp_params = dict(valid_periods_params) if valid_periods_params is not None else {}
+
+        if "fp_threshold" not in vp_params:
+            rpv_thresh = thresholds_dict.get("mua", {}).get("rpv", {}).get("less", None)
+            if rpv_thresh is not None:
+                vp_params["fp_threshold"] = rpv_thresh
+
+        if "fn_threshold" not in vp_params:
+            ac_thresh = thresholds_dict.get("mua", {}).get("amplitude_cutoff", {}).get("less", None)
+            if ac_thresh is not None:
+                vp_params["fn_threshold"] = ac_thresh
+
+        # Compute valid_unit_periods
+        if sorting_analyzer.has_extension("valid_unit_periods"):
+            sorting_analyzer.delete_extension("valid_unit_periods")
+        sorting_analyzer.compute("valid_unit_periods", **vp_params, **job_kwargs)
+
+        # Recompute quality metrics restricted to valid periods
+        if recompute_quality_metrics:
+            # Preserve existing quality metric settings (metric_names, metric_params)
+            qm_ext = sorting_analyzer.get_extension("quality_metrics")
+            if qm_ext is not None:
+                existing_params = qm_ext.params.copy()
+                existing_params.pop("periods", None)
+                existing_params.pop("use_valid_periods", None)
+                sorting_analyzer.delete_extension("quality_metrics")
+                sorting_analyzer.compute(
+                    "quality_metrics",
+                    use_valid_periods=True,
+                    **existing_params,
+                    **job_kwargs,
+                )
+            else:
+                raise ValueError(
+                    "use_valid_periods=True with recompute_quality_metrics=True requires "
+                    "quality_metrics to have been computed at least once."
+                )
 
     if sorting_analyzer is not None:
         combined_metrics = sorting_analyzer.get_metrics_extension_data()
@@ -161,15 +260,30 @@ def bombcell_label_units(
         else:
             combined_metrics = external_metrics
 
-    if thresholds is None:
-        thresholds_dict = bombcell_get_default_thresholds()
-    elif isinstance(thresholds, (str, Path)):
-        with open(thresholds, "r") as f:
-            thresholds_dict = json.load(f)
-    elif isinstance(thresholds, dict):
-        thresholds_dict = thresholds
-    else:
-        raise ValueError("thresholds must be a dict, a JSON file path, or None")
+    # Map "rpv" threshold to actual column name (rp_contamination or sliding_rp_violation)
+    if "mua" in thresholds_dict and "rpv" in thresholds_dict["mua"]:
+        rpv_thresh = thresholds_dict["mua"].pop("rpv")
+        for col in RPV_METRIC_COLUMNS:
+            if col in combined_metrics.columns:
+                thresholds_dict["mua"][col] = rpv_thresh
+                break
+
+    # Filter out threshold metrics that are not present in the metrics DataFrame.
+    # This allows optional metrics (e.g. isolation_distance, l_ratio) to be included
+    # in the default thresholds without crashing when they haven't been computed.
+    available_columns = set(combined_metrics.columns)
+    for section in ("noise", "mua", "non-somatic"):
+        if section not in thresholds_dict:
+            continue
+        missing = [m for m in thresholds_dict[section] if m not in available_columns]
+        if missing:
+            warnings.warn(
+                f"Bombcell thresholds reference metrics not found in the metrics DataFrame "
+                f"(section '{section}'): {missing}. These will be skipped. "
+                f"Compute them first if you want them included in the labeling."
+            )
+            for m in missing:
+                del thresholds_dict[section][m]
 
     n_units = len(combined_metrics)
 
@@ -262,6 +376,22 @@ def bombcell_label_units(
 
         # (ratio AND width) OR standalone main_peak_to_trough
         is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
+
+        # Standalone custom metrics: any metric in non-somatic thresholds that is not
+        # part of the built-in groups is OR'd in as its own independent condition.
+        standalone_metrics = {
+            m: non_somatic_thresholds[m] for m in non_somatic_thresholds if m not in _NON_SOMATIC_BUILTIN_METRICS
+        }
+        for metric_name, thresh in standalone_metrics.items():
+            standalone_labels = threshold_metrics_label_units(
+                metrics=combined_metrics,
+                thresholds={metric_name: thresh},
+                pass_label="pass",
+                fail_label="fail",
+                operator="and",
+                nan_policy="ignore",
+            )
+            is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
 
         if split_non_somatic_good_mua:
             good_mask = unit_labels["label"] == "good"
@@ -360,3 +490,84 @@ def save_bombcell_results(
 
         narrow_df = pd.DataFrame(rows)
         narrow_df.to_csv(folder / "labeling_results_narrow.csv", index=False)
+
+
+def save_valid_periods(
+    sorting_analyzer,
+    folder,
+) -> None:
+    """
+    Save valid time periods per unit to a TSV file for downstream analysis.
+
+    This function extracts the valid_unit_periods extension data and saves it
+    in a simple, human-readable TSV format with times in seconds.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        Analyzer with the valid_unit_periods extension computed.
+    folder : str or Path
+        Folder to save the TSV file.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    The output file `valid_periods.tsv` contains one row per valid period with columns:
+
+    - unit_id: The unit identifier
+    - segment_index: Recording segment (0-indexed)
+    - start_time_s: Start of valid period in seconds
+    - end_time_s: End of valid period in seconds
+    - duration_s: Duration of valid period in seconds
+
+    This file can be easily loaded with pandas or any TSV reader for downstream
+    analysis, filtering spikes to valid periods, or visualization.
+    """
+    from pathlib import Path
+    import pandas as pd
+
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    if not sorting_analyzer.has_extension("valid_unit_periods"):
+        return
+
+    vp_ext = sorting_analyzer.get_extension("valid_unit_periods")
+    valid_periods = vp_ext.get_data(outputs="numpy")
+
+    if len(valid_periods) == 0:
+        # No valid periods found - save empty file with header
+        df = pd.DataFrame(columns=["unit_id", "segment_index", "start_time_s", "end_time_s", "duration_s"])
+        df.to_csv(folder / "valid_periods.tsv", sep="\t", index=False)
+        return
+
+    fs = sorting_analyzer.sampling_frequency
+    unit_ids = sorting_analyzer.unit_ids
+
+    rows = []
+    for period in valid_periods:
+        unit_index = period["unit_index"]
+        unit_id = unit_ids[unit_index]
+        segment_index = period["segment_index"]
+        start_sample = period["start_sample_index"]
+        end_sample = period["end_sample_index"]
+
+        start_time_s = start_sample / fs
+        end_time_s = end_sample / fs
+        duration_s = end_time_s - start_time_s
+
+        rows.append(
+            {
+                "unit_id": unit_id,
+                "segment_index": segment_index,
+                "start_time_s": round(start_time_s, 6),
+                "end_time_s": round(end_time_s, 6),
+                "duration_s": round(duration_s, 6),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    df.to_csv(folder / "valid_periods.tsv", sep="\t", index=False)

@@ -46,6 +46,10 @@ class ComputeQualityMetrics(BaseMetricExtension):
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
     metric_list = misc_metrics_list + pca_metrics_list
+    tmp_data_to_save = {
+        "sliding_rp_per_tauR_contamination": True,  # (n_units, n_rp_centers)
+        "sliding_rp_rp_centers": False,  # (n_rp_centers,) — same for all units
+    }
 
     @classmethod
     def get_required_dependencies(cls, **params):
