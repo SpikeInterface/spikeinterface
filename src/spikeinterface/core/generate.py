@@ -1839,9 +1839,8 @@ def generate_templates(
         if spatial_profile == "exponential":
             channel_factors = alpha * np.exp(-distances / spatial_decay)
         elif spatial_profile == "power":
-            channel_factors = alpha / (
-                params["spatial_base"][u] + (distances / spatial_decay) ** params["spatial_power"][u]
-            )
+            channel_factors = (distances / spatial_decay) ** params["spatial_power"][u]
+            channel_factors = alpha / (params["spatial_base"][u] + channel_factors)
 
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
