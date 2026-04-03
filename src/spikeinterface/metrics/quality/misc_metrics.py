@@ -546,7 +546,6 @@ class RPViolation(BaseMetric):
 def compute_sliding_rp_violations(
     sorting_analyzer,
     unit_ids=None,
-    tmp_data=None,
     periods=None,
     min_spikes=0,
     bin_size_ms=0.25,
@@ -567,9 +566,6 @@ def compute_sliding_rp_violations(
         A SortingAnalyzer object.
     unit_ids : list or None
         List of unit ids to compute the sliding RP violations. If None, all units are used.
-    tmp_data : dict or None
-        Shared data dict from the metric extension. When provided, per-tauR contamination
-        curves and rp_centers are written to it for persistent storage.
     periods : array of unit_period_dtype | None, default: None
         Periods (segment_index, start_sample_index, end_sample_index, unit_index)
         on which to compute the metric. If None, the entire recording duration is used.
@@ -615,18 +611,8 @@ def compute_sliding_rp_violations(
 
     fs = sorting_analyzer.sampling_frequency
 
-    # Pre-compute rp_centers so we know the array size even if all units are skipped
-    if contamination_values is None:
-        contamination_values_arr = np.arange(0.5, 35, 0.5) / 100
-    else:
-        contamination_values_arr = np.asarray(contamination_values)
-    rp_bin_size = bin_size_ms / 1000
-    rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)
-    rp_centers = rp_edges + rp_bin_size / 2
-
     contamination = {}
     estimated_tauR = {}
-    per_tauR_contam_list = []
 
     spikes, slices = sorting.to_reordered_spike_vector(
         ["sample_index", "segment_index", "unit_index"], return_order=False
@@ -643,14 +629,13 @@ def compute_sliding_rp_violations(
         if unit_n_spikes <= min_spikes:
             contamination[unit_id] = np.nan
             estimated_tauR[unit_id] = np.nan
-            per_tauR_contam_list.append(np.full(len(rp_centers), np.nan))
             continue
 
         duration = total_durations[unit_id]
 
         sub_sorting = NumpySorting(sub_spikes, fs, unit_ids=[unit_id])
 
-        min_contam, est_tauR, contam_at_each_tauR, _ = slidingRP_violations(
+        min_contam, est_tauR, _, _ = slidingRP_violations(
             sub_sorting,
             duration,
             bin_size_ms,
@@ -662,12 +647,6 @@ def compute_sliding_rp_violations(
         )
         contamination[unit_id] = min_contam
         estimated_tauR[unit_id] = est_tauR
-        per_tauR_contam_list.append(contam_at_each_tauR)
-
-    # Store per-tauR data in tmp_data for persistent storage by the extension
-    if tmp_data is not None:
-        tmp_data["sliding_rp_per_tauR_contamination"] = np.array(per_tauR_contam_list)
-        tmp_data["sliding_rp_rp_centers"] = rp_centers
 
     return res(contamination, estimated_tauR)
 
@@ -689,7 +668,6 @@ class SlidingRPViolation(BaseMetric):
         "sliding_rp_violation": "Minimum contamination at specified confidence using sliding refractory period method.",
         "sliding_rp_estimated_tauR": "Estimated refractory period (seconds) at which the minimum contamination was found.",
     }
-    needs_tmp_data = True
     supports_periods = True
 
 
