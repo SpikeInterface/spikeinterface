@@ -73,7 +73,7 @@ With SpikeInterface, users can:
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
 - export a report and/or export to phy
 - curate your sorting with several strategies (ml-based, metrics based, manual, ...)
-- offer a powerful Qt-based or we-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui) for manual curation that replace phy.
+- offer a powerful Qt-based or web-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui) for manual curation that replace phy.
 - have powerful sorting components to build your own sorter.
 - have a full motion/drift correction framework
 
