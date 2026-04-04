@@ -237,10 +237,6 @@ def get_default_qc_params():
         sliding_rp_max_ms : float, default: 10.0
             Maximum refractory period to test when sweeping.
 
-        sliding_rp_confidence : float, default: 0.9
-            Confidence level for contamination estimate. Higher values
-            give more conservative (higher) contamination estimates.
-
         **Drift Parameters**
 
         drift_interval_s : float, default: 60
@@ -301,7 +297,6 @@ def get_default_qc_params():
         # Sliding RP method
         "sliding_rp_exclude_below_ms": 0.5,
         "sliding_rp_max_ms": 10.0,
-        "sliding_rp_confidence": 0.9,
         # Drift
         "drift_interval_s": 60,
         "drift_min_spikes": 100,
@@ -581,7 +576,6 @@ def run_bombcell_qc(
         "sliding_rp_violation": {
             "exclude_ref_period_below_ms": params["sliding_rp_exclude_below_ms"],
             "max_ref_period_ms": params["sliding_rp_max_ms"],
-            "confidence_threshold": params["sliding_rp_confidence"],
         },
         "drift": {
             "interval_s": params["drift_interval_s"],
