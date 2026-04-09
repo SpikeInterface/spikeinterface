@@ -413,16 +413,12 @@ def test_resample_traces_across_gap():
 
     # Section 1 should match the independently resampled section 1
     gapped_s1 = resampled_traces[:n_out_1]
-    assert gapped_s1.shape == ref_traces1.shape, (
-        f"Section 1 shape mismatch: {gapped_s1.shape} vs {ref_traces1.shape}"
-    )
+    assert gapped_s1.shape == ref_traces1.shape, f"Section 1 shape mismatch: {gapped_s1.shape} vs {ref_traces1.shape}"
     np.testing.assert_allclose(gapped_s1, ref_traces1, rtol=1e-5, atol=1e-5)
 
     # Section 2 should match the independently resampled section 2
     gapped_s2 = resampled_traces[n_out_1 : n_out_1 + n_out_2]
-    assert gapped_s2.shape == ref_traces2.shape, (
-        f"Section 2 shape mismatch: {gapped_s2.shape} vs {ref_traces2.shape}"
-    )
+    assert gapped_s2.shape == ref_traces2.shape, f"Section 2 shape mismatch: {gapped_s2.shape} vs {ref_traces2.shape}"
     np.testing.assert_allclose(gapped_s2, ref_traces2, rtol=1e-5, atol=1e-5)
 
 
@@ -489,7 +485,7 @@ def test_resample_multiple_gaps():
     # Create time_vector with 3 gaps (between 4 sections)
     tv = np.arange(n_total, dtype="float64") / sampling_frequency
     for i in range(1, n_sections):
-        tv[i * n_per_sec :] += (i * 10.0)  # gaps of 10s, 20s, 30s cumulative offsets
+        tv[i * n_per_sec :] += i * 10.0  # gaps of 10s, 20s, 30s cumulative offsets
     rec.set_times(tv)
 
     import warnings as _warnings

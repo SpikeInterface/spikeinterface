@@ -295,7 +295,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         if start_frame == end_frame:
             # Determine n_channels from parent
-            n_channels = len(channel_indices) if channel_indices is not None else self._parent_segment.get_traces(0, 1).shape[1]
+            n_channels = (
+                len(channel_indices) if channel_indices is not None else self._parent_segment.get_traces(0, 1).shape[1]
+            )
             return np.empty((0, n_channels), dtype=self._dtype)
 
         # Find which sections overlap [start_frame, end_frame) in output space.
@@ -342,9 +344,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             par_fetch_end = par_start_k + local_par_end + right_margin
 
             # Fetch parent traces for this section's sub-chunk
-            parent_traces = self._parent_segment.get_traces(
-                par_fetch_start, par_fetch_end, channel_indices
-            ).astype(np.float32)
+            parent_traces = self._parent_segment.get_traces(par_fetch_start, par_fetch_end, channel_indices).astype(
+                np.float32
+            )
 
             # Apply reflect padding if margin was truncated at section edge
             pad_left = self._margin - left_margin
@@ -375,7 +377,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             pieces.append(resampled)
 
         if len(pieces) == 0:
-            n_channels = len(channel_indices) if channel_indices is not None else self._parent_segment.get_traces(0, 1).shape[1]
+            n_channels = (
+                len(channel_indices) if channel_indices is not None else self._parent_segment.get_traces(0, 1).shape[1]
+            )
             return np.empty((0, n_channels), dtype=self._dtype)
         result = np.concatenate(pieces, axis=0) if len(pieces) > 1 else pieces[0]
         return result.astype(self._dtype)
