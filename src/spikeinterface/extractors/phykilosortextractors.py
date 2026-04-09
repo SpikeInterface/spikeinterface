@@ -1,4 +1,3 @@
-
 from spikeinterface.postprocessing.principal_component import ComputePrincipalComponents
 from spikeinterface.preprocessing.scale import scale_to_uV
 from spikeinterface.core.analyzer_extension_core import ComputeWaveforms
@@ -326,7 +325,6 @@ read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor
 def read_kilosort_as_analyzer(
     folder_path, unwhiten=True, gain_to_uV=None, offset_to_uV=None, recording=None
 ) -> SortingAnalyzer:
-
     """
     Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
     above are supported. The function may work on older versions of Kilosort output,
@@ -661,6 +659,7 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     # but are zero on many channels, which implicitly defines the sparsity
     mask = np.sum(np.abs(templates), axis=1) != 0
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
+
 
 def _make_sparsity_from_pcs(recording, sorting, kilosort_output_path):
     """Constructs the `ChannelSparsity` of from kilosort output, by seeing if the
