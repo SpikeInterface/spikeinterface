@@ -44,7 +44,7 @@ def test_generate_noise():
 
 
 @pytest.mark.parametrize("duration", [1.0, 2.0, 2.2])
-@pytest.mark.parametrize("strategy", ["tile_precomputed", "on_the_fly"])
+@pytest.mark.parametrize("strategy", ["tile_pregenerated", "on_the_fly"])
 def test_noise_generator_temporal(strategy, duration):
     psdlen = 25
     kdomain = np.linspace(0.0, 10.0, psdlen)
