@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import scipy.signal
 
@@ -74,7 +72,7 @@ class FilterOpenCLRecording(BasePreprocessor):
         dtype = "float32"
         executor = OpenCLFilterExecutor(coefficients, num_channels, dtype, margin)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             self.add_recording_segment(FilterOpenCLRecordingSegment(parent_segment, executor, margin))
 
         self._kwargs = dict(

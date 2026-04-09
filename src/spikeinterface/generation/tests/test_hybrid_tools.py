@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from spikeinterface.core import Templates
+from spikeinterface.core import Templates, ms_to_samples
 from spikeinterface.core.generate import (
     generate_ground_truth_recording,
     generate_sorting,
@@ -60,7 +60,7 @@ def test_generate_hybrid_from_templates():
     templates_array = generate_templates(
         channel_locations, unit_locations, rec.sampling_frequency, ms_before, ms_after, seed=0
     )
-    nbefore = int(ms_before * rec.sampling_frequency / 1000)
+    nbefore = ms_to_samples(ms_before, rec.sampling_frequency)
     templates = Templates(templates_array, rec.sampling_frequency, nbefore, True, None, None, None, rec.get_probe())
     hybrid, sorting_hybrid = generate_hybrid_recording(rec, templates=templates, seed=0)
     assert np.array_equal(hybrid.templates, templates.templates_array)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import warnings
 
@@ -67,9 +65,7 @@ class ResampleRecording(BasePreprocessor):
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000)
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
-        # in case there was a time_vector, it will be dropped for sanity.
-        for parent_segment in recording._recording_segments:
-            parent_segment.time_vector = None
+        for parent_segment in recording.segments:
             self.add_recording_segment(
                 ResampleRecordingSegment(
                     parent_segment,
@@ -98,24 +94,44 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         margin,
         dtype,
     ):
-        # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
-        BaseRecordingSegment.__init__(
-            self,
-            sampling_frequency=resample_rate,
-            t_start=parent_recording_segment.t_start,
-        )
+        self._resample_rate = resample_rate
         self._parent_segment = parent_recording_segment
         self._parent_rate = parent_rate
         self._margin = margin
         self._dtype = dtype
 
+        # Compute time_vector or t_start, following the pattern from DecimateRecordingSegment.
+        # Do not use BasePreprocessorSegment because we have to reset the sampling rate!
+        if parent_recording_segment.time_vector is not None:
+            parent_tv = np.asarray(parent_recording_segment.time_vector)
+            n_out = int(len(parent_tv) / parent_rate * resample_rate)
+
+            if parent_rate % resample_rate == 0:
+                q_int = int(parent_rate / resample_rate)
+                time_vector = parent_tv[::q_int][:n_out]
+            else:
+                warnings.warn(
+                    "Resampling with a non-integer ratio requires interpolating the time_vector. "
+                    "An integer ratio (parent_rate / resample_rate) is more performant."
+                )
+                parent_indices = np.linspace(0, len(parent_tv) - 1, n_out)
+                time_vector = np.interp(parent_indices, np.arange(len(parent_tv)), parent_tv)
+
+            BaseRecordingSegment.__init__(self, sampling_frequency=None, t_start=None, time_vector=time_vector)
+        else:
+            BaseRecordingSegment.__init__(
+                self, sampling_frequency=resample_rate, t_start=parent_recording_segment.t_start
+            )
+
     def get_num_samples(self):
-        return int(self._parent_segment.get_num_samples() / self._parent_rate * self.sampling_frequency)
+        if self.time_vector is not None:
+            return len(self.time_vector)
+        return int(self._parent_segment.get_num_samples() / self._parent_rate * self._resample_rate)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         # get parent traces with margin
         parent_start_frame, parent_end_frame = [
-            int((frame / self.sampling_frequency) * self._parent_rate) for frame in [start_frame, end_frame]
+            int((frame / self._resample_rate) * self._parent_rate) for frame in [start_frame, end_frame]
         ]
         parent_traces, left_margin, right_margin = get_chunk_with_margin(
             self._parent_segment,
@@ -128,7 +144,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         )
         # get left and right margins for the resampled case
         left_margin_rs, right_margin_rs = [
-            int((margin / self._parent_rate) * self.sampling_frequency) for margin in [left_margin, right_margin]
+            int((margin / self._parent_rate) * self._resample_rate) for margin in [left_margin, right_margin]
         ]
 
         # get the size for the resampled traces in case of resample:
@@ -138,9 +154,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         # Check which method to use:
         from scipy import signal
 
-        if np.mod(self._parent_rate, self.sampling_frequency) == 0:
+        if np.mod(self._parent_rate, self._resample_rate) == 0:
             # Ratio between sampling frequencies
-            q = int(self._parent_rate / self.sampling_frequency)
+            q = int(self._parent_rate / self._resample_rate)
             # Decimate can have issues for some cases, returning NaNs
             resampled_traces = signal.decimate(parent_traces, q=q, axis=0)
             # If that's the case, use signal.resample

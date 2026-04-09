@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import warnings
 from typing import Literal
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, Templates
+from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
 
 from spikeinterface.core.generate import (
     generate_templates,
@@ -73,8 +71,8 @@ def estimate_templates_from_recording(
     spikes = sorting.to_spike_vector()
     unit_ids = sorting.unit_ids
     sampling_frequency = recording.get_sampling_frequency()
-    nbefore = int(ms_before * sampling_frequency / 1000.0)
-    nafter = int(ms_after * sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
 
     job_kwargs = job_kwargs or {}
     templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs)
@@ -442,8 +440,8 @@ def generate_hybrid_recording(
         )
         ms_before = generate_templates_kwargs["ms_before"]
         ms_after = generate_templates_kwargs["ms_after"]
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
         templates_ = Templates(templates_array, sampling_frequency, nbefore, True, None, None, None, probe)
     else:
         from spikeinterface.postprocessing.localization_tools import compute_monopolar_triangulation

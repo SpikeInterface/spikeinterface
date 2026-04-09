@@ -16,10 +16,9 @@ def test_remove_redundant_units(sorting_analyzer_for_curation):
     # print(sorting.unit_ids)
     # print(sorting_with_dup.unit_ids)
 
-    job_kwargs = dict(n_jobs=-1)
     sorting_analyzer = create_sorting_analyzer(sorting_with_dup, recording, format="memory")
     sorting_analyzer.compute("random_spikes")
-    sorting_analyzer.compute("waveforms", **job_kwargs)
+    sorting_analyzer.compute("waveforms")
     sorting_analyzer.compute("templates")
 
     for remove_strategy in ("max_spikes", "minimum_shift", "highest_amplitude"):

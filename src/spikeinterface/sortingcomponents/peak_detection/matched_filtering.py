@@ -1,11 +1,10 @@
 """Sorting components: peak detection."""
 
-from __future__ import annotations
-
 import importlib.util
 import numpy as np
 
 from spikeinterface.core.base import base_peak_dtype
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.node_pipeline import PeakDetector
 from spikeinterface.core.recording_tools import get_channel_distances, get_random_data_chunks
 from spikeinterface.postprocessing.localization_tools import get_convolution_weights
@@ -32,7 +31,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
     prototype : array
         The canonical waveform of action potentials
     ms_before : float
-        The time in ms before the maximial value of the absolute prototype
+        The time in ms before the maximal value of the absolute prototype
     weight_method : dict
         Parameter that should be provided to the get_convolution_weights() function
         in order to know how to estimate the positions. One argument is mode that could
@@ -65,7 +64,7 @@ class MatchedFilteringPeakDetector(PeakDetector):
         self.conv_margin = prototype.shape[0]
 
         assert peak_sign in ("both", "neg", "pos")
-        self.nbefore = int(ms_before * recording.sampling_frequency / 1000)
+        self.nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
         if peak_sign == "neg":
             assert prototype[self.nbefore] < 0, "Prototype should have a negative peak"
             peak_sign = "pos"

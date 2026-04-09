@@ -1,8 +1,5 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
 from spikeinterface.core import get_noise_levels, get_channel_distances
 
@@ -14,6 +11,9 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
     name = "nearest"
     need_noise_levels = True
+    # this is because numba
+    need_first_call_before_pipeline = True
+
     params_doc = """
     peak_sign : 'neg' | 'pos' | 'both'
         The peak sign to use for detection

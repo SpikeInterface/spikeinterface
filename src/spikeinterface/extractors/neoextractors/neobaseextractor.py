@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, Union, Dict, Any, List
+from typing import Any
 import warnings
 from math import isclose
 
@@ -77,7 +75,7 @@ class _NeoBaseExtractor:
         stream_ids = stream_channels["id"].tolist()
         return stream_names, stream_ids
 
-    def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
+    def build_stream_id_to_sampling_frequency_dict(self) -> dict[str, float]:
         """
         Build a mapping from stream_id to sampling frequencies.
 
@@ -110,7 +108,7 @@ class _NeoBaseExtractor:
 
         return stream_to_sampling_frequencies
 
-    def build_stream_id_to_t_start_dict(self, segment_index: int) -> Dict[str, float]:
+    def build_stream_id_to_t_start_dict(self, segment_index: int) -> dict[str, float]:
         """
         Builds a dictionary mapping stream IDs to their respective t_start values for a given segment.
 
@@ -141,7 +139,7 @@ class _NeoBaseExtractor:
 
         return stream_id_to_t_start
 
-    def build_stream_name_to_stream_id_dict(self) -> Dict[str, str]:
+    def build_stream_name_to_stream_id_dict(self) -> dict[str, str]:
         neo_header = self.neo_reader.header
         signal_streams = neo_header["signal_streams"]
         stream_ids = signal_streams["id"]
@@ -157,12 +155,12 @@ class _NeoBaseExtractor:
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(
         self,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
-        block_index: Optional[int] = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
+        block_index: int | None = None,
         all_annotations: bool = False,
-        use_names_as_ids: Optional[bool] = None,
-        **neo_kwargs: Dict[str, Any],
+        use_names_as_ids: bool | None = None,
+        **neo_kwargs: dict[str, Any],
     ) -> None:
         """
         Initialize a NeoBaseRecordingExtractor instance.
@@ -360,9 +358,9 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         raw_traces = self.neo_reader.get_analogsignal_chunk(
             block_index=self.block_index,
@@ -396,8 +394,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         block_index=None,
         sampling_frequency=None,
         use_format_ids=False,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
         **neo_kwargs,
     ):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
@@ -436,7 +434,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
             self.add_sorting_segment(sorting_segment)
 
-    def _infer_sampling_frequency_from_analog_signal(self, stream_id: Optional[str] = None) -> float:
+    def _infer_sampling_frequency_from_analog_signal(self, stream_id: str | None = None) -> float:
         """
         Infer the sampling frequency from available signal channels.
 
@@ -524,7 +522,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         return sampling_frequency
 
-    def _infer_t_start_from_signal_stream(self, segment_index: int, stream_id: Optional[str] = None) -> float | None:
+    def _infer_t_start_from_signal_stream(self, segment_index: int, stream_id: str | None = None) -> float | None:
         """
         Infers the t_start value from the signal stream, either using the provided stream ID or by finding
         streams with matching frequency to the sorter's sampling frequency.

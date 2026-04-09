@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import shutil
 
 import numpy as np
 import spikeinterface
@@ -171,9 +172,14 @@ class Motion:
             interpolation_method=d["interpolation_method"],
         )
 
-    def save(self, folder):
+    def save(self, folder, overwrite=False):
         folder = Path(folder)
-        folder.mkdir(exist_ok=False, parents=True)
+        if folder.is_dir():
+            if overwrite:
+                shutil.rmtree(folder)
+            else:
+                raise FileExistsError(f"Folder {folder} already exists. Use `overwrite=True` to overwrite.")
+        folder.mkdir(exist_ok=True, parents=True)
 
         info_file = folder / f"spikeinterface_info.json"
         info = dict(

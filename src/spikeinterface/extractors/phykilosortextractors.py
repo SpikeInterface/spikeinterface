@@ -1,10 +1,11 @@
-from __future__ import annotations
+
 from spikeinterface.postprocessing.principal_component import ComputePrincipalComponents
 from spikeinterface.preprocessing.scale import scale_to_uV
 from spikeinterface.core.analyzer_extension_core import ComputeWaveforms
 from pandas.tests.tseries.offsets.test_business_day import offset
 
 from typing import Optional
+
 from pathlib import Path
 import warnings
 
@@ -69,7 +70,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     def __init__(
         self,
         folder_path: Path | str,
-        exclude_cluster_groups: Optional[list[str] | str] = None,
+        exclude_cluster_groups: list[str] | str | None = None,
         keep_good_only: bool = False,
         remove_empty_units: bool = False,
         load_all_cluster_properties: bool = True,
@@ -270,7 +271,7 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     def __init__(
         self,
         folder_path: Path | str,
-        exclude_cluster_groups: Optional[list[str] | str] = None,
+        exclude_cluster_groups: list[str] | str | None = None,
         load_all_cluster_properties: bool = True,
     ):
         BasePhyKilosortSortingExtractor.__init__(
@@ -325,6 +326,7 @@ read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor
 def read_kilosort_as_analyzer(
     folder_path, unwhiten=True, gain_to_uV=None, offset_to_uV=None, recording=None
 ) -> SortingAnalyzer:
+
     """
     Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
     above are supported. The function may work on older versions of Kilosort output,
@@ -349,14 +351,14 @@ def read_kilosort_as_analyzer(
 
     if gain_to_uV is None:
         warnings.warn(
-            f"No `gain_to_uv` value given. Outputted data will be in dimensionless units. If you know the conversion factor, please pass it to the `read_kilosort_as_analyzer` function."
+            "No `gain_to_uv` value given. Outputted data will be in dimensionless units. If you know the conversion factor, please pass it to the `read_kilosort_as_analyzer` function."
         )
         gain_to_uV = 1.0
     if offset_to_uV is None:
         warnings.warn(
-            f"No `offset_to_uV` value given. Outputted data may not be offset correctly. If you know the offset factor, please pass it to the `read_kilosort_as_analyzer` function."
+            "No `offset_to_uV` value given. Outputted data may not be offset correctly. If you know the offset factor, please pass it to the `read_kilosort_as_analyzer` function."
         )
-        offset_to_uV = 1.0
+        offset_to_uV = 0.0
 
     phy_path = Path(folder_path)
 
@@ -365,7 +367,7 @@ def read_kilosort_as_analyzer(
 
     # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
     # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-    duration = sorting._sorting_segments[0]._all_spikes[-1] / sampling_frequency + 1
+    duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
@@ -401,7 +403,13 @@ def read_kilosort_as_analyzer(
     sorting_analyzer.compute("random_spikes", method="all")
 
     _make_templates(
-        sorting_analyzer, phy_path, sparsity.mask, sampling_frequency, gain_to_uV, offset_to_uV, unwhiten=unwhiten
+        sorting_analyzer,
+        phy_path,
+        sparsity.mask,
+        sampling_frequency,
+        gain_to_uV=gain_to_uV,
+        offset_to_uV=offset_to_uV,
+        unwhiten=unwhiten,
     )
     _make_locations(sorting_analyzer, phy_path)
     _make_amplitudes(sorting_analyzer, phy_path, gain_to_uV, offset_to_uV)
@@ -654,7 +662,6 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     mask = np.sum(np.abs(templates), axis=1) != 0
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
 
-
 def _make_sparsity_from_pcs(recording, sorting, kilosort_output_path):
     """Constructs the `ChannelSparsity` of from kilosort output, by seeing if the
     templates output is zero or not on all channels."""
@@ -666,7 +673,6 @@ def _make_sparsity_from_pcs(recording, sorting, kilosort_output_path):
     sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
         unit_ids_to_channel_ids, sorting.unit_ids, recording.channel_ids
     )
-
     return sparsity
 
 

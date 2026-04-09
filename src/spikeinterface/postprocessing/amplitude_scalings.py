@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
@@ -89,7 +88,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
 
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
-            cut_out_before = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_before = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_before <= nbefore
             ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
@@ -97,7 +96,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             cut_out_before = nbefore
 
         if self.params["ms_after"] is not None:
-            cut_out_after = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_after = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_after <= nafter
             ), f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
@@ -203,6 +202,9 @@ class AmplitudeScalingNode(PipelineNode):
             max_margin_collisions = delta_collision_samples + margin_waveforms
             self._margin = max_margin_collisions
 
+        # for some edge cases a template can be zero, leading to problems later
+        template_is_zero = [np.all(template == 0) for template in all_templates]
+
         self._all_templates = all_templates
         self._sparsity_mask = sparsity_mask
         self._nbefore = nbefore
@@ -211,6 +213,7 @@ class AmplitudeScalingNode(PipelineNode):
         self._cut_out_after = cut_out_after
         self._handle_collisions = handle_collisions
         self._delta_collision_samples = delta_collision_samples
+        self._template_is_zero = template_is_zero
 
         self._kwargs.update(
             all_templates=all_templates,
@@ -222,6 +225,7 @@ class AmplitudeScalingNode(PipelineNode):
             return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
+            template_is_zero=template_is_zero,
         )
 
     def get_dtype(self):
@@ -241,6 +245,7 @@ class AmplitudeScalingNode(PipelineNode):
         cut_out_after = self._cut_out_after
         handle_collisions = self._handle_collisions
         delta_collision_samples = self._delta_collision_samples
+        template_is_zero = self._template_is_zero
 
         # local_spikes_within_margin = peaks
         # i0 = np.searchsorted(local_spikes_within_margin["sample_index"], left_margin)
@@ -267,7 +272,14 @@ class AmplitudeScalingNode(PipelineNode):
             if spike_index in collisions.keys():
                 # we deal with overlapping spikes later
                 continue
+
             unit_index = spike["unit_index"]
+
+            if template_is_zero[unit_index]:
+                # if template is zero, linregress will fail so we intervene
+                scalings[spike_index] = 0
+                continue
+
             sample_centered = spike["sample_index"]
             (sparse_indices,) = np.nonzero(sparsity_mask[unit_index])
             template = all_templates[unit_index][:, sparse_indices]

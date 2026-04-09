@@ -4,7 +4,7 @@ from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 
-from .loading import load, load_extractor
+from .loading import load
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
@@ -90,6 +90,7 @@ from .core_tools import (
     read_python,
     write_python,
     normal_pdf,
+    ms_to_samples,
 )
 from .job_tools import (
     get_best_job_kwargs,

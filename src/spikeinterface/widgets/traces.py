@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 import numpy as np
@@ -36,7 +34,7 @@ class TracesWidget(BaseWidget):
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
-    events : np.array | list[np.narray] or None, default: None
+    events : np.ndarray | list[np.narray] or None, default: None
         Events to display as vertical lines.
         The numpy arrays cen either be of dtype float, with event times in seconds,
         or a structured array with the "time" field,
@@ -396,7 +394,7 @@ class TracesWidget(BaseWidget):
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
-        ratios = [0.1, 0.8, 0.2]
+        ratios = [0.07, 0.79, 0.14]
 
         with plt.ioff():
             output = widgets.Output()
@@ -404,6 +402,7 @@ class TracesWidget(BaseWidget):
                 self.figure, self.ax = plt.subplots(
                     figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm), layout="constrained"
                 )
+                self.figure.canvas.header_visible = False
                 plt.show()
 
         if not self.rec0.has_time_vector(segment_index=data_plot["segment_index"]):
@@ -467,7 +466,7 @@ class TracesWidget(BaseWidget):
             left_sidebar_elements = [W.Label(value="layer"), self.layer_selector]
 
         left_sidebar_elements += [
-            W.Label(value="mode"),
+            W.Label(value="Mode"),
             self.mode_selector,
             self.scaler,
             self.colorbar,
@@ -634,8 +633,17 @@ class TracesWidget(BaseWidget):
         fig.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
+
         import importlib.util
 
         spec = importlib.util.find_spec("pyvips")
@@ -663,9 +671,9 @@ class TracesWidget(BaseWidget):
                 sampling_frequency=dp.recordings[layer_key].get_sampling_frequency(),
             )
 
-            tiled_layers.append(vv.TiledImageLayer(layer_key, img))
+            tiled_layers.append(vv_views.TiledImageLayer(layer_key, img))
 
-        self.view = vv.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
+        self.view = vv_views.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
 
         # traces currently doesn't display on the jupyter backend
         backend_kwargs["display"] = False

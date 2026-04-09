@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import json
 from dataclasses import dataclass, field, astuple, replace
@@ -141,7 +139,7 @@ class Templates:
 
         return repr_str
 
-    def select_units(self, unit_ids) -> Templates:
+    def select_units(self, unit_ids) -> "Templates":
         """
         Return a new Templates object with only the selected units.
 
@@ -163,7 +161,7 @@ class Templates:
             check_for_consistent_sparsity=False,
         )
 
-    def select_channels(self, channel_ids) -> Templates:
+    def select_channels(self, channel_ids) -> "Templates":
         """
         Return a new Templates object with only the selected channels.
         This operation can be useful to remove bad channels for hybrid recording

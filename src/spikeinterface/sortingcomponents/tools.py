@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import shutil
 
@@ -18,6 +16,7 @@ from spikeinterface.core.sparsity import compute_sparsity
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
+from spikeinterface.core.core_tools import ms_to_samples
 
 
 def make_multi_method_doc(methods, indent="    "):
@@ -59,8 +58,8 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
     spikes["unit_index"] = peaks["channel_index"]
     spikes["segment_index"] = peaks["segment_index"]
 
-    nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
-    nafter = int(ms_after * rec.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, rec.sampling_frequency)
+    nafter = ms_to_samples(ms_after, rec.sampling_frequency)
 
     all_wfs = extract_waveforms_to_single_buffer(
         rec,
@@ -117,8 +116,8 @@ def get_prototype_and_waveforms_from_peaks(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     few_peaks = select_peaks(
         peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed
@@ -181,7 +180,7 @@ def get_prototype_and_waveforms_from_recording(
 
     node0 = LocallyExclusivePeakDetector(recording, return_output=True, **detection_kwargs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
     node1 = ExtractSparseWaveforms(
         recording,
         parents=[node0],
@@ -556,7 +555,7 @@ def create_sorting_analyzer_with_existing_templates(
         sa.extensions["spike_locations"].params = dict(
             ms_before=0.5,
             ms_after=0.5,
-            spike_retriver_kwargs=None,
+            spike_retriever_kwargs=None,
             method="center_of_mass",
             method_kwargs={},
         )
