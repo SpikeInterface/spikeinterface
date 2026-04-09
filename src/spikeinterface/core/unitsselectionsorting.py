@@ -59,11 +59,15 @@ class UnitsSelectionSorting(BaseSorting):
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
-        # lexsort by segment_index, sample_index, unit_index
-        sort_indices = np.lexsort(
-            (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-        )
-        self._cached_spike_vector = spike_vector[sort_indices]
+        # lexsort by segment_index, sample_index, unit_index, only if needed
+        # (remapping can change the order of unit indices)
+        if np.diff(self.ids_to_indixes(self._unit_ids)).min() < 0:
+            sort_indices = np.lexsort(
+                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+            )
+            self._cached_spike_vector = spike_vector[sort_indices]
+        else:
+            self._cached_spike_vector = spike_vector
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
@@ -81,3 +85,12 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)
         return times
+
+    def get_unit_spike_trains(
+        self,
+        unit_ids,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+    ) -> dict:
+        unit_ids_parent = [self._ids_conversion[unit_id] for unit_id in unit_ids]
+        return self._parent_segment.get_unit_spike_trains(unit_ids_parent, start_frame, end_frame)
