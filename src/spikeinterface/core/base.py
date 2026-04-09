@@ -1151,7 +1151,8 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     if is_old_version:
         warnings.warn(
             f"This object was saved with {module_name}=={saved_version} and you are running {module_name}=={current_version}. "
-            f"To update the saved version, re-save the object with `save()` or `save_to_folder()`/`save_to_zarr()`."
+            f"This may lead to differences in default parameters or minor changes in behavior. "
+            f"To remove this warning, re-save the object with `save()` or `save_to_folder()`/`save_to_zarr()`."
         )
 
         if hasattr(extractor_class, "_handle_backward_compatibility"):
