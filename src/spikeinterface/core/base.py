@@ -1144,11 +1144,14 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    is_old_version = not _check_same_version(class_name, dic["version"])
+    module_name = class_name.split(".")[0]
+    current_version = importlib.import_module(module_name).__version__
+    saved_version = dic["version"]
+    is_old_version = not _check_same_version(class_name, saved_version)
     if is_old_version:
         warnings.warn(
-            f"Versions are not the same. This might lead to compatibility errors. "
-            f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
+            f"This object was saved with {module_name}=={saved_version} and you are running {module_name}=={current_version}. "
+            f"To update the saved version, re-save the object with `save()` or `save_to_folder()`/`save_to_zarr()`."
         )
 
         if hasattr(extractor_class, "_handle_backward_compatibility"):
