@@ -61,7 +61,7 @@ class UnitsSelectionSorting(BaseSorting):
         )
         # lexsort by segment_index, sample_index, unit_index, only if needed
         # (remapping can change the order of unit indices)
-        if np.diff(self.ids_to_indixes(self._unit_ids)).min() < 0:
+        if np.diff(self.ids_to_indices(self._unit_ids)).min() < 0:
             sort_indices = np.lexsort(
                 (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
             )
