@@ -310,6 +310,37 @@ def test_select_periods():
     np.testing.assert_array_equal(sliced_sorting.to_spike_vector(), sliced_sorting_array.to_spike_vector())
 
 
+@pytest.mark.parametrize("use_cache", [False, True])
+def test_get_unit_spike_trains(use_cache):
+    sampling_frequency = 10_000.0
+    duration = 1.0
+    num_samples = int(sampling_frequency * duration)
+    num_units = 10
+    sorting = generate_sorting(durations=[duration], sampling_frequency=sampling_frequency, num_units=num_units)
+
+    all_spike_trains = sorting.get_unit_spike_trains(unit_ids=sorting.unit_ids, use_cache=use_cache)
+    assert isinstance(all_spike_trains, dict)
+    assert set(all_spike_trains.keys()) == set(sorting.unit_ids)
+    for unit_id in sorting.unit_ids:
+        spiketrain = sorting.get_unit_spike_train(segment_index=0, unit_id=unit_id, use_cache=use_cache)
+        assert np.array_equal(all_spike_trains[unit_id], spiketrain)
+
+    # test with times
+    spike_trains_times = sorting.get_unit_spike_trains_in_seconds(
+        unit_ids=sorting.unit_ids, return_times=True, use_cache=use_cache
+    )
+    assert isinstance(spike_trains_times, dict)
+    assert set(spike_trains_times.keys()) == set(sorting.unit_ids)
+    for unit_id in sorting.unit_ids:
+        spiketrain = sorting.get_unit_spike_train(
+            segment_index=0, unit_id=unit_id, use_cache=use_cache, return_times=True
+        )
+        spiketrain_times = sorting.get_unit_spike_train_in_seconds(
+            segment_index=0, unit_id=unit_id, use_cache=use_cache
+        )
+        assert np.allclose(spiketrain_times, spiketrain)
+
+
 if __name__ == "__main__":
     import tempfile
 

@@ -350,6 +350,7 @@ class BaseSorting(BaseExtractor):
             )
 
         segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
         if use_cache:
             # TODO: speed things up
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
@@ -372,8 +373,9 @@ class BaseSorting(BaseExtractor):
                 spike_trains[unit_id] = spike_frames
         else:
             spike_trains = segment.get_unit_spike_trains(
-                unit_ids=unit_ids, start_frame=start_frame, end_frame=end_frame, return_times=return_times
+                unit_ids=unit_ids, start_frame=start_frame, end_frame=end_frame
             )
+        return spike_trains
 
     def get_unit_spike_trains_in_seconds(
         self,
@@ -453,10 +455,10 @@ class BaseSorting(BaseExtractor):
             use_cache=use_cache,
         )
         for unit_id in unit_ids:
-            spike_frames = spike_frames[unit_id]
+            spike_frames_unit = spike_frames[unit_id]
             t_start = segment._t_start if segment._t_start is not None else 0
-            spike_times[unit_id] = spike_frames / self.get_sampling_frequency()
-        return t_start + spike_times
+            spike_times[unit_id] = spike_frames_unit / self.get_sampling_frequency() + t_start
+        return spike_times
 
     def register_recording(self, recording, check_spike_frames: bool = True):
         """
