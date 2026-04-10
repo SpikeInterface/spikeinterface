@@ -13,6 +13,7 @@ from spikeinterface.core import (
     create_sorting_analyzer,
     SortingAnalyzer,
 )
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.core_tools import define_function_from_class
 
 from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
@@ -223,6 +224,50 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
+
+    def _compute_and_cache_spike_vector(self) -> None:
+        """Build the spike vector directly from the flat per-segment arrays.
+
+        Since Phy/Kilosort segments already hold the full spike_times and 
+        spike_clusters arrays in memory, we can construct the spike vector
+        in one shot. 
+        """
+        unit_ids = np.asarray(self.unit_ids)
+        sorter = np.argsort(unit_ids)
+        sorted_unit_ids = unit_ids[sorter]
+
+        num_seg = self.get_num_segments()
+        spikes_list = []
+        segment_slices = np.zeros((num_seg, 2), dtype="int64")
+        pos = 0
+
+        for seg_idx in range(num_seg):
+            seg = self.segments[seg_idx]
+            all_spikes = seg._all_spikes
+            all_clusters = seg._all_clusters
+
+            # Map cluster ids -> unit indices. `spike_clusters_clean` is guaranteed
+            # to only contain ids present in `self.unit_ids` (filtered in __init__),
+            # so searchsorted always returns a valid position.
+            unit_indices = sorter[np.searchsorted(sorted_unit_ids, all_clusters)]
+
+            n = all_spikes.size
+            segment_slices[seg_idx] = [pos, pos + n]
+            pos += n
+
+            seg_spikes = np.zeros(n, dtype=minimum_spike_dtype)
+            seg_spikes["sample_index"] = all_spikes
+            seg_spikes["unit_index"] = unit_indices
+            seg_spikes["segment_index"] = seg_idx
+            spikes_list.append(seg_spikes)
+
+        spikes = np.concatenate(spikes_list) if spikes_list else np.zeros(0, dtype=minimum_spike_dtype)
+        # Canonical order: (segment_index, sample_index, unit_index).
+        order = np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))
+        spikes = spikes[order]
+
+        self._cached_spike_vector = spikes
+        self._cached_spike_vector_segment_slices = segment_slices
 
 
 class PhySortingSegment(BaseSortingSegment):
