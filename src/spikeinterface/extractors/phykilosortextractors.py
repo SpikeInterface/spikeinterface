@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 import warnings
 
@@ -18,6 +19,8 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
 from probeinterface import read_prb, Probe
+
+HAVE_NUMBA = importlib.util.find_spec("numba") is not None
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
@@ -284,6 +287,104 @@ class PhySortingSegment(BaseSortingSegment):
 
         spike_times = self._all_spikes[start:end][self._all_clusters[start:end] == unit_id]
         return np.atleast_1d(spike_times.copy().squeeze())
+
+    def get_unit_spike_trains(
+        self,
+        unit_ids,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+    ) -> dict:
+        """Extract spike trains for several units in one pass.
+        
+        If you need to get ~20 or more spike trains, this is usually **much** faster 
+        than calling get_unit_spike_train() for each unit.
+
+        Numba-accelerated, if numba is available. Otherwise, falls back to NumPy. 
+        """
+        start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
+        end = (
+            len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="left")
+        )  # Exclude end frame
+
+        spikes = self._all_spikes[start:end]
+        clusters = self._all_clusters[start:end]
+
+        unit_ids_arr = np.asarray(unit_ids)
+        num_units = len(unit_ids_arr)
+        if num_units == 0:
+            return {}
+
+        # Map each spike's cluster id to a destination index in the caller-supplied
+        # unit_ids order. -1 means "this spike's cluster is not in unit_ids, skip it".
+        sorter = np.argsort(unit_ids_arr, kind="stable")
+        sorted_unit_ids = unit_ids_arr[sorter]
+        idx_in_sorted = np.searchsorted(sorted_unit_ids, clusters, side="left")
+        idx_clamped = np.minimum(idx_in_sorted, num_units - 1)
+        matches = (idx_in_sorted < num_units) & (sorted_unit_ids[idx_clamped] == clusters)
+        dest = np.where(matches, sorter[idx_clamped], -1).astype(np.int64)
+
+        spikes_i64 = np.ascontiguousarray(spikes, dtype=np.int64)
+
+        if HAVE_NUMBA:
+            offsets, flat_out = _counting_sort_spikes_by_unit(spikes_i64, dest, num_units)
+        else:
+            # NumPy fallback: stable argsort by destination index, then split on offsets.
+            # Stable sort preserves the input order of spikes within each unit group,
+            # and since _all_spikes is sorted by sample_index, so is each group.
+            valid = dest >= 0
+            valid_spikes = spikes_i64[valid]
+            valid_dest = dest[valid]
+            order = np.argsort(valid_dest, kind="stable")
+            flat_out = valid_spikes[order]
+            counts = np.bincount(valid_dest, minlength=num_units)
+            offsets = np.empty(num_units + 1, dtype=np.int64)
+            offsets[0] = 0
+            np.cumsum(counts, out=offsets[1:])
+
+        return {unit_ids[i]: flat_out[offsets[i] : offsets[i + 1]] for i in range(num_units)}
+
+
+if HAVE_NUMBA:
+    import numba
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _counting_sort_spikes_by_unit(all_spikes, dest_unit_indices, num_units):
+        """Counting-sort `all_spikes` into per-unit groups.
+
+        Parameters
+        ----------
+        all_spikes : int64 array
+            Spike sample indices.
+        dest_unit_indices : int64 array (same length as all_spikes)
+            Destination unit index for each spike, or -1 to skip.
+        num_units : int
+            Number of destination units.
+
+        Returns
+        -------
+        offsets : int64 array of shape (num_units + 1,)
+            Offsets into `flat_out`; group k is `flat_out[offsets[k]:offsets[k+1]]`.
+        flat_out : int64 array
+            Concatenated spike times, grouped by destination unit index.
+        """
+        n = all_spikes.shape[0]
+        counts = np.zeros(num_units + 1, dtype=np.int64)
+        for i in range(n):
+            u = dest_unit_indices[i]
+            if u >= 0:
+                counts[u + 1] += 1
+        for k in range(1, num_units + 1):
+            counts[k] += counts[k - 1]
+
+        flat_out = np.empty(counts[num_units], dtype=all_spikes.dtype)
+        write_pos = counts[:-1].copy()
+        for i in range(n):
+            u = dest_unit_indices[i]
+            if u >= 0:
+                flat_out[write_pos[u]] = all_spikes[i]
+                write_pos[u] += 1
+
+        return counts, flat_out
 
 
 class PhySortingExtractor(BasePhyKilosortSortingExtractor):
