@@ -93,4 +93,5 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
         end_frame: int | None = None,
     ) -> dict:
         unit_ids_parent = [self._ids_conversion[unit_id] for unit_id in unit_ids]
-        return self._parent_segment.get_unit_spike_trains(unit_ids_parent, start_frame, end_frame)
+        parent_trains = self._parent_segment.get_unit_spike_trains(unit_ids_parent, start_frame, end_frame)
+        return {child_id: parent_trains[parent_id] for child_id, parent_id in zip(unit_ids, unit_ids_parent)}
