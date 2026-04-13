@@ -629,7 +629,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     if i0 == i1:
         return
 
-    # Since we get_traces accounting for nbefore and nafter, all spikes in the chunk are valid and we can extract
+    # Since `get_traces` accounts for nbefore and nafter, all spikes in the chunk are valid and we can extract
     # all waveforms in one go without worrying about borders.
     start = int(spike_times[i0] - nbefore)
     end = int(spike_times[i1 - 1] + nafter)
