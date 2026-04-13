@@ -629,6 +629,8 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     if i0 == i1:
         return
 
+    # Since we get_traces accounting for nbefore and nafter, all spikes in the chunk are valid and we can extract
+    # all waveforms in one go without worrying about borders.
     start = int(spike_times[i0] - nbefore)
     end = int(spike_times[i1 - 1] + nafter)
     traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
@@ -636,34 +638,27 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     nsamples = nbefore + nafter
 
     # Extract all waveforms in the chunk at once
-    # valid_mask tracks which spikes have valid (in-bounds) waveforms
-    chunk_spike_times = spike_times[i0:i1]
-    offsets = chunk_spike_times - start - nbefore
-    valid_mask = (offsets >= 0) & (offsets + nsamples <= traces.shape[0])
+    spike_times_in_chunk = spike_times[i0:i1]
+    # Offset spike times to be relative to the start of the traces buffer
+    spike_times_offset = spike_times_in_chunk - start - nbefore
+    spike_indices = np.arange(i0, i1)
 
-    if not np.any(valid_mask):
-        return
-
-    valid_offsets = offsets[valid_mask]
-    valid_indices = np.arange(i0, i1)[valid_mask]
-    n_valid = len(valid_offsets)
-
-    # Build waveform array: (n_valid, nsamples, n_channels)
+    # Build waveform array: (n_spikes, nsamples, n_channels)
     # Use fancy indexing to extract all snippets at once
-    sample_indices = valid_offsets[:, None] + np.arange(nsamples)[None, :]  # (n_valid, nsamples)
-    all_wfs = traces[sample_indices]  # (n_valid, nsamples, n_channels)
+    sample_indices = spike_times_offset[:, None] + np.arange(nsamples)[None, :]  # (n_spikes, nsamples)
+    all_wfs = traces[sample_indices]  # (n_spikes, nsamples, n_channels)
 
     # Vectorized PCA: batch by channel across all spikes in the chunk.
     # For each unique channel, find all spikes that use it (via their unit's
     # sparsity), extract waveforms, and call transform once.
-    valid_labels = spike_labels[valid_indices]
+    labels_in_chunk = spike_labels[spike_indices]
 
     # Build a set of all channels used by spikes in this chunk
-    unique_unit_indices = np.unique(valid_labels)
+    unique_unit_indices = np.unique(labels_in_chunk)
     chan_info: dict[int, list[tuple[np.ndarray, int]]] = {}
     for unit_index in unique_unit_indices:
         chan_inds = unit_channels[unit_index]
-        unit_mask = valid_labels == unit_index
+        unit_mask = labels_in_chunk == unit_index
         unit_local_idxs = np.nonzero(unit_mask)[0]
         for c, chan_ind in enumerate(chan_inds):
             if chan_ind not in chan_info:
@@ -673,14 +668,13 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     for chan_ind, unit_groups in chan_info.items():
         # Concatenate all spike indices for this channel across units
         all_local_idxs = np.concatenate([g[0] for g in unit_groups])
-        global_idxs = valid_indices[all_local_idxs]
+        global_idxs = spike_indices[all_local_idxs]
 
         # Batch waveforms for this channel: (n_spikes, nsamples)
         wfs_batch = all_wfs[all_local_idxs, :, chan_ind]
 
         if wfs_batch.size == 0:
             continue
-
         try:
             pcs_batch = pca_model[chan_ind].transform(wfs_batch)
             # Write results back — each unit group has a fixed channel position
