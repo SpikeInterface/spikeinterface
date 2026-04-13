@@ -14,6 +14,7 @@ from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
+from spikeinterface.core.core_tools import ms_to_samples
 
 
 class PipelineNode:
@@ -314,8 +315,8 @@ class WaveformsNode(PipelineNode):
         PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
         self.ms_before = ms_before
         self.ms_after = ms_after
-        self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
-        self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
+        self.nbefore = ms_to_samples(ms_before, recording.get_sampling_frequency())
+        self.nafter = ms_to_samples(ms_after, recording.get_sampling_frequency())
         self.neighbours_mask = None
 
 
