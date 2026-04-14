@@ -135,8 +135,6 @@ def get_default_qc_params():
     >>> # Stricter for chronic recordings
     >>> params["compute_distance_metrics"] = True
     >>> params["compute_drift"] = False  # Less relevant for chronic
-    >>> # More lenient refractory period for fast-spiking neurons
-    >>> params["refractory_period_ms"] = 1.5
     >>> labels, metrics, figs = run_bombcell_qc(analyzer, params=params)
     """
     return {
@@ -279,7 +277,6 @@ def run_bombcell_qc(
 
     >>> params = get_default_qc_params()
     >>> params["compute_distance_metrics"] = True  # For chronic recordings
-    >>> params["refractory_period_ms"] = 1.5  # For fast-spiking neurons
     >>>
     >>> thresholds = bombcell_get_default_thresholds()
     >>> thresholds["mua"]["rpv"]["less"] = 0.05  # Stricter RP violations

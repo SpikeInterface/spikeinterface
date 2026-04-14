@@ -55,7 +55,7 @@ qc_params["use_valid_periods"] = False                   # if True, identify val
 qc_params["presence_ratio_bin_duration_s"] = 60          # bin size (s) for checking if unit fires throughout recording
 
 # --- Refractory period violations ---
-qc_params["refractory_period_ms"] = 2.0                  # expected refractory period - use 1.0-1.5 for fast-spiking
+qc_params["refractory_period_ms"] = 2.0                  # expected refractory period (ms)
 qc_params["censored_period_ms"] = 0.1                    # ignore ISIs shorter than this (spike sorting artifact)
 
 # --- Drift parameters ---
