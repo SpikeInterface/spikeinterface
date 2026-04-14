@@ -224,6 +224,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         experiment_names: str | list | None = None,
         all_annotations: bool = False,
     ):
+        folder_path = Path(folder_path)
+
         # Handle experiment_names deprecation
         if experiment_names is not None:
             warnings.warn(
@@ -336,8 +338,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     if sample_shifts is not None:
                         self.set_property("inter_sample_shift", sample_shifts)
 
-            # load synchronized timestamps and set_times to recording
-            recording_folder = Path(folder_path) / record_node
+            # folder_path can point to different levels of the OE folder structure
+            # (root, record node, experiment, or recording). We need to find the root folder
+            # in order to load the sync timestamps and set them as times to the recording.
+            if record_node in folder_path.parts:
+                root_index = len(folder_path.parts) - folder_path.parts.index(record_node) - 1
+                root_folder = folder_path.parents[root_index]
+            else:
+                root_folder = folder_path
+            recording_folder = root_folder / record_node
             stream_folders = []
             for segment_index, rec_id in enumerate(rec_ids):
                 stream_folder = (
