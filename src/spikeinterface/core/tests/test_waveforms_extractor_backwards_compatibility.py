@@ -198,9 +198,7 @@ def _add_legacy_template_metrics(folder, unit_ids):
     with open(ext_folder / "params.json", "w") as f:
         json.dump(deprecated_params, f)
 
-    metrics_df = pd.DataFrame(
-        index=unit_ids, columns=["peak_to_valley", "peak_trough_ratio", "half_width"]
-    )
+    metrics_df = pd.DataFrame(index=unit_ids, columns=["peak_to_valley", "peak_trough_ratio", "half_width"])
     metrics_df["peak_to_valley"] = 0.5
     metrics_df["peak_trough_ratio"] = 2.0
     metrics_df["half_width"] = 0.3
