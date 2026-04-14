@@ -257,7 +257,7 @@ labels_direct = sc.bombcell_label_units(
 # Chronic recordings:
 #   - Distance metrics work well (stable recordings = reliable isolation_distance/l_ratio)
 #   - Set compute_distance_metrics = True
-#   - Increase or disable drift threshold
+#   - Drift is typically minimal, so drift metrics are not very informative
 #
 # Acute recordings:
 #   - Distance metrics unreliable (drift artificially lowers isolation_distance/l_ratio)
@@ -265,7 +265,6 @@ labels_direct = sc.bombcell_label_units(
 #   - Keep drift threshold strict
 #
 # Cerebellum:
-#   - Purkinje cells: shorter peak-to-trough duration
 #   - Complex spikes may trigger noise detection; relax num_positive_peaks
 #
 # Striatum:
