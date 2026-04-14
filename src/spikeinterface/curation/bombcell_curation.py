@@ -106,6 +106,7 @@ def bombcell_label_units(
     use_valid_periods: bool = False,
     valid_periods_params: dict | None = None,
     recompute_quality_metrics: bool = True,
+    quality_metric_params: dict | None = None,
     **job_kwargs,
 ) -> "pd.DataFrame":
     """
@@ -170,6 +171,11 @@ def bombcell_label_units(
         If ``use_valid_periods`` is True, whether to recompute quality metrics restricted to valid
         periods. If False, the existing quality metrics are used as-is (useful if you already
         computed them with ``use_valid_periods=True``).
+    quality_metric_params : dict or None, default: None
+        Parameters to pass to ``quality_metrics`` computation when recomputing with valid periods.
+        Should contain keys accepted by ``sorting_analyzer.compute("quality_metrics", ...)``,
+        e.g. ``metric_names``, ``metric_params``, ``peak_sign``, ``seed``.
+        If None, the existing quality_metrics extension params are re-used.
     **job_kwargs
         Job keyword arguments (n_jobs, chunk_duration, progress_bar) passed to
         ``valid_unit_periods`` and ``quality_metrics`` computation when ``use_valid_periods=True``.
@@ -221,23 +227,26 @@ def bombcell_label_units(
 
         # Recompute quality metrics restricted to valid periods
         if recompute_quality_metrics:
-            # Preserve existing quality metric settings (metric_names, metric_params)
-            qm_ext = sorting_analyzer.get_extension("quality_metrics")
-            if qm_ext is not None:
-                existing_params = qm_ext.params.copy()
-                existing_params.pop("periods", None)
-                existing_params.pop("use_valid_periods", None)
-                sorting_analyzer.compute(
-                    "quality_metrics",
-                    use_valid_periods=True,
-                    **existing_params,
-                    **job_kwargs,
-                )
+            if quality_metric_params is not None:
+                qm_compute_params = quality_metric_params
             else:
-                raise ValueError(
-                    "use_valid_periods=True with recompute_quality_metrics=True requires "
-                    "quality_metrics to have been computed at least once."
-                )
+                # Fall back to existing extension params
+                qm_ext = sorting_analyzer.get_extension("quality_metrics")
+                if qm_ext is not None:
+                    qm_compute_params = qm_ext.params.copy()
+                    qm_compute_params.pop("periods", None)
+                    qm_compute_params.pop("use_valid_periods", None)
+                else:
+                    raise ValueError(
+                        "use_valid_periods=True with recompute_quality_metrics=True requires "
+                        "quality_metric_params or quality_metrics to have been computed at least once."
+                    )
+            sorting_analyzer.compute(
+                "quality_metrics",
+                use_valid_periods=True,
+                **qm_compute_params,
+                **job_kwargs,
+            )
 
     if sorting_analyzer is not None:
         combined_metrics = sorting_analyzer.get_metrics_extension_data()

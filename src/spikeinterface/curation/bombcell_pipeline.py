@@ -352,6 +352,7 @@ def run_bombcell_qc(
         split_non_somatic_good_mua=params["split_non_somatic_good_mua"],
         use_valid_periods=params["use_valid_periods"],
         valid_periods_params=valid_periods_params,
+        quality_metric_params={"metric_names": metric_names, "metric_params": qm_params},
         **job_kwargs,
     )
 
