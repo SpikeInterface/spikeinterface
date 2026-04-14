@@ -293,12 +293,16 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         """Resample traces section-by-section, avoiding FFT processing across gaps."""
         from scipy import signal
 
+        # Determine the post-indexing channel count via a 1-sample parent fetch.
+        # channel_indices may be a slice, list, ndarray, or None, so we cannot
+        # simply use len(channel_indices).
+        n_channels = self._parent_segment.get_traces(0, 1, channel_indices).shape[1]
+
+        # Pre-allocate the output buffer.
+        result = np.empty((end_frame - start_frame, n_channels), dtype=self._dtype)
+
         if start_frame == end_frame:
-            # Determine n_channels from parent
-            n_channels = (
-                len(channel_indices) if channel_indices is not None else self._parent_segment.get_traces(0, 1).shape[1]
-            )
-            return np.empty((0, n_channels), dtype=self._dtype)
+            return result
 
         # Find which sections overlap [start_frame, end_frame) in output space.
         # _sec_boundaries_output[k] = [out_start_k, out_end_k)
@@ -311,7 +315,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         is_integer_ratio = (self._parent_rate % self._resample_rate) == 0
 
-        pieces = []
+        pos = 0
         for k in range(first_sec, last_sec + 1):
             out_start_k = int(self._sec_boundaries_output[k, 0])
             out_end_k = int(self._sec_boundaries_output[k, 1])
@@ -361,7 +365,8 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             right_margin_rs = int((right_margin / self._parent_rate) * self._resample_rate)
 
             # Total output samples including margins
-            num = int(local_out_end - local_out_start) + left_margin_rs + right_margin_rs
+            chunk_len = int(local_out_end - local_out_start)
+            num = chunk_len + left_margin_rs + right_margin_rs
 
             # Resample this section
             if is_integer_ratio:
@@ -372,17 +377,16 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             else:
                 resampled = signal.resample(parent_traces, num, axis=0)
 
-            # Trim margins
-            resampled = resampled[left_margin_rs : num - right_margin_rs]
-            pieces.append(resampled)
+            # Trim margins and write directly into the pre-allocated buffer.
+            # Clamp to the remaining space in case decimate's output length
+            # differs from `num` by a rounding sample.
+            trimmed = resampled[left_margin_rs : num - right_margin_rs]
+            write_len = min(len(trimmed), result.shape[0] - pos)
+            result[pos : pos + write_len] = trimmed[:write_len]
+            pos += write_len
 
-        if len(pieces) == 0:
-            n_channels = (
-                len(channel_indices) if channel_indices is not None else self._parent_segment.get_traces(0, 1).shape[1]
-            )
-            return np.empty((0, n_channels), dtype=self._dtype)
-        result = np.concatenate(pieces, axis=0) if len(pieces) > 1 else pieces[0]
-        return result.astype(self._dtype)
+        # Return only the filled portion (normally equals end_frame - start_frame).
+        return result[:pos]
 
 
 resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")
