@@ -551,7 +551,6 @@ def run_bombcell_qc(
         bombcell_get_default_thresholds,
         bombcell_label_units,
         save_bombcell_results,
-        save_valid_periods,
     )
 
     if params is None:
@@ -662,8 +661,7 @@ def run_bombcell_qc(
             thresholds=thresholds,
             folder=output_folder,
         )
-        if params["use_valid_periods"]:
-            save_valid_periods(sorting_analyzer, output_folder)
+        # TODO: save valid periods via the valid_unit_periods extension to_dataframe() once available
         if "histograms" in figures:
             figures["histograms"].savefig(output_folder / "metric_histograms.png", dpi=150, bbox_inches="tight")
         if "waveforms" in figures:

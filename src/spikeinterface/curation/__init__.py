@@ -29,7 +29,6 @@ from .bombcell_curation import (
     bombcell_get_default_thresholds,
     bombcell_label_units,
     save_bombcell_results,
-    save_valid_periods,
 )
 from .bombcell_pipeline import (
     get_default_preprocessing_params,
