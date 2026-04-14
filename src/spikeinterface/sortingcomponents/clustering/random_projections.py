@@ -12,6 +12,7 @@ else:
     HAVE_HDBSCAN = False
 
 from spikeinterface.core.base import minimum_spike_dtype
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
@@ -60,8 +61,8 @@ class RandomProjectionClustering:
         radius_um = params.get("radius_um", 30)
         ms_before = params["waveforms"].get("ms_before", 0.5)
         ms_after = params["waveforms"].get("ms_before", 1.5)
-        nbefore = int(ms_before * fs / 1000.0)
-        nafter = int(ms_after * fs / 1000.0)
+        nbefore = ms_to_samples(ms_before, fs)
+        nafter = ms_to_samples(ms_after, fs)
         verbose = params.get("verbose", True)
         num_chans = recording.get_num_channels()
         debug_folder = params.get("debug_folder", None)

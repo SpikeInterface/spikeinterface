@@ -13,6 +13,7 @@ import numpy as np
 from probeinterface import generate_multi_columns_probe
 
 from spikeinterface import Templates
+from spikeinterface.core import ms_to_samples
 from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_sorting,
@@ -516,7 +517,7 @@ def generate_drifting_recording(
         )
 
     ms_before = generate_templates_kwargs["ms_before"]
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
     templates = Templates(
         templates_array=templates_array,
         sampling_frequency=sampling_frequency,
