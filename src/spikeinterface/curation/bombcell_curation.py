@@ -502,5 +502,3 @@ def save_bombcell_results(
 
         narrow_df = pd.DataFrame(rows)
         narrow_df.to_csv(folder / "labeling_results_narrow.csv", index=False)
-
-
