@@ -1,31 +1,7 @@
 import numpy as np
 
 from .basesorting import BaseSorting, BaseSortingSegment
-
-
-def _is_spike_vector_sorted(spike_vector: np.ndarray) -> bool:
-    """Return True iff the spike vector is sorted by (segment_index, sample_index, unit_index).
-
-    O(n) sequential scan. Used to avoid an O(n log n) lexsort when the vector already
-    happens to be in canonical order.
-    """
-    n = len(spike_vector)
-    if n <= 1:
-        return True
-    seg = spike_vector["segment_index"]
-    samp = spike_vector["sample_index"]
-    unit = spike_vector["unit_index"]
-    d_seg = np.diff(seg)
-    if np.any(d_seg < 0):
-        return False
-    seg_eq = d_seg == 0
-    d_samp = np.diff(samp)
-    if np.any(d_samp[seg_eq] < 0):
-        return False
-    samp_eq = seg_eq & (d_samp == 0)
-    if np.any(np.diff(unit)[samp_eq] < 0):
-        return False
-    return True
+from .sorting_tools import is_spike_vector_sorted
 
 
 class UnitsSelectionSorting(BaseSorting):
@@ -91,7 +67,7 @@ class UnitsSelectionSorting(BaseSorting):
         # relative order as in the parent (an O(k) check). If not, the vector may still
         # happen to be sorted -- verify with an O(n) scan before falling back to O(n log n)
         # lexsort.
-        if not self._is_order_preserving_selection() and not _is_spike_vector_sorted(spike_vector):
+        if not self._is_order_preserving_selection() and not is_spike_vector_sorted(spike_vector):
             sort_indices = np.lexsort(
                 (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
             )
@@ -100,7 +76,7 @@ class UnitsSelectionSorting(BaseSorting):
         self._cached_spike_vector = spike_vector
 
     def _is_order_preserving_selection(self) -> bool:
-        """Return True iff self._unit_ids appear in the same relative order as in the parent.
+        """Return True if self._unit_ids appear in the same relative order as in the parent.
 
         O(k) where k is the number of selected units. When True, the remapped spike vector
         is guaranteed to remain sorted by (segment, sample, unit) without re-sorting.
