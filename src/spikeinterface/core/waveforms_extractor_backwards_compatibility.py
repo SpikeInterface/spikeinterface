@@ -629,12 +629,16 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
                     pc_all[mask, ...] = pc_one
                 ext.data["pca_projection"] = pc_all
 
-        # update params
-        new_params = ext._set_params()
-        updated_params = make_ext_params_up_to_date(ext, params, new_params)
-        ext.set_params(**updated_params, save=False)
+        # Install raw on-disk params and run compat handler first,
+        # matching what AnalyzerExtension.load does for non-legacy folders.
+        ext.params = dict(params)
         if ext.need_backward_compatibility_on_load:
             ext._handle_backward_compatibility_on_load()
+
+        # Now merge and validate — deprecated names are already migrated.
+        new_params = ext._set_params()
+        updated_params = make_ext_params_up_to_date(ext, ext.params, new_params)
+        ext.set_params(**updated_params, save=False)
         ext.run_info = None
 
         sorting_analyzer.extensions[new_name] = ext
