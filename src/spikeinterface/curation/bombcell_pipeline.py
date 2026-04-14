@@ -178,6 +178,8 @@ def run_bombcell_qc(
     valid_periods_params: dict | None = None,
     rerun_quality_metrics: bool = False,
     rerun_pca: bool = False,
+    rerun_amplitude_scalings: bool = False,
+    rerun_valid_periods: bool = False,
     n_jobs: int = -1,
     progress_bar: bool = True,
 ):
@@ -224,6 +226,11 @@ def run_bombcell_qc(
         Force recomputation of quality metrics even if they exist.
     rerun_pca : bool, default: False
         Force recomputation of PCA (only relevant if compute_distance_metrics=True).
+    rerun_amplitude_scalings : bool, default: False
+        Force recomputation of amplitude_scalings (used as a prerequisite for
+        amplitude_cutoff and valid periods).
+    rerun_valid_periods : bool, default: False
+        Force recomputation of valid_unit_periods (only relevant if use_valid_periods=True).
     n_jobs : int, default: -1
         Number of parallel jobs.
     progress_bar : bool, default: True
@@ -356,11 +363,11 @@ def run_bombcell_qc(
             metric_names.append("mahalanobis")
 
     # Ensure prerequisite extensions are computed for whichever metrics are requested
-    if "amplitude_cutoff" in metric_names:
-        if not sorting_analyzer.has_extension("spike_amplitudes") and not sorting_analyzer.has_extension(
-            "amplitude_scalings"
-        ):
-            sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
+    # amplitude_cutoff uses amplitude_scalings (not spike_amplitudes) in this pipeline
+    needs_amplitude_scalings = "amplitude_cutoff" in metric_names or params["use_valid_periods"]
+    if needs_amplitude_scalings:
+        if rerun_amplitude_scalings or not sorting_analyzer.has_extension("amplitude_scalings"):
+            sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
 
     if "mahalanobis" in metric_names:
         if not sorting_analyzer.has_extension("principal_components") or rerun_pca:
@@ -370,9 +377,6 @@ def run_bombcell_qc(
     if "metric_params" in params and params["metric_params"] is not None:
         for metric, mp in params["metric_params"].items():
             qm_params[metric] = mp
-
-    if params["use_valid_periods"] and not sorting_analyzer.has_extension("amplitude_scalings"):
-        sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
 
     # Compute quality metrics
     if not sorting_analyzer.has_extension("quality_metrics") or rerun_quality_metrics:
@@ -387,6 +391,7 @@ def run_bombcell_qc(
         use_valid_periods=params["use_valid_periods"],
         valid_periods_params=valid_periods_params,
         quality_metric_params={"metric_names": metric_names, "metric_params": qm_params},
+        rerun_valid_periods=rerun_valid_periods,
         **job_kwargs,
     )
 

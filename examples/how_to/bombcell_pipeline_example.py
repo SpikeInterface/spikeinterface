@@ -23,7 +23,8 @@ output_folder = Path("/path/to/your/bombcell_output")
 
 # %% Load existing SortingAnalyzer
 # The analyzer should already have: random_spikes, waveforms, templates,
-# noise_levels, spike_amplitudes, unit_locations, spike_locations, template_metrics.
+# noise_levels, unit_locations, spike_locations, template_metrics.
+# amplitude_scalings is computed on-demand if needed (for amplitude_cutoff or valid periods).
 # See SpikeInterface docs for preprocessing, sorting, and analyzer creation.
 analyzer = si.load_sorting_analyzer(analyzer_folder)
 
@@ -141,6 +142,12 @@ pprint(thresholds)
 # e.g. params="qc_params.json", thresholds="thresholds.json".
 # After each run, the thresholds and bombcell-specific config are saved to
 # output_folder as thresholds.json and bombcell_config.json for reproducibility.
+#
+# Rerun flags force recomputation of specific extensions (all default False):
+#   rerun_quality_metrics    - quality_metrics
+#   rerun_pca                - principal_components (for distance metrics)
+#   rerun_amplitude_scalings - amplitude_scalings (prerequisite for amplitude_cutoff and valid periods)
+#   rerun_valid_periods      - valid_unit_periods (the "good times" extension)
 labels, metrics, figures = sc.run_bombcell_qc(
     sorting_analyzer=analyzer,
     output_folder=output_folder,

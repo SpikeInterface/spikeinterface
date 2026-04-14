@@ -107,6 +107,7 @@ def bombcell_label_units(
     valid_periods_params: dict | None = None,
     recompute_quality_metrics: bool = True,
     quality_metric_params: dict | None = None,
+    rerun_valid_periods: bool = False,
     **job_kwargs,
 ) -> "pd.DataFrame":
     """
@@ -176,6 +177,10 @@ def bombcell_label_units(
         Should contain keys accepted by ``sorting_analyzer.compute("quality_metrics", ...)``,
         e.g. ``metric_names``, ``metric_params``, ``peak_sign``, ``seed``.
         If None, the existing quality_metrics extension params are re-used.
+    rerun_valid_periods : bool, default: False
+        If ``use_valid_periods`` is True, force recomputation of valid_unit_periods even
+        if the extension already exists on the analyzer. If False (default), existing
+        valid_unit_periods data is reused when present.
     **job_kwargs
         Job keyword arguments (n_jobs, chunk_duration, progress_bar) passed to
         ``valid_unit_periods`` and ``quality_metrics`` computation when ``use_valid_periods=True``.
@@ -222,8 +227,9 @@ def bombcell_label_units(
             if ac_thresh is not None:
                 vp_params["fn_threshold"] = ac_thresh
 
-        # Compute valid_unit_periods
-        sorting_analyzer.compute("valid_unit_periods", **vp_params, **job_kwargs)
+        # Compute valid_unit_periods (skip if already computed unless rerun_valid_periods)
+        if rerun_valid_periods or not sorting_analyzer.has_extension("valid_unit_periods"):
+            sorting_analyzer.compute("valid_unit_periods", **vp_params, **job_kwargs)
 
         # Recompute quality metrics restricted to valid periods
         if recompute_quality_metrics:
