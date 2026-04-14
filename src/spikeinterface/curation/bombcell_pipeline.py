@@ -52,11 +52,13 @@ def get_default_qc_params():
             acute recordings. drift_ptp (peak-to-peak drift in um) is used
             by BombCell MUA thresholds.
 
-        rp_method : str, default: "sliding_rp"
-            Method for computing refractory period violations:
+        rp_method : dict, default: {"method": "sliding_rp", "exclude_ref_period_below_ms": 0.5, "max_ref_period_ms": 10.0}
+            Refractory period violation method and its parameters.
+            The "method" key selects the algorithm:
             - "sliding_rp": IBL/Steinmetz method that sweeps across RP values
               and estimates contamination. More robust. (recommended)
             - "llobet": Single RP value method from Llobet et al.
+            Additional keys are passed as metric params for the selected method.
 
         **BombCell Labeling Options**
 
@@ -94,15 +96,6 @@ def get_default_qc_params():
             Censored period in milliseconds. Spikes within this period of
             each other are not counted (accounts for detection artifacts).
             0.1 ms is standard.
-
-        **Sliding RP Method Parameters** (used if rp_method="sliding_rp")
-
-        sliding_rp_exclude_below_ms : float, default: 0.5
-            Exclude refractory periods below this value when sweeping.
-            Avoids artifacts from very short intervals.
-
-        sliding_rp_max_ms : float, default: 10.0
-            Maximum refractory period to test when sweeping.
 
         **Drift Parameters**
 
@@ -151,7 +144,11 @@ def get_default_qc_params():
         "compute_amplitude_cutoff": False,  # slow - requires spike_amplitudes
         "compute_distance_metrics": False,
         "compute_drift": True,
-        "rp_method": "sliding_rp",
+        "rp_method": {
+            "method": "sliding_rp",
+            "exclude_ref_period_below_ms": 0.5,
+            "max_ref_period_ms": 10.0,
+        },
         # BombCell labeling options
         "label_non_somatic": True,
         "split_non_somatic_good_mua": False,
@@ -161,9 +158,6 @@ def get_default_qc_params():
         # Refractory period violations
         "refractory_period_ms": 2.0,
         "censored_period_ms": 0.1,
-        # Sliding RP method
-        "sliding_rp_exclude_below_ms": 0.5,
-        "sliding_rp_max_ms": 10.0,
         # Drift
         "drift_interval_s": 60,
         "drift_min_spikes": 100,
@@ -299,21 +293,28 @@ def run_bombcell_qc(
         output_folder.mkdir(parents=True, exist_ok=True)
 
     # Build QM params
+    rp_method_dict = params["rp_method"]
+    rp_method_name = rp_method_dict["method"]
+    rp_method_params = {k: v for k, v in rp_method_dict.items() if k != "method"}
+
     qm_params = {
         "presence_ratio": {"bin_duration_s": params["presence_ratio_bin_duration_s"]},
         "rp_violation": {
             "refractory_period_ms": params["refractory_period_ms"],
             "censored_period_ms": params["censored_period_ms"],
         },
-        "sliding_rp_violation": {
-            "exclude_ref_period_below_ms": params["sliding_rp_exclude_below_ms"],
-            "max_ref_period_ms": params["sliding_rp_max_ms"],
-        },
         "drift": {
             "interval_s": params["drift_interval_s"],
             "min_spikes_per_interval": params["drift_min_spikes"],
         },
     }
+
+    if rp_method_name == "sliding_rp":
+        qm_params["sliding_rp_violation"] = rp_method_params
+        rp_metric_name = "sliding_rp_violation"
+    else:
+        qm_params["rp_violation"].update(rp_method_params)
+        rp_metric_name = "rp_violation"
 
     # Build metric names
     metric_names = ["amplitude_median", "snr", "num_spikes", "presence_ratio", "firing_rate"]
@@ -326,10 +327,7 @@ def run_bombcell_qc(
         ):
             sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
 
-    if params["rp_method"] == "sliding_rp":
-        metric_names.append("sliding_rp_violation")
-    else:
-        metric_names.append("rp_violation")
+    metric_names.append(rp_metric_name)
 
     if params["compute_drift"]:
         metric_names.append("drift")
