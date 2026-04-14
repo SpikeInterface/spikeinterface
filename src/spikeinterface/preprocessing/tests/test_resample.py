@@ -355,16 +355,23 @@ def test_resample_preserves_gaps_non_integer_ratio():
     assert not np.any(in_gap), "Output timestamps fall inside the gap"
 
 
-def test_resample_traces_across_gap():
+@pytest.mark.parametrize(
+    "resample_rate",
+    [
+        700,  # non-integer ratio (30000 / 700 ~= 42.857)
+        500,  # integer ratio (30000 / 500 = 60)
+    ],
+    ids=["non_integer_ratio", "integer_ratio"],
+)
+def test_resample_traces_across_gap(resample_rate):
     """Section-wise resampling should match individually resampled sections.
 
     Build a gapped recording, resample it with gap_tolerance_ms, and verify
     that each section's output matches what you'd get by resampling that
     section alone (without the gap).  This confirms that _get_traces_gapped
-    does not apply FFT processing across gap boundaries.
+    does not apply FFT processing (or decimate filtering) across gap boundaries.
     """
     sampling_frequency = 30000
-    resample_rate = 700  # non-integer ratio
     sec_duration = 2.0
     gap_s = 5.0
 
@@ -392,9 +399,17 @@ def test_resample_traces_across_gap():
         resampled = resample(rec, resample_rate, gap_tolerance_ms=1.0)
 
     resampled_traces = resampled.get_traces()
-    n_out_1 = int(resampled.segments[0]._sec_n_out[0])
-    n_out_2 = int(resampled.segments[0]._sec_n_out[1])
-    assert resampled_traces.shape[0] == n_out_1 + n_out_2
+
+    # Derive the section split point from the resampled time vector rather than
+    # accessing private attributes (to decouple the test from the internal
+    # representation).
+    resampled_tv = np.asarray(resampled.get_times())
+    output_diffs = np.diff(resampled_tv)
+    expected_dt = 1.0 / resample_rate
+    gap_indices = np.flatnonzero(output_diffs > 2 * expected_dt)
+    assert len(gap_indices) == 1, f"Expected one gap in resampled times, got {len(gap_indices)}"
+    n_out_1 = int(gap_indices[0]) + 1
+    n_out_2 = resampled_traces.shape[0] - n_out_1
 
     # Resample each section independently (no gap in these recordings)
     rec1 = NumpyRecording(traces1, sampling_frequency)
