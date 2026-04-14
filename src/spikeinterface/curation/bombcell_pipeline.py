@@ -41,8 +41,7 @@ def _resolve_rpv_metric(thresholds: dict) -> str:
         )
     if len(picked) > 1:
         raise ValueError(
-            f"thresholds['mua'] contains multiple RPV metrics ({picked}). "
-            "Pick exactly one: remove the other entry."
+            f"thresholds['mua'] contains multiple RPV metrics ({picked}). " "Pick exactly one: remove the other entry."
         )
     return picked[0]
 
