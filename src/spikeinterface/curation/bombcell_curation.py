@@ -61,7 +61,13 @@ def bombcell_get_default_thresholds() -> dict:
     bombcell - Returns default thresholds for unit labeling.
 
     Each metric has 'greater' and 'less' values. Use None to disable a threshold (e.g. to ignore a metric completely
-    or to only have a greater or a less threshold)
+    or to only have a greater or a less threshold).
+
+    Refractory-period violations: the "mua" section must contain exactly ONE of
+    ``"sliding_rp_violation"`` or ``"rp_contamination"``. That single key picks
+    both the RPV method that gets computed and the threshold applied to it —
+    the pipeline reads this entry to decide which RPV metric to compute.
+    The default here uses ``"sliding_rp_violation"``.
     """
     # bombcell
     return {
@@ -97,15 +103,8 @@ def bombcell_get_default_thresholds() -> dict:
 def bombcell_label_units(
     sorting_analyzer=None,
     thresholds: dict | str | Path | None = None,
-    label_non_somatic: bool = True,
-    split_non_somatic_good_mua: bool = False,
+    split_non_somatic: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame] | None" = None,
-    use_valid_periods: bool = False,
-    valid_periods_params: dict | None = None,
-    recompute_quality_metrics: bool = True,
-    quality_metric_params: dict | None = None,
-    rerun_valid_periods: bool = False,
-    **job_kwargs,
 ) -> "pd.DataFrame":
     """
     Label units based on quality metrics and template metrics using Bombcell logic:
@@ -122,7 +121,9 @@ def bombcell_label_units(
         Units that pass all noise and MUA thresholds are labeled as "good".
     4. NON-SOMATIC:
         Among units that are not "noise", those that meet non-somatic criteria based on waveform shape are
-        labeled as "non_soma".
+        labeled as "non_soma". Non-somatic labeling is active whenever ``thresholds["non-somatic"]``
+        is non-empty; skip it entirely by leaving that section empty or omitting it.
+
         These non-somatic criteria include:
 
         - Narrow peak and trough widths (using "peak_before_width" and "trough_width" metrics)
@@ -135,7 +136,7 @@ def bombcell_label_units(
         threshold section — any metric not part of the built-in groups (width, ratio, main_peak)
         is treated as a standalone condition OR'd into the non-somatic detection.
 
-        If `split_non_somatic_good_mua` is True, non-somatic units are further split
+        If `split_non_somatic` is True, non-somatic units are further split
         into "non_soma_good" and "non_soma_mua", otherwise they are all labeled as "non_soma".
 
     Parameters
@@ -147,41 +148,28 @@ def bombcell_label_units(
         Threshold dict or JSON file, including a three sections ("noise", "mua", "non-somatic") of
         {"metric": {"greater": val, "less": val}}.
         If None, default Bombcell thresholds are used.
-    label_non_somatic : bool, default: True
-        If True, detect non-somatic (dendritic, axonal) units.
-    split_non_somatic_good_mua : bool, default: False
-        If True, split non-somatic into "non_soma_good" and "non_soma_mua".
+
+        Refractory-period violation: include exactly ONE of ``"sliding_rp_violation"``
+        or ``"rp_contamination"`` under ``thresholds["mua"]``. This single entry
+        selects BOTH which RPV metric is used AND its threshold — there is no
+        separate knob for the method choice. ``run_bombcell_qc`` also reads this
+        entry to decide which RPV metric to compute.
+    split_non_somatic : bool, default: False
+        If True, split non-somatic units into "non_soma_good" and "non_soma_mua"
+        based on whether they pass MUA thresholds. If False, all non-somatic
+        units are labeled "non_soma". Has no effect if the non-somatic section
+        of ``thresholds`` is empty (non-somatic labeling is off in that case).
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
-    use_valid_periods : bool, default: False
-        If True, compute valid time periods per unit and recompute quality metrics restricted to
-        those periods before labeling. This uses the ``valid_unit_periods`` extension to identify
-        chunks with acceptable false positive (refractory violations) and false negative (amplitude
-        cutoff) rates. The FP/FN thresholds are derived from the bombcell thresholds
-        (``sliding_rp_violation`` or ``rp_contamination`` → ``fp_threshold``,
-        ``amplitude_cutoff`` → ``fn_threshold``).
-        Requires ``amplitude_scalings`` extension and Numba.
-    valid_periods_params : dict or None, default: None
-        Additional parameters passed to the ``valid_unit_periods`` extension computation.
-        Use this to set ``refractory_period_ms``, ``censored_period_ms``, ``period_mode``,
-        ``period_duration_s_absolute``, etc. Parameters ``fp_threshold`` and ``fn_threshold``
-        are automatically derived from bombcell thresholds if not explicitly provided here.
-    recompute_quality_metrics : bool, default: True
-        If ``use_valid_periods`` is True, whether to recompute quality metrics restricted to valid
-        periods. If False, the existing quality metrics are used as-is (useful if you already
-        computed them with ``use_valid_periods=True``).
-    quality_metric_params : dict or None, default: None
-        Parameters to pass to ``quality_metrics`` computation when recomputing with valid periods.
-        Should contain keys accepted by ``sorting_analyzer.compute("quality_metrics", ...)``,
-        e.g. ``metric_names``, ``metric_params``, ``peak_sign``, ``seed``.
-        If None, the existing quality_metrics extension params are re-used.
-    rerun_valid_periods : bool, default: False
-        If ``use_valid_periods`` is True, force recomputation of valid_unit_periods even
-        if the extension already exists on the analyzer. If False (default), existing
-        valid_unit_periods data is reused when present.
-    **job_kwargs
-        Job keyword arguments (n_jobs, chunk_duration, progress_bar) passed to
-        ``valid_unit_periods`` and ``quality_metrics`` computation when ``use_valid_periods=True``.
+
+    Notes
+    -----
+    This function is a pure labeler: it reads metrics off the analyzer (or
+    ``external_metrics``) and applies the thresholds. It does NOT compute or
+    recompute any extension. If you want quality metrics restricted to valid
+    unit periods, compute ``valid_unit_periods`` and ``quality_metrics`` with
+    ``use_valid_periods=True`` yourself before calling this function (or use
+    ``run_bombcell_qc`` with ``params["compute_valid_periods"]=True``).
 
     Returns
     -------
@@ -196,7 +184,6 @@ def bombcell_label_units(
     """
     import pandas as pd
 
-    # Parse thresholds early so we can derive valid_periods params from them
     if thresholds is None:
         thresholds_dict = bombcell_get_default_thresholds()
     elif isinstance(thresholds, (str, Path)):
@@ -206,55 +193,6 @@ def bombcell_label_units(
         thresholds_dict = thresholds
     else:
         raise ValueError("thresholds must be a dict, a JSON file path, or None")
-
-    # Compute valid periods and recompute quality metrics if requested
-    if use_valid_periods:
-        if sorting_analyzer is None:
-            raise ValueError("use_valid_periods=True requires a sorting_analyzer")
-
-        # Derive fp/fn thresholds from bombcell thresholds
-        vp_params = dict(valid_periods_params) if valid_periods_params is not None else {}
-
-        if "fp_threshold" not in vp_params:
-            mua_thresh = thresholds_dict.get("mua", {})
-            for rpv_name in ("sliding_rp_violation", "rp_contamination"):
-                if rpv_name in mua_thresh:
-                    rpv_thresh = mua_thresh[rpv_name].get("less", None)
-                    if rpv_thresh is not None:
-                        vp_params["fp_threshold"] = rpv_thresh
-                    break
-
-        if "fn_threshold" not in vp_params:
-            ac_thresh = thresholds_dict.get("mua", {}).get("amplitude_cutoff", {}).get("less", None)
-            if ac_thresh is not None:
-                vp_params["fn_threshold"] = ac_thresh
-
-        # Compute valid_unit_periods (skip if already computed unless rerun_valid_periods)
-        if rerun_valid_periods or not sorting_analyzer.has_extension("valid_unit_periods"):
-            sorting_analyzer.compute("valid_unit_periods", **vp_params, **job_kwargs)
-
-        # Recompute quality metrics restricted to valid periods
-        if recompute_quality_metrics:
-            if quality_metric_params is not None:
-                qm_compute_params = quality_metric_params
-            else:
-                # Fall back to existing extension params
-                qm_ext = sorting_analyzer.get_extension("quality_metrics")
-                if qm_ext is not None:
-                    qm_compute_params = qm_ext.params.copy()
-                    qm_compute_params.pop("periods", None)
-                    qm_compute_params.pop("use_valid_periods", None)
-                else:
-                    raise ValueError(
-                        "use_valid_periods=True with recompute_quality_metrics=True requires "
-                        "quality_metric_params or quality_metrics to have been computed at least once."
-                    )
-            sorting_analyzer.compute(
-                "quality_metrics",
-                use_valid_periods=True,
-                **qm_compute_params,
-                **job_kwargs,
-            )
 
     if sorting_analyzer is not None:
         combined_metrics = sorting_analyzer.get_metrics_extension_data()
@@ -320,8 +258,10 @@ def bombcell_label_units(
         )
         unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
 
-    if label_non_somatic:
-        non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
+    # Non-somatic labeling is driven by whether the user supplied any thresholds
+    # in the non-somatic section — no separate on/off flag.
+    non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
+    if len(non_somatic_thresholds) > 0:
         width_thresholds = {
             m: non_somatic_thresholds[m] for m in ["peak_before_width", "trough_width"] if m in non_somatic_thresholds
         }
@@ -400,7 +340,7 @@ def bombcell_label_units(
             is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
             is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
 
-        if split_non_somatic_good_mua:
+        if split_non_somatic:
             good_mask = unit_labels["label"] == "good"
             mua_mask = unit_labels["label"] == "mua"
             unit_labels.loc[good_mask & is_non_somatic, "label"] = "non_soma_good"

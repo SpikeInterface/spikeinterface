@@ -43,10 +43,11 @@ qc_params["compute_distance_metrics"] = False            # isolation distance & 
 # rp_contamination) is selected below in thresholds["mua"] — that is the ONE
 # place to pick the method. To tune its metric-specific params, use
 # qc_params["metric_params"] (see bottom of this section).
-qc_params["label_non_somatic"] = True                    # detect axonal/dendritic units via waveform shape
-qc_params["split_non_somatic_good_mua"] = False          # if True, non-somatic split into good/mua subcategories
-qc_params["use_valid_periods"] = False                   # if True, identify valid time chunks per unit and recompute
-                                                         # quality metrics only on those periods
+qc_params["split_non_somatic"] = False                   # if True, non-somatic split into good/mua subcategories
+                                                         # (to skip non-somatic labeling entirely, clear the
+                                                         #  thresholds["non-somatic"] section below)
+qc_params["compute_valid_periods"] = False               # if True, compute valid_unit_periods and then compute
+                                                         # quality metrics restricted to those periods
 
 # --- Presence ratio ---
 qc_params["presence_ratio_bin_duration_s"] = 60          # bin size (s) for checking if unit fires throughout recording
@@ -140,7 +141,6 @@ pprint(thresholds)
 #   rerun_quality_metrics    - quality_metrics
 #   rerun_pca                - principal_components (for distance metrics)
 #   rerun_amplitude_scalings - amplitude_scalings (prerequisite for amplitude_cutoff and valid periods)
-#   rerun_valid_periods      - valid_unit_periods (the "good times" extension)
 labels, metrics, figures = sc.run_bombcell_qc(
     sorting_analyzer=analyzer,
     output_folder=output_folder,
@@ -173,28 +173,42 @@ _ = sw.plot_template_peak_trough(
 
 # %% Using valid time periods
 # Valid periods identify chunks of time where each unit has stable amplitude
-# and low refractory period violations. This is useful when recordings have
-# unstable periods (e.g., drift, probe movement, or electrode noise).
+# and low refractory period violations. Quality metrics computed on those
+# chunks are more representative for units that drop out or drift during the
+# recording. This is useful when recordings have unstable periods (e.g., drift,
+# probe movement, or electrode noise).
 #
-# Example: Enable valid periods
-# qc_params["use_valid_periods"] = True
+# There are two ways to enable this, depending on how much control you want.
 #
-# Example: Customize valid period parameters
-# valid_periods_params = {
-#     "period_duration_s_absolute": 30.0,
-#     "period_target_num_spikes": 300,
-#     "period_mode": "absolute",
-#     "minimum_valid_period_duration": 180,
-#     "fp_threshold": 0.1,
-#     "fn_threshold": 0.1,
-# }
-# labels, metrics, figures = sc.run_bombcell_qc(
-#     analyzer, params=qc_params, valid_periods_params=valid_periods_params
+# --- Option A: let the pipeline handle it (simple case, defaults) ---
+# qc_params["compute_valid_periods"] = True
+# labels, metrics, figures = sc.run_bombcell_qc(analyzer, params=qc_params, ...)
+# The pipeline will:
+#   1. compute valid_unit_periods with default fp/fn thresholds
+#   2. compute quality_metrics with use_valid_periods=True
+#   3. hand the resulting metrics to bombcell for labeling
+#
+# --- Option B: compute valid periods yourself first (recommended for tuning) ---
+# This is the explicit route: you decide the fp/fn thresholds, period mode, etc.,
+# and bombcell just reads the resulting metrics. Recommended because it makes
+# the "what was the fp threshold?" question unambiguous instead of hidden.
+#
+# analyzer.compute("amplitude_scalings")  # prerequisite
+# analyzer.compute(
+#     "valid_unit_periods",
+#     fp_threshold=0.1,                       # should line up with your bombcell RPV threshold
+#     fn_threshold=0.1,                       # should line up with your bombcell amplitude_cutoff threshold
+#     period_duration_s_absolute=30.0,
+#     period_target_num_spikes=300,
+#     period_mode="absolute",
+#     minimum_valid_period_duration=180,
 # )
+# qc_params["compute_valid_periods"] = True   # tell the pipeline to use valid_periods
+# # (the pipeline sees the extension already exists and reuses it as-is; it will
+# # warn you if its fp/fn don't match your bombcell thresholds)
+# labels, metrics, figures = sc.run_bombcell_qc(analyzer, params=qc_params, ...)
 #
-# After running with use_valid_periods=True, the per-unit valid periods are stored
-# by the valid_unit_periods extension on the analyzer itself (saved as npy on disk).
-# Access them with:
+# After running, the per-unit valid periods live on the analyzer. Access with:
 #   valid_periods = analyzer.get_extension("valid_unit_periods").get_data()
 
 # %% Using bombcell_label_units directly (without the pipeline)
@@ -215,29 +229,10 @@ labels_direct = sc.bombcell_label_units(
 #     thresholds=thresholds,
 # )
 
-# With valid periods and explicit quality_metric_params:
-# When use_valid_periods=True, quality metrics are recomputed on valid time chunks.
-# Pass quality_metric_params to control exactly which metrics and params are used,
-# instead of relying on whatever was previously computed on the analyzer.
-# labels_direct = sc.bombcell_label_units(
-#     sorting_analyzer=analyzer,
-#     thresholds=thresholds,
-#     use_valid_periods=True,
-#     valid_periods_params={
-#         "period_duration_s_absolute": 30.0,
-#         "minimum_valid_period_duration": 180,
-#     },
-#     quality_metric_params={
-#         "metric_names": ["amplitude_median", "snr", "num_spikes", "sliding_rp_violation",
-#                          "presence_ratio", "firing_rate", "amplitude_cutoff", "drift"],
-#         "metric_params": {
-#             "sliding_rp_violation": {"exclude_ref_period_below_ms": 0.5, "max_ref_period_ms": 10.0},
-#             "presence_ratio": {"bin_duration_s": 60},
-#             "drift": {"interval_s": 60, "min_spikes_per_interval": 100},
-#         },
-#     },
-#     n_jobs=-1,
-# )
+# Note: bombcell_label_units is a pure labeler — it does not compute or
+# recompute any extension. If you want valid-periods-aware labels, compute
+# valid_unit_periods and quality_metrics(use_valid_periods=True) yourself
+# before calling bombcell_label_units (see "Option B" above).
 
 # Thresholds can also be loaded from a JSON file:
 # labels_direct = sc.bombcell_label_units(

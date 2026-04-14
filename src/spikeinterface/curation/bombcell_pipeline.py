@@ -18,6 +18,7 @@ bombcell_label_units : Core labeling function.
 """
 
 from __future__ import annotations
+import warnings
 from pathlib import Path
 
 # The two refractory-period-violation metrics BombCell supports. The user picks
@@ -44,6 +45,46 @@ def _resolve_rpv_metric(thresholds: dict) -> str:
             "Pick exactly one: remove the other entry."
         )
     return picked[0]
+
+
+def _warn_if_valid_periods_mismatch(sorting_analyzer, thresholds: dict) -> None:
+    """Warn if a pre-existing valid_unit_periods extension was built with fp/fn
+    thresholds that disagree with the bombcell RPV / amplitude_cutoff thresholds.
+
+    The point is to surface the mismatch (not fix it) — the user picked those
+    valid-periods params on purpose, but if their bombcell thresholds have
+    since drifted, the labels below won't match the periods above.
+    """
+    ext = sorting_analyzer.get_extension("valid_unit_periods")
+    if ext is None:
+        return
+    vp_params = ext.params or {}
+    mua = thresholds.get("mua", {})
+
+    # Match the RPV metric that bombcell will threshold
+    rpv_bc = None
+    for name in ("sliding_rp_violation", "rp_contamination"):
+        if name in mua:
+            rpv_bc = mua[name].get("less", None)
+            break
+    fp_vp = vp_params.get("fp_threshold", None)
+    if rpv_bc is not None and fp_vp is not None and fp_vp != rpv_bc:
+        warnings.warn(
+            f"valid_unit_periods was computed with fp_threshold={fp_vp}, but bombcell "
+            f"RPV threshold is {rpv_bc}. The valid periods were chosen with a different "
+            "contamination criterion than the one bombcell will use for labeling. "
+            "Recompute valid_unit_periods if you want them to line up."
+        )
+
+    ac_bc = mua.get("amplitude_cutoff", {}).get("less", None)
+    fn_vp = vp_params.get("fn_threshold", None)
+    if ac_bc is not None and fn_vp is not None and fn_vp != ac_bc:
+        warnings.warn(
+            f"valid_unit_periods was computed with fn_threshold={fn_vp}, but bombcell "
+            f"amplitude_cutoff threshold is {ac_bc}. The valid periods were chosen with "
+            "a different missing-spikes criterion than bombcell will use for labeling. "
+            "Recompute valid_unit_periods if you want them to line up."
+        )
 
 
 def get_default_qc_params():
@@ -87,21 +128,23 @@ def get_default_qc_params():
         ``params["metric_params"]`` (e.g. ``{"sliding_rp_violation":
         {"exclude_ref_period_below_ms": 0.5}}``).
 
-        label_non_somatic : bool, default: True
-            Whether to detect and label non-somatic (axonal/dendritic) units.
-            These have distinctive waveform shapes: narrow initial peak,
-            often triphasic. Set False to skip this classification.
-
-        split_non_somatic_good_mua : bool, default: False
+        split_non_somatic : bool, default: False
             If True, split non-somatic units into "non_soma_good" and
             "non_soma_mua" based on whether they pass MUA thresholds.
             If False, all non-somatic units are labeled "non_soma".
+            To skip non-somatic labeling entirely, empty or omit the
+            ``"non-somatic"`` section of ``thresholds``.
 
-        use_valid_periods : bool, default: False
+        compute_valid_periods : bool, default: False
             If True, identify valid time periods per unit (where the unit
             has stable amplitude and low refractory violations) and compute
             quality metrics only on those periods. Useful for recordings
             with unstable periods. Requires amplitude_scalings extension.
+            If the ``valid_unit_periods`` extension is already present on the
+            analyzer, it is reused as-is (no recompute); if its ``fp_threshold``
+            / ``fn_threshold`` differ from the bombcell RPV / amplitude_cutoff
+            thresholds, a warning is emitted. To customize valid-periods
+            parameters, compute the extension upstream with your own settings.
 
         **Presence Ratio Parameters**
 
@@ -156,9 +199,8 @@ def get_default_qc_params():
         "compute_distance_metrics": False,
         "compute_drift": True,
         # BombCell labeling options
-        "label_non_somatic": True,
-        "split_non_somatic_good_mua": False,
-        "use_valid_periods": False,
+        "split_non_somatic": False,
+        "compute_valid_periods": False,
         # Presence ratio
         "presence_ratio_bin_duration_s": 60,
         # Drift
@@ -178,11 +220,9 @@ def run_bombcell_qc(
     output_folder: str | Path = "bombcell",
     params: dict | str | Path | None = None,
     thresholds: dict | str | Path | None = None,
-    valid_periods_params: dict | None = None,
     rerun_quality_metrics: bool = False,
     rerun_pca: bool = False,
     rerun_amplitude_scalings: bool = False,
-    rerun_valid_periods: bool = False,
     n_jobs: int = -1,
     progress_bar: bool = True,
 ):
@@ -221,10 +261,11 @@ def run_bombcell_qc(
         Each threshold is {"greater": value, "less": value}. Use None to disable.
         See bombcell_get_default_thresholds() docstring for all thresholds.
 
-    valid_periods_params : dict or None, default: None
-        Parameters for valid_unit_periods extension if params["use_valid_periods"]=True.
-        Keys: refractory_period_ms, censored_period_ms, period_mode,
-        period_duration_s_absolute, minimum_valid_period_duration.
+        Refractory-period violations: ``thresholds["mua"]`` must contain exactly
+        ONE of ``"sliding_rp_violation"`` or ``"rp_contamination"``. That single
+        entry is the ONE place where the RPV method is selected — it determines
+        both which RPV metric is computed AND the threshold applied to it.
+
     rerun_quality_metrics : bool, default: False
         Force recomputation of quality metrics even if they exist.
     rerun_pca : bool, default: False
@@ -232,8 +273,6 @@ def run_bombcell_qc(
     rerun_amplitude_scalings : bool, default: False
         Force recomputation of amplitude_scalings (used as a prerequisite for
         amplitude_cutoff and valid periods).
-    rerun_valid_periods : bool, default: False
-        Force recomputation of valid_unit_periods (only relevant if use_valid_periods=True).
     n_jobs : int, default: -1
         Number of parallel jobs.
     progress_bar : bool, default: True
@@ -244,7 +283,7 @@ def run_bombcell_qc(
     labels : pd.DataFrame
         DataFrame with unit_ids as index and "bombcell_label" column.
         Possible labels: "good", "mua", "noise", "non_soma"
-        (or "non_soma_good"/"non_soma_mua" if split_non_somatic_good_mua=True).
+        (or "non_soma_good"/"non_soma_mua" if split_non_somatic=True).
     metrics : pd.DataFrame
         Combined DataFrame of all quality metrics and template metrics.
         Index is unit_ids, columns are metric names.
@@ -259,8 +298,8 @@ def run_bombcell_qc(
     - labeling_results_wide.csv: One row per unit with all metrics and label.
     - labeling_results_narrow.csv: One row per unit-metric with pass/fail status.
     - thresholds.json: Thresholds used for classification (reproducibility).
-    - bombcell_config.json: bombcell-specific options (label_non_somatic,
-      split_non_somatic_good_mua, use_valid_periods, valid_periods_params).
+    - bombcell_config.json: bombcell-specific options (split_non_somatic,
+      compute_valid_periods).
       Note: quality metric params are stored on the analyzer via the quality_metrics extension.
     - metric_histograms.png: Histogram of each metric with threshold lines.
     - waveforms_by_label.png: Waveform overlays for each label category.
@@ -268,9 +307,13 @@ def run_bombcell_qc(
 
     Note on valid periods
     ---------------------
-    When ``use_valid_periods=True``, the valid time periods per unit are stored by
-    the ``valid_unit_periods`` extension on the analyzer itself (npy on disk).
+    When ``params["compute_valid_periods"]=True``, the valid time periods per unit
+    are stored by the ``valid_unit_periods`` extension on the analyzer itself.
     Access them via ``sorting_analyzer.get_extension("valid_unit_periods").get_data()``.
+    If you want to customize the ``valid_unit_periods`` parameters (``fp_threshold``,
+    ``fn_threshold``, ``period_mode``, etc.), compute the extension upstream and
+    the pipeline will reuse it. A warning is raised if its fp/fn differ from the
+    bombcell RPV / amplitude_cutoff thresholds.
 
     Examples
     --------
@@ -357,9 +400,11 @@ def run_bombcell_qc(
         if params["compute_distance_metrics"]:
             metric_names.append("mahalanobis")
 
+    compute_valid_periods = params["compute_valid_periods"]
+
     # Ensure prerequisite extensions are computed for whichever metrics are requested
     # amplitude_cutoff uses amplitude_scalings (not spike_amplitudes) in this pipeline
-    needs_amplitude_scalings = "amplitude_cutoff" in metric_names or params["use_valid_periods"]
+    needs_amplitude_scalings = "amplitude_cutoff" in metric_names or compute_valid_periods
     if needs_amplitude_scalings:
         if rerun_amplitude_scalings or not sorting_analyzer.has_extension("amplitude_scalings"):
             sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
@@ -373,21 +418,32 @@ def run_bombcell_qc(
         for metric, mp in params["metric_params"].items():
             qm_params[metric] = mp
 
+    # Valid unit periods (pipeline-level, since it affects which QMs bombcell sees).
+    # - If the extension already exists, reuse it as-is, but warn if its fp/fn thresholds
+    #   don't line up with the bombcell RPV / amplitude_cutoff thresholds.
+    # - If it doesn't exist, compute it using defaults (users who want custom fp/fn
+    #   or period params should compute it upstream themselves).
+    if compute_valid_periods:
+        if sorting_analyzer.has_extension("valid_unit_periods"):
+            _warn_if_valid_periods_mismatch(sorting_analyzer, thresholds)
+        else:
+            sorting_analyzer.compute("valid_unit_periods", **job_kwargs)
+
     # Compute quality metrics
     if not sorting_analyzer.has_extension("quality_metrics") or rerun_quality_metrics:
-        sorting_analyzer.compute("quality_metrics", metric_names=metric_names, metric_params=qm_params, **job_kwargs)
+        sorting_analyzer.compute(
+            "quality_metrics",
+            metric_names=metric_names,
+            metric_params=qm_params,
+            use_valid_periods=compute_valid_periods,
+            **job_kwargs,
+        )
 
-    # Run BombCell
+    # Run BombCell (pure labeler — no extension mutation, no valid-periods magic)
     labels = bombcell_label_units(
         sorting_analyzer=sorting_analyzer,
         thresholds=thresholds,
-        label_non_somatic=params["label_non_somatic"],
-        split_non_somatic_good_mua=params["split_non_somatic_good_mua"],
-        use_valid_periods=params["use_valid_periods"],
-        valid_periods_params=valid_periods_params,
-        quality_metric_params={"metric_names": metric_names, "metric_params": qm_params},
-        rerun_valid_periods=rerun_valid_periods,
-        **job_kwargs,
+        split_non_somatic=params["split_non_somatic"],
     )
 
     metrics = sorting_analyzer.get_metrics_extension_data()
@@ -429,10 +485,8 @@ def run_bombcell_qc(
         with open(output_folder / "thresholds.json", "w") as f:
             json.dump(thresholds, f, indent=2)
         bombcell_config = {
-            "label_non_somatic": params["label_non_somatic"],
-            "split_non_somatic_good_mua": params["split_non_somatic_good_mua"],
-            "use_valid_periods": params["use_valid_periods"],
-            "valid_periods_params": valid_periods_params,
+            "split_non_somatic": params["split_non_somatic"],
+            "compute_valid_periods": compute_valid_periods,
         }
         with open(output_folder / "bombcell_config.json", "w") as f:
             json.dump(bombcell_config, f, indent=2)
