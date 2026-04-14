@@ -1,17 +1,13 @@
 """
-BombCell pipeline functions for preprocessing and quality control.
+BombCell pipeline functions for quality control.
 
-This module provides wrapper functions for running the full BombCell quality
+This module provides wrapper functions for running the BombCell quality
 control pipeline on spike-sorted data.
 
 Functions
 ---------
-get_default_preprocessing_params
-    Get default parameters for preprocessing and SortingAnalyzer creation.
 get_default_qc_params
     Get default parameters for quality metrics and BombCell labeling.
-preprocess_for_bombcell
-    Preprocess recording and create SortingAnalyzer with required extensions.
 run_bombcell_qc
     Compute quality metrics, run BombCell labeling, and generate plots.
 
@@ -23,135 +19,6 @@ bombcell_label_units : Core labeling function.
 
 from __future__ import annotations
 from pathlib import Path
-
-
-def get_default_preprocessing_params():
-    """
-    Get default parameters for preprocessing and SortingAnalyzer creation.
-
-    Returns a dictionary that can be modified and passed to preprocess_for_bombcell().
-
-    Returns
-    -------
-    dict
-        Dictionary with the following keys:
-
-        **Highpass Filtering**
-
-        freq_min : float, default: 300.0
-            Highpass filter cutoff frequency in Hz. Removes low-frequency noise
-            and LFP signals. Standard value for spike detection is 300 Hz.
-            Lower values (150-250 Hz) may be used if spikes have significant
-            low-frequency components.
-
-        **Bad Channel Detection**
-
-        detect_bad_channels : bool, default: True
-            Whether to automatically detect and remove bad channels before
-            further processing. Recommended to leave enabled.
-
-        bad_channel_method : str, default: "coherence+psd"
-            Method for detecting bad channels:
-            - "coherence+psd": Combines coherence with neighbors and power
-              spectral density analysis. Best for Neuropixels. (recommended)
-            - "mad": Median absolute deviation of signal amplitude.
-            - "std": Standard deviation based detection.
-
-        **Phase Shift Correction**
-
-        apply_phase_shift : bool, default: True
-            Whether to apply inter-sample phase shift correction. Essential for
-            Neuropixels probes where ADCs are multiplexed and channels are sampled
-            at slightly different times. Corrects for timing offsets that can
-            affect spike waveform shapes. Disable for non-Neuropixels probes.
-
-        **Common Reference**
-
-        apply_cmr : bool, default: True
-            Whether to apply common reference to remove correlated noise.
-            Highly recommended for Neuropixels recordings.
-
-        cmr_reference : str, default: "global"
-            Type of common reference:
-            - "global": Use all channels (recommended for Neuropixels).
-            - "local": Use nearby channels only (for probes with distinct groups).
-            - "single": Reference to a single channel.
-
-        cmr_operator : str, default: "median"
-            Operation for computing reference signal:
-            - "median": More robust to outliers (recommended).
-            - "average": Standard mean reference.
-
-        **SortingAnalyzer Settings**
-
-        sparse : bool, default: True
-            Use sparse waveform representation, storing only channels near each
-            unit. Significantly reduces memory usage for high-channel-count probes.
-            Recommended True for Neuropixels.
-
-        return_in_uV : bool, default: True
-            Convert waveforms to microvolts using gain/offset from probe metadata.
-            Required for amplitude-based quality metrics to be meaningful.
-
-        **Waveform Extraction**
-
-        max_spikes_per_unit : int, default: 500
-            Maximum number of spikes to extract per unit for waveform analysis.
-            Higher values give better templates but use more memory/time.
-            500 is typically sufficient for stable template estimation.
-
-        ms_before : float, default: 3.0
-            Milliseconds before spike peak to extract. 3.0 ms captures the
-            pre-spike baseline and any pre-depolarization.
-
-        ms_after : float, default: 3.0
-            Milliseconds after spike peak to extract. 3.0 ms captures the
-            repolarization and afterhyperpolarization.
-
-        **Template Computation**
-
-        template_operators : list, default: ["average", "median", "std"]
-            Statistics to compute for templates:
-            - "average": Mean waveform (standard template).
-            - "median": Median waveform (robust to outliers).
-            - "std": Standard deviation (waveform variability).
-
-        include_multi_channel_metrics : bool, default: True
-            Compute template metrics across multiple channels, including:
-            - exp_decay: Exponential decay of amplitude across channels.
-            - velocity: Propagation velocity estimate.
-            Required for BombCell noise detection. Leave True.
-
-    Examples
-    --------
-    >>> params = get_default_preprocessing_params()
-    >>> params["freq_min"] = 250.0  # Lower cutoff for some cell types
-    >>> params["max_spikes_per_unit"] = 1000  # More spikes for better templates
-    >>> analyzer, rec, bad_chs = preprocess_for_bombcell(recording, sorting, "analyzer.zarr", params=params)
-    """
-    return {
-        # Highpass filtering
-        "freq_min": 300.0,
-        # Bad channel detection
-        "detect_bad_channels": True,
-        "bad_channel_method": "coherence+psd",
-        # Phase shift (Neuropixels)
-        "apply_phase_shift": True,
-        # Common reference
-        "apply_cmr": True,
-        "cmr_reference": "global",
-        "cmr_operator": "median",
-        # SortingAnalyzer
-        "sparse": True,
-        "return_in_uV": True,
-        # Waveforms
-        "max_spikes_per_unit": 500,
-        "ms_before": 3.0,
-        "ms_after": 3.0,
-        # Templates
-        "template_operators": ["average", "median", "std"],
-        "include_multi_channel_metrics": True,
-    }
 
 
 def get_default_qc_params():
@@ -309,140 +176,6 @@ def get_default_qc_params():
     }
 
 
-def preprocess_for_bombcell(
-    recording,
-    sorting,
-    analyzer_folder: str | Path,
-    params: dict | None = None,
-    rerun_extensions: bool = False,
-    n_jobs: int = -1,
-    progress_bar: bool = True,
-):
-    """
-    Preprocess recording and create SortingAnalyzer with extensions for BombCell.
-
-    This function applies standard preprocessing steps (filtering, bad channel
-    removal, phase shift correction, common reference) and creates a SortingAnalyzer
-    with all extensions required for BombCell quality control.
-
-    Parameters
-    ----------
-    recording : BaseRecording
-        Raw recording to preprocess. Typically loaded with si.read_spikeglx()
-        or si.read_openephys().
-    sorting : BaseSorting
-        Spike sorting result. Can be loaded with si.read_sorter_folder() or
-        any other sorting loader.
-    analyzer_folder : str or Path
-        Path to save the SortingAnalyzer. Will be created in zarr format.
-        If folder exists, loads existing analyzer instead of creating new one.
-    params : dict or None, default: None
-        Preprocessing parameters from get_default_preprocessing_params().
-        If None, uses all default values.
-    rerun_extensions : bool, default: False
-        If True, recompute all extensions even if they already exist.
-        Useful after changing parameters.
-    n_jobs : int, default: -1
-        Number of parallel jobs for computation. -1 uses all available CPUs.
-    progress_bar : bool, default: True
-        Show progress bars during computation.
-
-    Returns
-    -------
-    analyzer : SortingAnalyzer
-        SortingAnalyzer saved to analyzer_folder with computed extensions:
-        random_spikes, waveforms, templates, noise_levels, unit_locations,
-        spike_locations, template_metrics. Note: spike_amplitudes is computed
-        on-demand by run_bombcell_qc() if compute_amplitude_cutoff=True.
-    rec_preprocessed : BaseRecording
-        Preprocessed recording (lazy chain, not saved to disk).
-        Can be used for further analysis or passed to other functions.
-    bad_channel_ids : list or None
-        List of channel IDs that were detected as bad and removed.
-        None if detect_bad_channels=False.
-
-    Examples
-    --------
-    Basic usage with defaults:
-
-    >>> analyzer, rec, bad_chs = preprocess_for_bombcell(recording, sorting, "analyzer.zarr")
-
-    With custom parameters:
-
-    >>> params = get_default_preprocessing_params()
-    >>> params["freq_min"] = 250.0
-    >>> params["detect_bad_channels"] = False  # Already cleaned
-    >>> analyzer, rec, bad_chs = preprocess_for_bombcell(
-    ...     recording, sorting, "analyzer.zarr", params=params
-    ... )
-
-    Rerun extensions after parameter change:
-
-    >>> analyzer, rec, bad_chs = preprocess_for_bombcell(
-    ...     recording, sorting, "analyzer.zarr", rerun_extensions=True
-    ... )
-    """
-    import spikeinterface.full as si
-
-    if params is None:
-        params = get_default_preprocessing_params()
-
-    analyzer_folder = Path(analyzer_folder)
-    job_kwargs = dict(n_jobs=n_jobs, chunk_duration="1s", progress_bar=progress_bar)
-
-    # Preprocess
-    rec = si.highpass_filter(recording, freq_min=params["freq_min"])
-
-    bad_channel_ids = None
-    if params["detect_bad_channels"]:
-        bad_channel_ids, _ = si.detect_bad_channels(rec, method=params["bad_channel_method"])
-        bad_channel_ids = list(bad_channel_ids)
-        if len(bad_channel_ids) > 0:
-            rec = rec.remove_channels(bad_channel_ids)
-
-    if params["apply_phase_shift"]:
-        rec = si.phase_shift(rec)
-
-    if params["apply_cmr"]:
-        rec = si.common_reference(rec, reference=params["cmr_reference"], operator=params["cmr_operator"])
-
-    rec_preprocessed = rec
-
-    # Create or load analyzer
-    if analyzer_folder.exists():
-        analyzer = si.load_sorting_analyzer(analyzer_folder)
-        if not analyzer.has_recording():
-            analyzer.set_temporary_recording(rec_preprocessed)
-    else:
-        analyzer = si.create_sorting_analyzer(
-            sorting=sorting,
-            recording=rec_preprocessed,
-            sparse=params["sparse"],
-            format="zarr",
-            folder=analyzer_folder,
-            return_in_uV=params["return_in_uV"],
-        )
-
-    # Compute extensions
-    def _compute(name, **kwargs):
-        if analyzer.has_extension(name) and not rerun_extensions:
-            return
-        if analyzer.has_extension(name):
-            analyzer.delete_extension(name)
-        analyzer.compute(name, **kwargs)
-
-    _compute("random_spikes", method="uniform", max_spikes_per_unit=params["max_spikes_per_unit"])
-    _compute("waveforms", ms_before=params["ms_before"], ms_after=params["ms_after"], **job_kwargs)
-    _compute("templates", operators=list(params["template_operators"]))
-    _compute("noise_levels")
-    # spike_amplitudes computed on-demand by run_bombcell_qc if compute_amplitude_cutoff=True
-    _compute("unit_locations")
-    _compute("spike_locations", **job_kwargs)
-    _compute("template_metrics", include_multi_channel_metrics=params["include_multi_channel_metrics"])
-
-    return analyzer, rec_preprocessed, bad_channel_ids
-
-
 def run_bombcell_qc(
     sorting_analyzer,
     output_folder: str | Path = "bombcell",
@@ -464,7 +197,7 @@ def run_bombcell_qc(
     Parameters
     ----------
     sorting_analyzer : SortingAnalyzer
-        Analyzer with template_metrics extension computed (from preprocess_for_bombcell).
+        Analyzer with template_metrics extension computed.
     output_folder : str or Path, default: "bombcell"
         Folder to save results (CSV files and plots). Set to None to skip saving.
         Created if it doesn't exist.
