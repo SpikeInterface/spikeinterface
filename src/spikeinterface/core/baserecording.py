@@ -421,7 +421,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
-        times = rs.get_times(start_frame, end_frame)
+        times = rs.get_times(start_frame=start_frame, end_frame=end_frame)
         return times
 
     def get_start_time(self, segment_index=None) -> float:
@@ -932,7 +932,9 @@ class BaseRecordingSegment(BaseSegment):
                 end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
                 return np.asarray(self.time_vector[start_frame:end_frame])
         else:
-            time_vector = np.arange(self.get_num_samples(), dtype="float64")
+            start_frame = int(start_frame) if start_frame is not None else 0
+            end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+            time_vector = np.arange(start_frame, end_frame, dtype="float64")
             time_vector /= self.sampling_frequency
             if self.t_start is not None:
                 time_vector += self.t_start
