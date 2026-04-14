@@ -325,9 +325,7 @@ def test_get_unit_spike_trains(use_cache):
         assert np.array_equal(all_spike_trains[unit_id], spiketrain)
 
     # test with times
-    spike_trains_times = sorting.get_unit_spike_trains_in_seconds(
-        unit_ids=sorting.unit_ids, use_cache=use_cache
-    )
+    spike_trains_times = sorting.get_unit_spike_trains_in_seconds(unit_ids=sorting.unit_ids, use_cache=use_cache)
     assert isinstance(spike_trains_times, dict)
     assert set(spike_trains_times.keys()) == set(sorting.unit_ids)
     for unit_id in sorting.unit_ids:

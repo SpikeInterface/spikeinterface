@@ -231,9 +231,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     def _compute_and_cache_spike_vector(self) -> None:
         """Build the spike vector directly from the flat per-segment arrays.
 
-        Since Phy/Kilosort segments already hold the full spike_times and 
+        Since Phy/Kilosort segments already hold the full spike_times and
         spike_clusters arrays in memory, we can construct the spike vector
-        in one shot. 
+        in one shot.
         """
         unit_ids = np.asarray(self.unit_ids)
         sorter = np.argsort(unit_ids)
@@ -295,11 +295,11 @@ class PhySortingSegment(BaseSortingSegment):
         end_frame: int | None = None,
     ) -> dict:
         """Extract spike trains for several units in one pass.
-        
-        If you need to get ~20 or more spike trains, this is usually **much** faster 
+
+        If you need to get ~20 or more spike trains, this is usually **much** faster
         than calling get_unit_spike_train() for each unit.
 
-        Numba-accelerated, if numba is available. Otherwise, falls back to NumPy. 
+        Numba-accelerated, if numba is available. Otherwise, falls back to NumPy.
         """
         start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
         end = (
