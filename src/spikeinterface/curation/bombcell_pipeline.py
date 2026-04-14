@@ -89,8 +89,7 @@ def get_default_qc_params():
 
         refractory_period_ms : float, default: 2.0
             Refractory period duration in milliseconds. Spikes closer than
-            this are considered violations. 2.0 ms is conservative; some
-            fast-spiking neurons may need 1.0-1.5 ms.
+            this are considered violations.
 
         censored_period_ms : float, default: 0.1
             Censored period in milliseconds. Spikes within this period of
