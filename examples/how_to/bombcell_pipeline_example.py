@@ -198,6 +198,11 @@ _ = sw.plot_template_peak_trough(
 # labels, metrics, figures = sc.run_bombcell_qc(
 #     analyzer, params=qc_params, valid_periods_params=valid_periods_params
 # )
+#
+# After running with use_valid_periods=True, the per-unit valid periods are stored
+# by the valid_unit_periods extension on the analyzer itself (saved as npy on disk).
+# Access them with:
+#   valid_periods = analyzer.get_extension("valid_unit_periods").get_data()
 
 # %% Using bombcell_label_units directly (without the pipeline)
 # If you want more control, you can call bombcell_label_units directly.

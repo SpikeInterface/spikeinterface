@@ -259,11 +259,15 @@ def run_bombcell_qc(
     - bombcell_config.json: bombcell-specific options (rp_method, label_non_somatic,
       split_non_somatic_good_mua, use_valid_periods, valid_periods_params).
       Note: quality metric params are stored on the analyzer via the quality_metrics extension.
-    - valid_periods.tsv: Valid time periods per unit (only if use_valid_periods=True).
-      Columns: unit_id, segment_index, start_time_s, end_time_s, duration_s.
     - metric_histograms.png: Histogram of each metric with threshold lines.
     - waveforms_by_label.png: Waveform overlays for each label category.
     - upset_plot_*.png: UpSet plots showing metric failure combinations.
+
+    Note on valid periods
+    ---------------------
+    When ``use_valid_periods=True``, the valid time periods per unit are stored by
+    the ``valid_unit_periods`` extension on the analyzer itself (npy on disk).
+    Access them via ``sorting_analyzer.get_extension("valid_unit_periods").get_data()``.
 
     Examples
     --------
@@ -442,7 +446,8 @@ def run_bombcell_qc(
         }
         with open(output_folder / "bombcell_config.json", "w") as f:
             json.dump(bombcell_config, f, indent=2)
-        # TODO: save valid periods via the valid_unit_periods extension to_dataframe() once available
+        # Note: valid periods are stored by the valid_unit_periods extension on the analyzer itself.
+        # Access them via: analyzer.get_extension("valid_unit_periods").get_data()
         if "histograms" in figures:
             figures["histograms"].savefig(output_folder / "metric_histograms.png", dpi=150, bbox_inches="tight")
         if "waveforms" in figures:
