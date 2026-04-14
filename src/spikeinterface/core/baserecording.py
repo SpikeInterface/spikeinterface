@@ -395,7 +395,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         return time_kwargs
 
-    def get_times(self, segment_index=None) -> np.ndarray:
+    def get_times(
+        self, segment_index: int | None = None, start_frame: int | None = None, end_frame: int | None = None
+    ) -> np.ndarray:
         """Get time vector for a recording segment.
 
         If the segment has a time_vector, then it is returned. Otherwise
@@ -407,6 +409,10 @@ class BaseRecording(BaseRecordingSnippets):
         ----------
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
+        start_frame : int or None, default: None
+            The start frame index. If None, it starts from the beginning of the segment.
+        end_frame : int or None, default: None
+            The end frame index. If None, it goes until the end of the segment.
 
         Returns
         -------
@@ -415,7 +421,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
-        times = rs.get_times()
+        times = rs.get_times(start_frame, end_frame)
         return times
 
     def get_start_time(self, segment_index=None) -> float:
@@ -913,10 +919,18 @@ class BaseRecordingSegment(BaseSegment):
 
         BaseSegment.__init__(self)
 
-    def get_times(self) -> np.ndarray:
+    def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
         if self.time_vector is not None:
-            self.time_vector = np.asarray(self.time_vector)
-            return self.time_vector
+            # Cache full times as numpy if start_frame and end_frame are None. If the user passes start_frame and
+            # end_frame, we slice the time vector and return the sliced version as numpy array.
+            # This is useful for very long recordings, where the full time vector might be too large to fit in memory.
+            if start_frame is None and end_frame is None:
+                self.time_vector = np.asarray(self.time_vector)
+                return self.time_vector
+            else:
+                start_frame = int(start_frame) if start_frame is not None else 0
+                end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+                return np.asarray(self.time_vector[start_frame:end_frame])
         else:
             time_vector = np.arange(self.get_num_samples(), dtype="float64")
             time_vector /= self.sampling_frequency

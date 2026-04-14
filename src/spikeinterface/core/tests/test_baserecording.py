@@ -83,6 +83,8 @@ def test_BaseRecording(create_cache_folder):
     assert values.dtype.kind == "i"
 
     times0 = rec.get_times(segment_index=0)
+    times0_slice = rec.get_times(segment_index=0, start_frame=10, end_frame=20)
+    assert np.allclose(times0_slice, times0[10:20])
 
     # dump/load dict
     d = rec.to_dict(include_annotations=True, include_properties=True)

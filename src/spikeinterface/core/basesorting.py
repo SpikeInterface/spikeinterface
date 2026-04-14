@@ -347,7 +347,12 @@ class BaseSorting(BaseExtractor):
         else:
             return False
 
-    def get_times(self, segment_index=None):
+    def get_times(
+        self,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+    ):
         """
         Get time vector for a registered recording segment.
 
@@ -359,7 +364,7 @@ class BaseSorting(BaseExtractor):
         """
         segment_index = self._check_segment_index(segment_index)
         if self.has_recording():
-            return self._recording.get_times(segment_index=segment_index)
+            return self._recording.get_times(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
         else:
             return None
 
