@@ -66,6 +66,20 @@ qc_params["plot_histograms"] = True                      # save histogram plots 
 qc_params["plot_waveforms"] = True                       # save waveform plots for each unit
 qc_params["plot_upset"] = True                           # save UpSet plot showing threshold failure combinations
 
+# --- Custom metric names / params (optional) ---
+# To bypass the compute_* flags and specify exactly which metrics to compute,
+# set qc_params["metric_names"] to a list. Any SpikeInterface quality metric works.
+# qc_params["metric_names"] = [
+#     "amplitude_median", "snr", "num_spikes", "presence_ratio", "firing_rate",
+#     "sliding_rp_violation", "drift", "silhouette",
+# ]
+#
+# To override metric-specific params, set qc_params["metric_params"]:
+# qc_params["metric_params"] = {
+#     "silhouette": {"method": "simplified"},
+#     "drift": {"interval_s": 30},
+# }
+
 # %% Classification thresholds
 # Format: {"greater": min_value, "less": max_value} - unit passes if min < value < max
 # Use None to disable a bound. Add "abs": True to use absolute value.
@@ -123,6 +137,10 @@ pprint(thresholds)
 
 # %% Run bombcell QC
 # This computes quality metrics and classifies units as good/mua/noise/non-somatic.
+# Both `params` and `thresholds` also accept a path to a JSON file:
+# e.g. params="qc_params.json", thresholds="thresholds.json".
+# After each run, the thresholds and bombcell-specific config are saved to
+# output_folder as thresholds.json and bombcell_config.json for reproducibility.
 labels, metrics, figures = sc.run_bombcell_qc(
     sorting_analyzer=analyzer,
     output_folder=output_folder,

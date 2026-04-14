@@ -173,8 +173,8 @@ def get_default_qc_params():
 def run_bombcell_qc(
     sorting_analyzer,
     output_folder: str | Path = "bombcell",
-    params: dict | None = None,
-    thresholds: dict | None = None,
+    params: dict | str | Path | None = None,
+    thresholds: dict | str | Path | None = None,
     valid_periods_params: dict | None = None,
     rerun_quality_metrics: bool = False,
     rerun_pca: bool = False,
@@ -195,11 +195,19 @@ def run_bombcell_qc(
     output_folder : str or Path, default: "bombcell"
         Folder to save results (CSV files and plots). Set to None to skip saving.
         Created if it doesn't exist.
-    params : dict or None, default: None
-        QC parameters from get_default_qc_params(). If None, uses defaults.
-    thresholds : dict or None, default: None
-        BombCell classification thresholds from bombcell_get_default_thresholds().
-        If None, uses defaults. Structure:
+    params : dict, str, Path, or None, default: None
+        QC parameters from get_default_qc_params(), or a path to a JSON file
+        containing such a dict. If None, uses defaults.
+
+        To override the default metric list built from the compute_* flags, set
+        params["metric_names"] to an explicit list of metric names. To override
+        the default metric params, set params["metric_params"] to a dict mapping
+        metric name -> param dict. Any metric you add this way must correspond to
+        a valid SpikeInterface quality metric.
+    thresholds : dict, str, Path, or None, default: None
+        BombCell classification thresholds from bombcell_get_default_thresholds(),
+        or a path to a JSON file containing such a dict. If None, uses defaults.
+        Structure:
 
         - "noise": Thresholds for waveform quality. Failing ANY -> "noise".
         - "mua": Thresholds for spike quality. Failing ANY -> "mua".
@@ -278,17 +286,27 @@ def run_bombcell_qc(
     >>> good_units = labels[labels["bombcell_label"] == "good"].index.tolist()
     >>> mua_units = labels[labels["bombcell_label"] == "mua"].index.tolist()
     """
+    import json
+
     from .bombcell_curation import (
         bombcell_get_default_thresholds,
         bombcell_label_units,
         save_bombcell_results,
     )
 
+    # Resolve params (dict, JSON path, or None)
     if params is None:
         params = get_default_qc_params()
+    elif isinstance(params, (str, Path)):
+        with open(params, "r") as f:
+            params = json.load(f)
 
+    # Resolve thresholds (dict, JSON path, or None)
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()
+    elif isinstance(thresholds, (str, Path)):
+        with open(thresholds, "r") as f:
+            thresholds = json.load(f)
 
     job_kwargs = dict(n_jobs=n_jobs, chunk_duration="1s", progress_bar=progress_bar)
 
@@ -320,26 +338,38 @@ def run_bombcell_qc(
         qm_params["rp_violation"].update(rp_method_params)
         rp_metric_name = "rp_violation"
 
-    # Build metric names
-    metric_names = ["amplitude_median", "snr", "num_spikes", "presence_ratio", "firing_rate"]
+    # Build metric names (user can override via params["metric_names"])
+    if "metric_names" in params and params["metric_names"] is not None:
+        metric_names = list(params["metric_names"])
+    else:
+        metric_names = ["amplitude_median", "snr", "num_spikes", "presence_ratio", "firing_rate"]
 
-    if params["compute_amplitude_cutoff"]:
-        metric_names.append("amplitude_cutoff")
-        # amplitude_cutoff requires spike_amplitudes or amplitude_scalings
+        if params["compute_amplitude_cutoff"]:
+            metric_names.append("amplitude_cutoff")
+
+        metric_names.append(rp_metric_name)
+
+        if params["compute_drift"]:
+            metric_names.append("drift")
+
+        if params["compute_distance_metrics"]:
+            metric_names.append("mahalanobis")
+
+    # Ensure prerequisite extensions are computed for whichever metrics are requested
+    if "amplitude_cutoff" in metric_names:
         if not sorting_analyzer.has_extension("spike_amplitudes") and not sorting_analyzer.has_extension(
             "amplitude_scalings"
         ):
             sorting_analyzer.compute("spike_amplitudes", **job_kwargs)
 
-    metric_names.append(rp_metric_name)
-
-    if params["compute_drift"]:
-        metric_names.append("drift")
-
-    if params["compute_distance_metrics"]:
-        metric_names.append("mahalanobis")
+    if "mahalanobis" in metric_names:
         if not sorting_analyzer.has_extension("principal_components") or rerun_pca:
             sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
+
+    # User-provided metric_params override the defaults built above
+    if "metric_params" in params and params["metric_params"] is not None:
+        for metric, mp in params["metric_params"].items():
+            qm_params[metric] = mp
 
     if params["use_valid_periods"] and not sorting_analyzer.has_extension("amplitude_scalings"):
         sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
