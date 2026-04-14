@@ -8,13 +8,13 @@ runs:
       run: |
         git config --global user.email "CI@example.com"
         git config --global user.name "CI Almighty"
-        pip install tabulate  # This produces summaries at the end
-        pip install -e .[test,extractors,streaming_extractors,test_extractors,full]
+        uv pip install --system tabulate  # This produces summaries at the end
+        uv pip install --system -e .[test,extractors,streaming_extractors,test_extractors,full]
       shell: bash
     - name: Install git-annex
       shell: bash
       run: |
-        pip install datalad-installer
+        uv pip install --system datalad-installer
         datalad-installer --sudo ok git-annex --method datalad/packages
         git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
     - name: Force installation of latest dev from key-packages when running dev (not release)
@@ -22,8 +22,8 @@ runs:
         spikeinterface_is_dev_version=$(python -c "import spikeinterface; print(spikeinterface.DEV_MODE)")
         if [ $spikeinterface_is_dev_version = "True" ]; then
           echo "Running spikeinterface dev version"
-          pip install --no-cache-dir git+https://github.com/NeuralEnsemble/python-neo
-          pip install --no-cache-dir git+https://github.com/SpikeInterface/probeinterface
+          uv pip install --system git+https://github.com/NeuralEnsemble/python-neo
+          uv pip install --system git+https://github.com/SpikeInterface/probeinterface
         fi
           echo "Running tests for release, using pyproject.toml versions of neo and probeinterface"
       shell: bash
