@@ -382,13 +382,13 @@ def bombcell_label_units(
         standalone_metrics = {
             m: non_somatic_thresholds[m] for m in non_somatic_thresholds if m not in _NON_SOMATIC_BUILTIN_METRICS
         }
-        for metric_name, thresh in standalone_metrics.items():
+        if len(standalone_metrics) > 0:
             standalone_labels = threshold_metrics_label_units(
                 metrics=combined_metrics,
-                thresholds={metric_name: thresh},
+                thresholds=standalone_metrics,
                 pass_label="pass",
                 fail_label="fail",
-                operator="and",
+                operator="or",
                 nan_policy="ignore",
             )
             is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
