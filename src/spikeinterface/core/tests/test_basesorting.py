@@ -314,7 +314,6 @@ def test_select_periods():
 def test_get_unit_spike_trains(use_cache):
     sampling_frequency = 10_000.0
     duration = 1.0
-    num_samples = int(sampling_frequency * duration)
     num_units = 10
     sorting = generate_sorting(durations=[duration], sampling_frequency=sampling_frequency, num_units=num_units)
 
@@ -327,18 +326,15 @@ def test_get_unit_spike_trains(use_cache):
 
     # test with times
     spike_trains_times = sorting.get_unit_spike_trains_in_seconds(
-        unit_ids=sorting.unit_ids, return_times=True, use_cache=use_cache
+        unit_ids=sorting.unit_ids, use_cache=use_cache
     )
     assert isinstance(spike_trains_times, dict)
     assert set(spike_trains_times.keys()) == set(sorting.unit_ids)
     for unit_id in sorting.unit_ids:
-        spiketrain = sorting.get_unit_spike_train(
-            segment_index=0, unit_id=unit_id, use_cache=use_cache, return_times=True
-        )
         spiketrain_times = sorting.get_unit_spike_train_in_seconds(
             segment_index=0, unit_id=unit_id, use_cache=use_cache
         )
-        assert np.allclose(spiketrain_times, spiketrain)
+        assert np.allclose(spike_trains_times[unit_id], spiketrain_times)
 
 
 if __name__ == "__main__":

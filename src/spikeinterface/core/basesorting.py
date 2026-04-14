@@ -238,10 +238,8 @@ class BaseSorting(BaseExtractor):
             The start time in seconds for spike train extraction
         end_time : float or None, default: None
             The end time in seconds for spike train extraction
-        return_times : bool, default: False
-            If True, returns spike times in seconds instead of frames
         use_cache : bool, default: True
-            If True, then precompute (or use) the to_reordered_spike_vector using
+            If True, precompute (or use) the reordered spike vector cache for fast access.
 
         Returns
         -------
@@ -252,7 +250,7 @@ class BaseSorting(BaseExtractor):
         segment = self.segments[segment_index]
 
         # If sorting has a registered recording, get the frames and get the times from the recording
-        # Note that this take into account the segment start time of the recording
+        # Note that this takes into account the segment start time of the recording
         if self.has_recording():
 
             # Get all the spike times and then slice them
@@ -326,7 +324,7 @@ class BaseSorting(BaseExtractor):
         return_times : bool, default: False
             If True, returns spike times in seconds instead of frames
         use_cache : bool, default: True
-            If True, then precompute (or use) the to_reordered_spike_vector using
+            If True, precompute (or use) the reordered spike vector cache for fast access.
 
         Returns
         -------
@@ -383,10 +381,9 @@ class BaseSorting(BaseExtractor):
         segment_index: int | None = None,
         start_time: float | None = None,
         end_time: float | None = None,
-        return_times: bool = False,
         use_cache: bool = True,
     ) -> dict[int | str, np.ndarray]:
-        """Return spike trains for multiple units in seconds
+        """Return spike trains for multiple units in seconds.
 
         Parameters
         ----------
@@ -399,10 +396,8 @@ class BaseSorting(BaseExtractor):
             The start time in seconds for spike train extraction
         end_time : float or None, default: None
             The end time in seconds for spike train extraction
-        return_times : bool, default: False
-            If True, returns spike times in seconds instead of frames
         use_cache : bool, default: True
-            If True, then precompute (or use) the to_reordered_spike_vector using
+            If True, precompute (or use) the reordered spike vector cache for fast access.
 
         Returns
         -------
@@ -413,7 +408,7 @@ class BaseSorting(BaseExtractor):
         segment = self.segments[segment_index]
 
         # If sorting has a registered recording, get the frames and get the times from the recording
-        # Note that this take into account the segment start time of the recording
+        # Note that this takes into account the segment start time of the recording
         spike_times = {}
         if self.has_recording():
             # Get all the spike times and then slice them
