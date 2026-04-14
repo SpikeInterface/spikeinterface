@@ -174,6 +174,54 @@ _ = sw.plot_template_peak_trough(
 #     analyzer, params=qc_params, valid_periods_params=valid_periods_params
 # )
 
+# %% Using bombcell_label_units directly (without the pipeline)
+# If you want more control, you can call bombcell_label_units directly.
+# This skips quality metric computation, plotting, and saving — you handle those yourself.
+
+# Basic usage: just pass the analyzer and thresholds
+labels_direct = sc.bombcell_label_units(
+    sorting_analyzer=analyzer,
+    thresholds=thresholds,
+)
+
+# With external metrics (e.g. from a CSV or custom computation):
+# import pandas as pd
+# my_metrics = pd.read_csv("my_metrics.csv", index_col=0)
+# labels_direct = sc.bombcell_label_units(
+#     external_metrics=my_metrics,
+#     thresholds=thresholds,
+# )
+
+# With valid periods and explicit quality_metric_params:
+# When use_valid_periods=True, quality metrics are recomputed on valid time chunks.
+# Pass quality_metric_params to control exactly which metrics and params are used,
+# instead of relying on whatever was previously computed on the analyzer.
+# labels_direct = sc.bombcell_label_units(
+#     sorting_analyzer=analyzer,
+#     thresholds=thresholds,
+#     use_valid_periods=True,
+#     valid_periods_params={
+#         "period_duration_s_absolute": 30.0,
+#         "minimum_valid_period_duration": 180,
+#     },
+#     quality_metric_params={
+#         "metric_names": ["amplitude_median", "snr", "num_spikes", "sliding_rp_violation",
+#                          "presence_ratio", "firing_rate", "amplitude_cutoff", "drift"],
+#         "metric_params": {
+#             "sliding_rp_violation": {"exclude_ref_period_below_ms": 0.5, "max_ref_period_ms": 10.0},
+#             "presence_ratio": {"bin_duration_s": 60},
+#             "drift": {"interval_s": 60, "min_spikes_per_interval": 100},
+#         },
+#     },
+#     n_jobs=-1,
+# )
+
+# Thresholds can also be loaded from a JSON file:
+# labels_direct = sc.bombcell_label_units(
+#     sorting_analyzer=analyzer,
+#     thresholds="my_thresholds.json",
+# )
+
 # %% Parameter tuning by recording type
 #
 # Chronic recordings:

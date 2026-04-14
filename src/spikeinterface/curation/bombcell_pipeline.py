@@ -240,6 +240,10 @@ def run_bombcell_qc(
     ------------------------------
     - labeling_results_wide.csv: One row per unit with all metrics and label.
     - labeling_results_narrow.csv: One row per unit-metric with pass/fail status.
+    - thresholds.json: Thresholds used for classification (reproducibility).
+    - bombcell_config.json: bombcell-specific options (rp_method, label_non_somatic,
+      split_non_somatic_good_mua, use_valid_periods, valid_periods_params).
+      Note: quality metric params are stored on the analyzer via the quality_metrics extension.
     - valid_periods.tsv: Valid time periods per unit (only if use_valid_periods=True).
       Columns: unit_id, segment_index, start_time_s, end_time_s, duration_s.
     - metric_histograms.png: Histogram of each metric with threshold lines.
@@ -382,12 +386,27 @@ def run_bombcell_qc(
 
     # Save
     if output_folder is not None:
+        import json
+
         save_bombcell_results(
             metrics=metrics,
             unit_label=labels["bombcell_label"].values,
             thresholds=thresholds,
             folder=output_folder,
         )
+        # Save thresholds and bombcell-specific config so the run is reproducible
+        # (quality metric params are stored on the analyzer itself via the extension)
+        with open(output_folder / "thresholds.json", "w") as f:
+            json.dump(thresholds, f, indent=2)
+        bombcell_config = {
+            "label_non_somatic": params["label_non_somatic"],
+            "split_non_somatic_good_mua": params["split_non_somatic_good_mua"],
+            "use_valid_periods": params["use_valid_periods"],
+            "rp_method": params["rp_method"],
+            "valid_periods_params": valid_periods_params,
+        }
+        with open(output_folder / "bombcell_config.json", "w") as f:
+            json.dump(bombcell_config, f, indent=2)
         # TODO: save valid periods via the valid_unit_periods extension to_dataframe() once available
         if "histograms" in figures:
             figures["histograms"].savefig(output_folder / "metric_histograms.png", dpi=150, bbox_inches="tight")
