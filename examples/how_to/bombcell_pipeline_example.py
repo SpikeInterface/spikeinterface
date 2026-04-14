@@ -38,14 +38,11 @@ qc_params["compute_drift"] = True                       # compute drift metrics 
 qc_params["compute_distance_metrics"] = False            # isolation distance & L-ratio - slow, not drift-robust
                                                          # recommend True for stable/chronic recordings
 
-# --- Refractory period method ---
-qc_params["rp_method"] = {
-    "method": "sliding_rp",                              # "sliding_rp" (recommended) or "llobet"
-    "exclude_ref_period_below_ms": 0.5,                  # min RP to consider when sweeping
-    "max_ref_period_ms": 10.0,                           # max RP to consider when sweeping
-}
-
 # --- bombcell classification options ---
+# Note: the refractory-period-violation method (sliding_rp_violation vs
+# rp_contamination) is selected below in thresholds["mua"] — that is the ONE
+# place to pick the method. To tune its metric-specific params, use
+# qc_params["metric_params"] (see bottom of this section).
 qc_params["label_non_somatic"] = True                    # detect axonal/dendritic units via waveform shape
 qc_params["split_non_somatic_good_mua"] = False          # if True, non-somatic split into good/mua subcategories
 qc_params["use_valid_periods"] = False                   # if True, identify valid time chunks per unit and recompute
@@ -53,10 +50,6 @@ qc_params["use_valid_periods"] = False                   # if True, identify val
 
 # --- Presence ratio ---
 qc_params["presence_ratio_bin_duration_s"] = 60          # bin size (s) for checking if unit fires throughout recording
-
-# --- Refractory period violations ---
-qc_params["refractory_period_ms"] = 2.0                  # expected refractory period (ms)
-qc_params["censored_period_ms"] = 0.1                    # ignore ISIs shorter than this (spike sorting artifact)
 
 # --- Drift parameters ---
 qc_params["drift_interval_s"] = 60                       # time bin (s) for computing position over time
@@ -101,7 +94,7 @@ thresholds["mua"]["amplitude_median"] = {"greater": 30, "less": None, "abs": Tru
 thresholds["mua"]["snr"] = {"greater": 5, "less": None}
 thresholds["mua"]["amplitude_cutoff"] = {"greater": None, "less": 0.2}
 thresholds["mua"]["num_spikes"] = {"greater": 300, "less": None}
-thresholds["mua"]["rpv"] = {"greater": None, "less": 0.1}
+thresholds["mua"]["sliding_rp_violation"] = {"greater": None, "less": 0.1}
 thresholds["mua"]["presence_ratio"] = {"greater": 0.7, "less": None}
 thresholds["mua"]["drift_ptp"] = {"greater": None, "less": 100}
 

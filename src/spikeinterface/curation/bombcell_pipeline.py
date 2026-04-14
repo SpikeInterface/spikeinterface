@@ -20,6 +20,31 @@ bombcell_label_units : Core labeling function.
 from __future__ import annotations
 from pathlib import Path
 
+# The two refractory-period-violation metrics BombCell supports. The user picks
+# one by including it as a key under thresholds["mua"] — that single choice
+# determines which metric is computed AND thresholded. No other knob selects it.
+_RPV_METRICS = ("sliding_rp_violation", "rp_contamination")
+
+
+def _resolve_rpv_metric(thresholds: dict) -> str:
+    """Return the single RPV metric name the user selected in thresholds["mua"].
+
+    Raises if the user specified both (ambiguous) or neither (no RPV check).
+    """
+    mua = thresholds.get("mua", {})
+    picked = [m for m in _RPV_METRICS if m in mua]
+    if len(picked) == 0:
+        raise ValueError(
+            f"thresholds['mua'] must include exactly one of {_RPV_METRICS} "
+            "to select the refractory-period-violation method."
+        )
+    if len(picked) > 1:
+        raise ValueError(
+            f"thresholds['mua'] contains multiple RPV metrics ({picked}). "
+            "Pick exactly one: remove the other entry."
+        )
+    return picked[0]
+
 
 def get_default_qc_params():
     """
@@ -52,15 +77,15 @@ def get_default_qc_params():
             acute recordings. drift_ptp (peak-to-peak drift in um) is used
             by BombCell MUA thresholds.
 
-        rp_method : dict, default: {"method": "sliding_rp", "exclude_ref_period_below_ms": 0.5, "max_ref_period_ms": 10.0}
-            Refractory period violation method and its parameters.
-            The "method" key selects the algorithm:
-            - "sliding_rp": IBL/Steinmetz method that sweeps across RP values
-              and estimates contamination. More robust. (recommended)
-            - "llobet": Single RP value method from Llobet et al.
-            Additional keys are passed as metric params for the selected method.
-
         **BombCell Labeling Options**
+
+        Note: the refractory-period-violation method (``sliding_rp_violation``
+        or ``rp_contamination``) and its threshold are selected in a single
+        place — the thresholds dict (``thresholds["mua"]``). Whichever RPV
+        key the user puts there determines which metric is computed AND
+        thresholded. Extra metric-specific parameters can be passed via
+        ``params["metric_params"]`` (e.g. ``{"sliding_rp_violation":
+        {"exclude_ref_period_below_ms": 0.5}}``).
 
         label_non_somatic : bool, default: True
             Whether to detect and label non-somatic (axonal/dendritic) units.
@@ -84,17 +109,6 @@ def get_default_qc_params():
             Bin duration in seconds for computing presence ratio.
             Presence ratio = fraction of bins containing at least one spike.
             60s bins are standard; shorter bins are stricter.
-
-        **Refractory Period Violation Parameters**
-
-        refractory_period_ms : float, default: 2.0
-            Refractory period duration in milliseconds. Spikes closer than
-            this are considered violations.
-
-        censored_period_ms : float, default: 0.1
-            Censored period in milliseconds. Spikes within this period of
-            each other are not counted (accounts for detection artifacts).
-            0.1 ms is standard.
 
         **Drift Parameters**
 
@@ -141,20 +155,12 @@ def get_default_qc_params():
         "compute_amplitude_cutoff": False,  # slow - requires spike_amplitudes
         "compute_distance_metrics": False,
         "compute_drift": True,
-        "rp_method": {
-            "method": "sliding_rp",
-            "exclude_ref_period_below_ms": 0.5,
-            "max_ref_period_ms": 10.0,
-        },
         # BombCell labeling options
         "label_non_somatic": True,
         "split_non_somatic_good_mua": False,
         "use_valid_periods": False,
         # Presence ratio
         "presence_ratio_bin_duration_s": 60,
-        # Refractory period violations
-        "refractory_period_ms": 2.0,
-        "censored_period_ms": 0.1,
         # Drift
         "drift_interval_s": 60,
         "drift_min_spikes": 100,
@@ -253,7 +259,7 @@ def run_bombcell_qc(
     - labeling_results_wide.csv: One row per unit with all metrics and label.
     - labeling_results_narrow.csv: One row per unit-metric with pass/fail status.
     - thresholds.json: Thresholds used for classification (reproducibility).
-    - bombcell_config.json: bombcell-specific options (rp_method, label_non_somatic,
+    - bombcell_config.json: bombcell-specific options (label_non_somatic,
       split_non_somatic_good_mua, use_valid_periods, valid_periods_params).
       Note: quality metric params are stored on the analyzer via the quality_metrics extension.
     - metric_histograms.png: Histogram of each metric with threshold lines.
@@ -278,7 +284,7 @@ def run_bombcell_qc(
     >>> params["compute_distance_metrics"] = True  # For chronic recordings
     >>>
     >>> thresholds = bombcell_get_default_thresholds()
-    >>> thresholds["mua"]["rpv"]["less"] = 0.05  # Stricter RP violations
+    >>> thresholds["mua"]["sliding_rp_violation"]["less"] = 0.05  # Stricter RP violations
     >>> thresholds["mua"]["num_spikes"]["greater"] = 100  # Lower spike threshold
     >>>
     >>> labels, metrics, figs = run_bombcell_qc(
@@ -321,29 +327,18 @@ def run_bombcell_qc(
         output_folder = Path(output_folder)
         output_folder.mkdir(parents=True, exist_ok=True)
 
-    # Build QM params
-    rp_method_dict = params["rp_method"]
-    rp_method_name = rp_method_dict["method"]
-    rp_method_params = {k: v for k, v in rp_method_dict.items() if k != "method"}
+    # The RPV method is selected by whichever key the user puts in thresholds["mua"]
+    # (either "sliding_rp_violation" or "rp_contamination"). This is the ONE place
+    # the choice lives — no separate pipeline-level parameter.
+    rpv_metric = _resolve_rpv_metric(thresholds)
 
     qm_params = {
         "presence_ratio": {"bin_duration_s": params["presence_ratio_bin_duration_s"]},
-        "rp_violation": {
-            "refractory_period_ms": params["refractory_period_ms"],
-            "censored_period_ms": params["censored_period_ms"],
-        },
         "drift": {
             "interval_s": params["drift_interval_s"],
             "min_spikes_per_interval": params["drift_min_spikes"],
         },
     }
-
-    if rp_method_name == "sliding_rp":
-        qm_params["sliding_rp_violation"] = rp_method_params
-        rp_metric_name = "sliding_rp_violation"
-    else:
-        qm_params["rp_violation"].update(rp_method_params)
-        rp_metric_name = "rp_violation"
 
     # Build metric names (user can override via params["metric_names"])
     if "metric_names" in params and params["metric_names"] is not None:
@@ -354,7 +349,7 @@ def run_bombcell_qc(
         if params["compute_amplitude_cutoff"]:
             metric_names.append("amplitude_cutoff")
 
-        metric_names.append(rp_metric_name)
+        metric_names.append(rpv_metric)
 
         if params["compute_drift"]:
             metric_names.append("drift")
@@ -437,7 +432,6 @@ def run_bombcell_qc(
             "label_non_somatic": params["label_non_somatic"],
             "split_non_somatic_good_mua": params["split_non_somatic_good_mua"],
             "use_valid_periods": params["use_valid_periods"],
-            "rp_method": params["rp_method"],
             "valid_periods_params": valid_periods_params,
         }
         with open(output_folder / "bombcell_config.json", "w") as f:

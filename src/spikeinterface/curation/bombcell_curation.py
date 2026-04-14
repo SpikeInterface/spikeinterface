@@ -31,15 +31,12 @@ DEFAULT_MUA_METRICS = [
     "snr",
     "amplitude_cutoff",
     "num_spikes",
-    "rpv",  # maps to rp_contamination or sliding_rp_violation
+    "sliding_rp_violation",
     "presence_ratio",
     "drift_ptp",
     "isolation_distance",
     "l_ratio",
 ]
-
-# RPV metric column names (bombcell accepts "rpv" as threshold key and maps to whichever exists)
-RPV_METRIC_COLUMNS = ["sliding_rp_violation", "rp_contamination"]
 
 DEFAULT_NON_SOMATIC_METRICS = [
     "peak_before_to_trough_ratio",
@@ -81,7 +78,7 @@ def bombcell_get_default_thresholds() -> dict:
             "snr": {"greater": 5, "less": None},
             "amplitude_cutoff": {"greater": None, "less": 0.2},
             "num_spikes": {"greater": 300, "less": None},
-            "rpv": {"greater": None, "less": 0.1},  # applies to rp_contamination or sliding_rp_violation
+            "sliding_rp_violation": {"greater": None, "less": 0.1},
             "presence_ratio": {"greater": 0.7, "less": None},
             "drift_ptp": {"greater": None, "less": 100},  # um
             "isolation_distance": {"greater": 20, "less": None},
@@ -161,7 +158,8 @@ def bombcell_label_units(
         those periods before labeling. This uses the ``valid_unit_periods`` extension to identify
         chunks with acceptable false positive (refractory violations) and false negative (amplitude
         cutoff) rates. The FP/FN thresholds are derived from the bombcell thresholds
-        (``rpv`` → ``fp_threshold``, ``amplitude_cutoff`` → ``fn_threshold``).
+        (``sliding_rp_violation`` or ``rp_contamination`` → ``fp_threshold``,
+        ``amplitude_cutoff`` → ``fn_threshold``).
         Requires ``amplitude_scalings`` extension and Numba.
     valid_periods_params : dict or None, default: None
         Additional parameters passed to the ``valid_unit_periods`` extension computation.
@@ -218,9 +216,13 @@ def bombcell_label_units(
         vp_params = dict(valid_periods_params) if valid_periods_params is not None else {}
 
         if "fp_threshold" not in vp_params:
-            rpv_thresh = thresholds_dict.get("mua", {}).get("rpv", {}).get("less", None)
-            if rpv_thresh is not None:
-                vp_params["fp_threshold"] = rpv_thresh
+            mua_thresh = thresholds_dict.get("mua", {})
+            for rpv_name in ("sliding_rp_violation", "rp_contamination"):
+                if rpv_name in mua_thresh:
+                    rpv_thresh = mua_thresh[rpv_name].get("less", None)
+                    if rpv_thresh is not None:
+                        vp_params["fp_threshold"] = rpv_thresh
+                    break
 
         if "fn_threshold" not in vp_params:
             ac_thresh = thresholds_dict.get("mua", {}).get("amplitude_cutoff", {}).get("less", None)
@@ -271,14 +273,6 @@ def bombcell_label_units(
             combined_metrics = pd.concat(external_metrics, axis=1)
         else:
             combined_metrics = external_metrics
-
-    # Map "rpv" threshold to actual column name (rp_contamination or sliding_rp_violation)
-    if "mua" in thresholds_dict and "rpv" in thresholds_dict["mua"]:
-        rpv_thresh = thresholds_dict["mua"].pop("rpv")
-        for col in RPV_METRIC_COLUMNS:
-            if col in combined_metrics.columns:
-                thresholds_dict["mua"][col] = rpv_thresh
-                break
 
     # Filter out threshold metrics that are not present in the metrics DataFrame.
     # This allows optional metrics (e.g. isolation_distance, l_ratio) to be included
