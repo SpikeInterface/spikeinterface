@@ -217,8 +217,6 @@ def bombcell_label_units(
                 vp_params["fn_threshold"] = ac_thresh
 
         # Compute valid_unit_periods
-        if sorting_analyzer.has_extension("valid_unit_periods"):
-            sorting_analyzer.delete_extension("valid_unit_periods")
         sorting_analyzer.compute("valid_unit_periods", **vp_params, **job_kwargs)
 
         # Recompute quality metrics restricted to valid periods
@@ -229,7 +227,6 @@ def bombcell_label_units(
                 existing_params = qm_ext.params.copy()
                 existing_params.pop("periods", None)
                 existing_params.pop("use_valid_periods", None)
-                sorting_analyzer.delete_extension("quality_metrics")
                 sorting_analyzer.compute(
                     "quality_metrics",
                     use_valid_periods=True,

@@ -337,18 +337,13 @@ def run_bombcell_qc(
     if params["compute_distance_metrics"]:
         metric_names.append("mahalanobis")
         if not sorting_analyzer.has_extension("principal_components") or rerun_pca:
-            if sorting_analyzer.has_extension("principal_components"):
-                sorting_analyzer.delete_extension("principal_components")
             sorting_analyzer.compute("principal_components", n_components=5, mode="by_channel_local", **job_kwargs)
 
     if params["use_valid_periods"] and not sorting_analyzer.has_extension("amplitude_scalings"):
         sorting_analyzer.compute("amplitude_scalings", **job_kwargs)
 
     # Compute quality metrics
-    if sorting_analyzer.has_extension("quality_metrics") and rerun_quality_metrics:
-        sorting_analyzer.delete_extension("quality_metrics")
-
-    if not sorting_analyzer.has_extension("quality_metrics"):
+    if not sorting_analyzer.has_extension("quality_metrics") or rerun_quality_metrics:
         sorting_analyzer.compute("quality_metrics", metric_names=metric_names, metric_params=qm_params, **job_kwargs)
 
     # Run BombCell
