@@ -307,8 +307,8 @@ def _get_backend_from_local_file(file_path: str | Path) -> str:
         try:
             import zarr
 
-            with zarr.open(file_path, "r") as f:
-                backend = "zarr"
+            _ = zarr.open(file_path, mode="r")
+            backend = "zarr"
         except:
             raise RuntimeError(f"{file_path} is not a valid Zarr folder!")
     else:
@@ -333,7 +333,8 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
     if result is None:
         result = []
 
-    for neurodata_name, value in group.items():
+    for neurodata_name in group.keys():
+        value = group[neurodata_name]
         # Check if it's a group and if it has the neurodata_type
         if isinstance(value, group_class):
             current_path = f"{path}/{neurodata_name}" if path else neurodata_name
@@ -1253,7 +1254,7 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         spike_times_index_data = units_table["spike_times_index"]
 
         if "unit_name" in units_table:
-            unit_ids = units_table["unit_name"]
+            unit_ids = np.asarray(units_table["unit_name"][:].tolist())
         else:
             unit_ids = units_table["id"]
 
@@ -1409,7 +1410,8 @@ def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
     if result is None:
         result = []
 
-    for name, value in group.items():
+    for name in group.keys():
+        value = group[name]
         if isinstance(value, group_class):
             current_path = f"{path}/{name}" if path else name
             if value.attrs.get("neurodata_type") == "TimeSeries":

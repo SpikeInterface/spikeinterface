@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -24,12 +24,11 @@ dependencies = [
     "numpy>=2.0.0;python_version>='3.13'",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr>=2.18,<3",
+    "zarr>=3,<4",
     "neo>=0.14.4",
     "probeinterface>=0.3.2",
     "packaging",
     "pydantic",
-    "numcodecs<0.16.0", # For supporting zarr < 3
 ]
 
 [build-system]
@@ -64,7 +63,9 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 extractors = [
     "MEArec>=1.8",
     "pynwb>=2.6.0",
-    "hdmf-zarr>=0.11.0",
+    # FOR TESTING
+    "hdmf-zarr @ git+https://github.com/hdmf-dev/hdmf-zarr.git@zarr-v3-migration",
+    # "hdmf-zarr>=0.11.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
@@ -81,9 +82,11 @@ streaming_extractors = [
     "fsspec",
     "aiohttp",
     "requests",
-    "hdmf-zarr>=0.11.0",
+    # FOR TESTING
+    "hdmf-zarr @ git+https://github.com/hdmf-dev/hdmf-zarr.git@zarr-v3-migration",
+    # "hdmf-zarr>=0.11.0",
     "remfile",
-    "s3fs"
+    "s3fs>=2025.7.0"
 ]
 
 
@@ -127,7 +130,9 @@ test_core = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs,
@@ -139,7 +144,9 @@ test_extractors = [
     "pooch>=1.8.2",
     "datalad>=1.0.2",
     # Commenting out for release
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
@@ -161,7 +168,7 @@ test = [
     "ibllib>=3.4.1;python_version>='3.10'",
 
     # streaming templates
-    "s3fs",
+    "s3fs>=2025.7.0",
 
     # exporters
     "pynapple",
@@ -190,7 +197,9 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 
     # for slurm jobs
@@ -219,7 +228,9 @@ docs = [
     "huggingface_hub", # For automated curation
 
     # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 ]
 

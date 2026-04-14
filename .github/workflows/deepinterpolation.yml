@@ -1,10 +1,8 @@
 name: Testing deepinterpolation
 
+# Manual only — deepinterpolation requires Python 3.10, incompatible with 3.11+ required by Zarr 3.0.0+
 on:
-  pull_request:
-    types: [synchronize, opened, reopened]
-    branches:
-      - main
+  workflow_dispatch:
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}

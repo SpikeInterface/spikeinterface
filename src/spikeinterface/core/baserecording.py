@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
-from .base import BaseSegment
+from .base import BaseSegment, BaseExtractor
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, _shared_job_kwargs_doc
 from .recording_tools import write_binary_recording
 
 
@@ -38,6 +38,41 @@ class BaseRecording(BaseRecordingSnippets):
         "noise_level_rms_raw",
         "noise_level_rms_scaled",
     ]
+
+    _save_to_folder_docs_params = """dtype: np.dtype | None, default: None
+    The dtype to use for saving the binary file. If None, the dtype of the recording is used.
+""" + _shared_job_kwargs_doc
+
+    _save_to_zarr_docs_params = """
+channel_chunk_size: int | None, default: None
+    Chunk size for the channel dimension. If None, no chunking is done on the channel dimension.
+chunks: tuple | None, default: None
+    Chunks for the traces dataset. If None, no chunking is done. Note that sharding requires chunking to be specified
+    and that chunk dimensions need to be larger than shard dimensions (if shards is not None).
+    If `chunks` is not None, it needs to be a tuple of length 2 with the chunk size for the time and channel
+    dimensions respectively and `channel_chunk_size` should not be specified.
+shard_factor: int | None, default: None
+    If specified, the shard size will be set to chunk_size * shard_factor in the first dimension (time),
+    and to be the at most the total number of channels in the second dimension. Note that `shard_factor` cannot
+    be specified together with `shards`.
+shards: tuple | None, default: None
+    Number of shard size. If None, no sharding is done. Note that shards dimensions need to be larger than
+    chunk dimensions (if chunks is not None) and that sharding is only done on the first dimension.
+compressors: list[numcodecs.Codec] | None, default: None
+    Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+filters: list[numcodecs.Codec] | None, default: None
+    Global filters for zarr (global)
+compressors_by_dataset: dict | None, default: None
+    Optional compressor per dataset:
+        - traces
+        - times
+    If None, the global compressor is used
+filters_by_dataset: dict | None, default: None
+    Optional filters per dataset:
+        - traces
+        - times
+    If None, the global filters are used
+""" + _shared_job_kwargs_doc
 
     def __init__(self, sampling_frequency: float, channel_ids: list, dtype):
         BaseRecordingSnippets.__init__(
@@ -581,8 +616,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         if format == "binary":
             folder = kwargs["folder"]
-            file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
+            file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             t_starts = self._get_t_starts()
 
             write_binary_recording(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
@@ -891,6 +926,12 @@ class BaseRecording(BaseRecordingSnippets):
         from spikeinterface.preprocessing.astype import astype
 
         return astype(self, dtype=dtype, round=round)
+
+
+BaseRecording.save_to_folder.__doc__ = BaseExtractor.save_to_folder.__doc__.format(
+    BaseRecording._save_to_folder_docs_params
+)
+BaseRecording.save_to_zarr.__doc__ = BaseExtractor.save_to_zarr.__doc__.format(BaseRecording._save_to_zarr_docs_params)
 
 
 class BaseRecordingSegment(BaseSegment):

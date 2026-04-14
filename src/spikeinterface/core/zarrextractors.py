@@ -8,9 +8,10 @@ from probeinterface import ProbeGroup
 from .base import minimum_spike_dtype, _get_class_from_string
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
-from .core_tools import define_function_from_class, check_json, retrieve_importing_provenance
-from .job_tools import split_job_kwargs
-from .core_tools import is_path_remote
+from .core_tools import define_function_from_class, check_json, is_path_remote, retrieve_importing_provenance
+from .job_tools import split_job_kwargs, fix_job_kwargs, ensure_chunk_size, ChunkRecordingExecutor
+
+zarr.config.set({"default_zarr_version": 3})
 
 
 def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
@@ -36,7 +37,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     Returns
     -------
-    root: zarr.hierarchy.Group
+    root: zarr.Group
         The zarr root group object
 
     Raises
@@ -47,11 +48,13 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
     import zarr
 
     # if mode is append or read/write, we try to open the folder with zarr.open
-    # since zarr.open_consolidated does not support creating new groups/datasets
+    # In zarr v3, we use use_consolidated parameter instead of open_consolidated
     if mode in ("a", "r+"):
         open_funcs = (zarr.open,)
+        use_consolidated_options = (False,)
     else:
-        open_funcs = (zarr.open_consolidated, zarr.open)
+        open_funcs = (zarr.open,)
+        use_consolidated_options = (True, False)
 
     # if storage_options is None, we try to open the folder with and without anonymous access
     # if storage_options is not None, we try to open the folder with the given storage options
@@ -63,12 +66,15 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
     root = None
     exception = None
     if is_path_remote(str(folder_path)):
-        for open_func in open_funcs:
+        from zarr.storage import FsspecStore
+
+        for use_consolidated in use_consolidated_options:
             if root is not None:
                 break
             for storage_options in storage_options_to_test:
                 try:
-                    root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                    store = FsspecStore.from_url(str(folder_path), storage_options=storage_options)
+                    root = zarr.open(store, mode=mode, use_consolidated=use_consolidated)
                     break
                 except Exception as e:
                     exception = e
@@ -76,9 +82,9 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
     else:
         if not Path(folder_path).is_dir():
             raise ValueError(f"Folder {folder_path} does not exist")
-        for open_func in open_funcs:
+        for use_consolidated in use_consolidated_options:
             try:
-                root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                root = zarr.open(str(folder_path), mode=mode, use_consolidated=use_consolidated)
                 break
             except Exception as e:
                 exception = e
@@ -129,7 +135,8 @@ class ZarrRecordingExtractor(BaseRecording):
         assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
         assert num_segments is not None, "'num_segments' attiribute not found!"
 
-        channel_ids = np.array(channel_ids)
+        # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+        channel_ids = np.array(channel_ids.tolist())
 
         dtype = self._root["traces_seg0"].dtype
 
@@ -167,7 +174,7 @@ class ZarrRecordingExtractor(BaseRecording):
 
             if load_compression_ratio:
                 nbytes_segment = self._root[trace_name].nbytes
-                nbytes_stored_segment = self._root[trace_name].nbytes_stored
+                nbytes_stored_segment = self._root[trace_name].nbytes_stored()
                 if nbytes_stored_segment > 0:
                     cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
                 else:
@@ -186,7 +193,11 @@ class ZarrRecordingExtractor(BaseRecording):
         if "properties" in self._root:
             prop_group = self._root["properties"]
             for key in prop_group.keys():
-                values = self._root["properties"][key]
+                values = self._root["properties"][key][:]
+                # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+                if hasattr(values.dtype, "na_object") or values.dtype.kind == "O":
+                    if values.size > 0 and isinstance(values.tolist()[0], str):
+                        values = np.array(values.tolist())
                 self.set_property(key, values)
 
         # load annotations
@@ -289,7 +300,7 @@ class ZarrSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        spikes = np.zeros(len(spikes_group["sample_index"]), dtype=minimum_spike_dtype)
+        spikes = np.zeros(spikes_group["sample_index"].shape[0], dtype=minimum_spike_dtype)
         spikes["sample_index"] = spikes_group["sample_index"][:]
         spikes["unit_index"] = spikes_group["unit_index"][:]
         for i, (start, end) in enumerate(segment_slices_list):
@@ -305,7 +316,11 @@ class ZarrSortingExtractor(BaseSorting):
         if "properties" in self._root:
             prop_group = self._root["properties"]
             for key in prop_group.keys():
-                values = self._root["properties"][key]
+                values = self._root["properties"][key][:]
+                # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+                if hasattr(values.dtype, "na_object") or values.dtype.kind == "O":
+                    if values.size > 0 and isinstance(values.tolist()[0], str):
+                        values = np.array(values.tolist())
                 self.set_property(key, values)
 
         # load annotations
@@ -402,12 +417,86 @@ def get_default_zarr_compressor(clevel: int = 5):
     Blosc.compressor
         The compressor object that can be used with the save to zarr function
     """
-    from numcodecs import Blosc
+    from zarr.codecs import BloscCodec, BloscShuffle
 
-    return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
+    return BloscCodec(cname="zstd", clevel=clevel, shuffle=BloscShuffle.bitshuffle)
 
 
-def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
+def build_codec_pipeline(filters=None, compressors=None):
+    """
+    Build zarr v3 codec kwargs from filters and compressors.
+
+    Classifies codecs into the three slots accepted by ``zarr.Group.create_array()``:
+      1. ``filters``    — ArrayArrayCodec  (e.g. Delta)
+      2. ``serializer`` — ArrayBytesCodec  (e.g. WavPack, BytesCodec)
+      3. ``compressors``— BytesBytesCodec  (e.g. BloscCodec, ZstdCodec)
+
+    This allows callers to pass an ArrayBytesCodec (e.g. WavPack) as a
+    compressor and have it placed in the correct serializer slot automatically.
+
+    Parameters
+    ----------
+    filters : ArrayArrayCodec or list of ArrayArrayCodec or None
+        Codec(s) applied before serialization.
+    compressors : codec or list of codecs or None
+        Can be a mix of ArrayBytesCodec (serializer) and BytesBytesCodec
+        (byte-level compressors). At most one ArrayBytesCodec is allowed.
+
+    Returns
+    -------
+    dict
+        Keyword arguments to unpack into ``zarr.Group.create_array()``.
+        Only keys with explicit values are included; omitted keys let zarr
+        use its defaults.
+
+    Raises
+    ------
+    ValueError
+        If filters contain non-ArrayArrayCodec instances, if more than one
+        ArrayBytesCodec is provided, or if an unrecognised codec type is passed.
+    """
+    from zarr.abc.codec import ArrayArrayCodec, ArrayBytesCodec, BytesBytesCodec
+
+    if filters is None:
+        filters = []
+    if not isinstance(filters, (list, tuple)):
+        filters = [filters]
+
+    if compressors is None:
+        compressors = []
+    if not isinstance(compressors, (list, tuple)):
+        compressors = [compressors]
+
+    for f in filters:
+        if not isinstance(f, ArrayArrayCodec):
+            raise ValueError(f"All filters must be ArrayArrayCodec instances, got {type(f)}")
+
+    serializers = [c for c in compressors if isinstance(c, ArrayBytesCodec)]
+    byte_compressors = [c for c in compressors if isinstance(c, BytesBytesCodec)]
+    invalid = [c for c in compressors if not isinstance(c, (ArrayBytesCodec, BytesBytesCodec))]
+
+    if invalid:
+        raise ValueError(
+            f"Compressors must be ArrayBytesCodec or BytesBytesCodec instances, got {[type(c) for c in invalid]}"
+        )
+    if len(serializers) > 1:
+        raise ValueError("Only one ArrayBytesCodec (serializer) is allowed in the codec pipeline.")
+
+    codec_kwargs = {}
+    codec_kwargs["filters"] = filters
+    codec_kwargs["serializer"] = serializers[0] if len(serializers) == 1 else "auto"
+    codec_kwargs["compressors"] = byte_compressors
+    return codec_kwargs
+
+
+def _has_string_fields(dtype: np.dtype) -> bool:
+    """Return True if dtype is or contains fixed-length unicode (U) sub-fields."""
+    if dtype.names:
+        return any(_has_string_fields(dtype.fields[name][0]) for name in dtype.names)
+    return dtype.kind == "U"
+
+
+def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
@@ -415,13 +504,26 @@ def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_o
         if values.dtype.kind == "O":
             warnings.warn(f"Property {key} not saved because it is a python Object type")
             continue
-        prop_group.create_dataset(name=key, data=values, compressor=None)
+        if values.dtype.names and _has_string_fields(values.dtype):
+            # Structured arrays with unicode sub-fields have no stable zarr v3 spec; skip them.
+            # Probe geometry (contact_vector) is already persisted via zarr_group.attrs["probe"].
+            warnings.warn(
+                f"Property '{key}' not saved because it is a structured array with unicode fields, "
+                "which do not have a stable zarr V3 specification."
+            )
+            continue
+        # Use variable-length UTF-8 (stable zarr v3 spec) for unicode arrays.
+        if values.dtype.kind == "U":
+            arr = prop_group.create_array(name=key, shape=values.shape, dtype=str, compressors=None)
+            arr[:] = values
+        else:
+            prop_group.create_array(name=key, data=values, compressors=None)
 
     # save annotations
     zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
 
 
-def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.Group, **kwargs):
+def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kwargs):
     """
     Add a sorting extractor to a zarr group.
 
@@ -429,46 +531,54 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     ----------
     sorting : BaseSorting
         The sorting extractor object to be added to the zarr group
-    zarr_group : zarr.hierarchy.Group
+    zarr_group : zarr.Group
         The zarr group
     kwargs : dict
         Other arguments passed to the zarr compressor
     """
-    from numcodecs import Delta
+    from zarr.codecs.numcodecs import Delta
 
     num_segments = sorting.get_num_segments()
     zarr_group.attrs["sampling_frequency"] = float(sorting.sampling_frequency)
     zarr_group.attrs["num_segments"] = int(num_segments)
-    zarr_group.create_dataset(name="unit_ids", data=sorting.unit_ids, compressor=None)
+    zarr_group.create_array(name="unit_ids", data=sorting.unit_ids, compressors=None)
 
-    compressor = kwargs.get("compressor", get_default_zarr_compressor())
+    compressor = kwargs.get("compressors") or kwargs.get("compressor")
+    if compressor is None:
+        compressor = get_default_zarr_compressor()
 
-    # save sub fields
+    # Save sub fields of spikes as separate arrays to allow for more efficient compression and to
+    # avoid issues with structured arrays with unicode fields in zarr v3.
+    # The "segment_index" field is saved as "segment_slices" which contains the start and end indices of spikes for
+    # each segment, to avoid having a large array of segment indices when there are many spikes.
     spikes_group = zarr_group.create_group(name="spikes")
     spikes = sorting.to_spike_vector()
     for field in spikes.dtype.fields:
         if field != "segment_index":
-            spikes_group.create_dataset(
-                name=field,
-                data=spikes[field],
-                compressor=compressor,
-                filters=[Delta(dtype=spikes[field].dtype)],
-            )
+            dtype = spikes[field].dtype
+            spikes_data = spikes[field]
+            if field == "sample_index":
+                # Delta filter is very effective for spike times (sample_index)
+                filters = [Delta(dtype=spikes[field].dtype.str)]
+            else:
+                filters = None
+            codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressor)
+            spikes_group.create_array(name=field, data=spikes_data, **codec_kwargs)
         else:
             segment_slices = []
             for segment_index in range(num_segments):
                 i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
                 segment_slices.append([i0, i1])
-            spikes_group.create_dataset(name="segment_slices", data=segment_slices, compressor=None)
+            segment_slices = np.array(segment_slices, dtype="int64")
+            spikes_group.create_array(name="segment_slices", data=segment_slices, compressors=None)
 
     add_properties_and_annotations(zarr_group, sorting)
 
 
 # Recording
-def add_recording_to_zarr_group(
-    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, dtype=None, **kwargs
-):
+def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group, verbose=False, dtype=None, **kwargs):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     if recording.check_if_json_serializable():
         zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True))
@@ -478,26 +588,67 @@ def add_recording_to_zarr_group(
     # save data (done the subclass)
     zarr_group.attrs["sampling_frequency"] = float(recording.get_sampling_frequency())
     zarr_group.attrs["num_segments"] = int(recording.get_num_segments())
-    zarr_group.create_dataset(name="channel_ids", data=recording.get_channel_ids(), compressor=None)
+    # Use variable-length UTF-8 (stable zarr v3 spec) instead of fixed-length unicode.
+    channel_ids = recording.get_channel_ids()
+    arr = zarr_group.create_array(name="channel_ids", data=channel_ids, compressors=None)
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
 
+    num_channels = recording.get_num_channels()
     dtype = recording.get_dtype() if dtype is None else dtype
-    channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
-    global_compressor = zarr_kwargs.pop("compressor", get_default_zarr_compressor())
+
+    # Compressors and filters
+    global_compressor = kwargs.get("compressors") or kwargs.get("compressor")
+    if global_compressor is None:
+        global_compressor = get_default_zarr_compressor()
     compressor_by_dataset = zarr_kwargs.pop("compressor_by_dataset", {})
     global_filters = zarr_kwargs.pop("filters", None)
     filters_by_dataset = zarr_kwargs.pop("filters_by_dataset", {})
-
     compressor_traces = compressor_by_dataset.get("traces", global_compressor)
     filters_traces = filters_by_dataset.get("traces", global_filters)
+
+    # Chunking and sharding
+    chunks = zarr_kwargs.get("chunks", None)
+    channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
+    shards = zarr_kwargs.get("shards", None)
+    shard_factor = zarr_kwargs.get("shard_factor", None)
+    if shards is not None and shard_factor is not None:
+        raise ValueError("Cannot specify both 'shards' and 'shard_factor' in zarr_kwargs")
+    if chunks is not None and channel_chunk_size is not None:
+        raise ValueError("Cannot specify both 'chunks' and 'channel_chunk_size' in zarr_kwargs")
+
+    # If not specified by chunk, we set the chunk size in the first dimension (time) to be the chunk size that we use
+    # for the job executor, and the chunk size in the second dimension (channels) to be either the provided
+    # channel_chunk_size or the total number of channels (no chunking in channels).
+    if chunks is not None:
+        job_kwargs["chunk_size"] = chunks[0]
+    else:
+        chunk_size = ensure_chunk_size(recording, **job_kwargs)
+        chunks = (chunk_size, channel_chunk_size if channel_chunk_size is not None else num_channels)
+
+    if shards is not None:
+        assert len(shards) == len(chunks), "Shards and chunks must have the same number of dimensions"
+        for dim in range(len(chunks)):
+            assert (
+                shards[dim] >= chunks[dim] and shards[dim] % chunks[dim] == 0
+            ), "Shard size must be a multiple of chunk size"
+        # When sharding is used, chunk_size in job_kwargs is used to determine the number of samples per chunk to
+        # write in each job. Each process will write all chunks in a shard.
+        job_kwargs["chunk_size"] = shards[0]
+    elif shard_factor is not None:
+        # If shard_factor is provided, we set the shard size to be chunk_size * shard_factor in the first dimension (time),
+        # and to be the at most the total number of channels in the second dimension.
+        shards = (chunks[0] * shard_factor, min(chunks[1] * shard_factor, num_channels))
+        job_kwargs["chunk_size"] = shards[0]
+
     add_traces_to_zarr(
         recording=recording,
         zarr_group=zarr_group,
         dataset_paths=dataset_paths,
-        compressor=compressor_traces,
+        compressors=compressor_traces,
         filters=filters_traces,
         dtype=dtype,
-        channel_chunk_size=channel_chunk_size,
+        chunks=chunks,
+        shards=shards,
         verbose=verbose,
         **job_kwargs,
     )
@@ -517,17 +668,13 @@ def add_recording_to_zarr_group(
         filters_times = filters_by_dataset.get("times", global_filters)
 
         if time_vector is not None:
-            _ = zarr_group.create_dataset(
-                name=f"times_seg{segment_index}",
-                data=time_vector,
-                filters=filters_times,
-                compressor=compressor_times,
-            )
+            codec_kwargs = build_codec_pipeline(filters=filters_times, compressors=compressor_times)
+            zarr_group.create_array(name=f"times_seg{segment_index}", data=time_vector, **codec_kwargs)
         elif d["t_start"] is not None:
             t_starts[segment_index] = d["t_start"]
 
     if np.any(~np.isnan(t_starts)):
-        zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
+        zarr_group.create_array(name="t_starts", data=t_starts, compressors=None)
 
     add_properties_and_annotations(zarr_group, recording)
 
@@ -536,9 +683,10 @@ def add_traces_to_zarr(
     recording,
     zarr_group,
     dataset_paths,
-    channel_chunk_size=None,
+    chunks=None,
+    shards=None,
     dtype=None,
-    compressor=None,
+    compressors=None,
     filters=None,
     verbose=False,
     **job_kwargs,
@@ -554,11 +702,13 @@ def add_traces_to_zarr(
         The zarr group to add traces to
     dataset_paths : list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size : int or None, default: None (chunking in time only)
+    chunks : tuple or None, default: None (chunking in time only)
         Channels per chunk
+    shards : tuple or None, default: None
+        If not None, a tuple of (time, num_chunks_per_shard) to
     dtype : dtype, default: None
         Type of the saved data
-    compressor : zarr compressor or None, default: None
+    compressors : zarr compressor or None, default: None
         Zarr compressor
     filters : list, default: None
         List of zarr filters
@@ -566,12 +716,6 @@ def add_traces_to_zarr(
         If True, output is verbose (when chunks are used)
     {}
     """
-    from .job_tools import (
-        ensure_chunk_size,
-        fix_job_kwargs,
-        ChunkRecordingExecutor,
-    )
-
     assert dataset_paths is not None, "Provide 'file_path'"
 
     if not isinstance(dataset_paths, list):
@@ -581,8 +725,7 @@ def add_traces_to_zarr(
     if dtype is None:
         dtype = recording.get_dtype()
 
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
 
     # create zarr datasets files
     zarr_datasets = []
@@ -591,13 +734,9 @@ def add_traces_to_zarr(
         num_channels = recording.get_num_channels()
         dset_name = dataset_paths[segment_index]
         shape = (num_frames, num_channels)
-        dset = zarr_group.create_dataset(
-            name=dset_name,
-            shape=shape,
-            chunks=(chunk_size, channel_chunk_size),
-            dtype=dtype,
-            filters=filters,
-            compressor=compressor,
+        # In zarr v3, chunks must be a tuple of integers (no None allowed)
+        dset = zarr_group.create_array(
+            name=dset_name, shape=shape, chunks=chunks, shards=shards, dtype=dtype, **codec_kwargs
         )
         zarr_datasets.append(dset)
         # synchronizer=zarr.ThreadSynchronizer())
