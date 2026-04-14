@@ -1593,6 +1593,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
+    # TODO (tayheau): add a safeguard e.g. memory error or SIGINT
     def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "AnalyzerExtension | None":
         """
         Compute one extension or several extensiosn.
@@ -2663,6 +2664,7 @@ class AnalyzerExtension:
 
             zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
+    # TODO (tayheau): add safeguard in writing case
     def _save_data(self):
         if self.format == "memory":
             return
