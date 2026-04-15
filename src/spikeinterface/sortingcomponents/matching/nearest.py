@@ -28,7 +28,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
     detection_radius_um : float, default 100.0
         The radius to define the neighborhood while detecting the peaks for locally exclusive detection.
     neighborhood_radius_um : float, default 50.0
-        The radius to use to select neighbour templates when assigning a detected peak to a template. 
+        The radius to use to select neighbour templates when assigning a detected peak to a template.
         The neighborhood is defined around the extremum channel of the templates.
     sparsity_radius_um : float, default 100.0
         The radius in um to use to compute the sparsity of the templates when the templates are not already sparse.
@@ -79,17 +79,15 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
                 if sparsity_radius_um is not None:
                     sparsity = compute_sparsity(
                         templates, method="radius", radius_um=sparsity_radius_um, peak_sign=self.peak_sign
-                        )
+                    )
                 else:
                     raise ValueError("sparsity_radius_um should be provided if templates are not sparse")
             else:
                 sparsity = templates.sparsity
 
             channel_locations = recording.get_channel_locations()
-            channel_distances = np.linalg.norm(
-                channel_locations[:, None] - channel_locations[np.newaxis, :], axis=2
-            )
-            self.sparsity_support_mask = (channel_distances <= self.support_radius_um)
+            channel_distances = np.linalg.norm(channel_locations[:, None] - channel_locations[np.newaxis, :], axis=2)
+            self.sparsity_support_mask = channel_distances <= self.support_radius_um
         else:
             self.sparsity_mask = np.ones((num_channels, num_channels), dtype=bool)
 
@@ -119,7 +117,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             peak_traces = traces[self.width : -self.width, :]
         else:
             peak_traces = traces
-        
+
         peak_sample_ind, peak_chan_ind = detect_peaks_numba_locally_exclusive_on_chunk(
             peak_traces, self.peak_sign, self.abs_threholds, self.exclude_sweep_size, self.neighbours_mask
         )
@@ -192,7 +190,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
             detection_radius_um=detection_radius_um,
             neighborhood_radius_um=neighborhood_radius_um,
             sparsity_radius_um=sparsity_radius_um,
-            support_radius_um=support_radius_um
+            support_radius_um=support_radius_um,
         )
 
         from spikeinterface.sortingcomponents.waveforms.waveform_utils import (
