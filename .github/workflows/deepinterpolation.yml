@@ -26,7 +26,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.10'
-          enable-cache: true
+          enable-cache: false
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v46.0.1
