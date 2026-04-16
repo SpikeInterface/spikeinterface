@@ -761,3 +761,8 @@ def is_path_remote(path: str | Path) -> bool:
         Whether the path is a remote path.
     """
     return "s3://" in str(path) or "gcs://" in str(path)
+
+
+def ms_to_samples(ms: float, sampling_frequency: float) -> int:
+    """Convert a duration in milliseconds to the nearest number of samples."""
+    return round(ms * sampling_frequency / 1000.0)

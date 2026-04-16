@@ -125,7 +125,7 @@ class ChannelsAggregationRecording(BaseRecording):
                 ch_id += 1
 
         for i_seg in range(num_segments):
-            parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
+            parent_segments = [rec.segments[i_seg] for rec in recording_list]
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 

@@ -11,6 +11,7 @@ from spikeinterface.core import (
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
+    ms_to_samples,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -291,8 +292,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
 
         templates_array = estimate_templates_with_accumulator(
             recording_for_peeler,

@@ -8,6 +8,7 @@ from spikeinterface.core import (
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
+    ms_to_samples,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -332,8 +333,8 @@ class LupinSorter(ComponentsBasedSorter):
         )
 
         # Template are sparse from radius using unit_location
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
         templates_array = estimate_templates_with_accumulator(
             recording,
             sorting_pre_peeler.to_spike_vector(),

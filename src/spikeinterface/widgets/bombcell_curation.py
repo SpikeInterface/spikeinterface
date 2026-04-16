@@ -1,7 +1,5 @@
 """Widgets for visualizing unit labeling results."""
 
-from __future__ import annotations
-
 import warnings
 
 import numpy as np
@@ -18,7 +16,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
     Plot UpSet plots showing which metrics fail together for each unit label after Bombcell
     curation.
 
-    Requires `upsetplot` package.
+    Requires `upsetplot-bombcell` package.
     Each unit label shows relevant metrics based on the threshold dictionary.
 
     Parameters
@@ -105,7 +103,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
             ax.text(
                 0.5,
                 0.5,
-                "UpSet plots require 'upsetplot' package.\n\npip install upsetplot",
+                "UpSet plots require 'upsetplot-bombcell' package.\n\npip install upsetplot-bombcell",
                 ha="center",
                 va="center",
                 fontsize=14,
@@ -226,7 +224,7 @@ def plot_bombcell_unit_labeling_all(
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
     include_upset : bool, default: True
-        Whether to include UpSet plots (requires upsetplot package).
+        Whether to include UpSet plots (requires upsetplot-bombcell package).
     **kwargs
         Additional arguments passed to plot functions.
 

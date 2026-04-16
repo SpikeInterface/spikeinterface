@@ -52,9 +52,7 @@ class BaseRecordingSnippets(BaseExtractor):
             return True
 
     def has_probe(self) -> bool:
-        if self._probegroup is None and self.get_property("contact_vector") is not None:
-            # if contact_vector is present we can reconstruct the probe
-            self._probegroup = self._build_probegroup_from_properties()
+        # probe group is saved and loaded to binary/zarr, so we don't need to check for legacy "contact_vector" property
         return self._probegroup is not None
 
     def has_3d_probe(self) -> bool:
@@ -283,44 +281,39 @@ class BaseRecordingSnippets(BaseExtractor):
         return probegroup.probes
 
     def get_probegroup(self):
-        if self._probegroup is not None:
-            return self._probegroup
-        else:  # Backward compatibility: if contact_vector is present we reconstruct the probe, otherwise we look for
-            probegroup = self._build_probegroup_from_properties()
-            if probegroup is None:
-                raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
-            self._probegroup = probegroup
-            return probegroup
+        if self._probegroup is None:
+            raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
+        return self._probegroup
 
-    def _build_probegroup_from_properties(self):
-        # location and create a dummy probe
-        arr = self.get_property("contact_vector")
-        if arr is None:
-            positions = self.get_property("location")
-            if positions is None:
-                return None
-            else:
-                warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
-                probe = self.create_dummy_probe_from_locations(positions)
-                #  probe.create_auto_shape()
-                probegroup = ProbeGroup()
-                probegroup.add_probe(probe)
-        else:
-            probegroup = ProbeGroup.from_numpy(arr)
+    # def _build_probegroup_from_properties(self):
+    #     # location and create a dummy probe
+    #     arr = self.get_property("contact_vector")
+    #     if arr is None:
+    #         positions = self.get_property("location")
+    #         if positions is None:
+    #             return None
+    #         else:
+    #             warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
+    #             probe = self.create_dummy_probe_from_locations(positions)
+    #             #  probe.create_auto_shape()
+    #             probegroup = ProbeGroup()
+    #             probegroup.add_probe(probe)
+    #     else:
+    #         probegroup = ProbeGroup.from_numpy(arr)
 
-            if "probes_info" in self.get_annotation_keys():
-                probes_info = self.get_annotation("probes_info")
-                for probe, probe_info in zip(probegroup.probes, probes_info):
-                    probe.annotations = probe_info
+    #         if "probes_info" in self.get_annotation_keys():
+    #             probes_info = self.get_annotation("probes_info")
+    #             for probe, probe_info in zip(probegroup.probes, probes_info):
+    #                 probe.annotations = probe_info
 
-            for probe_index, probe in enumerate(probegroup.probes):
-                contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
-                if contour is not None:
-                    probe.set_planar_contour(contour)
-                self.delete_annotation(f"probe_{probe_index}_planar_contour")
-            # delete contact_vector as it is not needed anymore
-            self.delete_property("contact_vector")
-        return probegroup
+    #         for probe_index, probe in enumerate(probegroup.probes):
+    #             contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
+    #             if contour is not None:
+    #                 probe.set_planar_contour(contour)
+    #             self.delete_annotation(f"probe_{probe_index}_planar_contour")
+    #         # delete contact_vector as it is not needed anymore
+    #         self.delete_property("contact_vector")
+    #     return probegroup
 
     def _extra_metadata_copy(self, other):
         if self._probegroup is not None:
@@ -329,15 +322,24 @@ class BaseRecordingSnippets(BaseExtractor):
     def _extra_metadata_from_folder(self, folder):
         # load probe
         folder = Path(folder)
-        if (folder / "probe.json").is_file():
-            probegroup = read_probeinterface(folder / "probe.json")
+        probe_file = folder / "probegroup.json"
+        legacy_probe_file = folder / "probe.json"
+        if probe_file.is_file():
+            probegroup = read_probeinterface(probe_file)
             self.set_probegroup(probegroup, in_place=True)
+        elif legacy_probe_file.is_file():
+            probegroup = read_probeinterface(legacy_probe_file)
+            self.set_probegroup(probegroup, in_place=True)
+
+        # remove "contact_vector" property if present as it is not needed anymore
+        if "contact_vector" in self.get_property_keys():
+            self.delete_property("contact_vector")
 
     def _extra_metadata_to_folder(self, folder):
         # save probe
         if self.has_probe():
             probegroup = self.get_probegroup()
-            write_probeinterface(folder / "probe.json", probegroup)
+            write_probeinterface(folder / "probegroup.json", probegroup)
 
     def _extra_metadata_from_dict(self, dump_dict):
         # load probe
