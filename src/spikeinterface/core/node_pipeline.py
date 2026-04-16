@@ -434,7 +434,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         return max(self.nbefore, self.nafter)
 
     def compute(self, traces, peaks):
-        sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=chunk.dtype)
+        sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=traces.dtype)
 
         for i, peak in enumerate(peaks):
             (chans,) = np.nonzero(self.neighbours_mask[peak["channel_index"]])
