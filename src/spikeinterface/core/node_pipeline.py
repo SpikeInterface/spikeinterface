@@ -246,7 +246,7 @@ class SpikeRetriever(PeakSource):
             local_peaks["in_margin"][:] = False
             mask = local_peaks["sample_index"] < max_margin
             local_peaks["in_margin"][mask] = True
-            mask = local_peaks["sample_index"] >= chunk.shape[0] - max_margin
+            mask = local_peaks["sample_index"] >= traces.shape[0] - max_margin
             local_peaks["in_margin"][mask] = True
 
         if not self.channel_from_template:
