@@ -454,9 +454,11 @@ class TestSortingTimeNoRecording:
         sorting = generate_sorting(num_units=5, durations=[10])
         assert sorting.get_start_time(segment_index=0) == 0.0
 
-    def test_get_end_time_default(self):
+    def test_get_end_time_is_last_spike(self):
         sorting = generate_sorting(num_units=5, durations=[10])
-        assert sorting.get_end_time(segment_index=0) is None
+        last_frame = sorting.get_last_spike_frame(segment_index=0)
+        expected_time = last_frame / sorting.get_sampling_frequency()
+        assert sorting.get_end_time(segment_index=0) == expected_time
 
     def test_get_start_time_with_t_start(self):
         sorting = generate_sorting(num_units=5, durations=[10])
@@ -478,15 +480,16 @@ class TestSortingTimeWithRecording:
         assert sorting.get_start_time(segment_index=0) == recording.get_start_time(segment_index=0)
         assert sorting.get_end_time(segment_index=0) == recording.get_end_time(segment_index=0)
 
-    def test_register_recording_resets_t_start(self):
-        """Registering a recording resets _t_start so the recording is the sole source of truth."""
+    def test_register_recording_sets_t_start_from_recording(self):
+        """Registering a recording copies the recording's start times into the sorting segments."""
         sorting = generate_sorting(num_units=5, durations=[10])
         sorting.segments[0]._t_start = 100.0
 
         recording = generate_recording(num_channels=4, durations=[10])
         sorting.register_recording(recording)
 
-        assert sorting.segments[0]._t_start == 0
+        # _t_start was overwritten with the recording's start time
+        assert sorting.segments[0]._t_start == recording.get_start_time(segment_index=0)
         assert sorting.get_start_time(segment_index=0) == recording.get_start_time(segment_index=0)
 
     def test_with_recording_shifted_start(self):
