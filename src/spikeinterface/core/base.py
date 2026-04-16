@@ -470,7 +470,7 @@ class BaseExtractor:
         if not only_main:
             self._extra_metadata_copy(other)
 
-    def _extra_metadata_copy(self, other: BaseExtractor):
+    def _extra_metadata_copy(self, other: "BaseExtractor") -> None:
         """
         This is a hook to copy extra metadata that is not in the annotations/properties dict.
         """
