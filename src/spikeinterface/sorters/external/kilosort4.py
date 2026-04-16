@@ -455,6 +455,11 @@ class Kilosort4Sorter(BaseSorter):
             if (sorter_output_folder / "recording.dat").is_file():
                 (sorter_output_folder / "recording.dat").unlink()
 
+        # close logger
+        for handler in logger.handlers.copy():
+            logger.removeHandler(handler)
+            handler.close()
+
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         return KilosortBase._get_result_from_folder(sorter_output_folder)
@@ -486,11 +491,6 @@ class Kilosort4Sorter(BaseSorter):
             "n_chan": n_chan,
         }
         save_probe(probe, str(sorter_output_folder / "chanMap.json"))
-
-        # close logger
-        for handler in logger.handlers.copy():
-            logger.removeHandler(handler)
-            handler.close()
 
 
 def read_kilosort4_motion(sorter_output_folder: str | Path, recording: BaseRecording | None = None) -> Motion:
