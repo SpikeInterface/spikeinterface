@@ -80,7 +80,7 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
 
         self._dtype = np.dtype(dtype_localize_by_method["monopolar_triangulation"])
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):

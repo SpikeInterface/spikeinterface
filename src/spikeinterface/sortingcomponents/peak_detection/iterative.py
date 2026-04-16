@@ -56,7 +56,7 @@ class IterativePeakDetector(PeakDetector):
         self.num_iterations = num_iterations
         self.tresholds = tresholds
 
-    def get_data_margin(self) -> int:
+    def get_margin(self) -> int:
         """
         Calculate the maximum trace margin from the internal pipeline.
         Using the strategy as use by the Node pipeline
@@ -68,10 +68,10 @@ class IterativePeakDetector(PeakDetector):
             The maximum trace margin.
         """
         internal_pipeline = (self.peak_detector_node, self.waveform_extraction_node, self.waveform_denoising_node)
-        pipeline_margin = [node.get_data_margin() for node in internal_pipeline]
+        pipeline_margin = [node.get_margin() for node in internal_pipeline]
         return max(pipeline_margin)
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform the iterative peak detection, waveform extraction, and denoising.
 
@@ -94,7 +94,7 @@ class IterativePeakDetector(PeakDetector):
             A tuple containing a single ndarray with the detected peaks.
         """
 
-        traces_chunk = np.array(chunk, copy=True, dtype="float32")
+        traces_chunk = np.array(traces, copy=True, dtype="float32")
         local_peaks_list = []
         all_waveforms = []
 

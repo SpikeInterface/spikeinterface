@@ -42,6 +42,6 @@ class HanningFilter(WaveformsNode):
         self.hanning = hanning[:, None]
         self._kwargs.update(dict())
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         denoised_waveforms = waveforms * self.hanning
         return denoised_waveforms

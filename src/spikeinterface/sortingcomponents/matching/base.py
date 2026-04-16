@@ -26,16 +26,16 @@ class BaseTemplateMatching(PeakDetector):
     def get_dtype(self):
         return np.dtype(_base_matching_dtype)
 
-    def get_data_margin(self):
+    def get_margin(self):
         raise NotImplementedError
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
-        spikes = self.compute_matching(chunk, start_frame, end_frame, segment_index)
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+        spikes = self.compute_matching(traces, start_frame, end_frame, segment_index)
         spikes["segment_index"] = segment_index
 
-        margin = self.get_data_margin()
+        margin = self.get_margin()
         if margin > 0 and spikes.size > 0:
-            keep = (spikes["sample_index"] >= margin) & (spikes["sample_index"] < (chunk.shape[0] - margin))
+            keep = (spikes["sample_index"] >= margin) & (spikes["sample_index"] < (traces.shape[0] - margin))
             spikes = spikes[keep]
 
         # node pipeline need to return a tuple

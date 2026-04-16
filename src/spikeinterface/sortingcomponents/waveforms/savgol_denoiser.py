@@ -49,7 +49,7 @@ class SavGolDenoiser(WaveformsNode):
         self.order = min(self.order, self.window_length - 1)
         self._kwargs.update(dict(order=order, window_length_ms=window_length_ms))
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         # Denoise
         import scipy.signal
 

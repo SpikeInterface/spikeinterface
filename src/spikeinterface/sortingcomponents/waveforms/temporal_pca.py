@@ -216,7 +216,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         self.n_components = self.pca_model.n_components
         self.dtype = np.dtype(dtype)
 
-    def compute(self, chunk: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
@@ -285,7 +285,7 @@ class TemporalPCADenoising(TemporalPCBaseNode):
             model_folder_path=model_folder_path,
         )
 
-    def compute(self, chunk: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
@@ -374,7 +374,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         # this is the final sparse channel count
         self.out_num_channels = max(np.sum(self.final_sparsity_mask, axis=1))
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin, peaks, waveforms) -> np.ndarray:
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peaks, waveforms) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 

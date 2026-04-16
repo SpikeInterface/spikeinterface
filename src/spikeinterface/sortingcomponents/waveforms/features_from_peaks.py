@@ -97,7 +97,7 @@ class AmplitudeFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         if self.all_channels:
             if self.peak_sign == "neg":
                 amplitudes = np.min(waveforms, axis=1)
@@ -131,7 +131,7 @@ class PeakToPeakFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         if self.all_channels:
             all_ptps = np.ptp(waveforms, axis=1)
         else:
@@ -182,7 +182,7 @@ class RandomProjectionsFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
 
         for main_chan in np.unique(peaks["channel_index"]):

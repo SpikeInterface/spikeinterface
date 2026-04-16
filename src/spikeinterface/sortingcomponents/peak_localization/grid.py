@@ -120,7 +120,7 @@ class LocalizeGridConvolution(LocalizeBase):
             )
         )
 
-    def compute(self, chunk, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
         nb_weights = self.weights.shape[0]
 

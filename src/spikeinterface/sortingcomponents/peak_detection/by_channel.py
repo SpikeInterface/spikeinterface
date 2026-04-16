@@ -56,11 +56,10 @@ class ByChannelPeakDetector(PeakDetector):
         self.peak_sign = peak_sign
         self.detect_threshold = detect_threshold
 
-    def get_data_margin(self):
+    def get_margin(self):
         return self.exclude_sweep_size
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
-        traces = chunk
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         traces_center = traces[self.exclude_sweep_size : -self.exclude_sweep_size, :]
         length = traces_center.shape[0]
 
@@ -162,8 +161,7 @@ class ByChannelTorchPeakDetector(ByChannelPeakDetector):
             self.device = device
         self.return_tensor = return_tensor
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin):
-        traces = chunk
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         peak_sample_ind, peak_chan_ind, peak_amplitude = _torch_detect_peaks(
             traces, self.peak_sign, self.abs_thresholds, self.exclude_sweep_size, None, self.device
         )

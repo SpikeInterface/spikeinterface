@@ -55,7 +55,7 @@ class PipelineNode:
 
         self._kwargs = dict()
 
-    def get_data_margin(self):
+    def get_margin(self):
         # can optionaly be overwritten
         return 0
 
@@ -77,7 +77,7 @@ class PeakSource(PipelineNode):
     # between processes or threads
     need_first_call_before_pipeline = False
 
-    def get_data_margin(self):
+    def get_margin(self):
         raise NotImplementedError
 
     def get_dtype(self):
@@ -94,7 +94,7 @@ class PeakSource(PipelineNode):
 
     def _first_call_before_pipeline(self):
         # see need_first_call_before_pipeline = True
-        margin = self.get_data_margin()
+        margin = self.get_margin()
         traces = self.recording.get_traces(start_frame=0, end_frame=margin * 2 + 1, segment_index=0)
         self.compute(traces, 0, margin * 2 + 1, 0, margin)
 
@@ -117,7 +117,7 @@ class PeakRetriever(PeakSource):
             i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
-    def get_data_margin(self):
+    def get_margin(self):
         return 0
 
     def get_dtype(self):
@@ -129,7 +129,7 @@ class PeakRetriever(PeakSource):
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         return i0, i1
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin, peak_slice):
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
@@ -212,7 +212,7 @@ class SpikeRetriever(PeakSource):
             i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
-    def get_data_margin(self):
+    def get_margin(self):
         return 0
 
     def get_dtype(self):
@@ -229,7 +229,7 @@ class SpikeRetriever(PeakSource):
             i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         return i0, i1
 
-    def compute(self, chunk, start_frame, end_frame, segment_index, max_margin, peak_slice):
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
@@ -362,10 +362,10 @@ class ExtractDenseWaveforms(WaveformsNode):
             return_output=return_output,
         )
 
-    def get_data_margin(self):
+    def get_margin(self):
         return max(self.nbefore, self.nafter)
 
-    def compute(self, chunk, peaks):
+    def compute(self, traces, peaks):
         waveforms = chunk[peaks["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
 
@@ -430,10 +430,10 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
-    def get_data_margin(self):
+    def get_margin(self):
         return max(self.nbefore, self.nafter)
 
-    def compute(self, chunk, peaks):
+    def compute(self, traces, peaks):
         sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=chunk.dtype)
 
         for i, peak in enumerate(peaks):
@@ -649,7 +649,7 @@ def _init_peak_pipeline(chunkable, nodes, skip_after_n_peaks_per_worker):
     worker_ctx = {}
     worker_ctx["chunkable"] = chunkable
     worker_ctx["nodes"] = nodes
-    worker_ctx["max_margin"] = max(node.get_data_margin() for node in nodes)
+    worker_ctx["max_margin"] = max(node.get_margin() for node in nodes)
     worker_ctx["skip_after_n_peaks_per_worker"] = skip_after_n_peaks_per_worker
     worker_ctx["num_peaks"] = 0
     return worker_ctx
@@ -697,7 +697,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 # to handle compatibility peak detector is a special case
                 # with specific margin
                 #  TODO later when in master: change this later
-                extra_margin = max_margin - node.get_data_margin()
+                extra_margin = max_margin - node.get_margin()
                 if extra_margin:
                     trace_detection = traces_chunk[extra_margin:-extra_margin]
                 else:
