@@ -1,7 +1,7 @@
 import warnings
 from packaging import version
 
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary_recording, Motion
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
 from spikeinterface.sorters.basesorter import get_job_kwargs
@@ -484,3 +484,52 @@ class Kilosort4Sorter(BaseSorter):
             "n_chan": n_chan,
         }
         save_probe(probe, str(sorter_output_folder / "chanMap.json"))
+
+        # close logger
+        for handler in logger.handlers.copy():
+            logger.removeHandler(handler)
+            handler.close()
+
+
+def read_kilosort4_motion(sorter_output_folder: str | Path, recording: BaseRecording | None = None) -> Motion:
+    """Reads the motion information from a Kilosort4 output folder and returns a Motion object.
+
+    Parameters
+    ----------
+    sorter_output_folder: str or Path
+        The path to the Kilosort4 output folder.
+    recording: BaseRecording, optional
+        The recording object. If provided, the temporal bins will be estimated based on the recording's
+        start and end times. If not provided, the temporal bins will be estimated based on the number
+        of batches in the ops file.
+
+    Returns
+    -------
+    Motion
+        A Motion object containing the displacement, temporal bins, and spatial bins.
+
+    """
+    sorter_output_folder = Path(sorter_output_folder)
+    ops_file = sorter_output_folder / "ops.npy"
+    if not ops_file.is_file():
+        raise FileNotFoundError("'ops.npy' file not found!")
+    ops = np.load(ops_file, allow_pickle=True).item()
+    yblk = ops.get("yblk")
+    dshift = ops.get("dshift")
+    if yblk is None or dshift is None:
+        raise Exception("'yblk' and 'dshift' fields not found in ops file!")
+    displacement = dshift + yblk
+    spatial_bins_um = yblk
+    # estimate temporal bins
+    batch_size = ops["batch_size"]
+    fs = ops["fs"]
+    t_bin = batch_size / fs
+    if recording is not None:
+        t_start = recording.get_start_time()
+        t_end = recording.get_end_time()
+        temporal_bins_s = np.linspace(t_start + t_bin / 2, t_end - t_bin / 2)
+    else:
+        temporal_bins_s = np.arange(displacement.shape[0]) * t_bin + t_bin / 2
+
+    motion = Motion(displacement=displacement, temporal_bins_s=temporal_bins_s, spatial_bins_um=spatial_bins_um)
+    return motion
