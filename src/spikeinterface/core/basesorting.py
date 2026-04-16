@@ -322,6 +322,11 @@ class BaseSorting(BaseExtractor):
                     "Might be necessary for further postprocessing."
                 )
         self._recording = recording
+        # The recording is now the source of truth for timestamps.
+        # Reset the sorting's own time offset so it doesn't conflict
+        # with the recording's t_start when accessed through get_start_time/get_end_time.
+        for segment in self.segments:
+            segment._t_start = 0
 
     @property
     def sorting_info(self):
@@ -346,6 +351,51 @@ class BaseSorting(BaseExtractor):
             return self._recording.has_time_vector(segment_index=segment_index)
         else:
             return False
+
+    def get_start_time(self, segment_index: int | None = None) -> float:
+        """Get the start time of the sorting segment.
+
+        If a recording is registered, returns the recording's start time.
+        Otherwise returns the sorting segment's own t_start (or 0.0).
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The start time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.get_start_time(segment_index=segment_index)
+        else:
+            segment = self.segments[segment_index]
+            return segment._t_start if segment._t_start is not None else 0.0
+
+    def get_end_time(self, segment_index: int | None = None) -> float | None:
+        """Get the end time of the sorting segment.
+
+        If a recording is registered, returns the recording's end time.
+        Otherwise returns None (the sorting doesn't know the recording duration).
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float or None
+            The end time in seconds, or None if no recording is registered.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.get_end_time(segment_index=segment_index)
+        else:
+            return None
 
     def get_times(self, segment_index=None):
         """

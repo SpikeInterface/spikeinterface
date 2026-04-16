@@ -445,3 +445,56 @@ def test_shift_times_with_None_as_t_start():
     assert recording.segments[0].t_start is None
     recording.shift_times(shift=1.0)  # Shift by one seconds should not generate an error
     assert recording.get_start_time() == 1.0
+
+
+class TestSortingTimeNoRecording:
+    """Tests for time methods on BaseSorting without a registered recording."""
+
+    def test_get_start_time_default(self):
+        sorting = generate_sorting(num_units=5, durations=[10])
+        assert sorting.get_start_time(segment_index=0) == 0.0
+
+    def test_get_end_time_default(self):
+        sorting = generate_sorting(num_units=5, durations=[10])
+        assert sorting.get_end_time(segment_index=0) is None
+
+    def test_get_start_time_with_t_start(self):
+        sorting = generate_sorting(num_units=5, durations=[10])
+        sorting.segments[0]._t_start = 100.0
+        assert sorting.get_start_time(segment_index=0) == 100.0
+
+
+class TestSortingTimeWithRecording:
+    """
+    Tests for time methods on BaseSorting with a registered recording.
+    The key invariant: the recording is the source of truth for timestamps.
+    """
+
+    def test_get_start_end_time(self):
+        recording = generate_recording(num_channels=4, durations=[10])
+        sorting = generate_sorting(num_units=5, durations=[10])
+        sorting.register_recording(recording)
+
+        assert sorting.get_start_time(segment_index=0) == recording.get_start_time(segment_index=0)
+        assert sorting.get_end_time(segment_index=0) == recording.get_end_time(segment_index=0)
+
+    def test_register_recording_resets_t_start(self):
+        """Registering a recording resets _t_start so the recording is the sole source of truth."""
+        sorting = generate_sorting(num_units=5, durations=[10])
+        sorting.segments[0]._t_start = 100.0
+
+        recording = generate_recording(num_channels=4, durations=[10])
+        sorting.register_recording(recording)
+
+        assert sorting.segments[0]._t_start == 0
+        assert sorting.get_start_time(segment_index=0) == recording.get_start_time(segment_index=0)
+
+    def test_with_recording_shifted_start(self):
+        """Recording with a non-zero t_start is reflected in the sorting."""
+        recording = generate_recording(num_channels=4, durations=[10])
+        recording.shift_times(shift=50.0)
+
+        sorting = generate_sorting(num_units=5, durations=[10])
+        sorting.register_recording(recording)
+
+        assert sorting.get_start_time(segment_index=0) == 50.0
