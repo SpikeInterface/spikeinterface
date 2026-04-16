@@ -220,6 +220,14 @@ class BaseExtractor:
         return ind
 
     def annotate(self, **new_annotations) -> None:
+        """Adds annotations.
+
+        Parameters
+        ----------
+        **new_annotations : dict
+            Key-value pairs of annotations to add. If an annotation key already exists,
+            it will be overwritten.
+        """
         self._annotations.update(new_annotations)
 
     def set_annotation(self, annotation_key: str, value: Any, overwrite=False) -> None:
@@ -242,6 +250,24 @@ class BaseExtractor:
                 self._annotations[annotation_key] = value
             else:
                 raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
+
+    def delete_annotation(self, annotation_key: str) -> None:
+        """Deletes existing annotation.
+
+        Parameters
+        ----------
+        annotation_key : str
+            The annotation key to delete
+
+        Raises
+        ------
+        ValueError
+            If the annotation key does not exist
+        """
+        if annotation_key in self._annotations.keys():
+            del self._annotations[annotation_key]
+        else:
+            raise ValueError(f"{annotation_key} is not an annotation key")
 
     def get_preferred_mp_context(self):
         """
@@ -441,6 +467,15 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
+        if not only_main:
+            self._extra_metadata_copy(other)
+
+    def _extra_metadata_copy(self, other: "BaseExtractor") -> None:
+        """
+        This is a hook to copy extra metadata that is not in the annotations/properties dict.
+        """
+        pass
+
     def to_dict(
         self,
         include_annotations: bool = False,
@@ -574,6 +609,8 @@ class BaseExtractor:
                 folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
+        self._extra_metadata_to_dict(dump_dict)
+
         return dump_dict
 
     @staticmethod
@@ -610,8 +647,6 @@ class BaseExtractor:
         # hack to load probe for recording
         folder_metadata = Path(folder_metadata)
 
-        self._extra_metadata_from_folder(folder_metadata)
-
         # load properties
         prop_folder = folder_metadata / "properties"
         if prop_folder.is_dir():
@@ -620,6 +655,8 @@ class BaseExtractor:
                     values = np.load(prop_file, allow_pickle=True)
                     key = prop_file.stem
                     self.set_property(key, values)
+
+        self._extra_metadata_from_folder(folder_metadata)
 
     def save_metadata_to_folder(self, folder_metadata):
         self._extra_metadata_to_folder(folder_metadata)
@@ -862,6 +899,14 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
+    def _extra_metadata_from_dict(self, dump_dict):
+        # This implemented in BaseRecording for probe
+        pass
+
+    def _extra_metadata_to_dict(self, dump_dict):
+        # This implemented in BaseRecording for probe
+        pass
+
     def save(self, **kwargs) -> "BaseExtractor":
         """
         Save a SpikeInterface object.
@@ -997,10 +1042,10 @@ class BaseExtractor:
         else:
             warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
-        self.save_metadata_to_folder(folder)
-
         # save data (done the subclass)
+        self.save_metadata_to_folder(folder)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
+        cached.load_metadata_from_folder(folder)
 
         # copy properties/
         self.copy_metadata(cached)
@@ -1160,6 +1205,8 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
         extractor.set_property(k, v)
+
+    extractor._extra_metadata_from_dict(dic)
 
     return extractor
 

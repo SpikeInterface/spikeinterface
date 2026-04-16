@@ -177,7 +177,7 @@ class ZarrRecordingExtractor(BaseRecording):
                 total_nbytes_stored += nbytes_stored_segment
 
         # load probe
-        probe_dict = self._root.attrs.get("probe", None)
+        probe_dict = self._root.attrs.get("probegroup", self._root.attrs.get("probe", None))
         if probe_dict is not None:
             probegroup = ProbeGroup.from_dict(probe_dict)
             self.set_probegroup(probegroup, in_place=True)
@@ -503,9 +503,9 @@ def add_recording_to_zarr_group(
     )
 
     # save probe
-    if recording.get_property("contact_vector") is not None:
+    if recording.has_probe():
         probegroup = recording.get_probegroup()
-        zarr_group.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
+        zarr_group.attrs["probegroup"] = check_json(probegroup.to_dict(array_as_list=True))
 
     # save time vector if any
     t_starts = np.zeros(recording.get_num_segments(), dtype="float64") * np.nan

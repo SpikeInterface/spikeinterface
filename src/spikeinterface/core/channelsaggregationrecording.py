@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 
+from probeinterface import ProbeGroup
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
@@ -90,31 +91,28 @@ class ChannelsAggregationRecording(BaseRecording):
                             break
 
         for prop_name, prop_values in property_dict.items():
-            if prop_name == "contact_vector":
-                # remap device channel indices correctly
-                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
-        # if locations are present, check that they are all different!
-        if "location" in self.get_property_keys():
-            location_tuple = [tuple(loc) for loc in self.get_property("location")]
-            assert len(set(location_tuple)) == self.get_num_channels(), (
-                "Locations are not unique! " "Cannot aggregate recordings!"
-            )
+        # Aggregate probe information
+        all_probegroups = [rec.get_probegroup() for rec in recording_list if rec.has_probe()]
+        if len(all_probegroups) == len(recording_list):
+            # check that contact positions are unique across all recordings
+            all_positions = []
+            for probegroup in all_probegroups:
+                for probe in probegroup.probes:
+                    all_positions.extend(probe.contact_positions)
+            assert len(np.unique(np.array(all_positions), axis=0)) == len(
+                all_positions
+            ), "Contact positions are not unique! Cannot aggregate recordings."
 
-        planar_contour_keys = [
-            key for recording in recording_list for key in recording.get_annotation_keys() if "planar_contour" in key
-        ]
-        if len(planar_contour_keys) > 0:
-            if all(
-                k == planar_contour_keys[0] for k in planar_contour_keys
-            ):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
-                planar_contour_key = planar_contour_keys[0]
-                collect_planar_contours = []
-                for rec in recording_list:
-                    collect_planar_contours.append(rec.get_annotation(planar_contour_key))
-                if all(np.array_equal(arr, collect_planar_contours[0]) for arr in collect_planar_contours):
-                    self.set_annotation(planar_contour_key, collect_planar_contours[0])
+            # Now make a new probegroup with all probes and set global device channel indices
+            all_probes = []
+            for probegroup in all_probegroups:
+                all_probes.extend([p.copy() for p in probegroup.probes])
+            probegroup_agg = ProbeGroup()
+            probegroup_agg.probes = all_probes
+            probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
+            self.set_probegroup(probegroup_agg, in_place=True, raise_if_overlapping_probes=False)
 
         # finally add segments, we need a channel mapping
         ch_id = 0

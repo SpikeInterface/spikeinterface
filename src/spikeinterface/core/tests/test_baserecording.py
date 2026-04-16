@@ -196,7 +196,13 @@ def test_BaseRecording(create_cache_folder):
     probe.create_auto_shape()
 
     rec_p = rec.set_probe(probe, group_mode="auto")
+    positions2 = rec_p.get_channel_locations()
+    assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
+
     rec_p = rec.set_probe(probe, group_mode="by_shank")
+    positions2 = rec_p.get_channel_locations()
+    assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
+
     rec_p = rec.set_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
@@ -204,7 +210,6 @@ def test_BaseRecording(create_cache_folder):
     probe2 = rec_p.get_probe()
     positions3 = probe2.contact_positions
     assert np.array_equal(positions2, positions3)
-
     assert np.array_equal(probe2.device_channel_indices, [0, 1])
 
     # test save with probe
@@ -284,8 +289,9 @@ def test_BaseRecording(create_cache_folder):
     rec_int16.set_property("offset_to_uV", [0.0] * 5)
 
     # Test deprecated return_scaled parameter
-    traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
-    assert traces_float32_old.dtype == "float32"
+    with pytest.warns(DeprecationWarning, match="`return_scaled` is deprecated"):
+        traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
+        assert traces_float32_old.dtype == "float32"
 
     # Test new return_in_uV parameter
     traces_float32_new = rec_int16.get_traces(return_in_uV=True)
@@ -342,7 +348,7 @@ def test_BaseRecording(create_cache_folder):
 
     # test 3d probe
     rec_3d = generate_recording(ndim=3, num_channels=30)
-    locations_3d = rec_3d.get_property("location")
+    locations_3d = rec_3d.get_probe().contact_positions
 
     locations_xy = rec_3d.get_channel_locations(axes="xy")
     assert np.allclose(locations_xy, locations_3d[:, [0, 1]])
@@ -411,8 +417,8 @@ def test_json_pickle_equivalence(create_cache_folder):
 
     for key, value in data_json.items():
         # skip probe info, since pickle keeps some additional information
-        if key not in ["properties"]:
-            if isinstance(value, dict):
+        if key not in ["properties", "probegroup"]:
+            if isinstance(value, dict) and isinstance(data_pickle[key], dict):
                 for sub_key, sub_value in value.items():
                     assert np.all(sub_value == data_pickle[key][sub_key])
             else:
