@@ -31,11 +31,13 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 cache_dir=None,
             )
         except:
+            print("Skipping test due to server being down.")
             pytest.skip("Skipping test due to server being down.")
         try:
             cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 503:
+                print("Skipping test due to server being down (HTTP 503).")
                 pytest.skip("Skipping test due to server being down (HTTP 503).")
             else:
                 raise
@@ -68,11 +70,11 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
     def test_gains(self):
         expected_gains = 2.34375 * np.ones(shape=384)
-        assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
+        assert_array_equal(self.recording.get_channel_gains(), expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=384)
-        assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
+        assert_array_equal(self.recording.get_channel_offsets(), expected_offsets)
 
     def test_probe_representation(self):
         probe = self.recording.get_probe()
@@ -143,11 +145,11 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
     def test_gains(self):
         expected_gains = np.concatenate([2.34375 * np.ones(shape=384), [1171.875]])
-        assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
+        assert_array_equal(self.recording.get_channel_gains(), expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=385)
-        assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
+        assert_array_equal(self.recording.get_channel_offsets(), expected_offsets)
 
     def test_probe_representation(self):
         expected_exception = ValueError
