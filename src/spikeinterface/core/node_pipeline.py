@@ -253,7 +253,7 @@ class SpikeRetriever(PeakSource):
             # handle channel spike per spike
             for i, peak in enumerate(local_peaks):
                 chans = np.flatnonzero(self.neighbours_mask[peak["channel_index"]])
-                sparse_wfs = chunk[peak["sample_index"], chans]
+                sparse_wfs = traces[peak["sample_index"], chans]
                 if self.peak_sign == "neg":
                     local_peaks[i]["channel_index"] = chans[np.argmin(sparse_wfs)]
                 elif self.peak_sign == "pos":
@@ -263,7 +263,7 @@ class SpikeRetriever(PeakSource):
 
         # handle amplitude
         for i, peak in enumerate(local_peaks):
-            local_peaks["amplitude"][i] = chunk[peak["sample_index"], peak["channel_index"]]
+            local_peaks["amplitude"][i] = traces[peak["sample_index"], peak["channel_index"]]
 
         return (local_peaks,)
 
@@ -366,7 +366,7 @@ class ExtractDenseWaveforms(WaveformsNode):
         return max(self.nbefore, self.nafter)
 
     def compute(self, traces, peaks):
-        waveforms = chunk[peaks["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
+        waveforms = traces[peaks["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
 
 
@@ -438,7 +438,7 @@ class ExtractSparseWaveforms(WaveformsNode):
 
         for i, peak in enumerate(peaks):
             (chans,) = np.nonzero(self.neighbours_mask[peak["channel_index"]])
-            sparse_wfs[i, :, : len(chans)] = chunk[
+            sparse_wfs[i, :, : len(chans)] = traces[
                 peak["sample_index"] - self.nbefore : peak["sample_index"] + self.nafter, :
             ][:, chans]
 
