@@ -44,8 +44,7 @@ from .generate import (
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
     generate_templates,
-    NoiseGeneratorRecording,
-    noise_generator_recording,
+    MockRecording,
     generate_recording_by_size,
     InjectTemplatesRecording,
     inject_templates,
@@ -190,3 +189,25 @@ from .waveforms_extractor_backwards_compatibility import (
     load_waveforms,
     load_sorting_analyzer_or_waveforms,
 )
+
+
+def __getattr__(name):
+    if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
+        import warnings
+
+        warnings.warn(
+            f"Importing {name} from spikeinterface.core is deprecated. "
+            f"Import from spikeinterface.generation instead: "
+            f"`from spikeinterface.generation import {name}`. "
+            f"This will be removed in version 0.103.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from spikeinterface.generation.noise_tools import NoiseGeneratorRecording, noise_generator_recording
+
+        _map = {
+            "NoiseGeneratorRecording": NoiseGeneratorRecording,
+            "noise_generator_recording": noise_generator_recording,
+        }
+        return _map[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -60,7 +60,7 @@ def generate_recording(
     """
     seed = _ensure_seed(seed)
 
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -1227,9 +1227,13 @@ class SortingGeneratorSegment(BaseSortingSegment):
 
 
 ## Noise generator zone ##
-class NoiseGeneratorRecording(BaseRecording):
+class MockRecording(BaseRecording):
     """
-    A lazy recording that generates white noise samples if and only if `get_traces` is called.
+    A lazy recording that generates unit-variance white noise samples if and only if `get_traces` is called.
+
+    This is a lightweight testing utility for infrastructure tests, memory profiling, and benchmarks.
+    For noise with spatial correlations or per-channel noise levels, use
+    ``spikeinterface.generation.NoiseGeneratorRecording``.
 
     This done by tiling small noise chunk.
 
@@ -1246,10 +1250,6 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : list[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_levels : float | np.ndarray, default: 1.0
-        Std of the white noise (if an array, defined by per channels)
-    cov_matrix : np.ndarray | None, default: None
-        The covariance matrix of the noise
     dtype : np.dtype | str | None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
@@ -1274,37 +1274,21 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: list[float],
-        noise_levels: float | np.ndarray = 1.0,
-        cov_matrix: np.ndarray | None = None,
         dtype: np.dtype | str | None = "float32",
         seed: int | None = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
 
-        channel_ids = [str(idx) for idx in np.arange(num_channels)]
+        channel_ids = [str(index) for index in np.arange(num_channels)]
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
         assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
-        if np.isscalar(noise_levels):
-            noise_levels = np.ones((1, num_channels)) * noise_levels
-        else:
-            noise_levels = np.asarray(noise_levels)
-            if len(noise_levels.shape) < 2:
-                noise_levels = noise_levels[np.newaxis, :]
-
-        assert len(noise_levels[0]) == num_channels, "Noise levels should have a size of num_channels"
-
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
         num_segments = len(durations)
-
-        if cov_matrix is not None:
-            assert (
-                cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels
-            ), "cov_matrix should have a size (num_channels, num_channels)"
 
         # very important here when multiprocessing and dump/load
         seed = _ensure_seed(seed)
@@ -1315,13 +1299,11 @@ class NoiseGeneratorRecording(BaseRecording):
 
         for i in range(num_segments):
             num_samples = int(durations[i] * sampling_frequency)
-            rec_segment = NoiseGeneratorRecordingSegment(
+            rec_segment = MockRecordingSegment(
                 num_samples,
                 num_channels,
                 sampling_frequency,
                 noise_block_size,
-                noise_levels,
-                cov_matrix,
                 dtype,
                 segments_seeds[i],
                 strategy,
@@ -1332,8 +1314,6 @@ class NoiseGeneratorRecording(BaseRecording):
             "num_channels": num_channels,
             "durations": durations,
             "sampling_frequency": sampling_frequency,
-            "noise_levels": noise_levels,
-            "cov_matrix": cov_matrix,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
@@ -1341,15 +1321,13 @@ class NoiseGeneratorRecording(BaseRecording):
         }
 
 
-class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
+class MockRecordingSegment(BaseRecordingSegment):
     def __init__(
         self,
         num_samples,
         num_channels,
         sampling_frequency,
         noise_block_size,
-        noise_levels,
-        cov_matrix,
         dtype,
         seed,
         strategy,
@@ -1361,24 +1339,13 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = num_samples
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
-        self.noise_levels = noise_levels
-        self.cov_matrix = cov_matrix
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
 
         if self.strategy == "tile_pregenerated":
             rng = np.random.default_rng(seed=self.seed)
-
-            if self.cov_matrix is None:
-                self.noise_block = (
-                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                    * noise_levels
-                )
-            else:
-                self.noise_block = rng.multivariate_normal(
-                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                )
+            self.noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
 
         elif self.strategy == "on_the_fly":
             pass
@@ -1413,14 +1380,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
                 noise_block = self.noise_block
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
-                if self.cov_matrix is None:
-                    noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                else:
-                    noise_block = rng.multivariate_normal(
-                        np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                    )
-
-                noise_block *= self.noise_levels
+                noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
@@ -1443,16 +1403,11 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-noise_generator_recording = define_function_from_class(
-    source_class=NoiseGeneratorRecording, name="noise_generator_recording"
-)
-
-
 def generate_recording_by_size(
     full_traces_size_GiB: float,
     seed: int | None = None,
     strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
-) -> NoiseGeneratorRecording:
+) -> MockRecording:
     """
     Generate a large lazy recording.
     This is a convenience wrapper around the NoiseGeneratorRecording class where only
@@ -1490,7 +1445,7 @@ def generate_recording_by_size(
     num_samples = int(full_traces_size_bytes / (num_channels * dtype.itemsize))
     durations = [num_samples / sampling_frequency]
 
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
@@ -2456,6 +2411,8 @@ def generate_ground_truth_recording(
     assert (nbefore + nafter) == templates.shape[1]
 
     # construct recording
+    from spikeinterface.generation.noise_tools import NoiseGeneratorRecording
+
     noise_rec = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -2482,3 +2439,25 @@ def generate_ground_truth_recording(
     sorting.name = "GroundTruthSorting"
 
     return recording, sorting
+
+
+def __getattr__(name):
+    if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
+        import warnings
+
+        warnings.warn(
+            f"Importing {name} from spikeinterface.core.generate is deprecated. "
+            f"Import from spikeinterface.generation instead: "
+            f"`from spikeinterface.generation import {name}`. "
+            f"This will be removed in version 0.103.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from spikeinterface.generation.noise_tools import NoiseGeneratorRecording, noise_generator_recording
+
+        _map = {
+            "NoiseGeneratorRecording": NoiseGeneratorRecording,
+            "noise_generator_recording": noise_generator_recording,
+        }
+        return _map[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
