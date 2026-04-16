@@ -1,5 +1,7 @@
 import warnings
+from pathlib import Path
 from packaging import version
+
 
 from spikeinterface.core import write_binary_recording, Motion
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
