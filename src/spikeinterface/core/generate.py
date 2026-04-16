@@ -2449,7 +2449,7 @@ def __getattr__(name):
             f"Importing {name} from spikeinterface.core.generate is deprecated. "
             f"Import from spikeinterface.generation instead: "
             f"`from spikeinterface.generation import {name}`. "
-            f"This will be removed in version 0.103.0.",
+            f"This will be removed in version 0.106.0.",
             FutureWarning,
             stacklevel=2,
         )
