@@ -219,13 +219,13 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         )
 
         if self.margin > 0:
-            peak_traces = traces[self.width : -self.wdith, :]
+            peak_traces = traces[self.width : -self.width, :]
         else:
             peak_traces = traces
         peak_sample_ind, peak_chan_ind = detect_peaks_numba_locally_exclusive_on_chunk(
             peak_traces, self.peak_sign, self.abs_threholds, self.exclude_sweep_size, self.neighbours_mask
         )
-        peak_sample_ind += self.wdith
+        peak_sample_ind += self.width
 
         spikes = np.empty(peak_sample_ind.size, dtype=_base_matching_dtype)
         spikes["sample_index"] = peak_sample_ind
