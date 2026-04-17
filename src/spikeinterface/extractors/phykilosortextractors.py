@@ -314,7 +314,9 @@ read_phy = define_function_from_class(source_class=PhySortingExtractor, name="re
 read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
 
 
-def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offset_to_uV=None) -> SortingAnalyzer:
+def read_kilosort_as_analyzer(
+    folder_path, recording=None, unwhiten=True, gain_to_uV=None, offset_to_uV=None
+) -> SortingAnalyzer:
     """
     Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
     above are supported. The function may work on older versions of Kilosort output,
@@ -324,6 +326,8 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     ----------
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
+    recording : BaseRecording
+        A spikeinterface Recording object which will be attached to the analyzer
     unwhiten : bool, default: True
         Unwhiten the templates computed by kilosort.
     gain_to_uV : float | None, default: None
@@ -370,14 +374,15 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     else:
         AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
-    # to make the initial analyzer, we'll use a fake recording and set it to None later
-    recording, _ = generate_ground_truth_recording(
-        probe=probe,
-        sampling_frequency=sampling_frequency,
-        durations=[duration],
-        num_units=1,
-        seed=1205,
-    )
+    if recording is None:
+        # to make the initial analyzer, we'll use a fake recording and set it to None later
+        recording, _ = generate_ground_truth_recording(
+            probe=probe,
+            sampling_frequency=sampling_frequency,
+            durations=[duration],
+            num_units=1,
+            seed=1205,
+        )
 
     sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
 
