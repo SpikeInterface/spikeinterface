@@ -309,7 +309,6 @@ def compute_merge_unit_groups(
                 win_sizes,
                 pair_mask=pair_mask,
             )
-            # print(correlogram_diff)
             pair_mask = pair_mask & (correlogram_diff < params["corr_diff_thresh"])
             outs["correlograms"] = correlograms
             outs["bins"] = bins
@@ -373,12 +372,20 @@ def compute_merge_unit_groups(
             outs["pairs_decreased_score"] = pairs_decreased_score
 
         elif step == "slay_score":
-
-            M_ij = compute_slay_matrix(
-                sorting_analyzer, params["k1"], params["k2"], templates_diff=outs["templates_diff"], pair_mask=pair_mask
+            M_ij, sigma_ij, rho_ij, eta_ij = compute_slay_matrix(
+                sorting_analyzer,
+                params["k1"],
+                params["k2"],
+                params["censored_period_ms"],
+                templates_diff=outs["templates_diff"],
+                pair_mask=pair_mask,
             )
 
             pair_mask = pair_mask & (M_ij > params["slay_threshold"])
+            outs["slay_M_ij"] = M_ij
+            outs["slay_sigma_ij"] = sigma_ij
+            outs["slay_rho_ij"] = rho_ij
+            outs["slay_eta_ij"] = eta_ij
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -1600,7 +1607,28 @@ def compute_slay_matrix(
 
     M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
 
-    return M_ij
+    return M_ij, sigma_ij, rho_ij, eta_ij
+
+
+def _count_coincident_spikes(t1, t2, max_samples):
+    """
+    Count spikes in t1 that have a matching spike in t2 within max_samples,
+    split by lag direction.
+
+    Returns (n_nonneg, n_neg) where n_nonneg counts pairs where t2 >= t1
+    (non-negative lag, mapped to the right center CCG bin) and n_neg counts
+    pairs where t2 < t1 (negative lag, mapped to the left center CCG bin).
+    """
+    if len(t1) == 0 or len(t2) == 0:
+        return 0, 0
+    indices = np.searchsorted(t2, t1, side="left")
+    right_valid = indices < len(t2)
+    right_diffs = np.where(right_valid, t2[np.minimum(indices, len(t2) - 1)] - t1, max_samples + 1)
+    left_valid = indices > 0
+    left_diffs = np.where(left_valid, t1 - t2[np.maximum(indices - 1, 0)], max_samples + 1)
+    n_nonneg = int(np.sum(right_diffs <= max_samples))
+    n_neg = int(np.sum((left_diffs <= max_samples) & (left_diffs > 0)))
+    return n_nonneg, n_neg
 
 
 def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarray, censor_period_ms: float):
@@ -1617,13 +1645,32 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarra
     censor_period_ms : float
         The censored period to exclude from the refractory period computation to discard
         duplicated spikes.
+
+    Returns
+    -------
+    rho_ij : np.ndarray
+        The cross-correlation significance measure for each pair of units.
+    eta_ij : np.ndarray
+        The sliding refractory period violation measure for each pair of units.
     """
 
     correlograms_extension = sorting_analyzer.get_extension("correlograms")
-    ccgs, _ = correlograms_extension.get_data()
+    ccgs, bin_edges = correlograms_extension.get_data()
 
     # convert to seconds for SLAy functions
     bin_size_ms = correlograms_extension.params["bin_ms"]
+
+    # pre-fetch spike trains for duplicate counting (sub-bin resolution)
+    if censor_period_ms > 0:
+        sorting = sorting_analyzer.sorting
+        censor_period_samples = int(censor_period_ms / 1000 * sorting_analyzer.sampling_frequency)
+        n_segments = sorting_analyzer.get_num_segments()
+        spike_trains = [
+            [sorting.get_unit_spike_train(unit_id=uid, segment_index=seg) for seg in range(n_segments)]
+            for uid in sorting_analyzer.unit_ids
+        ]
+        # lag=0 spike pairs land in the bin starting at 0: xgram[num_half_bins]
+        center_bin = ccgs.shape[2] // 2
 
     rho_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
     eta_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
@@ -1635,17 +1682,41 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarra
             if not pair_mask[unit_index_1, unit_index_2]:
                 continue
 
-            # TODO: test this
             xgram = ccgs[unit_index_1, unit_index_2, :]
+
+            # Merged ACG approximation: sum of individual ACGs and both CCG directions.
+            # _sliding_RP_viol_pair expects the ACG of the merged unit; the merged ACG
+            # has a large center bin when duplicates are present, which the LP filter
+            # attenuates so bin_rate_max reflects the flank rate — making RP violations
+            # detectable (unlike using the CCG alone where bin_rate_max is dominated by
+            # the duplicate peak and masks violations).
+            merged_acg = (
+                ccgs[unit_index_1, unit_index_1, :]
+                + ccgs[unit_index_2, unit_index_2, :]
+                + ccgs[unit_index_1, unit_index_2, :]
+                + ccgs[unit_index_2, unit_index_1, :]
+            )
+
             if censor_period_ms > 0:
-                center_bin = len(xgram) // 2
-                censor_bins = int(round(censor_period_ms / bin_size_ms))
-                xgram[center_bin - censor_bins : center_bin + censor_bins + 1] = 0
+                # count number of spikes within the censor period from the two units
+                n_right, n_left = 0, 0
+                for seg in range(n_segments):
+                    r, l = _count_coincident_spikes(
+                        spike_trains[unit_index_1][seg], spike_trains[unit_index_2][seg], censor_period_samples
+                    )
+                    n_right += r
+                    n_left += l
+                # subtract number of duplicates from central bin(s) of the merged ACG:
+                # n_right pairs land in center_bin (lag ≥ 0), n_left in center_bin-1 (lag < 0);
+                # each direction is counted in both ccgs[i,j] and ccgs[j,i], hence the factor 2
+                merged_acg = merged_acg.copy()
+                merged_acg[center_bin] = max(0, merged_acg[center_bin] - 2 * n_right)
+                merged_acg[center_bin - 1] = max(0, merged_acg[center_bin - 1] - 2 * n_left)
 
             rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(
                 xgram, bin_size_s=bin_size_ms / 1000, min_xcorr_rate=0
             )
-            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size_ms=bin_size_ms)
+            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(merged_acg, bin_size_ms=bin_size_ms)
 
     return rho_ij, eta_ij
 

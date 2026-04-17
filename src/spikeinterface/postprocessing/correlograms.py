@@ -208,7 +208,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         self.data["bins"] = bins
 
     def _get_data(self):
-        return self.data["ccgs"], self.data["bins"]
+        return self.data["ccgs"].copy(), self.data["bins"].copy()
 
 
 class ComputeAutoCorrelograms(AnalyzerExtension):
