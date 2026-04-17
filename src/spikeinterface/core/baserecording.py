@@ -898,7 +898,7 @@ class BaseRecordingSegment(BaseSegment):
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
 
-    def __init__(self, sampling_frequency=None, t_start=None, time_vector=None, num_channels=None):
+    def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
         # sampling_frequency and time_vector are exclusive
         if sampling_frequency is None:
             assert time_vector is not None, "Pass either 'sampling_frequency' or 'time_vector'"
@@ -910,7 +910,7 @@ class BaseRecordingSegment(BaseSegment):
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start
         self.time_vector = time_vector
-        self._num_channels = num_channels
+        self._num_channels = None
 
         BaseSegment.__init__(self)
 
