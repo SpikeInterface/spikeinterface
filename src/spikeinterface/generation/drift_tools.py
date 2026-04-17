@@ -542,9 +542,9 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         end_frame = self.num_samples if end_frame is None else end_frame
 
         if channel_indices is None:
-            n_channels = self.drifting_templates.num_channels
+            n_channels = self.num_channels
         elif isinstance(channel_indices, slice):
-            stop = channel_indices.stop if channel_indices.stop is not None else self.drifting_templates.num_channels
+            stop = channel_indices.stop if channel_indices.stop is not None else self.num_channels
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)

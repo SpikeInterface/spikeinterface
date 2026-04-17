@@ -1359,7 +1359,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
 
         self.num_samples = num_samples
-        self.num_channels = num_channels
+        self._num_channels = num_channels
         self.noise_block_size = noise_block_size
         self.noise_levels = noise_levels
         self.cov_matrix = cov_matrix
@@ -2075,9 +2075,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         channel_indices: list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
-            n_channels = self.templates.shape[2]
+            n_channels = self.num_channels
         elif isinstance(channel_indices, slice):
-            stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
+            stop = channel_indices.stop if channel_indices.stop is not None else self.num_channels
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)

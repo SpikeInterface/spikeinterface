@@ -103,7 +103,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment
-        self.num_channels = num_channels
+        self._num_channels = num_channels
         self.same_along_dim_chans = same_along_dim_chans
         self.n_chans_each_pos = n_chans_each_pos
         self._dtype = dtype

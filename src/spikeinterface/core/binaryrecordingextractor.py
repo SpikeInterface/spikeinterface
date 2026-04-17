@@ -172,8 +172,9 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 
 class BinaryRecordingSegment(BaseRecordingSegment):
     def __init__(self, file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset):
-        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
-        self.num_channels = num_channels
+        BaseRecordingSegment.__init__(
+            self, sampling_frequency=sampling_frequency, t_start=t_start, num_channels=num_channels
+        )
         self.dtype = np.dtype(dtype)
         self.file_offset = file_offset
         self.time_axis = time_axis
