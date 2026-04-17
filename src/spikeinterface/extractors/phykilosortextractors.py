@@ -17,7 +17,7 @@ from spikeinterface.core import (
 from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.core_tools import define_function_from_class
 
-from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
+from spikeinterface.postprocessing import ComputeSpikeLocations
 from probeinterface import read_prb, Probe
 
 HAVE_NUMBA = importlib.util.find_spec("numba") is not None
@@ -229,44 +229,38 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
     def _compute_and_cache_spike_vector(self) -> None:
-        """Build the spike vector directly from the flat per-segment arrays.
+        """Build the spike vector directly from the flat single-segment arrays.
 
-        Since Phy/Kilosort segments already hold the full spike_times and
+        Since Phy/Kilosort segment already holds the full spike_times and
         spike_clusters arrays in memory, we can construct the spike vector
         in one shot.
         """
+        assert self.get_num_segments() == 1
+
         unit_ids = np.asarray(self.unit_ids)
         sorter = np.argsort(unit_ids)
         sorted_unit_ids = unit_ids[sorter]
 
-        num_seg = self.get_num_segments()
-        spikes_list = []
-        segment_slices = np.zeros((num_seg, 2), dtype="int64")
-        pos = 0
+        seg = self.segments[0]
+        all_spikes = seg._all_spikes
+        all_clusters = seg._all_clusters
+        n = all_spikes.size
 
-        for seg_idx in range(num_seg):
-            seg = self.segments[seg_idx]
-            all_spikes = seg._all_spikes
-            all_clusters = seg._all_clusters
+        # Map cluster ids -> unit indices. `spike_clusters_clean` is guaranteed
+        # to only contain ids present in `self.unit_ids` (filtered in __init__),
+        # so searchsorted always returns a valid position.
+        unit_indices = sorter[np.searchsorted(sorted_unit_ids, all_clusters)]
 
-            # Map cluster ids -> unit indices. `spike_clusters_clean` is guaranteed
-            # to only contain ids present in `self.unit_ids` (filtered in __init__),
-            # so searchsorted always returns a valid position.
-            unit_indices = sorter[np.searchsorted(sorted_unit_ids, all_clusters)]
+        segment_slices = np.array([[0, n]], dtype="int64")
+        spikes = np.empty(n, dtype=minimum_spike_dtype)
+        spikes["sample_index"] = all_spikes
+        spikes["unit_index"] = unit_indices
+        spikes["segment_index"] = 0
 
-            n = all_spikes.size
-            segment_slices[seg_idx] = [pos, pos + n]
-            pos += n
-
-            seg_spikes = np.zeros(n, dtype=minimum_spike_dtype)
-            seg_spikes["sample_index"] = all_spikes
-            seg_spikes["unit_index"] = unit_indices
-            seg_spikes["segment_index"] = seg_idx
-            spikes_list.append(seg_spikes)
-
-        spikes = np.concatenate(spikes_list) if spikes_list else np.zeros(0, dtype=minimum_spike_dtype)
-        # Canonical order: (segment_index, sample_index, unit_index).
-        order = np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))
+        # Kilosort and Phy seem to always output spikes sorted by sample_index, but
+        # they DO NOT sort cluster_ids within a sample_index.
+        # No need to sort by segment_index since we know there's only one segment.
+        order = np.lexsort((spikes["unit_index"], spikes["sample_index"]))
         spikes = spikes[order]
 
         self._cached_spike_vector = spikes
