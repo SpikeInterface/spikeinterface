@@ -2,6 +2,7 @@ import warnings
 from pathlib import Path
 from packaging import version
 
+import numpy as np
 
 from spikeinterface.core import write_binary_recording, Motion, BaseRecording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
@@ -171,7 +172,6 @@ class Kilosort4Sorter(BaseSorter):
 
         import time
         import torch
-        import numpy as np
         import logging
 
         if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
@@ -468,7 +468,6 @@ class Kilosort4Sorter(BaseSorter):
     def _setup_json_probe_map(cls, recording, sorter_output_folder):
         """Create a JSON probe map file for Kilosort4."""
         from kilosort.io import save_probe
-        import numpy as np
 
         groups = recording.get_channel_groups()
         positions = np.array(recording.get_channel_locations())
@@ -520,7 +519,7 @@ def read_kilosort4_motion(sorter_output_folder: str | Path, recording: BaseRecor
     dshift = ops.get("dshift")
     if yblk is None or dshift is None:
         raise Exception("'yblk' and 'dshift' fields not found in ops file!")
-    displacement = dshift + yblk
+    displacement = dshift
     spatial_bins_um = yblk
     # estimate temporal bins
     batch_size = ops["batch_size"]
@@ -529,7 +528,7 @@ def read_kilosort4_motion(sorter_output_folder: str | Path, recording: BaseRecor
     if recording is not None:
         t_start = recording.get_start_time()
         t_end = recording.get_end_time()
-        temporal_bins_s = np.linspace(t_start + t_bin / 2, t_end - t_bin / 2)
+        temporal_bins_s = np.linspace(t_start + t_bin / 2, t_end - t_bin / 2, displacement.shape[0])
     else:
         temporal_bins_s = np.arange(displacement.shape[0]) * t_bin + t_bin / 2
 
