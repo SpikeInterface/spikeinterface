@@ -331,7 +331,7 @@ class AmplitudeScalingNode(PipelineNode):
         # TODO: switch to collision mask and return that (to use concatenation)
         return (scalings, spike_collision_mask)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self._margin
 
 

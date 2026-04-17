@@ -5,7 +5,7 @@ import shutil
 
 from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
 from spikeinterface.core.base import spike_peak_dtype
-from spikeinterface.core.job_tools import divide_recording_into_chunks
+from spikeinterface.core.job_tools import divide_chunkable_into_chunks
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core.node_pipeline import (
@@ -32,7 +32,7 @@ class AmplitudeExtractionNode(PipelineNode):
         amps["abs_amplitude"] = np.abs(peaks["amplitude"])
         return amps
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return 5
 
 
@@ -220,11 +220,9 @@ def test_skip_after_n_peaks_and_recording_slices():
     assert some_amplitudes.size < spikes.size
 
     # slices : 1 every 4
-    recording_slices = divide_recording_into_chunks(recording, 10_000)
+    recording_slices = divide_chunkable_into_chunks(recording, 10_000)
     recording_slices = recording_slices[::4]
-    some_amplitudes = run_node_pipeline(
-        recording, nodes, job_kwargs, gather_mode="memory", recording_slices=recording_slices
-    )
+    some_amplitudes = run_node_pipeline(recording, nodes, job_kwargs, gather_mode="memory", slices=recording_slices)
     tolerance = 1.2
     assert some_amplitudes.size < (spikes.size // 4) * tolerance
 
