@@ -5,7 +5,6 @@ import json
 import shutil
 
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core import generate_ground_truth_recording, SortingAnalyzer
 from spikeinterface.core.core_tools import SIJsonEncoder
@@ -145,6 +144,8 @@ def _create_legacy_we_folder(recording, sorting, folder):
 
 def _add_legacy_quality_metrics(folder, unit_ids):
     """Add a ``quality_metrics/`` sub-folder with deprecated 0.100-era params."""
+    import pandas as pd
+
     ext_folder = folder / "quality_metrics"
     ext_folder.mkdir()
 
@@ -181,6 +182,8 @@ def _add_legacy_quality_metrics(folder, unit_ids):
 
 def _add_legacy_template_metrics(folder, unit_ids):
     """Add a ``template_metrics/`` sub-folder with deprecated 0.100-era params."""
+    import pandas as pd
+
     ext_folder = folder / "template_metrics"
     ext_folder.mkdir()
 
