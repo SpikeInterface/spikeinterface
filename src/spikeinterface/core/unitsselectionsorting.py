@@ -67,10 +67,16 @@ class UnitsSelectionSorting(BaseSorting):
         # relative order as in the parent (an O(k) check). If not, the vector may still
         # happen to be sorted -- verify with an O(n) scan before falling back to O(n log n)
         # lexsort.
-        if not self._is_order_preserving_selection() and not is_spike_vector_sorted(spike_vector):
-            sort_indices = np.lexsort(
-                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-            )
+        assume_single_segment = self.get_num_segments() == 1
+        if not self._is_order_preserving_selection() and not is_spike_vector_sorted(
+            spike_vector, assume_single_segment=assume_single_segment
+        ):
+            if assume_single_segment:
+                sort_indices = np.lexsort((spike_vector["unit_index"], spike_vector["sample_index"]))
+            else:
+                sort_indices = np.lexsort(
+                    (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+                )
             spike_vector = spike_vector[sort_indices]
 
         self._cached_spike_vector = spike_vector

@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface.core import UnitsSelectionSorting
 from spikeinterface.core.numpyextractors import NumpySorting
+from spikeinterface.core.sorting_tools import is_spike_vector_sorted
 
 from spikeinterface.core.generate import generate_sorting
 
@@ -41,7 +41,7 @@ def test_failure_with_non_unique_unit_ids():
     seed = 10
     sorting = generate_sorting(num_units=3, durations=[0.100], sampling_frequency=30000.0, seed=seed)
     with pytest.raises(AssertionError):
-        sorting2 = UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
+        UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
 
 
 def test_compute_and_cache_spike_vector():
@@ -89,6 +89,8 @@ def test_uss_get_unit_spike_trains_with_renamed_ids(use_cache):
 def test_spike_vector_sorted_after_reorder_with_cotemporal_spikes():
     """USS spike vector must be correctly sorted even when selection reverses unit order
     and co-temporal spikes exist (same sample_index, different units)."""
+    from spikeinterface.core.basesorting import BaseSorting
+
     # Build a sorting with guaranteed co-temporal spikes:
     # units 0, 1, 2 all fire at sample 100 and 200
     samples = np.array([100, 100, 100, 200, 200, 200, 300, 400], dtype=np.int64)
@@ -102,19 +104,15 @@ def test_spike_vector_sorted_after_reorder_with_cotemporal_spikes():
 
     spike_vector = sub.to_spike_vector()
 
-    # Spike vector must be sorted by (segment_index, sample_index, unit_index)
-    n = len(spike_vector)
-    if n > 1:
-        seg = spike_vector["segment_index"]
-        samp = spike_vector["sample_index"]
-        unit = spike_vector["unit_index"]
-        d_seg = np.diff(seg)
-        assert np.all(d_seg >= 0), "segment_index not non-decreasing"
-        seg_eq = d_seg == 0
-        d_samp = np.diff(samp)
-        assert np.all(d_samp[seg_eq] >= 0), "sample_index not non-decreasing within segment"
-        samp_eq = seg_eq & (d_samp == 0)
-        assert np.all(np.diff(unit)[samp_eq] >= 0), "unit_index not non-decreasing within same sample"
+    sub._cached_spike_vector = None
+    sub._cached_spike_vector_segment_slices = None
+    BaseSorting._compute_and_cache_spike_vector(sub)
+    base_vector = sub._cached_spike_vector
+
+    assert np.array_equal(spike_vector, base_vector)
+    assert np.all(spike_vector["segment_index"] == 0)
+    assert is_spike_vector_sorted(spike_vector)
+
 
 
 if __name__ == "__main__":
