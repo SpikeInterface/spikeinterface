@@ -13,6 +13,7 @@ from spikeinterface.core.sorting_tools import (
     _get_ids_after_merging,
     generate_unit_ids_for_merge_group,
     remap_unit_indices_in_vector,
+    is_spike_vector_sorted,
 )
 from spikeinterface.core.base import minimum_spike_dtype
 
@@ -45,6 +46,32 @@ def test_spike_vector_to_indices():
         )
 
 
+def test_is_spike_vector_sorted():
+    spikes = np.zeros(5, dtype=minimum_spike_dtype)
+    spikes["segment_index"] = [0, 0, 1, 1, 1]
+    spikes["sample_index"] = [100, 200, 0, 100, 100]
+    spikes["unit_index"] = [0, 1, 0, 0, 1]
+    assert is_spike_vector_sorted(spikes)
+
+    segment_unsorted = spikes.copy()
+    segment_unsorted["segment_index"] = [0, 1, 0, 1, 1]
+    segment_unsorted["sample_index"] = [0, 100, 200, 300, 400]
+    segment_unsorted["unit_index"] = [0, 0, 0, 0, 0]
+    assert not is_spike_vector_sorted(segment_unsorted)
+
+    sample_unsorted = spikes.copy()
+    sample_unsorted["segment_index"] = 0
+    sample_unsorted["sample_index"] = [0, 100, 50, 200, 300]
+    sample_unsorted["unit_index"] = [0, 0, 0, 0, 0]
+    assert not is_spike_vector_sorted(sample_unsorted)
+
+    tie_unsorted = spikes.copy()
+    tie_unsorted["segment_index"] = 0
+    tie_unsorted["sample_index"] = [0, 100, 100, 200, 300]
+    tie_unsorted["unit_index"] = [0, 1, 0, 0, 0]
+    assert not is_spike_vector_sorted(tie_unsorted)
+
+
 def test_random_spikes_selection():
     recording, sorting = generate_ground_truth_recording(
         durations=[20.0, 10.0],
@@ -61,7 +88,6 @@ def test_random_spikes_selection():
     random_spikes_indices = random_spikes_selection(
         sorting, num_samples, method="uniform", max_spikes_per_unit=max_spikes_per_unit, margin_size=None, seed=2205
     )
-    random_spikes_indices1 = random_spikes_indices
     spikes = sorting.to_spike_vector()
     some_spikes = spikes[random_spikes_indices]
     for unit_index, unit_id in enumerate(sorting.unit_ids):
