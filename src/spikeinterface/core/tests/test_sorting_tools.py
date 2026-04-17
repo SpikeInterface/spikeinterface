@@ -47,11 +47,19 @@ def test_spike_vector_to_indices():
 
 
 def test_is_spike_vector_sorted():
+    empty_spikes = np.zeros(0, dtype=minimum_spike_dtype)
+    assert is_spike_vector_sorted(empty_spikes)
+
+    one_spike = np.zeros(1, dtype=minimum_spike_dtype)
+    assert is_spike_vector_sorted(one_spike)
+
     spikes = np.zeros(5, dtype=minimum_spike_dtype)
     spikes["segment_index"] = [0, 0, 1, 1, 1]
     spikes["sample_index"] = [100, 200, 0, 100, 100]
     spikes["unit_index"] = [0, 1, 0, 0, 1]
     assert is_spike_vector_sorted(spikes)
+    assert is_spike_vector_sorted(spikes, chunk_size=None)
+    assert is_spike_vector_sorted(spikes, chunk_size=1)
 
     segment_unsorted = spikes.copy()
     segment_unsorted["segment_index"] = [0, 1, 0, 1, 1]
@@ -70,6 +78,43 @@ def test_is_spike_vector_sorted():
     tie_unsorted["sample_index"] = [0, 100, 100, 200, 300]
     tie_unsorted["unit_index"] = [0, 1, 0, 0, 0]
     assert not is_spike_vector_sorted(tie_unsorted)
+
+    with pytest.raises(ValueError, match="chunk_size"):
+        is_spike_vector_sorted(spikes, chunk_size=0)
+
+
+def test_is_spike_vector_sorted_chunk_boundaries():
+    spikes = np.zeros(6, dtype=minimum_spike_dtype)
+    spikes["segment_index"] = [0, 0, 1, 0, 1, 1]
+    spikes["sample_index"] = [0, 100, 200, 300, 400, 500]
+    spikes["unit_index"] = 0
+    assert not is_spike_vector_sorted(spikes, chunk_size=3)
+
+    spikes["segment_index"] = 0
+    spikes["sample_index"] = [0, 100, 300, 200, 400, 500]
+    assert not is_spike_vector_sorted(spikes, chunk_size=3)
+
+    spikes["sample_index"] = [0, 100, 200, 200, 400, 500]
+    spikes["unit_index"] = [0, 0, 1, 0, 0, 0]
+    assert not is_spike_vector_sorted(spikes, chunk_size=3)
+
+
+def test_is_spike_vector_sorted_assume_single_segment():
+    spikes = np.zeros(5, dtype=minimum_spike_dtype)
+    spikes["segment_index"] = [0, 1, 0, 1, 1]
+    spikes["sample_index"] = [0, 100, 200, 300, 400]
+    spikes["unit_index"] = [0, 0, 0, 0, 0]
+    assert not is_spike_vector_sorted(spikes)
+    assert is_spike_vector_sorted(spikes, assume_single_segment=True)
+
+    sample_unsorted = spikes.copy()
+    sample_unsorted["sample_index"] = [0, 100, 50, 200, 300]
+    assert not is_spike_vector_sorted(sample_unsorted, assume_single_segment=True)
+
+    tie_unsorted = spikes.copy()
+    tie_unsorted["sample_index"] = [0, 100, 100, 200, 300]
+    tie_unsorted["unit_index"] = [0, 1, 0, 0, 0]
+    assert not is_spike_vector_sorted(tie_unsorted, assume_single_segment=True)
 
 
 def test_random_spikes_selection():

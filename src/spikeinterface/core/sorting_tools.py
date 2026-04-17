@@ -236,14 +236,14 @@ def random_spikes_selection(
 
             elif method == "percentage":
                 if percentage is None or not (0 < percentage <= 1):
-                    raise ValueError(f"percentage must be in the interval (0, 1]")
+                    raise ValueError("percentage must be in the interval (0, 1]")
 
                 rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "maximum_rate":
                 if maximum_rate is None:
-                    raise ValueError(f"maximum_rate must be defined")
+                    raise ValueError("maximum_rate must be defined")
 
                 t_duration = np.sum(get_segment_durations(sorting))
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
@@ -998,26 +998,87 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     return new_vector, keep_mask_vector
 
 
-def is_spike_vector_sorted(spike_vector: np.ndarray) -> bool:
+def is_spike_vector_sorted(
+    spike_vector: np.ndarray, *, chunk_size: int | None = 10_000_000, assume_single_segment: bool = False
+) -> bool:
     """Return True iff the spike vector is sorted by (segment_index, sample_index, unit_index).
 
-    O(n) sequential scan. Used to avoid an O(n log n) lexsort when the vector already
-    happens to be in canonical order.
+    This is an O(n) sequential scan used to avoid an O(n log n) lexsort when the
+    vector already happens to be in canonical order.
+
+    The strategy is: compare pairs of adjacent spikes in chunks to avoid allocating 
+    (possibly big) temporary arrays for diffs. 
+
+    Each adjacent pair has to be fully "lexsorted":
+
+    * segment_index is nondecreasing;
+    * within the same segment, sample_index is nondecreasing;
+    * within the same segment and same sample, unit_index is nondecreasing.
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray
+        Spike vector with fields "sample_index", "unit_index", and
+        "segment_index".
+    chunk_size : int | None, default 10_000_000
+        Number of adjacent pairs to check per chunk. None checks the full vector
+        in one chunk.
+    assume_single_segment : bool, default False
+        If True, skip segment_index checks and require only sample_index/unit_index
+        ordering.
     """
     n = len(spike_vector)
     if n <= 1:
         return True
-    seg = spike_vector["segment_index"]
-    samp = spike_vector["sample_index"]
-    unit = spike_vector["unit_index"]
-    d_seg = np.diff(seg)
-    if np.any(d_seg < 0):
-        return False
-    seg_eq = d_seg == 0
-    d_samp = np.diff(samp)
-    if np.any(d_samp[seg_eq] < 0):
-        return False
-    samp_eq = seg_eq & (d_samp == 0)
-    if np.any(np.diff(unit)[samp_eq] < 0):
-        return False
+
+    if chunk_size is None:
+        chunk_size = n - 1
+    elif chunk_size < 1:
+        raise ValueError("chunk_size must be >= 1 or None")
+
+    sample_index = spike_vector["sample_index"]
+    unit_index = spike_vector["unit_index"]
+
+    if assume_single_segment:
+        for start in range(0, n - 1, chunk_size):
+            stop = min(start + chunk_size, n - 1)
+
+            # Compare each sample_index value to the following one. The shifted
+            # slices have equal length and represent adjacent spike pairs.
+            sample0 = sample_index[start:stop]
+            sample1 = sample_index[start + 1 : stop + 1]
+            if np.any(sample1 < sample0):
+                return False
+
+            # Unit order only matters for cotemporal (same sample) spikes
+            same_sample = sample1 == sample0
+            if np.any((unit_index[start + 1 : stop + 1] < unit_index[start:stop]) & same_sample):
+                return False
+
+        return True
+
+    segment_index = spike_vector["segment_index"]
+
+    for start in range(0, n - 1, chunk_size):
+        stop = min(start + chunk_size, n - 1)
+
+        # First enforce segment ordering. Later checks are masked to adjacent
+        # pairs in the same segment because sample/unit ordering is segment-local.
+        segment0 = segment_index[start:stop]
+        segment1 = segment_index[start + 1 : stop + 1]
+        if np.any(segment1 < segment0):
+            return False
+    
+        same_segment = segment1 == segment0
+
+        sample0 = sample_index[start:stop]
+        sample1 = sample_index[start + 1 : stop + 1]
+        if np.any((sample1 < sample0) & same_segment):
+            return False
+
+        # Unit order is only part of canonical order for cotemporal spikes.
+        same_sample = same_segment & (sample1 == sample0)
+        if np.any((unit_index[start + 1 : stop + 1] < unit_index[start:stop]) & same_sample):
+            return False
+
     return True
