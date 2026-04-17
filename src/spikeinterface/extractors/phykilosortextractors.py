@@ -370,9 +370,22 @@ def read_kilosort_as_analyzer(
         probe = Probe(si_units="um")
         channel_positions = np.load(phy_path / "channel_positions.npy")
         probe.set_contacts(channel_positions)
-        probe.set_device_channel_indices(range(probe.get_contact_count()))
+        channel_map = np.load(phy_path / "channel_map.npy")
+        probe.set_device_channel_indices(channel_map)
     else:
         AssertionError(f"Cannot read probe layout from folder {phy_path}.")
+
+    # Check that user-defined recording probe geometry is consistent with phy output
+    if recording is not None:
+        for recording_channel_location, probe_contact_position in zip(
+            recording.get_channel_locations(), probe.contact_positions
+        ):
+            if not np.all(recording_channel_location == probe_contact_position):
+                raise ValueError(
+                    "Recording channel locations from `recording` do not match probe channel locations from `folder_path/probe.prb`."
+                    "Hence there is an inconsistency between probe layout or wiring between the recording and sorting output."
+                    "Please resolve this inconsistency."
+                )
 
     if recording is None:
         # to make the initial analyzer, we'll use a fake recording and set it to None later
@@ -402,7 +415,9 @@ def read_kilosort_as_analyzer(
     )
     _make_locations(sorting_analyzer, phy_path)
 
-    sorting_analyzer._recording = None
+    if recording is None:
+        sorting_analyzer._recording = None
+
     return sorting_analyzer
 
 
@@ -418,14 +433,9 @@ def _make_locations(sorting_analyzer, kilosort_output_path):
     else:
         return
 
-    # Check that the spike locations vector is the same size as the spike vector
+    # When recording is given, need to trim spike locations to match spikes in sorting
     num_spikes = len(sorting_analyzer.sorting.to_spike_vector())
-    num_spike_locs = len(locs_np)
-    if num_spikes != num_spike_locs:
-        warnings.warn(
-            "The number of spikes does not match the number of spike locations in `spike_positions.npy`. Skipping spike locations."
-        )
-        return
+    locs_np = locs_np[:num_spikes]
 
     num_dims = len(locs_np[0])
     column_names = ["x", "y", "z"][:num_dims]
