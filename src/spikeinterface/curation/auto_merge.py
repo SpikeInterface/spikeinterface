@@ -88,7 +88,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5},
+    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5, "censored_period_ms": 0.2},
 }
 
 
@@ -1552,6 +1552,7 @@ def compute_slay_matrix(
     sorting_analyzer: SortingAnalyzer,
     k1: float,
     k2: float,
+    censor_period_ms: float,
     templates_diff: np.ndarray | None,
     pair_mask: np.ndarray | None = None,
 ):
@@ -1569,6 +1570,9 @@ def compute_slay_matrix(
         Coefficient determining the importance of the cross-correlation significance
     k2 : float
         Coefficient determining the importance of the sliding rp violation
+    censor_period_ms : float
+        The censored period to exclude from the refractory period computation to discard
+        duplicated spikes.
     templates_diff : np.ndarray | None
         Pre-computed template similarity difference matrix. If None, it will be retrieved from the sorting_analyzer.
     pair_mask : None | np.ndarray, default: None
@@ -1592,14 +1596,14 @@ def compute_slay_matrix(
         sigma_ij = 1 - templates_diff
     else:
         sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
-    rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, pair_mask)
+    rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, pair_mask, censor_period_ms)
 
     M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
 
     return M_ij
 
 
-def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarray):
+def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarray, censor_period_ms: float):
     """
     Computes a cross-correlation significance measure and a sliding refractory period violation
     measure for all units in the `sorting_analyzer`.
@@ -1610,6 +1614,9 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarra
         The sorting analyzer object containing the spike sorting data
     pair_mask : np.ndarray
         A bool matrix describing which pairs are possible merges based on previous steps
+    censor_period_ms : float
+        The censored period to exclude from the refractory period computation to discard
+        duplicated spikes.
     """
 
     correlograms_extension = sorting_analyzer.get_extension("correlograms")
@@ -1628,7 +1635,12 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarra
             if not pair_mask[unit_index_1, unit_index_2]:
                 continue
 
+            # TODO: test this
             xgram = ccgs[unit_index_1, unit_index_2, :]
+            if censor_period_ms > 0:
+                center_bin = len(xgram) // 2
+                censor_bins = int(round(censor_period_ms / bin_size_ms))
+                xgram[center_bin - censor_bins : center_bin + censor_bins + 1] = 0
 
             rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(
                 xgram, bin_size_s=bin_size_ms / 1000, min_xcorr_rate=0
