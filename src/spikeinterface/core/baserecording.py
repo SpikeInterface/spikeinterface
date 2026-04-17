@@ -910,8 +910,26 @@ class BaseRecordingSegment(BaseSegment):
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start
         self.time_vector = time_vector
+        self._num_channels = None
 
         BaseSegment.__init__(self)
+
+    @property
+    def num_channels(self):
+        # Return an explicit value if a subclass set one (via the `num_channels` kwarg
+        # at construction or by assigning `self._num_channels = N`). Otherwise derive from
+        # the container recording through the weakref established in `add_segment`.
+        if self._num_channels is not None:
+            return self._num_channels
+        if self._parent_extractor is None:
+            return None
+        container_recording = self._parent_extractor()
+        if container_recording is None:
+            return None
+        return container_recording.get_num_channels()
+
+    def get_num_channels(self):
+        return self.num_channels
 
     def get_times(self) -> np.ndarray:
         if self.time_vector is not None:
