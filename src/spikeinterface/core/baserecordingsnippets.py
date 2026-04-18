@@ -146,13 +146,17 @@ class BaseRecordingSnippets(BaseExtractor):
             probe.device_channel_indices is not None for probe in probegroup.probes
         ), "Probe must have device_channel_indices"
 
-        # identify connected contacts; device_channel_indices values are preserved as provenance
+        # identify connected contacts and their channel-order
         global_device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
         connected_mask = global_device_channel_indices >= 0
         if np.any(~connected_mask):
             warn("The given probes have unconnected contacts: they are removed")
 
-        device_channel_indices = np.sort(global_device_channel_indices[connected_mask])
+        connected_contact_indices = np.where(connected_mask)[0]
+        connected_channel_values = global_device_channel_indices[connected_mask]
+        order = np.argsort(connected_channel_values)
+        sorted_contact_indices = connected_contact_indices[order]
+        device_channel_indices = connected_channel_values[order]
 
         # validate indices fit the recording
         number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
@@ -168,8 +172,9 @@ class BaseRecordingSnippets(BaseExtractor):
 
         new_channel_ids = self.get_channel_ids()[device_channel_indices]
 
-        # drop only the unconnected contacts from the stored probegroup; preserve device_channel_indices values
-        probegroup = probegroup.get_slice(connected_mask)
+        # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
+        probegroup = probegroup.get_slice(sorted_contact_indices)
+        probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
         probegroup._build_contact_vector()
         contact_vector = probegroup.contact_vector
 

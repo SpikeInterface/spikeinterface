@@ -61,31 +61,11 @@ class ChannelSliceRecording(BaseRecording):
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
         self._parent = parent_recording
 
-        # filter the probegroup to contacts wired to the retained channels
+        # slice the probegroup to the retained channels and reset wiring to the new channel order
         if parent_recording.has_probe():
             parent_probegroup = parent_recording.get_probegroup()
-            parent_dci_sorted = np.sort(parent_probegroup.get_global_device_channel_indices()["device_channel_indices"])
-            child_dci_values = parent_dci_sorted[self._parent_channel_indices]
-            are_channels_reordered: bool = not np.all(np.diff(child_dci_values) >= 0)
-            probe_dci = parent_probegroup.get_global_device_channel_indices()["device_channel_indices"]
-            keep_mask = np.isin(probe_dci, child_dci_values)
-            sliced_probegroup = parent_probegroup.get_slice(keep_mask)
-
-            if not are_channels_reordered:
-                # simple case: the child's channels are already in ascending device_channel_indices order
-                # so _build_contact_vector on the filtered probegroup will produce rows in the child's
-                # channel order. Nothing else to do.
-                pass
-            else:
-                # reorder case: the user picked channels in an order that does not match sort-by-dci.
-                # We have to rewrite device_channel_indices on the child's copy so that the sort done
-                # by _build_contact_vector aligns with the child's channel order.
-                new_dci_by_old = {int(d): new for new, d in enumerate(child_dci_values.tolist())}
-                sliced_dci = sliced_probegroup.get_global_device_channel_indices()["device_channel_indices"]
-                sliced_probegroup.set_global_device_channel_indices(
-                    np.array([new_dci_by_old[int(d)] for d in sliced_dci], dtype="int64")
-                )
-
+            sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
+            sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
             sliced_probegroup._build_contact_vector()
             self._probegroup = sliced_probegroup
 
@@ -173,31 +153,11 @@ class ChannelSliceSnippets(BaseSnippets):
         # copy annotation and properties
         parent_snippets.copy_metadata(self, only_main=False, ids=self._channel_ids)
 
-        # filter the probegroup to contacts wired to the retained channels
+        # slice the probegroup to the retained channels and reset wiring to the new channel order
         if parent_snippets.has_probe():
             parent_probegroup = parent_snippets.get_probegroup()
-            parent_dci_sorted = np.sort(parent_probegroup.get_global_device_channel_indices()["device_channel_indices"])
-            child_dci_values = parent_dci_sorted[self._parent_channel_indices]
-            are_channels_reordered: bool = not np.all(np.diff(child_dci_values) >= 0)
-            probe_dci = parent_probegroup.get_global_device_channel_indices()["device_channel_indices"]
-            keep_mask = np.isin(probe_dci, child_dci_values)
-            sliced_probegroup = parent_probegroup.get_slice(keep_mask)
-
-            if not are_channels_reordered:
-                # simple case: the child's channels are already in ascending device_channel_indices order
-                # so _build_contact_vector on the filtered probegroup will produce rows in the child's
-                # channel order. Nothing else to do.
-                pass
-            else:
-                # reorder case: the user picked channels in an order that does not match sort-by-dci.
-                # We have to rewrite device_channel_indices on the child's copy so that the sort done
-                # by _build_contact_vector aligns with the child's channel order.
-                new_dci_by_old = {int(d): new for new, d in enumerate(child_dci_values.tolist())}
-                sliced_dci = sliced_probegroup.get_global_device_channel_indices()["device_channel_indices"]
-                sliced_probegroup.set_global_device_channel_indices(
-                    np.array([new_dci_by_old[int(d)] for d in sliced_dci], dtype="int64")
-                )
-
+            sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
+            sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
             sliced_probegroup._build_contact_vector()
             self._probegroup = sliced_probegroup
 
