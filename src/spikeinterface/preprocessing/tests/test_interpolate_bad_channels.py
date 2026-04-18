@@ -126,8 +126,10 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     # distribute default probe locations across 4 shanks if set
     rng = np.random.default_rng(seed=None)
     x = rng.choice(shanks, num_channels)
-    for idx, __ in enumerate(recording._properties["contact_vector"]):
-        recording._properties["contact_vector"][idx][1] = x[idx]
+    probe = recording.get_probegroup().probes[0]
+    probe._contact_positions[:, 0] = x
+    recording._probegroup._build_contact_vector()
+    recording.set_property("location", recording.get_channel_locations())
 
     # generate random bad channel locations
     bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
@@ -170,9 +172,12 @@ def test_output_values():
         [5, 5, 5, 7, 3],
     ]  # all others equal distance away.
     # Overwrite the probe information with the new locations
+    probe = recording.get_probegroup().probes[0]
     for idx, (x, y) in enumerate(zip(*new_probe_locs)):
-        recording._properties["contact_vector"][idx][1] = x
-        recording._properties["contact_vector"][idx][2] = y
+        probe._contact_positions[idx, 0] = x
+        probe._contact_positions[idx, 1] = y
+    recording._probegroup._build_contact_vector()
+    recording.set_property("location", recording.get_channel_locations())
 
     # Run interpolation in SI and check the interpolated channel
     # 0 is a linear combination of other channels
@@ -186,8 +191,11 @@ def test_output_values():
     # Shift the last channel position so that it is 4 units, rather than 2
     # away. Setting sigma_um = p = 1 allows easy calculation of the expected
     # weights.
-    recording._properties["contact_vector"][-1][1] = 5
-    recording._properties["contact_vector"][-1][2] = 9
+    probe = recording.get_probegroup().probes[0]
+    probe._contact_positions[-1, 0] = 5
+    probe._contact_positions[-1, 1] = 9
+    recording._probegroup._build_contact_vector()
+    recording.set_property("location", recording.get_channel_locations())
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)
 

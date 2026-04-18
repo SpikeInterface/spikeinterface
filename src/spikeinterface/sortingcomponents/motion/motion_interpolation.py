@@ -403,13 +403,15 @@ class InterpolateMotionRecording(BasePreprocessor):
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, channel_ids=channel_ids, dtype=dtype_)
 
-        if border_mode == "remove_channels":
-            # change the wiring of the probe
-            # TODO this is also done in ChannelSliceRecording, this should be done in a common place
-            contact_vector = self.get_property("contact_vector")
-            if contact_vector is not None:
-                contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
-                self.set_property("contact_vector", contact_vector)
+        if border_mode == "remove_channels" and recording.has_probe():
+            # filter the probegroup to contacts wired to the retained channels; order is preserved (channel_inds is ascending)
+            parent_probegroup = recording.get_probegroup()
+            parent_dci_sorted = np.sort(parent_probegroup.get_global_device_channel_indices()["device_channel_indices"])
+            child_dci_values = parent_dci_sorted[channel_inds]
+            probe_dci = parent_probegroup.get_global_device_channel_indices()["device_channel_indices"]
+            sliced_probegroup = parent_probegroup.get_slice(np.isin(probe_dci, child_dci_values))
+            sliced_probegroup._build_contact_vector()
+            self._probegroup = sliced_probegroup
 
         # handle manual interpolation_time_bin_centers_s
         # the case where interpolation_time_bin_size_s is set is handled per-segment below
