@@ -176,7 +176,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
         probegroup = probegroup.get_slice(sorted_contact_indices)
         probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
-        contact_vector = probegroup.contact_vector
+        contact_vector = probegroup._contact_vector
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -319,7 +319,7 @@ class BaseRecordingSnippets(BaseExtractor):
         channel_indices = self.ids_to_indices(channel_ids)
         if not self.has_probe():
             raise ValueError("get_channel_locations(..) needs a probe to be attached to the recording")
-        contact_vector = self._probegroup.contact_vector
+        contact_vector = self._probegroup._contact_vector
         ndim = len(axes)
         all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
         for i, dim in enumerate(axes):
