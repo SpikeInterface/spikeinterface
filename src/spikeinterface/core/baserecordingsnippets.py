@@ -228,6 +228,17 @@ class BaseRecordingSnippets(BaseExtractor):
             groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
+        # TODO discuss backwards compatibility: mirror probe-level annotations and planar
+        # contours as recording-level annotations so external code that reads these keys
+        # keeps working. The canonical source is now `probe.annotations` and
+        # `probe.probe_planar_contour` on the attached probegroup.
+        probes_info = [probe.annotations for probe in probegroup.probes]
+        sub_recording.annotate(probes_info=probes_info)
+        for probe_index, probe in enumerate(probegroup.probes):
+            contour = probe.probe_planar_contour
+            if contour is not None:
+                sub_recording.set_annotation(f"probe_{probe_index}_planar_contour", contour, overwrite=True)
+
         return sub_recording
 
     def get_probe(self):
@@ -322,14 +333,18 @@ class BaseRecordingSnippets(BaseExtractor):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
-        if not self.has_probe():
-            raise ValueError("get_channel_locations(..) needs a probe to be attached to the recording")
-        contact_vector = self._probegroup._contact_vector
-        ndim = len(axes)
-        all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
-        for i, dim in enumerate(axes):
-            all_positions[:, i] = contact_vector[dim]
-        return all_positions[channel_indices]
+        if self.has_probe():
+            contact_vector = self._probegroup._contact_vector
+            ndim = len(axes)
+            all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
+            for i, dim in enumerate(axes):
+                all_positions[:, i] = contact_vector[dim]
+            return all_positions[channel_indices]
+        locations = self.get_property("location")
+        if locations is None:
+            raise Exception("There are no channel locations")
+        locations = np.asarray(locations)[channel_indices]
+        return select_axes(locations, axes)
 
     def has_3d_locations(self) -> bool:
         return self.get_property("location").shape[1] == 3
