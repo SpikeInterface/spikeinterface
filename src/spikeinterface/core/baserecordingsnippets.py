@@ -231,37 +231,21 @@ class BaseRecordingSnippets(BaseExtractor):
         return sub_recording
 
     def get_probe(self):
-        """
-        Return a copy of the single attached probe.
-
-        Returns a deepcopy so callers can mutate the probe without affecting the
-        recording's internal state. To re-attach a mutated probe use `set_probe(...)`.
-        """
         probes = self.get_probes()
         assert len(probes) == 1, "there are several probe use .get_probes() or get_probegroup()"
         return probes[0]
 
     def get_probes(self):
-        """
-        Return a list of copies of the attached probes.
-
-        Returns deepcopies so callers can mutate probes without affecting the
-        recording's internal state. To re-attach a mutated probe use
-        `set_probegroup(...)` or `set_probe(...)`.
-        """
         probegroup = self.get_probegroup()
         return probegroup.probes
 
     def get_probegroup(self):
-        """
-        Return a copy of the attached `ProbeGroup`.
-
-        Returns a deepcopy so callers hold a snapshot independent of the recording's
-        internal state. Mutating the returned probegroup does not modify the
-        recording; to commit changes use `set_probegroup(...)`.
-        """
         if self._probegroup is None:
             raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
+        # Return a deepcopy for backwards compatibility: pre-migration `main` reconstructed
+        # a fresh `ProbeGroup` from the stored structured array on each call, so external
+        # callers relied on value semantics. Handing out the live `_probegroup` would be a
+        # silent behavioural change.
         return copy.deepcopy(self._probegroup)
 
     def _extra_metadata_from_folder(self, folder):
