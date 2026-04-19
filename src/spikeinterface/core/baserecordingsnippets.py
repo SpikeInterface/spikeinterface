@@ -161,7 +161,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # validate indices fit the recording
         number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
         if number_of_device_channel_indices >= self.get_num_channels():
-            raise ValueError(
+            error_msg = (
                 f"The given Probe either has 'device_channel_indices' that does not match channel count \n"
                 f"{len(device_channel_indices)} vs {self.get_num_channels()} \n"
                 f"or it's max index {number_of_device_channel_indices} is the same as the number of channels {self.get_num_channels()} \n"
@@ -169,13 +169,13 @@ class BaseRecordingSnippets(BaseExtractor):
                 f"device_channel_indices are the following: {device_channel_indices} \n"
                 f"recording channels are the following: {self.get_channel_ids()} \n"
             )
+            raise ValueError(error_msg)
 
         new_channel_ids = self.get_channel_ids()[device_channel_indices]
 
         # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
         probegroup = probegroup.get_slice(sorted_contact_indices)
         probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
-        probegroup._build_contact_vector()
         contact_vector = probegroup.contact_vector
 
         # create recording : channel slice or clone or self
@@ -319,7 +319,6 @@ class BaseRecordingSnippets(BaseExtractor):
         channel_indices = self.ids_to_indices(channel_ids)
         if not self.has_probe():
             raise ValueError("get_channel_locations(..) needs a probe to be attached to the recording")
-        self._probegroup._build_contact_vector()
         contact_vector = self._probegroup.contact_vector
         ndim = len(axes)
         all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")

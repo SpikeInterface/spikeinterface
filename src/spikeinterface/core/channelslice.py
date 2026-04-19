@@ -66,7 +66,6 @@ class ChannelSliceRecording(BaseRecording):
             parent_probegroup = parent_recording.get_probegroup()
             sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-            sliced_probegroup._build_contact_vector()
             self._probegroup = sliced_probegroup
 
         # update dump dict
@@ -158,7 +157,6 @@ class ChannelSliceSnippets(BaseSnippets):
             parent_probegroup = parent_snippets.get_probegroup()
             sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-            sliced_probegroup._build_contact_vector()
             self._probegroup = sliced_probegroup
 
         # update dump dict

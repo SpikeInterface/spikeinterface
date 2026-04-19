@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 
-from probeinterface import ProbeGroup
+from probeinterface import Probe, ProbeGroup
 
 from .baserecording import BaseRecording, BaseRecordingSegment
 
@@ -94,15 +94,16 @@ class ChannelsAggregationRecording(BaseRecording):
         for prop_name, prop_values in property_dict.items():
             self.set_property(key=prop_name, values=prop_values)
 
-        # aggregate probegroups across the inputs and reset wiring to the new channel order
+        # aggregate probegroups across the inputs and attach via the canonical path
         if all(rec.has_probe() for rec in recording_list):
             aggregated_probegroup = ProbeGroup()
             for rec in recording_list:
                 for probe in rec.get_probegroup().probes:
-                    aggregated_probegroup.add_probe(probe.copy())
+                    # round-trip through to_dict/from_dict because Probe.copy() drops contact_ids
+                    # and annotations (tracked in probeinterface #421)
+                    aggregated_probegroup.add_probe(Probe.from_dict(probe.to_dict(array_as_list=False)))
             aggregated_probegroup.set_global_device_channel_indices(np.arange(self.get_num_channels(), dtype="int64"))
-            aggregated_probegroup._build_contact_vector()
-            self._probegroup = aggregated_probegroup
+            self.set_probegroup(aggregated_probegroup, in_place=True)
 
         # if locations are present, check that they are all different!
         if "location" in self.get_property_keys():

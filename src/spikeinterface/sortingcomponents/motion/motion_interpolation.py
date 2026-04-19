@@ -408,7 +408,6 @@ class InterpolateMotionRecording(BasePreprocessor):
             parent_probegroup = recording.get_probegroup()
             sliced_probegroup = parent_probegroup.get_slice(channel_inds)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-            sliced_probegroup._build_contact_vector()
             self._probegroup = sliced_probegroup
 
         # handle manual interpolation_time_bin_centers_s

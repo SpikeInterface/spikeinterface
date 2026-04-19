@@ -574,6 +574,9 @@ class BaseExtractor:
                 folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
+        if getattr(self, "_probegroup", None) is not None:
+            dump_dict["probegroup"] = self._probegroup.to_dict(array_as_list=True)
+
         return dump_dict
 
     @staticmethod
@@ -1160,6 +1163,15 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
         extractor.set_property(k, v)
+
+    if "probegroup" in dic:
+        from probeinterface import ProbeGroup
+
+        probegroup = ProbeGroup.from_dict(dic["probegroup"])
+        if hasattr(extractor, "set_probegroup"):
+            extractor.set_probegroup(probegroup, in_place=True)
+        else:
+            extractor._probegroup = probegroup
 
     return extractor
 
