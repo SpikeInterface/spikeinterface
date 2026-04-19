@@ -177,7 +177,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
         probegroup = probegroup.get_slice(sorted_contact_indices)
         probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
-        contact_vector = probegroup._contact_vector
+        probe_as_numpy_array = probegroup._contact_vector
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -194,14 +194,14 @@ class BaseRecordingSnippets(BaseExtractor):
 
         # duplicate positions to "location" property so SpikeInterface-level readers keep working
         ndim = probegroup.ndim
-        locations = np.zeros((contact_vector.size, ndim), dtype="float64")
+        locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
         for i, dim in enumerate(["x", "y", "z"][:ndim]):
-            locations[:, i] = contact_vector[dim]
+            locations[:, i] = probe_as_numpy_array[dim]
         sub_recording.set_property("location", locations, ids=None)
 
         # derive groups from contact_vector
-        has_shank_id = "shank_ids" in contact_vector.dtype.fields
-        has_contact_side = "contact_sides" in contact_vector.dtype.fields
+        has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
+        has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
         if group_mode == "auto":
             group_keys = ["probe_index"]
             if has_shank_id:
@@ -219,12 +219,12 @@ class BaseRecordingSnippets(BaseExtractor):
                 group_keys = ["probe_index", "shank_ids", "contact_sides"]
             else:
                 group_keys = ["probe_index", "contact_sides"]
-        groups = np.zeros(contact_vector.size, dtype="int64")
-        unique_keys = np.unique(contact_vector[group_keys])
+        groups = np.zeros(probe_as_numpy_array.size, dtype="int64")
+        unique_keys = np.unique(probe_as_numpy_array[group_keys])
         for group, a in enumerate(unique_keys):
-            mask = np.ones(contact_vector.size, dtype=bool)
+            mask = np.ones(probe_as_numpy_array.size, dtype=bool)
             for k in group_keys:
-                mask &= contact_vector[k] == a[k]
+                mask &= probe_as_numpy_array[k] == a[k]
             groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
