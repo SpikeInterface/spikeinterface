@@ -314,14 +314,6 @@ class BaseRecordingSnippets(BaseExtractor):
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
-        """
-        Set channel locations directly on the `"location"` property.
-
-        When a probe is attached, channel locations come from the probegroup and
-        `"location"` is a compatibility mirror maintained by `_set_probes`. Writing
-        directly to the property would diverge the mirror from the probegroup, so
-        this method raises in that case; reattach a modified probe via `set_probe`.
-        """
         if self.has_probe():
             raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
@@ -351,25 +343,12 @@ class BaseRecordingSnippets(BaseExtractor):
         self.set_property("location", locations, ids=channel_ids)
 
     def set_channel_groups(self, groups, channel_ids=None):
-        """
-        Set channel groups directly on the `"group"` property.
-
-        When a probe is attached, the `"group"` property is a compatibility mirror
-        derived by `_set_probes` from the probegroup and the chosen `group_mode`.
-        Writing groups directly bypasses that derivation and can diverge from the
-        probegroup; prefer re-attaching via `set_probe(..., group_mode=...)`.
-        """
         if "probes" in self._annotations:
             warn("set_channel_groups() destroys the probe description. Using set_probe() is preferable")
             self._annotations.pop("probes")
         self.set_property("group", groups, ids=channel_ids)
 
     def get_channel_groups(self, channel_ids=None):
-        # Note: `"group"` is a compatibility mirror of the probegroup-derived grouping
-        # when a probe is attached, populated at `_set_probes` time. It is read directly
-        # here because the `group_mode` used to derive it is not currently persisted on
-        # the recording. Follow-up work may unify this with `get_channel_locations` by
-        # reading directly from the attached probegroup.
         groups = self.get_property("group", ids=channel_ids)
         return groups
 
