@@ -257,11 +257,12 @@ test-preprocessing = [
 test-postprocessing = [{include-group = "test-common"}]
 test-metrics = [{include-group = "test-common"}]
 test-comparison = [{include-group = "test-common"}]
-test-sorters = [{include-group = "test-common"}]
 test-sorters-internal = [
     {include-group = "test-common"},
     "torch",  # spyking_circus2 template matching
+    "hdbscan>=0.8.33",  # simplesorter / tridesclous2
 ]
+test-sorters = [{include-group = "test-sorters-internal"}]
 test-curation = [{include-group = "test-common"}]
 
 test-widgets = [
