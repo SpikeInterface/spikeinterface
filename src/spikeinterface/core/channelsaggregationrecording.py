@@ -97,12 +97,20 @@ class ChannelsAggregationRecording(BaseRecording):
         # aggregate probegroups across the inputs and attach via the canonical path
         if all(rec.has_probe() for rec in recording_list):
             aggregated_probegroup = ProbeGroup()
+            offset = 0
             for rec in recording_list:
                 for probe in rec.get_probegroup().probes:
                     # round-trip through to_dict/from_dict because Probe.copy() drops contact_ids
                     # and annotations (tracked in probeinterface #421)
-                    aggregated_probegroup.add_probe(Probe.from_dict(probe.to_dict(array_as_list=False)))
-            aggregated_probegroup.set_global_device_channel_indices(np.arange(self.get_num_channels(), dtype="int64"))
+                    probe_copy = Probe.from_dict(probe.to_dict(array_as_list=False))
+                    # assign non-colliding device_channel_indices before add_probe so the
+                    # cross-probe uniqueness check does not fire on children that share
+                    # child-local wiring (each sub-recording's probe was reset to arange
+                    # when it was created via set_probe)
+                    n = probe_copy.get_contact_count()
+                    probe_copy.set_device_channel_indices(np.arange(offset, offset + n, dtype="int64"))
+                    aggregated_probegroup.add_probe(probe_copy)
+                    offset += n
             self.set_probegroup(aggregated_probegroup, in_place=True)
 
         # if locations are present, check that they are all different!
