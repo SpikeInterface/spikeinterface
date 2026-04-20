@@ -174,10 +174,13 @@ class BaseRecordingSnippets(BaseExtractor):
 
         new_channel_ids = self.get_channel_ids()[device_channel_indices]
 
+        # capture ndim before slicing; get_slice with an empty selection yields a probegroup
+        # with no probes, on which `.ndim` raises
+        ndim = probegroup.ndim
+
         # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
         probegroup = probegroup.get_slice(sorted_contact_indices)
         probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
-        probe_as_numpy_array = probegroup._contact_vector
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -192,8 +195,20 @@ class BaseRecordingSnippets(BaseExtractor):
 
         sub_recording._probegroup = probegroup
 
+        # TODO: revisit whether set_probe with a fully unconnected probe should raise
+        # instead of returning a zero-channel recording. Preserved here for backwards
+        # compatibility with a test in test_BaseRecording; that test case should be
+        # peeled into its own named test so this assumption is easy to find and
+        # discuss when we decide to tighten the behaviour.
+        if len(device_channel_indices) == 0:
+            sub_recording.set_property("location", np.zeros((0, ndim), dtype="float64"), ids=None)
+            sub_recording.set_property("group", np.zeros(0, dtype="int64"), ids=None)
+            sub_recording.annotate(probes_info=[])
+            return sub_recording
+
+        probe_as_numpy_array = probegroup._contact_vector
+
         # duplicate positions to "location" property so SpikeInterface-level readers keep working
-        ndim = probegroup.ndim
         locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
         for i, dim in enumerate(["x", "y", "z"][:ndim]):
             locations[:, i] = probe_as_numpy_array[dim]
