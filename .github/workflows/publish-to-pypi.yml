@@ -25,7 +25,7 @@ jobs:
           uv pip install --system pytest
           uv pip install --system zarr
           uv pip install --system setuptools wheel twine build
-          uv pip install --system -e .[test_core]
+          uv pip install --system -e . --group test-core
       - name: Test core with pytest
         run: |
           pytest -v src/spikeinterface/core
