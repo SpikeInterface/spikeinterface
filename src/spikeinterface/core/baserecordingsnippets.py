@@ -267,7 +267,18 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def get_probegroup(self):
         if self._probegroup is None:
-            raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
+            # Backwards-compat fallback: pre-migration get_probegroup synthesised a dummy
+            # probe from the "location" property when no probe had been attached. Callers
+            # (e.g. sparsity.py) rely on this for recordings that have locations but no
+            # probe.
+            positions = self.get_property("location")
+            if positions is None:
+                raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
+            warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
+            probe = self.create_dummy_probe_from_locations(positions)
+            pg = ProbeGroup()
+            pg.add_probe(probe)
+            return copy.deepcopy(pg)
         # Return a deepcopy for backwards compatibility: pre-migration `main` reconstructed
         # a fresh `ProbeGroup` from the stored structured array on each call, so external
         # callers relied on value semantics. Handing out the live `_probegroup` would be a
