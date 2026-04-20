@@ -12,11 +12,12 @@ from spikeinterface.core import (
     ComputeTemplates,
     create_sorting_analyzer,
     SortingAnalyzer,
+    aggregate_channels,
 )
 from spikeinterface.core.core_tools import define_function_from_class
 
 from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
-from probeinterface import read_prb, Probe
+from probeinterface import read_prb, Probe, ProbeGroup
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
@@ -363,22 +364,20 @@ def read_kilosort_as_analyzer(
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
-        if len(probegroup.probes) > 0:
-            warnings.warn("Found more than one probe. Selecting the first probe in ProbeGroup.")
-        probe = probegroup.probes[0]
     elif (phy_path / "channel_positions.npy").is_file():
         probe = Probe(si_units="um")
         channel_positions = np.load(phy_path / "channel_positions.npy")
         probe.set_contacts(channel_positions)
         channel_map = np.load(phy_path / "channel_map.npy")
         probe.set_device_channel_indices(channel_map)
+        probegroup = ProbeGroup().add_probe(probe)
     else:
         AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
     # Check that user-defined recording probe geometry is consistent with phy output
     if recording is not None:
         for recording_channel_location, probe_contact_position in zip(
-            recording.get_channel_locations(), probe.contact_positions
+            recording.get_channel_locations(), probe.get_global_contact_positions()
         ):
             if not np.all(recording_channel_location == probe_contact_position):
                 raise ValueError(
@@ -389,13 +388,17 @@ def read_kilosort_as_analyzer(
 
     if recording is None:
         # to make the initial analyzer, we'll use a fake recording and set it to None later
-        recording, _ = generate_ground_truth_recording(
-            probe=probe,
-            sampling_frequency=sampling_frequency,
-            durations=[duration],
-            num_units=1,
-            seed=1205,
-        )
+        recordings = []
+        for probe in probegroup.probes:
+            one_recording, _ = generate_ground_truth_recording(
+                probe=probe,
+                sampling_frequency=sampling_frequency,
+                durations=[duration],
+                num_units=1,
+                seed=1205,
+            )
+            recordings.append(one_recording)
+        recording = aggregate_channels(recordings)
 
     sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
 
