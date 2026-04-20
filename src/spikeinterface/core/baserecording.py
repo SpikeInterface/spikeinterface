@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
-from .chunkable import ChunkableSegment, ChunkableMixin
+from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
 
 
-class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
+class BaseRecording(BaseRecordingSnippets, TimeSeries):
     """
     Abstract class representing several a multichannel timeseries (or block of raw ephys traces).
     Internally handle list of RecordingSegment
@@ -311,7 +311,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
-            from .chunkable_tools import write_binary
+            from .time_series_tools import write_binary
 
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
@@ -637,7 +637,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         return astype(self, dtype=dtype, round=round)
 
 
-class BaseRecordingSegment(ChunkableSegment):
+class BaseRecordingSegment(TimeSeriesSegment):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """

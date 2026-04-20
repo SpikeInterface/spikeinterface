@@ -205,7 +205,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def divide_chunkable_into_chunks(recording, chunk_size):
+def divide_time_series_into_chunks(recording, chunk_size):
     slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
@@ -242,7 +242,7 @@ def ensure_n_jobs(extractor, n_jobs=1):
     return n_jobs
 
 
-def chunk_duration_to_chunk_size(chunk_duration, chunkable: "ChunkableMixin"):
+def chunk_duration_to_chunk_size(chunk_duration, chunkable: "TimeSeries"):
     if isinstance(chunk_duration, float):
         chunk_size = int(chunk_duration * chunkable.get_sampling_frequency())
     elif isinstance(chunk_duration, str):
@@ -259,7 +259,7 @@ def chunk_duration_to_chunk_size(chunk_duration, chunkable: "ChunkableMixin"):
 
 
 def ensure_chunk_size(
-    chunkable: "ChunkableMixin",
+    chunkable: "TimeSeries",
     total_memory=None,
     chunk_size=None,
     chunk_memory=None,
@@ -320,7 +320,7 @@ def ensure_chunk_size(
     return chunk_size
 
 
-class ChunkExecutor:
+class TimeSeriesChunkExecutor:
     """
     Core class for parallel processing to run a "function" over chunks on a chunkable extractor.
 
@@ -334,7 +334,7 @@ class ChunkExecutor:
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
+    chunkable : TimeSeries
         The chunkable object to be processed.
     func : function
         Function that runs on each chunk
@@ -383,7 +383,7 @@ class ChunkExecutor:
 
     def __init__(
         self,
-        chunkable: "ChunkableMixin",
+        chunkable: "TimeSeries",
         func,
         init_func,
         init_args,
@@ -487,7 +487,7 @@ class ChunkExecutor:
 
         if slices is None:
             # TODO: rename
-            slices = divide_chunkable_into_chunks(self.chunkable, self.chunk_size)
+            slices = divide_time_series_into_chunks(self.chunkable, self.chunk_size)
 
         if self.handle_returns:
             returns = []

@@ -11,9 +11,9 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
-from spikeinterface.core.chunkable import ChunkableMixin
+from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
-from spikeinterface.core.job_tools import ChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
 from spikeinterface.core.core_tools import ms_to_samples
 
@@ -26,7 +26,7 @@ class PipelineNode:
 
     def __init__(
         self,
-        chunkable: ChunkableMixin,
+        chunkable: TimeSeries,
         return_output: bool | tuple[bool] = True,
         parents: list[Type["PipelineNode"]] | None = None,
     ):
@@ -38,7 +38,7 @@ class PipelineNode:
 
         Parameters
         ----------
-        chunkable : ChunkableMixin
+        chunkable : TimeSeries
             The chunkable object.
         return_output : bool or tuple[bool], default: True
             Whether or not the output of the node is returned by the pipeline.
@@ -526,7 +526,7 @@ def check_graph(nodes, check_for_peak_source=True):
 
 
 def run_node_pipeline(
-    chunkable: ChunkableMixin,
+    chunkable: TimeSeries,
     nodes: list[PipelineNode],
     job_kwargs: dict,
     job_name: str = "pipeline",
@@ -566,7 +566,7 @@ def run_node_pipeline(
 
     Parameters
     ----------
-    chunkable: ChunkableMixin
+    chunkable: TimeSeries
         The chunkable object to run the pipeline on. This is typically a recording but it can be anything that have the
         same interface for getting chunks with margin.
     nodes: a list of PipelineNode
@@ -628,7 +628,7 @@ def run_node_pipeline(
 
     init_args = (chunkable, nodes, skip_after_n_peaks_per_worker)
 
-    processor = ChunkExecutor(
+    processor = TimeSeriesChunkExecutor(
         chunkable,
         _compute_peak_pipeline_chunk,
         _init_peak_pipeline,
