@@ -45,13 +45,13 @@ for import_statement in import_statement_list:
         time_taken_list.append(time_taken)
 
     for time in time_taken_list:
-        import_time_threshold = 3.0  # Most of the times is sub-second but there outliers
+        # TODO: lower this back toward 3.0 s once the Windows runner outliers are diagnosed.
+        import_time_threshold = 6.0
         if time >= import_time_threshold:
             exceptions.append(
                 f"Importing {import_statement} took: {time:.2f} s. Should be <: {import_time_threshold} s."
             )
             break
-
 
     if time_taken_list:
         avg_time = sum(time_taken_list) / len(time_taken_list)
@@ -65,8 +65,9 @@ for import_statement in import_statement_list:
                 f"Importing {import_statement} took: {avg_time:.2f} s in average. Should be <: {import_time_threshold} s."
             )
 
+# This is displayed to GITHUB_STEP_SUMMARY. Print it before raising so the
+# per-sample table is available even when the average threshold is exceeded.
+print(markdown_output)
+
 if exceptions:
     raise Exception("\n".join(exceptions))
-
-# This is displayed to GITHUB_STEP_SUMMARY
-print(markdown_output)

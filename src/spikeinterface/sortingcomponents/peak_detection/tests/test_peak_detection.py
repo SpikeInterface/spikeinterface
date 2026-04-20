@@ -152,7 +152,7 @@ def test_iterative_peak_detection(recording, job_kwargs, pca_model_folder_path, 
         return_output=(True, True),
     )
 
-    peaks, waveforms = run_node_pipeline(recording=recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
+    peaks, waveforms = run_node_pipeline(recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
     # Assert there is a field call iteration in structured array peaks
     assert "iteration" in peaks.dtype.names
     assert peaks.shape[0] == waveforms.shape[0]
@@ -197,7 +197,7 @@ def test_iterative_peak_detection_sparse(recording, job_kwargs, pca_model_folder
         return_output=(True, True),
     )
 
-    peaks, waveforms = run_node_pipeline(recording=recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
+    peaks, waveforms = run_node_pipeline(recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
     # Assert there is a field call iteration in structured array peaks
     assert "iteration" in peaks.dtype.names
     assert peaks.shape[0] == waveforms.shape[0]
@@ -239,7 +239,7 @@ def test_iterative_peak_detection_thresholds(recording, job_kwargs, pca_model_fo
         tresholds=tresholds,
     )
 
-    peaks, waveforms = run_node_pipeline(recording=recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
+    peaks, waveforms = run_node_pipeline(recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
     # Assert there is a field call iteration in structured array peaks
     assert "iteration" in peaks.dtype.names
     assert peaks.shape[0] == waveforms.shape[0]
@@ -435,15 +435,15 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
 
     kwargs["peak_sign"] = "neg"
     peak_detection_node = detection_class(**kwargs)
-    negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
+    negative_peaks = run_node_pipeline(recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
 
     kwargs["peak_sign"] = "pos"
     peak_detection_node = detection_class(**kwargs)
-    positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
+    positive_peaks = run_node_pipeline(recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
 
     kwargs["peak_sign"] = "both"
     peak_detection_node = detection_class(**kwargs)
-    all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
+    all_peaks = run_node_pipeline(recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
 
     # To account for exclusion of positive peaks that are to close to negative peaks.
     # This should be excluded by the detection method when is exclusive so using peak_sign="both" should

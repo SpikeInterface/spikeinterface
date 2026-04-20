@@ -192,23 +192,15 @@ def get_prototype_and_waveforms_from_recording(
 
     nodes = [node0, node1]
 
-    recording_slices = get_shuffled_recording_slices(recording, job_kwargs=job_kwargs, seed=seed)
-    # res = detect_peaks(
-    #     recording,
-    #     pipeline_nodes=pipeline_nodes,
-    #     skip_after_n_peaks=n_peaks,
-    #     recording_slices=recording_slices,
-    #     method="locally_exclusive",
-    #     method_kwargs=detection_kwargs,
-    #     job_kwargs=job_kwargs,
-    # )
+    slices = get_shuffled_recording_slices(recording, job_kwargs=job_kwargs, seed=seed)
+
     res = run_node_pipeline(
         recording,
         nodes,
         job_kwargs,
         job_name="get protoype waveforms",
         skip_after_n_peaks=n_peaks,
-        recording_slices=recording_slices,
+        slices=slices,
     )
 
     rng = np.random.default_rng(seed)
