@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional
 from pathlib import Path
 import warnings
 
@@ -64,7 +61,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     def __init__(
         self,
         folder_path: Path | str,
-        exclude_cluster_groups: Optional[list[str] | str] = None,
+        exclude_cluster_groups: list[str] | str | None = None,
         keep_good_only: bool = False,
         remove_empty_units: bool = False,
         load_all_cluster_properties: bool = True,
@@ -265,7 +262,7 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     def __init__(
         self,
         folder_path: Path | str,
-        exclude_cluster_groups: Optional[list[str] | str] = None,
+        exclude_cluster_groups: list[str] | str | None = None,
         load_all_cluster_properties: bool = True,
     ):
         BasePhyKilosortSortingExtractor.__init__(
@@ -317,7 +314,7 @@ read_phy = define_function_from_class(source_class=PhySortingExtractor, name="re
 read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
 
 
-def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
+def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offset_to_uV=None) -> SortingAnalyzer:
     """
     Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
     above are supported. The function may work on older versions of Kilosort output,
@@ -329,12 +326,27 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
         Path to the output Phy folder (containing the params.py).
     unwhiten : bool, default: True
         Unwhiten the templates computed by kilosort.
+    gain_to_uV : float | None, default: None
+        The gain to apply to convert traces to uV
+    offset_to_uV : float | None, default: None
+        The offset to apply to the traces
 
     Returns
     -------
     sorting_analyzer : SortingAnalyzer
         A SortingAnalyzer object.
     """
+
+    if gain_to_uV is None:
+        warnings.warn(
+            "No `gain_to_uv` value given. Outputted data will be in dimensionless units. If you know the conversion factor, please pass it to the `read_kilosort_as_analyzer` function."
+        )
+        gain_to_uV = 1.0
+    if offset_to_uV is None:
+        warnings.warn(
+            "No `offset_to_uV` value given. Outputted data may not be offset correctly. If you know the offset factor, please pass it to the `read_kilosort_as_analyzer` function."
+        )
+        offset_to_uV = 0.0
 
     phy_path = Path(folder_path)
 
@@ -343,7 +355,7 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
 
     # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
     # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-    duration = sorting._sorting_segments[0]._all_spikes[-1] / sampling_frequency + 1
+    duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
@@ -374,7 +386,15 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True) -> SortingAnalyzer:
     # first compute random spikes. These do nothing, but are needed for si-gui to run
     sorting_analyzer.compute("random_spikes")
 
-    _make_templates(sorting_analyzer, phy_path, sparsity.mask, sampling_frequency, unwhiten=unwhiten)
+    _make_templates(
+        sorting_analyzer,
+        phy_path,
+        sparsity.mask,
+        sampling_frequency,
+        gain_to_uV=gain_to_uV,
+        offset_to_uV=offset_to_uV,
+        unwhiten=unwhiten,
+    )
     _make_locations(sorting_analyzer, phy_path)
 
     sorting_analyzer._recording = None
@@ -432,7 +452,9 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
 
 
-def _make_templates(sorting_analyzer, kilosort_output_path, mask, sampling_frequency, unwhiten=True):
+def _make_templates(
+    sorting_analyzer, kilosort_output_path, mask, sampling_frequency, gain_to_uV, offset_to_uV, unwhiten=True
+):
     """Constructs a `templates` extension from the amplitudes numpy array
     in `kilosort_output_path`, and attaches the extension to the `sorting_analyzer`."""
 
@@ -440,7 +462,11 @@ def _make_templates(sorting_analyzer, kilosort_output_path, mask, sampling_frequ
 
     whitened_templates = np.load(kilosort_output_path / "templates.npy")
     wh_inv = np.load(kilosort_output_path / "whitening_mat_inv.npy")
-    new_templates = _compute_unwhitened_templates(whitened_templates, wh_inv) if unwhiten else whitened_templates
+    new_templates = (
+        _compute_unwhitened_templates(whitened_templates, wh_inv, gain_to_uV, offset_to_uV)
+        if unwhiten
+        else whitened_templates
+    )
 
     template_extension.data = {"average": new_templates}
 
@@ -479,13 +505,14 @@ def _make_templates(sorting_analyzer, kilosort_output_path, mask, sampling_frequ
     sorting_analyzer.extensions["templates"] = template_extension
 
 
-def _compute_unwhitened_templates(whitened_templates, wh_inv):
+def _compute_unwhitened_templates(whitened_templates, wh_inv, gain_to_uV, offset_to_uV):
     """Constructs unwhitened templates from whitened_templates, by
     applying an inverse whitening matrix."""
 
     # templates have dimension (num units) x (num samples) x (num channels)
-    # whitening inverse has dimension (num units) x (num channels)
+    # whitening inverse has dimension (num channels) x (num channels)
     # to undo whitening, we need do matrix multiplication on the channel index
     unwhitened_templates = np.einsum("ij,klj->kli", wh_inv, whitened_templates)
 
-    return unwhitened_templates
+    # then scale to physical units
+    return unwhitened_templates * gain_to_uV + offset_to_uV

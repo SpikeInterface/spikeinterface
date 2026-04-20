@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .external.combinato import CombinatoSorter
 from .external.dartsort import DartsortSorter
 from .external.hdsort import HDSortSorter

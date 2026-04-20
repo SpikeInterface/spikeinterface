@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from typing import Union
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
@@ -17,9 +14,7 @@ class BaseSnippets(BaseRecordingSnippets):
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
     _main_features = []
 
-    def __init__(
-        self, sampling_frequency: float, nbefore: Union[int, None], snippet_len: int, channel_ids: list, dtype
-    ):
+    def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
@@ -79,7 +74,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_num_segments(self):
         return len(self._snippets_segments)
 
-    def get_frames(self, indices=None, segment_index: Union[int, None] = None):
+    def get_frames(self, indices=None, segment_index: int | None = None):
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         return spts.get_frames(indices)
@@ -87,8 +82,8 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_snippets(
         self,
         indices=None,
-        segment_index: Union[int, None] = None,
-        channel_ids: Union[list, None] = None,
+        segment_index: int | None = None,
+        channel_ids: list | None = None,
         return_scaled: bool | None = None,
         return_in_uV: bool = False,
     ):
@@ -99,9 +94,9 @@ class BaseSnippets(BaseRecordingSnippets):
         ----------
         indices : list[int], default: None
             Indices of the snippets to return. If None, all snippets are returned.
-        segment_index : Union[int, None], default: None
+        segment_index : int | None, default: None
             The segment index to get snippets from. If snippets is multi-segment, it is required.
-        channel_ids : Union[list, None], default: None
+        channel_ids : list | None, default: None
             The channel ids. If None, all channels are used.
         return_scaled : bool | None, default: None
             DEPRECATED. Use return_in_uV instead.
@@ -145,10 +140,10 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def get_snippets_from_frames(
         self,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_ids: Union[list, None] = None,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_ids: list | None = None,
         return_scaled: bool | None = None,
         return_in_uV: bool = False,
     ):
@@ -157,13 +152,13 @@ class BaseSnippets(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : Union[int, None], default: None
+        segment_index : int | None, default: None
             The segment index to get snippets from. If snippets is multi-segment, it is required.
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             The start frame. If None, 0 is used.
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             The end frame. If None, the number of samples in the segment is used.
-        channel_ids : Union[list, None], default: None
+        channel_ids : list | None, default: None
             The channel ids. If None, all channels are used.
         return_scaled : bool | None, default: None
             DEPRECATED. Use return_in_uV instead.
@@ -196,7 +191,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def _save(self, format="binary", **save_kwargs):
         raise NotImplementedError
 
-    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
+    def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
 
         return ChannelSliceSnippets(self, channel_ids)
@@ -285,7 +280,7 @@ class BaseSnippetsSegment(BaseSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[list, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -294,7 +289,7 @@ class BaseSnippetsSegment(BaseSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default: None
+        channel_indices : list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -320,15 +315,15 @@ class BaseSnippetsSegment(BaseSegment):
         """
         raise NotImplementedError
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
 
         Returns

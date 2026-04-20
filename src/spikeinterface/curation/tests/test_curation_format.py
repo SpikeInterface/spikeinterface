@@ -171,6 +171,27 @@ unknown_merged_unit = {
 # This is a failure because unit 99 is not in the initial list
 unknown_removed_unit = {**curation_ids_int, "removed": [31, 42, 99]}
 
+# Sequential curation test data
+sequential_curation = [
+    {
+        "format_version": "2",
+        "unit_ids": [1, 2, 3, 4, 5],
+        "merges": [{"unit_ids": [3, 4], "new_unit_id": 34}],
+    },
+    {
+        "format_version": "2",
+        "unit_ids": [1, 2, 34, 5],
+        "splits": [{"unit_id": 34, "mode": "indices", "indices": [[0, 1, 2, 3]], "new_unit_ids": [340, 341]}],
+    },
+    {
+        "format_version": "2",
+        "unit_ids": [1, 2, 340, 341, 5],
+        "removed": [2, 5],
+        "merges": [{"unit_ids": [1, 340], "new_unit_id": 100}],
+        "splits": [{"unit_id": 341, "mode": "indices", "indices": [[0, 1, 2]], "new_unit_ids": [3410, 3411]}],
+    },
+]
+
 
 def test_curation_format_validation():
     # Test basic formats
@@ -410,6 +431,26 @@ def test_apply_curation_splits_with_mask():
     assert spike_counts[43] == num_spikes // 3  # First third
     assert spike_counts[44] == num_spikes // 3  # Second third
     assert spike_counts[45] == num_spikes - 2 * (num_spikes // 3)  # Remainder
+
+
+def test_apply_sequential_curation():
+    recording, sorting = generate_ground_truth_recording(durations=[10.0], num_units=5, seed=2205)
+    sorting = sorting.rename_units([1, 2, 3, 4, 5])
+    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
+
+    # sequential curation steps:
+    # 1. merge 3 and 4 -> 34
+    # 2. split 34 -> 340, 341
+    # 3. remove 2, 5; merge 1 and 340 -> 100; split 341 -> 3410, 3411
+    analyzer_curated = apply_curation(analyzer, sequential_curation, verbose=True)
+    # initial -1(merge) +1(split) -2(remove) -1(merge) +1(split)
+    num_final_units = analyzer.get_num_units() - 1 + 1 - 2 - 1 + 1
+    assert analyzer_curated.get_num_units() == num_final_units
+
+    # check final unit ids
+    final_unit_ids = analyzer_curated.sorting.unit_ids
+    expected_final_unit_ids = [100, 3410, 3411]
+    assert set(final_unit_ids) == set(expected_final_unit_ids)
 
 
 if __name__ == "__main__":

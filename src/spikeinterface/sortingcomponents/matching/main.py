@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import warnings
 
@@ -41,7 +39,7 @@ def find_spikes_from_templates(
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
-        Parameters for ChunkRecordingExecutor
+        Parameters for ChunkExecutor
 
     {method_doc}
 

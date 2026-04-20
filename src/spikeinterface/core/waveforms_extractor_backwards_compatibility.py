@@ -4,10 +4,7 @@ This backwards compatibility module aims to:
   * mock the function extract_waveforms() and the class SortingAnalyzer() but based SortingAnalyzer
 """
 
-from __future__ import annotations
-
 import warnings
-from typing import Optional
 
 from pathlib import Path
 
@@ -24,6 +21,7 @@ from .job_tools import split_job_kwargs
 from .sparsity import ChannelSparsity
 from .sortinganalyzer import SortingAnalyzer, load_sorting_analyzer
 from .loading import load
+from .core_tools import ms_to_samples
 from .analyzer_extension_core import ComputeRandomSpikes, ComputeWaveforms, ComputeTemplates
 
 _backwards_compatibility_msg = """####
@@ -165,12 +163,12 @@ class MockWaveformExtractor:
     @property
     def nbefore(self) -> int:
         ms_before = self.sorting_analyzer.get_extension("waveforms").params["ms_before"]
-        return int(ms_before * self.sampling_frequency / 1000.0)
+        return ms_to_samples(ms_before, self.sampling_frequency)
 
     @property
     def nafter(self) -> int:
         ms_after = self.sorting_analyzer.get_extension("waveforms").params["ms_after"]
-        return int(ms_after * self.sampling_frequency / 1000.0)
+        return ms_to_samples(ms_after, self.sampling_frequency)
 
     @property
     def nsamples(self) -> int:
@@ -190,7 +188,7 @@ class MockWaveformExtractor:
     def has_recording(self) -> bool:
         return self.sorting_analyzer._recording is not None
 
-    def get_num_samples(self, segment_index: Optional[int] = None) -> int:
+    def get_num_samples(self, segment_index: int | None = None) -> int:
         return self.sorting_analyzer.get_num_samples(segment_index)
 
     def get_total_samples(self) -> int:
@@ -319,12 +317,12 @@ class MockWaveformExtractor:
             return wfs
 
     def get_all_templates(
-        self, unit_ids: list | np.array | tuple | None = None, mode="average", percentile: float | None = None
+        self, unit_ids: list | np.ndarray | tuple | None = None, mode="average", percentile: float | None = None
     ):
         ext = self.sorting_analyzer.get_extension("templates")
 
         if mode == "percentile":
-            key = f"pencentile_{percentile}"
+            key = f"percentile_{percentile}"
         else:
             key = mode
 
@@ -374,7 +372,7 @@ def load_sorting_analyzer_or_waveforms(folder, sorting=None):
 def load_waveforms(
     folder,
     with_recording: bool = True,
-    sorting: Optional[BaseSorting] = None,
+    sorting: BaseSorting | None = None,
     output="MockWaveformExtractor",
 ) -> MockWaveformExtractor | SortingAnalyzer:
     """
@@ -525,8 +523,8 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         else:
             max_num_channel = np.max(np.sum(sparsity.mask, axis=1))
 
-        nbefore = int(params["ms_before"] * sorting.sampling_frequency / 1000.0)
-        nafter = int(params["ms_after"] * sorting.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(params["ms_before"], sorting.sampling_frequency)
+        nafter = ms_to_samples(params["ms_after"], sorting.sampling_frequency)
 
         waveforms = np.zeros((num_spikes, nbefore + nafter, max_num_channel), dtype=params["dtype"])
         # then read waveforms per units
@@ -631,12 +629,16 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
                     pc_all[mask, ...] = pc_one
                 ext.data["pca_projection"] = pc_all
 
-        # update params
-        new_params = ext._set_params()
-        updated_params = make_ext_params_up_to_date(ext, params, new_params)
-        ext.set_params(**updated_params, save=False)
+        # Install raw on-disk params and run compat handler first,
+        # matching what AnalyzerExtension.load does for non-legacy folders.
+        ext.params = dict(params)
         if ext.need_backward_compatibility_on_load:
             ext._handle_backward_compatibility_on_load()
+
+        # Now merge and validate — deprecated names are already migrated.
+        new_params = ext._set_params()
+        updated_params = make_ext_params_up_to_date(ext, ext.params, new_params)
+        ext.set_params(**updated_params, save=False)
         ext.run_info = None
 
         sorting_analyzer.extensions[new_name] = ext

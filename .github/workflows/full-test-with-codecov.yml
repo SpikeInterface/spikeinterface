@@ -20,9 +20,13 @@ jobs:
         os: ["ubuntu-latest", ]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.12'
+          enable-cache: true
       - name: Free space
         run: |
           sudo rm -rf /usr/local/lib/android
@@ -50,7 +54,7 @@ jobs:
       - name: Install packages
         uses: ./.github/actions/build-test-environment
       - name: Pip list
-        run: pip list
+        run: uv pip list --system
       - name: run tests
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell

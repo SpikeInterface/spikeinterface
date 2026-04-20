@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 import importlib.util
 
 import numpy as np
@@ -8,6 +5,7 @@ from spikeinterface.core import (
     get_channel_distances,
     get_template_extremum_channel,
 )
+from spikeinterface.core.core_tools import ms_to_samples
 
 from spikeinterface.sortingcomponents.peak_detection.method_list import (
     LocallyExclusivePeakDetector,
@@ -47,6 +45,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
     name = "tdc-peeler"
     need_noise_levels = True
+    # this is because numba
+    need_first_call_before_pipeline = True
     params_doc = """
         peak_sign : str
             'neg', 'pos' or 'both'
@@ -133,8 +133,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         self.peak_sign = peak_sign
 
-        nbefore_short = int(ms_before * sr / 1000.0)
-        nafter_short = int(ms_after * sr / 1000.0)
+        nbefore_short = ms_to_samples(ms_before, sr)
+        nafter_short = ms_to_samples(ms_after, sr)
         assert nbefore_short <= templates.nbefore
         assert nafter_short <= templates.nafter
         self.nbefore_short = nbefore_short
@@ -203,7 +203,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             # interpolation bins edges
             self.interpolation_time_bins_s = []
             self.interpolation_time_bin_edges_s = []
-            for segment_index, parent_segment in enumerate(recording._recording_segments):
+            for segment_index, parent_segment in enumerate(recording.segments):
                 # in this case, interpolation_time_bin_size_s is set.
                 s_end = parent_segment.get_num_samples()
                 t_start, t_end = parent_segment.sample_index_to_time(np.array([0, s_end]))
@@ -319,12 +319,12 @@ class TridesclousPeeler(BaseTemplateMatching):
                 # noise_levels=None,
             )
 
-        self.detector_margin0 = self.fast_spike_detector.get_trace_margin()
-        self.detector_margin1 = self.fine_spike_detector.get_trace_margin() if use_fine_detector else 0
+        self.detector_margin0 = self.fast_spike_detector.get_margin()
+        self.detector_margin1 = self.fine_spike_detector.get_margin() if use_fine_detector else 0
         self.peeler_margin = max(self.nbefore, self.nafter) * 2
         self.margin = max(self.peeler_margin, self.detector_margin0, self.detector_margin1)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -506,7 +506,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             peak_detector = self.fast_spike_detector
 
         # print('peak_detector', peak_detector)
-        detector_margin = peak_detector.get_trace_margin()
+        detector_margin = peak_detector.get_margin()
 
         if self.peeler_margin > detector_margin:
             margin_shift = self.peeler_margin - detector_margin
@@ -901,7 +901,7 @@ def fit_one_amplitude_with_neighbors(
 if HAVE_NUMBA:
     from numba import jit, prange
 
-    @jit(nopython=True)
+    @jit(nopython=True, nogil=True)
     def construct_prediction_sparse(
         spikes, traces, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, nbefore, additive
     ):
@@ -931,7 +931,7 @@ if HAVE_NUMBA:
                     if template_sparsity_mask[cluster_index, chan]:
                         chan_in_template += 1
 
-    @jit(nopython=True)
+    @jit(nopython=True, nogil=True)
     def numba_sparse_distance(
         wf, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, possible_clusters
     ):
@@ -967,7 +967,7 @@ if HAVE_NUMBA:
             distances[i] = sum_dist
         return distances
 
-    @jit(nopython=True)
+    @jit(nopython=True, nogil=True)
     def numba_best_shift_sparse(
         traces, sparse_template, sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity
     ):

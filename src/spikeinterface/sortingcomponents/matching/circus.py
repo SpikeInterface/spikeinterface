@@ -1,8 +1,5 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
 import importlib.util
 
@@ -325,7 +322,7 @@ class CircusOMPPeeler(BaseTemplateMatching):
                 output[key] = getattr(self, key)
         return output
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -712,7 +709,7 @@ class CircusPeeler(BaseTemplateMatching):
 
         self.circus_templates = templates_array
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

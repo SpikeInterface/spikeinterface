@@ -1,13 +1,13 @@
 [project]
 name = "spikeinterface"
-version = "0.103.3"
+version = "0.104.1"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -25,8 +25,8 @@ dependencies = [
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
-    "neo>=0.14.3",
-    "probeinterface>=0.3.1",
+    "neo>=0.14.4",
+    "probeinterface>=0.3.2",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
@@ -122,7 +122,8 @@ metrics = [
 ]
 
 test_core = [
-    "pytest<8.4.0",
+    "pandas<3",
+    "pytest",
     "psutil",
 
     # for github test : probeinterface and neo from master
@@ -146,11 +147,14 @@ test_extractors = [
 test_preprocessing = [
     "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
     "torch",
+    # for IBL data fetching
+    "pooch",
+    "datalad"
 ]
 
 
 test = [
-    "pytest<8.4.0",
+    "pytest",
     "pytest-cov",
     "psutil",
 
@@ -229,6 +233,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+testpaths = ["src"]
 markers = [
     "core",
     "generation",

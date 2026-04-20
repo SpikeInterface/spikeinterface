@@ -1,7 +1,3 @@
-from __future__ import annotations
-
-from typing import Union
-
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
@@ -36,7 +32,7 @@ class TracePaddedRecording(BasePreprocessor):
         self.padding_start = padding_start
         self.padding_end = padding_end
         self.fill_value = fill_value
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = TracePaddedRecordingSegment(
                 segment,
                 recording.get_num_channels(),
@@ -137,7 +133,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
 class ZeroChannelPaddedRecording(BaseRecording):
 
-    def __init__(self, recording: BaseRecording, num_channels: int, channel_mapping: Union[list, None] = None):
+    def __init__(self, recording: BaseRecording, num_channels: int, channel_mapping: list | None = None):
         """Pads a recording with channels that contain only zero.
 
         Parameters
@@ -146,7 +142,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             recording to zero-pad
         num_channels : int
             Total number of channels in the zero-channel-padded recording
-        channel_mapping : Union[list, None], default: None
+        channel_mapping : list | None, default: None
             Mapping from the channel index in the original recording to the zero-channel-padded recording.
             If None, sorts the channel indices in ascending y channel location and puts them at the
             beginning of the zero-channel-padded recording.
@@ -168,7 +164,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
 
         self.parent_recording = recording
         self.num_channels = num_channels
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = ZeroChannelPaddedRecordingSegment(segment, self.num_channels, self.channel_mapping)
             self.add_recording_segment(recording_segment)
 

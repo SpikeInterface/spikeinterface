@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from .method_list import detect_peak_methods
@@ -86,7 +84,8 @@ def detect_peaks(
     method_class = detect_peak_methods[method]
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    job_kwargs["mp_context"] = method_class.preferred_mp_context
+    if method_class.preferred_mp_context is not None:
+        job_kwargs["mp_context"] = method_class.preferred_mp_context
 
     if method_class.need_noise_levels:
         from spikeinterface.core.recording_tools import get_noise_levels

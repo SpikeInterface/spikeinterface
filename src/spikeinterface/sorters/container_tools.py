@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import platform
 import os
@@ -240,7 +238,14 @@ def install_package_in_container(
         pkg = package_name
         if extra is not None:
             pkg += extra
-        cmd = f'pip install --user --upgrade --no-input "{pkg} @ {github_url}/archive/{tag_or_version}.tar.gz"'
+        cmd = [
+            "pip",
+            "install",
+            "--user",
+            "--upgrade",
+            "--no-input",
+            f"{pkg} @ {github_url}/archive/{tag_or_version}.tar.gz",
+        ]
         res_output = container_client.run_command(cmd)
 
     elif installation_mode == "folder":

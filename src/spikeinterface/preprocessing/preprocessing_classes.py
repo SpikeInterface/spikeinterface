@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 ### PREPROCESSORS ###
 from .resample import ResampleRecording, resample
 from .decimate import DecimateRecording, decimate
@@ -50,7 +48,8 @@ from .directional_derivative import DirectionalDerivativeRecording, directional_
 from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
-from .silence_artifacts import SilencedArtifactsRecording, silence_artifacts
+
+# from .silence_artifacts import SilencedArtifactsRecording, silence_artifacts
 
 _all_preprocesser_dict = {
     # filter stuff
@@ -90,7 +89,7 @@ _all_preprocesser_dict = {
     DirectionalDerivativeRecording: directional_derivative,
     AstypeRecording: astype,
     UnsignedToSignedRecording: unsigned_to_signed,
-    SilencedArtifactsRecording: silence_artifacts,
+    # SilencedArtifactsRecording: silence_artifacts,
 }
 # we control import in the preprocessing init by setting an __all__
 

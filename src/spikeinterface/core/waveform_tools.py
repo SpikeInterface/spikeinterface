@@ -9,7 +9,6 @@ It is a 2-step approach:
 
 """
 
-from __future__ import annotations
 from pathlib import Path
 import warnings
 
@@ -18,7 +17,7 @@ import numpy as np
 from spikeinterface.core.baserecording import BaseRecording
 
 from .baserecording import BaseRecording
-from .job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
+from .job_tools import ChunkExecutor, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
 from .job_tools import fix_job_kwargs
 
@@ -295,16 +294,14 @@ def distribute_waveforms_to_buffers(
     )
     if job_name is None:
         job_name = f"extract waveforms {mode} multi buffer"
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
-    )
+    processor = ChunkExecutor(recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs)
     processor.run()
 
 
 distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 
-# used by ChunkRecordingExecutor
+# used by ChunkExecutor
 def _init_worker_distribute_buffers(
     recording, unit_ids, spikes, arrays_info, nbefore, nafter, return_in_uV, inds_by_unit, mode, sparsity_mask
 ):
@@ -351,7 +348,7 @@ def _init_worker_distribute_buffers(
     return worker_dict
 
 
-# used by ChunkRecordingExecutor
+# used by ChunkExecutor
 def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -382,13 +379,18 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
     l1 = i1 + s0
 
     if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+
+        sub_spikes = in_seg_spikes[i0:i1]
+        start = sub_spikes[0]["sample_index"] - nbefore
+        end = sub_spikes[-1]["sample_index"] + nafter
 
         # load trace in memory
         traces = recording.get_traces(
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
+
+        onset = start + nbefore
+        offset = nbefore + nafter
 
         for unit_ind, unit_id in enumerate(unit_ids):
             # find pos
@@ -405,8 +407,8 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
                 wfs = worker_dict["waveforms_by_units"][unit_id]
 
             for pos in in_chunk_pos:
-                sample_index = spikes[inds[pos]]["sample_index"]
-                wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+                sample_index = spikes["sample_index"][inds[pos]] - onset
+                wf = traces[sample_index : sample_index + offset, :]
 
                 if sparsity_mask is None:
                     wfs[pos, :, :] = wf
@@ -559,7 +561,7 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkRecordingExecutor(
+        processor = ChunkExecutor(
             recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
         )
         processor.run()
@@ -616,7 +618,7 @@ def _init_worker_distribute_single_buffer(
     return worker_dict
 
 
-# used by ChunkRecordingExecutor
+# used by ChunkExecutor
 def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -640,23 +642,24 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
         in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
     )
 
-    # slice in absolut in spikes vector
-    l0 = i0 + s0
-    l1 = i1 + s0
-
-    if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+    if i1 > i0:
+        sub_spikes = in_seg_spikes[i0:i1]
+        start = sub_spikes[0]["sample_index"] - nbefore
+        end = sub_spikes[-1]["sample_index"] + nafter
 
         # load trace in memory
         traces = recording.get_traces(
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
-        for spike_index in range(l0, l1):
-            sample_index = spikes[spike_index]["sample_index"]
-            unit_index = spikes[spike_index]["unit_index"]
-            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+        onset = start + nbefore
+        offset = nbefore + nafter
+        sample_indices = sub_spikes["sample_index"] - onset
+        unit_indices = sub_spikes["unit_index"]
+        spike_indices = s0 + np.arange(i0, i1)
+
+        for sample_index, unit_index, spike_index in zip(sample_indices, unit_indices, spike_indices):
+            wf = traces[sample_index : sample_index + offset, :]
 
             if sparsity_mask is None:
                 all_waveforms[spike_index, :, :] = wf
@@ -943,7 +946,7 @@ def estimate_templates_with_accumulator(
 
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
-    processor = ChunkRecordingExecutor(
+    processor = ChunkExecutor(
         recording, func, init_func, init_args, job_name=job_name, verbose=verbose, need_worker_index=True, **job_kwargs
     )
     processor.run()
@@ -996,6 +999,7 @@ def _init_worker_estimate_templates(
     nafter,
     return_in_uV,
     sparsity_mask,
+    worker_index,
 ):
     worker_dict = {}
     worker_dict["recording"] = recording
@@ -1029,7 +1033,7 @@ def _init_worker_estimate_templates(
     return worker_dict
 
 
-# used by ChunkRecordingExecutor
+# used by ChunkExecutor
 def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -1055,23 +1059,25 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
         in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
     )
 
-    # slice in absolut in spikes vector
-    l0 = i0 + s0
-    l1 = i1 + s0
+    if i1 > i0:
+        sub_spikes = in_seg_spikes[i0:i1]
 
-    if l1 > l0:
-        start = spikes[l0]["sample_index"] - nbefore
-        end = spikes[l1 - 1]["sample_index"] + nafter
+        start = sub_spikes[0]["sample_index"] - nbefore
+        end = sub_spikes[-1]["sample_index"] + nafter
 
         # load trace in memory
         traces = recording.get_traces(
             start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
         )
 
-        for spike_index in range(l0, l1):
-            sample_index = spikes[spike_index]["sample_index"]
-            unit_index = spikes[spike_index]["unit_index"]
-            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
+        onset = start + nbefore
+        offset = nbefore + nafter
+        sample_indices = sub_spikes["sample_index"] - onset
+        unit_indices = sub_spikes["unit_index"]
+
+        for sample_index, unit_index in zip(sample_indices, unit_indices):
+
+            wf = traces[sample_index : sample_index + offset, :]
 
             if sparsity_mask is None:
                 waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf

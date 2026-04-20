@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
 
 import copy
@@ -28,7 +26,7 @@ def find_clusters_from_peaks(
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
-        Parameters for ChunkRecordingExecutor
+        Parameters for ChunkExecutor
 
     {method_doc}
 

@@ -1,6 +1,3 @@
-from __future__ import annotations
-from typing import Union
-
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
@@ -56,7 +53,7 @@ class ChannelSliceRecording(BaseRecording):
         self._parent_channel_indices = parent_recording.ids_to_indices(self._channel_ids)
 
         # link recording segment
-        for parent_segment in parent_recording._recording_segments:
+        for parent_segment in parent_recording.segments:
             sub_segment = ChannelSliceRecordingSegment(parent_segment, self._parent_channel_indices)
             self.add_recording_segment(sub_segment)
 
@@ -181,7 +178,7 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self) -> int:
         return self._parent_snippets_segment.get_num_snippets()
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         return self._parent_snippets_segment.frames_to_indices(start_frame, end_frame)
 
     def get_frames(self, indices=None):

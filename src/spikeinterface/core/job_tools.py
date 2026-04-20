@@ -2,12 +2,10 @@
 Some utils to handle parallel jobs on top of job and/or loky
 """
 
-from __future__ import annotations
 import numpy as np
 import platform
 import os
 import warnings
-from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
 import sys
 from tqdm.auto import tqdm
@@ -16,6 +14,8 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import multiprocessing
 import threading
 from threadpoolctl import threadpool_limits
+
+from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
 
 _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
     * chunk_duration or chunk_size or chunk_memory or total_memory
@@ -120,17 +120,6 @@ def fix_job_kwargs(runtime_job_kwargs):
         # in this case this will be the global job_kwargs
         runtime_job_kwargs = dict()
 
-    # deprecation with backward compatibility
-    # this can be removed in 0.104.0
-    if "max_threads_per_process" in runtime_job_kwargs:
-        runtime_job_kwargs = runtime_job_kwargs.copy()
-        runtime_job_kwargs["max_threads_per_worker"] = runtime_job_kwargs.pop("max_threads_per_process")
-        warnings.warn(
-            "job_kwargs: max_threads_per_process was changed to max_threads_per_worker, max_threads_per_process will be removed in 0.104",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
     for k in runtime_job_kwargs:
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
@@ -216,16 +205,16 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def divide_recording_into_chunks(recording, chunk_size):
-    recording_slices = []
+def divide_chunkable_into_chunks(recording, chunk_size):
+    slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        recording_slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
-    return recording_slices
+        slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+    return slices
 
 
-def ensure_n_jobs(recording, n_jobs=1):
+def ensure_n_jobs(extractor, n_jobs=1):
     if n_jobs == -1:
         n_jobs = os.cpu_count()
     elif n_jobs == 0:
@@ -243,19 +232,19 @@ def ensure_n_jobs(recording, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not recording.check_if_memory_serializable():
+    if not extractor.check_if_memory_serializable():
         if n_jobs != 1:
             raise RuntimeError(
-                "Recording is not serializable to memory and can't be processed in parallel. "
+                "Extractor is not serializable to memory and can't be processed in parallel. "
                 "You can use the `rec = recording.save(folder=...)` function or set 'n_jobs' to 1."
             )
 
     return n_jobs
 
 
-def chunk_duration_to_chunk_size(chunk_duration, recording):
+def chunk_duration_to_chunk_size(chunk_duration, chunkable: "ChunkableMixin"):
     if isinstance(chunk_duration, float):
-        chunk_size = int(chunk_duration * recording.get_sampling_frequency())
+        chunk_size = int(chunk_duration * chunkable.get_sampling_frequency())
     elif isinstance(chunk_duration, str):
         if chunk_duration.endswith("ms"):
             chunk_duration = float(chunk_duration.replace("ms", "")) / 1000.0
@@ -263,17 +252,23 @@ def chunk_duration_to_chunk_size(chunk_duration, recording):
             chunk_duration = float(chunk_duration.replace("s", ""))
         else:
             raise ValueError("chunk_duration must ends with s or ms")
-        chunk_size = int(chunk_duration * recording.get_sampling_frequency())
+        chunk_size = int(chunk_duration * chunkable.get_sampling_frequency())
     else:
         raise ValueError("chunk_duration must be str or float")
     return chunk_size
 
 
 def ensure_chunk_size(
-    recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
+    chunkable: "ChunkableMixin",
+    total_memory=None,
+    chunk_size=None,
+    chunk_memory=None,
+    chunk_duration=None,
+    n_jobs=1,
+    **other_kwargs,
 ):
     """
-    "chunk_size" is the traces.shape[0] for each worker.
+    "chunk_size" is the number of samples for each worker.
 
     Flexible chunk_size setter with 3 ways:
         * "chunk_size" : is the length in sample for each chunk independently of channel count and dtype.
@@ -304,24 +299,20 @@ def ensure_chunk_size(
         assert total_memory is None
         # set by memory per worker size
         chunk_memory = convert_string_to_bytes(chunk_memory)
-        n_bytes = np.dtype(recording.get_dtype()).itemsize
-        num_channels = recording.get_num_channels()
-        chunk_size = int(chunk_memory / (num_channels * n_bytes))
+        chunk_size = int(chunk_memory / chunkable.get_sample_size_in_bytes())
     elif total_memory is not None:
         # clip by total memory size
-        n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
+        n_jobs = ensure_n_jobs(chunkable, n_jobs=n_jobs)
         total_memory = convert_string_to_bytes(total_memory)
-        n_bytes = np.dtype(recording.get_dtype()).itemsize
-        num_channels = recording.get_num_channels()
-        chunk_size = int(total_memory / (num_channels * n_bytes * n_jobs))
+        chunk_size = int(total_memory / (chunkable.get_sample_size_in_bytes() * n_jobs))
     elif chunk_duration is not None:
-        chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
+        chunk_size = chunk_duration_to_chunk_size(chunk_duration, chunkable)
     else:
         # Edge case to define single chunk per segment for n_jobs=1.
         # All chunking parameters equal None mean single chunk per segment
         if n_jobs == 1:
-            num_segments = recording.get_num_segments()
-            samples_in_larger_segment = max([recording.get_num_samples(segment) for segment in range(num_segments)])
+            num_segments = chunkable.get_num_segments()
+            samples_in_larger_segment = max([chunkable.get_num_samples(segment) for segment in range(num_segments)])
             chunk_size = samples_in_larger_segment
         else:
             raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
@@ -329,9 +320,9 @@ def ensure_chunk_size(
     return chunk_size
 
 
-class ChunkRecordingExecutor:
+class ChunkExecutor:
     """
-    Core class for parallel processing to run a "function" over chunks on a recording.
+    Core class for parallel processing to run a "function" over chunks on a chunkable extractor.
 
     It supports running a function:
         * in loop with chunk processing (low RAM usage)
@@ -343,8 +334,8 @@ class ChunkRecordingExecutor:
 
     Parameters
     ----------
-    recording : RecordingExtractor
-        The recording to be processed
+    chunkable : ChunkableMixin
+        The chunkable object to be processed.
     func : function
         Function that runs on each chunk
     init_func : function
@@ -392,7 +383,7 @@ class ChunkRecordingExecutor:
 
     def __init__(
         self,
-        recording,
+        chunkable: "ChunkableMixin",
         func,
         init_func,
         init_args,
@@ -411,18 +402,32 @@ class ChunkRecordingExecutor:
         max_threads_per_worker=1,
         need_worker_index=False,
     ):
-        self.recording = recording
+        self.chunkable = chunkable
         self.func = func
         self.init_func = init_func
         self.init_args = init_args
 
         if pool_engine == "process":
             if mp_context is None:
-                mp_context = recording.get_preferred_mp_context()
-            if mp_context is not None and platform.system() == "Windows":
-                assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-            elif mp_context == "fork" and platform.system() == "Darwin":
-                warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
+                # auto choice
+                if platform.system() == "Windows":
+                    mp_context = "spawn"
+                elif platform.system() == "Linux":
+                    mp_context = "fork"
+                elif platform.system() == "Darwin":
+                    # We used to force spawn for macos, this is sad but in some cases fork in macos
+                    # is very unstable and lead to crashes.
+                    mp_context = "spawn"
+                else:
+                    mp_context = "spawn"
+
+            preferred_mp_context = chunkable.get_preferred_mp_context()
+            if preferred_mp_context is not None and preferred_mp_context != mp_context:
+                warnings.warn(
+                    f"Your processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
+                    f"So use mp_context='{preferred_mp_context}' instead"
+                )
+                mp_context = preferred_mp_context
 
         self.mp_context = mp_context
 
@@ -432,9 +437,8 @@ class ChunkRecordingExecutor:
         self.handle_returns = handle_returns
         self.gather_func = gather_func
 
-        self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
-        self.chunk_size = ensure_chunk_size(
-            recording,
+        self.n_jobs = ensure_n_jobs(self.chunkable, n_jobs=n_jobs)
+        self.chunk_size = self.ensure_chunk_size(
             total_memory=total_memory,
             chunk_size=chunk_size,
             chunk_memory=chunk_memory,
@@ -449,9 +453,9 @@ class ChunkRecordingExecutor:
         self.need_worker_index = need_worker_index
 
         if verbose:
-            chunk_memory = self.chunk_size * recording.get_num_channels() * np.dtype(recording.get_dtype()).itemsize
+            chunk_memory = self.get_chunk_memory()
             total_memory = chunk_memory * self.n_jobs
-            chunk_duration = self.chunk_size / recording.get_sampling_frequency()
+            chunk_duration = self.chunk_size / chunkable.sampling_frequency
             chunk_memory_str = convert_bytes_to_str(chunk_memory)
             total_memory_str = convert_bytes_to_str(total_memory)
             chunk_duration_str = convert_seconds_to_str(chunk_duration)
@@ -466,13 +470,24 @@ class ChunkRecordingExecutor:
                 f"chunk_duration={chunk_duration_str}",
             )
 
-    def run(self, recording_slices=None):
+    def get_chunk_memory(self):
+        return self.chunk_size * self.chunkable.get_sample_size_in_bytes()
+
+    def ensure_chunk_size(
+        self, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
+    ):
+        return ensure_chunk_size(
+            self.chunkable, total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs
+        )
+
+    def run(self, slices=None):
         """
         Runs the defined jobs.
         """
 
-        if recording_slices is None:
-            recording_slices = divide_recording_into_chunks(self.recording, self.chunk_size)
+        if slices is None:
+            # TODO: rename
+            slices = divide_chunkable_into_chunks(self.chunkable, self.chunk_size)
 
         if self.handle_returns:
             returns = []
@@ -481,15 +496,18 @@ class ChunkRecordingExecutor:
 
         if self.n_jobs == 1:
             if self.progress_bar:
-                recording_slices = tqdm(
-                    recording_slices, desc=f"{self.job_name} (no parallelization)", total=len(recording_slices)
-                )
+                slices = tqdm(slices, desc=f"{self.job_name} (no parallelization)", total=len(slices))
 
-            worker_dict = self.init_func(*self.init_args)
+            init_args = self.init_args
             if self.need_worker_index:
-                worker_dict["worker_index"] = 0
+                worker_index = 0
+                init_args = init_args + (worker_index,)
 
-            for segment_index, frame_start, frame_stop in recording_slices:
+            worker_dict = self.init_func(*init_args)
+            if self.need_worker_index:
+                worker_dict["worker_index"] = worker_index
+
+            for segment_index, frame_start, frame_stop in slices:
                 res = self.func(segment_index, frame_start, frame_stop, worker_dict)
                 if self.handle_returns:
                     returns.append(res)
@@ -497,11 +515,13 @@ class ChunkRecordingExecutor:
                     self.gather_func(res)
 
         else:
-            n_jobs = min(self.n_jobs, len(recording_slices))
+            n_jobs = min(self.n_jobs, len(slices))
 
             if self.pool_engine == "process":
 
                 if self.need_worker_index:
+
+                    multiprocessing.set_start_method(self.mp_context, force=True)
                     lock = multiprocessing.Lock()
                     array_pid = multiprocessing.Array("i", n_jobs)
                     for i in range(n_jobs):
@@ -525,11 +545,13 @@ class ChunkRecordingExecutor:
                         array_pid,
                     ),
                 ) as executor:
-                    results = executor.map(process_function_wrapper, recording_slices)
+                    results = executor.map(process_function_wrapper, slices)
 
                     if self.progress_bar:
                         results = tqdm(
-                            results, desc=f"{self.job_name} (workers: {n_jobs} processes)", total=len(recording_slices)
+                            results,
+                            desc=f"{self.job_name} (workers: {n_jobs} processes {self.mp_context})",
+                            total=len(slices),
                         )
 
                     for res in results:
@@ -548,7 +570,7 @@ class ChunkRecordingExecutor:
                 if self.progress_bar:
                     # here the tqdm threading do not work (maybe collision) so we need to create a pbar
                     # before thread spawning
-                    pbar = tqdm(desc=f"{self.job_name} (workers: {n_jobs} threads)", total=len(recording_slices))
+                    pbar = tqdm(desc=f"{self.job_name} (workers: {n_jobs} threads)", total=len(slices))
 
                 if self.need_worker_index:
                     lock = threading.Lock()
@@ -569,8 +591,8 @@ class ChunkRecordingExecutor:
                     ),
                 ) as executor:
 
-                    recording_slices2 = [(thread_local_data,) + tuple(args) for args in recording_slices]
-                    results = executor.map(thread_function_wrapper, recording_slices2)
+                    slices2 = [(thread_local_data,) + tuple(args) for args in slices]
+                    results = executor.map(thread_function_wrapper, slices2)
 
                     for res in results:
                         if self.progress_bar:
@@ -618,11 +640,6 @@ global _process_func_wrapper
 
 def process_worker_initializer(func, init_func, init_args, max_threads_per_worker, need_worker_index, lock, array_pid):
     global _process_func_wrapper
-    if max_threads_per_worker is None:
-        worker_dict = init_func(*init_args)
-    else:
-        with threadpool_limits(limits=max_threads_per_worker):
-            worker_dict = init_func(*init_args)
 
     if need_worker_index:
         child_process = multiprocessing.current_process()
@@ -633,8 +650,18 @@ def process_worker_initializer(func, init_func, init_args, max_threads_per_worke
                 worker_index = i
                 array_pid[i] = child_process.ident
                 break
-        worker_dict["worker_index"] = worker_index
         lock.release()
+
+        init_args = init_args + (worker_index,)
+
+    if max_threads_per_worker is None:
+        worker_dict = init_func(*init_args)
+    else:
+        with threadpool_limits(limits=max_threads_per_worker):
+            worker_dict = init_func(*init_args)
+
+    if need_worker_index:
+        worker_dict["worker_index"] = worker_index
 
     _process_func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_worker)
 
@@ -651,6 +678,15 @@ global _thread_started
 def thread_worker_initializer(
     func, init_func, init_args, max_threads_per_worker, thread_local_data, need_worker_index, lock
 ):
+
+    if need_worker_index:
+        lock.acquire()
+        global _thread_started
+        worker_index = _thread_started
+        _thread_started += 1
+        lock.release()
+        init_args = init_args + (worker_index,)
+
     if max_threads_per_worker is None:
         worker_dict = init_func(*init_args)
     else:
@@ -658,12 +694,7 @@ def thread_worker_initializer(
             worker_dict = init_func(*init_args)
 
     if need_worker_index:
-        lock.acquire()
-        global _thread_started
-        worker_index = _thread_started
-        _thread_started += 1
         worker_dict["worker_index"] = worker_index
-        lock.release()
 
     thread_local_data.func_wrapper = WorkerFuncWrapper(func, worker_dict, max_threads_per_worker)
 

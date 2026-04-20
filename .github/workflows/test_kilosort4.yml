@@ -21,14 +21,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.12
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          pip install requests packaging
-          pip install .
+          uv pip install --system requests packaging
+          uv pip install --system .
 
       - name: Fetch package versions from PyPI
         run: |
@@ -55,22 +59,26 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
       - name: Install SpikeInterface
         run: |
-          pip install -e .[test]
+          uv pip install --system -e .[test]
         shell: bash
 
       - name: Install legacy setuptools for KS4 < 4.0.19
         if: matrix.ks_version == '4.0.16' || matrix.ks_version == '4.0.17' || matrix.ks_version == '4.0.18'
-        run: pip install setuptools==78.0.2
+        run: uv pip install --system setuptools==78.0.2
 
       - name: Install Kilosort
         run: |
-          pip install kilosort==${{ matrix.ks_version }}
+          uv pip install --system kilosort==${{ matrix.ks_version }}
         shell: bash
 
       - name: Run new kilosort4 tests

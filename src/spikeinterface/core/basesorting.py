@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import warnings
-from typing import Optional
 
 from copy import deepcopy
 
@@ -19,7 +16,6 @@ class BaseSorting(BaseExtractor):
     def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = float(sampling_frequency)
-        self._sorting_segments: list[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
         self._sorting_info = None
@@ -65,6 +61,11 @@ class BaseSorting(BaseExtractor):
         return html_repr
 
     @property
+    def segments(self) -> list["BaseSortingSegment"]:
+        """List of sorting segments."""
+        return self._segments
+
+    @property
     def unit_ids(self):
         return self._main_ids
 
@@ -78,15 +79,11 @@ class BaseSorting(BaseExtractor):
     def get_num_units(self) -> int:
         return len(self.get_unit_ids())
 
-    def add_sorting_segment(self, sorting_segment):
-        self._sorting_segments.append(sorting_segment)
-        sorting_segment.set_parent_extractor(self)
+    def add_sorting_segment(self, sorting_segment: "BaseSortingSegment") -> None:
+        super().add_segment(sorting_segment)
 
     def get_sampling_frequency(self) -> float:
         return self._sampling_frequency
-
-    def get_num_segments(self) -> int:
-        return len(self._sorting_segments)
 
     def get_num_samples(self, segment_index=None) -> int:
         """Returns the number of samples of the associated recording for a segment.
@@ -136,9 +133,9 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train(
         self,
         unit_id: str | int,
-        segment_index: Optional[int] = None,
-        start_frame: Optional[int] = None,
-        end_frame: Optional[int] = None,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
         return_times: bool = False,
         use_cache: bool = True,
     ) -> np.ndarray:
@@ -202,7 +199,7 @@ class BaseSorting(BaseExtractor):
                 end = np.searchsorted(spike_frames, end_frame)
                 spike_frames = spike_frames[:end]
         else:
-            segment = self._sorting_segments[segment_index]
+            segment = self.segments[segment_index]
             spike_frames = segment.get_unit_spike_train(
                 unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
             ).astype("int64")
@@ -212,9 +209,9 @@ class BaseSorting(BaseExtractor):
     def get_unit_spike_train_in_seconds(
         self,
         unit_id: str | int,
-        segment_index: Optional[int] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        segment_index: int | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
     ) -> np.ndarray:
         """
         Get spike train for a unit in seconds.
@@ -246,7 +243,7 @@ class BaseSorting(BaseExtractor):
             Spike times in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        segment = self._sorting_segments[segment_index]
+        segment = self.segments[segment_index]
 
         # If sorting has a registered recording, get the frames and get the times from the recording
         # Note that this take into account the segment start time of the recording
@@ -340,7 +337,7 @@ class BaseSorting(BaseExtractor):
     def has_recording(self) -> bool:
         return self._recording is not None
 
-    def has_time_vector(self, segment_index: Optional[int] = None) -> bool:
+    def has_time_vector(self, segment_index: int | None = None) -> bool:
         """
         Check if the segment of the registered recording has a time vector.
         """
@@ -437,7 +434,7 @@ class BaseSorting(BaseExtractor):
         ----------
         outputs : "dict" | "array", default: "dict"
             Control the type of the returned object : a dict (keys are unit_ids) or an numpy array.
-        unit_ids: np.array | None
+        unit_ids: np.ndarray | None
             Compute the number of spikes on a subset unit_ids only
         Returns
         -------
@@ -499,7 +496,7 @@ class BaseSorting(BaseExtractor):
         """
         return self.to_spike_vector().size
 
-    def select_units(self, unit_ids, renamed_unit_ids=None) -> BaseSorting:
+    def select_units(self, unit_ids, renamed_unit_ids=None) -> "BaseSorting":
         """
         Returns a new sorting object which contains only a selected subset of units.
 
@@ -521,7 +518,7 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
-    def rename_units(self, new_unit_ids: np.ndarray | list) -> BaseSorting:
+    def rename_units(self, new_unit_ids: np.ndarray | list) -> "BaseSorting":
         """
         Returns a new sorting object with renamed units.
 
@@ -542,7 +539,7 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, renamed_unit_ids=new_unit_ids)
         return sub_sorting
 
-    def remove_units(self, remove_unit_ids) -> BaseSorting:
+    def remove_units(self, remove_unit_ids) -> "BaseSorting":
         """
         Returns a new sorting object with contains only a selected subset of units.
 
@@ -615,7 +612,7 @@ class BaseSorting(BaseExtractor):
         )
         return sub_sorting
 
-    def time_slice(self, start_time: float | None, end_time: float | None) -> BaseSorting:
+    def time_slice(self, start_time: float | None, end_time: float | None) -> "BaseSorting":
         """
         Returns a new sorting object, restricted to the time interval [start_time, end_time].
 
@@ -707,14 +704,14 @@ class BaseSorting(BaseExtractor):
         if self.has_recording():
             sample_index = self._recording.time_to_sample_index(time, segment_index=segment_index)
         else:
-            segment = self._sorting_segments[segment_index]
+            segment = self.segments[segment_index]
             t_start = segment._t_start if segment._t_start is not None else 0
             sample_index = round((time - t_start) * self.get_sampling_frequency())
 
         return sample_index
 
     def sample_index_to_time(
-        self, sample_index: int | np.ndarray, segment_index: Optional[int] = None
+        self, sample_index: int | np.ndarray, segment_index: int | None = None
     ) -> float | np.ndarray:
         """
         Transform sample index into time in seconds
@@ -723,7 +720,7 @@ class BaseSorting(BaseExtractor):
         if self.has_recording():
             return self._recording.sample_index_to_time(sample_index, segment_index=segment_index)
         else:
-            segment = self._sorting_segments[segment_index]
+            segment = self.segments[segment_index]
             t_start = segment._t_start if segment._t_start is not None else 0
             return (sample_index / self.get_sampling_frequency()) + t_start
 
@@ -756,7 +753,7 @@ class BaseSorting(BaseExtractor):
             sample_indices = []
             unit_indices = []
             for u, unit_id in enumerate(self.unit_ids):
-                segment = self._sorting_segments[segment_index]
+                segment = self.segments[segment_index]
                 spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
                     "int64"
                 )
@@ -1087,8 +1084,8 @@ class BaseSortingSegment(BaseSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Optional[int] = None,
-        end_frame: Optional[int] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         """Get the spike train for a unit.
 

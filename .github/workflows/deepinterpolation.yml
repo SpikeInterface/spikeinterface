@@ -20,9 +20,13 @@ jobs:
         os: ["ubuntu-latest"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.10'
+          enable-cache: false
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v46.0.1
@@ -38,16 +42,15 @@ jobs:
       - name: Install dependencies
         if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
         run: |
-          python -m pip install -U pip  # Official recommended way
           # install deepinteprolation
-          pip install tensorflow==2.8.4
-          pip install deepinterpolation@git+https://github.com/AllenInstitute/deepinterpolation.git
-          pip install numpy==1.26.4
-          pip install -e .[full,test_core]
+          uv pip install --system tensorflow==2.8.4
+          uv pip install --system deepinterpolation@git+https://github.com/AllenInstitute/deepinterpolation.git
+          uv pip install --system numpy==1.26.4
+          uv pip install --system -e .[full,test_core]
       - name: Pip list
         if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
         run: |
-          pip list
+          uv pip list --system
       - name: Test DeepInterpolation with pytest
         if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
         run: |

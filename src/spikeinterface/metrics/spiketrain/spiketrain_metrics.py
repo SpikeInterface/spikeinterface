@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 

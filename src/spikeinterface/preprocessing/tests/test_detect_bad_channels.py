@@ -16,7 +16,7 @@ from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, d
 # pip install ibl-neuropixel
 # note the check needs to find package first before submodule otherwise the check will fail if the library
 # does not exist
-if importlib.util.find_spec("neurodsp") is not None and importlib.util.find_spec("neurodsp.voltage") is not None:
+if importlib.util.find_spec("ibldsp") is not None and importlib.util.find_spec("ibldsp.voltage") is not None:
     HAVE_NPIX = True
 else:
     HAVE_NPIX = False
@@ -157,7 +157,7 @@ def test_detect_bad_channels_ibl(num_channels):
     however for testing it is necssary. So before calling the IBL function
     we need to rescale the traces to Volts.
     """
-    import neurodsp.voltage
+    import ibldsp.voltage
 
     # download_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
     # recording = se.read_spikeglx(download_path, stream_id="imec0.ap")
@@ -201,7 +201,7 @@ def test_detect_bad_channels_ibl(num_channels):
     for i, random_chunk in enumerate(random_data):
         traces_uV = random_chunk.T
         traces_V = traces_uV * 1e-6
-        channel_flags, _ = neurodsp.voltage.detect_bad_channels(
+        channel_flags, _ = ibldsp.voltage.detect_bad_channels(
             traces_V,
             recording.get_sampling_frequency(),
             psd_hf_threshold=psd_cutoff,
@@ -262,7 +262,7 @@ def reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     """
     from scipy.signal import welch
 
-    for iseg, __ in enumerate(recording._recording_segments):
+    for iseg, __ in enumerate(recording.segments):
         data = recording.get_traces(iseg).T
         num_samples = recording.get_num_samples(iseg)
 
@@ -291,7 +291,7 @@ def add_dead_channels(recording, is_dead):
         data[:, is_dead] = np.random.normal(
             mean, std * 0.1, size=(is_dead.size, recording.get_num_samples(segment_index))
         ).T
-        recording._recording_segments[segment_index]._traces = data
+        recording.segments[segment_index]._traces = data
 
 
 if __name__ == "__main__":

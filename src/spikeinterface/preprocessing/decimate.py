@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from spikeinterface.core.core_tools import (
     define_function_handling_dict_from_class,
@@ -67,7 +65,7 @@ class DecimateRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             self.add_recording_segment(
                 DecimateRecordingSegment(
                     parent_segment,

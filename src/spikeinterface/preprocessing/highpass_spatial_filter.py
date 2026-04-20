@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
@@ -133,7 +131,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 rms_values = recording.get_property("noise_level_rms_raw")
             else:
                 random_slice_kwargs = {} if random_slice_kwargs is None else random_slice_kwargs
-                rms_values = get_noise_levels(recording, method="rms", return_scaled=False, **random_slice_kwargs)
+                rms_values = get_noise_levels(recording, method="rms", return_in_uV=False, **random_slice_kwargs)
 
         # Pre-compute spatial filtering parameters
         butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
@@ -141,7 +139,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
 
         dtype = fix_dtype(recording, dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = HighPassSpatialFilterSegment(
                 parent_segment,
                 n_channel_pad,
@@ -223,7 +221,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             self.parent_recording_segment,
             start_frame=start_frame,
             end_frame=end_frame,
-            channel_indices=slice(None),
+            last_dimension_indices=slice(None),
             margin=margin,
         )
         # apply sorting by depth
@@ -310,7 +308,9 @@ def agc(traces, window, epsilons):
 
     dead_channels = np.sum(gain, axis=0) == 0
 
-    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(epsilons, gain[:, ~dead_channels])
+    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(
+        epsilons[~dead_channels], gain[:, ~dead_channels]
+    )
 
     return traces, gain
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr

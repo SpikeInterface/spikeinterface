@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .si_based import ComponentsBasedSorter
 
 import shutil
@@ -274,7 +272,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 np.save(clustering_folder / "prototype.npy", prototype)
 
         if skip_peaks:
-            detect_pipeline_kwargs["recording_slices"] = get_shuffled_recording_slices(
+            detect_pipeline_kwargs["slices"] = get_shuffled_recording_slices(
                 recording_w,
                 job_kwargs=job_kwargs,
                 seed=params["seed"],

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
@@ -112,5 +110,5 @@ class SpikeAmplitudeNode(PipelineNode):
 
         return amplitudes
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self._margin
