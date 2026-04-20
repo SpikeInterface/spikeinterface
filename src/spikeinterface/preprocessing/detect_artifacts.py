@@ -229,8 +229,7 @@ class _DetectSaturation(PipelineNode):
             all_events = np.concatenate(all_events)
             # sort by start sample index
             order = np.argsort(all_events["start_sample_index"])
-            all_events = all_events[order]
-            return (all_events,)
+            events = all_events[order]
 
         return (events,)
 
