@@ -569,7 +569,7 @@ def add_traces_to_zarr(
     from .job_tools import (
         ensure_chunk_size,
         fix_job_kwargs,
-        ChunkRecordingExecutor,
+        ChunkExecutor,
     )
 
     assert dataset_paths is not None, "Provide 'file_path'"
@@ -606,13 +606,13 @@ def add_traces_to_zarr(
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     init_args = (recording, zarr_datasets, dtype)
-    executor = ChunkRecordingExecutor(
+    executor = ChunkExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
     )
     executor.run()
 
 
-# used by write_zarr_recording + ChunkRecordingExecutor
+# used by write_zarr_recording + ChunkExecutor
 def _init_zarr_worker(recording, zarr_datasets, dtype):
     import zarr
 
@@ -625,7 +625,7 @@ def _init_zarr_worker(recording, zarr_datasets, dtype):
     return worker_ctx
 
 
-# used by write_zarr_recording + ChunkRecordingExecutor
+# used by write_zarr_recording + ChunkExecutor
 def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     import gc
 
