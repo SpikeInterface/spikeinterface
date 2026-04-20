@@ -122,7 +122,7 @@ metrics = [
 ]
 
 test_core = [
-    "pytest<8.4.0",
+    "pytest",
     "psutil",
 
     # for github test : probeinterface and neo from master
@@ -153,7 +153,7 @@ test_preprocessing = [
 
 
 test = [
-    "pytest<8.4.0",
+    "pytest",
     "pytest-cov",
     "psutil",
 
