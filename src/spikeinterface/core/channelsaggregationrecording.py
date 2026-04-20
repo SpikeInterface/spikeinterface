@@ -94,24 +94,23 @@ class ChannelsAggregationRecording(BaseRecording):
         for prop_name, prop_values in property_dict.items():
             self.set_property(key=prop_name, values=prop_values)
 
-        # aggregate probegroups across the inputs and attach via the canonical path
+        # split_by resets each child probe's device_channel_indices, so the information
+        # of which contact was connected to which channel of the parent is lost by the
+        # time we aggregate. We rebuild a globally-unique wiring via per-probe offsets
+        # and skip set_probegroup because children also share contact positions.
         if all(rec.has_probe() for rec in recording_list):
             aggregated_probegroup = ProbeGroup()
             offset = 0
             for rec in recording_list:
                 for probe in rec.get_probegroup().probes:
-                    # round-trip through to_dict/from_dict because Probe.copy() drops contact_ids
-                    # and annotations (tracked in probeinterface #421)
+                    # round-trip through to_dict/from_dict because Probe.copy() drops
+                    # contact_ids and annotations (probeinterface #421)
                     probe_copy = Probe.from_dict(probe.to_dict(array_as_list=False))
-                    # assign non-colliding device_channel_indices before add_probe so the
-                    # cross-probe uniqueness check does not fire on children that share
-                    # child-local wiring (each sub-recording's probe was reset to arange
-                    # when it was created via set_probe)
                     n = probe_copy.get_contact_count()
                     probe_copy.set_device_channel_indices(np.arange(offset, offset + n, dtype="int64"))
                     aggregated_probegroup.add_probe(probe_copy)
                     offset += n
-            self.set_probegroup(aggregated_probegroup, in_place=True)
+            self._probegroup = aggregated_probegroup
 
         # if locations are present, check that they are all different!
         if "location" in self.get_property_keys():
