@@ -300,7 +300,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         """
-        General retrieval function for chunkable objects
+        General retrieval function for time_series objects
         """
         return self.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame, **kwargs)
 
@@ -672,6 +672,6 @@ class BaseRecordingSegment(TimeSeriesSegment):
         self, start_frame: int, end_frame: int, indices: list | np.ndarray | tuple | None = None
     ) -> np.ndarray:
         """
-        General retrieval function for chunkable objects
+        General retrieval function for time_series objects
         """
         return self.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=indices)
