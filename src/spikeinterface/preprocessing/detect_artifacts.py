@@ -114,7 +114,7 @@ class _DetectSaturation(PipelineNode):
         else:
             self.diff_threshold_unscaled = None
 
-    def get_trace_margin(self) -> int:
+    def get_margin(self) -> int:
         """Return the number of margin samples required on each side of a chunk."""
         return 0
 
@@ -326,7 +326,7 @@ class _DetectThresholdCrossing(PeakDetector):
         # internal dtype
         self._dtype = np.dtype([("sample_index", "int64"), ("segment_index", "int64"), ("front", "bool")])
 
-    def get_trace_margin(self) -> int:
+    def get_margin(self) -> int:
         """Return the number of margin samples required on each side of a chunk."""
         return 0
 

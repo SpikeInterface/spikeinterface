@@ -17,9 +17,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.11'
+          enable-cache: true
       - name: Create the directory to store the data
         run: |
           mkdir -p  ~/spikeinterface_datasets/ephy_testing_data/
@@ -45,8 +49,7 @@ jobs:
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          python -m pip install -U pip  # Official recommended way
-          pip install datalad-installer
+          uv pip install --system datalad-installer
           if [ ${{ runner.os }} == 'Linux' ]; then
             datalad-installer --sudo ok git-annex --method datalad/packages
           elif [ ${{ runner.os }} == 'macOS' ]; then
@@ -54,7 +57,7 @@ jobs:
           elif [ ${{ runner.os }} == 'Windows' ]; then
             datalad-installer --sudo ok git-annex --method datalad/git-annex:release
           fi
-          pip install datalad
+          uv pip install --system datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
         shell: bash
       - name: Download dataset

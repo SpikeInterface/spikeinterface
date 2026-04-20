@@ -122,6 +122,7 @@ metrics = [
 ]
 
 test_core = [
+    "pandas<3",
     "pytest<8.4.0",
     "psutil",
 
