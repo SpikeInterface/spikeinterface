@@ -251,6 +251,7 @@ test-preprocessing = [
     "ibllib>=3.4.1;python_version>='3.10'",
     "pooch",
     "datalad",
+    "torch",  # preprocessing tests exercise sortingcomponents.motion.dredge
 ]
 
 test-postprocessing = [{include-group = "test-common"}]
