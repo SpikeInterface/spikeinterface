@@ -370,14 +370,18 @@ def read_kilosort_as_analyzer(
         probe.set_contacts(channel_positions)
         channel_map = np.load(phy_path / "channel_map.npy")
         probe.set_device_channel_indices(channel_map)
-        probegroup = ProbeGroup().add_probe(probe)
+
+        probegroup = ProbeGroup()
+        probegroup.add_probe(probe)
     else:
         AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
     # Check that user-defined recording probe geometry is consistent with phy output
     if recording is not None:
+        user_gave_recording = True
+        all_contact_positions = np.vstack([probe.contact_positions for probe in probegroup.probes])
         for recording_channel_location, probe_contact_position in zip(
-            recording.get_channel_locations(), probe.get_global_contact_positions()
+            recording.get_channel_locations(), all_contact_positions
         ):
             if not np.all(recording_channel_location == probe_contact_position):
                 raise ValueError(
@@ -385,8 +389,8 @@ def read_kilosort_as_analyzer(
                     "Hence there is an inconsistency between probe layout or wiring between the recording and sorting output."
                     "Please resolve this inconsistency."
                 )
-
-    if recording is None:
+    else:
+        user_gave_recording = False
         # to make the initial analyzer, we'll use a fake recording and set it to None later
         recordings = []
         for probe in probegroup.probes:
@@ -418,7 +422,7 @@ def read_kilosort_as_analyzer(
     )
     _make_locations(sorting_analyzer, phy_path)
 
-    if recording is None:
+    if not user_gave_recording:
         sorting_analyzer._recording = None
 
     return sorting_analyzer
