@@ -96,7 +96,7 @@ from .job_tools import (
     get_best_job_kwargs,
     ensure_n_jobs,
     ensure_chunk_size,
-    ChunkRecordingExecutor,
+    ChunkExecutor,
     split_job_kwargs,
     fix_job_kwargs,
 )

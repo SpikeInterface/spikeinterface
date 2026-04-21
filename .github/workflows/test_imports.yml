@@ -20,15 +20,18 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
       - name: Install Spikeinterface with only core dependencies
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          python -m pip install -U pip  # Official recommended way
-          pip install .  # This should install core only
+          uv pip install --system .  # This should install core only
       - name: Profile Imports
         run: |
           echo "## OS: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
@@ -38,7 +41,7 @@ jobs:
         shell: bash  # Necessary for pipeline to work on windows
       - name: Install in full mode
         run: |
-          pip install .[full]
+          uv pip install --system .[full]
       - name: Profile Imports with full
         run: |
           # Add a header to separate the two profiles
