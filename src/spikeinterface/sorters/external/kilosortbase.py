@@ -151,7 +151,7 @@ class KilosortBase:
             else:
                 padded_recording = recording
             write_binary_recording(
-                recording=padded_recording,
+                padded_recording,
                 file_paths=[binary_file_path],
                 dtype="int16",
                 **get_job_kwargs(params, verbose),
