@@ -1162,10 +1162,9 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
         from probeinterface import ProbeGroup
 
         probegroup = ProbeGroup.from_dict(dic["probegroup"])
-        if hasattr(extractor, "set_probegroup"):
-            extractor.set_probegroup(probegroup, in_place=True)
-        else:
-            extractor._probegroup = probegroup
+        # The `wiring` per-channel property was restored above by the standard
+        # property-load loop; we just attach the probegroup object.
+        extractor._probegroup = probegroup
     elif "contact_vector" in dic.get("properties", {}):
         _restore_probegroup_from_legacy_contact_vector(extractor)
 

@@ -63,25 +63,6 @@ class BaseRecordingSnippets(BaseExtractor):
         return self._annotations.get("is_filtered", False)
 
     def set_probe(self, probe, group_mode="auto", in_place=False):
-        """
-        Attach a list of Probe object to a recording.
-
-        Parameters
-        ----------
-        probe_or_probegroup: Probe, list of Probe, or ProbeGroup
-            The probe(s) to be attached to the recording
-        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
-            How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-        in_place: bool
-            False by default.
-            Useful internally when extractor do self.set_probegroup(probe)
-
-        Returns
-        -------
-        sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself)
-        """
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
@@ -92,169 +73,171 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False):
         """
-        Attach a list of Probe objects to a recording.
-        For this Probe.device_channel_indices is used to link contacts to recording channels.
-        If some contacts of the Probe are not connected (device_channel_indices=-1)
-        then the recording is "sliced" and only connected channel are kept.
+        Attach a Probe, ProbeGroup, or list of Probe to the recording.
 
-        The probe order is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
+        The probegroup is stored by reference without mutation. The contact-to-channel
+        mapping is built from each probe's current `device_channel_indices` and stored
+        on the recording as two per-channel properties, `probe_id` and `contact_id`.
+        `location` and `group` are also written as properties for backward compatibility.
 
+        If the probegroup wires only a subset of the recording's channels, the recording
+        is sliced via `select_channels` to keep only the wired channels (preserving the
+        historical attach semantics).
 
         Parameters
         ----------
         probe_or_probegroup: Probe, list of Probe, or ProbeGroup
-            The probe(s) to be attached to the recording
-        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
-            How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-        in_place: bool
-            False by default.
-            Useful internally when extractor do self.set_probegroup(probe)
+            The probe(s) to be attached to the recording.
+        in_place: bool, default: False
+            If True, attach to self in place.
 
         Returns
         -------
         sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself)
+            The recording with the probegroup attached.
         """
-        assert group_mode in (
-            "auto",
-            "by_probe",
-            "by_shank",
-            "by_side",
-        ), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
-
-        # handle several input possibilities
+        # normalize input to a ProbeGroup
         if isinstance(probe_or_probegroup, Probe):
             probegroup = ProbeGroup()
             probegroup.add_probe(probe_or_probegroup)
         elif isinstance(probe_or_probegroup, ProbeGroup):
             probegroup = probe_or_probegroup
         elif isinstance(probe_or_probegroup, list):
-            assert all([isinstance(e, Probe) for e in probe_or_probegroup])
+            assert all(isinstance(e, Probe) for e in probe_or_probegroup)
             probegroup = ProbeGroup()
             for probe in probe_or_probegroup:
                 probegroup.add_probe(probe)
         else:
             raise ValueError("must give Probe or ProbeGroup or list of Probe")
 
-        # check that the probe do not overlap
-        num_probes = len(probegroup.probes)
-        if num_probes > 1:
+        if len(probegroup.probes) > 1:
             check_probe_do_not_overlap(probegroup.probes)
 
-        # handle not connected channels
         assert all(
             probe.device_channel_indices is not None for probe in probegroup.probes
         ), "Probe must have device_channel_indices"
 
-        # identify connected contacts and their channel-order
-        global_device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
-        connected_mask = global_device_channel_indices >= 0
-        if np.any(~connected_mask):
-            warn("The given probes have unconnected contacts: they are removed")
+        # ensure every probe has a stable probe_id and every contact has a contact_id;
+        # auto-generate only when missing so user-assigned ids survive
+        if not any("probe_id" in p.annotations for p in probegroup.probes):
+            probegroup.auto_generate_probe_ids()
+        if any(p.contact_ids is None for p in probegroup.probes):
+            probegroup.auto_generate_contact_ids()
 
-        connected_contact_indices = np.where(connected_mask)[0]
-        connected_channel_values = global_device_channel_indices[connected_mask]
-        order = np.argsort(connected_channel_values)
-        sorted_contact_indices = connected_contact_indices[order]
-        device_channel_indices = connected_channel_values[order]
+        # collect, per recording channel (by position in self.channel_ids), which
+        # (probe_id, contact_id) pair wires into it. Unwired channels stay as None.
+        num_channels = self.get_num_channels()
+        probe_id_col = [None] * num_channels
+        contact_id_col = [None] * num_channels
+        for probe in probegroup.probes:
+            probe_id = probe.annotations["probe_id"]
+            dci = np.asarray(probe.device_channel_indices)
+            for contact_idx, device_idx in enumerate(dci):
+                if device_idx < 0:
+                    continue  # unconnected contact; skip
+                if device_idx >= num_channels:
+                    raise ValueError(
+                        f"device_channel_indices value {device_idx} is out of range; "
+                        f"recording has {num_channels} channels."
+                    )
+                if probe_id_col[device_idx] is not None:
+                    raise ValueError(f"channel at index {device_idx} is wired to more than one contact.")
+                probe_id_col[device_idx] = probe_id
+                contact_id_col[device_idx] = probe.contact_ids[contact_idx]
 
-        # validate indices fit the recording
-        number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
-        if number_of_device_channel_indices >= self.get_num_channels():
-            error_msg = (
-                f"The given Probe either has 'device_channel_indices' that does not match channel count \n"
-                f"{len(device_channel_indices)} vs {self.get_num_channels()} \n"
-                f"or it's max index {number_of_device_channel_indices} is the same as the number of channels {self.get_num_channels()} \n"
-                f"If using all channels remember that python is 0-indexed so max device_channel_index should be {self.get_num_channels() - 1} \n"
-                f"device_channel_indices are the following: {device_channel_indices} \n"
-                f"recording channels are the following: {self.get_channel_ids()} \n"
-            )
-            raise ValueError(error_msg)
+        # Reorder the recording's channels to match the probe's device_channel_indices
+        # order (smallest dci first). Also drops any channels that are unwired. This
+        # matches the historical `set_probe` behaviour: after attach, recording channel
+        # i corresponds to the probe contact whose dci was the i-th smallest.
+        wired_dci_pairs = []  # (device_idx, position_in_probe_id_col)
+        for i, pid in enumerate(probe_id_col):
+            if pid is not None:
+                wired_dci_pairs.append(i)  # position == original device_idx since we indexed by it
+        # sort by device_idx (which equals the position already)
+        ordered_positions = sorted(wired_dci_pairs)
+        original_channel_ids = self.get_channel_ids()
+        new_channel_ids = original_channel_ids[ordered_positions]
 
-        new_channel_ids = self.get_channel_ids()[device_channel_indices]
-
-        # capture ndim before slicing; get_slice with an empty selection yields a probegroup
-        # with no probes, on which `.ndim` raises
-        ndim = probegroup.ndim
-
-        # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
-        probegroup = probegroup.get_slice(sorted_contact_indices)
-        probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
-
-        # create recording : channel slice or clone or self
         if in_place:
-            if not np.array_equal(new_channel_ids, self.get_channel_ids()):
-                raise Exception("set_probe(inplace=True) must have all channel indices")
-            sub_recording = self
+            if not np.array_equal(new_channel_ids, original_channel_ids):
+                raise Exception("set_probe(in_place=True) must have all channel indices")
+            target = self
         else:
-            if np.array_equal(new_channel_ids, self.get_channel_ids()):
-                sub_recording = self.clone()
+            if np.array_equal(new_channel_ids, original_channel_ids):
+                target = self.clone()
             else:
-                sub_recording = self.select_channels(new_channel_ids)
+                target = self.select_channels(new_channel_ids)
+        # re-key probe_id_col / contact_id_col into the (possibly reordered) target
+        probe_id_col = [probe_id_col[i] for i in ordered_positions]
+        contact_id_col = [contact_id_col[i] for i in ordered_positions]
 
-        sub_recording._probegroup = probegroup
+        # attach probegroup; the wiring lives as a (num_channels, 2) per-channel
+        # string property `wiring` with column 0 = probe_id, column 1 = contact_id.
+        # This is the same pattern as `location` (2D property per channel) and rides
+        # on SI's existing property plumbing (copy_metadata, concat, serialization).
+        target._probegroup = probegroup
 
-        # TODO: revisit whether set_probe with a fully unconnected probe should raise
-        # instead of returning a zero-channel recording. Preserved here for backwards
-        # compatibility with a test in test_BaseRecording; that test case should be
-        # peeled into its own named test so this assumption is easy to find and
-        # discuss when we decide to tighten the behaviour.
-        if len(device_channel_indices) == 0:
-            sub_recording.set_property("location", np.zeros((0, ndim), dtype="float64"), ids=None)
-            sub_recording.set_property("group", np.zeros(0, dtype="int64"), ids=None)
-            sub_recording.annotate(probes_info=[])
-            return sub_recording
+        # handle the degenerate empty-wiring case (probe with all dci=-1)
+        if len(probe_id_col) == 0:
+            ndim = probegroup.ndim
+            target.set_property("wiring", np.zeros((0, 2), dtype="U64"))
+            target.set_property("location", np.zeros((0, ndim), dtype="float64"))
+            target.set_property("group", np.zeros(0, dtype="int64"))
+            return target
 
-        probe_as_numpy_array = probegroup._build_contact_vector()
+        wiring = np.column_stack(
+            [
+                np.asarray(probe_id_col, dtype="U64"),
+                np.asarray(contact_id_col, dtype="U64"),
+            ]
+        )
+        target.set_property("wiring", wiring)
 
-        # duplicate positions to "location" property so SpikeInterface-level readers keep working
-        locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
-        for i, dim in enumerate(["x", "y", "z"][:ndim]):
-            locations[:, i] = probe_as_numpy_array[dim]
-        sub_recording.set_property("location", locations, ids=None)
-
-        # derive groups from contact_vector
-        has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
-        has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
+        # write `location` and `group` as compatibility mirrors of the canonical
+        # probegroup + _channel_to_contact mapping. group_mode is consulted here to
+        # match the pre-strong-preserve API; callers that pass "by_probe", "by_shank"
+        # etc. get the same partitioning as before.
+        ndim = probegroup.ndim
+        probes_by_id = {p.annotations["probe_id"]: p for p in probegroup.probes}
+        has_shank = any(p.shank_ids is not None for p in probegroup.probes)
+        has_side = any(p.contact_sides is not None for p in probegroup.probes)
         if group_mode == "auto":
-            group_keys = ["probe_index"]
-            if has_shank_id:
-                group_keys += ["shank_ids"]
-            if has_contact_side:
-                group_keys += ["contact_sides"]
+            keys_template = ["probe"] + (["shank"] if has_shank else []) + (["side"] if has_side else [])
         elif group_mode == "by_probe":
-            group_keys = ["probe_index"]
+            keys_template = ["probe"]
         elif group_mode == "by_shank":
-            assert has_shank_id, "shank_ids is None in probe, you cannot group by shank"
-            group_keys = ["probe_index", "shank_ids"]
+            assert has_shank, "shank_ids is None in probe, you cannot group by shank"
+            keys_template = ["probe", "shank"]
         elif group_mode == "by_side":
-            assert has_contact_side, "contact_sides is None in probe, you cannot group by side"
-            if has_shank_id:
-                group_keys = ["probe_index", "shank_ids", "contact_sides"]
-            else:
-                group_keys = ["probe_index", "contact_sides"]
-        groups = np.zeros(probe_as_numpy_array.size, dtype="int64")
-        unique_keys = np.unique(probe_as_numpy_array[group_keys])
-        for group, a in enumerate(unique_keys):
-            mask = np.ones(probe_as_numpy_array.size, dtype=bool)
-            for k in group_keys:
-                mask &= probe_as_numpy_array[k] == a[k]
-            groups[mask] = group
-        sub_recording.set_property("group", groups, ids=None)
+            assert has_side, "contact_sides is None in probe, you cannot group by side"
+            keys_template = ["probe"] + (["shank"] if has_shank else []) + ["side"]
+        else:
+            raise ValueError(f"unknown group_mode {group_mode!r}")
 
-        # TODO discuss backwards compatibility: mirror probe-level annotations and planar
-        # contours as recording-level annotations so external code that reads these keys
-        # keeps working. The canonical source is now `probe.annotations` and
-        # `probe.probe_planar_contour` on the attached probegroup.
-        probes_info = [probe.annotations for probe in probegroup.probes]
-        sub_recording.annotate(probes_info=probes_info)
-        for probe_index, probe in enumerate(probegroup.probes):
-            contour = probe.probe_planar_contour
-            if contour is not None:
-                sub_recording.set_annotation(f"probe_{probe_index}_planar_contour", contour, overwrite=True)
+        wired_positions = list(range(len(probe_id_col)))
+        locations = np.zeros((len(wired_positions), ndim), dtype="float64")
+        group_keys_per_channel = []
+        for i, (pid, cid) in enumerate(zip(probe_id_col, contact_id_col)):
+            probe = probes_by_id[pid]
+            contact_idx = int(np.where(np.asarray(probe.contact_ids) == cid)[0][0])
+            locations[i] = probe.contact_positions[contact_idx, :ndim]
+            key = []
+            for k in keys_template:
+                if k == "probe":
+                    key.append(pid)
+                elif k == "shank" and probe.shank_ids is not None:
+                    key.append(probe.shank_ids[contact_idx])
+                elif k == "side" and probe.contact_sides is not None:
+                    key.append(probe.contact_sides[contact_idx])
+            group_keys_per_channel.append(tuple(key))
 
-        return sub_recording
+        unique_keys = list(dict.fromkeys(group_keys_per_channel))
+        key_to_int = {k: i for i, k in enumerate(unique_keys)}
+        groups = np.array([key_to_int[k] for k in group_keys_per_channel], dtype="int64")
+
+        target.set_property("location", locations)
+        target.set_property("group", groups)
+        return target
 
     def get_probe(self):
         probes = self.get_probes()
@@ -279,11 +262,29 @@ class BaseRecordingSnippets(BaseExtractor):
             pg = ProbeGroup()
             pg.add_probe(probe)
             return copy.deepcopy(pg)
-        # Return a deepcopy for backwards compatibility: pre-migration `main` reconstructed
-        # a fresh `ProbeGroup` from the stored structured array on each call, so external
-        # callers relied on value semantics. Handing out the live `_probegroup` would be a
-        # silent behavioural change.
-        return copy.deepcopy(self._probegroup)
+
+        # Build a channel-ordered view of the stored probegroup for the public getter.
+        # Strong-preserve keeps each probe intact on `_probegroup`; here we slice it down
+        # to the contacts that actually appear in this recording, in channel order, with
+        # device_channel_indices = arange(N). The returned object matches the
+        # pre-strong-preserve `get_probe()` semantic.
+        wiring = self.get_property("wiring")
+        if wiring is None:
+            return copy.deepcopy(self._probegroup)
+
+        # map (probe_id, contact_id) to the global contact index in the stored probegroup
+        contact_id_to_global = {}
+        offset = 0
+        for probe in self._probegroup.probes:
+            pid = probe.annotations["probe_id"]
+            for cid in probe.contact_ids:
+                contact_id_to_global[(pid, cid)] = offset
+                offset += 1
+
+        global_indices = [contact_id_to_global[(pid, cid)] for pid, cid in wiring]
+        view = self._probegroup.get_slice(np.asarray(global_indices, dtype="int64"))
+        view.set_global_device_channel_indices(np.arange(len(global_indices), dtype="int64"))
+        return view
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
@@ -358,14 +359,25 @@ class BaseRecordingSnippets(BaseExtractor):
     def get_channel_locations(self, channel_ids=None, axes: str = "xy") -> np.ndarray:
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
-        channel_indices = self.ids_to_indices(channel_ids)
+
         if self.has_probe():
-            contact_vector = self._probegroup._build_contact_vector()
+            # resolve each channel via the `wiring` property (column 0 = probe_id,
+            # column 1 = contact_id) and look up the contact's position on the
+            # corresponding probe
+            wiring = self.get_property("wiring", ids=channel_ids)
+            probes_by_id = {p.annotations["probe_id"]: p for p in self._probegroup.probes}
+            axis_index = {"x": 0, "y": 1, "z": 2}
             ndim = len(axes)
-            all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
-            for i, dim in enumerate(axes):
-                all_positions[:, i] = contact_vector[dim]
-            return all_positions[channel_indices]
+            locations = np.zeros((len(channel_ids), ndim), dtype="float64")
+            for i, (probe_id, contact_id) in enumerate(wiring):
+                probe = probes_by_id[probe_id]
+                contact_idx = int(np.where(np.asarray(probe.contact_ids) == contact_id)[0][0])
+                for j, axis in enumerate(axes):
+                    locations[i, j] = probe.contact_positions[contact_idx, axis_index[axis]]
+            return locations
+
+        # fallback for recordings that have a "location" property but no attached probegroup
+        channel_indices = self.ids_to_indices(channel_ids)
         locations = self.get_property("location")
         if locations is None:
             raise Exception("There are no channel locations")
@@ -373,6 +385,8 @@ class BaseRecordingSnippets(BaseExtractor):
         return select_axes(locations, axes)
 
     def has_3d_locations(self) -> bool:
+        if self.has_probe():
+            return self._probegroup.ndim == 3
         return self.get_property("location").shape[1] == 3
 
     def clear_channel_locations(self, channel_ids=None):
@@ -390,8 +404,34 @@ class BaseRecordingSnippets(BaseExtractor):
         self.set_property("group", groups, ids=channel_ids)
 
     def get_channel_groups(self, channel_ids=None):
-        groups = self.get_property("group", ids=channel_ids)
-        return groups
+        # when a probe is attached, derive groups on the fly from the `wiring`
+        # property + probegroup state (probe_id + shank_ids + contact_sides)
+        if self.has_probe():
+            if channel_ids is None:
+                channel_ids = self.get_channel_ids()
+            wiring = self.get_property("wiring", ids=channel_ids)
+            probes_by_id = {p.annotations["probe_id"]: p for p in self._probegroup.probes}
+            has_shank = any(p.shank_ids is not None for p in self._probegroup.probes)
+            has_side = any(p.contact_sides is not None for p in self._probegroup.probes)
+
+            group_keys = []
+            for probe_id, contact_id in wiring:
+                probe = probes_by_id[probe_id]
+                key = [probe_id]
+                if has_shank or has_side:
+                    contact_idx = int(np.where(np.asarray(probe.contact_ids) == contact_id)[0][0])
+                    if has_shank and probe.shank_ids is not None:
+                        key.append(probe.shank_ids[contact_idx])
+                    if has_side and probe.contact_sides is not None:
+                        key.append(probe.contact_sides[contact_idx])
+                group_keys.append(tuple(key))
+
+            unique_keys = list(dict.fromkeys(group_keys))
+            key_to_int = {k: i for i, k in enumerate(unique_keys)}
+            return np.array([key_to_int[k] for k in group_keys], dtype="int64")
+
+        # fallback: read a stored "group" property (recordings without a probe)
+        return self.get_property("group", ids=channel_ids)
 
     def clear_channel_groups(self, channel_ids=None):
         if channel_ids is None:

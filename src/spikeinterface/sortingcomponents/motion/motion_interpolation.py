@@ -404,11 +404,9 @@ class InterpolateMotionRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording, channel_ids=channel_ids, dtype=dtype_)
 
         if border_mode == "remove_channels" and recording.has_probe():
-            # slice the probegroup to the retained channels and attach via the canonical path
-            parent_probegroup = recording.get_probegroup()
-            sliced_probegroup = parent_probegroup.get_slice(channel_inds)
-            sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-            self.set_probegroup(sliced_probegroup, in_place=True)
+            # inherit the probegroup by reference; the `wiring` per-channel property
+            # rode through BasePreprocessor's copy_metadata with filtered channel_ids
+            self._probegroup = recording._probegroup
 
         # handle manual interpolation_time_bin_centers_s
         # the case where interpolation_time_bin_size_s is set is handled per-segment below

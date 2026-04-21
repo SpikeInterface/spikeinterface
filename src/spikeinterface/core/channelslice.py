@@ -61,12 +61,10 @@ class ChannelSliceRecording(BaseRecording):
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
         self._parent = parent_recording
 
-        # slice the probegroup to the retained channels and attach via the canonical path
+        # inherit the probegroup by reference; the `wiring` per-channel property
+        # rode through copy_metadata above with the filtered channel_ids
         if parent_recording.has_probe():
-            parent_probegroup = parent_recording.get_probegroup()
-            sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
-            sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-            self.set_probegroup(sliced_probegroup, in_place=True)
+            self._probegroup = parent_recording._probegroup
 
         # update dump dict
         self._kwargs = {
@@ -152,12 +150,10 @@ class ChannelSliceSnippets(BaseSnippets):
         # copy annotation and properties
         parent_snippets.copy_metadata(self, only_main=False, ids=self._channel_ids)
 
-        # slice the probegroup to the retained channels and attach via the canonical path
+        # inherit the probegroup by reference; the `wiring` per-channel property
+        # rode through copy_metadata above with the filtered channel_ids
         if parent_snippets.has_probe():
-            parent_probegroup = parent_snippets.get_probegroup()
-            sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
-            sliced_probegroup.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-            self.set_probegroup(sliced_probegroup, in_place=True)
+            self._probegroup = parent_snippets._probegroup
 
         # update dump dict
         self._kwargs = {

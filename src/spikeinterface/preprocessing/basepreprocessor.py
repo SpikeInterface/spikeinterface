@@ -21,10 +21,8 @@ class BasePreprocessor(BaseRecording):
         recording.copy_metadata(self, only_main=False, ids=channel_ids)
         self._parent = recording
 
-        # Propagate the attached probegroup. copy_metadata only handles annotations
-        # and properties; `_probegroup` is a direct attribute and needs its own path.
-        # Subclasses that change channels (e.g. slicing) should override by slicing
-        # the probegroup themselves via set_probegroup.
+        # Propagate the attached probegroup. `_probegroup` is a recording-global
+        # direct attribute; the per-channel `wiring` property rides on copy_metadata.
         if getattr(recording, "_probegroup", None) is not None and channel_ids is None:
             self._probegroup = recording._probegroup
 
