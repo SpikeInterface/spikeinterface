@@ -86,6 +86,7 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
             "offset_to_uV",
             "location",
             "group",
+            "wiring",
             "shank",
             "shank_row",
             "shank_col",
