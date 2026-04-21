@@ -66,6 +66,11 @@ class BaseSorting(BaseExtractor):
         return self._segments
 
     @property
+    def _sorting_segments(self) -> list["BaseSortingSegment"]:
+        """For backward compatibility, we keep _sorting_segments."""
+        return self._segments
+
+    @property
     def unit_ids(self):
         return self._main_ids
 
