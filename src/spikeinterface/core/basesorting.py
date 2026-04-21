@@ -322,11 +322,11 @@ class BaseSorting(BaseExtractor):
                     "Might be necessary for further postprocessing."
                 )
         self._recording = recording
-        # The recording is now the source of truth for timestamps.
-        # Reset the sorting's own time offset so it doesn't conflict
-        # with the recording's t_start when accessed through get_start_time/get_end_time.
-        for segment in self.segments:
-            segment._t_start = None
+        # Copy the recording's start times into the sorting segments. This way,
+        # the sorting preserves the start time even if the recording is later
+        # detached (e.g. analyzer saved and reloaded without the recording).
+        for segment_index, segment in enumerate(self.segments):
+            segment._t_start = recording.get_start_time(segment_index=segment_index)
 
     @property
     def sorting_info(self):
@@ -355,9 +355,6 @@ class BaseSorting(BaseExtractor):
     def get_start_time(self, segment_index: int | None = None) -> float:
         """Get the start time of the sorting segment.
 
-        If a recording is registered, returns the recording's start time.
-        Otherwise returns the sorting's own start time (0.0 if it was not set).
-
         Parameters
         ----------
         segment_index : int or None, default: None
@@ -369,11 +366,8 @@ class BaseSorting(BaseExtractor):
             The start time in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        if self.has_recording():
-            return self._recording.get_start_time(segment_index=segment_index)
-        else:
-            segment = self.segments[segment_index]
-            return segment._t_start if segment._t_start is not None else 0.0
+        segment = self.segments[segment_index]
+        return segment._t_start if segment._t_start is not None else 0.0
 
     def get_end_time(self, segment_index: int | None = None) -> float:
         """Get the end time of the sorting segment.
