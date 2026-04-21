@@ -377,7 +377,7 @@ class RasterWidget(BaseRasterWidget):
         backend: str | None = None,
         sorting: BaseSorting | None = None,
         sorting_analyzer: SortingAnalyzer | None = None,
-        sort_by_depth : bool = False,
+        sort_by_depth: bool = False,
         **backend_kwargs,
     ):
         if sorting is not None:
@@ -390,8 +390,6 @@ class RasterWidget(BaseRasterWidget):
             warn(deprecation_msg, category=DeprecationWarning, stacklevel=2)
             sorting_analyzer_or_sorting = sorting_analyzer
 
-        
-
         sorting = self.ensure_sorting(sorting_analyzer_or_sorting)
 
         segment_indices = validate_segment_indices(segment_indices, sorting)
@@ -399,7 +397,7 @@ class RasterWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        if sort_by_depth :
+        if sort_by_depth:
             # print("hey")
             if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
                 raise AttributeError(f"'unit_locations' necessary for sort_by_depth is True")
