@@ -10,6 +10,31 @@ from .recording_tools import check_probe_do_not_overlap
 from warnings import warn
 
 
+def _restore_probe_ids_from_wiring(probegroup, wiring):
+    """
+    Re-attach `probe_id` annotations to probes from the `wiring` property when
+    they have been stripped (e.g. by a reconstruction path that rebuilds the
+    ProbeGroup without preserving annotations). `wiring` has shape `(N, 2)`
+    with probe_ids in column 0; unique probe_ids in order of first appearance
+    correspond directly to the stored probe order, which is how `_set_probes`
+    builds wiring in the first place. No-op when annotations are intact or
+    when the counts don't match.
+    """
+    if probegroup is None or wiring is None or len(probegroup.probes) == 0:
+        return
+    if all("probe_id" in p.annotations for p in probegroup.probes):
+        return
+    seen = []
+    for pid in np.asarray(wiring)[:, 0]:
+        if pid not in seen:
+            seen.append(pid)
+    if len(seen) != len(probegroup.probes):
+        return  # cannot reconstruct safely
+    for probe, pid in zip(probegroup.probes, seen):
+        if "probe_id" not in probe.annotations:
+            probe.annotate(probe_id=pid)
+
+
 class BaseRecordingSnippets(BaseExtractor):
     """
     Mixin that handles all probe and channel operations
@@ -275,6 +300,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 # re-running `_set_probes` would fail for sliced children.
                 # Attach the probegroup object directly.
                 self._probegroup = probegroup
+                _restore_probe_ids_from_wiring(self._probegroup, self.get_property("wiring"))
             else:
                 self.set_probegroup(probegroup, in_place=True)
 
