@@ -1,4 +1,3 @@
-import copy
 from pathlib import Path
 
 import numpy as np
@@ -261,13 +260,9 @@ class BaseRecordingSnippets(BaseExtractor):
             probe = self.create_dummy_probe_from_locations(positions)
             pg = ProbeGroup()
             pg.add_probe(probe)
-            return copy.deepcopy(pg)
+            return pg
 
-        # Strong-preserve: return the stored probegroup as-is. The probe objects carry
-        # the user's original `device_channel_indices` and the full set of physical
-        # contacts, not a channel-aligned view. Callers that want channel-ordered
-        # geometry should use `get_channel_locations()`.
-        return copy.deepcopy(self._probegroup)
+        return self._probegroup
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
