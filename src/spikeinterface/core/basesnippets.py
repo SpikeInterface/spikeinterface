@@ -260,8 +260,10 @@ class BaseSnippets(BaseRecordingSnippets):
             raise ValueError(f"format {format} not supported")
 
         if self.has_probe() and not cached.has_probe():
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup, in_place=True)
+            # Share the probegroup by reference; see BaseRecording._save for
+            # the rationale (avoids re-running _set_probes validation on a
+            # child whose parent's dci exceeds the child's channel count).
+            cached._probegroup = self._probegroup
 
         return cached
 

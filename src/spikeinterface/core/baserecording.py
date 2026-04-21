@@ -393,8 +393,13 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             raise ValueError(f"format {format} not supported")
 
         if self.has_probe() and not cached.has_probe():
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup, in_place=True)
+            # Share the probegroup by reference. We deliberately skip
+            # `set_probegroup` (which re-runs _set_probes and validates dci)
+            # because a child of `split_by` references the parent's full
+            # probegroup whose dci values can exceed the child's channel
+            # count. Wiring/location/group properties are carried over by
+            # the caller's `copy_metadata` step.
+            cached._probegroup = self._probegroup
 
         return cached
 
