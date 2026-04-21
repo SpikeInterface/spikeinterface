@@ -263,28 +263,11 @@ class BaseRecordingSnippets(BaseExtractor):
             pg.add_probe(probe)
             return copy.deepcopy(pg)
 
-        # Build a channel-ordered view of the stored probegroup for the public getter.
-        # Strong-preserve keeps each probe intact on `_probegroup`; here we slice it down
-        # to the contacts that actually appear in this recording, in channel order, with
-        # device_channel_indices = arange(N). The returned object matches the
-        # pre-strong-preserve `get_probe()` semantic.
-        wiring = self.get_property("wiring")
-        if wiring is None:
-            return copy.deepcopy(self._probegroup)
-
-        # map (probe_id, contact_id) to the global contact index in the stored probegroup
-        contact_id_to_global = {}
-        offset = 0
-        for probe in self._probegroup.probes:
-            pid = probe.annotations["probe_id"]
-            for cid in probe.contact_ids:
-                contact_id_to_global[(pid, cid)] = offset
-                offset += 1
-
-        global_indices = [contact_id_to_global[(pid, cid)] for pid, cid in wiring]
-        view = self._probegroup.get_slice(np.asarray(global_indices, dtype="int64"))
-        view.set_global_device_channel_indices(np.arange(len(global_indices), dtype="int64"))
-        return view
+        # Strong-preserve: return the stored probegroup as-is. The probe objects carry
+        # the user's original `device_channel_indices` and the full set of physical
+        # contacts, not a channel-aligned view. Callers that want channel-ordered
+        # geometry should use `get_channel_locations()`.
+        return copy.deepcopy(self._probegroup)
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
