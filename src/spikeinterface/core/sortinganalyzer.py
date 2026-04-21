@@ -1642,6 +1642,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 )
 
         """
+
         def __handle_sigint(signum, frame):
             if self.format == "memory":
                 return
