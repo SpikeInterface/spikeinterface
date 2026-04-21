@@ -574,6 +574,9 @@ class BaseExtractor:
                 folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
+        if getattr(self, "_probegroup", None) is not None:
+            dump_dict["probegroup"] = self._probegroup.to_dict(array_as_list=True)
+
         return dump_dict
 
     @staticmethod
@@ -1155,7 +1158,52 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     for k, v in dic["properties"].items():
         extractor.set_property(k, v)
 
+    if "probegroup" in dic:
+        from probeinterface import ProbeGroup
+
+        probegroup = ProbeGroup.from_dict(dic["probegroup"])
+        if hasattr(extractor, "set_probegroup"):
+            extractor.set_probegroup(probegroup, in_place=True)
+        else:
+            extractor._probegroup = probegroup
+    elif "contact_vector" in dic.get("properties", {}):
+        _restore_probegroup_from_legacy_contact_vector(extractor)
+
     return extractor
+
+
+def _restore_probegroup_from_legacy_contact_vector(extractor) -> None:
+    """
+    Reconstruct a `ProbeGroup` from the legacy `contact_vector` property.
+
+    Recordings saved before the probegroup refactor stored the probe as a structured numpy
+    array under the `contact_vector` property, with probe-level annotations under a separate
+    `probes_info` annotation and per-probe planar contours under `probe_{i}_planar_contour`
+    annotations. This function reconstructs a `ProbeGroup` from those legacy fields, attaches
+    it via the canonical `set_probegroup` path, and removes the legacy property so the new
+    and old representations do not coexist on the loaded extractor.
+    """
+    from probeinterface import ProbeGroup
+
+    contact_vector_array = extractor.get_property("contact_vector")
+    probegroup = ProbeGroup.from_numpy(contact_vector_array)
+
+    if "probes_info" in extractor.get_annotation_keys():
+        probes_info = extractor.get_annotation("probes_info")
+        for probe, probe_info in zip(probegroup.probes, probes_info):
+            probe.annotations = probe_info
+
+    for probe_index, probe in enumerate(probegroup.probes):
+        contour = extractor._annotations.get(f"probe_{probe_index}_planar_contour")
+        if contour is not None:
+            probe.set_planar_contour(contour)
+
+    if hasattr(extractor, "set_probegroup"):
+        extractor.set_probegroup(probegroup, in_place=True)
+    else:
+        extractor._probegroup = probegroup
+
+    extractor._properties.pop("contact_vector", None)
 
 
 def _get_class_from_string(class_string):

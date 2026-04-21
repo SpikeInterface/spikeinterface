@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import probeinterface
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -71,8 +72,9 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
             probe_kwargs["electrode_width"] = electrode_width
         probe = probeinterface.read_3brain(file_path, **probe_kwargs)
         self.set_probe(probe, in_place=True)
-        self.set_property("row", self.get_property("contact_vector")["row"])
-        self.set_property("col", self.get_property("contact_vector")["col"])
+        probe = self.get_probegroup().probes[0]
+        self.set_property("row", np.asarray(probe.contact_annotations["row"]))
+        self.set_property("col", np.asarray(probe.contact_annotations["col"]))
 
         self._kwargs.update(
             {

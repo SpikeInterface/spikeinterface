@@ -1,3 +1,4 @@
+import copy
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseExtractor.__init__(self, channel_ids)
         self._sampling_frequency = float(sampling_frequency)
         self._dtype = np.dtype(dtype)
+        self._probegroup = None
 
     @property
     def channel_ids(self):
@@ -51,7 +53,7 @@ class BaseRecordingSnippets(BaseExtractor):
             return True
 
     def has_probe(self) -> bool:
-        return "contact_vector" in self.get_property_keys()
+        return self._probegroup is not None
 
     def has_channel_location(self) -> bool:
         return self.has_probe() or "location" in self.get_property_keys()
@@ -145,21 +147,19 @@ class BaseRecordingSnippets(BaseExtractor):
             probe.device_channel_indices is not None for probe in probegroup.probes
         ), "Probe must have device_channel_indices"
 
-        # this is a vector with complex fileds (dataframe like) that handle all contact attr
-        probe_as_numpy_array = probegroup.to_numpy(complete=True)
-
-        # keep only connected contact ( != -1)
-        keep = probe_as_numpy_array["device_channel_indices"] >= 0
-        if np.any(~keep):
+        # identify connected contacts and their channel-order
+        global_device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
+        connected_mask = global_device_channel_indices >= 0
+        if np.any(~connected_mask):
             warn("The given probes have unconnected contacts: they are removed")
 
-        probe_as_numpy_array = probe_as_numpy_array[keep]
+        connected_contact_indices = np.where(connected_mask)[0]
+        connected_channel_values = global_device_channel_indices[connected_mask]
+        order = np.argsort(connected_channel_values)
+        sorted_contact_indices = connected_contact_indices[order]
+        device_channel_indices = connected_channel_values[order]
 
-        device_channel_indices = probe_as_numpy_array["device_channel_indices"]
-        order = np.argsort(device_channel_indices)
-        device_channel_indices = device_channel_indices[order]
-
-        # check TODO: Where did this came from?
+        # validate indices fit the recording
         number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
         if number_of_device_channel_indices >= self.get_num_channels():
             error_msg = (
@@ -173,8 +173,14 @@ class BaseRecordingSnippets(BaseExtractor):
             raise ValueError(error_msg)
 
         new_channel_ids = self.get_channel_ids()[device_channel_indices]
-        probe_as_numpy_array = probe_as_numpy_array[order]
-        probe_as_numpy_array["device_channel_indices"] = np.arange(probe_as_numpy_array.size, dtype="int64")
+
+        # capture ndim before slicing; get_slice with an empty selection yields a probegroup
+        # with no probes, on which `.ndim` raises
+        ndim = probegroup.ndim
+
+        # slice + reorder probegroup so contact order matches the recording's channel order, and reset wiring to arange
+        probegroup = probegroup.get_slice(sorted_contact_indices)
+        probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices), dtype="int64"))
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -187,23 +193,28 @@ class BaseRecordingSnippets(BaseExtractor):
             else:
                 sub_recording = self.select_channels(new_channel_ids)
 
-        # create a vector that handle all contacts in property
-        sub_recording.set_property("contact_vector", probe_as_numpy_array, ids=None)
+        sub_recording._probegroup = probegroup
 
-        # planar_contour is saved in annotations
-        for probe_index, probe in enumerate(probegroup.probes):
-            contour = probe.probe_planar_contour
-            if contour is not None:
-                sub_recording.set_annotation(f"probe_{probe_index}_planar_contour", contour, overwrite=True)
+        # TODO: revisit whether set_probe with a fully unconnected probe should raise
+        # instead of returning a zero-channel recording. Preserved here for backwards
+        # compatibility with a test in test_BaseRecording; that test case should be
+        # peeled into its own named test so this assumption is easy to find and
+        # discuss when we decide to tighten the behaviour.
+        if len(device_channel_indices) == 0:
+            sub_recording.set_property("location", np.zeros((0, ndim), dtype="float64"), ids=None)
+            sub_recording.set_property("group", np.zeros(0, dtype="int64"), ids=None)
+            sub_recording.annotate(probes_info=[])
+            return sub_recording
 
-        # duplicate positions to "locations" property
-        ndim = probegroup.ndim
+        probe_as_numpy_array = probegroup._build_contact_vector()
+
+        # duplicate positions to "location" property so SpikeInterface-level readers keep working
         locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
         for i, dim in enumerate(["x", "y", "z"][:ndim]):
             locations[:, i] = probe_as_numpy_array[dim]
         sub_recording.set_property("location", locations, ids=None)
 
-        # handle groups
+        # derive groups from contact_vector
         has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
         has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
         if group_mode == "auto":
@@ -232,11 +243,16 @@ class BaseRecordingSnippets(BaseExtractor):
             groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
-        # add probe annotations to recording
-        probes_info = []
-        for probe in probegroup.probes:
-            probes_info.append(probe.annotations)
+        # TODO discuss backwards compatibility: mirror probe-level annotations and planar
+        # contours as recording-level annotations so external code that reads these keys
+        # keeps working. The canonical source is now `probe.annotations` and
+        # `probe.probe_planar_contour` on the attached probegroup.
+        probes_info = [probe.annotations for probe in probegroup.probes]
         sub_recording.annotate(probes_info=probes_info)
+        for probe_index, probe in enumerate(probegroup.probes):
+            contour = probe.probe_planar_contour
+            if contour is not None:
+                sub_recording.set_annotation(f"probe_{probe_index}_planar_contour", contour, overwrite=True)
 
         return sub_recording
 
@@ -250,30 +266,24 @@ class BaseRecordingSnippets(BaseExtractor):
         return probegroup.probes
 
     def get_probegroup(self):
-        arr = self.get_property("contact_vector")
-        if arr is None:
+        if self._probegroup is None:
+            # Backwards-compat fallback: pre-migration get_probegroup synthesised a dummy
+            # probe from the "location" property when no probe had been attached. Callers
+            # (e.g. sparsity.py) rely on this for recordings that have locations but no
+            # probe.
             positions = self.get_property("location")
             if positions is None:
                 raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
-            else:
-                warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
-                probe = self.create_dummy_probe_from_locations(positions)
-                #  probe.create_auto_shape()
-                probegroup = ProbeGroup()
-                probegroup.add_probe(probe)
-        else:
-            probegroup = ProbeGroup.from_numpy(arr)
-
-            if "probes_info" in self.get_annotation_keys():
-                probes_info = self.get_annotation("probes_info")
-                for probe, probe_info in zip(probegroup.probes, probes_info):
-                    probe.annotations = probe_info
-
-            for probe_index, probe in enumerate(probegroup.probes):
-                contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
-                if contour is not None:
-                    probe.set_planar_contour(contour)
-        return probegroup
+            warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
+            probe = self.create_dummy_probe_from_locations(positions)
+            pg = ProbeGroup()
+            pg.add_probe(probe)
+            return copy.deepcopy(pg)
+        # Return a deepcopy for backwards compatibility: pre-migration `main` reconstructed
+        # a fresh `ProbeGroup` from the stored structured array on each call, so external
+        # callers relied on value semantics. Handing out the live `_probegroup` would be a
+        # silent behavioural change.
+        return copy.deepcopy(self._probegroup)
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
@@ -284,7 +294,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def _extra_metadata_to_folder(self, folder):
         # save probe
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
 
@@ -341,7 +351,7 @@ class BaseRecordingSnippets(BaseExtractor):
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             raise ValueError("set_channel_locations(..) destroys the probe description, prefer _set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
@@ -349,21 +359,18 @@ class BaseRecordingSnippets(BaseExtractor):
         if channel_ids is None:
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
-        contact_vector = self.get_property("contact_vector")
-        if contact_vector is not None:
-            # here we bypass the probe reconstruction so this works both for probe and probegroup
+        if self.has_probe():
+            contact_vector = self._probegroup._build_contact_vector()
             ndim = len(axes)
             all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
             for i, dim in enumerate(axes):
                 all_positions[:, i] = contact_vector[dim]
-            positions = all_positions[channel_indices]
-            return positions
-        else:
-            locations = self.get_property("location")
-            if locations is None:
-                raise Exception("There are no channel locations")
-            locations = np.asarray(locations)[channel_indices]
-            return select_axes(locations, axes)
+            return all_positions[channel_indices]
+        locations = self.get_property("location")
+        if locations is None:
+            raise Exception("There are no channel locations")
+        locations = np.asarray(locations)[channel_indices]
+        return select_axes(locations, axes)
 
     def has_3d_locations(self) -> bool:
         return self.get_property("location").shape[1] == 3
