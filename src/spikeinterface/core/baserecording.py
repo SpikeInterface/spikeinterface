@@ -392,7 +392,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.has_probe():
+        if self.has_probe() and not cached.has_probe():
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 
@@ -403,7 +403,14 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         folder = Path(folder)
         if (folder / "probe.json").is_file():
             probegroup = read_probeinterface(folder / "probe.json")
-            self.set_probegroup(probegroup, in_place=True)
+            if "wiring" in self.get_property_keys():
+                # wiring was restored via the property-load loop; the stored
+                # probegroup's dci refers to the parent's channel space, so
+                # re-running `_set_probes` would fail for sliced children.
+                # Attach the probegroup object directly.
+                self._probegroup = probegroup
+            else:
+                self.set_probegroup(probegroup, in_place=True)
 
         # load time vector if any
         for segment_index, rs in enumerate(self.segments):

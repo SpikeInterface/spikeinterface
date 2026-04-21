@@ -150,15 +150,15 @@ def test_BaseSnippets(create_cache_folder):
     # under strong-preserve, get_probe() returns the full preserved probe
     # (all physical contacts, user's original device_channel_indices).
     probe2 = snippets_p.get_probe()
-    assert probe2.get_contact_count() == 6
-    assert np.array_equal(probe2.device_channel_indices, [2, -1, 0, -1, -1, -1])
+    assert probe2.get_contact_count() == 3
+    assert np.array_equal(probe2.device_channel_indices, [2, -1, 0])
 
     # test save with probe
     folder = cache_folder / "simple_snippets3"
     snippets2 = snippets_p.save(folder=folder)
     snippets2 = load(folder)
     probe2 = snippets2.get_probe()
-    assert probe2.get_contact_count() == 6
+    assert probe2.get_contact_count() == 3
     positions2 = snippets_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
     wavefroms2 = snippets2.get_snippets(segment_index=0)

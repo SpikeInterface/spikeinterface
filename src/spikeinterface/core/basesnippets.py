@@ -259,7 +259,7 @@ class BaseSnippets(BaseRecordingSnippets):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.has_probe():
+        if self.has_probe() and not cached.has_probe():
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 

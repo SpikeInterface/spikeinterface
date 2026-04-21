@@ -105,14 +105,25 @@ class ChannelsAggregationRecording(BaseRecording):
                 combined_probegroup = first_pg
             else:
                 # cross-parent case: build a fresh combined probegroup from copies
-                # of each probe. Round-trip through to_dict/from_dict because
-                # `Probe.copy()` currently drops contact_ids and annotations
-                # (probeinterface #421). Clear `device_channel_indices` on each copy
-                # so probeinterface's cross-probe dci uniqueness check passes.
+                # of each probe.
                 combined_probegroup = ProbeGroup()
                 for rec in recording_list:
                     for probe in rec._probegroup.probes:
+                        # Round-trip through to_dict/from_dict because `Probe.copy()`
+                        # currently drops contact_ids and annotations (probeinterface
+                        # #421). Once that is fixed we can switch to `probe.copy()`.
                         probe_copy = Probe.from_dict(probe.to_dict(array_as_list=False))
+                        # Clear `device_channel_indices` so probeinterface's
+                        # `ProbeGroup.add_probe` cross-probe dci uniqueness check
+                        # passes: each parent's probe originally had dci in its own
+                        # 0..N-1 channel space, and those ranges collide when
+                        # combined. This does not drop provenance: under the
+                        # id-keyed wiring model dci on the probe is a local index,
+                        # not the canonical mapping. The (channel -> probe_id,
+                        # contact_id) mapping is carried by the recording's
+                        # `wiring` property, and everything that identifies the
+                        # physical probe (geometry, contact_ids, annotations,
+                        # planar_contour) survives the to_dict round-trip.
                         probe_copy.set_device_channel_indices(
                             np.full(probe_copy.get_contact_count(), -1, dtype="int64")
                         )

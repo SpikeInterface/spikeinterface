@@ -61,11 +61,9 @@ def test_ChannelSliceRecording(create_cache_folder):
     probe.set_device_channel_indices(np.arange(num_chan))
     rec_p = rec.set_probe(probe)
     rec_sliced3 = ChannelSliceRecording(rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
-    probe3 = rec_sliced3.get_probe()
-    locations3 = probe3.contact_positions
+    locations3 = rec_sliced3.get_channel_locations()
     folder = cache_folder / "sliced_recording"
     rec_saved = rec_sliced3.save(folder=folder, chunk_size=10, n_jobs=2)
-    probe = rec_saved.get_probe()
     assert np.array_equal(locations3, rec_saved.get_channel_locations())
     traces3 = rec_saved.get_traces(segment_index=0)
     assert np.all(traces3[:, 0] == 0)

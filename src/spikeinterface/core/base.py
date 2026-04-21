@@ -610,12 +610,11 @@ class BaseExtractor:
         return extractor
 
     def load_metadata_from_folder(self, folder_metadata):
-        # hack to load probe for recording
         folder_metadata = Path(folder_metadata)
 
-        self._extra_metadata_from_folder(folder_metadata)
-
-        # load properties
+        # load properties first so that `_extra_metadata_from_folder` can see
+        # restored state like the `wiring` property and skip re-running
+        # `set_probegroup` when the mapping is already in place.
         prop_folder = folder_metadata / "properties"
         if prop_folder.is_dir():
             for prop_file in prop_folder.iterdir():
@@ -623,6 +622,8 @@ class BaseExtractor:
                     values = np.load(prop_file, allow_pickle=True)
                     key = prop_file.stem
                     self.set_property(key, values)
+
+        self._extra_metadata_from_folder(folder_metadata)
 
     def save_metadata_to_folder(self, folder_metadata):
         self._extra_metadata_to_folder(folder_metadata)
