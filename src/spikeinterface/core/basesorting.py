@@ -326,7 +326,7 @@ class BaseSorting(BaseExtractor):
         # Reset the sorting's own time offset so it doesn't conflict
         # with the recording's t_start when accessed through get_start_time/get_end_time.
         for segment in self.segments:
-            segment._t_start = 0
+            segment._t_start = None
 
     @property
     def sorting_info(self):
