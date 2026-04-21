@@ -172,10 +172,9 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         """List of recording segments."""
         return self._segments
 
-    # For backward compatibility, we keep _recording_segments
     @property
     def _recording_segments(self) -> list["BaseRecordingSegment"]:
-        """List of recording segments."""
+        """For backward compatibility, we keep _recording_segments."""
         return self._segments
 
     def add_recording_segment(self, recording_segment: "BaseRecordingSegment") -> None:
