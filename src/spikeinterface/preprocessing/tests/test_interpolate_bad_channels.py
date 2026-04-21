@@ -128,7 +128,6 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     x = rng.choice(shanks, num_channels)
     probe = recording._probegroup.probes[0]
     probe._contact_positions[:, 0] = x
-    recording._probegroup._build_contact_vector()
     recording.set_property("location", recording.get_channel_locations())
 
     # generate random bad channel locations
@@ -176,7 +175,6 @@ def test_output_values():
     for idx, (x, y) in enumerate(zip(*new_probe_locs)):
         probe._contact_positions[idx, 0] = x
         probe._contact_positions[idx, 1] = y
-    recording._probegroup._build_contact_vector()
     recording.set_property("location", recording.get_channel_locations())
 
     # Run interpolation in SI and check the interpolated channel
@@ -194,7 +192,6 @@ def test_output_values():
     probe = recording._probegroup.probes[0]
     probe._contact_positions[-1, 0] = 5
     probe._contact_positions[-1, 1] = 9
-    recording._probegroup._build_contact_vector()
     recording.set_property("location", recording.get_channel_locations())
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)

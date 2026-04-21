@@ -206,7 +206,7 @@ class BaseRecordingSnippets(BaseExtractor):
             sub_recording.annotate(probes_info=[])
             return sub_recording
 
-        probe_as_numpy_array = probegroup._contact_vector
+        probe_as_numpy_array = probegroup._build_contact_vector()
 
         # duplicate positions to "location" property so SpikeInterface-level readers keep working
         locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
@@ -360,7 +360,7 @@ class BaseRecordingSnippets(BaseExtractor):
             channel_ids = self.get_channel_ids()
         channel_indices = self.ids_to_indices(channel_ids)
         if self.has_probe():
-            contact_vector = self._probegroup._contact_vector
+            contact_vector = self._probegroup._build_contact_vector()
             ndim = len(axes)
             all_positions = np.zeros((contact_vector.size, ndim), dtype="float64")
             for i, dim in enumerate(axes):
