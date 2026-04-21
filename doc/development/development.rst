@@ -73,7 +73,7 @@ With :code:`uv`, you can run the tests for a single module without creating a vi
 
 .. code-block:: bash
 
-    uv run --group test-preprocessing pytest -s src/spikeinterface/preprocessing/tests
+    uv run --group test-preprocessing pytest src/spikeinterface/preprocessing/tests
 
 :code:`uv run` resolves the dependency group on the fly into an ephemeral environment, so you do not need to remember which extras and test groups map to which module.
 
