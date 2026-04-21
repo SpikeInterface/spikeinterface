@@ -363,8 +363,8 @@ class RasterWidget(BaseRasterWidget):
         A sorting object. Deprecated.
     sorting_analyzer : SortingAnalyzer  | None, default: None
         A sorting analyzer object. Deprecated.
-    sort_by_depth: bool = False
-        Wether or not to sort units by depth, default: False
+    sort_by_depth : bool, default: False
+        Whether or not to sort units by depth, default: False
     """
 
     def __init__(
@@ -398,7 +398,6 @@ class RasterWidget(BaseRasterWidget):
             unit_ids = sorting.unit_ids
 
         if sort_by_depth:
-            # print("hey")
             if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
                 raise AttributeError(f"'unit_locations' necessary for sort_by_depth is True")
             depths = sorting_analyzer_or_sorting.get_extension("unit_locations").get_data(outputs="numpy")
