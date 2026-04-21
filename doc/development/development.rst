@@ -69,6 +69,14 @@ Note that you should install spikeinterface before running the tests. You can do
 
 You can change the :code:`[extractors,full]` extras to install only the runtime dependencies you need, and swap :code:`--group test-all` for a per-module test group (for example :code:`--group test-postprocessing`). Both lists are defined in :code:`pyproject.toml`: feature extras live under :code:`[project.optional-dependencies]` and test groups under :code:`[dependency-groups]` (PEP 735). Note that :code:`--group` requires pip 25.1+ or uv.
 
+With :code:`uv`, you can run the tests for a single module without creating a virtual environment explicitly by combining :code:`uv run --group` with pytest. For example, to run the preprocessing tests:
+
+.. code-block:: bash
+
+    uv run --group test-preprocessing pytest -s src/spikeinterface/preprocessing/tests
+
+:code:`uv run` resolves the dependency group on the fly into an ephemeral environment, so you do not need to remember which extras and test groups map to which module.
+
 The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can
 find the full tests in the :code:`.github/workflows/full_test.yml` file.
 
