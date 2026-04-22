@@ -524,7 +524,7 @@ def _plot_performances_vs_metric(
 
             if show_scatter:
                 ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size, alpha=scatter_alpha)
-            
+
             ax.set_ylabel(performance_name)
 
         ax.set_ylim(-0.05, 1.05)
@@ -655,7 +655,7 @@ def plot_performances_vs_firing_rate(
     show_legend : bool, default True
         Show legend or not
     show_scatter : bool, default True
-        Show scatter or not        
+        Show scatter or not
     show_sigmoid_fit : bool, default True
         Show sigmoid that fit the performances.
     show_average_by_bin : bool, default False
