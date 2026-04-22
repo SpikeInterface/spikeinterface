@@ -415,9 +415,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
                 # re-running `_set_probes` would fail for sliced children.
                 # Attach the probegroup object directly.
                 self._probegroup = probegroup
-                from .baserecordingsnippets import _restore_probe_ids_from_wiring
-
-                _restore_probe_ids_from_wiring(self._probegroup, self.get_property("wiring"))
             else:
                 self.set_probegroup(probegroup, in_place=True)
 

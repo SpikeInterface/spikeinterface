@@ -10,31 +10,6 @@ from .recording_tools import check_probe_do_not_overlap
 from warnings import warn
 
 
-def _restore_probe_ids_from_wiring(probegroup, wiring):
-    """
-    Re-attach `probe_id` annotations to probes from the `wiring` property when
-    they have been stripped (e.g. by a reconstruction path that rebuilds the
-    ProbeGroup without preserving annotations). `wiring` has shape `(N, 2)`
-    with probe_ids in column 0; unique probe_ids in order of first appearance
-    correspond directly to the stored probe order, which is how `_set_probes`
-    builds wiring in the first place. No-op when annotations are intact or
-    when the counts don't match.
-    """
-    if probegroup is None or wiring is None or len(probegroup.probes) == 0:
-        return
-    if all("probe_id" in p.annotations for p in probegroup.probes):
-        return
-    seen = []
-    for pid in np.asarray(wiring)[:, 0]:
-        if pid not in seen:
-            seen.append(pid)
-    if len(seen) != len(probegroup.probes):
-        return  # cannot reconstruct safely
-    for probe, pid in zip(probegroup.probes, seen):
-        if "probe_id" not in probe.annotations:
-            probe.annotate(probe_id=pid)
-
-
 class BaseRecordingSnippets(BaseExtractor):
     """
     Mixin that handles all probe and channel operations
@@ -87,12 +62,48 @@ class BaseRecordingSnippets(BaseExtractor):
         return self._annotations.get("is_filtered", False)
 
     def set_probe(self, probe, group_mode="auto", in_place=False):
+        """
+        Attach a Probe to a recording.
+
+        Parameters
+        ----------
+        probe: Probe
+            The probe to be attached to the recording.
+        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
+            How to derive the "group" property mirror.
+            "auto" is the best splitting possible across multiple probes, multiple shanks, and two sides.
+        in_place: bool, default: False
+            If True, attach to self in place (only allowed when all channels are wired).
+            Useful internally when an extractor calls ``self.set_probe(probe)`` on itself.
+
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself) with the probe attached.
+        """
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def set_probegroup(self, probegroup, group_mode="auto", in_place=False):
+        """
+        Attach a ProbeGroup to a recording.
+
+        Parameters
+        ----------
+        probegroup: ProbeGroup
+            The probegroup to be attached to the recording.
+        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
+            How to derive the "group" property mirror.
+        in_place: bool, default: False
+            If True, attach to self in place (only allowed when all channels are wired).
+
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself) with the probegroup attached.
+        """
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False):
@@ -300,7 +311,6 @@ class BaseRecordingSnippets(BaseExtractor):
                 # re-running `_set_probes` would fail for sliced children.
                 # Attach the probegroup object directly.
                 self._probegroup = probegroup
-                _restore_probe_ids_from_wiring(self._probegroup, self.get_property("wiring"))
             else:
                 self.set_probegroup(probegroup, in_place=True)
 

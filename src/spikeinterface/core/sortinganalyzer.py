@@ -560,11 +560,7 @@ class SortingAnalyzer:
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
         if probegroup_file.is_file():
-            probegroup = probeinterface.read_probeinterface(probegroup_file)
-            from .baserecordingsnippets import _restore_probe_ids_from_wiring
-
-            _restore_probe_ids_from_wiring(probegroup, rec_attributes.get("properties", {}).get("wiring"))
-            rec_attributes["probegroup"] = probegroup
+            rec_attributes["probegroup"] = probeinterface.read_probeinterface(probegroup_file)
         else:
             rec_attributes["probegroup"] = None
 
@@ -746,11 +742,7 @@ class SortingAnalyzer:
         rec_attributes = zarr_root["recording_info"].attrs["recording_attributes"]
         if "probegroup" in zarr_root["recording_info"].attrs:
             probegroup_dict = zarr_root["recording_info"].attrs["probegroup"]
-            probegroup = probeinterface.ProbeGroup.from_dict(probegroup_dict)
-            from .baserecordingsnippets import _restore_probe_ids_from_wiring
-
-            _restore_probe_ids_from_wiring(probegroup, rec_attributes.get("properties", {}).get("wiring"))
-            rec_attributes["probegroup"] = probegroup
+            rec_attributes["probegroup"] = probeinterface.ProbeGroup.from_dict(probegroup_dict)
         else:
             rec_attributes["probegroup"] = None
 
