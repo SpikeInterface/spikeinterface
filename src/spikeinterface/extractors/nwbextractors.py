@@ -1313,13 +1313,12 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
 
 class NwbSortingSegment(BaseSortingSegment):
     def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
-        BaseSortingSegment.__init__(self)
+        BaseSortingSegment.__init__(self, t_start=t_start)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
-        self._t_start = t_start
 
     def get_unit_spike_train(
         self,
