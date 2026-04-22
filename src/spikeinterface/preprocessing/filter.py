@@ -339,7 +339,13 @@ class HighpassFilterRecording(FilterRecording):
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
         )
         dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs = dict(
+            recording=recording,
+            freq_min=freq_min,
+            margin_ms=margin_ms,
+            dtype=dtype.str,
+            ignore_low_freq_error=ignore_low_freq_error,
+        )
         self._kwargs.update(filter_kwargs)
 
     @classmethod
