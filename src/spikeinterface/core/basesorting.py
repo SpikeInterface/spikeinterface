@@ -278,15 +278,17 @@ class BaseSorting(BaseExtractor):
 
         # Use the native spiking times if available
         # Some instances might implement a method themselves to access spike times directly without having to convert
-        # (e.g. NWB extractors)
+        # (e.g. NWB extractors). The native times already include the extractor's `_native_t_start`,
+        # so we apply only the shift (`_t_start - _native_t_start`) on top.
         if hasattr(segment, "get_unit_spike_train_in_seconds"):
             spike_times = segment.get_unit_spike_train_in_seconds(
                 unit_id=unit_id, start_time=start_time, end_time=end_time
             )
-            # Apply the sorting's shift on top of the native times
             t_start = segment._t_start if segment._t_start is not None else 0
-            if t_start != 0:
-                spike_times = spike_times + t_start
+            native_t_start = segment._native_t_start if segment._native_t_start is not None else 0
+            shift = t_start - native_t_start
+            if shift != 0:
+                spike_times = spike_times + shift
             return spike_times
 
         # If no recording attached and all back to frame-based conversion
@@ -337,8 +339,12 @@ class BaseSorting(BaseExtractor):
         # Copy the recording's start times into the sorting segments. This way,
         # the sorting preserves the start time even if the recording is later
         # detached (e.g. analyzer saved and reloaded without the recording).
+        # Also update `_native_t_start` so any subsequent `shift_times` call measures
+        # its delta from the recording's start time (not the extractor's original value).
         for segment_index, segment in enumerate(self.segments):
-            segment._t_start = recording.get_start_time(segment_index=segment_index)
+            start_time = recording.get_start_time(segment_index=segment_index)
+            segment._t_start = start_time
+            segment._native_t_start = start_time
 
     @property
     def sorting_info(self):
@@ -1198,6 +1204,11 @@ class BaseSortingSegment(BaseSegment):
 
     def __init__(self, t_start=None):
         self._t_start = t_start
+        # Immutable reference to the start time as set by the extractor at init.
+        # Used to compute the user-applied shift as `_t_start - _native_t_start`,
+        # so `shift_times` can correctly propagate through extractors that return
+        # native absolute times (e.g. NWB) without double-counting the extractor's offset.
+        self._native_t_start = t_start
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(
