@@ -26,7 +26,7 @@ def find_clusters_from_peaks(
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
-        Parameters for TimeSeriesChunkExecutor
+        Parameters for ChunkExecutor
 
     {method_doc}
 

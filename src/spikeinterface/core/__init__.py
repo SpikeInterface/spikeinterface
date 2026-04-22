@@ -97,14 +97,12 @@ from .job_tools import (
     get_best_job_kwargs,
     ensure_n_jobs,
     ensure_chunk_size,
-    TimeSeriesChunkExecutor,
+    ChunkExecutor,
     split_job_kwargs,
     fix_job_kwargs,
 )
 from .recording_tools import (
     write_binary_recording,
-    write_memory_recording,
-    write_recording_to_zarr,
     write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,
