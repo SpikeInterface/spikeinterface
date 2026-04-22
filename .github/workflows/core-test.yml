@@ -31,7 +31,7 @@ jobs:
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          uv pip install --system -e .[test_core]
+          uv pip install --system -e . --group test-core
       - name: Test core with pytest
         run: |
           pytest -m "core" -vv -ra --durations=0 --durations-min=0.001 | tee report.txt; test $? -eq 0 || exit 1

@@ -69,7 +69,7 @@ jobs:
 
       - name: Install SpikeInterface
         run: |
-          uv pip install --system -e .[test]
+          uv pip install --system -e .[full] --group test-sorters
         shell: bash
 
       - name: Install legacy setuptools for KS4 < 4.0.19
