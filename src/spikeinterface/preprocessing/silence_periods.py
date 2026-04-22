@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.signal
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -48,14 +49,15 @@ class SilencedPeriodsRecording(BasePreprocessor):
         self,
         recording,
         periods=None,
-        # this is keep for backward compatibility
+        # this is kept for backward compatibility
         list_periods=None,
         mode="zeros",
         noise_levels=None,
+        apodization=7,
         seed=None,
         **noise_levels_kwargs,
     ):
-        available_modes = ("zeros", "noise")
+        available_modes = ("zeros", "noise", "apodization")
         num_seg = recording.get_num_segments()
 
         # handle backward compatibility with previous version
@@ -108,11 +110,11 @@ class SilencedPeriodsRecording(BasePreprocessor):
             i1 = seg_limits[seg_index + 1]
             periods_in_seg = periods[i0:i1]
             rec_segment = SilencedPeriodsRecordingSegment(
-                parent_segment, periods_in_seg, mode, noise_generator, seg_index
+                parent_segment, periods_in_seg, mode, noise_generator, seg_index, apodization=apodization,
             )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels)
+        self._kwargs = dict(recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels, apodization=apodization)
 
 
 def _all_period_list_to_periods_vec(list_periods, num_seg):
@@ -154,12 +156,13 @@ def _check_periods(periods, num_seg):
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index):
+    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index, apodization=7):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.periods = periods
         self.mode = mode
         self.seg_index = seg_index
         self.noise_generator = noise_generator
+        self.apodization = apodization
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
@@ -185,7 +188,13 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                             :, channel_indices
                         ]
                         traces[onset:offset, :] = noise[onset:offset]
-
+                    elif self.mode == "apodization":
+                        # apply a cosine taper to the saturation to create a mute function
+                        mute = np.zeros(traces.shape[0], dtype=np.float32)
+                        mute[onset:offset] = 1
+                        win = scipy.signal.windows.cosine(self.apodization)
+                        mute = np.maximum(0, 1 - scipy.signal.convolve(mute, win, mode="same"))
+                        traces = (traces.astype(np.float32) * mute[:, np.newaxis]).astype(traces.dtype)
         return traces
 
 
