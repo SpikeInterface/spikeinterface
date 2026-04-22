@@ -63,23 +63,23 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_probe(self, probe, group_mode="auto", in_place=False):
         """
-        Attach a Probe to a recording.
+        Attach a list of Probe object to a recording.
 
         Parameters
         ----------
-        probe: Probe
-            The probe to be attached to the recording.
+        probe_or_probegroup: Probe, list of Probe, or ProbeGroup
+            The probe(s) to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
-            How to derive the "group" property mirror.
-            "auto" is the best splitting possible across multiple probes, multiple shanks, and two sides.
-        in_place: bool, default: False
-            If True, attach to self in place (only allowed when all channels are wired).
-            Useful internally when an extractor calls ``self.set_probe(probe)`` on itself.
+            How to add the "group" property.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
+        in_place: bool
+            False by default.
+            Useful internally when extractor do self.set_probegroup(probe)
 
         Returns
         -------
         sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself) with the probe attached.
+            A view of the recording (ChannelSlice or clone or itself)
         """
         assert isinstance(probe, Probe), "must give Probe"
         probegroup = ProbeGroup()
@@ -87,23 +87,6 @@ class BaseRecordingSnippets(BaseExtractor):
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def set_probegroup(self, probegroup, group_mode="auto", in_place=False):
-        """
-        Attach a ProbeGroup to a recording.
-
-        Parameters
-        ----------
-        probegroup: ProbeGroup
-            The probegroup to be attached to the recording.
-        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
-            How to derive the "group" property mirror.
-        in_place: bool, default: False
-            If True, attach to self in place (only allowed when all channels are wired).
-
-        Returns
-        -------
-        sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself) with the probegroup attached.
-        """
         return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
 
     def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False):
