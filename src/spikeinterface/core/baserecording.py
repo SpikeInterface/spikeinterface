@@ -21,6 +21,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
     _main_properties = [
         "group",
         "location",
+        "wiring",
         "gain_to_uV",
         "offset_to_uV",
         "gain_to_physical_unit",

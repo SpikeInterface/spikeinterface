@@ -11,7 +11,7 @@ class BaseSnippets(BaseRecordingSnippets):
     Abstract class representing several multichannel snippets.
     """
 
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = ["group", "location", "wiring", "gain_to_uV", "offset_to_uV"]
     _main_features = []
 
     def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
