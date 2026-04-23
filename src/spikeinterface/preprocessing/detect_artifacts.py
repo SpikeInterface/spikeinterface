@@ -717,6 +717,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         job_kwargs: dict | None = None,
         mode: Literal["zeros", "noise"] = "zeros",
         noise_levels_kwargs: dict | None = None,
+        apodization: int = 7,
         seed: int | None = None,
         artifact_periods=None,
     ) -> None:
@@ -729,7 +730,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
                 recording_to_detect, method=method, method_kwargs=method_kwargs, job_kwargs=job_kwargs
             )
         super().__init__(
-            recording, periods=artifact_periods, mode=mode, noise_levels_kwargs=noise_levels_kwargs, seed=seed
+            recording, periods=artifact_periods, mode=mode, noise_levels_kwargs=noise_levels_kwargs, seed=seed, apodization=apodization
         )
 
         self._kwargs = dict(
@@ -742,6 +743,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
             noise_levels_kwargs=noise_levels_kwargs,
             seed=seed,
             artifact_periods=artifact_periods,
+            apodization=apodization,
         )
 
 
