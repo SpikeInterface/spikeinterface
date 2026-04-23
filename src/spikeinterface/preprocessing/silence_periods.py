@@ -110,11 +110,23 @@ class SilencedPeriodsRecording(BasePreprocessor):
             i1 = seg_limits[seg_index + 1]
             periods_in_seg = periods[i0:i1]
             rec_segment = SilencedPeriodsRecordingSegment(
-                parent_segment, periods_in_seg, mode, noise_generator, seg_index, apodization=apodization,
+                parent_segment,
+                periods_in_seg,
+                mode,
+                noise_generator,
+                seg_index,
+                apodization=apodization,
             )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels, apodization=apodization)
+        self._kwargs = dict(
+            recording=recording,
+            periods=periods,
+            mode=mode,
+            seed=seed,
+            noise_levels=noise_levels,
+            apodization=apodization,
+        )
 
 
 def _all_period_list_to_periods_vec(list_periods, num_seg):
