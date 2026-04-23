@@ -268,6 +268,7 @@ test-curation = [{include-group = "test-common"}]
 test-widgets = [
     {include-group = "test-common"},
     "sortingview>=0.12.0",
+    "numba>=0.59",  # For motion widget
 ]
 
 test-exporters = [{include-group = "test-common"}]

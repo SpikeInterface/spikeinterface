@@ -1,0 +1,26 @@
+.. _release0.104.1:
+
+SpikeInterface 0.104.1 release notes
+------------------------------------
+
+April 7th 2025
+
+Minor release with bug fixes
+
+
+extractors:
+
+* Align CompressedBinaryIBLExtractor with updated get_neuropixels_sample_shifts (#4477)
+
+
+postprocessing:
+
+* Make get_data for valid unit periods use unit ids, not indices ( #4468)
+* Remove tmp_data_to_save when loading old analyzers (#4480)
+* Handle peak_sign for quality metrics in _handle_backward_compatibility_on_load (#4481)
+
+
+Contributors:
+
+* @chrishalcrow
+* @hayleybounds
