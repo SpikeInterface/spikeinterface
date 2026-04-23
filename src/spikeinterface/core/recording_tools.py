@@ -13,16 +13,169 @@ from .job_tools import (
     ensure_chunk_size,
     divide_segment_into_chunks,
     fix_job_kwargs,
-    ChunkExecutor,
+    TimeSeriesChunkExecutor,
     _shared_job_kwargs_doc,
     split_job_kwargs,
 )
 
-from .chunkable_tools import get_random_sample_slices, get_chunks, get_chunk_with_margin
+from .time_series_tools import get_random_sample_slices, get_chunks, get_chunk_with_margin
+from .time_series_tools import write_binary as _write_binary
+from .time_series_tools import write_memory as _write_memory
+from .time_series_tools import _write_time_series_to_zarr
 
-# for back-compatibility imports
-from .chunkable_tools import write_binary as write_binary_recording
-from .chunkable_tools import write_memory as write_memory_recording
+
+def write_binary_recording(
+    recording,
+    file_paths,
+    file_timestamps_paths=None,
+    dtype=None,
+    add_file_extension=True,
+    byte_offset=0,
+    verbose=False,
+    **job_kwargs,
+):
+    """
+    Save the traces of a recording to binary format.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to save to binary file.
+    file_paths : list[Path | str] | Path | str
+        The path to the files to save data for each segment.
+    file_timestamps_paths : list[Path | str] | Path | str | None, default: None
+        The path to the timestamps file. If None, timestamps are not saved.
+    dtype : dtype or None, default: None
+        Type of the saved data.
+    add_file_extension : bool, default: True
+        If True, and the file path does not end in "raw", "bin", or "dat" then "raw" is added as an extension.
+    byte_offset : int, default: 0
+        Offset in bytes for the binary file (e.g. to write a header).
+    verbose : bool, default: False
+        Verbosity of the chunk executor.
+    {}
+    """
+    return _write_binary(
+        recording,
+        file_paths=file_paths,
+        file_timestamps_paths=file_timestamps_paths,
+        dtype=dtype,
+        add_file_extension=add_file_extension,
+        byte_offset=byte_offset,
+        verbose=verbose,
+        **job_kwargs,
+    )
+
+
+write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
+
+
+def write_memory_recording(
+    recording,
+    dtype=None,
+    verbose=False,
+    buffer_type="auto",
+    job_name="write_memory",
+    **job_kwargs,
+):
+    """
+    Save the traces of a recording into numpy arrays in memory.
+
+    Uses SharedMemory when ``n_jobs > 1``.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to save to memory.
+    dtype : dtype, default: None
+        Type of the saved data.
+    verbose : bool, default: False
+        If True, output is verbose (when chunks are used).
+    buffer_type : "auto" | "numpy" | "sharedmem", default: "auto"
+        The type of buffer to use for storing the data.
+    job_name : str, default: "write_memory"
+        Name of the job.
+    {}
+
+    Returns
+    -------
+    arrays : list
+        One array per segment.
+    """
+    return _write_memory(
+        recording,
+        dtype=dtype,
+        verbose=verbose,
+        buffer_type=buffer_type,
+        job_name=job_name,
+        **job_kwargs,
+    )
+
+
+write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
+
+
+def write_recording_to_zarr(
+    recording,
+    zarr_group,
+    dataset_paths,
+    dataset_timestamps_paths=None,
+    extra_chunks=None,
+    dtype=None,
+    compressor_data=None,
+    filters_data=None,
+    compressor_times=None,
+    filters_times=None,
+    verbose=False,
+    **job_kwargs,
+):
+    """
+    Save the traces of a recording to zarr format.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to save in zarr format.
+    zarr_group : zarr.Group
+        The zarr group to add traces to.
+    dataset_paths : list
+        List of paths to traces datasets in the zarr group.
+    dataset_timestamps_paths : list or None, default: None
+        List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
+    extra_chunks : tuple or None, default: None
+        Extra chunking dimensions to use for the zarr dataset. The first dimension is always time and
+        controlled by the job_kwargs. Useful to chunk by channel, with ``extra_chunks=(channel_chunk_size,)``.
+    dtype : dtype, default: None
+        Type of the saved data.
+    compressor_data : zarr compressor or None, default: None
+        Zarr compressor for data.
+    filters_data : list, default: None
+        List of zarr filters for data.
+    compressor_times : zarr compressor or None, default: None
+        Zarr compressor for timestamps.
+    filters_times : list, default: None
+        List of zarr filters for timestamps.
+    verbose : bool, default: False
+        If True, output is verbose (when chunks are used).
+    {}
+    """
+    return _write_time_series_to_zarr(
+        recording,
+        zarr_group=zarr_group,
+        dataset_paths=dataset_paths,
+        dataset_timestamps_paths=dataset_timestamps_paths,
+        extra_chunks=extra_chunks,
+        dtype=dtype,
+        compressor_data=compressor_data,
+        filters_data=filters_data,
+        compressor_times=compressor_times,
+        filters_times=filters_times,
+        verbose=verbose,
+        **job_kwargs,
+    )
+
+
+write_recording_to_zarr.__doc__ = write_recording_to_zarr.__doc__.format(_shared_job_kwargs_doc)
 
 
 def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
@@ -458,7 +611,7 @@ def get_noise_levels(
         func = _noise_level_chunk
         init_func = _noise_level_chunk_init
         init_args = (recording, return_in_uV, method)
-        executor = ChunkExecutor(
+        executor = TimeSeriesChunkExecutor(
             recording,
             func,
             init_func,

@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
-from .chunkable import ChunkableSegment, ChunkableMixin
+from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
 
 
-class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
+class BaseRecording(BaseRecordingSnippets, TimeSeries):
     """
     Abstract class representing several a multichannel timeseries (or block of raw ephys traces).
     Internally handle list of RecordingSegment
@@ -172,6 +172,11 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         """List of recording segments."""
         return self._segments
 
+    @property
+    def _recording_segments(self) -> list["BaseRecordingSegment"]:
+        """For backward compatibility, we keep _recording_segments."""
+        return self._segments
+
     def add_recording_segment(self, recording_segment: "BaseRecordingSegment") -> None:
         """Adds a recording segment.
 
@@ -300,7 +305,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         """
-        General retrieval function for chunkable objects
+        General retrieval function for time_series objects
         """
         return self.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame, **kwargs)
 
@@ -311,7 +316,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
-            from .chunkable_tools import write_binary
+            from .time_series_tools import write_binary
 
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
@@ -637,7 +642,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         return astype(self, dtype=dtype, round=round)
 
 
-class BaseRecordingSegment(ChunkableSegment):
+class BaseRecordingSegment(TimeSeriesSegment):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
@@ -672,6 +677,6 @@ class BaseRecordingSegment(ChunkableSegment):
         self, start_frame: int, end_frame: int, indices: list | np.ndarray | tuple | None = None
     ) -> np.ndarray:
         """
-        General retrieval function for chunkable objects
+        General retrieval function for time_series objects
         """
         return self.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=indices)

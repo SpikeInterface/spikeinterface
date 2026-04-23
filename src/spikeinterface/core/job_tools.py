@@ -205,7 +205,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def divide_chunkable_into_chunks(recording, chunk_size):
+def divide_time_series_into_chunks(recording, chunk_size):
     slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
@@ -242,9 +242,9 @@ def ensure_n_jobs(extractor, n_jobs=1):
     return n_jobs
 
 
-def chunk_duration_to_chunk_size(chunk_duration, chunkable: "ChunkableMixin"):
+def chunk_duration_to_chunk_size(chunk_duration, time_series: "TimeSeries"):
     if isinstance(chunk_duration, float):
-        chunk_size = int(chunk_duration * chunkable.get_sampling_frequency())
+        chunk_size = int(chunk_duration * time_series.get_sampling_frequency())
     elif isinstance(chunk_duration, str):
         if chunk_duration.endswith("ms"):
             chunk_duration = float(chunk_duration.replace("ms", "")) / 1000.0
@@ -252,14 +252,14 @@ def chunk_duration_to_chunk_size(chunk_duration, chunkable: "ChunkableMixin"):
             chunk_duration = float(chunk_duration.replace("s", ""))
         else:
             raise ValueError("chunk_duration must ends with s or ms")
-        chunk_size = int(chunk_duration * chunkable.get_sampling_frequency())
+        chunk_size = int(chunk_duration * time_series.get_sampling_frequency())
     else:
         raise ValueError("chunk_duration must be str or float")
     return chunk_size
 
 
 def ensure_chunk_size(
-    chunkable: "ChunkableMixin",
+    time_series: "TimeSeries",
     total_memory=None,
     chunk_size=None,
     chunk_memory=None,
@@ -299,20 +299,20 @@ def ensure_chunk_size(
         assert total_memory is None
         # set by memory per worker size
         chunk_memory = convert_string_to_bytes(chunk_memory)
-        chunk_size = int(chunk_memory / chunkable.get_sample_size_in_bytes())
+        chunk_size = int(chunk_memory / time_series.get_sample_size_in_bytes())
     elif total_memory is not None:
         # clip by total memory size
-        n_jobs = ensure_n_jobs(chunkable, n_jobs=n_jobs)
+        n_jobs = ensure_n_jobs(time_series, n_jobs=n_jobs)
         total_memory = convert_string_to_bytes(total_memory)
-        chunk_size = int(total_memory / (chunkable.get_sample_size_in_bytes() * n_jobs))
+        chunk_size = int(total_memory / (time_series.get_sample_size_in_bytes() * n_jobs))
     elif chunk_duration is not None:
-        chunk_size = chunk_duration_to_chunk_size(chunk_duration, chunkable)
+        chunk_size = chunk_duration_to_chunk_size(chunk_duration, time_series)
     else:
         # Edge case to define single chunk per segment for n_jobs=1.
         # All chunking parameters equal None mean single chunk per segment
         if n_jobs == 1:
-            num_segments = chunkable.get_num_segments()
-            samples_in_larger_segment = max([chunkable.get_num_samples(segment) for segment in range(num_segments)])
+            num_segments = time_series.get_num_segments()
+            samples_in_larger_segment = max([time_series.get_num_samples(segment) for segment in range(num_segments)])
             chunk_size = samples_in_larger_segment
         else:
             raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
@@ -320,9 +320,9 @@ def ensure_chunk_size(
     return chunk_size
 
 
-class ChunkExecutor:
+class TimeSeriesChunkExecutor:
     """
-    Core class for parallel processing to run a "function" over chunks on a chunkable extractor.
+    Core class for parallel processing to run a "function" over chunks on a time_series extractor.
 
     It supports running a function:
         * in loop with chunk processing (low RAM usage)
@@ -334,8 +334,8 @@ class ChunkExecutor:
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
-        The chunkable object to be processed.
+    time_series : TimeSeries
+        The time_series object to be processed.
     func : function
         Function that runs on each chunk
     init_func : function
@@ -383,7 +383,7 @@ class ChunkExecutor:
 
     def __init__(
         self,
-        chunkable: "ChunkableMixin",
+        time_series: "TimeSeries",
         func,
         init_func,
         init_args,
@@ -402,7 +402,7 @@ class ChunkExecutor:
         max_threads_per_worker=1,
         need_worker_index=False,
     ):
-        self.chunkable = chunkable
+        self.time_series = time_series
         self.func = func
         self.init_func = init_func
         self.init_args = init_args
@@ -421,7 +421,7 @@ class ChunkExecutor:
                 else:
                     mp_context = "spawn"
 
-            preferred_mp_context = chunkable.get_preferred_mp_context()
+            preferred_mp_context = time_series.get_preferred_mp_context()
             if preferred_mp_context is not None and preferred_mp_context != mp_context:
                 warnings.warn(
                     f"Your processing chain using pool_engine='process' and mp_context='{mp_context}' is not possible."
@@ -437,7 +437,7 @@ class ChunkExecutor:
         self.handle_returns = handle_returns
         self.gather_func = gather_func
 
-        self.n_jobs = ensure_n_jobs(self.chunkable, n_jobs=n_jobs)
+        self.n_jobs = ensure_n_jobs(self.time_series, n_jobs=n_jobs)
         self.chunk_size = self.ensure_chunk_size(
             total_memory=total_memory,
             chunk_size=chunk_size,
@@ -455,7 +455,7 @@ class ChunkExecutor:
         if verbose:
             chunk_memory = self.get_chunk_memory()
             total_memory = chunk_memory * self.n_jobs
-            chunk_duration = self.chunk_size / chunkable.sampling_frequency
+            chunk_duration = self.chunk_size / time_series.sampling_frequency
             chunk_memory_str = convert_bytes_to_str(chunk_memory)
             total_memory_str = convert_bytes_to_str(total_memory)
             chunk_duration_str = convert_seconds_to_str(chunk_duration)
@@ -471,13 +471,13 @@ class ChunkExecutor:
             )
 
     def get_chunk_memory(self):
-        return self.chunk_size * self.chunkable.get_sample_size_in_bytes()
+        return self.chunk_size * self.time_series.get_sample_size_in_bytes()
 
     def ensure_chunk_size(
         self, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
     ):
         return ensure_chunk_size(
-            self.chunkable, total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs
+            self.time_series, total_memory, chunk_size, chunk_memory, chunk_duration, n_jobs, **other_kwargs
         )
 
     def run(self, slices=None):
@@ -487,7 +487,7 @@ class ChunkExecutor:
 
         if slices is None:
             # TODO: rename
-            slices = divide_chunkable_into_chunks(self.chunkable, self.chunk_size)
+            slices = divide_time_series_into_chunks(self.time_series, self.chunk_size)
 
         if self.handle_returns:
             returns = []
