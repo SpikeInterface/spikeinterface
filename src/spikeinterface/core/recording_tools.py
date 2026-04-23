@@ -815,7 +815,7 @@ def get_chunk_with_margin(
     add_zeros=False,
     add_reflect_padding=False,
     window_on_margin=False,
-    dtype=None,        
+    dtype=None,
 ):
     """
     Helper to get chunk with margin
