@@ -220,5 +220,39 @@ def test_filter_opencl():
     # plt.show()
 
 
+def test_bandpass_parallel_matches_stock():
+    """BandpassFilterRecording(n_workers=N) must produce the same output as n_workers=1.
+
+    Locks in the invariant that channel-axis parallelism is a pure perf
+    optimisation — scipy's sosfiltfilt is channel-independent so splitting
+    the channel axis across threads cannot change per-channel output.
+    """
+    rng = np.random.default_rng(0)
+    T, C = 60_000, 64
+    traces = (rng.standard_normal((T, C)) * 100).astype("float32")
+    rec = NumpyRecording([traces], sampling_frequency=30_000.0)
+    stock = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32")
+    fast = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32", n_workers=8)
+    ref = stock.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    out = fast.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)
+
+
+def test_filter_parallel_fewer_channels_than_workers():
+    """n_workers > C must still produce correct output (falls through to serial)."""
+    rng = np.random.default_rng(0)
+    T, C = 10_000, 4
+    traces = (rng.standard_normal((T, C)) * 100).astype("float32")
+    rec = NumpyRecording([traces], sampling_frequency=30_000.0)
+    fast = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32", n_workers=16)
+    # Should not raise; should match stock.
+    stock = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32")
+    ref = stock.get_traces(start_frame=1000, end_frame=T - 1000)
+    out = fast.get_traces(start_frame=1000, end_frame=T - 1000)
+    np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)
+
+
 if __name__ == "__main__":
     test_filter()
+    test_bandpass_parallel_matches_stock()
+    test_filter_parallel_fewer_channels_than_workers()
