@@ -443,7 +443,7 @@ class RasterWidget(BaseRasterWidget):
             else:
                 depths = sorting_analyzer_or_sorting.get_extension("unit_locations").get_data(outputs="numpy")
                 s_args_depths = np.argsort(depths[:, 1])
-                depth_dict = {b:i for i,b in enumerate(unit_ids[s_args_depths].tolist())}
+                depth_dict = {b: i for i, b in enumerate(unit_ids[s_args_depths].tolist())}
         elif sort_by_depth:
             raise AttributeError("`sort_by_depth=True` requires a SortingAnalyzer")
 
