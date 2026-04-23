@@ -706,6 +706,26 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         job_kwargs : dict | None, default: None
             Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
             ``n_jobs``, ``chunk_duration``).
+        noise_levels_kwargs : dict | None, default: None
+            Keyword arguments for `spikeinterface.core.get_noise_levels()` function.
+
+        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
+        mode : "zeros" | "noise" | "apodization", default: "zeros"
+            Determines what periods are replaced by. Can be one of the following:
+
+            - "zeros": Artifacts are replaced by zeros.
+
+            - "noise": The periods are filled with a gaussion noise that has the
+                    same variance that the one in the recordings, on a per channel
+                    basis
+            - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization_factor`)
+        apodization_factor : int, default: 7
+            The factor used for the cosine taper when mode is "apodization". Higher values create a wider taper.
+        seed : int | None, default: None
+            Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+        artifact_periods : np.ndarray | None, default: None
+            Optionally, pre-computed artifact periods can be passed directly to the constructor to skip the
+            detection step. If ``None``, artifact periods are detected on the fly using the specified method
     """
 
     def __init__(
@@ -715,7 +735,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         method: Literal["envelope", "saturation"] = "envelope",
         method_kwargs: dict | None = None,
         job_kwargs: dict | None = None,
-        mode: Literal["zeros", "noise"] = "zeros",
+        mode: Literal["zeros", "noise", "apodization"] = "zeros",
         noise_levels_kwargs: dict | None = None,
         apodization: int = 7,
         seed: int | None = None,
@@ -730,7 +750,12 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
                 recording_to_detect, method=method, method_kwargs=method_kwargs, job_kwargs=job_kwargs
             )
         super().__init__(
-            recording, periods=artifact_periods, mode=mode, noise_levels_kwargs=noise_levels_kwargs, seed=seed, apodization=apodization
+            recording,
+            periods=artifact_periods,
+            mode=mode,
+            noise_levels_kwargs=noise_levels_kwargs,
+            seed=seed,
+            apodization=apodization,
         )
 
         self._kwargs = dict(
