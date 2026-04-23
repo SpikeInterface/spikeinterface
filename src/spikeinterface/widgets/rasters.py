@@ -436,13 +436,16 @@ class RasterWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
-            if sort_by_depth:
-                raise AttributeError(f"'unit_locations' necessary for sort_by_depth is True")
-        depths = sorting_analyzer_or_sorting.get_extension("unit_locations").get_data(outputs="numpy")
-        s_args_depths = np.argsort(depths[:, 1])
-        depth_dict = {b: i for i, b in enumerate(unit_ids[s_args_depths].tolist())}
-        # unit_ids = unit_ids[s_args_depths]
+        if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
+            if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
+                if sort_by_depth:
+                    raise AttributeError(f"'unit_locations' necessary for `sort_by_depth=True`")
+            else:
+                depths = sorting_analyzer_or_sorting.get_extension("unit_locations").get_data(outputs="numpy")
+                s_args_depths = np.argsort(depths[:, 1])
+                depth_dict = {b:i for i,b in enumerate(unit_ids[s_args_depths].tolist())}
+        elif sort_by_depth:
+            raise AttributeError("`sort_by_depth=True` requires a SortingAnalyzer")
 
         # Create dict of dicts structure
         spike_train_data = {}
