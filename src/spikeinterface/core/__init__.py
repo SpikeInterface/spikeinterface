@@ -111,6 +111,7 @@ from .recording_tools import (
     get_closest_channels,
     get_noise_levels,
     get_chunk_with_margin,
+    apply_raised_cosine_taper,
     order_channels_by_depth,
 )
 from .sorting_tools import (

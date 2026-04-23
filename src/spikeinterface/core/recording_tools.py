@@ -18,7 +18,7 @@ from .job_tools import (
     split_job_kwargs,
 )
 
-from .time_series_tools import get_random_sample_slices, get_chunks, get_chunk_with_margin
+from .time_series_tools import get_random_sample_slices, get_chunks, get_chunk_with_margin, apply_raised_cosine_taper
 from .time_series_tools import write_binary as _write_binary
 from .time_series_tools import write_memory as _write_memory
 from .time_series_tools import _write_time_series_to_zarr
