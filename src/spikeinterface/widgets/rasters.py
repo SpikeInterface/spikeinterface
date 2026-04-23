@@ -204,7 +204,7 @@ class BaseRasterWidget(BaseWidget):
 
         spike_train_data = dp.spike_train_data
         y_axis_data = dp.y_axis_data
-        
+
         for unit_id in unit_ids:
             if unit_id not in spike_train_data:
                 continue  # Skip this unit if not in data
@@ -258,10 +258,7 @@ class BaseRasterWidget(BaseWidget):
         scatter_ax.set_xlim(x_lim)
 
         if dp.sort_by_depth and dp.depth_dict is not None:
-            scatter_ax.set_yticks(
-                ticks=list(range(len(dp.depth_dict))),
-                labels=list(dp.depth_dict.keys())
-            )
+            scatter_ax.set_yticks(ticks=list(range(len(dp.depth_dict))), labels=list(dp.depth_dict.keys()))
         elif dp.y_ticks:
             scatter_ax.set_yticks(**dp.y_ticks)
 
@@ -298,7 +295,7 @@ class BaseRasterWidget(BaseWidget):
         if data_plot["sort_by_depth"] and data_plot["depth_dict"] is not None:
             unit_list = list(data_plot["depth_dict"].keys())
         else:
-            unit_list = (list(data_plot["spike_train_data"].keys()))
+            unit_list = list(data_plot["spike_train_data"].keys())
 
         self.unit_selector = UnitSelector(unit_list)
         self.unit_selector.value = unit_list[:1]
@@ -341,7 +338,7 @@ class BaseRasterWidget(BaseWidget):
 
         if backend_kwargs["display"]:
             display(self.widget)
-    
+
     def _full_update_plot(self, change=None):
         self.figure.clear()
         data_plot = self.next_data_plot
@@ -370,7 +367,7 @@ class BaseRasterWidget(BaseWidget):
             unit_list = list(data_plot["depth_dict"].keys())
         else:
             unit_list = list(data_plot["spike_train_data"].keys())
-        
+
         old_value = self.unit_selector.value
         self.unit_selector.unit_ids = unit_list
         self.unit_selector.selector.options = unit_list
@@ -383,6 +380,7 @@ class BaseRasterWidget(BaseWidget):
         self.plot_matplotlib(data_plot, **backend_kwargs)
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
+
 
 class RasterWidget(BaseRasterWidget):
     """
@@ -438,13 +436,12 @@ class RasterWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
-        
         if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
             if sort_by_depth:
                 raise AttributeError(f"'unit_locations' necessary for sort_by_depth is True")
         depths = sorting_analyzer_or_sorting.get_extension("unit_locations").get_data(outputs="numpy")
         s_args_depths = np.argsort(depths[:, 1])
-        depth_dict = {b:i for i,b in enumerate(unit_ids[s_args_depths].tolist())}
+        depth_dict = {b: i for i, b in enumerate(unit_ids[s_args_depths].tolist())}
         # unit_ids = unit_ids[s_args_depths]
 
         # Create dict of dicts structure
