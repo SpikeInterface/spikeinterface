@@ -9,6 +9,7 @@ Unit Labels:
 """
 
 import operator
+import warnings
 from pathlib import Path
 import json
 import numpy as np
@@ -30,9 +31,11 @@ DEFAULT_MUA_METRICS = [
     "snr",
     "amplitude_cutoff",
     "num_spikes",
-    "rp_contamination",
+    "sliding_rp_violation",
     "presence_ratio",
     "drift_ptp",
+    "isolation_distance",
+    "l_ratio",
 ]
 
 DEFAULT_NON_SOMATIC_METRICS = [
@@ -43,13 +46,28 @@ DEFAULT_NON_SOMATIC_METRICS = [
     "main_peak_to_trough_ratio",
 ]
 
+# Metrics belonging to the built-in non-somatic groups.
+# The compound logic is: (width_group AND ratio_group) OR main_peak_group
+# Any metric in the "non-somatic" threshold section that is NOT listed here
+# is treated as a standalone condition OR'd into the final result.
+_NON_SOMATIC_WIDTH_GROUP = {"peak_before_width", "trough_width"}
+_NON_SOMATIC_RATIO_GROUP = {"peak_before_to_trough_ratio", "peak_before_to_peak_after_ratio"}
+_NON_SOMATIC_MAIN_PEAK_GROUP = {"main_peak_to_trough_ratio"}
+_NON_SOMATIC_BUILTIN_METRICS = _NON_SOMATIC_WIDTH_GROUP | _NON_SOMATIC_RATIO_GROUP | _NON_SOMATIC_MAIN_PEAK_GROUP
+
 
 def bombcell_get_default_thresholds() -> dict:
     """
     bombcell - Returns default thresholds for unit labeling.
 
     Each metric has 'greater' and 'less' values. Use None to disable a threshold (e.g. to ignore a metric completely
-    or to only have a greater or a less threshold)
+    or to only have a greater or a less threshold).
+
+    Refractory-period violations: the "mua" section must contain exactly ONE of
+    ``"sliding_rp_violation"`` or ``"rp_contamination"``. That single key picks
+    both the RPV method that gets computed and the threshold applied to it —
+    the pipeline reads this entry to decide which RPV metric to compute.
+    The default here uses ``"sliding_rp_violation"``.
     """
     # bombcell
     return {
@@ -66,9 +84,11 @@ def bombcell_get_default_thresholds() -> dict:
             "snr": {"greater": 5, "less": None},
             "amplitude_cutoff": {"greater": None, "less": 0.2},
             "num_spikes": {"greater": 300, "less": None},
-            "rp_contamination": {"greater": None, "less": 0.1},
+            "sliding_rp_violation": {"greater": None, "less": 0.1},
             "presence_ratio": {"greater": 0.7, "less": None},
             "drift_ptp": {"greater": None, "less": 100},  # um
+            "isolation_distance": {"greater": 20, "less": None},
+            "l_ratio": {"greater": None, "less": 0.3},
         },
         "non-somatic": {
             "peak_before_to_trough_ratio": {"greater": None, "less": 3},
@@ -83,8 +103,7 @@ def bombcell_get_default_thresholds() -> dict:
 def bombcell_label_units(
     sorting_analyzer=None,
     thresholds: dict | str | Path | None = None,
-    label_non_somatic: bool = True,
-    split_non_somatic_good_mua: bool = False,
+    split_non_somatic: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame] | None" = None,
 ) -> "pd.DataFrame":
     """
@@ -102,7 +121,9 @@ def bombcell_label_units(
         Units that pass all noise and MUA thresholds are labeled as "good".
     4. NON-SOMATIC:
         Among units that are not "noise", those that meet non-somatic criteria based on waveform shape are
-        labeled as "non_soma".
+        labeled as "non_soma". Non-somatic labeling is active whenever ``thresholds["non-somatic"]``
+        is non-empty; skip it entirely by leaving that section empty or omitting it.
+
         These non-somatic criteria include:
 
         - Narrow peak and trough widths (using "peak_before_width" and "trough_width" metrics)
@@ -111,7 +132,11 @@ def bombcell_label_units(
         - Large main peak to trough ratio (using "main_peak_to_trough_ratio" metric)
 
         If units have a narrow peak and a large ratio OR a large main peak to trough ratio,
-        they are labeled as non-somatic. If `split_non_somatic_good_mua` is True, non-somatic units are further split
+        they are labeled as non-somatic. Custom metrics can also be added to the "non-somatic"
+        threshold section — any metric not part of the built-in groups (width, ratio, main_peak)
+        is treated as a standalone condition OR'd into the non-somatic detection.
+
+        If `split_non_somatic` is True, non-somatic units are further split
         into "non_soma_good" and "non_soma_mua", otherwise they are all labeled as "non_soma".
 
     Parameters
@@ -123,12 +148,28 @@ def bombcell_label_units(
         Threshold dict or JSON file, including a three sections ("noise", "mua", "non-somatic") of
         {"metric": {"greater": val, "less": val}}.
         If None, default Bombcell thresholds are used.
-    label_non_somatic : bool, default: True
-        If True, detect non-somatic (dendritic, axonal) units.
-    split_non_somatic_good_mua : bool, default: False
-        If True, split non-somatic into "non_soma_good" and "non_soma_mua".
+
+        Refractory-period violation: include exactly ONE of ``"sliding_rp_violation"``
+        or ``"rp_contamination"`` under ``thresholds["mua"]``. This single entry
+        selects BOTH which RPV metric is used AND its threshold — there is no
+        separate knob for the method choice. ``run_bombcell_qc`` also reads this
+        entry to decide which RPV metric to compute.
+    split_non_somatic : bool, default: False
+        If True, split non-somatic units into "non_soma_good" and "non_soma_mua"
+        based on whether they pass MUA thresholds. If False, all non-somatic
+        units are labeled "non_soma". Has no effect if the non-somatic section
+        of ``thresholds`` is empty (non-somatic labeling is off in that case).
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
+
+    Notes
+    -----
+    This function is a pure labeler: it reads metrics off the analyzer (or
+    ``external_metrics``) and applies the thresholds. It does NOT compute or
+    recompute any extension. If you want quality metrics restricted to valid
+    unit periods, compute ``valid_unit_periods`` and ``quality_metrics`` with
+    ``use_valid_periods=True`` yourself before calling this function (or use
+    ``run_bombcell_qc`` with ``params["compute_valid_periods"]=True``).
 
     Returns
     -------
@@ -142,6 +183,16 @@ def bombcell_label_units(
     See [Fabre]_ for more details on the original implementation and rationale behind the thresholds.
     """
     import pandas as pd
+
+    if thresholds is None:
+        thresholds_dict = bombcell_get_default_thresholds()
+    elif isinstance(thresholds, (str, Path)):
+        with open(thresholds, "r") as f:
+            thresholds_dict = json.load(f)
+    elif isinstance(thresholds, dict):
+        thresholds_dict = thresholds
+    else:
+        raise ValueError("thresholds must be a dict, a JSON file path, or None")
 
     if sorting_analyzer is not None:
         combined_metrics = sorting_analyzer.get_metrics_extension_data()
@@ -161,15 +212,22 @@ def bombcell_label_units(
         else:
             combined_metrics = external_metrics
 
-    if thresholds is None:
-        thresholds_dict = bombcell_get_default_thresholds()
-    elif isinstance(thresholds, (str, Path)):
-        with open(thresholds, "r") as f:
-            thresholds_dict = json.load(f)
-    elif isinstance(thresholds, dict):
-        thresholds_dict = thresholds
-    else:
-        raise ValueError("thresholds must be a dict, a JSON file path, or None")
+    # Filter out threshold metrics that are not present in the metrics DataFrame.
+    # This allows optional metrics (e.g. isolation_distance, l_ratio) to be included
+    # in the default thresholds without crashing when they haven't been computed.
+    available_columns = set(combined_metrics.columns)
+    for section in ("noise", "mua", "non-somatic"):
+        if section not in thresholds_dict:
+            continue
+        missing = [m for m in thresholds_dict[section] if m not in available_columns]
+        if missing:
+            warnings.warn(
+                f"Bombcell thresholds reference metrics not found in the metrics DataFrame "
+                f"(section '{section}'): {missing}. These will be skipped. "
+                f"Compute them first if you want them included in the labeling."
+            )
+            for m in missing:
+                del thresholds_dict[section][m]
 
     n_units = len(combined_metrics)
 
@@ -200,8 +258,10 @@ def bombcell_label_units(
         )
         unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
 
-    if label_non_somatic:
-        non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
+    # Non-somatic labeling is driven by whether the user supplied any thresholds
+    # in the non-somatic section — no separate on/off flag.
+    non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
+    if len(non_somatic_thresholds) > 0:
         width_thresholds = {
             m: non_somatic_thresholds[m] for m in ["peak_before_width", "trough_width"] if m in non_somatic_thresholds
         }
@@ -263,7 +323,24 @@ def bombcell_label_units(
         # (ratio AND width) OR standalone main_peak_to_trough
         is_non_somatic = (ratio_conditions & width_conditions) | large_main_peak
 
-        if split_non_somatic_good_mua:
+        # Standalone custom metrics: any metric in non-somatic thresholds that is not
+        # part of the built-in groups is OR'd in as its own independent condition.
+        standalone_metrics = {
+            m: non_somatic_thresholds[m] for m in non_somatic_thresholds if m not in _NON_SOMATIC_BUILTIN_METRICS
+        }
+        if len(standalone_metrics) > 0:
+            standalone_labels = threshold_metrics_label_units(
+                metrics=combined_metrics,
+                thresholds=standalone_metrics,
+                pass_label="pass",
+                fail_label="fail",
+                operator="or",
+                nan_policy="ignore",
+            )
+            is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
+            is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
+
+        if split_non_somatic:
             good_mask = unit_labels["label"] == "good"
             mua_mask = unit_labels["label"] == "mua"
             unit_labels.loc[good_mask & is_non_somatic, "label"] = "non_soma_good"
