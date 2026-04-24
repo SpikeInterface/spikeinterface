@@ -231,9 +231,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         left_pad = half - (start_frame - fetch_start)
         right_pad = half - (fetch_end - end_frame)
 
-        traces = parent.get_traces(
-            start_frame=fetch_start, end_frame=fetch_end, channel_indices=channel_indices
-        )
+        traces = parent.get_traces(start_frame=fetch_start, end_frame=fetch_end, channel_indices=channel_indices)
 
         if left_pad > 0 or right_pad > 0:
             full_len = (end_frame - start_frame) + 2 * half
