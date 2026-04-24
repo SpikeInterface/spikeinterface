@@ -38,8 +38,6 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     --------
     >>> from spikeinterface.extractors import read_spikeglx
     >>> recording = read_spikeglx(folder_path=r'path_to_folder_with_data')
-    # we can load the sync channel, but then the probe is not loaded
-    >>> recording = read_spikeglx(folder_path=r'pat_to_folder_with_data')
     """
 
     NeoRawIOClass = "SpikeGLXRawIO"
