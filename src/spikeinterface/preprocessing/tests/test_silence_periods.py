@@ -48,8 +48,8 @@ def test_silence(create_cache_folder):
     assert not np.all(traces_mix[:-200] == 0)
 
     # test that the apodization creates a taper
-    apodization_factor = 10
-    rec2 = silence_periods(rec, periods=periods, mode="apodization", apodization_factor=apodization_factor)
+    apodization_samples = 10
+    rec2 = silence_periods(rec, periods=periods, mode="apodization", apodization_samples=apodization_samples)
     rec2 = rec2.save(format="memory", verbose=False, overwrite=True)
     traces_in0 = rec2.get_traces(segment_index=0, start_frame=0, end_frame=1000)
     traces_in1 = rec2.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
@@ -58,10 +58,10 @@ def test_silence(create_cache_folder):
     assert np.all(traces_in1 == 0)
 
     # at margins, traces should not be all zero, but should be apodized
-    apodized_traces_in0 = rec2.get_traces(segment_index=0, start_frame=1000, end_frame=1000 + apodization_factor)
-    apodized_traces_in1 = rec2.get_traces(segment_index=0, start_frame=5000 - apodization_factor, end_frame=5000)
-    traces_raw_in0 = rec.get_traces(segment_index=0, start_frame=1000, end_frame=1000 + apodization_factor)
-    traces_raw_in1 = rec.get_traces(segment_index=0, start_frame=5000 - apodization_factor, end_frame=5000)
+    apodized_traces_in0 = rec2.get_traces(segment_index=0, start_frame=1000, end_frame=1000 + apodization_samples)
+    apodized_traces_in1 = rec2.get_traces(segment_index=0, start_frame=5000 - apodization_samples, end_frame=5000)
+    traces_raw_in0 = rec.get_traces(segment_index=0, start_frame=1000, end_frame=1000 + apodization_samples)
+    traces_raw_in1 = rec.get_traces(segment_index=0, start_frame=5000 - apodization_samples, end_frame=5000)
     # the apodized traces should be less than the raw traces in absolute value,
     # since they are multiplied by a cosine taper between 0 and 1
     assert np.all(np.abs(apodized_traces_in0) <= np.abs(traces_raw_in0))

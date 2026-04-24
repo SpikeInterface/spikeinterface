@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.signal
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -34,8 +33,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-        - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization_factor`)
-    apodization_factor : int, default: 7
+        - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization_samples`)
+    apodization_samples : int, default: 7
         The factor used for the cosine taper when mode is "apodization". Higher values create a wider taper.
     noise_levels : array
         Noise levels if already computed
@@ -57,7 +56,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         # this is kept for backward compatibility
         list_periods=None,
         mode="zeros",
-        apodization_factor=7,
+        apodization_samples=7,
         noise_levels=None,
         seed=None,
         **noise_levels_kwargs,
@@ -120,7 +119,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 mode,
                 noise_generator,
                 seg_index,
-                apodization_factor=apodization_factor,
+                apodization_samples=apodization_samples,
             )
             self.add_recording_segment(rec_segment)
 
@@ -130,7 +129,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             mode=mode,
             seed=seed,
             noise_levels=noise_levels,
-            apodization_factor=apodization_factor,
+            apodization_samples=apodization_samples,
         )
 
 
@@ -173,13 +172,13 @@ def _check_periods(periods, num_seg):
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index, apodization_factor=7):
+    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index, apodization_samples=7):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.periods = periods
         self.mode = mode
         self.seg_index = seg_index
         self.noise_generator = noise_generator
-        self.apodization_factor = apodization_factor
+        self.apodization_samples = apodization_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
@@ -206,10 +205,12 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                         ]
                         traces[onset:offset, :] = noise[onset:offset]
                     elif self.mode == "apodization":
+                        import scipy.signal
+
                         # apply a cosine taper to the saturation to create a mute function
                         mute = np.zeros(traces.shape[0], dtype=np.float32)
                         mute[onset:offset] = 1
-                        win = scipy.signal.windows.cosine(self.apodization_factor)
+                        win = scipy.signal.windows.cosine(self.apodization_samples)
                         mute = np.maximum(0, 1 - scipy.signal.convolve(mute, win, mode="same"))
                         traces = (traces.astype(np.float32) * mute[:, np.newaxis]).astype(traces.dtype)
         return traces
