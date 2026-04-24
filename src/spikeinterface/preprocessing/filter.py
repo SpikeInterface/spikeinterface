@@ -3,7 +3,12 @@ import warnings
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-from spikeinterface.core import get_chunk_with_margin, ensure_chunk_size, get_global_job_kwargs
+from spikeinterface.core import (
+    get_chunk_with_margin,
+    ensure_chunk_size,
+    get_global_job_kwargs,
+    is_set_global_job_kwargs_set,
+)
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -118,7 +123,7 @@ class FilterRecording(BasePreprocessor):
         margin = int(margin_ms * fs / 1000.0)
 
         global_job_kwargs_chunk_size = ensure_chunk_size(recording, **get_global_job_kwargs())
-        if margin > MARGIN_TO_CHUNK_PERCENT_WARNING * global_job_kwargs_chunk_size:
+        if is_set_global_job_kwargs_set() and margin > MARGIN_TO_CHUNK_PERCENT_WARNING * global_job_kwargs_chunk_size:
             warnings.warn(
                 f"The margin size ({margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
                 f"of the global chunk size {global_job_kwargs_chunk_size} samples. This may lead to performance bottlenecks when "
@@ -339,7 +344,13 @@ class HighpassFilterRecording(FilterRecording):
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
         )
         dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs = dict(
+            recording=recording,
+            freq_min=freq_min,
+            margin_ms=margin_ms,
+            dtype=dtype.str,
+            ignore_low_freq_error=ignore_low_freq_error,
+        )
         self._kwargs.update(filter_kwargs)
 
     @classmethod
