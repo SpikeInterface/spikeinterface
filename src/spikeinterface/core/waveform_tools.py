@@ -17,7 +17,7 @@ import numpy as np
 from spikeinterface.core.baserecording import BaseRecording
 
 from .baserecording import BaseRecording
-from .job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
+from .job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
 from .job_tools import fix_job_kwargs
 
@@ -294,7 +294,7 @@ def distribute_waveforms_to_buffers(
     )
     if job_name is None:
         job_name = f"extract waveforms {mode} multi buffer"
-    processor = ChunkRecordingExecutor(
+    processor = TimeSeriesChunkExecutor(
         recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
     )
     processor.run()
@@ -303,7 +303,7 @@ def distribute_waveforms_to_buffers(
 distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 
-# used by ChunkRecordingExecutor
+# used by TimeSeriesChunkExecutor
 def _init_worker_distribute_buffers(
     recording, unit_ids, spikes, arrays_info, nbefore, nafter, return_in_uV, inds_by_unit, mode, sparsity_mask
 ):
@@ -350,7 +350,7 @@ def _init_worker_distribute_buffers(
     return worker_dict
 
 
-# used by ChunkRecordingExecutor
+# used by TimeSeriesChunkExecutor
 def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -563,7 +563,7 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkRecordingExecutor(
+        processor = TimeSeriesChunkExecutor(
             recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
         )
         processor.run()
@@ -620,7 +620,7 @@ def _init_worker_distribute_single_buffer(
     return worker_dict
 
 
-# used by ChunkRecordingExecutor
+# used by TimeSeriesChunkExecutor
 def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -948,7 +948,7 @@ def estimate_templates_with_accumulator(
 
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
-    processor = ChunkRecordingExecutor(
+    processor = TimeSeriesChunkExecutor(
         recording, func, init_func, init_args, job_name=job_name, verbose=verbose, need_worker_index=True, **job_kwargs
     )
     processor.run()
@@ -1035,7 +1035,7 @@ def _init_worker_estimate_templates(
     return worker_dict
 
 
-# used by ChunkRecordingExecutor
+# used by TimeSeriesChunkExecutor
 def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]

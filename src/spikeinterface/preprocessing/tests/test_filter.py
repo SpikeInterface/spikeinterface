@@ -50,7 +50,7 @@ class TestCausalFilter:
 
         # Then, change all kwargs to ensure they are propagated
         # and check the backwards version.
-        options["band"] = [671]
+        options["band"] = 671
         options["btype"] = "highpass"
         options["filter_order"] = 8
         options["ftype"] = "bessel"
