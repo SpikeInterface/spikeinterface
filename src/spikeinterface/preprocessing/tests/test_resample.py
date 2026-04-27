@@ -3,6 +3,7 @@ from spikeinterface.core import NumpyRecording
 
 
 import numpy as np
+import pytest
 
 DEBUG = False
 # DEBUG = True
@@ -71,6 +72,20 @@ def get_fft(traces, sampling_frequency):
     xf = fftfreq(N, 1 / sampling_frequency)[: N // 2]
     nyf = 2.0 / N * np.abs(yf)[: N // 2]
     return xf, nyf
+
+
+def _make_gapped_recording(sampling_frequency=30000, n_channels=2, sec1_duration=1.0, sec2_duration=1.0, gap_s=5.0):
+    """Helper: create a NumpyRecording with a time_vector gap between two sections."""
+    n1 = int(sec1_duration * sampling_frequency)
+    n2 = int(sec2_duration * sampling_frequency)
+    n_total = n1 + n2
+    traces = np.random.randn(n_total, n_channels).astype(np.float32)
+    rec = NumpyRecording(traces, sampling_frequency)
+
+    tv = np.arange(n_total, dtype="float64") / sampling_frequency
+    tv[n1:] += gap_s
+    rec.set_times(tv)
+    return rec, n1, n2
 
 
 def test_resample_freq_domain():
@@ -240,7 +255,8 @@ def test_resample_does_not_mutate_parent():
 
 
 def test_resample_preserves_time_vector_integer_ratio():
-    """Resampling with integer ratio should slice the parent time_vector."""
+    """Resampling with integer ratio should slice the parent time_vector,
+    preserving gaps when gap_tolerance_ms is provided."""
     sampling_frequency = 30000
     resample_rate = 500
     n_samples = sampling_frequency * 2
@@ -254,7 +270,7 @@ def test_resample_preserves_time_vector_integer_ratio():
     time_vector[midpoint:] += 5.0
     parent_rec.set_times(time_vector)
 
-    resampled = resample(parent_rec, resample_rate)
+    resampled = resample(parent_rec, resample_rate, gap_tolerance_ms=1.0)
 
     assert resampled.has_time_vector()
     resampled_times = resampled.get_times()
@@ -298,6 +314,247 @@ def test_resample_preserves_time_vector_non_integer_ratio():
     assert np.isclose(resampled_times[0], 10.0, atol=1.0 / sampling_frequency)
 
 
+def test_resample_errors_on_gaps_by_default():
+    """With gap_tolerance_ms=None (default), a gapped time vector should raise ValueError."""
+    rec, _, _ = _make_gapped_recording()
+    with pytest.raises(ValueError, match="timestamp gap"):
+        resample(rec, 500)
+
+
+def test_resample_preserves_gaps_non_integer_ratio():
+    """Non-integer ratio with gap_tolerance_ms should preserve the gap in the output time_vector."""
+    sampling_frequency = 30000
+    resample_rate = 700  # non-integer ratio
+    gap_s = 5.0
+    rec, n1, n2 = _make_gapped_recording(sampling_frequency=sampling_frequency, gap_s=gap_s)
+
+    import warnings as _warnings
+
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        resampled = resample(rec, resample_rate, gap_tolerance_ms=1.0)
+
+    assert resampled.has_time_vector()
+    resampled_times = resampled.get_times()
+    assert len(resampled_times) == resampled.get_num_samples()
+
+    # The gap should be preserved
+    diffs = np.diff(resampled_times)
+    normal_dt = 1.0 / resample_rate
+    gap_indices = np.where(diffs > normal_dt * 2)[0]
+    assert len(gap_indices) == 1, f"Expected 1 gap, found {len(gap_indices)}"
+
+    # Gap size should be approximately gap_s (plus one normal dt)
+    assert np.isclose(diffs[gap_indices[0]], gap_s + normal_dt, atol=2 * normal_dt)
+
+    # No timestamps should fall inside the gap
+    parent_tv = rec.get_times()
+    gap_start_t = parent_tv[n1 - 1]
+    gap_end_t = parent_tv[n1]
+    in_gap = (resampled_times > gap_start_t + normal_dt) & (resampled_times < gap_end_t - normal_dt)
+    assert not np.any(in_gap), "Output timestamps fall inside the gap"
+
+
+@pytest.mark.parametrize(
+    "resample_rate",
+    [
+        700,  # non-integer ratio (30000 / 700 ~= 42.857)
+        500,  # integer ratio (30000 / 500 = 60)
+    ],
+    ids=["non_integer_ratio", "integer_ratio"],
+)
+def test_resample_traces_across_gap(resample_rate):
+    """Section-wise resampling should match individually resampled sections.
+
+    Build a gapped recording, resample it with gap_tolerance_ms, and verify
+    that each section's output matches what you'd get by resampling that
+    section alone (without the gap).  This confirms that _get_traces_gapped
+    does not apply FFT processing (or decimate filtering) across gap boundaries.
+    """
+    sampling_frequency = 30000
+    sec_duration = 2.0
+    gap_s = 5.0
+
+    n1 = int(sec_duration * sampling_frequency)
+    n2 = int(sec_duration * sampling_frequency)
+
+    # Build random traces (more realistic than a sinusoid)
+    rng = np.random.default_rng(42)
+    traces1 = rng.standard_normal((n1, 2)).astype(np.float32)
+    traces2 = rng.standard_normal((n2, 2)).astype(np.float32)
+    traces = np.concatenate([traces1, traces2], axis=0)
+
+    t1 = np.arange(n1, dtype="float64") / sampling_frequency
+    t2 = np.arange(n2, dtype="float64") / sampling_frequency + sec_duration + gap_s
+    tv = np.concatenate([t1, t2])
+
+    rec = NumpyRecording(traces, sampling_frequency)
+    rec.set_times(tv)
+
+    # Resample the gapped recording
+    import warnings as _warnings
+
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        resampled = resample(rec, resample_rate, gap_tolerance_ms=1.0)
+
+    resampled_traces = resampled.get_traces()
+
+    # Derive the section split point from the resampled time vector rather than
+    # accessing private attributes (to decouple the test from the internal
+    # representation).
+    resampled_tv = np.asarray(resampled.get_times())
+    output_diffs = np.diff(resampled_tv)
+    expected_dt = 1.0 / resample_rate
+    gap_indices = np.flatnonzero(output_diffs > 2 * expected_dt)
+    assert len(gap_indices) == 1, f"Expected one gap in resampled times, got {len(gap_indices)}"
+    n_out_1 = int(gap_indices[0]) + 1
+    n_out_2 = resampled_traces.shape[0] - n_out_1
+
+    # Resample each section independently (no gap in these recordings)
+    rec1 = NumpyRecording(traces1, sampling_frequency)
+    rec1.set_times(t1)
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        resampled1 = resample(rec1, resample_rate, gap_tolerance_ms=1.0)
+    ref_traces1 = resampled1.get_traces()
+
+    rec2 = NumpyRecording(traces2, sampling_frequency)
+    rec2.set_times(t2)
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        resampled2 = resample(rec2, resample_rate, gap_tolerance_ms=1.0)
+    ref_traces2 = resampled2.get_traces()
+
+    # Section 1 should match the independently resampled section 1
+    gapped_s1 = resampled_traces[:n_out_1]
+    assert gapped_s1.shape == ref_traces1.shape, f"Section 1 shape mismatch: {gapped_s1.shape} vs {ref_traces1.shape}"
+    np.testing.assert_allclose(gapped_s1, ref_traces1, rtol=1e-5, atol=1e-5)
+
+    # Section 2 should match the independently resampled section 2
+    gapped_s2 = resampled_traces[n_out_1 : n_out_1 + n_out_2]
+    assert gapped_s2.shape == ref_traces2.shape, f"Section 2 shape mismatch: {gapped_s2.shape} vs {ref_traces2.shape}"
+    np.testing.assert_allclose(gapped_s2, ref_traces2, rtol=1e-5, atol=1e-5)
+
+
+def test_resample_gapped_chunked_consistency():
+    """Chunked .save() should match non-chunked for gapped recordings."""
+    sampling_frequency = 30000
+    resample_rate = 700
+    rec, _, _ = _make_gapped_recording(sampling_frequency=sampling_frequency, sec1_duration=2.0, sec2_duration=2.0)
+
+    import warnings as _warnings
+
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        resampled = resample(rec, resample_rate, gap_tolerance_ms=1.0)
+
+    traces_full = resampled.get_traces()
+    chunk_size = resample_rate  # 1 second chunks
+    saved = resampled.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)
+    traces_chunked = saved.get_traces()
+
+    assert traces_full.shape == traces_chunked.shape
+    # Interior samples should match closely (edges may have small differences)
+    sl = slice(chunk_size, -chunk_size)
+    rms = np.sqrt(np.mean(traces_full[sl] ** 2))
+    if rms > 0:
+        error = np.sqrt(np.mean((traces_full[sl] - traces_chunked[sl]) ** 2))
+        assert error / rms < 0.05, f"Chunked vs full RMS error ratio: {error / rms:.4f}"
+
+
+def test_resample_no_gap_unchanged_behavior():
+    """Uniform time_vector without gaps should produce identical results with or without gap_tolerance_ms."""
+    sampling_frequency = 30000
+    resample_rate = 700
+    n_samples = sampling_frequency * 2
+    traces = np.random.randn(n_samples, 1).astype(np.float32)
+    rec = NumpyRecording(traces, sampling_frequency)
+
+    tv = np.arange(n_samples, dtype="float64") / sampling_frequency + 100.0
+    rec.set_times(tv)
+
+    import warnings as _warnings
+
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        # Without gap_tolerance_ms (no gaps, so no error)
+        resampled_default = resample(rec, resample_rate)
+        # With gap_tolerance_ms (no gaps to split on, should be identical)
+        resampled_tolerant = resample(rec, resample_rate, gap_tolerance_ms=1.0)
+
+    np.testing.assert_array_equal(resampled_default.get_times(), resampled_tolerant.get_times())
+    np.testing.assert_array_equal(resampled_default.get_traces(), resampled_tolerant.get_traces())
+
+
+def test_resample_multiple_gaps():
+    """Recording with multiple gaps should produce the correct number of sections."""
+    sampling_frequency = 30000
+    resample_rate = 700
+    n_per_sec = int(0.5 * sampling_frequency)  # 0.5s per section
+    n_sections = 4
+    n_total = n_per_sec * n_sections
+    traces = np.random.randn(n_total, 1).astype(np.float32)
+    rec = NumpyRecording(traces, sampling_frequency)
+
+    # Create time_vector with 3 gaps (between 4 sections)
+    tv = np.arange(n_total, dtype="float64") / sampling_frequency
+    for i in range(1, n_sections):
+        tv[i * n_per_sec :] += i * 10.0  # gaps of 10s, 20s, 30s cumulative offsets
+    rec.set_times(tv)
+
+    import warnings as _warnings
+
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("ignore")
+        resampled = resample(rec, resample_rate, gap_tolerance_ms=1.0)
+
+    resampled_times = resampled.get_times()
+    diffs = np.diff(resampled_times)
+    normal_dt = 1.0 / resample_rate
+
+    # Should detect 3 gaps
+    gap_indices = np.where(diffs > normal_dt * 2)[0]
+    assert len(gap_indices) == 3, f"Expected 3 gaps, found {len(gap_indices)}"
+
+    # Traces and times should match in length
+    assert resampled.get_traces().shape[0] == len(resampled_times)
+
+
+def test_resample_gap_tolerance_filtering():
+    """Gaps smaller than gap_tolerance_ms should be treated as continuous."""
+    sampling_frequency = 30000
+    resample_rate = 500  # integer ratio for simplicity
+
+    n1 = int(1.0 * sampling_frequency)
+    n2 = int(1.0 * sampling_frequency)
+    n3 = int(1.0 * sampling_frequency)
+    n_total = n1 + n2 + n3
+    traces = np.random.randn(n_total, 1).astype(np.float32)
+    rec = NumpyRecording(traces, sampling_frequency)
+
+    tv = np.arange(n_total, dtype="float64") / sampling_frequency
+    # Small gap (5ms = 0.005s) after section 1 — detectable but below 50ms tolerance
+    tv[n1:] += 0.005
+    # Large gap (100ms = 0.1s) after section 2
+    tv[n1 + n2 :] += 0.1
+    rec.set_times(tv)
+
+    # With tolerance of 50ms: only the 100ms gap triggers a section split
+    resampled = resample(rec, resample_rate, gap_tolerance_ms=50.0)
+    seg = resampled.segments[0]
+    assert seg._has_gaps, "Should detect at least one gap"
+    n_sections = len(seg._sec_n_out)
+    assert n_sections == 2, f"Expected 2 sections (split at 100ms gap), found {n_sections}"
+
+    # With tolerance of 1.0ms: both gaps trigger section splits
+    # (5ms > 1ms, 100ms > 1ms)
+    resampled_strict = resample(rec, resample_rate, gap_tolerance_ms=1.0)
+    seg_strict = resampled_strict.segments[0]
+    n_sections_strict = len(seg_strict._sec_n_out)
+    assert n_sections_strict == 3, f"Expected 3 sections with 1ms tolerance, found {n_sections_strict}"
+
+
 if __name__ == "__main__":
     test_resample_freq_domain()
     test_resample_by_chunks()
@@ -305,3 +562,10 @@ if __name__ == "__main__":
     test_resample_does_not_mutate_parent()
     test_resample_preserves_time_vector_integer_ratio()
     test_resample_preserves_time_vector_non_integer_ratio()
+    test_resample_errors_on_gaps_by_default()
+    test_resample_preserves_gaps_non_integer_ratio()
+    test_resample_traces_across_gap()
+    test_resample_gapped_chunked_consistency()
+    test_resample_no_gap_unchanged_behavior()
+    test_resample_multiple_gaps()
+    test_resample_gap_tolerance_filtering()
