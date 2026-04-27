@@ -112,7 +112,6 @@ def test_generate_drifting_recording():
         seed=2205,
     )
 
-
     # print(static_recording)
     # print(drifting_recording)
     # print(sorting)
