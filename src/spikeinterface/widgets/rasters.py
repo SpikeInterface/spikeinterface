@@ -436,6 +436,7 @@ class RasterWidget(BaseRasterWidget):
         if unit_ids is None:
             unit_ids = sorting.unit_ids
 
+        depth_dict = None
         if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
             if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
                 if sort_by_depth:
