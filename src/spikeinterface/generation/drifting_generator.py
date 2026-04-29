@@ -57,6 +57,10 @@ def _make_probe_by_name(probe_name: str):
         )
     elif probe_name == "tetrode":
         probe = generate_tetrode()
+    elif 'sinaps-128':
+        probe = get_probe('sinaps-research-platform', 'p1024s1NHP')
+        order = np.argsort(probe.contact_ids.astype('int64'))
+        probe = probe.get_slice(order[:128])
     elif "/" in probe_name:
         manufacturer, probe_name_ = probe_name.split("/")
         probe = get_probe(manufacturer, probe_name_)
@@ -66,7 +70,6 @@ def _make_probe_by_name(probe_name: str):
     else:
         raise ValueError("wring probe_name")
 
-    print(probe)
     return probe
 
 def make_one_displacement_vector(
