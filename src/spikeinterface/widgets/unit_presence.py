@@ -91,12 +91,9 @@ class UnitPresenceWidget(BaseWidget):
             last = spikes["sample_index"][-1]
             duration = last / fs
 
-
-
         if spikes.size == 0:
             return
 
-        
         num_units = len(unit_ids)
         num_time_bins = int(duration / dp.bin_duration_s) + 1
         map = np.zeros((num_units, num_time_bins))
@@ -115,13 +112,10 @@ class UnitPresenceWidget(BaseWidget):
             smooth_kernel = smooth_kernel[np.newaxis, :]
             map = scipy.signal.oaconvolve(map, smooth_kernel, mode="same", axes=1)
 
-        extent=(dp.time_range[0], dp.time_range[1], len(unit_ids), 0) if dp.time_range is not None else None
-        im = self.ax.imshow(map, cmap="inferno",
-                            aspect="auto",
-                            interpolation="nearest",
-                            extent=extent,
-                            vmax=1.0,
-                            vmin=0.0)
+        extent = (dp.time_range[0], dp.time_range[1], len(unit_ids), 0) if dp.time_range is not None else None
+        im = self.ax.imshow(
+            map, cmap="inferno", aspect="auto", interpolation="nearest", extent=extent, vmax=1.0, vmin=0.0
+        )
         self.ax.set_xlabel("Time (s)")
         self.ax.set_ylabel("Units")
         self.ax.set_yticks(np.arange(len(unit_ids)) + 0.5)
