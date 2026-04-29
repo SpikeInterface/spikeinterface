@@ -23,9 +23,6 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path : str
         The folder path to load the recordings from.
-    load_sync_channel : bool default: False
-        Whether or not to load the last channel in the stream, which is typically used for synchronization.
-        If True, then the probe is not loaded.
     stream_id : str or None, default: None
         If there are several streams, specify the stream id you want to load.
         For example, "imec0.ap", "nidq", or "imec0.lf".
@@ -40,9 +37,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     Examples
     --------
     >>> from spikeinterface.extractors import read_spikeglx
-    >>> recording = read_spikeglx(folder_path=r'path_to_folder_with_data', load_sync_channel=False)
-    # we can load the sync channel, but then the probe is not loaded
-    >>> recording = read_spikeglx(folder_path=r'pat_to_folder_with_data', load_sync_channel=True)
+    >>> recording = read_spikeglx(folder_path=r'path_to_folder_with_data')
     """
 
     NeoRawIOClass = "SpikeGLXRawIO"
@@ -50,14 +45,13 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(
         self,
         folder_path,
-        load_sync_channel=False,
         stream_id=None,
         stream_name=None,
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
     ):
 
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -67,7 +61,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), load_sync_channel=load_sync_channel))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
         stream_is_nidq = "nidq" in self.stream_id
         stream_is_one_box = "obx" in self.stream_id
@@ -83,7 +77,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         ap_meta_filename = meta_filename.replace(".lf", ".ap") if "lf" in self.stream_id else meta_filename
         ap_meta_file_exists = Path(ap_meta_filename).exists()
-        add_probe_properties = ap_meta_file_exists and not load_sync_channel
+        add_probe_properties = ap_meta_file_exists
 
         if add_probe_properties:
             probe = probeinterface.read_spikeglx(ap_meta_filename)
@@ -105,8 +99,8 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             warnings.warn(warning_message, UserWarning, stacklevel=2)
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False):
-        neo_kwargs = {"dirname": str(folder_path), "load_sync_channel": load_sync_channel}
+    def map_to_neo_kwargs(cls, folder_path):
+        neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
 
