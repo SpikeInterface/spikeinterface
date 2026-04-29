@@ -1,3 +1,4 @@
+import os
 import threading
 import warnings
 import weakref
@@ -209,14 +210,21 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.operator_func = np.mean if self.operator == "average" else np.median
         self.n_workers = int(n_workers)
         # Per-caller-thread lazy pool map.  See filter.FilterRecordingSegment
-        # for full rationale and WeakKeyDictionary mechanics.
+        # for full rationale, WeakKeyDictionary mechanics, and the post-fork
+        # pid guard in _get_pool.
         self._cmr_pools = weakref.WeakKeyDictionary()
         self._cmr_pools_lock = threading.Lock()
+        self._cmr_pools_pid = os.getpid()
 
     def _get_pool(self):
         """Lazy per-caller-thread thread pool for parallel median/mean across time blocks."""
         if self.n_workers <= 1:
             return None
+        # See filter.FilterRecordingSegment._get_pool for the rationale.
+        if self._cmr_pools_pid != os.getpid():
+            self._cmr_pools = weakref.WeakKeyDictionary()
+            self._cmr_pools_lock = threading.Lock()
+            self._cmr_pools_pid = os.getpid()
         thread = threading.current_thread()
         pool = self._cmr_pools.get(thread)
         if pool is None:
