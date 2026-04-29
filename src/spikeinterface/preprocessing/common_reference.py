@@ -244,6 +244,9 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         numpy's partition-based median and BLAS-backed mean release the GIL
         during per-row work, so Python-thread parallelism delivers real
         speedup (measured ~10× on 16 threads for 1M × 384 median).
+
+        Workers write directly into a pre-allocated output array — see
+        FilterRecordingSegment._apply_sos for the same pattern.
         """
         if self.n_workers == 1:
             return self.operator_func(traces, axis=1)
@@ -258,15 +261,17 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         block = (T + effective - 1) // effective
         bounds = [(t0, min(t0 + block, T)) for t0 in range(0, T, block)]
 
+        # Probe dtype: median/mean of a 1×C row gives the same dtype as the
+        # full reduction.
+        out_dtype = self.operator_func(traces[:1, :], axis=1).dtype
+        out = np.empty(T, dtype=out_dtype)
+
         def _work(t0, t1):
-            return t0, t1, self.operator_func(traces[t0:t1, :], axis=1)
+            out[t0:t1] = self.operator_func(traces[t0:t1, :], axis=1)
 
         futures = [pool.submit(_work, t0, t1) for t0, t1 in bounds]
-        results = [fut.result() for fut in futures]
-        out_dtype = results[0][2].dtype
-        out = np.empty(T, dtype=out_dtype)
-        for t0, t1, block_out in results:
-            out[t0:t1] = block_out
+        for fut in futures:
+            fut.result()
         return out
 
     def get_traces(self, start_frame, end_frame, channel_indices):
