@@ -225,6 +225,7 @@ def plot_unit_counts(
     with_rectangle=True,
     revert_bad=True,
     xticks_rotation=45.0,
+    show_legend=True,
     figsize=None,
     ax=None,
 ):
@@ -339,7 +340,9 @@ def plot_unit_counts(
     xticklabels = labels_list
     ax.set_xticks(np.arange(len(xticklabels)) + 1.5 - width)
     ax.set_xticklabels(xticklabels, rotation=xticks_rotation)
-    ax.legend()
+
+    if show_legend:
+        ax.legend()
 
     despine(ax)
 
