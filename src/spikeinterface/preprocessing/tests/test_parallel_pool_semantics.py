@@ -140,8 +140,14 @@ def _child_uses_inherited_recording(rec, queue):
 @pytest.mark.parametrize(
     "builder,pools_attr",
     [
-        (lambda: BandpassFilterRecording(_make_recording(), freq_min=300.0, freq_max=6000.0, n_workers=4), "_filter_pools"),
-        (lambda: CommonReferenceRecording(_make_recording(), operator="median", reference="global", n_workers=4), "_cmr_pools"),
+        (
+            lambda: BandpassFilterRecording(_make_recording(), freq_min=300.0, freq_max=6000.0, n_workers=4),
+            "_filter_pools",
+        ),
+        (
+            lambda: CommonReferenceRecording(_make_recording(), operator="median", reference="global", n_workers=4),
+            "_cmr_pools",
+        ),
     ],
     ids=["filter", "cmr"],
 )
