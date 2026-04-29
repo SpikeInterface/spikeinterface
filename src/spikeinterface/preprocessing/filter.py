@@ -1,3 +1,4 @@
+import os
 import threading
 import warnings
 import weakref
@@ -197,11 +198,23 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         # long-running processes don't accumulate zombie pools.
         self._filter_pools = weakref.WeakKeyDictionary()
         self._filter_pools_lock = threading.Lock()
+        self._filter_pools_pid = os.getpid()
 
     def _get_pool(self):
         """Lazy per-caller-thread thread pool for channel-parallel filtering."""
         if self.n_workers <= 1:
             return None
+        # os.fork() copies memory but only the calling thread.  In a forked
+        # child, ThreadPoolExecutors stored on this segment reference parent
+        # Thread objects whose OS threads don't exist here, and the pool lock
+        # may even be in a held state.  Detect by pid and reset.  Pickling
+        # (mp_context="spawn"/"forkserver") goes through __reduce__ and
+        # rebuilds via __init__, so it sees fresh state already; this guard
+        # is specifically for the fork path.
+        if self._filter_pools_pid != os.getpid():
+            self._filter_pools = weakref.WeakKeyDictionary()
+            self._filter_pools_lock = threading.Lock()
+            self._filter_pools_pid = os.getpid()
         thread = threading.current_thread()
         pool = self._filter_pools.get(thread)
         if pool is None:

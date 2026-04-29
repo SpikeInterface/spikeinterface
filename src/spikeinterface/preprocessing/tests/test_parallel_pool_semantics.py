@@ -11,6 +11,9 @@ for the full rationale.
 
 from __future__ import annotations
 
+import multiprocessing as mp
+import os
+import sys
 import threading
 
 import numpy as np
@@ -101,3 +104,80 @@ class TestPerCallerThreadPool:
             "expected distinct inner pools for concurrent callers; Model 1 "
             "shared-pool semantics would cause queueing pathology"
         )
+
+
+# --- Post-fork pid-guard regression test --------------------------------------
+#
+# Without the pid guard in _get_pool, a forked child inherits the parent's
+# WeakKeyDictionary keyed by the calling thread.  Because Python reuses the
+# calling thread's identity in the child after fork, the child's first lookup
+# returns the *parent's* ThreadPoolExecutor — whose worker threads do not exist
+# in the child.  The child's first ``submit()`` then blocks indefinitely.
+#
+# This test pre-warms the pool in the parent (the trigger condition), forks via
+# multiprocessing with the ``fork`` context, and asserts the child's
+# ``get_traces`` completes within a short timeout.
+
+
+def _child_uses_inherited_recording(rec, queue):
+    """Child entry point: exercise the parent-inherited recording's pool.
+
+    Under fork, ``rec`` here is the parent's pre-warmed recording, copied via
+    fork's COW memory.  Its ``_filter_pools`` / ``_cmr_pools`` dict already
+    contains an entry for what *was* the parent's main thread — and Python
+    reuses that thread identity in the child.  Without the pid guard, the
+    child's first ``submit()`` blocks because the worker threads of the
+    inherited ThreadPoolExecutor don't exist in this process.
+    """
+    try:
+        rec.get_traces(start_frame=0, end_frame=50_000)
+        queue.put("ok")
+    except Exception as e:  # pragma: no cover — failure path
+        queue.put(f"error: {type(e).__name__}: {e}")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="fork is POSIX-only")
+@pytest.mark.parametrize(
+    "builder,pools_attr",
+    [
+        (lambda: BandpassFilterRecording(_make_recording(), freq_min=300.0, freq_max=6000.0, n_workers=4), "_filter_pools"),
+        (lambda: CommonReferenceRecording(_make_recording(), operator="median", reference="global", n_workers=4), "_cmr_pools"),
+    ],
+    ids=["filter", "cmr"],
+)
+def test_pool_recovers_after_fork(builder, pools_attr):
+    """After fork, the child must rebuild its inner pool rather than reuse the
+    parent's stale one — so ``get_traces`` completes promptly.
+
+    Trigger: the parent pre-warms the pool *before* fork.  Without the pid
+    guard in ``_get_pool``, the child's first ``submit()`` deadlocks on the
+    inherited pool's queue because the parent's worker OS threads were not
+    copied across ``fork()``.
+    """
+    rec = builder()
+    rec.get_traces(start_frame=0, end_frame=50_000)
+    seg = rec._recording_segments[0]
+    parent_pid = os.getpid()
+    parent_pool = getattr(seg, pools_attr).get(threading.current_thread())
+    assert parent_pool is not None, "fixture failed to pre-warm the parent pool"
+
+    ctx = mp.get_context("fork")
+    queue = ctx.Queue()
+    proc = ctx.Process(target=_child_uses_inherited_recording, args=(rec, queue))
+    proc.start()
+    proc.join(timeout=30)
+    if proc.is_alive():
+        proc.terminate()
+        proc.join()
+        pytest.fail(
+            "child get_traces() deadlocked after fork: pid guard in _get_pool "
+            "is missing or broken (parent pre-warmed the pool before fork)"
+        )
+    result = queue.get_nowait()
+    assert result == "ok", f"child failed: {result}"
+    assert proc.exitcode == 0, f"child exited non-zero: {proc.exitcode}"
+
+    # Parent's pool is unchanged after the child runs (the child only touches
+    # its own copy of the dict; the parent's dict is unaffected).
+    assert os.getpid() == parent_pid
+    assert getattr(seg, pools_attr).get(threading.current_thread()) is parent_pool
