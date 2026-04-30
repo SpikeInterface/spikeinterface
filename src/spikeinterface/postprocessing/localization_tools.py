@@ -179,7 +179,7 @@ def compute_center_of_mass(
         keep_unit_indices = np.array([all_unit_ids.index(unit_id) for unit_id in unit_ids])
         templates = templates[keep_unit_indices, :, :]
 
-    unit_location = np.zeros((len(unit_ids), 2), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), len(contact_locations[0])), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
@@ -340,7 +340,7 @@ def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance
     # initial guess is the center of mass
     com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
     x0 = np.zeros(4, dtype="float32")
-    x0[:2] = com
+    x0[:2] = com[:2]
     x0[2] = initial_z
     initial_alpha = np.sqrt(np.sum((com - local_contact_locations[ind_max, :]) ** 2) + initial_z**2) * max_ptp
     x0[3] = initial_alpha
@@ -390,7 +390,7 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
 def estimate_distance_error(vec, wf_data, local_contact_locations):
     # vec dims ar (x, y, z amplitude_factor)
     # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
-    dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2]) ** 2).sum(axis=1) + vec[2] ** 2)
+    dist = np.sqrt(((local_contact_locations[:, :2] - vec[np.newaxis, :2]) ** 2).sum(axis=1) + vec[2] ** 2)
     data_estimated = vec[3] / dist
     err = wf_data - data_estimated
     return err
