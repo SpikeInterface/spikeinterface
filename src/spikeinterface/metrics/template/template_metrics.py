@@ -201,9 +201,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
         ):
-            if self.sorting_analyzer.get_channel_locations().shape[1] == 1:
-                raise ValueError("Multi-channel metrics cannot be computed when channel locations are 1D.")
-            if self.sorting_analyzer.get_channel_locations().shape[1] > 2:
+            if self.sorting_analyzer.get_channel_locations().shape[1] == 3:
                 warnings.warn(
                     "Multi-channel metrics assume 2D channel locations. We will assume the first two dimensions are the physically relevant ones"
                 )
