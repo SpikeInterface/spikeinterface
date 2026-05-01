@@ -41,7 +41,7 @@ from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
 
 
@@ -617,7 +617,6 @@ class SortingAnalyzer:
     def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
         import zarr
-        import numcodecs
         from .zarrextractors import add_sorting_to_zarr_group
 
         if is_path_remote(folder):
@@ -646,13 +645,9 @@ class SortingAnalyzer:
         if recording is not None:
             rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
-                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
-                zarr_rec = np.array([check_json(rec_dict)], dtype=object)
-                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
+                _write_object_array(zarr_root, "recording", check_json(rec_dict), codec="json")
             elif recording.check_serializability("pickle"):
-                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
-                zarr_rec = np.array([rec_dict], dtype=object)
-                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+                _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
             else:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
@@ -662,11 +657,9 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
         if sorting.check_serializability("json"):
-            zarr_sort = np.array([check_json(sort_dict)], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
+            _write_object_array(zarr_root, "sorting_provenance", check_json(sort_dict), codec="json")
         elif sorting.check_serializability("pickle"):
-            zarr_sort = np.array([sort_dict], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
+            _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
         else:
             warnings.warn(
                 "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
@@ -2703,8 +2696,6 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            import numcodecs
-
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
@@ -2717,9 +2708,7 @@ class AnalyzerExtension:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, (dict, list)):
                     ext_data_ = check_json(ext_data)
-                    extension_group.create_dataset(
-                        name=ext_data_name, data=np.array([ext_data_], dtype=object), object_codec=numcodecs.JSON()
-                    )
+                    _write_object_array(extension_group, ext_data_name, ext_data_, codec="json")
                     extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
@@ -2739,9 +2728,7 @@ class AnalyzerExtension:
                 else:
                     # any object
                     try:
-                        extension_group.create_dataset(
-                            name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.Pickle()
-                        )
+                        _write_object_array(extension_group, ext_data_name, ext_data, codec="pickle")
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
                     extension_group[ext_data_name].attrs["object"] = True
