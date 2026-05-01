@@ -247,7 +247,7 @@ def compute_grid_convolution(
     unit_location: np.array
     """
 
-    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()[:, :2]
 
     templates = get_dense_templates_array(
         sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
@@ -693,7 +693,7 @@ def compute_location_max_channel(
     extremum_channels_index = get_template_extremum_channel(
         templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index", operator=operator
     )
-    contact_locations = templates_or_sorting_analyzer.get_channel_locations()
+    contact_locations = templates_or_sorting_analyzer.get_channel_locations()[:, :2]
     if unit_ids is None:
         unit_ids = templates_or_sorting_analyzer.unit_ids
     else:
