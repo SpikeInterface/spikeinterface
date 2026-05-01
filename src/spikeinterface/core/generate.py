@@ -1676,6 +1676,8 @@ default_unit_params_range = dict(
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     spatial_decay=(10.0, 45.0),
+    spatial_base=(0.1, 1.0),
+    spatial_power=(2.0, 4.0),
     propagation_speed=(250.0, 350.0),  # um  / ms
     ellipse_shrink=(0.4, 1),
     ellipse_angle=(0, np.pi * 2),
@@ -1719,6 +1721,7 @@ def generate_templates(
     upsample_factor=None,
     unit_params=None,
     mode="ellipsoid",
+    spatial_profile="exponential",
 ):
     """
     Generate some templates from the given channel positions and neuron positions.
@@ -1759,6 +1762,8 @@ def generate_templates(
             * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
             * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
             * "spatial_decay": the spatial constant (default range: (20-40))
+            * "spatial_base": denominator term for power spatial decay decay (default range: 0.1-1.0)
+            * "spatial_power": exponent for power spatial decay decay (default range: 2-4)
             * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
 
         Values can be:
@@ -1769,10 +1774,11 @@ def generate_templates(
         Method used to calculate the distance between unit and channel location.
         Ellipsoid injects some anisotropy dependent on unit shape, sphere is equivalent
         to Euclidean distance.
+    spatial_profile : "exponential" | "power", default: "exponential"
+        Spatial footpring decay curve family.
 
-    mode : "sphere" | "ellipsoid", default: "ellipsoid"
-        Mode for how to calculate distances
-
+            * "exponential": alpha * exp(-r / spatial_decay)
+            * "power": alpha / (spatial_base + (r/spatial_decay) ** spatial_power)
 
     Returns
     -------
@@ -1783,7 +1789,6 @@ def generate_templates(
 
     """
     unit_params = unit_params or dict()
-    rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
     assert units_locations.shape[1] == 3
@@ -1849,7 +1854,12 @@ def generate_templates(
                 z_angle=params["ellipse_angle"][u],
             )
 
-        channel_factors = alpha * np.exp(-distances / spatial_decay)
+        if spatial_profile == "exponential":
+            channel_factors = alpha * np.exp(-distances / spatial_decay)
+        elif spatial_profile == "power":
+            channel_factors = (distances / spatial_decay) ** params["spatial_power"][u]
+            channel_factors = alpha / (params["spatial_base"][u] + channel_factors)
+
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
         # This mimic a propagation delay for distant channel
