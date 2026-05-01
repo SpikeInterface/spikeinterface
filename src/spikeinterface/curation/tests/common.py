@@ -35,12 +35,9 @@ def make_sorting_analyzer(sparse=True, num_units=5, durations=[300.0]):
     sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     sorting_analyzer = create_sorting_analyzer(
-        sorting=sorting,
-        recording=recording,
-        format="memory",
-        sparse=sparse,
+        sorting=sorting, recording=recording, format="memory", sparse=sparse, n_jobs=-1
     )
-    sorting_analyzer.compute(extensions)
+    sorting_analyzer.compute(extensions, n_jobs=-1)
 
     return sorting_analyzer
 
@@ -58,9 +55,9 @@ def make_sorting_analyzer_with_splits(sorting_analyzer, num_unit_splitted=1, num
     )
 
     sorting_analyzer_with_splits = create_sorting_analyzer(
-        sorting=sorting_with_split, recording=sorting_analyzer.recording, format="memory", sparse=True
+        sorting=sorting_with_split, recording=sorting_analyzer.recording, format="memory", sparse=True, n_jobs=-1
     )
-    sorting_analyzer_with_splits.compute(extensions)
+    sorting_analyzer_with_splits.compute(extensions, n_jobs=-1)
 
     return sorting_analyzer_with_splits, num_unit_splitted, other_ids
 
@@ -78,8 +75,8 @@ def sorting_analyzer_for_unitrefine_curation():
     recording, sorting_1 = generate_ground_truth_recording(num_channels=4, seed=1, num_units=6)
     _, sorting_2 = generate_ground_truth_recording(num_channels=4, seed=2, num_units=6)
     both_sortings = aggregate_units([sorting_1, sorting_2])
-    analyzer = create_sorting_analyzer(sorting=both_sortings, recording=recording)
-    analyzer.compute(["random_spikes", "noise_levels", "templates"])
+    analyzer = create_sorting_analyzer(sorting=both_sortings, recording=recording, n_jobs=-1)
+    analyzer.compute(["random_spikes", "noise_levels", "templates"], n_jobs=-1)
     return analyzer
 
 
