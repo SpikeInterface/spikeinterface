@@ -27,7 +27,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
     def get_full_path(path):
         return local_folder / path
 
-    def test_open(self):
+    def test_oopen(self):
         for entity in self.entities:
             kwargs = {}
             if isinstance(entity, tuple):
