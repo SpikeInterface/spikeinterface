@@ -179,10 +179,10 @@ def compute_center_of_mass(
         keep_unit_indices = np.array([all_unit_ids.index(unit_id) for unit_id in unit_ids])
         templates = templates[keep_unit_indices, :, :]
 
-    unit_location = np.zeros((len(unit_ids), len(contact_locations[0])), dtype="float64")
+    unit_location = np.zeros((len(unit_ids), 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-        local_contact_locations = contact_locations[chan_inds, :]
+        local_contact_locations = contact_locations[chan_inds, :2]
 
         wf = templates[i, :, :]
 
