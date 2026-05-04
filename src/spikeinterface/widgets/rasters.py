@@ -403,7 +403,7 @@ class RasterWidget(BaseRasterWidget):
     sorting_analyzer : SortingAnalyzer  | None, default: None
         A sorting analyzer object. Deprecated.
     sort_by_depth : bool, default: False
-        Whether or not to sort units by depth, default: False
+        Whether or not to sort units by depth, only available when input is a `SortingAnalyzer`
     """
 
     def __init__(
