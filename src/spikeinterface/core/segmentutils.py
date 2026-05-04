@@ -606,19 +606,21 @@ class SelectSegmentSorting(BaseSorting):
 
 select_segment_sorting = define_function_from_class(source_class=SelectSegmentSorting, name="select_segment_sorting")
 
+
 class SelectSegmentEvent(BaseEvent):
     def __init__(self, event: BaseEvent, segment_indices: int | list[int]):
         BaseEvent.__init__(self, event.channel_ids, event.structured_dtype)
 
-        if isinstance(segment_indices, int): segment_indices = [segment_indices]
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
 
         num_segments = event.get_num_segments()
 
-        if not all( 0 <= s < num_segments for s in segment_indices):
+        if not all(0 <= s < num_segments for s in segment_indices):
             raise ValueError(f"'segment_index' must be between 0 and {num_segments - 1}")
 
         for seg_idx in segment_indices:
-            seg = event._event_segments[seg_idx]    
+            seg = event._event_segments[seg_idx]
             self.add_event_segment(seg)
 
         self._parent = event
