@@ -103,7 +103,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     def is_installed(cls):
         import importlib.util
 
-        tridesclous2_deps = ["scipy", "numba", "hbdscan"]
+        tridesclous2_deps = ["scipy", "numba", "hdbscan"]
 
         for package_name in tridesclous2_deps:
             if not importlib.util.find_spec(package_name):

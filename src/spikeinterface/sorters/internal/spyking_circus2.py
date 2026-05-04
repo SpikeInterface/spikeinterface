@@ -92,7 +92,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     def is_installed(cls):
         import importlib.util
 
-        spykingcircus2_deps = ["scipy", "numba", "hbdscan"]
+        spykingcircus2_deps = ["scipy", "numba", "hdbscan"]
 
         for package_name in spykingcircus2_deps:
             if not importlib.util.find_spec(package_name):
