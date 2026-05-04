@@ -23,7 +23,7 @@ class TestUnitLocationsExtension(AnalyzerExtensionCommonTestSuite):
         self.run_extension_tests(ComputeUnitLocations, params=params)
 
 
-def test_2d_and_3d_unit_localisation():
+def test_2d_and_3d_unit_localization():
     """
     Our localization tools do not use the 3rd dimension of contact position.
     Hence if we pass the same data with a 2D probe and a 3D probe (with the
