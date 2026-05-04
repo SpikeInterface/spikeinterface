@@ -110,7 +110,7 @@ class LupinSorter(ComponentsBasedSorter):
     def is_installed(cls):
         import importlib.util
 
-        lupin_deps = ["scipy", "numba", "scikit-learn", "torch"]
+        lupin_deps = ["scipy", "numba", "sklearn", "torch"]
 
         for package_name in lupin_deps:
             if not importlib.util.find_spec(package_name):
