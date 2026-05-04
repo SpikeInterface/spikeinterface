@@ -31,6 +31,7 @@ def generate_recording(
     durations: list[float] = [5.0, 2.5],
     set_probe: bool | None = True,
     ndim: int | None = 2,
+    t_starts: list[float] | None = None,
     seed: int | None = None,
 ) -> BaseRecording:
     """
@@ -50,6 +51,9 @@ def generate_recording(
         If true, attaches probe to the returned `Recording`
     ndim : int, default: 2
         The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
+    t_starts : list[float] | None, default: None
+        The start time of each segment in seconds. If provided, must have the same
+        length as `durations`.
     seed : int | None, default: None
         A seed for the np.ramdom.default_rng function
 
@@ -70,6 +74,11 @@ def generate_recording(
         # block size is fixed to one second
         noise_block_size=int(sampling_frequency),
     )
+
+    if t_starts is not None:
+        assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
+        for segment_index, t_start in enumerate(t_starts):
+            recording.segments[segment_index].t_start = t_start
 
     recording.annotate(is_filtered=True)
 
@@ -95,6 +104,7 @@ def generate_sorting(
     add_spikes_on_borders=False,
     num_spikes_per_border=3,
     border_size_samples=20,
+    t_starts=None,
     seed=None,
 ):
     """
@@ -122,6 +132,9 @@ def generate_sorting(
         The number of spikes to add close to the borders of the segments.
     border_size_samples : int, default: 20
         The size of the border in samples to add border spikes.
+    t_starts : list[float] | None, default: None
+        The start time of each segment in seconds. If provided, must have the same
+        length as `durations`.
     seed : int, default: None
         The random seed.
 
@@ -176,6 +189,11 @@ def generate_sorting(
     spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+    if t_starts is not None:
+        assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
+        for segment_index, t_start in enumerate(t_starts):
+            sorting.segments[segment_index]._t_start = t_start
 
     return sorting
 
