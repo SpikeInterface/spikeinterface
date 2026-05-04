@@ -149,6 +149,37 @@ can also be obtained from the pipeline object directly:
     dict_used_to_make_pipeline = preprocessing_pipeline.preprocessor_dict
 
 
+Some preprocessing steps, such as :code:`detect_and_remove_artifacts`, allow you to specify an input recording
+and optionally another recording to perform some computation (e.g., detect artifacts on the output of a previous
+preprocessor, but remove them on the the parent preprocessor). In this case, the string "pipeline[preprocessor_name]"
+can be used in the dictionary to specify that the recording argument for this step should be the output of a previous
+preprocessor in the same pipeline. For example, if we want to use the output of the "bandpass_filter" step as the
+recording to detect artifacts, we can specify it as follows:
+
+.. code-block:: python
+
+    preprocessing_dict = {
+        'bandpass_filter': {'freq_min': 250},
+        'common_reference': {'operator': 'median', 'reference': 'global'},
+        'detect_and_remove_artifacts': {'recording_to_detect': 'pipeline[bandpass_filter]'},
+    }
+
+This will detect artifacts on the output of the "bandpass_filter" step, but the artifacts will be removed on the output
+of the "common_reference" step (since the parent recording for "detect_and_remove_artifacts" is by default the output of
+the previous step in the pipeline, which is "common_reference" in this case).
+To specify the "raw" recording, i.e., the input to the pipeline, we can use "pipeline[raw]".
+For example, if we want to detect artifacts on the raw recording, we can specify it as follows:
+
+
+.. code-block:: python
+
+    preprocessing_dict = {
+        'bandpass_filter': {'freq_min': 250},
+        'common_reference': {'operator': 'median', 'reference': 'global'},
+        'detect_and_remove_artifacts': {'recording_to_detect': 'pipeline[raw]'},
+    }
+
+
 Impact on recording dtype
 -------------------------
 

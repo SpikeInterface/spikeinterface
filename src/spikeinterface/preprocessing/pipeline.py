@@ -99,10 +99,28 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
             Preprocessed recording
 
         """
-
-        for preprocessor_name, kwargs in self.preprocessor_dict.items():
-
+        instantiated_recordings = {"raw": recording}
+        for preprocessor_name, kwargs_ in self.preprocessor_dict.items():
+            kwargs = kwargs_.copy()
             dont_apply_kwargs = ["recording", "parent_recording"]
+
+            for k, v in kwargs.items():
+                if isinstance(v, str) and "pipeline[" in v:
+                    if "recording" not in k:
+                        raise ValueError(
+                            f"Cannot substitute recording for argument '{k}' of preprocessor '{preprocessor_name}' "
+                            f"because this argument is not meant to be a recording object."
+                        )
+                    if k in dont_apply_kwargs:
+                        raise ValueError(
+                            f"Cannot substitute recording for argument '{k}' of preprocessor '{preprocessor_name}' "
+                            f"because this argument is reserved for the recording to be preprocessed."
+                        )
+                    rec_name = v.split("pipeline[")[-1].split("]")[0]
+                    substituted_recording = instantiated_recordings.get(rec_name)
+                    if substituted_recording is None:
+                        raise ValueError(f"Cannot find recording '{rec_name}' from previous steps in the pipeline.")
+                    kwargs[k] = substituted_recording
 
             if not apply_precomputed_kwargs:
                 preprocessor_class = pp_names_to_classes[preprocessor_name]
@@ -112,6 +130,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
             non_rec_kwargs = {key: value for key, value in kwargs.items() if key not in dont_apply_kwargs}
             pp_output = pp_names_to_functions[preprocessor_name](recording, **non_rec_kwargs)
             recording = pp_output
+            instantiated_recordings[preprocessor_name] = recording
 
         return recording
 

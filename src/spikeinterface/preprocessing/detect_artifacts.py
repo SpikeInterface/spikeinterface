@@ -582,7 +582,6 @@ def _transform_internal_dtype_to_artifact_dtype(
     for seg_index in range(num_seg):
         mask = artifacts["segment_index"] == seg_index
         sub_thr = artifacts[mask]
-        print(sub_thr)
         if len(sub_thr) > 0:
             if not sub_thr["front"][0]:
                 local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))

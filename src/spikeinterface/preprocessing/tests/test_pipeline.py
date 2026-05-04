@@ -1,3 +1,5 @@
+import pytest
+
 from spikeinterface.generation import generate_recording, generate_ground_truth_recording
 from spikeinterface.preprocessing import (
     apply_preprocessing_pipeline,
@@ -210,6 +212,51 @@ def test_loading_from_analyzer(create_cache_folder):
     pp_dict_from_zarr = get_preprocessing_dict_from_analyzer(analyzer_zarr_folder)
     pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_dict_from_zarr)
     check_recordings_equal(pp_recording, pp_recording_from_zarr)
+
+
+def test_pipeline_recording_arg_substitution():
+    """
+    Tests that if a preprocessing step in the pipeline has an argument that is a string of the form "pipeline[preprocessor_name]",
+    then this string is replaced by the recording output by the preprocessor with name "preprocessor_name". This allows users to
+    use outputs of previous preprocessors as arguments for later preprocessors in the same pipeline.
+    """
+    from spikeinterface.preprocessing.filter import BandpassFilterRecording
+    from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
+    from spikeinterface.preprocessing.detect_artifacts import DetectAndRemoveArtifactsRecording
+
+    rec = generate_recording(durations=[1])
+
+    # "recording" argument is protected, as it is the default argument for the recording to preprocess
+    pipeline_dict_wrong = {
+        "common_reference": {},
+        "bandpass_filter": {"recording": "pipeline[raw]"},
+    }
+    with pytest.raises(ValueError):
+        pp_rec_from_pipeline = apply_preprocessing_pipeline(rec, pipeline_dict_wrong)
+
+    # The argument using the pipeline substitution must be a string with "recording" as substring
+    pipeline_dict_wrong2 = {
+        "common_reference": {},
+        "bandpass_filter": {"freq_min": "pipeline[raw]"},
+    }
+    with pytest.raises(ValueError):
+        pp_rec_from_pipeline = apply_preprocessing_pipeline(rec, pipeline_dict_wrong2)
+
+    # Correct usage: the "recording_to_detect" argument for the "detect_and_remove_artifacts" step is set to be the
+    # output of the "bandpass_filter" step, which is correctly substituted when applying the pipeline.
+    # The "recording" argument for the "detect_and_remove_artifacts" step should be set to the output of the
+    # "common_reference" step, as this is the last preprocessor in the pipeline before it.
+    pipeline_dict_correct = {
+        "bandpass_filter": {},
+        "common_reference": {},
+        "detect_and_remove_artifacts": {"recording_to_detect": "pipeline[bandpass_filter]"},
+    }
+    pp_rec_from_pipeline = apply_preprocessing_pipeline(rec, pipeline_dict_correct)
+    # Check that the recording argument for detect step is common ref,
+    # and that the recording_to_detect argument for detect_and_remove_artifacts is also the output of bandpass_filter
+    assert isinstance(pp_rec_from_pipeline._kwargs["recording_to_detect"], BandpassFilterRecording)
+    assert isinstance(pp_rec_from_pipeline._kwargs["recording"], CommonReferenceRecording)
+    assert isinstance(pp_rec_from_pipeline, DetectAndRemoveArtifactsRecording)
 
 
 if __name__ == "__main__":
