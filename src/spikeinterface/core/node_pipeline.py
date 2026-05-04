@@ -97,7 +97,7 @@ class PeakSource(PipelineNode):
         # see need_first_call_before_pipeline = True
         margin = self.get_margin()
         traces = self.recording.get_traces(start_frame=0, end_frame=margin * 2 + 1, segment_index=0)
-        self.compute(traces, 0, margin * 2 + 1, 0, margin)
+        self.compute(traces, margin, margin + 1, 0, margin)
 
 
 # this is used in sorting components
