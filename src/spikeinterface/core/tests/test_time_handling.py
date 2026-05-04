@@ -447,6 +447,29 @@ def test_shift_times_with_None_as_t_start():
     assert recording.get_start_time() == 1.0
 
 
+def test_get_times_with_time_vector_slicing():
+    sampling_frequency = 10_000.0
+    recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
+    times = 1.0 + np.arange(0, 10_000) / sampling_frequency
+    recording.set_times(times=times, segment_index=0, with_warning=False)
+
+    # Full get_times should return the complete time vector
+    times_full = recording.get_times(segment_index=0)
+    assert np.allclose(times_full, times)
+
+    # Sliced get_times should match slicing the full vector
+    times_slice = recording.get_times(segment_index=0, start_frame=1000, end_frame=8000)
+    assert np.allclose(times_slice, times[1000:8000])
+
+    # Only start_frame provided
+    times_from_start = recording.get_times(segment_index=0, start_frame=5000)
+    assert np.allclose(times_from_start, times[5000:])
+
+    # Only end_frame provided
+    times_to_end = recording.get_times(segment_index=0, end_frame=3000)
+    assert np.allclose(times_to_end, times[:3000])
+
+
 class TestSortingTimeNoRecording:
     """Tests for time methods on BaseSorting without a registered recording."""
 
