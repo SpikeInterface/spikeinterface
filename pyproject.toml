@@ -168,6 +168,26 @@ widgets = [
     "distinctipy",
 ]
 
+lupin = [
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "torch"
+]
+
+spykingcircus2 = [
+    "scipy",
+    "hdbscan",
+    "numba",
+]
+
+tridesclous2= [
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "torch",
+]
+
 # `full` installs every module's optional feature deps. Defined as the union of
 # per-module extras so adding a dep to a module propagates here automatically.
 full = [
@@ -298,6 +318,7 @@ test-all = [
     {include-group = "test-sortingcomponents"},
     {include-group = "test-generation"},
 ]
+dev = []
 
 [tool.pytest.ini_options]
 testpaths = ["src"]

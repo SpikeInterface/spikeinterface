@@ -97,6 +97,20 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     handle_multi_segment = True
 
+    installation_mesg = "\tpip install 'spikeinterface[tridesclous2]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[tridesclous2]'"
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        tridesclous2_deps = ["scipy", "numba", "hbdscan"]
+
+        for package_name in tridesclous2_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
+
     @classmethod
     def get_sorter_version(cls):
         return "2026.01"
