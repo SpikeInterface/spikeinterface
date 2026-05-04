@@ -26,11 +26,14 @@ from .noise_tools import generate_noise
 
 
 def _make_probe_by_name(probe_name: str):
-    # this function replace the old _toy_probes dict that generate probe using generate_multi_columns_probe()
-    # this is now using the probeinterface library directly
-    # for using the library the namùe can be given:
-    #   dataset_name = 'cambridgeneurotech/ASSY-37-H7b_50_1800.s'
-    #   dataset_name = 'cambridgeneurotech#ASSY-37-H7b_50_1800.s'
+    """
+    Generates a probe from probeinterface library, using the manufacturer name combined with the probe name, e.g.
+        - 'cambridgeneurotech/ASSY-37-H7b'
+        - 'cambridgeneurotech#ASSY-37-H7b'
+        - 'imec#NP1000"
+    
+    This function replace the old `_toy_probes` dict that generate probe using `generate_multi_columns_probe()`
+    """
     if probe_name == "Neuropixels1-384":
         probe = get_probe("imec", "NP1000")
         probe = probe.get_slice(np.arange(384))
