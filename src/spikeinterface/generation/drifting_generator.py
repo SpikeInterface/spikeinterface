@@ -31,7 +31,7 @@ def _make_probe_by_name(probe_name: str):
         - 'cambridgeneurotech/ASSY-37-H7b'
         - 'cambridgeneurotech#ASSY-37-H7b'
         - 'imec#NP1000"
-    
+
     This function replace the old `_toy_probes` dict that generate probe using `generate_multi_columns_probe()`
     """
     if probe_name == "Neuropixels1-384":
