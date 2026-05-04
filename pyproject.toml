@@ -292,10 +292,11 @@ test-comparison = [
 
 test-sorters-internal = [
     {include-group = "test-common"},
-    "torch",  # spyking_circus2 template matching
-    "hdbscan>=0.8.33",  # simplesorter / tridesclous2
-    "numba", # lupin / spykingcircus2 / tridesclous2
-    "scikit-learn", # tridesclous2
+    "scipy",
+    "torch",
+    "hdbscan>=0.8.33",
+    "numba",
+    "scikit-learn",
 ]
 test-sorters = [{include-group = "test-sorters-internal"}]
 test-curation = [{include-group = "test-common"}]
