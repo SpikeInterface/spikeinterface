@@ -66,6 +66,11 @@ class BaseSorting(BaseExtractor):
         return self._segments
 
     @property
+    def _sorting_segments(self) -> list["BaseSortingSegment"]:
+        """For backward compatibility, we keep _sorting_segments."""
+        return self._segments
+
+    @property
     def unit_ids(self):
         return self._main_ids
 
@@ -322,6 +327,11 @@ class BaseSorting(BaseExtractor):
                     "Might be necessary for further postprocessing."
                 )
         self._recording = recording
+        # Copy the recording's start times into the sorting segments. This way,
+        # the sorting preserves the start time even if the recording is later
+        # detached (e.g. analyzer saved and reloaded without the recording).
+        for segment_index, segment in enumerate(self.segments):
+            segment._t_start = recording.get_start_time(segment_index=segment_index)
 
     @property
     def sorting_info(self):
@@ -346,6 +356,66 @@ class BaseSorting(BaseExtractor):
             return self._recording.has_time_vector(segment_index=segment_index)
         else:
             return False
+
+    def get_start_time(self, segment_index: int | None = None) -> float:
+        """Get the start time of the sorting segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The start time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        return segment._t_start if segment._t_start is not None else 0.0
+
+    def get_end_time(self, segment_index: int | None = None) -> float:
+        """Get the end time of the sorting segment.
+
+        If a recording is registered, returns the recording's end time.
+        Otherwise returns the time of the last spike in the segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The end time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            return self._recording.get_end_time(segment_index=segment_index)
+        else:
+            last_spike_frame = self.get_last_spike_frame(segment_index=segment_index)
+            return self.sample_index_to_time(last_spike_frame, segment_index=segment_index)
+
+    def get_last_spike_frame(self, segment_index: int | None = None) -> int:
+        """Get the frame index of the last spike in a segment across all units.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        int
+            The frame index of the last spike, or 0 if no spikes exist.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        spike_vector = self.to_spike_vector(concatenated=False)
+        spikes_in_segment = spike_vector[segment_index]
+        if len(spikes_in_segment) == 0:
+            return 0
+        return int(np.max(spikes_in_segment["sample_index"]))
 
     def get_times(self, segment_index=None):
         """

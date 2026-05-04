@@ -91,111 +91,97 @@ preprocessing = [
     "scipy",
 ]
 
-
-full = [
-    "h5py",
-    "pandas<3",
+postprocessing = [
+    "spikeinterface[preprocessing]",
     "scipy",
     "scikit-learn<1.8",
-    "networkx",
-    "distinctipy",
-    "matplotlib>=3.6", # matplotlib.colormaps
-    "cuda-python>=11.8.6; platform_system != 'Darwin'",
     "numba>=0.59",
-    "skops",
-    "huggingface_hub"
-]
-
-widgets = [
-    "matplotlib",
-    "ipympl",
-    "ipywidgets",
-    "figpack",
-    "figpack-spike-sorting"
+    "matplotlib>=3.6",
 ]
 
 metrics = [
     "scikit-learn<1.8",
     "scipy",
     "pandas<3",
-    "numba",
+    "numba>=0.59",
 ]
 
-test_core = [
+comparison = [
+    "scipy",
     "pandas<3",
-    "pytest",
-    "psutil",
-
-    # for github test : probeinterface and neo from master
-    # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-
-    # for slurm jobs,
-    "pytest-mock"
+    "networkx",
 ]
 
-test_extractors = [
-    # Functions to download data in neo test suite
-    "pooch>=1.8.2",
-    "datalad>=1.0.2",
-    # Commenting out for release
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+generation = [
+    "scipy",
+    "pandas<3",
 ]
 
-test_preprocessing = [
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
-    "torch",
-    # for IBL data fetching
-    "pooch",
-    "datalad"
+sorters = [
+    "scipy",
+    "h5py",
+    "cuda-python>=11.8.6; platform_system != 'Darwin'",
 ]
 
+sortingcomponents = [
+    "spikeinterface[preprocessing]",
+    "scipy",
+    "scikit-learn<1.8",
+    "numba>=0.59",
+    "networkx",
+    "hdbscan>=0.8.33",
+    # `torch` is an optional heavy dep used by neural-network peak detection,
+    # motion estimation, and template matching. Install separately if needed:
+    # pip install torch
+]
 
-test = [
-    "pytest",
-    "pytest-cov",
-    "psutil",
+sorters_internal = [
+    "spikeinterface[sortingcomponents]",
+    "spikeinterface[preprocessing]",
+]
 
-    # preprocessing
-    "ibllib>=3.4.1;python_version>='3.10'",
-
-    # streaming templates
-    "s3fs",
-
-    # exporters
-    "pynapple",
-
-    # tridesclous2
-    "numba<0.61.0;python_version<'3.13'",
-    "numba>=0.61.0;python_version>='3.13'",
-    "hdbscan>=0.8.33",  # Previous version had a broken wheel
-
-    # isosplit is needed for trideclous2 noramaly but isosplit is only build until python3.11
-    # so lets wait a new build of isosplit6
-    # "isosplit6",
-
-    # for sortingview backend
-    "sortingview>=0.12.0",
-
-    # for motion and sortingcomponents
-    "torch",
-
-    # curation
+curation = [
+    "spikeinterface[metrics]",
+    "spikeinterface[postprocessing]",
+    "spikeinterface[comparison]",
+    "pandas<3",
+    "scikit-learn<1.8",
     "skops",
     "huggingface_hub",
+    "numba>=0.59",
+    "networkx",
+]
 
-    # widgets
-    "sortingview",
+exporters = [
+    "spikeinterface[postprocessing]",
+    "spikeinterface[widgets]",
+    "pandas<3",
+    "pynapple",
+]
 
-    # for github test : probeinterface and neo from master
-    # for release we need pypi, so this need to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+widgets = [
+    "matplotlib>=3.6",
+    "ipympl",
+    "ipywidgets",
+    "figpack",
+    "figpack-spike-sorting",
+    "distinctipy",
+]
 
-    # for slurm jobs
-    "pytest-mock",
+# `full` installs every module's optional feature deps. Defined as the union of
+# per-module extras so adding a dep to a module propagates here automatically.
+full = [
+    "spikeinterface[preprocessing]",
+    "spikeinterface[postprocessing]",
+    "spikeinterface[metrics]",
+    "spikeinterface[comparison]",
+    "spikeinterface[generation]",
+    "spikeinterface[sorters]",
+    "spikeinterface[sortingcomponents]",
+    "spikeinterface[sorters_internal]",
+    "spikeinterface[curation]",
+    "spikeinterface[exporters]",
+    "spikeinterface[widgets]",
 ]
 
 docs = [
@@ -225,11 +211,112 @@ docs = [
 ]
 
 dev = [
-    "spikeinterface[test]",
-    "spikeinterface[test_core]",
     "spikeinterface[docs]",
     "black",
     "pre-commit",
+]
+
+[dependency-groups]
+# Shared test infrastructure used by every per-module group. The neo and
+# probeinterface git pins match CI behavior before the PEP 735 migration.
+# For a release, comment the two git lines out.
+test-common = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "psutil",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+]
+
+test-core = [
+    {include-group = "test-common"},
+    "pandas<3",
+]
+
+test-extractors = [
+    {include-group = "test-common"},
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
+]
+
+test-streaming-extractors = [
+    {include-group = "test-common"},
+    "pooch>=1.8.2",
+    "datalad>=1.0.2",
+    "remfile",
+    "requests",
+    "aiohttp",
+    "fsspec",
+    "s3fs",
+]
+
+test-preprocessing = [
+    {include-group = "test-common"},
+    "ibllib>=3.4.1;python_version>='3.10'",
+    "pooch",
+    "datalad",
+    "torch",  # preprocessing tests exercise sortingcomponents.motion.dredge
+]
+
+test-postprocessing = [
+    {include-group = "test-common"},
+    "pandas<3",
+    ]
+test-metrics = [{include-group = "test-common"}]
+
+test-comparison = [
+    {include-group = "test-common"},
+    "numba>=0.59"
+    ]
+
+test-sorters-internal = [
+    {include-group = "test-common"},
+    "torch",  # spyking_circus2 template matching
+    "hdbscan>=0.8.33",  # simplesorter / tridesclous2
+]
+test-sorters = [{include-group = "test-sorters-internal"}]
+test-curation = [{include-group = "test-common"}]
+
+test-widgets = [
+    {include-group = "test-common"},
+    "sortingview>=0.12.0",
+    "numba>=0.59",  # For motion widget
+    "scikit-learn",
+    "pyvips",
+    "networkx",
+]
+
+test-exporters = [{include-group = "test-common"}]
+test-sortingcomponents = [
+    {include-group = "test-common"},
+    "torch",  # neural network peak detection, motion, matching
+    "huggingface_hub", # for `test_single_channel_toy_denoiser_in_peak_pipeline`
+]
+test-generation = [
+    {include-group = "test-common"},
+    "fsspec",
+    "s3fs",
+    "numba>=0.59", # numba and sklearn needed for motion correction of
+    "scikit-learn", # syntheic data used in `test_generate_hybrid_motion`
+    ]
+
+# Aggregate group for workflows that run the full test suite (nightly codecov).
+test-all = [
+    {include-group = "test-core"},
+    {include-group = "test-extractors"},
+    {include-group = "test-streaming-extractors"},
+    {include-group = "test-preprocessing"},
+    {include-group = "test-postprocessing"},
+    {include-group = "test-metrics"},
+    {include-group = "test-comparison"},
+    {include-group = "test-sorters"},
+    {include-group = "test-sorters-internal"},
+    {include-group = "test-curation"},
+    {include-group = "test-widgets"},
+    {include-group = "test-exporters"},
+    {include-group = "test-sortingcomponents"},
+    {include-group = "test-generation"},
 ]
 
 [tool.pytest.ini_options]

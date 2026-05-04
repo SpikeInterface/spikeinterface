@@ -27,7 +27,7 @@ jobs:
         python-version: ["3.10", "3.13"]  # Lower and higher versions we support
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
@@ -87,7 +87,7 @@ jobs:
 
       - name: Install packages
         run: |
-          uv pip install --system -e .[test_core]
+          uv pip install --system -e . --group test-core
         shell: bash
 
       - name: Pip list
@@ -111,7 +111,7 @@ jobs:
       - name: Cache datasets
         if: env.RUN_EXTRACTORS_TESTS == 'true' || env.RUN_PREPROCESSING_TESTS == 'true'
         id: cache-datasets
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
@@ -145,7 +145,7 @@ jobs:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
         if: env.RUN_EXTRACTORS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[extractors,streaming_extractors,test_extractors]
+          uv pip install --system -e .[extractors,streaming_extractors] --group test-extractors
           uv pip list --system
           ./.github/run_tests.sh "extractors and not streaming_extractors" --no-virtual-env
 
@@ -153,7 +153,7 @@ jobs:
         shell: bash
         if: env.RUN_STREAMING_EXTRACTORS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[streaming_extractors,test_extractors]
+          uv pip install --system -e .[streaming_extractors] --group test-streaming-extractors
           uv pip list --system
           ./.github/run_tests.sh "streaming_extractors" --no-virtual-env
 
@@ -161,21 +161,15 @@ jobs:
         shell: bash
         if: env.RUN_PREPROCESSING_TESTS == 'true'
         run: |
-          uv pip install --system -e .[preprocessing,test_preprocessing]
+          uv pip install --system -e .[preprocessing] --group test-preprocessing
           uv pip list --system
           ./.github/run_tests.sh "preprocessing and not deepinterpolation" --no-virtual-env
-
-      - name: Install remaining testing dependencies # TODO: Remove this step once we have better modularization
-        shell: bash
-        run: |
-          uv pip install --system -e .[test]
-          uv pip list --system
 
       - name: Test postprocessing
         shell: bash
         if: env.RUN_POSTPROCESSING_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[postprocessing] --group test-postprocessing
           uv pip list --system
           ./.github/run_tests.sh postprocessing --no-virtual-env
 
@@ -183,7 +177,7 @@ jobs:
         shell: bash
         if: env.RUN_METRICS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[metrics]
+          uv pip install --system -e .[metrics] --group test-metrics
           uv pip list --system
           ./.github/run_tests.sh metrics --no-virtual-env
 
@@ -191,7 +185,7 @@ jobs:
         shell: bash
         if: env.RUN_COMPARISON_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[comparison] --group test-comparison
           uv pip list --system
           ./.github/run_tests.sh comparison --no-virtual-env
 
@@ -199,7 +193,7 @@ jobs:
         shell: bash
         if: env.RUN_SORTERS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[sorters] --group test-sorters
           uv pip list --system
           ./.github/run_tests.sh sorters --no-virtual-env
 
@@ -207,7 +201,7 @@ jobs:
         shell: bash
         if: env.RUN_INTERNAL_SORTERS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[sorters_internal] --group test-sorters-internal
           uv pip list --system
           ./.github/run_tests.sh sorters_internal --no-virtual-env
 
@@ -215,7 +209,7 @@ jobs:
         shell: bash
         if: env.RUN_CURATION_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[curation] --group test-curation
           uv pip list --system
           ./.github/run_tests.sh curation --no-virtual-env
 
@@ -225,7 +219,7 @@ jobs:
         env:
           KACHERY_ZONE: "scratch"
         run: |
-          uv pip install --system -e .[full,widgets]
+          uv pip install --system -e .[widgets] --group test-widgets
           uv pip list --system
           ./.github/run_tests.sh widgets --no-virtual-env -s
 
@@ -233,7 +227,7 @@ jobs:
         shell: bash
         if: env.RUN_EXPORTERS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[exporters] --group test-exporters
           uv pip list --system
           ./.github/run_tests.sh exporters --no-virtual-env
 
@@ -241,7 +235,7 @@ jobs:
         shell: bash
         if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[sortingcomponents] --group test-sortingcomponents
           uv pip list --system
 
           # Internal shell check for platform and env var
@@ -262,6 +256,6 @@ jobs:
         shell: bash
         if: env.RUN_GENERATION_TESTS == 'true'
         run: |
-          uv pip install --system -e .[full]
+          uv pip install --system -e .[generation] --group test-generation
           uv pip list --system
           ./.github/run_tests.sh generation --no-virtual-env

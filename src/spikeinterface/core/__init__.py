@@ -83,6 +83,7 @@ from .globals import (
     get_global_job_kwargs,
     set_global_job_kwargs,
     reset_global_job_kwargs,
+    is_set_global_job_kwargs_set,
 )
 
 # tools
@@ -96,12 +97,14 @@ from .job_tools import (
     get_best_job_kwargs,
     ensure_n_jobs,
     ensure_chunk_size,
-    ChunkExecutor,
+    TimeSeriesChunkExecutor,
     split_job_kwargs,
     fix_job_kwargs,
 )
 from .recording_tools import (
     write_binary_recording,
+    write_memory_recording,
+    write_recording_to_zarr,
     write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,

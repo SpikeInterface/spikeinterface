@@ -6,7 +6,7 @@ from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtracto
 from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
-from spikeinterface.core.chunkable_tools import (
+from spikeinterface.core.time_series_tools import (
     write_binary,
     write_memory,
     get_random_sample_slices,

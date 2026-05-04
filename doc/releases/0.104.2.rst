@@ -1,0 +1,24 @@
+.. _release0.104.2:
+
+SpikeInterface 0.104.2 release notes
+------------------------------------
+
+April 20th 2025
+
+Minor release with bug fixes
+
+core:
+
+* Fix ``WaveformExtractor`` backwards compatibility: run backwards compatibility migration before validating metrics (#4509)
+* Make version mismatch warning informative and actionable (#4505)
+
+extractors:
+
+* Open Ephys: find root folder to correctly look for timestamps (#4500)
+
+
+Contributors:
+
+* @alejoe91
+* @h-mayorquin
+* @galenlynch

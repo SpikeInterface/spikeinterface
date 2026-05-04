@@ -19,7 +19,7 @@ jobs:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -42,7 +42,7 @@ jobs:
         run: |
           echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - name: Restore cached gin data for extractors tests
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         id: cache-datasets
         env:
           # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
@@ -64,7 +64,7 @@ jobs:
           python ./.github/scripts/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report_full.txt
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true

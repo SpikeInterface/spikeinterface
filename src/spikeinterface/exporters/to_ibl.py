@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import SortingAnalyzer, BaseRecording, get_random_data_chunks
-from spikeinterface.core.job_tools import fix_job_kwargs, ChunkExecutor, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor, _shared_job_kwargs_doc
 from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.exporters import export_to_phy
 
@@ -258,7 +258,7 @@ def compute_rms(
     func = _compute_rms_chunk
     init_func = _init_rms_worker
     init_args = (recording,)
-    executor = ChunkExecutor(
+    executor = TimeSeriesChunkExecutor(
         recording,
         func,
         init_func,

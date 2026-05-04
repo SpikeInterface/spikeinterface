@@ -39,7 +39,7 @@ def find_spikes_from_templates(
     verbose : Bool, default: False
         If True, output is verbose
     job_kwargs : dict
-        Parameters for ChunkExecutor
+        Parameters for TimeSeriesChunkExecutor
 
     {method_doc}
 

@@ -9,14 +9,14 @@ from .job_tools import (
     chunk_duration_to_chunk_size,
     ensure_n_jobs,
     fix_job_kwargs,
-    ChunkExecutor,
+    TimeSeriesChunkExecutor,
     _shared_job_kwargs_doc,
 )
-from .chunkable import ChunkableMixin, ChunkableSegment
+from .time_series import TimeSeries, TimeSeriesSegment
 
 
 def write_binary(
-    chunkable: ChunkableMixin,
+    time_series: TimeSeries,
     file_paths: list[Path | str] | Path | str,
     file_timestamps_paths: list[Path | str] | Path | str | None = None,
     dtype: np.typing.DTypeLike = None,
@@ -26,7 +26,7 @@ def write_binary(
     **job_kwargs,
 ):
     """
-    Save the data of a chunkable object to binary format.
+    Save the data of a time_series object to binary format.
 
     Note :
         time_axis is always 0 (contrary to previous version.
@@ -34,8 +34,8 @@ def write_binary(
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
-        The chunkable object to be saved to binary file
+    time_series : TimeSeries
+        The time_series object to be saved to binary file
     file_paths : list[Path | str] | Path | str
         The path to the files to save data for each segment.
     file_timestamps_paths : list[Path | str] | Path | str | None, default: None
@@ -48,23 +48,23 @@ def write_binary(
         Offset in bytes for the binary file (e.g. to write a header). This is useful in case you want to append data
         to an existing file where you wrote a header or other data before.
     verbose : bool
-        This is the verbosity of the ChunkExecutor
+        This is the verbosity of the TimeSeriesChunkExecutor
     {}
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
-    num_segments = chunkable.get_num_segments()
+    num_segments = time_series.get_num_segments()
     if len(file_path_list) != num_segments:
-        raise ValueError("'file_paths' must be a list of the same size as the number of segments in the chunkable")
+        raise ValueError("'file_paths' must be a list of the same size as the number of segments in the time_series")
 
     file_path_list = [Path(file_path) for file_path in file_path_list]
     if add_file_extension:
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
-    dtype = dtype if dtype is not None else chunkable.get_dtype()
+    dtype = dtype if dtype is not None else time_series.get_dtype()
 
-    sample_size_bytes = chunkable.get_sample_size_in_bytes()
+    sample_size_bytes = time_series.get_sample_size_in_bytes()
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     if file_timestamps_paths is not None:
@@ -74,7 +74,7 @@ def write_binary(
     else:
         file_timestamps_path_dict = None
     for segment_index, file_path in file_path_dict.items():
-        num_samples = chunkable.get_num_samples(segment_index=segment_index)
+        num_samples = time_series.get_num_samples(segment_index=segment_index)
         data_size_bytes = sample_size_bytes * num_samples
         file_size_bytes = data_size_bytes + byte_offset
 
@@ -95,18 +95,18 @@ def write_binary(
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (chunkable, file_path_dict, dtype, byte_offset, file_timestamps_path_dict)
-    executor = ChunkExecutor(
-        chunkable, func, init_func, init_args, job_name="write_binary", verbose=verbose, **job_kwargs
+    init_args = (time_series, file_path_dict, dtype, byte_offset, file_timestamps_path_dict)
+    executor = TimeSeriesChunkExecutor(
+        time_series, func, init_func, init_args, job_name="write_binary", verbose=verbose, **job_kwargs
     )
     executor.run()
 
 
-# used by write_binary + ChunkExecutor
-def _init_binary_worker(chunkable, file_path_dict, dtype, byte_offset, file_timestamps_path_dict=None):
+# used by write_binary + TimeSeriesChunkExecutor
+def _init_binary_worker(time_series, file_path_dict, dtype, byte_offset, file_timestamps_path_dict=None):
     # create a local dict per worker
     worker_ctx = {}
-    worker_ctx["chunkable"] = chunkable
+    worker_ctx["time_series"] = time_series
     worker_ctx["byte_offset"] = byte_offset
     worker_ctx["dtype"] = np.dtype(dtype)
 
@@ -117,20 +117,20 @@ def _init_binary_worker(chunkable, file_path_dict, dtype, byte_offset, file_time
     return worker_ctx
 
 
-# used by write_binary + ChunkExecutor
+# used by write_binary + TimeSeriesChunkExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    chunkable = worker_ctx["chunkable"]
+    time_series = worker_ctx["time_series"]
     dtype = worker_ctx["dtype"]
     byte_offset = worker_ctx["byte_offset"]
     file = worker_ctx["file_dict"][segment_index]
     file_timestamps_dict = worker_ctx["file_timestamps_dict"]
-    sample_size_bytes = chunkable.get_sample_size_in_bytes()
+    sample_size_bytes = time_series.get_sample_size_in_bytes()
 
     # Calculate byte offsets for the start frames relative to the entire recording
     start_byte = byte_offset + start_frame * sample_size_bytes
 
-    data = chunkable.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    data = time_series.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     data = data.astype(dtype, order="c", copy=False)
 
     file.seek(start_byte)
@@ -140,7 +140,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     if file_timestamps_dict is not None:
         file_timestamps = file_timestamps_dict[segment_index]
-        timestamps = chunkable.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+        timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
         timestamps = timestamps.astype("float64", order="c", copy=False)
         timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
         file.seek(timestamp_byte_offset)
@@ -152,10 +152,10 @@ write_binary.__doc__ = write_binary.__doc__.format(_shared_job_kwargs_doc)
 
 
 # used by write_memory
-def _init_memory_worker(chunkable, arrays, shm_names, shapes, dtype):
+def _init_memory_worker(time_series, arrays, shm_names, shapes, dtype):
     # create a local dict per worker
     worker_ctx = {}
-    worker_ctx["chunkable"] = chunkable
+    worker_ctx["time_series"] = time_series
     worker_ctx["dtype"] = np.dtype(dtype)
 
     if arrays is None:
@@ -179,18 +179,18 @@ def _init_memory_worker(chunkable, arrays, shm_names, shapes, dtype):
 # used by write_memory
 def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    chunkable = worker_ctx["chunkable"]
+    time_series = worker_ctx["time_series"]
     dtype = worker_ctx["dtype"]
     arr = worker_ctx["arrays"][segment_index]
 
     # apply function
-    traces = chunkable.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+    traces = time_series.get_data(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
     traces = traces.astype(dtype, copy=False)
     arr[start_frame:end_frame, :] = traces
 
 
 def write_memory(
-    chunkable: ChunkableMixin, dtype=None, verbose=False, buffer_type="auto", job_name="write_memory", **job_kwargs
+    time_series: TimeSeries, dtype=None, verbose=False, buffer_type="auto", job_name="write_memory", **job_kwargs
 ):
     """
     Save the traces into numpy arrays (memory).
@@ -198,8 +198,8 @@ def write_memory(
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
-        The chunkable object to be saved to memory
+    time_series : TimeSeries
+        The time_series object to be saved to memory
     dtype : dtype, default: None
         Type of the saved data
     verbose : bool, default: False
@@ -217,7 +217,7 @@ def write_memory(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     if dtype is None:
-        dtype = chunkable.get_dtype()
+        dtype = time_series.get_dtype()
 
     # create sharedmmep
     arrays = []
@@ -225,15 +225,15 @@ def write_memory(
     shms = []
     shapes = []
 
-    n_jobs = ensure_n_jobs(chunkable, n_jobs=job_kwargs.get("n_jobs", 1))
+    n_jobs = ensure_n_jobs(time_series, n_jobs=job_kwargs.get("n_jobs", 1))
     if buffer_type == "auto":
         if n_jobs > 1:
             buffer_type = "sharedmem"
         else:
             buffer_type = "numpy"
 
-    for segment_index in range(chunkable.get_num_segments()):
-        shape = chunkable.get_shape(segment_index=segment_index)
+    for segment_index in range(time_series.get_num_segments()):
+        shape = time_series.get_shape(segment_index=segment_index)
         shapes.append(shape)
         if buffer_type == "sharedmem":
             arr, shm = make_shared_array(shape, dtype)
@@ -248,11 +248,13 @@ def write_memory(
     func = _write_memory_chunk
     init_func = _init_memory_worker
     if n_jobs > 1:
-        init_args = (chunkable, None, shm_names, shapes, dtype)
+        init_args = (time_series, None, shm_names, shapes, dtype)
     else:
-        init_args = (chunkable, arrays, None, None, dtype)
+        init_args = (time_series, arrays, None, None, dtype)
 
-    executor = ChunkExecutor(chunkable, func, init_func, init_args, verbose=verbose, job_name=job_name, **job_kwargs)
+    executor = TimeSeriesChunkExecutor(
+        time_series, func, init_func, init_args, verbose=verbose, job_name=job_name, **job_kwargs
+    )
     executor.run()
 
     return arrays, shms
@@ -261,8 +263,8 @@ def write_memory(
 write_memory.__doc__ = write_memory.__doc__.format(_shared_job_kwargs_doc)
 
 
-def write_chunkable_to_zarr(
-    chunkable: ChunkableMixin,
+def _write_time_series_to_zarr(
+    time_series: TimeSeries,
     zarr_group,
     dataset_paths,
     dataset_timestamps_paths=None,
@@ -276,12 +278,12 @@ def write_chunkable_to_zarr(
     **job_kwargs,
 ):
     """
-    Save the trace of a chunkable object in several zarr format.
+    Save the trace of a time_series object in several zarr format.
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
-        The chunkable object to be saved in .dat format
+    time_series : TimeSeries
+        The time_series object to be saved in .dat format
     zarr_group : zarr.Group
         The zarr group to add traces to
     dataset_paths : list
@@ -309,41 +311,41 @@ def write_chunkable_to_zarr(
     from .job_tools import (
         ensure_chunk_size,
         fix_job_kwargs,
-        ChunkExecutor,
+        TimeSeriesChunkExecutor,
     )
 
     assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
     if dataset_timestamps_paths is not None:
         assert (
-            len(dataset_timestamps_paths) == chunkable.get_num_segments()
-        ), "dataset_timestamps_paths should have the same length as the number of segments in the chunkable"
+            len(dataset_timestamps_paths) == time_series.get_num_segments()
+        ), "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
     else:
-        dataset_timestamps_paths = [None] * chunkable.get_num_segments()
+        dataset_timestamps_paths = [None] * time_series.get_num_segments()
 
     if not isinstance(dataset_paths, list):
         dataset_paths = [dataset_paths]
-    assert len(dataset_paths) == chunkable.get_num_segments()
+    assert len(dataset_paths) == time_series.get_num_segments()
 
     if dtype is None:
-        dtype = chunkable.get_dtype()
+        dtype = time_series.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(chunkable, **job_kwargs)
+    chunk_size = ensure_chunk_size(time_series, **job_kwargs)
 
     if extra_chunks is not None:
-        assert len(extra_chunks) == len(chunkable.get_shape(0)[1:]), (
+        assert len(extra_chunks) == len(time_series.get_shape(0)[1:]), (
             "extra_chunks should have the same length as the number of dimensions "
-            "of the chunkable minus one (time axis)"
+            "of the time_series minus one (time axis)"
         )
 
     # create zarr datasets files
     zarr_datasets = []
     zarr_timestamps_datasets = []
 
-    for segment_index in range(chunkable.get_num_segments()):
-        num_samples = chunkable.get_num_samples(segment_index)
+    for segment_index in range(time_series.get_num_segments()):
+        num_samples = time_series.get_num_samples(segment_index)
         dset_name = dataset_paths[segment_index]
-        shape = chunkable.get_shape(segment_index)
+        shape = time_series.get_shape(segment_index)
         dset = zarr_group.create_dataset(
             name=dset_name,
             shape=shape,
@@ -371,16 +373,16 @@ def write_chunkable_to_zarr(
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    init_args = (chunkable, zarr_datasets, dtype, zarr_timestamps_datasets)
-    executor = ChunkExecutor(
-        chunkable, func, init_func, init_args, verbose=verbose, job_name="write_zarr", **job_kwargs
+    init_args = (time_series, zarr_datasets, dtype, zarr_timestamps_datasets)
+    executor = TimeSeriesChunkExecutor(
+        time_series, func, init_func, init_args, verbose=verbose, job_name="write_zarr", **job_kwargs
     )
     executor.run()
 
     # save t_starts
-    t_starts = np.zeros(chunkable.get_num_segments(), dtype="float64") * np.nan
-    for segment_index in range(chunkable.get_num_segments()):
-        time_info = chunkable.get_time_info(segment_index)
+    t_starts = np.zeros(time_series.get_num_segments(), dtype="float64") * np.nan
+    for segment_index in range(time_series.get_num_segments()):
+        time_info = time_series.get_time_info(segment_index)
         if time_info["t_start"] is not None:
             t_starts[segment_index] = time_info["t_start"]
 
@@ -388,13 +390,12 @@ def write_chunkable_to_zarr(
         zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
 
 
-# used by write_zarr_recording + ChunkExecutor
-def _init_zarr_worker(chunkable, zarr_datasets, dtype, zarr_timestamps_datasets=None):
+def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_datasets=None):
     import zarr
 
     # create a local dict per worker
     worker_ctx = {}
-    worker_ctx["chunkable"] = chunkable
+    worker_ctx["time_series"] = time_series
     worker_ctx["zarr_datasets"] = zarr_datasets
     if zarr_timestamps_datasets is not None and len(zarr_timestamps_datasets) > 0:
         worker_ctx["zarr_timestamps_datasets"] = zarr_timestamps_datasets
@@ -405,12 +406,11 @@ def _init_zarr_worker(chunkable, zarr_datasets, dtype, zarr_timestamps_datasets=
     return worker_ctx
 
 
-# used by write_zarr_recording + ChunkExecutor
 def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     import gc
 
     # recover variables of the worker
-    chunkable = worker_ctx["chunkable"]
+    time_series = worker_ctx["time_series"]
     dtype = worker_ctx["dtype"]
     zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
     if worker_ctx["zarr_timestamps_datasets"] is not None:
@@ -419,7 +419,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
         zarr_timestamps_dataset = None
 
     # apply function
-    data = chunkable.get_data(
+    data = time_series.get_data(
         start_frame=start_frame,
         end_frame=end_frame,
         segment_index=segment_index,
@@ -428,7 +428,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     zarr_dataset[start_frame:end_frame, :] = data
 
     if zarr_timestamps_dataset is not None:
-        timestamps = chunkable.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
+        timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
         zarr_timestamps_dataset[start_frame:end_frame] = timestamps
 
     # fix memory leak by forcing garbage collection
@@ -437,7 +437,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def get_random_sample_slices(
-    chunkable: ChunkableMixin,
+    time_series: TimeSeries,
     method="full_random",
     num_chunks_per_segment=20,
     chunk_duration="500ms",
@@ -446,12 +446,12 @@ def get_random_sample_slices(
     seed=None,
 ):
     """
-    Get random slice of a chunkable object across segments.
+    Get random slice of a time_series object across segments.
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
-        The chunkable object to get random chunks from
+    time_series : TimeSeries
+        The time_series object to get random chunks from
     method : "full_random"
         The method used to get random slices.
           * "full_random" : legacy method,  used until version 0.101.0, there is no constrain on slices
@@ -484,14 +484,14 @@ def get_random_sample_slices(
     if method == "full_random":
         if chunk_size is None:
             if chunk_duration is not None:
-                chunk_size = chunk_duration_to_chunk_size(chunk_duration, chunkable)
+                chunk_size = chunk_duration_to_chunk_size(chunk_duration, time_series)
             else:
                 raise ValueError("get_random_sample_slices need chunk_size or chunk_duration")
 
         # check chunk size
-        num_segments = chunkable.get_num_segments()
+        num_segments = time_series.get_num_segments()
         for segment_index in range(num_segments):
-            chunk_size_limit = chunkable.get_num_samples(segment_index) - 2 * margin_frames
+            chunk_size_limit = time_series.get_num_samples(segment_index) - 2 * margin_frames
             if chunk_size > chunk_size_limit:
                 chunk_size = chunk_size_limit - 1
                 warnings.warn(
@@ -504,7 +504,7 @@ def get_random_sample_slices(
         low = margin_frames
         size = num_chunks_per_segment
         for segment_index in range(num_segments):
-            num_frames = chunkable.get_num_samples(segment_index)
+            num_frames = time_series.get_num_samples(segment_index)
             high = num_frames - chunk_size - margin_frames
             # here we set endpoint to True, because the this represents the start of the
             # chunk, and should be inclusive
@@ -517,7 +517,7 @@ def get_random_sample_slices(
     return slices
 
 
-def get_chunks(chunkable: ChunkableMixin, concatenated=True, get_data_kwargs=None, **random_slices_kwargs):
+def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None, **random_slices_kwargs):
     """
     Extract random chunks across segments.
 
@@ -531,12 +531,12 @@ def get_chunks(chunkable: ChunkableMixin, concatenated=True, get_data_kwargs=Non
 
     Parameters
     ----------
-    chunkable : ChunkableMixin
-        The chunkable object to get random chunks from
+    time_series : TimeSeries
+        The time_series object to get random chunks from
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
-        If True and the chunkable has scaling (gain_to_uV and offset_to_uV properties),
+        If True and the time_series has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
     num_chunks_per_segment : int, default: 20
         Number of chunks per segment
@@ -551,12 +551,12 @@ def get_chunks(chunkable: ChunkableMixin, concatenated=True, get_data_kwargs=Non
     chunk_list : np.ndarray | list of np.array
         Array of concatenate chunks per segment
     """
-    slices = get_random_sample_slices(chunkable, **random_slices_kwargs)
+    slices = get_random_sample_slices(time_series, **random_slices_kwargs)
 
     chunk_list = []
     get_data_kwargs = get_data_kwargs if get_data_kwargs is not None else {}
     for segment_index, start_frame, end_frame in slices:
-        traces_chunk = chunkable.get_data(
+        traces_chunk = time_series.get_data(
             start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, **get_data_kwargs
         )
         chunk_list.append(traces_chunk)
@@ -568,7 +568,7 @@ def get_chunks(chunkable: ChunkableMixin, concatenated=True, get_data_kwargs=Non
 
 
 def get_chunk_with_margin(
-    chunkable_segment: ChunkableSegment,
+    chunkable_segment: TimeSeriesSegment,
     start_frame,
     end_frame,
     last_dimension_indices,

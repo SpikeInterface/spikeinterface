@@ -18,7 +18,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -56,7 +56,7 @@ jobs:
         ks_version: ${{ fromJson(needs.versions.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -69,7 +69,7 @@ jobs:
 
       - name: Install SpikeInterface
         run: |
-          uv pip install --system -e .[test]
+          uv pip install --system -e .[full] --group test-sorters
         shell: bash
 
       - name: Install legacy setuptools for KS4 < 4.0.19

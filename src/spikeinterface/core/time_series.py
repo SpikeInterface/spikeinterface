@@ -7,15 +7,15 @@ import numpy as np
 from spikeinterface.core.base import BaseExtractor, BaseSegment
 
 
-class ChunkableMixin(ABC):
+class TimeSeries(ABC):
     """
-    Abstract mixin class for chunkable objects. Note that the mixin can only be used
-    for classes that inherit from BaseExtractor.
-    Provides methods to handle chunked data access, that can be used for parallelization.
-    In addition, since chunkable objects are continuous data, time handling methods are provided.
+    Abstract base class for time series extractors: continuous data sampled along a time axis
+    that supports chunked access for parallelization. The class can only be used by extractors
+    that inherit from BaseExtractor.
 
-    The Mixin is abstract since all methods need to be implemented in the child class in order
-    for it to function properly.
+    Provides the chunking contract (``get_data``, ``get_shape``, ``get_sample_size_in_bytes``,
+    memory-size helpers, multiprocessing hints) and time-handling methods built on top of it.
+    All abstract methods must be implemented in the child class.
     """
 
     _preferred_mp_context = None
@@ -23,7 +23,7 @@ class ChunkableMixin(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not issubclass(cls, BaseExtractor):
-            raise TypeError(f"{cls.__name__} must inherit from BaseExtractor to use Chunkable mixin.")
+            raise TypeError(f"{cls.__name__} must inherit from BaseExtractor to use TimeSeries.")
 
     @abstractmethod
     def get_sampling_frequency(self) -> float:
@@ -45,13 +45,13 @@ class ChunkableMixin(ABC):
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
-    def _extra_copy_metadata(self, other: "ChunkableMixin", **kwargs) -> None:
+    def _extra_copy_metadata(self, other: "TimeSeries", **kwargs) -> None:
         """
-        Copy metadata from another Chunkable object.
+        Copy metadata from another TimeSeries object.
 
         Parameters
         ----------
-        other : ChunkableMixin
+        other : TimeSeries
             The object from which to copy metadata.
         """
         # inherit preferred mp context if any
@@ -362,8 +362,9 @@ class ChunkableMixin(ABC):
         return time_vectors
 
 
-class ChunkableSegment(BaseSegment):
-    """Class for chunkable segments, which provide methods to handle time kwargs."""
+class TimeSeriesSegment(BaseSegment):
+    """Per-segment time-series class. Provides time handling methods (sample/time conversion,
+    start/end time, time vectors) on top of ``BaseSegment``."""
 
     def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
         # sampling_frequency and time_vector are exclusive
