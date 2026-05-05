@@ -40,8 +40,10 @@ def _get_saved_channel_indices(meta):
     return _parse_saved_channel_subset(subset_text)
 
 
-def _read_spikeglx_probe(meta_file, meta):
-    """Build a Probe for a SpikeGLX meta, honoring IBL shank-split subsets."""
+def _read_cbin_probe(meta_file, meta):
+    """Build a Probe for a SpikeGLX meta, honoring IBL shank-split subsets.
+    This is a specific to IBL cbin files, that sometimes do not have `~` in front of the .meta file fields.
+    """
     if "snsSaveChanSubset_orig" not in meta:
         return probeinterface.read_spikeglx(meta_file)
     from probeinterface.neuropixels_tools import _read_imro_string
@@ -150,7 +152,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
         self.set_channel_offsets(offsets)
 
         if not load_sync_channel:
-            probe = _read_spikeglx_probe(meta_file, meta)
+            probe = _read_cbin_probe(meta_file, meta)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
