@@ -567,7 +567,7 @@ def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None,
         return chunk_list
 
 
-def get_chunk_with_margin(
+def get_time_series_chunk_with_margin(
     chunkable_segment: TimeSeriesSegment,
     start_frame,
     end_frame,

@@ -39,7 +39,10 @@ def test_generate_hybrid_with_sorting():
 def test_generate_hybrid_motion():
     rec, _ = generate_ground_truth_recording(sampling_frequency=20000, durations=[10], num_channels=16, seed=0)
     _, motion_info = correct_motion(
-        rec, output_motion_info=True, estimate_motion_kwargs={"win_step_um": 20, "win_scale_um": 20}
+        rec,
+        output_motion_info=True,
+        preset="nonrigid_fast_and_accurate",
+        estimate_motion_kwargs={"win_step_um": 20, "win_scale_um": 20},
     )
     motion = motion_info["motion"]
     hybrid, sorting_hybrid = generate_hybrid_recording(rec, motion=motion, seed=0)

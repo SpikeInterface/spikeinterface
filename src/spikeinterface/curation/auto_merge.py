@@ -69,9 +69,9 @@ _required_extensions = {
 
 _default_step_params = {
     "num_spikes": {"min_spikes": 100},
-    "snr": {"min_snr": 2},
+    "snr": {"min_snr": 2.0},
     "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "unit_locations": {"max_distance_um": 150},
+    "unit_locations": {"max_distance_um": 150.0},
     "correlogram": {
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
@@ -79,7 +79,7 @@ _default_step_params = {
         "adaptative_window_thresh": 0.5,
     },
     "template_similarity": {"similarity_method": "l1", "template_diff_thresh": 0.25},
-    "presence_distance": {"presence_distance_thresh": 100},
+    "presence_distance": {"presence_distance_thresh": 100.0},
     "knn": {"k_nn": 10},
     "cross_contamination": {
         "cc_thresh": 0.1,
@@ -88,7 +88,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5},
+    "slay_score": {"k1": 0.25, "k2": 1.0, "slay_threshold": 0.5},
 }
 
 
@@ -534,7 +534,7 @@ def get_potential_auto_merge(
     corr_diff_thresh: float = 0.16,
     template_diff_thresh: float = 0.25,
     contamination_thresh: float = 0.2,
-    presence_distance_thresh: float = 100,
+    presence_distance_thresh: float = 100.0,
     p_value: float = 0.2,
     cc_thresh: float = 0.1,
     censored_period_ms: float = 0.3,
