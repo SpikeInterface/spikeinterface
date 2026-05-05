@@ -3,6 +3,7 @@ from typing import Literal, Optional, Any, Iterable
 from pathlib import Path
 from itertools import chain
 import os
+import signal
 import json
 import math
 import pickle
@@ -1593,6 +1594,7 @@ class SortingAnalyzer:
         return self.sorting.get_num_units()
 
     ## extensions zone
+    # TODO (tayheau): add a safeguard e.g. memory error or SIGINT
     def compute(self, input, save=True, extension_params=None, verbose=False, **kwargs) -> "AnalyzerExtension | None":
         """
         Compute one extension or several extensiosn.
@@ -1640,31 +1642,54 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 )
 
         """
-        if isinstance(input, str):
-            return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
-        elif isinstance(input, dict):
-            params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, (
-                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
-                f"please remove the arguments {set(params_)} from the compute function."
-            )
-            self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
-        elif isinstance(input, list):
-            params_, job_kwargs = split_job_kwargs(kwargs)
-            assert len(params_) == 0, (
-                "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
-                f"please remove the arguments {set(params_)} from the compute function."
-            )
-            extensions = {k: {} for k in input}
-            if extension_params is not None:
-                for ext_name, ext_params in extension_params.items():
-                    assert (
-                        ext_name in input
-                    ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
-                    extensions[ext_name] = ext_params
-            self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
-        else:
-            raise ValueError("SortingAnalyzer.compute() needs a str, dict or list")
+
+        def __handle_sigint(signum, frame):
+            if self.format == "memory":
+                return
+            for k, v in self.extensions.items():
+                if v is not None:
+                    continue
+                self.extensions.pop(k)
+                if self.format == "binary_folder":
+                    ext_folder = self.folder / "extensions"
+                    saved_extensions = {e.name: e for e in ext_folder.iterdir() if ext_folder.is_dir()}
+                    if k in saved_extensions.keys():
+                        shutil.rmtree(saved_extensions[k], ignore_errors=True)
+                elif self.format == "zarr":
+                    zarr_root = self._get_zarr_root(mode="rw")
+                    extension_group = zarr_root.get("extensions")
+                    if extension_group is not None and k in extension_group:
+                        del extension_group[k]
+
+        old_hander = signal.signal(signal.SIGINT, __handle_sigint)
+        try:
+            if isinstance(input, str):
+                return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
+            elif isinstance(input, dict):
+                params_, job_kwargs = split_job_kwargs(kwargs)
+                assert len(params_) == 0, (
+                    "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                    f"please remove the arguments {set(params_)} from the compute function."
+                )
+                self.compute_several_extensions(extensions=input, save=save, verbose=verbose, **job_kwargs)
+            elif isinstance(input, list):
+                params_, job_kwargs = split_job_kwargs(kwargs)
+                assert len(params_) == 0, (
+                    "Too many arguments for SortingAnalyzer.compute_several_extensions(), "
+                    f"please remove the arguments {set(params_)} from the compute function."
+                )
+                extensions = {k: {} for k in input}
+                if extension_params is not None:
+                    for ext_name, ext_params in extension_params.items():
+                        assert (
+                            ext_name in input
+                        ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                        extensions[ext_name] = ext_params
+                self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
+            else:
+                raise ValueError("SortingAnalyzer.compute() needs a str, dict or list")
+        finally:
+            signal.signal(signal.SIGINT, old_hander)
 
     def compute_one_extension(self, extension_name, save=True, verbose=False, **kwargs) -> "AnalyzerExtension":
         """
@@ -2663,6 +2688,7 @@ class AnalyzerExtension:
 
             zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
+    # TODO (tayheau): add safeguard in writing case
     def _save_data(self):
         if self.format == "memory":
             return
