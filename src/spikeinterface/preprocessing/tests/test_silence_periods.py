@@ -47,10 +47,17 @@ def test_silence(create_cache_folder):
     assert not np.all(traces_mix[:200] == 0)
     assert not np.all(traces_mix[:-200] == 0)
 
+
+def test_silence_with_apodization(create_cache_folder):
+
+    cache_folder = create_cache_folder
+
+    rec = generate_recording()
+
+    periods = np.array([(0, 0, 1000), (0, 5000, 6000)], dtype=base_period_dtype)
     # test that the apodization creates a taper
     apodization_samples = 10
     rec2 = silence_periods(rec, periods=periods, mode="apodization", apodization_samples=apodization_samples)
-    rec2 = rec2.save(format="memory", verbose=False, overwrite=True)
     traces_in0 = rec2.get_traces(segment_index=0, start_frame=0, end_frame=1000)
     traces_in1 = rec2.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     # all apodized traces
@@ -66,6 +73,22 @@ def test_silence(create_cache_folder):
     # since they are multiplied by a cosine taper between 0 and 1
     assert np.all(np.abs(apodized_traces_in0) <= np.abs(traces_raw_in0))
     assert np.all(np.abs(apodized_traces_in1) <= np.abs(traces_raw_in1))
+
+    # check that margins are handled correctly with apodization
+    extra_samples = 50
+    traces_at_offset = rec2.get_traces(segment_index=0, start_frame=998, end_frame=1002)
+    traces_at_offset_extended = rec2.get_traces(
+        segment_index=0, start_frame=998 - extra_samples, end_frame=1002 + extra_samples
+    )
+    # the traces at offset should be apodized, and the extended traces should have the same apodization in the overlapping region
+    assert np.array_equal(traces_at_offset, traces_at_offset_extended[extra_samples:-extra_samples])
+
+    traces_at_onset = rec2.get_traces(segment_index=0, start_frame=4997, end_frame=5003)
+    traces_at_onset_extended = rec2.get_traces(
+        segment_index=0, start_frame=4997 - extra_samples, end_frame=5003 + extra_samples
+    )
+    # the traces at onset should be apodized, and the extended traces should have the same apodization in the overlapping region
+    assert np.array_equal(traces_at_onset, traces_at_onset_extended[extra_samples:-extra_samples])
 
 
 if __name__ == "__main__":

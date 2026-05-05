@@ -1,12 +1,13 @@
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from spikeinterface.core import get_noise_levels
+from spikeinterface.core.base import base_period_dtype
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.recording_tools import get_noise_levels, get_chunk_with_margin
 from spikeinterface.core.generate import NoiseGeneratorRecording
 from spikeinterface.core.job_tools import split_job_kwargs
-from spikeinterface.core.base import base_period_dtype
+
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -181,10 +182,19 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
         self.apodization_samples = apodization_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+        if self.mode in ("zeros", "noise"):
+            margin = 0
+        elif self.mode == "apodization":
+            margin = self.apodization_samples
+        else:
+            raise ValueError(f"Unknown method {self.mode}")
+
+        traces, left_margin, right_margin = get_chunk_with_margin(
+            self.parent_recording_segment, start_frame, end_frame, channel_indices, margin=margin
+        )
 
         if self.periods.size > 0:
-            new_interval = np.array([start_frame, end_frame])
+            new_interval = np.array([start_frame - margin, end_frame + margin])
 
             lower_index = np.searchsorted(self.periods["end_sample_index"], new_interval[0])
             upper_index = np.searchsorted(self.periods["start_sample_index"], new_interval[1])
@@ -193,9 +203,14 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                 traces = traces.copy()
 
                 periods_in_interval = self.periods[lower_index:upper_index]
+
+                # For apodization, we pre-allocate the mute function and cosine window
+                if self.mode == "apodization":
+                    mute_mask = np.zeros(traces.shape[0], dtype=np.float32)
+
                 for period in periods_in_interval:
-                    onset = max(0, period["start_sample_index"] - start_frame)
-                    offset = min(period["end_sample_index"] - start_frame, end_frame)
+                    onset = max(0, period["start_sample_index"] - start_frame - margin)
+                    offset = min(period["end_sample_index"] - start_frame + margin, end_frame + margin)
 
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
@@ -205,15 +220,19 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                         ]
                         traces[onset:offset, :] = noise[onset:offset]
                     elif self.mode == "apodization":
-                        import scipy.signal
-
                         # apply a cosine taper to the saturation to create a mute function
-                        mute = np.zeros(traces.shape[0], dtype=np.float32)
-                        mute[onset:offset] = 1
-                        win = scipy.signal.windows.cosine(self.apodization_samples)
-                        mute = np.maximum(0, 1 - scipy.signal.convolve(mute, win, mode="same"))
-                        traces = (traces.astype(np.float32) * mute[:, np.newaxis]).astype(traces.dtype)
-        return traces
+                        mute_mask[onset:offset] = 1
+
+                # For apodization, we apply the mute function including all periods to the whole trace,
+                # so that the edges of the silenced periods are smoothly tapered
+                if self.mode == "apodization":
+                    import scipy.signal
+
+                    win = scipy.signal.windows.cosine(self.apodization_samples)
+                    mute = np.maximum(0, 1 - scipy.signal.convolve(mute_mask, win, mode="same"))
+                    traces = (traces.astype(np.float32) * mute[:, np.newaxis]).astype(traces.dtype)
+        # discard margin
+        return traces[left_margin : traces.shape[0] - right_margin, :]
 
 
 # function for API
