@@ -688,6 +688,10 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         ----------
         recording : BaseRecording
             The recording on which to detect artifact periods.
+        recording_to_detect : BaseRecording | None, default: None
+            The recording on which to perform artifact detection.
+            If ``None``, the same recording passed in ``recording`` is used.  This allows users to perform detection on
+            the another recording (e.g. the raw recording) while applying the silencing to the `recording`.
         method : "envelope" | "saturation", default: "envelope"
             Detection method to use.
         method_kwargs : dict | None, default: None

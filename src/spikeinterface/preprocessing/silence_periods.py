@@ -67,10 +67,16 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         # handle backward compatibility with previous version
         if list_periods is not None:
-            assert periods is None
+            assert periods is None, (
+                "You cannot specify both list_periods and periods. "
+                f"Please specify only periods, which should be a np.array with dtype {base_period_dtype}"
+            )
             periods = _all_period_list_to_periods_vec(list_periods, num_seg)
         else:
-            assert list_periods is None
+            assert list_periods is None, (
+                "list_periods is deprecated. Please specify periods, which should be a np.array with "
+                f"dtype {base_period_dtype}"
+            )
             if not isinstance(periods, np.ndarray):
                 raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
 
@@ -123,6 +129,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 apodization_samples=apodization_samples,
             )
             self.add_recording_segment(rec_segment)
+
+        # the base_period_dtype is a structured dtype, which is not json serializable
+        self._serializability["json"] = False
 
         self._kwargs = dict(
             recording=recording,

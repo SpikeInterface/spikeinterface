@@ -324,6 +324,12 @@ def _load_pp_from_dict(prov_dict, kwargs_dict):
     for name, value in prov_dict["kwargs"].items():
         if is_dict_extractor(value):
             this_level_kwargs[name] = _load_pp_from_dict(value, kwargs_dict)
+        elif isinstance(value, BaseRecording):
+            extractor_as_dict = value.to_dict()
+            if name in ["recording", "parent_recording"]:
+                this_level_kwargs[name] = _load_pp_from_dict(extractor_as_dict, kwargs_dict)
+            else:  # this branch takes care of other arguments being a recording, e.g., `recording_to_detect`
+                this_level_kwargs[name] = value
         elif isinstance(value, dict):
             this_level_kwargs[name] = {k: prov_dict_to_kwargs_dict(v) for k, v in value.items()}
         elif isinstance(value, list):

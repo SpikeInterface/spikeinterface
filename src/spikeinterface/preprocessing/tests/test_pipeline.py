@@ -214,7 +214,7 @@ def test_loading_from_analyzer(create_cache_folder):
     check_recordings_equal(pp_recording, pp_recording_from_zarr)
 
 
-def test_pipeline_recording_arg_substitution():
+def test_pipeline_recording_arg_substitution(create_cache_folder):
     """
     Tests that if a preprocessing step in the pipeline has an argument that is a string of the form "pipeline[preprocessor_name]",
     then this string is replaced by the recording output by the preprocessor with name "preprocessor_name". This allows users to
@@ -257,6 +257,16 @@ def test_pipeline_recording_arg_substitution():
     assert isinstance(pp_rec_from_pipeline._kwargs["recording_to_detect"], BandpassFilterRecording)
     assert isinstance(pp_rec_from_pipeline._kwargs["recording"], CommonReferenceRecording)
     assert isinstance(pp_rec_from_pipeline, DetectAndRemoveArtifactsRecording)
+
+    # Test dumping the pipeline to pickle and loading it back with the correct substitution still works
+    pp_rec_from_pipeline.dump_to_pickle(create_cache_folder / "pipeline_substitution_test.pkl")
+    pp_rec_from_pkl = get_preprocessing_dict_from_file(create_cache_folder / "pipeline_substitution_test.pkl")
+    pp_rec_from_pipeline_substitution = apply_preprocessing_pipeline(
+        rec, pp_rec_from_pkl, apply_precomputed_kwargs=True
+    )
+    assert isinstance(pp_rec_from_pipeline_substitution._kwargs["recording_to_detect"], BandpassFilterRecording)
+    assert isinstance(pp_rec_from_pipeline_substitution._kwargs["recording"], CommonReferenceRecording)
+    assert isinstance(pp_rec_from_pipeline_substitution, DetectAndRemoveArtifactsRecording)
 
 
 if __name__ == "__main__":
