@@ -308,6 +308,9 @@ def detect_bad_channels(
         if channel_filters is None:
             channel_filters = allowed_filters
 
+        if isinstance(channel_filters, list):
+            channel_filters = set(channel_filters)
+
         if not isinstance(channel_filters, set):
             raise ValueError(f"channel_filters must be None or a set of the following values : {allowed_filters} ")
 
