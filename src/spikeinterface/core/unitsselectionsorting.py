@@ -1,6 +1,7 @@
 import numpy as np
 
 from .basesorting import BaseSorting, BaseSortingSegment
+from .sorting_tools import is_spike_vector_sorted
 
 
 class UnitsSelectionSorting(BaseSorting):
@@ -59,11 +60,36 @@ class UnitsSelectionSorting(BaseSorting):
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
-        # lexsort by segment_index, sample_index, unit_index
-        sort_indices = np.lexsort(
-            (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-        )
-        self._cached_spike_vector = spike_vector[sort_indices]
+
+        # The parent's spike vector is sorted by (segment_index, sample_index, unit_index).
+        # Boolean filtering by unit preserves that order; the remap only changes unit_index
+        # values. The result stays sorted iff the selected unit_ids appear in the same
+        # relative order as in the parent (an O(k) check). If not, the vector may still
+        # happen to be sorted -- verify with an O(n) scan before falling back to O(n log n)
+        # lexsort.
+        if not self._is_order_preserving_selection() and not is_spike_vector_sorted(spike_vector):
+            sort_indices = np.lexsort(
+                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+            )
+            spike_vector = spike_vector[sort_indices]
+
+        self._cached_spike_vector = spike_vector
+
+    def _is_order_preserving_selection(self) -> bool:
+        """Return True if self._unit_ids appear in the same relative order as in the parent.
+
+        O(k) where k is the number of selected units. When True, the remapped spike vector
+        is guaranteed to remain sorted by (segment, sample, unit) without re-sorting.
+        """
+        parent_unit_ids = self._parent_sorting.unit_ids
+        parent_id_to_pos = {uid: i for i, uid in enumerate(parent_unit_ids)}
+        prev_pos = -1
+        for uid in self._unit_ids:
+            pos = parent_id_to_pos.get(uid)
+            if pos is None or pos <= prev_pos:
+                return False
+            prev_pos = pos
+        return True
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
@@ -81,3 +107,13 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)
         return times
+
+    def get_unit_spike_trains(
+        self,
+        unit_ids,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+    ) -> dict:
+        unit_ids_parent = [self._ids_conversion[unit_id] for unit_id in unit_ids]
+        parent_trains = self._parent_segment.get_unit_spike_trains(unit_ids_parent, start_frame, end_frame)
+        return {child_id: parent_trains[parent_id] for child_id, parent_id in zip(unit_ids, unit_ids_parent)}
