@@ -95,6 +95,7 @@ def generate_sorting(
     add_spikes_on_borders=False,
     num_spikes_per_border=3,
     border_size_samples=20,
+    t_starts=None,
     seed=None,
 ):
     """
@@ -122,6 +123,9 @@ def generate_sorting(
         The number of spikes to add close to the borders of the segments.
     border_size_samples : int, default: 20
         The size of the border in samples to add border spikes.
+    t_starts : list of float | None, default: None
+        Per-segment start times in seconds. Must match the length of `durations`.
+        If None, all segments start at t=0.
     seed : int, default: None
         The random seed.
 
@@ -176,6 +180,16 @@ def generate_sorting(
     spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+    if t_starts is not None:
+        if len(t_starts) != num_segments:
+            raise ValueError(
+                f"`t_starts` must have the same length as `durations` ({num_segments}), got {len(t_starts)}."
+            )
+        for segment_index, t_start in enumerate(t_starts):
+            segment = sorting.segments[segment_index]
+            segment._t_start = float(t_start)
+            segment._native_t_start = float(t_start)
 
     return sorting
 

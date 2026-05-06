@@ -363,6 +363,20 @@ class SortingAnalyzer:
                     f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}. "
                     "Ensure that you are associating the correct Recording and Sorting when creating a SortingAnalyzer."
                 )
+
+        # Check that sorting and recording start times match per segment. A mismatch typically
+        # means the user shifted one but not the other (e.g. via `shift_times` on only one side).
+        for segment_index in range(sorting.get_num_segments()):
+            sorting_start = sorting.get_start_time(segment_index=segment_index)
+            recording_start = recording.get_start_time(segment_index=segment_index)
+            if not math.isclose(sorting_start, recording_start, abs_tol=1e-6, rel_tol=1e-6):
+                raise ValueError(
+                    f"Sorting and Recording start times do not match for segment {segment_index}: "
+                    f"recording: {recording_start} - sorting: {sorting_start}. "
+                    "Call `sorting.register_recording(recording)` to align them, or apply the "
+                    "matching `shift_times` to the side that is out of sync."
+                )
+
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
         check_probe_do_not_overlap(all_probes)

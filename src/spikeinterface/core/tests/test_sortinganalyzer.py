@@ -304,6 +304,21 @@ def test_SortingAnalyzer_tmp_recording(dataset):
         sorting_analyzer.set_temporary_recording(recording_sliced)
 
 
+def test_create_sorting_analyzer_start_time_mismatch(dataset):
+    """create_sorting_analyzer must raise when the sorting and recording have different start times."""
+    recording, sorting = dataset
+
+    # Shift only the sorting, leaving the recording at t=0.
+    sorting.shift_times(shift=5.0)
+
+    with pytest.raises(ValueError, match="start times do not match"):
+        create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+
+    # Aligning them via register_recording resolves the mismatch.
+    sorting.register_recording(recording)
+    create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+
+
 def test_SortingAnalyzer_interleaved_probegroup(dataset):
     from probeinterface import generate_linear_probe, ProbeGroup
 

@@ -286,8 +286,10 @@ class TestTimeHandling:
         """
         _, times_recording, _ = time_vector_recording
 
+        num_segments = times_recording.get_num_segments()
         sorting = si.generate_sorting(
-            durations=[times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
+            durations=[times_recording.get_duration(s) for s in range(num_segments)],
+            t_starts=[times_recording.get_start_time(segment_index=s) for s in range(num_segments)],
         )
         sorting_analyzer = si.create_sorting_analyzer(sorting, recording=times_recording)
 
@@ -461,8 +463,7 @@ class TestSortingTimeNoRecording:
         assert sorting.get_end_time(segment_index=0) == expected_time
 
     def test_get_start_time_with_t_start(self):
-        sorting = generate_sorting(num_units=5, durations=[10])
-        sorting.segments[0]._t_start = 100.0
+        sorting = generate_sorting(num_units=5, durations=[10], t_starts=[100.0])
         assert sorting.get_start_time(segment_index=0) == 100.0
 
     def test_shift_times(self):
@@ -478,9 +479,7 @@ class TestSortingTimeNoRecording:
         assert np.allclose(spike_times_after, spike_times_before + 5.0)
 
     def test_shift_times_all_segments(self):
-        sorting = generate_sorting(num_units=5, durations=[10, 15])
-        sorting.segments[0]._t_start = 1.0
-        sorting.segments[1]._t_start = 2.0
+        sorting = generate_sorting(num_units=5, durations=[10, 15], t_starts=[1.0, 2.0])
 
         sorting.shift_times(shift=3.0)
 
@@ -488,9 +487,7 @@ class TestSortingTimeNoRecording:
         assert sorting.get_start_time(segment_index=1) == 5.0
 
     def test_shift_times_single_segment(self):
-        sorting = generate_sorting(num_units=5, durations=[10, 15])
-        sorting.segments[0]._t_start = 1.0
-        sorting.segments[1]._t_start = 2.0
+        sorting = generate_sorting(num_units=5, durations=[10, 15], t_starts=[1.0, 2.0])
 
         sorting.shift_times(shift=3.0, segment_index=1)
 
@@ -527,17 +524,16 @@ class TestSortingTimeWithRecording:
         assert sorting.get_end_time(segment_index=0) == recording.get_end_time(segment_index=0)
 
     def test_register_recording_copies_start_times(self):
-        """Registering a recording copies its start times into the sorting segments."""
-        sorting = generate_sorting(num_units=5, durations=[10])
-        sorting.segments[0]._t_start = 100.0
+        """Registering a recording overrides any pre-existing sorting start time."""
+        sorting = generate_sorting(num_units=5, durations=[10], t_starts=[100.0])
 
         recording = generate_recording(num_channels=4, durations=[10])
         recording.shift_times(shift=50.0)
         sorting.register_recording(recording)
 
-        # _t_start now mirrors the recording's start time, preserving it across
-        # save/load cycles even when the recording is not attached.
-        assert sorting.segments[0]._t_start == recording.get_start_time(segment_index=0)
+        # The sorting's start time now mirrors the recording's start time, preserving it
+        # across save/load cycles even when the recording is later detached.
+        assert sorting.get_start_time(segment_index=0) == recording.get_start_time(segment_index=0)
         assert sorting.get_start_time(segment_index=0) == 50.0
 
     def test_with_recording_shifted_start(self):
