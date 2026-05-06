@@ -21,6 +21,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
     _main_properties = [
         "group",
         "location",
+        "wiring",
         "gain_to_uV",
         "offset_to_uV",
         "gain_to_physical_unit",
@@ -392,9 +393,14 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
+        if self.has_probe() and not cached.has_probe():
+            # Share the probegroup by reference. We deliberately skip
+            # `set_probegroup` (which re-runs _set_probes and validates dci)
+            # because a child of `split_by` references the parent's full
+            # probegroup whose dci values can exceed the child's channel
+            # count. Wiring/location/group properties are carried over by
+            # the caller's `copy_metadata` step.
+            cached._probegroup = self._probegroup
 
         return cached
 
@@ -403,7 +409,14 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         folder = Path(folder)
         if (folder / "probe.json").is_file():
             probegroup = read_probeinterface(folder / "probe.json")
-            self.set_probegroup(probegroup, in_place=True)
+            if "wiring" in self.get_property_keys():
+                # wiring was restored via the property-load loop; the stored
+                # probegroup's dci refers to the parent's channel space, so
+                # re-running `_set_probes` would fail for sliced children.
+                # Attach the probegroup object directly.
+                self._probegroup = probegroup
+            else:
+                self.set_probegroup(probegroup, in_place=True)
 
         # load time vector if any
         for segment_index, rs in enumerate(self.segments):
@@ -414,7 +427,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
     def _extra_metadata_to_folder(self, folder):
         # save probe
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
 

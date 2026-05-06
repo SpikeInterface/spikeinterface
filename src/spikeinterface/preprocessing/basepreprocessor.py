@@ -21,6 +21,11 @@ class BasePreprocessor(BaseRecording):
         recording.copy_metadata(self, only_main=False, ids=channel_ids)
         self._parent = recording
 
+        # Propagate the attached probegroup. `_probegroup` is a recording-global
+        # direct attribute; the per-channel `wiring` property rides on copy_metadata.
+        if getattr(recording, "_probegroup", None) is not None and channel_ids is None:
+            self._probegroup = recording._probegroup
+
         # self._kwargs have to be handled in subclass
 
 

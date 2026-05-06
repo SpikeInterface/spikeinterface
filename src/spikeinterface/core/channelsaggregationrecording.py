@@ -2,6 +2,8 @@ import warnings
 
 import numpy as np
 
+from probeinterface import Probe, ProbeGroup
+
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
@@ -90,14 +92,49 @@ class ChannelsAggregationRecording(BaseRecording):
                             break
 
         for prop_name, prop_values in property_dict.items():
-            if prop_name == "contact_vector":
-                # remap device channel indices correctly
-                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
-        # if locations are present, check that they are all different!
-        if "location" in self.get_property_keys():
-            location_tuple = [tuple(loc) for loc in self.get_property("location")]
+        # Under the id-keyed wiring model, the per-channel `wiring` property
+        # concatenates across children via the property-merge loop above. We only
+        # need to combine the probegroups and attach the combined object.
+        if all(rec.has_probe() for rec in recording_list):
+            # intra-parent case: every child shares the same probegroup reference
+            # (as produced by `split_by` etc.). Reuse it directly.
+            first_pg = recording_list[0]._probegroup
+            if all(rec._probegroup is first_pg for rec in recording_list):
+                combined_probegroup = first_pg
+            else:
+                # cross-parent case: build a fresh combined probegroup from copies
+                # of each probe.
+                combined_probegroup = ProbeGroup()
+                for rec in recording_list:
+                    for probe in rec._probegroup.probes:
+                        # Round-trip through to_dict/from_dict because `Probe.copy()`
+                        # currently drops contact_ids and annotations (probeinterface
+                        # #421). Once that is fixed we can switch to `probe.copy()`.
+                        probe_copy = Probe.from_dict(probe.to_dict(array_as_list=False))
+                        # Clear `device_channel_indices` so probeinterface's
+                        # `ProbeGroup.add_probe` cross-probe dci uniqueness check
+                        # passes: each parent's probe originally had dci in its own
+                        # 0..N-1 channel space, and those ranges collide when
+                        # combined. This does not drop provenance: under the
+                        # id-keyed wiring model dci on the probe is a local index,
+                        # not the canonical mapping. The (channel -> probe_id,
+                        # contact_id) mapping is carried by the recording's
+                        # `wiring` property, and everything that identifies the
+                        # physical probe (geometry, contact_ids, annotations,
+                        # planar_contour) survives the to_dict round-trip.
+                        probe_copy.set_device_channel_indices(
+                            np.full(probe_copy.get_contact_count(), -1, dtype="int64")
+                        )
+                        combined_probegroup.add_probe(probe_copy)
+            self._probegroup = combined_probegroup
+
+        # if locations are available (either via attached probe or "location" property),
+        # check that they are all different
+        if self.has_probe() or "location" in self.get_property_keys():
+            locations = self.get_channel_locations()
+            location_tuple = [tuple(loc) for loc in locations]
             assert len(set(location_tuple)) == self.get_num_channels(), (
                 "Locations are not unique! " "Cannot aggregate recordings!"
             )
