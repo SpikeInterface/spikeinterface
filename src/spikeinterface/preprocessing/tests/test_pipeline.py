@@ -1,5 +1,7 @@
 import pytest
 
+from spikeinterface.core.testing import check_recordings_equal
+from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.generation import generate_recording, generate_ground_truth_recording
 from spikeinterface.preprocessing import (
     apply_preprocessing_pipeline,
@@ -16,8 +18,6 @@ from spikeinterface.preprocessing.pipeline import (
     get_preprocessing_dict_from_file,
     get_preprocessing_dict_from_analyzer,
 )
-from spikeinterface.core.testing import check_recordings_equal
-from spikeinterface.core import create_sorting_analyzer
 
 
 def test_pipeline_equiv_to_step():
@@ -267,6 +267,7 @@ def test_pipeline_recording_arg_substitution(create_cache_folder):
     assert isinstance(pp_rec_from_pipeline_substitution._kwargs["recording_to_detect"], BandpassFilterRecording)
     assert isinstance(pp_rec_from_pipeline_substitution._kwargs["recording"], CommonReferenceRecording)
     assert isinstance(pp_rec_from_pipeline_substitution, DetectAndRemoveArtifactsRecording)
+    check_recordings_equal(pp_rec_from_pipeline, pp_rec_from_pipeline_substitution)
 
 
 if __name__ == "__main__":
