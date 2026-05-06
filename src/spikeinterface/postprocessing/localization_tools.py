@@ -104,7 +104,7 @@ def compute_monopolar_triangulation(
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-        local_contact_locations = contact_locations[chan_inds, :]
+        local_contact_locations = contact_locations[chan_inds, :2]
 
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :][:, chan_inds]
@@ -182,7 +182,7 @@ def compute_center_of_mass(
     unit_location = np.zeros((len(unit_ids), 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-        local_contact_locations = contact_locations[chan_inds, :]
+        local_contact_locations = contact_locations[chan_inds, :2]
 
         wf = templates[i, :, :]
 
@@ -247,7 +247,7 @@ def compute_grid_convolution(
     unit_location: np.array
     """
 
-    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()[:, :2]
 
     templates = get_dense_templates_array(
         sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)
@@ -693,7 +693,7 @@ def compute_location_max_channel(
     extremum_channels_index = get_template_extremum_channel(
         templates_or_sorting_analyzer, peak_sign=peak_sign, mode=mode, outputs="index", operator=operator
     )
-    contact_locations = templates_or_sorting_analyzer.get_channel_locations()
+    contact_locations = templates_or_sorting_analyzer.get_channel_locations()[:, :2]
     if unit_ids is None:
         unit_ids = templates_or_sorting_analyzer.unit_ids
     else:
