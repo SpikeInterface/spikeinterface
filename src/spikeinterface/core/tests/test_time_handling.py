@@ -286,11 +286,8 @@ class TestTimeHandling:
         """
         _, times_recording, _ = time_vector_recording
 
-        num_segments = times_recording.get_num_segments()
-        sorting = si.generate_sorting(
-            durations=[times_recording.get_duration(s) for s in range(num_segments)],
-            t_starts=[times_recording.get_start_time(segment_index=s) for s in range(num_segments)],
-        )
+        durations = [times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
+        sorting = si.generate_sorting(durations=durations)
         sorting_analyzer = si.create_sorting_analyzer(sorting, recording=times_recording)
 
         assert np.array_equal(sorting_analyzer.get_total_duration(), times_recording.get_total_duration())
