@@ -286,9 +286,8 @@ class TestTimeHandling:
         """
         _, times_recording, _ = time_vector_recording
 
-        sorting = si.generate_sorting(
-            durations=[times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
-        )
+        durations = [times_recording.get_duration(s) for s in range(times_recording.get_num_segments())]
+        sorting = si.generate_sorting(durations=durations)
         sorting_analyzer = si.create_sorting_analyzer(sorting, recording=times_recording)
 
         assert np.array_equal(sorting_analyzer.get_total_duration(), times_recording.get_total_duration())
@@ -484,9 +483,50 @@ class TestSortingTimeNoRecording:
         assert sorting.get_end_time(segment_index=0) == expected_time
 
     def test_get_start_time_with_t_start(self):
-        sorting = generate_sorting(num_units=5, durations=[10])
-        sorting.segments[0]._t_start = 100.0
+        sorting = generate_sorting(num_units=5, durations=[10], t_starts=[100.0])
         assert sorting.get_start_time(segment_index=0) == 100.0
+
+    def test_shift_times(self):
+        sorting = generate_sorting(num_units=5, durations=[10])
+        unit_id = sorting.unit_ids[0]
+
+        spike_times_before = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+
+        sorting.shift_times(shift=5.0)
+
+        assert sorting.get_start_time(segment_index=0) == 5.0
+        spike_times_after = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+        assert np.allclose(spike_times_after, spike_times_before + 5.0)
+
+    def test_shift_times_all_segments(self):
+        sorting = generate_sorting(num_units=5, durations=[10, 15], t_starts=[1.0, 2.0])
+
+        sorting.shift_times(shift=3.0)
+
+        assert sorting.get_start_time(segment_index=0) == 4.0
+        assert sorting.get_start_time(segment_index=1) == 5.0
+
+    def test_shift_times_single_segment(self):
+        sorting = generate_sorting(num_units=5, durations=[10, 15], t_starts=[1.0, 2.0])
+
+        sorting.shift_times(shift=3.0, segment_index=1)
+
+        assert sorting.get_start_time(segment_index=0) == 1.0
+        assert sorting.get_start_time(segment_index=1) == 5.0
+
+    def test_shift_times_with_native_spike_times(self):
+        """Shift must apply even when the segment provides native spike times (e.g. NWB extractors)."""
+        sorting = generate_sorting(num_units=5, durations=[10])
+        unit_id = sorting.unit_ids[0]
+        segment = sorting.segments[0]
+
+        # Simulate a segment that provides native spike times directly
+        original_times = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True).copy()
+        segment.get_unit_spike_train_in_seconds = lambda unit_id, start_time, end_time: original_times
+
+        sorting.shift_times(shift=5.0)
+        spike_times = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+        assert np.allclose(spike_times, original_times + 5.0)
 
 
 class TestSortingTimeWithRecording:
@@ -504,17 +544,16 @@ class TestSortingTimeWithRecording:
         assert sorting.get_end_time(segment_index=0) == recording.get_end_time(segment_index=0)
 
     def test_register_recording_copies_start_times(self):
-        """Registering a recording copies its start times into the sorting segments."""
-        sorting = generate_sorting(num_units=5, durations=[10])
-        sorting.segments[0]._t_start = 100.0
+        """Registering a recording overrides any pre-existing sorting start time."""
+        sorting = generate_sorting(num_units=5, durations=[10], t_starts=[100.0])
 
         recording = generate_recording(num_channels=4, durations=[10])
         recording.shift_times(shift=50.0)
         sorting.register_recording(recording)
 
-        # _t_start now mirrors the recording's start time, preserving it across
-        # save/load cycles even when the recording is not attached.
-        assert sorting.segments[0]._t_start == recording.get_start_time(segment_index=0)
+        # The sorting's start time now mirrors the recording's start time, preserving it
+        # across save/load cycles even when the recording is later detached.
+        assert sorting.get_start_time(segment_index=0) == recording.get_start_time(segment_index=0)
         assert sorting.get_start_time(segment_index=0) == 50.0
 
     def test_with_recording_shifted_start(self):
@@ -526,3 +565,68 @@ class TestSortingTimeWithRecording:
         sorting.register_recording(recording)
 
         assert sorting.get_start_time(segment_index=0) == 50.0
+
+    def test_shift_times(self):
+        recording = generate_recording(num_channels=4, durations=[10])
+        sorting = generate_sorting(num_units=5, durations=[10])
+        sorting.register_recording(recording)
+        unit_id = sorting.unit_ids[0]
+
+        rec_start_before = recording.get_start_time(segment_index=0)
+        rec_end_before = recording.get_end_time(segment_index=0)
+        spike_times_before = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+
+        sorting.shift_times(shift=5.0)
+
+        # The recording should be untouched
+        assert recording.get_start_time(segment_index=0) == rec_start_before
+        assert recording.get_end_time(segment_index=0) == rec_end_before
+
+        # The sorting's times should be shifted
+        assert sorting.get_start_time(segment_index=0) == rec_start_before + 5.0
+        assert sorting.get_end_time(segment_index=0) == rec_end_before + 5.0
+        spike_times_after = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+        assert np.allclose(spike_times_after, spike_times_before + 5.0)
+
+    def test_time_conversion_roundtrip_after_shift(self):
+        """sample_index_to_time and time_to_sample_index must remain inverses after a shift."""
+        recording = generate_recording(num_channels=4, durations=[10])
+        sorting = generate_sorting(num_units=5, durations=[10])
+        sorting.register_recording(recording)
+
+        sorting.shift_times(shift=5.0)
+
+        # Frame 30000 is 1.0s in the recording. After a 5.0s shift, the sorting should report 6.0s.
+        time = sorting.sample_index_to_time(30000, segment_index=0)
+        assert time == recording.sample_index_to_time(30000, segment_index=0) + 5.0
+
+        # The inverse: 6.0s in the sorting should map back to frame 30000.
+        frame = sorting.time_to_sample_index(time, segment_index=0)
+        assert frame == 30000
+
+    def test_shift_times_with_time_vector(self):
+        """Shift on sorting composes with a recording that has an explicit time vector,
+        preserving the irregular spacing."""
+        recording = generate_recording(num_channels=4, durations=[1.0])
+        num_samples = recording.get_num_samples(segment_index=0)
+        # Irregular timestamps starting at 100.0
+        times = (
+            100.0
+            + np.cumsum(np.random.RandomState(0).uniform(0.5, 1.5, num_samples)) / recording.get_sampling_frequency()
+        )
+        recording.set_times(times, segment_index=0, with_warning=False)
+
+        sorting = generate_sorting(num_units=5, durations=[1.0])
+        sorting.register_recording(recording)
+        unit_id = sorting.unit_ids[0]
+
+        spike_times_before = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+
+        sorting.shift_times(shift=5.0)
+
+        spike_times_after = sorting.get_unit_spike_train(unit_id, segment_index=0, return_times=True)
+        # Irregular spacing preserved, everything shifted by 5.0
+        assert np.allclose(spike_times_after, spike_times_before + 5.0)
+
+        # Recording is untouched
+        assert np.allclose(recording.get_times(segment_index=0), times)

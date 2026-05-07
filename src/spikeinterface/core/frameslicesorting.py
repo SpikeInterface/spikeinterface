@@ -76,7 +76,9 @@ class FrameSliceSorting(BaseSorting):
 
         # link sorting segment
         parent_segment = parent_sorting.segments[0]
-        sub_segment = FrameSliceSortingSegment(parent_segment, start_frame, end_frame)
+        sub_segment = FrameSliceSortingSegment(
+            parent_segment, start_frame, end_frame, sampling_frequency=parent_sorting.get_sampling_frequency()
+        )
         self.add_sorting_segment(sub_segment)
 
         # copy properties and annotations
@@ -96,8 +98,13 @@ class FrameSliceSorting(BaseSorting):
 
 
 class FrameSliceSortingSegment(BaseSortingSegment):
-    def __init__(self, parent_sorting_segment, start_frame, end_frame):
-        BaseSortingSegment.__init__(self)
+    def __init__(self, parent_sorting_segment, start_frame, end_frame, sampling_frequency):
+        # Propagate the parent's start time forward by the slice offset, mirroring
+        # what FrameSliceRecordingSegment does. A parent with `_t_start=None` is
+        # treated as starting at 0, so the slice gets a concrete `start_frame / fs`.
+        parent_t_start = parent_sorting_segment._t_start if parent_sorting_segment._t_start is not None else 0.0
+        t_start = parent_t_start + start_frame / sampling_frequency
+        BaseSortingSegment.__init__(self, t_start=t_start)
         self._parent_sorting_segment = parent_sorting_segment
         self.start_frame = start_frame
         self.end_frame = end_frame

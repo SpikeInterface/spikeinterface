@@ -193,7 +193,9 @@ def generate_sorting(
     if t_starts is not None:
         assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
         for segment_index, t_start in enumerate(t_starts):
-            sorting.segments[segment_index]._t_start = t_start
+            segment = sorting.segments[segment_index]
+            segment._t_start = float(t_start)
+            segment._native_t_start = float(t_start)
 
     return sorting
 

@@ -618,11 +618,10 @@ class NeoSortingSegment(BaseSortingSegment):
         sampling_frequency,
         neo_returns_frames,
     ):
-        BaseSortingSegment.__init__(self)
+        BaseSortingSegment.__init__(self, t_start=t_start)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
-        self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self.neo_returns_frames = neo_returns_frames
 
