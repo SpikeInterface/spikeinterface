@@ -102,7 +102,21 @@ class LupinSorter(ComponentsBasedSorter):
         "debug": "Save debug files",
     }
 
+    installation_mesg = "\tpip install 'spikeinterface[lupin]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[lupin]'"
+
     handle_multi_segment = True
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        lupin_deps = ["scipy", "numba", "sklearn", "torch"]
+
+        for package_name in lupin_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
 
     @classmethod
     def get_sorter_version(cls):
