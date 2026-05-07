@@ -5,6 +5,7 @@ from spikeinterface.preprocessing import (
     detect_artifact_periods,
     detect_saturation_periods,
     detect_artifact_periods_by_envelope,
+    detect_and_remove_artifacts,
 )
 
 
@@ -236,6 +237,119 @@ def test_detect_saturation_periods(debug_plots):
         job_kwargs=job_kwargs,
     )
     assert np.array_equal(periods, periods_entry_with_annotation)
+
+
+def test_detect_saturation_signed():
+    import scipy.signal
+
+    num_chans = 32
+    sampling_frequency = 30000
+    chunk_size = 30000
+    job_kwargs = {"chunk_size": chunk_size}
+
+    sat_value = 1200
+    noise_level = 10
+    rng = np.random.default_rng(0)
+    data = noise_level * rng.uniform(low=-0.5, high=0.5, size=(90000, num_chans)) * 10
+
+    sos = scipy.signal.butter(N=3, Wn=8000 / (sampling_frequency / 2), btype="low", output="sos")
+    data = scipy.signal.sosfiltfilt(sos, data, axis=0)
+
+    # Inject positive saturation in first third, negative in second third
+    pos_start, pos_stop = 15000, 15500
+    neg_start, neg_stop = 45000, 45500
+    data[pos_start:pos_stop, :] = sat_value
+    data[neg_start:neg_stop, :] = -sat_value
+
+    gain = 2.34
+    offset = 0
+    data_int16 = np.clip(np.rint((data - offset) / gain), -32768, 32767).astype(np.int16)
+
+    recording = NumpyRecording(data_int16, sampling_frequency)
+    recording.set_channel_gains(gain)
+    recording.set_channel_offsets([offset] * num_chans)
+
+    periods = detect_saturation_periods(
+        recording,
+        saturation_threshold_uV=sat_value * 0.98,
+        signed=True,
+        job_kwargs=job_kwargs,
+    )
+
+    # Output dtype must include the "sign" field
+    assert "sign" in periods.dtype.names
+
+    pos_periods = periods[periods["sign"] == "positive"]
+    neg_periods = periods[periods["sign"] == "negative"]
+    assert len(pos_periods) > 0, "No positive saturation periods detected"
+    assert len(neg_periods) > 0, "No negative saturation periods detected"
+
+    # Positive period should be near the injected positive saturation
+    tolerance = 1
+    assert np.any(np.abs(pos_periods["start_sample_index"] - pos_start) <= tolerance)
+    assert np.any(np.abs(pos_periods["end_sample_index"] - pos_stop) <= tolerance)
+
+    # Negative period should be near the injected negative saturation
+    assert np.any(np.abs(neg_periods["start_sample_index"] - neg_start) <= tolerance)
+    assert np.any(np.abs(neg_periods["end_sample_index"] - neg_stop) <= tolerance)
+
+    # Positive periods must not contain any sample indices from the negative injection
+    for p in pos_periods:
+        assert not (p["start_sample_index"] < neg_stop and p["end_sample_index"] > neg_start)
+
+    # Negative periods must not contain any sample indices from the positive injection
+    for p in neg_periods:
+        assert not (p["start_sample_index"] < pos_stop and p["end_sample_index"] > pos_start)
+
+
+def test_detect_and_remove_artifacts():
+    import scipy.signal
+
+    num_chans = 32
+    sampling_frequency = 30000
+    chunk_size = 30000
+    job_kwargs = {"chunk_size": chunk_size}
+
+    sat_value = 1200
+    noise_level = 10
+    rng = np.random.default_rng(0)
+    data = noise_level * rng.uniform(low=-0.5, high=0.5, size=(90000, num_chans)) * 10
+
+    sos = scipy.signal.butter(N=3, Wn=8000 / (sampling_frequency / 2), btype="low", output="sos")
+    data = scipy.signal.sosfiltfilt(sos, data, axis=0)
+
+    sat_start, sat_stop = 15000, 15500
+    data[sat_start:sat_stop, :] = sat_value
+
+    gain = 2.34
+    offset = 0
+    data_int16 = np.clip(np.rint((data - offset) / gain), -32768, 32767).astype(np.int16)
+
+    recording = NumpyRecording(data_int16, sampling_frequency)
+    recording.set_channel_gains(gain)
+    recording.set_channel_offsets([offset] * num_chans)
+
+    # Basic usage: detect and zero out saturation in one step
+    cleaned = detect_and_remove_artifacts(
+        recording,
+        method="saturation",
+        method_kwargs=dict(saturation_threshold_uV=sat_value * 0.98),
+        job_kwargs=job_kwargs,
+    )
+    traces = cleaned.get_traces(segment_index=0)
+    assert traces[sat_start + 100, 0] == 0, "Saturated samples should be zeroed"
+    assert traces[0, 0] != 0, "Non-saturated samples should not be zeroed"
+
+    # recording_to_detect: detect on raw recording, silence a separate (processed) recording
+    # We use the same recording here just to exercise the code path
+    cleaned_with_detect = detect_and_remove_artifacts(
+        recording,
+        recording_to_detect=recording,
+        method="saturation",
+        method_kwargs=dict(saturation_threshold_uV=sat_value * 0.98),
+        job_kwargs=job_kwargs,
+    )
+    assert np.array_equal(cleaned.get_traces(), cleaned_with_detect.get_traces())
 
 
 if __name__ == "__main__":

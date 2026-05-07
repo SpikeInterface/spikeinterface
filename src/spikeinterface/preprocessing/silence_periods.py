@@ -1,12 +1,13 @@
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from spikeinterface.core import get_noise_levels
+from spikeinterface.core.base import base_period_dtype
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.recording_tools import get_noise_levels, get_chunk_with_margin
 from spikeinterface.core.generate import NoiseGeneratorRecording
 from spikeinterface.core.job_tools import split_job_kwargs
-from spikeinterface.core.base import base_period_dtype
+
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -21,14 +22,11 @@ class SilencedPeriodsRecording(BasePreprocessor):
     ----------
     recording : RecordingExtractor
         The recording extractor to silance periods
-    list_periods : list of lists/arrays
-        One list per segment of tuples (start_frame, end_frame) to silence
-    noise_levels : array
-        Noise levels if already computed
-    seed : int | None, default: None
-        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
-        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
-    mode : "zeros" | "noise, default: "zeros"
+    periods : np.array
+        A numpy array with dtype `base_period_dtype` and fields
+        "segment_index", "start_sample_index", "end_sample_index".
+        Each row corresponds to a period to silence.
+    mode : "zeros" | "noise" | "apodization", default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
         - "zeros": Artifacts are replaced by zeros.
@@ -36,6 +34,14 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - "noise": The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
+        - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization_samples`)
+    apodization_samples : int, default: 7
+        The factor used for the cosine taper when mode is "apodization". Higher values create a wider taper.
+    noise_levels : array
+        Noise levels if already computed
+    seed : int | None, default: None
+        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
     **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     Returns
@@ -48,22 +54,29 @@ class SilencedPeriodsRecording(BasePreprocessor):
         self,
         recording,
         periods=None,
-        # this is keep for backward compatibility
+        # this is kept for backward compatibility
         list_periods=None,
         mode="zeros",
+        apodization_samples=7,
         noise_levels=None,
         seed=None,
         **noise_levels_kwargs,
     ):
-        available_modes = ("zeros", "noise")
+        available_modes = ("zeros", "noise", "apodization")
         num_seg = recording.get_num_segments()
 
         # handle backward compatibility with previous version
         if list_periods is not None:
-            assert periods is None
+            assert periods is None, (
+                "You cannot specify both list_periods and periods. "
+                f"Please specify only periods, which should be a np.array with dtype {base_period_dtype}"
+            )
             periods = _all_period_list_to_periods_vec(list_periods, num_seg)
         else:
-            assert list_periods is None
+            assert list_periods is None, (
+                "list_periods is deprecated. Please specify periods, which should be a np.array with "
+                f"dtype {base_period_dtype}"
+            )
             if not isinstance(periods, np.ndarray):
                 raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
 
@@ -108,11 +121,26 @@ class SilencedPeriodsRecording(BasePreprocessor):
             i1 = seg_limits[seg_index + 1]
             periods_in_seg = periods[i0:i1]
             rec_segment = SilencedPeriodsRecordingSegment(
-                parent_segment, periods_in_seg, mode, noise_generator, seg_index
+                parent_segment,
+                periods_in_seg,
+                mode,
+                noise_generator,
+                seg_index,
+                apodization_samples=apodization_samples,
             )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, periods=periods, mode=mode, seed=seed, noise_levels=noise_levels)
+        # the base_period_dtype is a structured dtype, which is not json serializable
+        self._serializability["json"] = False
+
+        self._kwargs = dict(
+            recording=recording,
+            periods=periods,
+            mode=mode,
+            seed=seed,
+            noise_levels=noise_levels,
+            apodization_samples=apodization_samples,
+        )
 
 
 def _all_period_list_to_periods_vec(list_periods, num_seg):
@@ -154,18 +182,28 @@ def _check_periods(periods, num_seg):
 
 
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index):
+    def __init__(self, parent_recording_segment, periods, mode, noise_generator, seg_index, apodization_samples=7):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.periods = periods
         self.mode = mode
         self.seg_index = seg_index
         self.noise_generator = noise_generator
+        self.apodization_samples = apodization_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+        if self.mode in ("zeros", "noise"):
+            margin = 0
+        elif self.mode == "apodization":
+            margin = self.apodization_samples
+        else:
+            raise ValueError(f"Unknown method {self.mode}")
+
+        traces, left_margin, right_margin = get_chunk_with_margin(
+            self.parent_recording_segment, start_frame, end_frame, channel_indices, margin=margin
+        )
 
         if self.periods.size > 0:
-            new_interval = np.array([start_frame, end_frame])
+            new_interval = np.array([start_frame - margin, end_frame + margin])
 
             lower_index = np.searchsorted(self.periods["end_sample_index"], new_interval[0])
             upper_index = np.searchsorted(self.periods["start_sample_index"], new_interval[1])
@@ -174,9 +212,14 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                 traces = traces.copy()
 
                 periods_in_interval = self.periods[lower_index:upper_index]
+
+                # For apodization, we pre-allocate the mute function and cosine window
+                if self.mode == "apodization":
+                    mute_mask = np.zeros(traces.shape[0], dtype=np.float32)
+
                 for period in periods_in_interval:
-                    onset = max(0, period["start_sample_index"] - start_frame)
-                    offset = min(period["end_sample_index"] - start_frame, end_frame)
+                    onset = max(0, period["start_sample_index"] - start_frame - margin)
+                    offset = min(period["end_sample_index"] - start_frame + margin, end_frame + margin)
 
                     if self.mode == "zeros":
                         traces[onset:offset, :] = 0
@@ -185,8 +228,20 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                             :, channel_indices
                         ]
                         traces[onset:offset, :] = noise[onset:offset]
+                    elif self.mode == "apodization":
+                        # apply a cosine taper to the saturation to create a mute function
+                        mute_mask[onset:offset] = 1
 
-        return traces
+                # For apodization, we apply the mute function including all periods to the whole trace,
+                # so that the edges of the silenced periods are smoothly tapered
+                if self.mode == "apodization":
+                    import scipy.signal
+
+                    win = scipy.signal.windows.cosine(self.apodization_samples)
+                    mute = np.maximum(0, 1 - scipy.signal.convolve(mute_mask, win, mode="same"))
+                    traces = (traces.astype(np.float32) * mute[:, np.newaxis]).astype(traces.dtype)
+        # discard margin
+        return traces[left_margin : traces.shape[0] - right_margin, :]
 
 
 # function for API

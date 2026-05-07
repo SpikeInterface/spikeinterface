@@ -91,6 +91,15 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
             if sample_shifts is not None:
                 self.set_property("inter_sample_shift", sample_shifts)
+
+            # add saturation levels if available
+            saturation_threshold_uV = None
+            if "ap" in self.stream_id:
+                saturation_threshold_uV = probe.annotations.get("ap_saturation_uV", None)
+            elif "lf" in self.stream_id:
+                saturation_threshold_uV = probe.annotations.get("lf_saturation_uV", None)
+            if saturation_threshold_uV is not None:
+                self.annotate(saturation_threshold_uV=saturation_threshold_uV)
         else:
             warning_message = (
                 "Unable to find a corresponding metadata file for the recording. "

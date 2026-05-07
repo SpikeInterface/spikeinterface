@@ -99,10 +99,28 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
             Preprocessed recording
 
         """
-
-        for preprocessor_name, kwargs in self.preprocessor_dict.items():
-
+        instantiated_recordings = {"raw": recording}
+        for preprocessor_name, kwargs_ in self.preprocessor_dict.items():
+            kwargs = kwargs_.copy()
             dont_apply_kwargs = ["recording", "parent_recording"]
+
+            for k, v in kwargs.items():
+                if isinstance(v, str) and "pipeline[" in v:
+                    if "recording" not in k:
+                        raise ValueError(
+                            f"Cannot substitute recording for argument '{k}' of preprocessor '{preprocessor_name}' "
+                            f"because this argument is not meant to be a recording object."
+                        )
+                    if k in dont_apply_kwargs:
+                        raise ValueError(
+                            f"Cannot substitute recording for argument '{k}' of preprocessor '{preprocessor_name}' "
+                            f"because this argument is reserved for the recording to be preprocessed."
+                        )
+                    rec_name = v.split("pipeline[")[-1].split("]")[0]
+                    substituted_recording = instantiated_recordings.get(rec_name)
+                    if substituted_recording is None:
+                        raise ValueError(f"Cannot find recording '{rec_name}' from previous steps in the pipeline.")
+                    kwargs[k] = substituted_recording
 
             if not apply_precomputed_kwargs:
                 preprocessor_class = pp_names_to_classes[preprocessor_name]
@@ -112,6 +130,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
             non_rec_kwargs = {key: value for key, value in kwargs.items() if key not in dont_apply_kwargs}
             pp_output = pp_names_to_functions[preprocessor_name](recording, **non_rec_kwargs)
             recording = pp_output
+            instantiated_recordings[preprocessor_name] = recording
 
         return recording
 
@@ -305,6 +324,12 @@ def _load_pp_from_dict(prov_dict, kwargs_dict):
     for name, value in prov_dict["kwargs"].items():
         if is_dict_extractor(value):
             this_level_kwargs[name] = _load_pp_from_dict(value, kwargs_dict)
+        elif isinstance(value, BaseRecording):
+            extractor_as_dict = value.to_dict()
+            if name in ["recording", "parent_recording"]:
+                this_level_kwargs[name] = _load_pp_from_dict(extractor_as_dict, kwargs_dict)
+            else:  # this branch takes care of other arguments being a recording, e.g., `recording_to_detect`
+                this_level_kwargs[name] = value
         elif isinstance(value, dict):
             this_level_kwargs[name] = {k: prov_dict_to_kwargs_dict(v) for k, v in value.items()}
         elif isinstance(value, list):
