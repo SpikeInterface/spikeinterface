@@ -52,6 +52,11 @@ exclude = ["spikeinterface.*.tests"]
 [tool.black]
 line-length = 120
 
+[tool.ruff]
+line-length = 120
+[tool.ruff.lint]
+select = ['F401']
+
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"
 repository = "https://github.com/SpikeInterface/spikeinterface"
