@@ -246,6 +246,8 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         return filtered
 
     def _get_traces_impl(self, start_frame, end_frame, channel_indices, max_threads):
+        # Propagate max_threads upstream so a chained Filter→Filter (or any
+        # parallel-capable parent) fans out under the same thread budget.
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -253,6 +255,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             channel_indices,
             self.margin,
             add_reflect_padding=self.add_reflect_padding,
+            max_threads=max_threads,
         )
 
         # if uint --> force int

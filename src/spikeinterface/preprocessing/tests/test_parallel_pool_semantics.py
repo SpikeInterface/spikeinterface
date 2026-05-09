@@ -119,6 +119,100 @@ class TestPerCallerThreadPool:
         assert get_inner_pool(0) is None
 
 
+class TestChainPropagation:
+    """Verify max_threads propagates through chained preprocessor segments.
+
+    The contract: calling ``cmr.get_traces_multi_thread(max_threads=K)`` on
+    a ``BP → CMR`` chain must invoke BP's parallel kernel with ``K`` threads
+    too — not just CMR's.  Inside one such call the chain runs sequentially
+    (BP completes before CMR starts), so peak in-flight is K threads, but
+    each stage gets the budget when it's its turn.
+    """
+
+    def test_chain_bp_cmr_matches_serial(self):
+        """Bit-equivalence (within float tolerance) of serial vs parallel chain."""
+        rec = _make_recording(T=60_000, C=64)
+        bp = BandpassFilterRecording(rec, freq_min=300.0, freq_max=6000.0, dtype="float32")
+        cmr = CommonReferenceRecording(bp, reference="global", operator="median")
+        ref = cmr.get_traces(start_frame=5_000, end_frame=55_000)
+        out = cmr.get_traces_multi_thread(start_frame=5_000, end_frame=55_000, max_threads=8)
+        # CMR median is bit-identical regardless of block partition; BP SOS
+        # split is also bit-identical per channel.  Both stages parallel ⇒
+        # bit-identical to fully-serial chain.
+        np.testing.assert_array_equal(out, ref)
+
+    def test_chain_bp_car_within_tolerance(self):
+        """CAR (mean) is non-associative across blocks ⇒ tolerance-equivalent."""
+        rec = _make_recording(T=60_000, C=64)
+        bp = BandpassFilterRecording(rec, freq_min=300.0, freq_max=6000.0, dtype="float32")
+        car = CommonReferenceRecording(bp, reference="global", operator="average")
+        ref = car.get_traces(start_frame=5_000, end_frame=55_000)
+        out = car.get_traces_multi_thread(start_frame=5_000, end_frame=55_000, max_threads=8)
+        # Mean across block partitions can differ by ~1 ULP from single-pass.
+        np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)
+
+    def test_chain_bp_invokes_parallel_kernel(self):
+        """The upstream BP segment's get_traces_multi_thread must actually fire.
+
+        We monkey-patch the BP segment to count get_traces vs
+        get_traces_multi_thread invocations during a chained call.
+        """
+        rec = _make_recording(T=60_000, C=64)
+        bp = BandpassFilterRecording(rec, freq_min=300.0, freq_max=6000.0, dtype="float32")
+        cmr = CommonReferenceRecording(bp, reference="global", operator="median")
+
+        bp_seg = bp._recording_segments[0]
+        counts = {"get_traces": 0, "get_traces_multi_thread": 0}
+        original_get_traces = bp_seg.get_traces
+        original_multi = bp_seg.get_traces_multi_thread
+
+        def counting_get_traces(*args, **kwargs):
+            counts["get_traces"] += 1
+            return original_get_traces(*args, **kwargs)
+
+        def counting_multi(*args, **kwargs):
+            counts["get_traces_multi_thread"] += 1
+            return original_multi(*args, **kwargs)
+
+        bp_seg.get_traces = counting_get_traces
+        bp_seg.get_traces_multi_thread = counting_multi
+
+        cmr.get_traces_multi_thread(start_frame=5_000, end_frame=55_000, max_threads=8)
+        # Chain propagation must route upstream via get_traces_multi_thread.
+        assert (
+            counts["get_traces_multi_thread"] >= 1
+        ), f"expected BP.get_traces_multi_thread to fire under chain propagation; counts={counts}"
+
+    def test_chain_serial_path_bypasses_multi(self):
+        """``cmr.get_traces()`` (not multi_thread) must NOT fire the parallel kernel.
+
+        Symmetric guard: the serial path stays serial all the way down.
+        """
+        rec = _make_recording(T=60_000, C=64)
+        bp = BandpassFilterRecording(rec, freq_min=300.0, freq_max=6000.0, dtype="float32")
+        cmr = CommonReferenceRecording(bp, reference="global", operator="median")
+
+        bp_seg = bp._recording_segments[0]
+        counts = {"get_traces": 0, "get_traces_multi_thread": 0}
+        original_get_traces = bp_seg.get_traces
+        original_multi = bp_seg.get_traces_multi_thread
+
+        def counting_get_traces(*args, **kwargs):
+            counts["get_traces"] += 1
+            return original_get_traces(*args, **kwargs)
+
+        def counting_multi(*args, **kwargs):
+            counts["get_traces_multi_thread"] += 1
+            return original_multi(*args, **kwargs)
+
+        bp_seg.get_traces = counting_get_traces
+        bp_seg.get_traces_multi_thread = counting_multi
+
+        cmr.get_traces(start_frame=5_000, end_frame=55_000)
+        assert counts["get_traces_multi_thread"] == 0, f"serial path leaked into multi_thread; counts={counts}"
+        assert counts["get_traces"] >= 1, f"BP.get_traces should have fired; counts={counts}"
+
+
 # --- Post-fork pid-guard regression test --------------------------------------
 #
 # The pid guard in get_inner_pool detects when the calling process has

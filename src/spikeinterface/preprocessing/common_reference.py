@@ -270,11 +270,29 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             fut.result()
         return out
 
+    def _fetch_parent(self, start_frame, end_frame, max_threads):
+        """Fetch upstream traces, propagating max_threads when > 1.
+
+        Explicit branch keeps the serial path strictly serial — calling
+        ``get_traces`` directly when ``max_threads <= 1`` avoids any
+        traversal through ``get_traces_multi_thread`` and its routing.
+        """
+        if max_threads > 1:
+            return self.parent_recording_segment.get_traces_multi_thread(
+                start_frame=start_frame,
+                end_frame=end_frame,
+                channel_indices=slice(None),
+                max_threads=max_threads,
+            )
+        return self.parent_recording_segment.get_traces(
+            start_frame=start_frame, end_frame=end_frame, channel_indices=slice(None)
+        )
+
     def _get_traces_impl(self, start_frame, end_frame, channel_indices, max_threads):
         # Let's do the case with group_indices equal None as that is easy
         if self.group_indices is None:
-            # We need all the channels to calculate the reference
-            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+            # We need all the channels to calculate the reference.
+            traces = self._fetch_parent(start_frame, end_frame, max_threads)
 
             if self.reference == "global":
                 if self.ref_channel_indices is None:
@@ -303,8 +321,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
 
         # Then the old implementation for backwards compatibility that supports grouping
         else:
-            # need input trace
-            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+            traces = self._fetch_parent(start_frame, end_frame, max_threads)
 
             sliced_channel_indices = np.arange(traces.shape[1])
             if channel_indices is not None:

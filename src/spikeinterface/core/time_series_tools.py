@@ -577,6 +577,7 @@ def get_chunk_with_margin(
     add_reflect_padding=False,
     window_on_margin=False,
     dtype=None,
+    max_threads: int = 1,
 ):
     """
     Helper to get chunk with margin
@@ -586,11 +587,32 @@ def get_chunk_with_margin(
     of `add_zeros` or `add_reflect_padding` is True. In the first
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
+
+    When ``max_threads > 1`` and the segment is a recording segment with a
+    ``get_traces_multi_thread`` override, the upstream fetch goes through
+    that parallel kernel so a chained pipeline (e.g. Filter → CMR) gets
+    end-to-end parallelism per call.  Snippets and other generic
+    ``TimeSeriesSegment`` subtypes always use ``get_data`` (serial).
     """
     length = int(chunkable_segment.get_num_samples())
 
     if last_dimension_indices is None:
         last_dimension_indices = slice(None)
+
+    # Local fetcher: branch on max_threads + recording-segment capability.
+    # Keeps ``get_data`` as a clean generic-TimeSeries API and pushes the
+    # "parallel if K>1" decision to the one call site that cares.
+    use_multi = max_threads > 1 and hasattr(chunkable_segment, "get_traces_multi_thread")
+
+    def _fetch(s0, s1):
+        if use_multi:
+            return chunkable_segment.get_traces_multi_thread(
+                start_frame=s0,
+                end_frame=s1,
+                channel_indices=last_dimension_indices,
+                max_threads=max_threads,
+            )
+        return chunkable_segment.get_data(s0, s1, last_dimension_indices)
 
     if not (add_zeros or add_reflect_padding):
         if window_on_margin and not add_zeros:
@@ -612,11 +634,7 @@ def get_chunk_with_margin(
         else:
             right_margin = margin
 
-        data_chunk = chunkable_segment.get_data(
-            start_frame - left_margin,
-            end_frame + right_margin,
-            last_dimension_indices,
-        )
+        data_chunk = _fetch(start_frame - left_margin, end_frame + right_margin)
 
     else:
         # either add_zeros or reflect_padding
@@ -642,7 +660,7 @@ def get_chunk_with_margin(
             end_frame2 = end_frame + margin
             right_pad = 0
 
-        data_chunk = chunkable_segment.get_data(start_frame2, end_frame2, last_dimension_indices)
+        data_chunk = _fetch(start_frame2, end_frame2)
 
         if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
             need_copy = True
