@@ -210,17 +210,16 @@ def test_local_car_vs_cmr_performance():
 
 
 def test_cmr_parallel_median_matches_stock():
-    """CommonReferenceRecording(n_workers=N) must produce bit-identical output."""
+    """``get_traces_multi_thread`` must produce bit-identical median output."""
     from spikeinterface import NumpyRecording
 
     rng = np.random.default_rng(0)
     T, C = 60_000, 64
     traces = (rng.standard_normal((T, C)) * 100).astype("float32")
     rec = NumpyRecording([traces], sampling_frequency=30_000.0)
-    stock = common_reference(rec, reference="global", operator="median")
-    fast = common_reference(rec, reference="global", operator="median", n_workers=8)
-    ref = stock.get_traces(start_frame=5_000, end_frame=T - 5_000)
-    out = fast.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    cmr = common_reference(rec, reference="global", operator="median")
+    ref = cmr.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    out = cmr.get_traces_multi_thread(start_frame=5_000, end_frame=T - 5_000, max_threads=8)
     np.testing.assert_array_equal(out, ref)
 
 
@@ -232,10 +231,9 @@ def test_cmr_parallel_average_matches_stock():
     T, C = 60_000, 64
     traces = (rng.standard_normal((T, C)) * 100).astype("float32")
     rec = NumpyRecording([traces], sampling_frequency=30_000.0)
-    stock = common_reference(rec, reference="global", operator="average")
-    fast = common_reference(rec, reference="global", operator="average", n_workers=8)
-    ref = stock.get_traces(start_frame=5_000, end_frame=T - 5_000)
-    out = fast.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    cmr = common_reference(rec, reference="global", operator="average")
+    ref = cmr.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    out = cmr.get_traces_multi_thread(start_frame=5_000, end_frame=T - 5_000, max_threads=8)
     # Mean across different block partitions can differ by 1 ULP due to
     # non-associative float summation.
     np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)

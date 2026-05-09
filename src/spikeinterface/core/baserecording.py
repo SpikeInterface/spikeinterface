@@ -303,7 +303,97 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
-    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
+    def get_traces_multi_thread(
+        self,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_ids: list | np.ndarray | tuple | None = None,
+        order: Literal["C", "F"] | None = None,
+        return_in_uV: bool = False,
+        max_threads: int | None = None,
+    ) -> np.ndarray:
+        """Like ``get_traces``, but the segment kernel may use up to
+        ``max_threads`` threads internally to compute its output.
+
+        Most segments fall through to the serial ``get_traces`` path; only
+        segments whose kernels benefit from intra-call parallelism (e.g.
+        ``FilterRecordingSegment``, ``CommonReferenceRecordingSegment``)
+        override ``BaseRecordingSegment.get_traces_multi_thread`` to actually
+        use the budget.
+
+        Parameters
+        ----------
+        max_threads : int or None, default: None
+            Inner thread budget for this single call.  ``None`` means
+            "look up ``max_threads_per_worker`` from the global job_kwargs."
+            ``<= 1`` falls back to plain ``get_traces``.
+
+            .. note::
+               The implicit ``None`` lookup is only safe in the **parent
+               process**. Inside a ``TimeSeriesChunkExecutor`` worker
+               (especially with ``mp_context="spawn"`` / ``"forkserver"`` or on
+               macOS / Windows defaults), the worker's globals do not reflect
+               the parent's ``set_global_job_kwargs(...)``. Chunk callbacks
+               that want intra-call parallelism inside CRE must pass
+               ``max_threads`` explicitly.
+
+        See ``get_traces`` for the other parameters.
+        """
+        if max_threads is None:
+            from .globals import get_global_job_kwargs
+
+            max_threads = int(
+                get_global_job_kwargs().get("max_threads_per_worker", 1) or 1
+            )
+
+        if max_threads <= 1:
+            return self.get_traces(
+                segment_index=segment_index,
+                start_frame=start_frame,
+                end_frame=end_frame,
+                channel_ids=channel_ids,
+                order=order,
+                return_in_uV=return_in_uV,
+            )
+
+        segment_index = self._check_segment_index(segment_index)
+        channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
+        rs = self.segments[segment_index]
+        start_frame = int(start_frame) if start_frame is not None else 0
+        num_samples = rs.get_num_samples()
+        end_frame = (
+            int(min(end_frame, num_samples)) if end_frame is not None else num_samples
+        )
+        traces = rs.get_traces_multi_thread(
+            start_frame=start_frame,
+            end_frame=end_frame,
+            channel_indices=channel_indices,
+            max_threads=max_threads,
+        )
+
+        if order is not None:
+            assert order in ["C", "F"]
+            traces = np.asanyarray(traces, order=order)
+
+        if return_in_uV:
+            if not self.has_scaleable_traces():
+                if self._dtype.kind == "f":
+                    pass
+                else:
+                    raise ValueError(
+                        "This recording does not support return_in_uV=True (need gain_to_uV and offset_"
+                        "to_uV properties)"
+                    )
+            else:
+                gains = self.get_property("gain_to_uV")
+                offsets = self.get_property("offset_to_uV")
+                gains = gains[channel_indices].astype("float32", copy=False)
+                offsets = offsets[channel_indices].astype("float32", copy=False)
+                traces = traces.astype("float32", copy=False) * gains + offsets
+        return traces
+
+    def get_data( self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         """
         General retrieval function for time_series objects
         """
@@ -672,6 +762,26 @@ class BaseRecordingSegment(TimeSeriesSegment):
         """
         # must be implemented in subclass
         raise NotImplementedError
+
+    def get_traces_multi_thread(
+        self,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | np.ndarray | tuple | None = None,
+        max_threads: int = 1,
+    ) -> np.ndarray:
+        """Default: serial fall-through to ``get_traces``.
+
+        Override on segments whose kernels benefit from intra-call
+        parallelism (channel-block fan-out, time-block fan-out, numba
+        prange).  See ``core/job_tools.py:get_inner_pool`` and
+        ``thread_budget`` for the building blocks.
+        """
+        return self.get_traces(
+            start_frame=start_frame,
+            end_frame=end_frame,
+            channel_indices=channel_indices,
+        )
 
     def get_data(
         self, start_frame: int, end_frame: int, indices: list | np.ndarray | tuple | None = None

@@ -221,7 +221,7 @@ def test_filter_opencl():
 
 
 def test_bandpass_parallel_matches_stock():
-    """BandpassFilterRecording(n_workers=N) must produce the same output as n_workers=1.
+    """``get_traces_multi_thread(max_threads=N)`` must match ``get_traces``.
 
     Locks in the invariant that channel-axis parallelism is a pure perf
     optimisation — scipy's sosfiltfilt is channel-independent so splitting
@@ -231,24 +231,21 @@ def test_bandpass_parallel_matches_stock():
     T, C = 60_000, 64
     traces = (rng.standard_normal((T, C)) * 100).astype("float32")
     rec = NumpyRecording([traces], sampling_frequency=30_000.0)
-    stock = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32")
-    fast = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32", n_workers=8)
-    ref = stock.get_traces(start_frame=5_000, end_frame=T - 5_000)
-    out = fast.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    bp = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32")
+    ref = bp.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    out = bp.get_traces_multi_thread(start_frame=5_000, end_frame=T - 5_000, max_threads=8)
     np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)
 
 
 def test_filter_parallel_fewer_channels_than_workers():
-    """n_workers > C must still produce correct output (falls through to serial)."""
+    """``max_threads > C`` must still produce correct output (falls through to serial)."""
     rng = np.random.default_rng(0)
     T, C = 10_000, 4
     traces = (rng.standard_normal((T, C)) * 100).astype("float32")
     rec = NumpyRecording([traces], sampling_frequency=30_000.0)
-    fast = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32", n_workers=16)
-    # Should not raise; should match stock.
-    stock = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32")
-    ref = stock.get_traces(start_frame=1000, end_frame=T - 1000)
-    out = fast.get_traces(start_frame=1000, end_frame=T - 1000)
+    bp = bandpass_filter(rec, freq_min=300.0, freq_max=5000.0, dtype="float32")
+    ref = bp.get_traces(start_frame=1000, end_frame=T - 1000)
+    out = bp.get_traces_multi_thread(start_frame=1000, end_frame=T - 1000, max_threads=16)
     np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)
 
 

@@ -1,7 +1,4 @@
-import os
-import threading
 import warnings
-import weakref
 
 import numpy as np
 
@@ -11,6 +8,7 @@ from spikeinterface.core import (
     ensure_chunk_size,
     get_global_job_kwargs,
     is_set_global_job_kwargs_set,
+    get_inner_pool,
 )
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -95,12 +93,10 @@ class FilterRecording(BasePreprocessor):
         coeff=None,
         dtype=None,
         direction="forward-backward",
-        n_workers=1,
     ):
         import scipy.signal
 
         assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
-        assert int(n_workers) >= 1, "n_workers must be >= 1"
         fs = recording.get_sampling_frequency()
         if coeff is None:
             assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
@@ -145,7 +141,6 @@ class FilterRecording(BasePreprocessor):
                     dtype,
                     add_reflect_padding=add_reflect_padding,
                     direction=direction,
-                    n_workers=int(n_workers),
                 )
             )
 
@@ -161,7 +156,6 @@ class FilterRecording(BasePreprocessor):
             add_reflect_padding=add_reflect_padding,
             dtype=dtype.str,
             direction=direction,
-            n_workers=int(n_workers),
         )
 
 
@@ -175,7 +169,6 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         dtype,
         add_reflect_padding=False,
         direction="forward-backward",
-        n_workers=1,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.coeff = coeff
@@ -184,77 +177,28 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
         self.add_reflect_padding = add_reflect_padding
         self.dtype = dtype
-        self.n_workers = int(n_workers)
-        # Per-caller-thread lazy pool map.  Each outer thread that calls
-        # get_traces() on this segment gets its own inner pool, avoiding the
-        # shared-pool queueing pathology that would occur if multiple outer
-        # workers (e.g., a TimeSeriesChunkExecutor with n_jobs > 1) all
-        # dispatched into a single shared pool on the segment.
-        #
-        # WeakKeyDictionary + weakref.finalize: entries are keyed by the Thread
-        # object itself (not by thread-id integer, which can be reused after a
-        # thread dies).  When the calling thread is garbage-collected, its
-        # inner pool is shut down (non-blocking) and the dict entry drops, so
-        # long-running processes don't accumulate zombie pools.
-        self._filter_pools = weakref.WeakKeyDictionary()
-        self._filter_pools_lock = threading.Lock()
-        self._filter_pools_pid = os.getpid()
 
-    def _get_pool(self):
-        """Lazy per-caller-thread thread pool for channel-parallel filtering."""
-        if self.n_workers <= 1:
-            return None
-        # os.fork() copies memory but only the calling thread.  In a forked
-        # child, ThreadPoolExecutors stored on this segment reference parent
-        # Thread objects whose OS threads don't exist here, and the pool lock
-        # may even be in a held state.  Detect by pid and reset.  Pickling
-        # (mp_context="spawn"/"forkserver") goes through __reduce__ and
-        # rebuilds via __init__, so it sees fresh state already; this guard
-        # is specifically for the fork path.
-        if self._filter_pools_pid != os.getpid():
-            self._filter_pools = weakref.WeakKeyDictionary()
-            self._filter_pools_lock = threading.Lock()
-            self._filter_pools_pid = os.getpid()
-        thread = threading.current_thread()
-        pool = self._filter_pools.get(thread)
-        if pool is None:
-            with self._filter_pools_lock:
-                pool = self._filter_pools.get(thread)
-                if pool is None:
-                    from concurrent.futures import ThreadPoolExecutor
+    def _apply_sos(self, fn, traces, max_threads, axis=0):
+        """Apply a scipy SOS function across channel blocks, optionally parallel.
 
-                    pool = ThreadPoolExecutor(max_workers=self.n_workers)
-                    self._filter_pools[thread] = pool
-                    # When the calling thread is GC'd, shut down its pool
-                    # without blocking the finalizer thread.  In-flight
-                    # tasks would be cancelled, but the owning thread
-                    # submits + joins synchronously, so no such tasks
-                    # exist when the thread actually exits.
-                    weakref.finalize(thread, pool.shutdown, wait=False)
-        return pool
-
-    def _apply_sos(self, fn, traces, axis=0):
-        """Apply a scipy SOS function across channel blocks in parallel.
-
-        Each channel is independent of every other channel, so splitting the
-        channel axis across threads is a safe parallelization.  scipy's C
-        implementations of ``sosfiltfilt``/``sosfilt`` release the GIL during
+        Each channel is independent of every other, so splitting the channel
+        axis across threads is a safe parallelization.  scipy's C
+        implementations of ``sosfiltfilt`` / ``sosfilt`` release the GIL during
         per-column work, so Python-thread parallelism delivers real speedup
         (measured ~3× on 8 threads for a 1M × 384 float32 chunk).
 
-        Workers write directly into a pre-allocated output array — eliminating
-        the per-block tuple return + post-loop allocate-and-copy that adds
-        ~15 ms of wall time per call on a (30k, 384) float32 chunk.  Each
-        block writes into a non-overlapping channel slice, so concurrent
-        writes are safe.
+        ``max_threads <= 1`` or too few channels falls back to a single serial
+        call.  Workers write directly into a pre-allocated output to avoid the
+        per-block tuple return + post-loop copy.
         """
-        if self.n_workers == 1:
+        pool = get_inner_pool(max_threads)
+        if pool is None:
             return fn(self.coeff, traces, axis=axis)
         C = traces.shape[1]
-        if C < 2 * self.n_workers:
+        if C < 2 * max_threads:
             return fn(self.coeff, traces, axis=axis)
-        pool = self._get_pool()
-        block = (C + self.n_workers - 1) // self.n_workers
+
+        block = (C + max_threads - 1) // max_threads
         bounds = [(c0, min(c0 + block, C)) for c0 in range(0, C, block)]
 
         # Probe the output dtype on a tiny slice (longer than scipy's internal
@@ -271,7 +215,37 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             fut.result()
         return out
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _filter(self, traces_chunk, max_threads):
+        """Run the configured filter on a margin-included chunk.
+
+        Factored out so ``get_traces`` (serial) and ``get_traces_multi_thread``
+        share a single body and only differ by the ``max_threads`` argument.
+        """
+        import scipy.signal
+
+        if self.direction == "forward-backward":
+            if self.filter_mode == "sos":
+                return self._apply_sos(scipy.signal.sosfiltfilt, traces_chunk, max_threads, axis=0)
+            elif self.filter_mode == "ba":
+                b, a = self.coeff
+                return scipy.signal.filtfilt(b, a, traces_chunk, axis=0)
+
+        # forward / backward only
+        if self.direction == "backward":
+            traces_chunk = np.flip(traces_chunk, axis=0)
+
+        if self.filter_mode == "sos":
+            filtered = self._apply_sos(scipy.signal.sosfilt, traces_chunk, max_threads, axis=0)
+        elif self.filter_mode == "ba":
+            b, a = self.coeff
+            filtered = scipy.signal.lfilter(b, a, traces_chunk, axis=0)
+
+        if self.direction == "backward":
+            filtered = np.flip(filtered, axis=0)
+
+        return filtered
+
+    def _get_traces_impl(self, start_frame, end_frame, channel_indices, max_threads):
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -281,31 +255,11 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             add_reflect_padding=self.add_reflect_padding,
         )
 
-        traces_dtype = traces_chunk.dtype
         # if uint --> force int
-        if traces_dtype.kind == "u":
+        if traces_chunk.dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
-        import scipy.signal
-
-        if self.direction == "forward-backward":
-            if self.filter_mode == "sos":
-                filtered_traces = self._apply_sos(scipy.signal.sosfiltfilt, traces_chunk, axis=0)
-            elif self.filter_mode == "ba":
-                b, a = self.coeff
-                filtered_traces = scipy.signal.filtfilt(b, a, traces_chunk, axis=0)
-        else:
-            if self.direction == "backward":
-                traces_chunk = np.flip(traces_chunk, axis=0)
-
-            if self.filter_mode == "sos":
-                filtered_traces = self._apply_sos(scipy.signal.sosfilt, traces_chunk, axis=0)
-            elif self.filter_mode == "ba":
-                b, a = self.coeff
-                filtered_traces = scipy.signal.lfilter(b, a, traces_chunk, axis=0)
-
-            if self.direction == "backward":
-                filtered_traces = np.flip(filtered_traces, axis=0)
+        filtered_traces = self._filter(traces_chunk, max_threads)
 
         if right_margin > 0:
             filtered_traces = filtered_traces[left_margin:-right_margin, :]
@@ -316,6 +270,14 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             filtered_traces = filtered_traces.round()
 
         return filtered_traces.astype(self.dtype)
+
+    def get_traces(self, start_frame=None, end_frame=None, channel_indices=None):
+        return self._get_traces_impl(start_frame, end_frame, channel_indices, max_threads=1)
+
+    def get_traces_multi_thread(
+        self, start_frame=None, end_frame=None, channel_indices=None, max_threads=1
+    ):
+        return self._get_traces_impl(start_frame, end_frame, channel_indices, max_threads=max_threads)
 
 
 class BandpassFilterRecording(FilterRecording):

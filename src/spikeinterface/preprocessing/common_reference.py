@@ -1,14 +1,11 @@
-import os
-import threading
 import warnings
-import weakref
 from typing import Literal
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core import get_closest_channels
+from spikeinterface.core import get_closest_channels, get_inner_pool
 from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype
@@ -91,7 +88,6 @@ class CommonReferenceRecording(BasePreprocessor):
         local_radius: tuple[float, float] = (30.0, 55.0),
         min_local_neighbors: int = 5,
         dtype: str | np.dtype | None = None,
-        n_workers: int = 1,
     ):
         num_chans = recording.get_num_channels()
         local_kernel = None
@@ -158,7 +154,6 @@ class CommonReferenceRecording(BasePreprocessor):
         else:
             ref_channel_indices = None
 
-        assert int(n_workers) >= 1, "n_workers must be >= 1"
         for parent_segment in recording.segments:
             rec_segment = CommonReferenceRecordingSegment(
                 parent_segment,
@@ -168,7 +163,6 @@ class CommonReferenceRecording(BasePreprocessor):
                 ref_channel_indices,
                 local_kernel,
                 dtype_,
-                n_workers=int(n_workers),
             )
             self.add_recording_segment(rec_segment)
 
@@ -181,7 +175,6 @@ class CommonReferenceRecording(BasePreprocessor):
             local_radius=local_radius,
             min_local_neighbors=min_local_neighbors,
             dtype=dtype_.str,
-            n_workers=int(n_workers),
         )
 
 
@@ -195,7 +188,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         ref_channel_indices,
         local_kernel,
         dtype,
-        n_workers=1,
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
@@ -208,38 +200,9 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.dtype = dtype
         self.operator = operator
         self.operator_func = np.mean if self.operator == "average" else np.median
-        self.n_workers = int(n_workers)
-        # Per-caller-thread lazy pool map.  See filter.FilterRecordingSegment
-        # for full rationale, WeakKeyDictionary mechanics, and the post-fork
-        # pid guard in _get_pool.
-        self._cmr_pools = weakref.WeakKeyDictionary()
-        self._cmr_pools_lock = threading.Lock()
-        self._cmr_pools_pid = os.getpid()
 
-    def _get_pool(self):
-        """Lazy per-caller-thread thread pool for parallel median/mean across time blocks."""
-        if self.n_workers <= 1:
-            return None
-        # See filter.FilterRecordingSegment._get_pool for the rationale.
-        if self._cmr_pools_pid != os.getpid():
-            self._cmr_pools = weakref.WeakKeyDictionary()
-            self._cmr_pools_lock = threading.Lock()
-            self._cmr_pools_pid = os.getpid()
-        thread = threading.current_thread()
-        pool = self._cmr_pools.get(thread)
-        if pool is None:
-            with self._cmr_pools_lock:
-                pool = self._cmr_pools.get(thread)
-                if pool is None:
-                    from concurrent.futures import ThreadPoolExecutor
-
-                    pool = ThreadPoolExecutor(max_workers=self.n_workers)
-                    self._cmr_pools[thread] = pool
-                    weakref.finalize(thread, pool.shutdown, wait=False)
-        return pool
-
-    def _parallel_reduce_axis1(self, traces):
-        """Apply ``operator_func(..., axis=1)`` split across time blocks.
+    def _parallel_reduce_axis1(self, traces, max_threads):
+        """Apply ``operator_func(..., axis=1)`` optionally split across time blocks.
 
         numpy's partition-based median and BLAS-backed mean release the GIL
         during per-row work, so Python-thread parallelism delivers real
@@ -252,8 +215,8 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         per worker) rather than one big chunk per worker.  With N small
         chunks dispatched to a fixed-size pool, all workers tend to be
         processing rows in the same time region at any moment (FIFO
-        queue), so shared L3 absorbs the input data once instead of N_workers
-        independent streams competing for DRAM.
+        queue), so shared L3 absorbs the input data once instead of
+        ``max_threads`` independent streams competing for DRAM.
 
         Empirically (524k × 384 fp32, 16 workers) this scheme is ~1.4×
         faster than "one chunk per worker": measured 121 ms at block=1024
@@ -263,14 +226,15 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         Workers write directly into a pre-allocated output array — see
         FilterRecordingSegment._apply_sos for the same pattern.
         """
-        if self.n_workers == 1:
+        pool = get_inner_pool(max_threads)
+        if pool is None:
             return self.operator_func(traces, axis=1)
         T = traces.shape[0]
         C = traces.shape[1] if traces.ndim == 2 else 1
         itemsize = traces.dtype.itemsize
 
         # Target each chunk at ~1.5 MB so it fits comfortably in L2 on a
-        # typical core, with N_workers chunks active at once fitting in L3.
+        # typical core, with max_threads chunks active at once fitting in L3.
         # Floor at 1024 rows so per-chunk dispatch overhead (~few µs) stays
         # well below per-chunk compute (~hundreds of µs at C=384).
         target_chunk_bytes = 1_500_000
@@ -279,8 +243,8 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         # Don't make the chunk count exceed what's useful: at very small T
         # we want at least one chunk per worker, but no more than 64
         # chunks/worker (more would just amortize less work per dispatch).
-        n_chunks = max(self.n_workers, (T + block - 1) // block)
-        n_chunks = min(n_chunks, self.n_workers * 64)
+        n_chunks = max(max_threads, (T + block - 1) // block)
+        n_chunks = min(n_chunks, max_threads * 64)
         block = max(1, (T + n_chunks - 1) // n_chunks)
 
         # Floor: if T is so small that each chunk would be tiny, shrink the
@@ -292,7 +256,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             block = (T + effective - 1) // effective
 
         bounds = [(t0, min(t0 + block, T)) for t0 in range(0, T, block)]
-        pool = self._get_pool()
 
         # Probe dtype: median/mean of a 1×C row gives the same dtype as the
         # full reduction.
@@ -307,7 +270,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             fut.result()
         return out
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def _get_traces_impl(self, start_frame, end_frame, channel_indices, max_threads):
         # Let's do the case with group_indices equal None as that is easy
         if self.group_indices is None:
             # We need all the channels to calculate the reference
@@ -316,7 +279,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
             if self.reference == "global":
                 if self.ref_channel_indices is None:
                     # Hot path: parallelizable global median/mean across all channels.
-                    shift = self._parallel_reduce_axis1(traces)[:, np.newaxis]
+                    shift = self._parallel_reduce_axis1(traces, max_threads)[:, np.newaxis]
                 else:
                     shift = self.operator_func(traces[:, self.ref_channel_indices], axis=1, keepdims=True)
                 re_referenced_traces = traces[:, channel_indices] - shift
@@ -363,6 +326,14 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     re_referenced_traces[:, out_indices] = in_group_traces - shift
 
             return re_referenced_traces.astype(self.dtype, copy=False)
+
+    def get_traces(self, start_frame=None, end_frame=None, channel_indices=None):
+        return self._get_traces_impl(start_frame, end_frame, channel_indices, max_threads=1)
+
+    def get_traces_multi_thread(
+        self, start_frame=None, end_frame=None, channel_indices=None, max_threads=1
+    ):
+        return self._get_traces_impl(start_frame, end_frame, channel_indices, max_threads=max_threads)
 
     def slice_groups(self, channel_indices):
         """
