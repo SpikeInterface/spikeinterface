@@ -343,9 +343,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if max_threads is None:
             from .globals import get_global_job_kwargs
 
-            max_threads = int(
-                get_global_job_kwargs().get("max_threads_per_worker", 1) or 1
-            )
+            max_threads = int(get_global_job_kwargs().get("max_threads_per_worker", 1) or 1)
 
         if max_threads <= 1:
             return self.get_traces(
@@ -362,9 +360,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         rs = self.segments[segment_index]
         start_frame = int(start_frame) if start_frame is not None else 0
         num_samples = rs.get_num_samples()
-        end_frame = (
-            int(min(end_frame, num_samples)) if end_frame is not None else num_samples
-        )
+        end_frame = int(min(end_frame, num_samples)) if end_frame is not None else num_samples
         traces = rs.get_traces_multi_thread(
             start_frame=start_frame,
             end_frame=end_frame,
@@ -393,7 +389,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 traces = traces.astype("float32", copy=False) * gains + offsets
         return traces
 
-    def get_data( self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
+    def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         """
         General retrieval function for time_series objects
         """

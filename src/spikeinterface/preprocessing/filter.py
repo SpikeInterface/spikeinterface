@@ -274,9 +274,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame=None, end_frame=None, channel_indices=None):
         return self._get_traces_impl(start_frame, end_frame, channel_indices, max_threads=1)
 
-    def get_traces_multi_thread(
-        self, start_frame=None, end_frame=None, channel_indices=None, max_threads=1
-    ):
+    def get_traces_multi_thread(self, start_frame=None, end_frame=None, channel_indices=None, max_threads=1):
         return self._get_traces_impl(start_frame, end_frame, channel_indices, max_threads=max_threads)
 
 
