@@ -46,9 +46,40 @@ def _read_cbin_probe(meta_file, meta):
     """
     if "snsSaveChanSubset_orig" not in meta:
         return probeinterface.read_spikeglx(meta_file)
-    from probeinterface.neuropixels_tools import _read_imro_string
 
-    probe = _read_imro_string(imro_str=meta["imroTbl"], imDatPrb_pn=meta.get("imDatPrb_pn"))
+    # probeinterface 0.3.2 removed the single-shot `_read_imro_string` helper
+    # used previously. The equivalent flow in 0.3.2 is: build the full geometric
+    # probe, parse the IMRO table to a dict, resolve which contact IDs are
+    # active, and slice the full probe down to those contacts.
+    from probeinterface.neuropixels_tools import (
+        build_neuropixels_probe,
+        _parse_imro_string,
+        _get_imro_active_contact_ids,
+        _annotate_probe_with_adc_sampling_info,
+    )
+
+    imDatPrb_pn = meta.get("imDatPrb_pn")
+    # neo's read_meta_file leaves imroTbl as a raw string when the meta field
+    # has no leading '~' (the IBL cbin case noted above). _parse_imro_string
+    # requires the string form, so rebuild it defensively if neo split it.
+    imro_table_string = meta["imroTbl"]
+    if isinstance(imro_table_string, list):
+        imro_table_string = "(" + ")(".join(imro_table_string) + ")"
+
+    full_probe = build_neuropixels_probe(probe_part_number=imDatPrb_pn)
+    imro_per_channel = _parse_imro_string(imro_table_string, imDatPrb_pn)
+    active_contact_ids = _get_imro_active_contact_ids(imro_per_channel)
+    contact_id_to_index = {cid: i for i, cid in enumerate(full_probe.contact_ids)}
+    selected = np.array([contact_id_to_index[cid] for cid in active_contact_ids])
+    probe = full_probe.get_slice(selected)
+
+    # Attach ADC sampling annotations (num_channels_per_adc and per-contact
+    # adc_sample_order) needed by get_neuropixels_sample_shifts_from_probe for
+    # phase_shift preprocessing. Must run while contacts are still in readout
+    # channel order, i.e. before the snsSaveChanSubset_orig slice below.
+    adc_sampling_table = probe.annotations.get("adc_sampling_table")
+    _annotate_probe_with_adc_sampling_info(probe, adc_sampling_table)
+
     saved = _get_saved_channel_indices(meta)
     if saved is not None:
         saved = saved[saved < probe.get_contact_count()]
