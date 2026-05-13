@@ -229,19 +229,19 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
-    
+
     def _compute_and_cache_spike_vector(self) -> None:
         # make the spike_vector fast using the internal spike_times/spike_clusters
         # with a small mapping id to index
         # the order for 2 units with the same sample_index is not garanty here but should be OK
-        
+
         unit_ids = self.unit_ids
 
         # mapping unit_id to unit_index
-        mapping = -np.ones(np.max(unit_ids) +1, dtype="int64")
+        mapping = -np.ones(np.max(unit_ids) + 1, dtype="int64")
         for unit_ind, unit_id in enumerate(unit_ids):
             mapping[unit_id] = unit_ind
-        
+
         spike_times = self.segments[0]._all_spike_times
         spike_clusters = self.segments[0]._all_clusters
         n = spike_times.size
@@ -265,7 +265,9 @@ class PhySortingSegment(BaseSortingSegment):
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         start = 0 if start_frame is None else np.searchsorted(self._all_spike_times, start_frame, side="left")
         end = (
-            len(self._all_spike_times) if end_frame is None else np.searchsorted(self._all_spike_times, end_frame, side="left")
+            len(self._all_spike_times)
+            if end_frame is None
+            else np.searchsorted(self._all_spike_times, end_frame, side="left")
         )  # Exclude end frame
 
         spike_times = self._all_spike_times[start:end][self._all_clusters[start:end] == unit_id]
