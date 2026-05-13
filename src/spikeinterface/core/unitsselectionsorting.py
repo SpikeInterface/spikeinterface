@@ -59,11 +59,24 @@ class UnitsSelectionSorting(BaseSorting):
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
-        # lexsort by segment_index, sample_index, unit_index
-        sort_indices = np.lexsort(
-            (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-        )
-        self._cached_spike_vector = spike_vector[sort_indices]
+
+        # check if order is preserved
+        pos = np.searchsorted(self._parent_sorting.unit_ids, self.unit_ids)
+        order_is_preserved = np.all(np.diff(pos)>0)
+        print('order_is_preserved', order_is_preserved)
+
+        if not order_is_preserved:
+            # note from Sam:
+            # this can be a very high cost and make big dataset very slow
+            # the only goal of this is to ensure the unit_index order when the sample is the same
+            # (and maybe this is not so usefull!!! : to be discussed)
+
+            # lexsort by segment_index, sample_index, unit_index
+            sort_indices = np.lexsort(
+                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+            )
+            spike_vector = spike_vector[sort_indices]
+        self._cached_spike_vector = spike_vector
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
