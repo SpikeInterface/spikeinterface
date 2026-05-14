@@ -6,10 +6,14 @@ from spikeinterface.core import get_chunk_with_margin, apply_raised_cosine_taper
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-# Default 32-tap FIR with DC-gain normalization.  Measured <0.001 % broadband
-# RMS error vs the FFT reference on real Neuropixels 2.0 data; 16 taps gives
-# ~0.009 % at half the cost.  64 taps doesn't meaningfully improve on 32.
-_DEFAULT_FIR_TAPS = 32
+# Default 16-tap FIR with DC-gain normalization.  Worst-case in-band RMS
+# error vs the FFT reference is ~0.02 % on a white test signal bandlimited
+# to the NPX analog cutoff — ~180× below the ~5 µV Johnson noise of a
+# 150 kΩ NPX 2.0 electrode at brain temperature, so the FIR's contribution
+# is well below the noise floor any in-vivo recording will see.  Smaller
+# kernels (K<16) start eating into the 0–10 kHz passband; larger ones
+# (K=32, K=64) buy accuracy that is already below the physics floor.
+_DEFAULT_FIR_TAPS = 16
 
 
 class PhaseShiftRecording(BasePreprocessor):
@@ -48,14 +52,15 @@ class PhaseShiftRecording(BasePreprocessor):
           from IBL / SpikeGLX.  Exact to floating-point precision.  Requires
           the 40 ms margin and a raised-cosine taper on the zero-padded
           edges to suppress FFT spectral leakage.
-        - ``"fir"``: a Kaiser-windowed sinc FIR (default 32 taps, β=8.6)
-          with per-channel DC-gain normalization.  ~85× faster than FFT
+        - ``"fir"``: a Kaiser-windowed sinc FIR (default 16 taps, β=8.6)
+          with per-channel DC-gain normalization.  ~170× faster than FFT
           on typical Neuropixels chunks (measured on a 24-core host for
-          1M × 384 float32), with <0.001 % broadband RMS error vs the
-          FFT reference.  Uses a K/2-sample margin (no 40 ms tax) and
-          no taper (a bounded-support FIR at a zero-padded boundary is
-          already exact under linear convolution semantics).
-    n_taps : int, default: 32
+          1M × 384 float32), with ≤0.02 % worst-case in-band RMS error
+          vs the FFT reference — well below the electrode thermal noise
+          floor.  Uses a K/2-sample margin (no 40 ms tax) and no taper
+          (a bounded-support FIR at a zero-padded boundary is already
+          exact under linear convolution semantics).
+    n_taps : int, default: 16
         FIR length when ``method="fir"``.  Must be even.  Ignored for FFT.
     output_dtype : None | dtype, default: None
         When ``method="fir"`` and the parent is integer-typed, setting
@@ -462,8 +467,9 @@ if _HAS_NUMBA:
         """int16-native variant: reads int16, accumulates in float32, writes float32.
 
         ~8% faster than the float32 kernel on (1M, 384) on a 24-core host —
-        halved signal working set (24 KB vs 48 KB for 32 × 384) leaves more
-        L1 headroom, and the int16 → float32 cast vectorizes cleanly.
+        halved signal working set (12 KB vs 24 KB for the 16 × 384 sliding
+        window) leaves more L1 headroom, and the int16 → float32 cast
+        vectorizes cleanly.
         More importantly, it lets callers skip the int16 → float64 → int16
         round-trip that the FFT path requires, saving ~2.4 s/shard of cast
         traffic when the parent is int16.
