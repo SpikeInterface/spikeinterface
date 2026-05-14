@@ -4,10 +4,11 @@ import numpy as np
 from spikeinterface.core.base import base_period_dtype
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.core.recording_tools import get_noise_levels, get_chunk_with_margin
-from spikeinterface.core.generate import NoiseGeneratorRecording
+from spikeinterface.core.generate import MockRecording
 from spikeinterface.core.job_tools import split_job_kwargs
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .normalize_scale import ScaleRecording
 
 
 class SilencedPeriodsRecording(BasePreprocessor):
@@ -100,16 +101,16 @@ class SilencedPeriodsRecording(BasePreprocessor):
                     recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs
                 )
 
-            noise_generator = NoiseGeneratorRecording(
+            mock_noise = MockRecording(
                 num_channels=recording.get_num_channels(),
                 sampling_frequency=recording.sampling_frequency,
                 durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
                 dtype=recording.dtype,
                 seed=seed,
-                noise_levels=noise_levels,
                 strategy="on_the_fly",
                 noise_block_size=int(recording.sampling_frequency),
             )
+            noise_generator = ScaleRecording(mock_noise, gain=noise_levels, dtype=recording.dtype)
         else:
             noise_generator = None
 
