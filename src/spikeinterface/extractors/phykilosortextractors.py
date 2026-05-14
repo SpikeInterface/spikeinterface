@@ -149,7 +149,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             del cluster_info["id"]
 
         if remove_empty_units:
-            cluster_info = cluster_info.query(f"cluster_id in {unique_unit_ids}")
+            cluster_info = cluster_info.query(f"cluster_id in {list(unique_unit_ids)}")
 
         # update spike clusters and times values
         bad_clusters = [clust for clust in unique_unit_ids if clust not in cluster_info["cluster_id"].values]
