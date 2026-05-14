@@ -15,7 +15,10 @@ import warnings
 
 import probeinterface
 
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neuropixels_utils import (
+    get_neuropixels_sample_shifts_from_probe,
+    compute_saturation_threshold_from_probe,
+)
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
@@ -339,12 +342,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                         self.set_property("inter_sample_shift", sample_shifts)
 
                     # add saturation levels if available
-                    saturation_threshold_uV = None
-                    # LFP should be in the oe_stream_name for LFP streams, anything else is considered AP
-                    if "LFP" in oe_stream_name:
-                        saturation_threshold_uV = probe.annotations.get("lf_saturation_uV", None)
-                    else:
-                        saturation_threshold_uV = probe.annotations.get("ap_saturation_uV", None)
+                    saturation_threshold_uV = compute_saturation_threshold_from_probe(probe, oe_stream_name)
                     if saturation_threshold_uV is not None:
                         self.annotate(saturation_threshold_uV=saturation_threshold_uV)
 
