@@ -49,9 +49,10 @@ class PhaseShiftRecording(BasePreprocessor):
         Interpolation method.
 
         - ``"fft"``: the original rfft → phase-rotate → irfft implementation
-          from IBL / SpikeGLX.  Exact to floating-point precision.  Requires
-          the 40 ms margin and a raised-cosine taper on the zero-padded
-          edges to suppress FFT spectral leakage.
+          from IBL / SpikeGLX.  Exact to floating-point precision for all
+          frequencies up to Nyquist.  Requires the 40 ms margin and a
+          raised-cosine taper on the zero-padded edges to suppress FFT
+          spectral leakage.
         - ``"fir"``: a Kaiser-windowed sinc FIR (default 16 taps, β=8.6)
           with per-channel DC-gain normalization.  ~170× faster than FFT
           on typical Neuropixels chunks (measured on a 24-core host for
@@ -60,8 +61,29 @@ class PhaseShiftRecording(BasePreprocessor):
           floor.  Uses a K/2-sample margin (no 40 ms tax) and no taper
           (a bounded-support FIR at a zero-padded boundary is already
           exact under linear convolution semantics).
+
+          **The FIR also acts as an implicit soft lowpass.**  A K-tap
+          windowed sinc cannot be a perfect allpass; it has a flat
+          passband up to roughly ``≈ 0.33 · fs`` for the K=16 default,
+          rolling off above that.  For Neuropixels (analog cutoff at
+          ~10 kHz, fs = 30 kHz) the FIR's rolloff sits at the analog
+          cutoff, so it attenuates only out-of-band noise — a side
+          effect that's *beneficial* in practice (slightly cleaner data
+          at high frequencies; the analog filter already removed signal
+          there).  For applications where signal content extends past
+          ``~0.33 · fs`` (high-fs custom probes, broadband non-ephys
+          data, or any case where exact allpass behaviour is required)
+          either raise ``n_taps`` (K=32 widens the flat passband to
+          ``~0.4 · fs``; K=64 to ``~0.45 · fs``) or use ``method="fft"``.
     n_taps : int, default: 16
         FIR length when ``method="fir"``.  Must be even.  Ignored for FFT.
+        K=16 is matched to NPX 2.0 (12-bit ADC + 10 kHz analog passband
+        at fs=30 kHz); the FIR's residual error is ~5000:1 (≈ 12 bits),
+        i.e. at the ADC's precision limit.  Higher K trades compute for
+        a wider flat passband and tighter accuracy: K=32 reaches
+        ~21 000:1 (~14 bits) but is ~2× more expensive on compute-bound
+        machines (kernel time on DRAM-bandwidth-bound hosts is roughly
+        the same up to K~24).
     output_dtype : None | dtype, default: None
         When ``method="fir"`` and the parent is integer-typed, setting
         ``output_dtype=np.float32`` enables the int16-native fast path:
