@@ -666,10 +666,17 @@ class SortingAnalyzer:
             zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
         elif sorting.check_serializability("pickle"):
             zarr_sort = np.array([sort_dict], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
+            try:
+                zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
+            except Exception as e:
+                warnings.warn(
+                    "Failed to serialize sorting provenance with Pickle Codec! "
+                    "The sorting provenance link will be lost for future load"
+                )
         else:
             warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+                "The sorting provenance is not serializable! "
+                "The sorting provenance link will be lost for future load"
             )
 
         recording_info = zarr_root.create_group("recording_info")
