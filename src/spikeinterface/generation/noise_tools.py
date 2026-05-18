@@ -107,9 +107,7 @@ class NoiseGeneratorRecording(BaseRecording):
                 segments_seeds[i],
             )
             if spectral_density is not None:
-                rec_segment = AddTemporalCorrelationsSegment(
-                    rec_segment, spectral_density
-                )
+                rec_segment = AddTemporalCorrelationsSegment(rec_segment, spectral_density)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = {
@@ -234,7 +232,6 @@ class AddTemporalCorrelationsSegment(BasePreprocessorSegment):
         # that's because the FFT method would FFT the traces, and there would be slight numerical differences
         traces = convolve(traces.T, self.kernel[None], mode="valid", method="direct").T
         return traces
-
 
 
 noise_generator_recording = define_function_from_class(

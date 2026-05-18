@@ -98,5 +98,6 @@ def test_noise_generator_temporal(duration):
     )
     np.testing.assert_allclose(psd, fake_psd, atol=0.5)
 
+
 if __name__ == "__main__":
     test_generate_noise()
