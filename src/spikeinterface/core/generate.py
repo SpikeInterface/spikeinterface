@@ -1658,8 +1658,7 @@ default_unit_params_range = dict(
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     spatial_decay=(10.0, 45.0),
-    spatial_base=(0.1, 1.0),
-    spatial_power=(2.0, 4.0),
+    spatial_power=(1.5, 2.5),
     propagation_speed=(250.0, 350.0),  # um  / ms
     ellipse_shrink=(0.4, 1),
     ellipse_angle=(0, np.pi * 2),
@@ -1744,8 +1743,7 @@ def generate_templates(
             * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
             * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
             * "spatial_decay": the spatial constant (default range: (20-40))
-            * "spatial_base": denominator term for power spatial decay decay (default range: 0.1-1.0)
-            * "spatial_power": exponent for power spatial decay decay (default range: 2-4)
+            * "spatial_power": exponent for power spatial decay decay (default range: 1.5-2.5)
             * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
 
         Values can be:
@@ -1760,7 +1758,7 @@ def generate_templates(
         Spatial footpring decay curve family.
 
             * "exponential": alpha * exp(-r / spatial_decay)
-            * "power": alpha / (spatial_base + (r/spatial_decay) ** spatial_power)
+            * "power": alpha / (1.0 + (r/spatial_decay) ** spatial_power)
 
     Returns
     -------
@@ -1840,7 +1838,7 @@ def generate_templates(
             channel_factors = alpha * np.exp(-distances / spatial_decay)
         elif spatial_profile == "power":
             channel_factors = (distances / spatial_decay) ** params["spatial_power"][u]
-            channel_factors = alpha / (params["spatial_base"][u] + channel_factors)
+            channel_factors = alpha / (1.0 + channel_factors)
 
         wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
 
