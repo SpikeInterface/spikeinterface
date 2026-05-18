@@ -1,0 +1,21 @@
+.. _release0.104.3:
+
+SpikeInterface 0.104.3 release notes
+------------------------------------
+
+April 22th 2025
+
+Minor release with bug fixes
+
+preprocessing:
+
+* Fix filter kwargs (#4543)
+
+widgets:
+
+* Fix sortingview "backend" in plot_sorting_summary (#4554)
+
+
+Contributors:
+
+* @alejoe91
