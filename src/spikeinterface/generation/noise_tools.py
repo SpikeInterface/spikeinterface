@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Literal
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.generate import _ensure_seed
@@ -33,12 +32,6 @@ class NoiseGeneratorRecording(BaseRecording):
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
         The seed for np.random.default_rng.
-    strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
-        The strategy of generating noise chunk:
-          * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
-                                 very fast and cusume only one noise block.
-          * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
-                          no memory preallocation but a bit more computaion (random)
     noise_block_size : int, default: 30000
         Size in sample of noise block.
 
@@ -57,7 +50,6 @@ class NoiseGeneratorRecording(BaseRecording):
         cov_matrix: np.ndarray | None = None,
         dtype: np.dtype | str | None = "float32",
         seed: int | None = None,
-        strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
 
@@ -65,7 +57,6 @@ class NoiseGeneratorRecording(BaseRecording):
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
-        assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
         if np.isscalar(noise_levels):
             noise_levels = np.ones((1, num_channels)) * noise_levels
@@ -103,7 +94,6 @@ class NoiseGeneratorRecording(BaseRecording):
                 cov_matrix,
                 dtype,
                 segments_seeds[i],
-                strategy,
             )
             self.add_recording_segment(rec_segment)
 
@@ -115,7 +105,6 @@ class NoiseGeneratorRecording(BaseRecording):
             "cov_matrix": cov_matrix,
             "dtype": dtype,
             "seed": seed,
-            "strategy": strategy,
             "noise_block_size": noise_block_size,
         }
 
@@ -131,7 +120,6 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         cov_matrix,
         dtype,
         seed,
-        strategy,
     ):
         assert seed is not None
 
@@ -144,23 +132,6 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.cov_matrix = cov_matrix
         self.dtype = dtype
         self.seed = seed
-        self.strategy = strategy
-
-        if self.strategy == "tile_pregenerated":
-            rng = np.random.default_rng(seed=self.seed)
-
-            if self.cov_matrix is None:
-                self.noise_block = (
-                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                    * noise_levels
-                )
-            else:
-                self.noise_block = rng.multivariate_normal(
-                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                )
-
-        elif self.strategy == "on_the_fly":
-            pass
 
     def get_num_samples(self) -> int:
         return self.num_samples
@@ -169,7 +140,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: list | None = None,
+        channel_indices: list | np.ndarray | tuple | None = None,
     ) -> np.ndarray:
 
         if start_frame is None:
@@ -188,18 +159,15 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
 
         pos = 0
         for block_index in range(first_block_index, last_block_index + 1):
-            if self.strategy == "tile_pregenerated":
-                noise_block = self.noise_block
-            elif self.strategy == "on_the_fly":
-                rng = np.random.default_rng(seed=(self.seed, block_index))
-                if self.cov_matrix is None:
-                    noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                else:
-                    noise_block = rng.multivariate_normal(
-                        np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                    )
+            rng = np.random.default_rng(seed=(self.seed, block_index))
+            if self.cov_matrix is None:
+                noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+            else:
+                noise_block = rng.multivariate_normal(
+                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
+                )
 
-                noise_block *= self.noise_levels
+            noise_block *= self.noise_levels
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
@@ -284,7 +252,6 @@ def generate_noise(
         sampling_frequency=sampling_frequency,
         durations=durations,
         dtype=dtype,
-        strategy="on_the_fly",
         noise_levels=noise_levels,
         cov_matrix=cov_matrix,
         seed=seed,
