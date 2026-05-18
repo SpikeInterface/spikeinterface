@@ -18,7 +18,7 @@ from .job_tools import (
     split_job_kwargs,
 )
 
-from .time_series_tools import get_random_sample_slices, get_chunks, get_chunk_with_margin
+from .time_series_tools import get_random_sample_slices, get_chunks, get_time_series_chunk_with_margin
 from .time_series_tools import write_binary as _write_binary
 from .time_series_tools import write_memory as _write_memory
 from .time_series_tools import _write_time_series_to_zarr
@@ -804,3 +804,39 @@ def do_recording_attributes_match(
         exception_str = ""
 
     return attributes_match, exception_str
+
+
+def get_chunk_with_margin(
+    rec_segment,
+    start_frame,
+    end_frame,
+    channel_indices,
+    margin,
+    add_zeros=False,
+    add_reflect_padding=False,
+    window_on_margin=False,
+    dtype=None,
+):
+    """
+    Helper to get chunk with margin
+
+    The margin is extracted from the recording when possible. If
+    at the edge of the recording, no margin is used unless one
+    of `add_zeros` or `add_reflect_padding` is True. In the first
+    case zero padding is used, in the second case np.pad is called
+    with mod="reflect".
+    """
+
+    # wrapper to keep backward compatibility with the previous naming and signature
+    # this help dartsort for instance
+    return get_time_series_chunk_with_margin(
+        rec_segment,
+        start_frame,
+        end_frame,
+        channel_indices,
+        margin,
+        add_zeros=add_zeros,
+        add_reflect_padding=add_reflect_padding,
+        window_on_margin=window_on_margin,
+        dtype=dtype,
+    )
