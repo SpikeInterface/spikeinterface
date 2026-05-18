@@ -3,6 +3,8 @@ import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.generate import _ensure_seed
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessorSegment
+from spikeinterface.core.recording_tools import get_chunk_with_margin
 
 
 class NoiseGeneratorRecording(BaseRecording):
@@ -28,6 +30,14 @@ class NoiseGeneratorRecording(BaseRecording):
         Std of the white noise (if an array, defined by per channels)
     cov_matrix : np.ndarray | None, default: None
         The covariance matrix of the noise
+    spectral_density : np.ndarray | None, default: None
+        The spectral density of the noise, as you could estimate from an array of snippets with shape
+        `(n_snippets, spectral_snippet_length)` by the following method (Welch's method):
+
+        ```python
+        periodogram = rfft(snippets, n=next_fast_len(snippets.shape[1]), norm="ortho")
+        spectral_density = np.sqrt((periodogram * periodogram.conj()).mean(axis=0))
+        ```
     dtype : np.dtype | str | None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
@@ -48,6 +58,7 @@ class NoiseGeneratorRecording(BaseRecording):
         durations: list[float],
         noise_levels: float | np.ndarray = 1.0,
         cov_matrix: np.ndarray | None = None,
+        spectral_density: np.ndarray | None = None,
         dtype: np.dtype | str | None = "float32",
         seed: int | None = None,
         noise_block_size: int = 30000,
@@ -95,6 +106,10 @@ class NoiseGeneratorRecording(BaseRecording):
                 dtype,
                 segments_seeds[i],
             )
+            if spectral_density is not None:
+                rec_segment = AddTemporalCorrelationsSegment(
+                    rec_segment, spectral_density
+                )
             self.add_recording_segment(rec_segment)
 
         self._kwargs = {
@@ -190,13 +205,52 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 
+class AddTemporalCorrelationsSegment(BasePreprocessorSegment):
+    def __init__(self, parent_recording_segment, spectral_density: np.ndarray):
+        super().__init__(parent_recording_segment)
+        assert spectral_density.ndim == 1
+        self.spectral_density = spectral_density
+        self.margin = spectral_density.shape[0] - 1
+        self.block_len = 2 * spectral_density.shape[0] - 1
+        self.kernel = np.fft.fftshift(np.fft.irfft(spectral_density, n=self.block_len))
+
+    def get_traces(
+        self,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | np.ndarray | tuple | None = None,
+    ):
+        from scipy.signal import convolve
+
+        traces = get_chunk_with_margin(
+            self.parent_recording_segment,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            channel_indices=channel_indices,
+            margin=self.margin,
+            add_reflect_padding=True,
+        )
+        # need to use "direct", or else output differs numerically when start_frame, end_frame change
+        # that's because the FFT method would FFT the traces, and there would be slight numerical differences
+        traces = convolve(traces.T, self.kernel[None], mode="valid", method="direct").T
+        return traces
+
+
+
 noise_generator_recording = define_function_from_class(
     source_class=NoiseGeneratorRecording, name="noise_generator_recording"
 )
 
 
 def generate_noise(
-    probe, sampling_frequency, durations, dtype="float32", noise_levels=15.0, spatial_decay=None, seed=None
+    probe,
+    sampling_frequency,
+    durations,
+    dtype="float32",
+    noise_levels=15.0,
+    spatial_decay=None,
+    spectral_density=None,
+    seed=None,
 ):
     """
     Generate a noise recording.
@@ -217,6 +271,14 @@ def generate_noise(
         If tuple, then this represent the range.
     spatial_decay : float | None, default: None
         If not None, the spatial decay of the noise used to generate the noise covariance matrix.
+    spectral_density : np.ndarray | None, default: None
+        The spectral density of the noise, as you could estimate from an array of snippets with shape
+        `(n_snippets, spectral_snippet_length)` by the following method (Welch's method):
+
+        ```python
+        periodogram = rfft(snippets, n=next_fast_len(snippets.shape[1]), norm="ortho")
+        spectral_density = np.sqrt((periodogram * periodogram.conj()).mean(axis=0))
+        ```
     seed : int | None, default: None
         The seed for random generator.
 
@@ -254,6 +316,7 @@ def generate_noise(
         dtype=dtype,
         noise_levels=noise_levels,
         cov_matrix=cov_matrix,
+        spectral_density=spectral_density,
         seed=seed,
     )
 
