@@ -1739,6 +1739,7 @@ def generate_templates(
 
     """
     unit_params = unit_params or dict()
+    rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
     assert units_locations.shape[1] == 3
