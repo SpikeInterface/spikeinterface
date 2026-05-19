@@ -4,7 +4,8 @@ from pathlib import Path
 import json
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
+from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.generation import generate_ground_truth_recording
 
 from spikeinterface.curation.curation_format import (
     validate_curation_dict,

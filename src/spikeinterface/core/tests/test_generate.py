@@ -18,11 +18,10 @@ from spikeinterface.core.generate import (
     generate_templates,
     generate_channel_locations,
     generate_unit_locations,
-    generate_ground_truth_recording,
     generate_sorting_to_inject,
     synthesize_random_firings,
 )
-from spikeinterface.generation import NoiseGeneratorRecording
+from spikeinterface.generation import NoiseGeneratorRecording, generate_ground_truth_recording
 
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -220,7 +219,6 @@ def test_noise_generator_several_noise_levels():
         dtype="float32",
         seed=32,
         noise_levels=1,
-        strategy="on_the_fly",
         noise_block_size=20000,
     )
     assert np.all(np.abs(get_noise_levels(rec1) - 1) < 0.1)
@@ -232,7 +230,6 @@ def test_noise_generator_several_noise_levels():
         dtype="float32",
         seed=32,
         noise_levels=[0, 1, 2, 3],
-        strategy="on_the_fly",
         noise_block_size=20000,
     )
     assert np.all(np.abs(get_noise_levels(rec2) - np.arange(4)) < 0.1)

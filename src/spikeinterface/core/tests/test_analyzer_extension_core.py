@@ -4,7 +4,7 @@ import shutil
 
 from pathlib import Path
 
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import Templates
 
@@ -30,7 +30,7 @@ def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
                 alpha=(200.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2406,
     )
     if format == "memory":

@@ -3,7 +3,8 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
+from spikeinterface import create_sorting_analyzer, get_template_extremum_channel
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.base import spike_peak_dtype
 from spikeinterface.core.job_tools import divide_time_series_into_chunks
 

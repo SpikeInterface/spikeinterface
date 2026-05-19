@@ -5,7 +5,8 @@ import platform
 
 import numpy as np
 
-from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording, ms_to_samples
+from spikeinterface.core import generate_recording, generate_sorting, ms_to_samples
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
     extract_waveforms_to_single_buffer,
@@ -29,7 +30,7 @@ def get_dataset():
         num_channels=4,
         num_units=7,
         generate_sorting_kwargs=dict(firing_rates=5.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=1.0),
         seed=2205,
     )
     return recording, sorting

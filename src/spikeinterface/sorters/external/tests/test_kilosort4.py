@@ -1,7 +1,8 @@
 import unittest
 import pytest
 
-from spikeinterface import load, generate_ground_truth_recording
+from spikeinterface import load
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.sorters import Kilosort4Sorter, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 

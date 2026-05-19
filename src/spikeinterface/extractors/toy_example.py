@@ -7,8 +7,8 @@ from spikeinterface.core.generate import (
     generate_channel_locations,
     generate_unit_locations,
     generate_templates,
-    generate_ground_truth_recording,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 
 
 def toy_example(
@@ -155,7 +155,7 @@ def toy_example(
         ms_after=ms_after,
         dtype="float32",
         seed=seed,
-        noise_kwargs=dict(noise_levels=10.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=10.0),
     )
 
     return recording, sorting

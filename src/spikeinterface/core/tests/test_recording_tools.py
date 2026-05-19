@@ -33,7 +33,6 @@ def test_write_binary_recording(tmp_path):
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
-        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw"]
 
@@ -60,7 +59,6 @@ def test_write_binary_recording_offset(tmp_path):
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
-        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw"]
 
@@ -95,7 +93,6 @@ def test_write_binary_recording_parallel(tmp_path):
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         dtype=dtype,
-        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -125,7 +122,6 @@ def test_write_binary_recording_multiple_segment(tmp_path):
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
-        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -146,9 +142,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = MockRecording(
-        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
-    )
+    recording = MockRecording(num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000)
     recording = recording.save()
 
     # write with loop
@@ -316,9 +310,7 @@ def test_order_channels_by_depth():
 
 
 def test_do_recording_attributes_match():
-    recording = MockRecording(
-        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
-    )
+    recording = MockRecording(num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000)
     rec_attributes = get_rec_attributes(recording)
     do_match, _ = do_recording_attributes_match(recording, rec_attributes)
     assert do_match

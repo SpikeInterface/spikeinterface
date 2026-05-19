@@ -5,13 +5,13 @@ import numpy as np
 import shutil
 
 from spikeinterface.core import (
-    generate_ground_truth_recording,
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
     get_default_analyzer_extension_params,
     get_default_zarr_compressor,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.sortinganalyzer import (
     register_result_extension,
     AnalyzerExtension,
@@ -31,7 +31,7 @@ def get_dataset():
         num_channels=10,
         num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
 

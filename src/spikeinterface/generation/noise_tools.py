@@ -284,7 +284,6 @@ def generate_noise(
         sampling_frequency=sampling_frequency,
         durations=durations,
         dtype=dtype,
-        strategy="on_the_fly",
         noise_levels=noise_levels,
         cov_matrix=cov_matrix,
         seed=seed,

@@ -7,12 +7,12 @@ from spikeinterface.core import (
     BaseSorting,
     BaseSortingSegment,
     read_python,
-    generate_ground_truth_recording,
     ChannelSparsity,
     ComputeTemplates,
     create_sorting_analyzer,
     SortingAnalyzer,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.core_tools import define_function_from_class
 
 from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations

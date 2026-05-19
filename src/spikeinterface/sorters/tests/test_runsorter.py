@@ -7,7 +7,8 @@ from packaging.version import parse
 import json
 import numpy as np
 
-from spikeinterface import generate_ground_truth_recording, load
+from spikeinterface import load
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.sorters import run_sorter
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))

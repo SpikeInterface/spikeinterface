@@ -1,7 +1,7 @@
 import pytest
 import shutil
 
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.sorters import run_sorter
 from spikeinterface.core.snippets_tools import snippets_from_sorting
 

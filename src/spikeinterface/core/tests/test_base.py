@@ -6,7 +6,8 @@ but check only for BaseRecording general methods.
 from typing import Sequence
 import numpy as np
 from spikeinterface.core.base import BaseExtractor
-from spikeinterface.core import generate_recording, generate_ground_truth_recording, concatenate_recordings
+from spikeinterface.core import generate_recording, concatenate_recordings
+from spikeinterface.generation import generate_ground_truth_recording
 
 
 class DummyDictExtractor(BaseExtractor):
