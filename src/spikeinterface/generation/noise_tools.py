@@ -220,7 +220,12 @@ class AddTemporalCorrelationsSegment(BasePreprocessorSegment):
     ):
         from scipy.signal import convolve
 
-        traces = get_chunk_with_margin(
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
+        traces, *_ = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame=start_frame,
             end_frame=end_frame,
@@ -231,6 +236,7 @@ class AddTemporalCorrelationsSegment(BasePreprocessorSegment):
         # need to use "direct", or else output differs numerically when start_frame, end_frame change
         # that's because the FFT method would FFT the traces, and there would be slight numerical differences
         traces = convolve(traces.T, self.kernel[None], mode="valid", method="direct").T
+        assert traces.shape[0] == end_frame - start_frame
         return traces
 
 
