@@ -1628,10 +1628,10 @@ default_unit_params_range = dict(
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     spatial_decay=(10.0, 45.0),
-    spatial_power=(1.5, 2.5),
     propagation_speed=(250.0, 350.0),  # um  / ms
     ellipse_shrink=(0.4, 1),
     ellipse_angle=(0, np.pi * 2),
+    spatial_power=(1.5, 2.5),
 )
 
 
