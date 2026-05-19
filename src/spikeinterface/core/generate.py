@@ -1743,6 +1743,7 @@ def generate_templates(
 
     # neuron location must be 3D
     assert units_locations.shape[1] == 3
+    assert spatial_profile in ("exponential", "power")
 
     # channel_locations to 3D
     if channel_locations.shape[1] == 2:
