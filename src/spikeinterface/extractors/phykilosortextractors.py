@@ -156,9 +156,14 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         # update spike clusters and times values
         bad_clusters = [clust for clust in clust_id if clust not in cluster_info["cluster_id"].values]
-        spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
-        spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
-        spike_times_clean = spike_times[spike_clusters_clean_idxs]
+        if len(bad_clusters) > 0:
+            spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
+            spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
+            spike_times_clean = spike_times[spike_clusters_clean_idxs]
+        else:
+            # No bad clusters — skip the O(N) isin mask and two N-sized copies.
+            spike_clusters_clean = spike_clusters
+            spike_times_clean = spike_times
 
         if "si_unit_id" in cluster_info.columns:
             unit_ids = cluster_info["si_unit_id"].values
@@ -311,7 +316,7 @@ class PhySortingSegment(BaseSortingSegment):
             return {}
 
         # Map cluster ids -> unit indices via a direct lookup table.
-        # See `_compute_and_cache_spike_vector()`. 
+        # See `_compute_and_cache_spike_vector()`.
         max_id = int(max(unit_ids_arr.max(), clusters.max() if clusters.size else -1))
         cluster_to_dest = np.full(max_id + 1, -1, dtype=np.int64)
         cluster_to_dest[unit_ids_arr] = np.arange(num_units, dtype=np.int64)
