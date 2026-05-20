@@ -9,7 +9,7 @@ from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
-    NoiseGeneratorRecording,
+    MockRecording,
     SortingGenerator,
     TransformSorting,
     generate_recording_by_size,
@@ -22,6 +22,7 @@ from spikeinterface.core.generate import (
     generate_sorting_to_inject,
     synthesize_random_firings,
 )
+from spikeinterface.generation import NoiseGeneratorRecording
 
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -178,7 +179,7 @@ def test_noise_generator_memory():
 
     # case 1 preallocation of noise use one noise block 88M for 60000 sample of 384
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    rec1 = NoiseGeneratorRecording(
+    rec1 = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -193,11 +194,11 @@ def test_noise_generator_memory():
     ratio = expected_allocation_MiB / expected_allocation_MiB
     assert (
         ratio <= 1.0 + relative_tolerance
-    ), f"NoiseGeneratorRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    ), f"MockRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
 
     # case 2: no preallocation very few memory (under 2 MiB)
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    rec2 = NoiseGeneratorRecording(
+    rec2 = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -208,7 +209,7 @@ def test_noise_generator_memory():
     )
     after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
-    assert memory_usage_MiB < 2, f"NoiseGeneratorRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
+    assert memory_usage_MiB < 2, f"MockRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
 
 
 def test_noise_generator_several_noise_levels():
@@ -262,7 +263,7 @@ def test_noise_generator_correct_shape(strategy):
     num_channels = 2
     seed = 0
 
-    lazy_recording = NoiseGeneratorRecording(
+    lazy_recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -298,7 +299,7 @@ def test_noise_generator_consistency_across_calls(strategy, start_frame, end_fra
     num_channels = 2
     seed = 0
 
-    lazy_recording = NoiseGeneratorRecording(
+    lazy_recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -333,7 +334,7 @@ def test_noise_generator_consistency_across_traces(strategy, start_frame, end_fr
     num_channels = 2
     seed = start_frame + end_frame + extra_samples  # To make sure that the seed is different for each test
 
-    lazy_recording = NoiseGeneratorRecording(
+    lazy_recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -353,7 +354,7 @@ def test_noise_generator_consistency_across_traces(strategy, start_frame, end_fr
 @pytest.mark.parametrize("seed", [None, 42])
 def test_noise_generator_consistency_after_dump(strategy, seed):
     # test same noise after dump even with seed=None
-    rec0 = NoiseGeneratorRecording(
+    rec0 = MockRecording(
         num_channels=2,
         sampling_frequency=30000.0,
         durations=[2.0],
