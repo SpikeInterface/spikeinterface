@@ -14,6 +14,7 @@ from spikeinterface.core.sorting_tools import (
     generate_unit_ids_for_merge_group,
     remap_unit_indices_in_vector,
     is_spike_vector_sorted,
+    build_spike_vector_from_sorted_arrays,
 )
 from spikeinterface.core.base import minimum_spike_dtype
 
@@ -115,6 +116,112 @@ def test_is_spike_vector_sorted_assume_single_segment():
     tie_unsorted["sample_index"] = [0, 100, 100, 200, 300]
     tie_unsorted["unit_index"] = [0, 1, 0, 0, 0]
     assert not is_spike_vector_sorted(tie_unsorted, assume_single_segment=True)
+
+
+def _reference_spike_vector(sample_indices, unit_indices, segment_index=0):
+    """Reference implementation: global lexsort, used as ground truth in tests."""
+    n = sample_indices.size
+    spikes = np.empty(n, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = sample_indices
+    spikes["unit_index"] = unit_indices
+    spikes["segment_index"] = segment_index
+    order = np.lexsort((spikes["unit_index"], spikes["sample_index"]))
+    return spikes[order]
+
+
+@pytest.fixture(params=[True, False], ids=["numba", "numpy"])
+def force_numba(request, monkeypatch):
+    """Run each test once with numba enabled (if installed) and once with the fallback."""
+    if request.param and importlib.util.find_spec("numba") is None:
+        pytest.skip("numba not installed")
+    monkeypatch.setattr("spikeinterface.core.sorting_tools.HAVE_NUMBA", request.param)
+    return request.param
+
+
+def test_build_spike_vector_no_ties(force_numba):
+    sample_indices = np.array([10, 20, 30, 40, 50], dtype=np.int64)
+    unit_indices = np.array([3, 1, 4, 1, 5], dtype=np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
+    assert out.dtype == np.dtype(minimum_spike_dtype)
+    assert np.array_equal(out["sample_index"], sample_indices)
+    assert np.array_equal(out["unit_index"], unit_indices)
+    assert np.all(out["segment_index"] == 0)
+
+
+def test_build_spike_vector_with_ties(force_numba):
+    # Three runs of ties (lengths 3, 2, 1, 4) with shuffled unit_indices
+    sample_indices = np.array(
+        [10, 10, 10, 20, 20, 30, 40, 40, 40, 40, 50],
+        dtype=np.int64,
+    )
+    unit_indices = np.array([7, 2, 5, 9, 1, 3, 4, 0, 8, 2, 6], dtype=np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
+    ref = _reference_spike_vector(sample_indices, unit_indices)
+    assert np.array_equal(out, ref)
+
+
+def test_build_spike_vector_all_same_sample_index(force_numba):
+    n = 64
+    sample_indices = np.full(n, 42, dtype=np.int64)
+    rng = np.random.default_rng(0)
+    unit_indices = rng.permutation(n).astype(np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
+    ref = _reference_spike_vector(sample_indices, unit_indices)
+    assert np.array_equal(out, ref)
+
+
+def test_build_spike_vector_ties_at_edges(force_numba):
+    # Ties at the very start, the very end, and an isolated single in between.
+    sample_indices = np.array([5, 5, 5, 9, 12, 12, 12], dtype=np.int64)
+    unit_indices = np.array([2, 0, 1, 7, 3, 1, 2], dtype=np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
+    ref = _reference_spike_vector(sample_indices, unit_indices)
+    assert np.array_equal(out, ref)
+
+
+def test_build_spike_vector_empty(force_numba):
+    out = build_spike_vector_from_sorted_arrays(
+        np.array([], dtype=np.int64),
+        np.array([], dtype=np.int64),
+    )
+    assert out.size == 0
+    assert out.dtype == np.dtype(minimum_spike_dtype)
+
+
+def test_build_spike_vector_segment_index(force_numba):
+    sample_indices = np.array([0, 1, 2], dtype=np.int64)
+    unit_indices = np.array([0, 0, 0], dtype=np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices, segment_index=3)
+    assert np.all(out["segment_index"] == 3)
+
+
+def test_build_spike_vector_length_mismatch():
+    with pytest.raises(ValueError):
+        build_spike_vector_from_sorted_arrays(
+            np.array([1, 2, 3], dtype=np.int64),
+            np.array([1, 2], dtype=np.int64),
+        )
+
+
+def test_build_spike_vector_randomized_against_lexsort(force_numba):
+    rng = np.random.default_rng(1234)
+    n = 10_000
+    # Build ~30% ties by drawing sample positions from a small space.
+    sample_indices = np.sort(rng.integers(0, n // 3, size=n).astype(np.int64))
+    unit_indices = rng.integers(0, 200, size=n).astype(np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
+    ref = _reference_spike_vector(sample_indices, unit_indices)
+    assert np.array_equal(out, ref)
+
+
+def test_build_spike_vector_unsorted_falls_back(force_numba):
+    # Caller violates the "sample_indices is sorted" invariant; helper must
+    # still return a globally lexsorted vector via the fallback.
+    sample_indices = np.array([200, 100, 300, 100], dtype=np.int64)
+    unit_indices = np.array([0, 1, 2, 0], dtype=np.int64)
+    out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
+    ref = _reference_spike_vector(sample_indices, unit_indices)
+    assert np.array_equal(out, ref)
 
 
 def test_random_spikes_selection():

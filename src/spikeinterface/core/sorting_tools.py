@@ -5,7 +5,7 @@ from typing import Literal
 
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor, unit_period_dtype
+from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -1006,8 +1006,8 @@ def is_spike_vector_sorted(
     This is an O(n) sequential scan used to avoid an O(n log n) lexsort when the
     vector already happens to be in canonical order.
 
-    The strategy is: compare pairs of adjacent spikes in chunks to avoid allocating 
-    (possibly big) temporary arrays for diffs. 
+    The strategy is: compare pairs of adjacent spikes in chunks to avoid allocating
+    (possibly big) temporary arrays for diffs.
 
     Each adjacent pair has to be fully "lexsorted":
 
@@ -1068,7 +1068,7 @@ def is_spike_vector_sorted(
         segment1 = segment_index[start + 1 : stop + 1]
         if np.any(segment1 < segment0):
             return False
-    
+
         same_segment = segment1 == segment0
 
         sample0 = sample_index[start:stop]
@@ -1082,3 +1082,151 @@ def is_spike_vector_sorted(
             return False
 
     return True
+
+
+def build_spike_vector_from_sorted_arrays(
+    sample_indices: np.ndarray,
+    unit_indices: np.ndarray,
+    segment_index: int = 0,
+) -> np.ndarray:
+    """Build a `minimum_spike_dtype` spike vector when sample_indices is already sorted.
+
+    Some sorting extractors (notably Phy/Kilosort) hold their spike samples in
+    a flat array that is already monotonic non-decreasing in `sample_index`.
+    Building the spike vector then only requires sorting `unit_index` *within*
+    runs of equal `sample_index` — a single O(N) pass, instead of an O(N log N)
+    global `np.lexsort`.
+
+    Parameters
+    ----------
+    sample_indices : np.ndarray
+        1-D integer array of spike sample positions. Expected to be monotonic
+        non-decreasing; if a violation is detected the function falls back to
+        a global lexsort so the result is still correct.
+    unit_indices : np.ndarray
+        1-D integer array, parallel to `sample_indices`, giving each spike's
+        unit index (position in the parent sorting's `unit_ids`).
+    segment_index : int, default 0
+        Value to broadcast into the output `segment_index` field.
+
+    Returns
+    -------
+    spikes : np.ndarray
+        Structured array of length `sample_indices.size` with dtype
+        `minimum_spike_dtype`. The ordering is identical to what you would
+        get by building the structured array from the inputs and then
+        applying ``np.lexsort((unit_indices, sample_indices))`` — i.e.
+        primary key `sample_index` ascending, secondary key `unit_index`
+        ascending within ties.
+    """
+    n = sample_indices.size
+    if unit_indices.size != n:
+        raise ValueError(f"sample_indices and unit_indices must have the same length; got {n} and {unit_indices.size}.")
+
+    if n == 0:
+        return np.empty(0, dtype=minimum_spike_dtype)
+
+    # Since the numba kernel is compiled for int64, this ensures we don't re-JIT if,
+    # for examples, the caller passes unit ids as int32. More importantly, this allows
+    # the kernel to index with a constant stride no matter what (e.g. if the caller
+    # passes a non-contiguous view like `arr[::2]`), and costs nothing if no-op.
+    sample_arr = np.ascontiguousarray(sample_indices, dtype=np.int64)
+    unit_arr = np.ascontiguousarray(unit_indices, dtype=np.int64)
+
+    if HAVE_NUMBA:
+        # Allocate the output as a flat (N, 3) int64 buffer and let one numba
+        # kernel pass do everything: monotonicity check, unit-index
+        # tie resolution, and writing all three fields.
+        flat = np.empty((n, 3), dtype=np.int64)
+        is_monotonic = _build_spike_vector_kernel(sample_arr, unit_arr, int(segment_index), flat)
+        if is_monotonic:
+            # NB: This is zero-copy, becuase the (N, 3) int64 layout matches
+            # `minimum_spike_dtype` exactly.
+            return flat.view(minimum_spike_dtype).reshape(n)
+
+    # Fallback: caller's sample_indices invariant did not hold (or numba
+    # is unavailable). Do a global lexsort. ='(
+    spikes = np.empty(n, dtype=minimum_spike_dtype)
+    spikes["segment_index"] = segment_index
+    order = np.lexsort((unit_arr, sample_arr))
+    spikes["sample_index"] = sample_arr[order]
+    spikes["unit_index"] = unit_arr[order]
+    return spikes
+
+
+if HAVE_NUMBA:
+    import numba
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _build_spike_vector_kernel(sample_indices, unit_indices, segment_index, flat_out):
+        """Single-pass build of a `minimum_spike_dtype` spike vector.
+
+        Walks `sample_indices` once and, for each spike, writes all three
+        fields (sample_index, unit_index, segment_index) into `flat_out`
+        — a contiguous (N, 3) int64 buffer whose memory layout matches
+        `minimum_spike_dtype` exactly.
+
+        While walking, the kernel also:
+          * verifies `sample_indices` is monotonic non-decreasing — returns
+            False at the first violation (caller falls back to a global
+            lexsort),
+          * insertion-sorts `unit_indices` within each run of equal
+            `sample_indices` before emitting that run. Runs of length 1
+            (the common case for Kilosort/Phy output) skip the sort
+            entirely.
+        """
+        n = sample_indices.shape[0]
+        i = 0
+        # Walk one tie-run at a time: [i, j) is the next run of equal sample_indices.
+        while i < n:
+            # Monotonicity guard — bail out and lexsort instead of it fails
+            if i > 0 and sample_indices[i] < sample_indices[i - 1]:
+                return False
+
+            # Find the end of the current tie-run.
+            j = i + 1
+            while j < n and sample_indices[j] == sample_indices[i]:
+                j += 1
+
+            sample = sample_indices[i]
+            if j - i == 1:
+                # Fast path: no co-temporal spikes.
+                # Column order (0, 1, 2) matches minimum_spike_dtype field order
+                # (sample_index, unit_index, segment_index). Essential!
+                flat_out[i, 0] = sample
+                flat_out[i, 1] = unit_indices[i]
+                flat_out[i, 2] = segment_index
+            else:
+                # Tied run: sort unit_indices within the run.
+                # In practice, runs are short (single-digit numbers of spikes) and rare
+                # (single-digit percentage of total spikes), so the per-run allocation
+                # + insertion sort are cheap.
+                run_len = j - i
+
+                # Stage the tied unit_indices into a small working buffer.
+                # This _could_ be expensive if the runs were long, but I tested
+                # with/without, and this _always_ wins.
+                buf = np.empty(run_len, dtype=np.int64)
+                for k in range(run_len):
+                    buf[k] = unit_indices[i + k]
+
+                # Insertion-sort the buffer in place. Beats anything fancier on
+                # tiny arrays (maybe because there is zero setup cost).
+                for k in range(1, run_len):
+                    key = buf[k]
+                    m = k - 1
+                    while m >= 0 and buf[m] > key:
+                        buf[m + 1] = buf[m]
+                        m -= 1
+                    buf[m + 1] = key
+
+                # Emit the run with sorted unit_indices.
+                for k in range(run_len):
+                    flat_out[i + k, 0] = sample
+                    flat_out[i + k, 1] = buf[k]
+                    flat_out[i + k, 2] = segment_index
+
+            # Advance past the run we just emitted.
+            i = j
+
+        return True
