@@ -306,33 +306,36 @@ class PhySortingSegment(BaseSortingSegment):
         clusters = self._all_clusters[start:end]
 
         unit_ids_arr = np.asarray(unit_ids)
-        num_units = len(unit_ids_arr)
+        num_units = unit_ids_arr.size
         if num_units == 0:
             return {}
 
-        # Map each spike's cluster id to a destination index in the caller-supplied
-        # unit_ids order. -1 means "this spike's cluster is not in unit_ids, skip it".
-        sorter = np.argsort(unit_ids_arr, kind="stable")
-        sorted_unit_ids = unit_ids_arr[sorter]
-        idx_in_sorted = np.searchsorted(sorted_unit_ids, clusters, side="left")
-        idx_clamped = np.minimum(idx_in_sorted, num_units - 1)
-        matches = (idx_in_sorted < num_units) & (sorted_unit_ids[idx_clamped] == clusters)
-        dest = np.where(matches, sorter[idx_clamped], -1).astype(np.int64)
-
-        spikes_i64 = np.ascontiguousarray(spikes, dtype=np.int64)
+        # Map cluster ids -> unit indices via a direct lookup table.
+        # See `_compute_and_cache_spike_vector()`. 
+        max_id = int(max(unit_ids_arr.max(), clusters.max() if clusters.size else -1))
+        cluster_to_dest = np.full(max_id + 1, -1, dtype=np.int64)
+        cluster_to_dest[unit_ids_arr] = np.arange(num_units, dtype=np.int64)
+        dest = cluster_to_dest[clusters]
 
         if HAVE_NUMBA:
-            offsets, flat_out = _counting_sort_spikes_by_unit(spikes_i64, dest, num_units)
+            offsets, flat_out = _counting_sort_spikes_by_unit(spikes, dest, num_units)
         else:
             # NumPy fallback: stable argsort by destination index, then split on offsets.
             # Stable sort preserves the input order of spikes within each unit group,
             # and since _all_spikes is sorted by sample_index, so is each group.
-            valid = dest >= 0
-            valid_spikes = spikes_i64[valid]
-            valid_dest = dest[valid]
-            order = np.argsort(valid_dest, kind="stable")
-            flat_out = valid_spikes[order]
-            counts = np.bincount(valid_dest, minlength=num_units)
+            if dest.size and dest.min() >= 0:
+                # Trick: Every cluster in `clusters` is in `unit_ids`, so no
+                # boolean-mask filtering is needed. Skips two N-sized copies.
+                order = np.argsort(dest, kind="stable")
+                flat_out = spikes[order]
+                counts = np.bincount(dest, minlength=num_units)
+            else:
+                valid = dest >= 0
+                valid_spikes = spikes[valid]
+                valid_dest = dest[valid]
+                order = np.argsort(valid_dest, kind="stable")
+                flat_out = valid_spikes[order]
+                counts = np.bincount(valid_dest, minlength=num_units)
             offsets = np.empty(num_units + 1, dtype=np.int64)
             offsets[0] = 0
             np.cumsum(counts, out=offsets[1:])
