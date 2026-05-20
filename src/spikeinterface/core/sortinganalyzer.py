@@ -415,7 +415,7 @@ class SortingAnalyzer:
         """
         if format == "auto":
             # make better assumption and check for auto guess format
-            if Path(folder).suffix == ".zarr":
+            if Path(folder).suffix == ".zarr" or is_path_remote(folder):
                 format = "zarr"
             else:
                 format = "binary_folder"
