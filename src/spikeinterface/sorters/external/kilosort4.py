@@ -1,4 +1,3 @@
-from spikeinterface.widgets.gtstudy import StudyRunTimesWidget
 import warnings
 from packaging import version
 
