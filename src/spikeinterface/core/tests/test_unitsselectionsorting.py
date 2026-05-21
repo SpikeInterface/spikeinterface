@@ -114,7 +114,6 @@ def test_spike_vector_sorted_after_reorder_with_cotemporal_spikes():
     assert is_spike_vector_sorted(spike_vector)
 
 
-
 def test_compute_and_cache_spike_vector_identity_selection_shares_parent_cache():
     """A USS that selects all of its parent's units in parent order should reuse the
     parent's cached spike vector by reference, not rebuild it."""
@@ -142,6 +141,40 @@ def test_compute_and_cache_spike_vector_identity_selection_shares_parent_cache()
     BaseSorting._compute_and_cache_spike_vector(uss2)
     base_vector = uss2._cached_spike_vector
     assert np.array_equal(uss1._cached_spike_vector, base_vector)
+
+
+def test_to_reordered_spike_vector_identity_selection_shares_parent_cache():
+    """A USS that selects all of its parent's units in parent order should reuse the
+    parent's lexsorted spike vector cache by reference, not re-run the counting sort."""
+    sorting = generate_sorting(num_units=5, durations=[0.200, 0.200], sampling_frequency=30000.0)
+
+    # Identity selection, with renamed ids to also exercise the rename-only path.
+    renamed = [f"r{uid}" for uid in sorting.unit_ids]
+    uss = UnitsSelectionSorting(sorting, unit_ids=list(sorting.unit_ids), renamed_unit_ids=renamed)
+
+    for lexsort in [
+        ("sample_index", "segment_index", "unit_index"),
+        ("sample_index", "unit_index", "segment_index"),
+    ]:
+        # Force the parent to build the lexsorted cache.
+        parent_ordered, _, parent_slices = sorting.to_reordered_spike_vector(
+            lexsort=lexsort, return_order=True, return_slices=True
+        )
+        key = str(lexsort)
+        assert key in sorting._cached_lexsorted_spike_vector
+
+        # Reset USS cache and force a build through the override.
+        uss._cached_lexsorted_spike_vector = {}
+        uss_ordered, _, uss_slices = uss.to_reordered_spike_vector(
+            lexsort=lexsort, return_order=True, return_slices=True
+        )
+
+        # The cache entry must be the *same* dict object as the parent's.
+        assert (
+            uss._cached_lexsorted_spike_vector[key] is sorting._cached_lexsorted_spike_vector[key]
+        ), f"identity USS did not share parent lexsorted cache for {lexsort}"
+        assert uss_ordered is parent_ordered
+        assert uss_slices is parent_slices
 
 
 if __name__ == "__main__":

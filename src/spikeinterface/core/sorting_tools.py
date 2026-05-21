@@ -950,7 +950,7 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
       * merging/spliting periods or spikes and update the "unit_index" in the vector
 
     Do not use this if you are operating on `minimum_spike_dtype` inputs! In such cases,
-    it is much more efficient to use a dense LUT + `filter_and_remap_spike_vector()` 
+    it is much more efficient to use a dense LUT + `filter_and_remap_spike_vector()`
     (see `UnitSelectionSorting._compute_and_cache_spike_vector()`).
 
     Parameters
@@ -1171,15 +1171,15 @@ def filter_and_remap_spike_vector(
     Spikes are written in their original order in `spike_vector`, so if the input
     is sorted by ``(segment_index, sample_index, parent_unit_index)`` and
     `unit_mapping`, restricted to its kept entries, is monotonic increasing,
-    then the output is also sorted by ``(segment_index, sample_index, new_unit_index)``. 
-    
-    If `unit_mapping` is not order-preserving, the caller is responsible for re-sorting 
+    then the output is also sorted by ``(segment_index, sample_index, new_unit_index)``.
+
+    If `unit_mapping` is not order-preserving, the caller is responsible for re-sorting
     cotemporal spike groups (e.g. by calling `is_spike_vector_sorted` + `np.lexsort`).
 
     Parameters
     ----------
     spike_vector : np.ndarray
-        Structured array with dtype `minimum_spike_dtype`. 
+        Structured array with dtype `minimum_spike_dtype`.
     unit_mapping : np.ndarray
         1-D int64 array of length ``parent_num_units``. ``unit_mapping[old]``
         gives the new unit_index, or any negative value to drop the spike.
@@ -1198,20 +1198,91 @@ def filter_and_remap_spike_vector(
 
     if HAVE_NUMBA:
         # Same trick as `build_spike_vector_from_sorted_arrays()`:
-        # These flat-buffier views are zero-copy because the (N, 3) int64 layouts match 
-        # `minimum_spike_dtype` exactly. 
+        # These flat-buffier views are zero-copy because the (N, 3) int64 layouts match
+        # `minimum_spike_dtype` exactly.
         parent_flat = spike_vector.view(np.int64).reshape(n_parent, 3)
         out_flat = np.empty((n_parent, 3), dtype=np.int64)
         n_kept = _filter_and_remap_kernel(parent_flat, mapping_arr, out_flat)
         return out_flat[:n_kept].view(minimum_spike_dtype).reshape(n_kept)
 
-    # NumPy fallback: bool-mask + remap. 
+    # NumPy fallback: bool-mask + remap.
     old_unit_idx = spike_vector["unit_index"]
     new_unit_idx_full = mapping_arr[old_unit_idx]
     keep = new_unit_idx_full >= 0
     out = spike_vector[keep].copy()
     out["unit_index"] = new_unit_idx_full[keep]
     return out
+
+
+def reorder_spike_vector_by_buckets(
+    spike_vector: np.ndarray,
+    bucket_index: np.ndarray,
+    num_buckets: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Stable counting-sort of a `minimum_spike_dtype` spike vector by precomputed
+    bucket index.
+
+    If numba is available, runs in O(N) using a kernel based on the algorithm described
+    in Cormen, Leiserson, Rivest, and Stein (CLRS) Chapter 8.2. Uses the same
+    flat-buffer view trick as `build_spike_vector_from_sorted_arrays()` and
+    `filter_and_remap_spike_vector()` to avoid intermediate copies.
+
+    Stability means rows are emitted in input order within each bucket,
+    so any pre-existing sort within a bucket
+    (e.g. ascending `sample_index` within a (segment, unit) group) is preserved.
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray
+        Structured array with dtype `minimum_spike_dtype`.
+    bucket_index : np.ndarray
+        1-D integer array of length ``spike_vector.size`` giving the
+        destination bucket for each spike. Values must be in
+        ``[0, num_buckets)``.
+    num_buckets : int
+        Total number of buckets.
+
+    Returns
+    -------
+    ordered_spikes : np.ndarray
+        Structured array of `minimum_spike_dtype`, same length as input,
+        with rows grouped by `bucket_index`.
+    order : np.ndarray
+        1-D int64 array such that ``spike_vector[order] == ordered_spikes``.
+    counts : np.ndarray
+        1-D int64 array of length `num_buckets`, the number of spikes in
+        each bucket.
+    """
+    n = spike_vector.size
+    if n == 0:
+        return (
+            np.empty(0, dtype=minimum_spike_dtype),
+            np.empty(0, dtype=np.int64),
+            np.zeros(int(num_buckets), dtype=np.int64),
+        )
+
+    # See implementation note in `build_spike_vector_from_sorted_arrays()`.
+    bucket_arr = np.ascontiguousarray(bucket_index, dtype=np.int64)
+    if bucket_arr.size != n:
+        raise ValueError(f"bucket_index and spike_vector must have the same length; got {bucket_arr.size} and {n}.")
+
+    if HAVE_NUMBA:
+        # Same trick as `build_spike_vector_from_sorted_arrays()`:
+        # These flat-buffier views are zero-copy because the (N, 3) int64 layouts match
+        # `minimum_spike_dtype` exactly.
+        in_flat = spike_vector.view(np.int64).reshape(n, 3)
+        out_flat = np.empty((n, 3), dtype=np.int64)
+        order = np.empty(n, dtype=np.int64)
+        counts = np.empty(int(num_buckets), dtype=np.int64)
+        _reorder_spike_vector_kernel(in_flat, bucket_arr, int(num_buckets), out_flat, order, counts)
+        ordered_spikes = out_flat.view(minimum_spike_dtype).reshape(n)
+        return ordered_spikes, order, counts
+
+    # NumPy fallback: stable argsort by bucket, then fancy-index the structured array.
+    order = np.argsort(bucket_arr, kind="stable")
+    ordered_spikes = spike_vector[order]
+    counts = np.bincount(bucket_arr, minlength=int(num_buckets)).astype(np.int64, copy=False)
+    return ordered_spikes, order, counts
 
 
 if HAVE_NUMBA:
@@ -1320,3 +1391,44 @@ if HAVE_NUMBA:
                 out_flat[write_pos, 2] = parent_flat[i, 2]
                 write_pos += 1
         return write_pos
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _reorder_spike_vector_kernel(in_flat, bucket_index, num_buckets, out_flat, order, counts):
+        """Stable counting-sort of a (N, 3) int64 spike-vector flat-buffer view by bucket.
+
+        Adapted from Cormen, Leiserson, Rivest, and Stein (CLRS) Chapter 8.2.
+
+        Two O(N) passes:
+          1. histogram `bucket_index` into `counts`,
+          2. cumulative-sum to per-bucket write positions, then scatter each
+             row of `in_flat` to its destination in `out_flat` and record the
+             source index in `order` so that ``in[order] == out``.
+
+        Stability: within each bucket, rows keep their input order, so any
+        ordering already present in `in_flat` (e.g. ascending sample_index
+        within a (segment, unit) group) carries over to `out_flat`.
+        """
+        n = in_flat.shape[0]
+
+        for b in range(num_buckets):
+            counts[b] = 0
+        for i in range(n):
+            counts[bucket_index[i]] += 1
+
+        # Exclusive prefix sum into a local write_pos buffer. `counts` keeps
+        # the per-bucket sizes (the caller uses them to derive slices).
+        # (If slices weren't needed, maybe this could be done in-place in `counts`?)
+        write_pos = np.empty(num_buckets, dtype=np.int64)
+        running = 0
+        for b in range(num_buckets):
+            write_pos[b] = running
+            running += counts[b]
+
+        for i in range(n):
+            b = bucket_index[i]
+            pos = write_pos[b]
+            out_flat[pos, 0] = in_flat[i, 0]
+            out_flat[pos, 1] = in_flat[i, 1]
+            out_flat[pos, 2] = in_flat[i, 2]
+            order[pos] = i
+            write_pos[b] = pos + 1
