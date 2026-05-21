@@ -115,5 +115,34 @@ def test_spike_vector_sorted_after_reorder_with_cotemporal_spikes():
 
 
 
+def test_compute_and_cache_spike_vector_identity_selection_shares_parent_cache():
+    """A USS that selects all of its parent's units in parent order should reuse the
+    parent's cached spike vector by reference, not rebuild it."""
+    from spikeinterface.core.basesorting import BaseSorting
+
+    sorting = generate_sorting(num_units=4, durations=[0.100, 0.100], sampling_frequency=30000.0)
+
+    # First USS: identity selection over `sorting`. Force its cache.
+    uss1 = UnitsSelectionSorting(sorting, unit_ids=list(sorting.unit_ids))
+    uss1._compute_and_cache_spike_vector()
+    assert uss1._cached_spike_vector is not None
+
+    # Second USS: identity selection over uss1, with renamed ids to exercise the
+    # rename-only path. The cached spike vector must be the same Python object.
+    renamed = [f"r{uid}" for uid in uss1.unit_ids]
+    uss2 = UnitsSelectionSorting(uss1, unit_ids=list(uss1.unit_ids), renamed_unit_ids=renamed)
+    uss2._compute_and_cache_spike_vector()
+    assert uss2._cached_spike_vector is uss1._cached_spike_vector
+    if uss1._cached_spike_vector_segment_slices is not None:
+        assert uss2._cached_spike_vector_segment_slices is uss1._cached_spike_vector_segment_slices
+
+    # Belt-and-suspenders: the shared vector must still match the slow base-class path.
+    uss2._cached_spike_vector = None
+    uss2._cached_spike_vector_segment_slices = None
+    BaseSorting._compute_and_cache_spike_vector(uss2)
+    base_vector = uss2._cached_spike_vector
+    assert np.array_equal(uss1._cached_spike_vector, base_vector)
+
+
 if __name__ == "__main__":
     test_basic_functions()

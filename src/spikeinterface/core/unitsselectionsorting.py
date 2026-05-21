@@ -53,8 +53,20 @@ class UnitsSelectionSorting(BaseSorting):
             if self._parent_sorting._cached_spike_vector is None:
                 return
 
-        # Build a dense LUT from parent unit_index -> new unit_index (-1 = drop).
         parent_unit_ids = self._parent_sorting.unit_ids
+
+        # Check if the user requested an "identity selection": all parent units, in 
+        # parent order, possibly renamed (the spike vector uses unit _index_, and 
+        # renaming doesn't affect that). If so, the cached parent spike vector is 
+        # identical to the one we want, so just share the reference and skip the rest.
+        if self._unit_ids.size == parent_unit_ids.size and np.array_equal(self._unit_ids, parent_unit_ids):
+            self._cached_spike_vector = self._parent_sorting._cached_spike_vector
+            parent_slices = self._parent_sorting._cached_spike_vector_segment_slices
+            if parent_slices is not None:
+                self._cached_spike_vector_segment_slices = parent_slices
+            return
+
+        # Build a dense LUT from parent unit_index -> new unit_index (-1 = drop).
         parent_id_to_pos = {uid: i for i, uid in enumerate(parent_unit_ids)}
         unit_mapping = np.full(parent_unit_ids.size, -1, dtype=np.int64)
         for new_idx, uid in enumerate(self._unit_ids):
