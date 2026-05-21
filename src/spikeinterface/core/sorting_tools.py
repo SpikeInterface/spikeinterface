@@ -949,6 +949,9 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
       * select unit and recompute quickly the "unit_index" in the spike vector
       * merging/spliting periods or spikes and update the "unit_index" in the vector
 
+    Do not use this if you are operating on `minimum_spike_dtype` inputs! In such cases,
+    it is much more efficient to use a dense LUT + `filter_and_remap_spike_vector()` 
+    (see `UnitSelectionSorting._compute_and_cache_spike_vector()`).
 
     Parameters
     ----------
@@ -1140,7 +1143,7 @@ def build_spike_vector_from_sorted_arrays(
         flat = np.empty((n, 3), dtype=np.int64)
         is_monotonic = _build_spike_vector_kernel(sample_arr, unit_arr, int(segment_index), flat)
         if is_monotonic:
-            # NB: This is zero-copy, becuase the (N, 3) int64 layout matches
+            # NB: This is zero-copy, because the (N, 3) int64 layout matches
             # `minimum_spike_dtype` exactly.
             return flat.view(minimum_spike_dtype).reshape(n)
 
@@ -1152,6 +1155,63 @@ def build_spike_vector_from_sorted_arrays(
     spikes["sample_index"] = sample_arr[order]
     spikes["unit_index"] = unit_arr[order]
     return spikes
+
+
+def filter_and_remap_spike_vector(
+    spike_vector: np.ndarray,
+    unit_mapping: np.ndarray,
+) -> np.ndarray:
+    """Filter a `minimum_spike_dtype` spike vector by unit and remap unit_index in one pass.
+
+    For each spike `i` in `spike_vector`:
+      * look up ``new_idx = unit_mapping[spike_vector[i]["unit_index"]]``,
+      * if ``new_idx >= 0``, copy the spike to the output with that new unit_index;
+      * otherwise drop it.
+
+    Spikes are written in their original order in `spike_vector`, so if the input
+    is sorted by ``(segment_index, sample_index, parent_unit_index)`` and
+    `unit_mapping`, restricted to its kept entries, is monotonic increasing,
+    then the output is also sorted by ``(segment_index, sample_index, new_unit_index)``. 
+    
+    If `unit_mapping` is not order-preserving, the caller is responsible for re-sorting 
+    cotemporal spike groups (e.g. by calling `is_spike_vector_sorted` + `np.lexsort`).
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray
+        Structured array with dtype `minimum_spike_dtype`. 
+    unit_mapping : np.ndarray
+        1-D int64 array of length ``parent_num_units``. ``unit_mapping[old]``
+        gives the new unit_index, or any negative value to drop the spike.
+
+    Returns
+    -------
+    out : np.ndarray
+        Structured array of `minimum_spike_dtype`, length `n_kept`.
+    """
+    n_parent = spike_vector.size
+    if n_parent == 0:
+        return np.empty(0, dtype=minimum_spike_dtype)
+
+    # See implementation note in `build_spike_vector_from_sorted_arrays()`
+    mapping_arr = np.ascontiguousarray(unit_mapping, dtype=np.int64)
+
+    if HAVE_NUMBA:
+        # Same trick as `build_spike_vector_from_sorted_arrays()`:
+        # These flat-buffier views are zero-copy because the (N, 3) int64 layouts match 
+        # `minimum_spike_dtype` exactly. 
+        parent_flat = spike_vector.view(np.int64).reshape(n_parent, 3)
+        out_flat = np.empty((n_parent, 3), dtype=np.int64)
+        n_kept = _filter_and_remap_kernel(parent_flat, mapping_arr, out_flat)
+        return out_flat[:n_kept].view(minimum_spike_dtype).reshape(n_kept)
+
+    # NumPy fallback: bool-mask + remap. 
+    old_unit_idx = spike_vector["unit_index"]
+    new_unit_idx_full = mapping_arr[old_unit_idx]
+    keep = new_unit_idx_full >= 0
+    out = spike_vector[keep].copy()
+    out["unit_index"] = new_unit_idx_full[keep]
+    return out
 
 
 if HAVE_NUMBA:
@@ -1230,3 +1290,33 @@ if HAVE_NUMBA:
             i = j
 
         return True
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _filter_and_remap_kernel(parent_flat, unit_mapping, out_flat):
+        """Single-pass filter + remap for a (N, 3) int64 spike-vector view.
+
+        For each row i of `parent_flat` (columns 0/1/2 = sample, unit, segment):
+          look up ``new_unit = unit_mapping[parent_flat[i, 1]]``; if it is
+          non-negative, copy (sample, new_unit, segment) to ``out_flat[write_pos]``
+          and advance `write_pos`.
+
+        Returns the number of spikes written. The caller is expected to slice
+        `out_flat[:n_kept]` and view as `minimum_spike_dtype`.
+
+        Spikes are emitted in the order they appear in `parent_flat`, so
+        ordering on (segment_index, sample_index) is preserved automatically;
+        unit_index ordering within tied sample_index groups follows whatever
+        `unit_mapping` does to the parent's unit_index values.
+        """
+        n = parent_flat.shape[0]
+        write_pos = 0
+        for i in range(n):
+            new_unit = unit_mapping[parent_flat[i, 1]]
+            if new_unit >= 0:
+                # Column order (0, 1, 2) is coupled to minimum_spike_dtype field order
+                # (sample_index, unit_index, segment_index) — keep them in sync.
+                out_flat[write_pos, 0] = parent_flat[i, 0]
+                out_flat[write_pos, 1] = new_unit
+                out_flat[write_pos, 2] = parent_flat[i, 2]
+                write_pos += 1
+        return write_pos

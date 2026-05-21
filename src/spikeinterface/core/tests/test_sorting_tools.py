@@ -15,6 +15,7 @@ from spikeinterface.core.sorting_tools import (
     remap_unit_indices_in_vector,
     is_spike_vector_sorted,
     build_spike_vector_from_sorted_arrays,
+    filter_and_remap_spike_vector,
 )
 from spikeinterface.core.base import minimum_spike_dtype
 
@@ -222,6 +223,81 @@ def test_build_spike_vector_unsorted_falls_back(force_numba):
     out = build_spike_vector_from_sorted_arrays(sample_indices, unit_indices)
     ref = _reference_spike_vector(sample_indices, unit_indices)
     assert np.array_equal(out, ref)
+
+
+def _make_spike_vector(samples, units, segments=None):
+    """Build a minimum_spike_dtype array from parallel arrays. Test helper."""
+    n = len(samples)
+    sv = np.empty(n, dtype=minimum_spike_dtype)
+    sv["sample_index"] = samples
+    sv["unit_index"] = units
+    sv["segment_index"] = segments if segments is not None else 0
+    return sv
+
+
+def test_filter_and_remap_keep_all(force_numba):
+    # Identity mapping: every parent unit_index maps to itself.
+    sv = _make_spike_vector([10, 20, 30, 40], [0, 1, 2, 0])
+    mapping = np.arange(3, dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    assert np.array_equal(out, sv)
+
+
+def test_filter_and_remap_drop_some(force_numba):
+    # Drop unit 1 entirely; keep 0 and 2 with new indices [0, 1].
+    sv = _make_spike_vector([10, 20, 30, 40, 50], [0, 1, 2, 0, 1])
+    mapping = np.array([0, -1, 1], dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    expected = _make_spike_vector([10, 30, 40], [0, 1, 0])
+    assert np.array_equal(out, expected)
+
+
+def test_filter_and_remap_renamed_only(force_numba):
+    # Selection is full but unit indices are permuted: 0->2, 1->0, 2->1.
+    sv = _make_spike_vector([10, 20, 30], [0, 1, 2])
+    mapping = np.array([2, 0, 1], dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    expected = _make_spike_vector([10, 20, 30], [2, 0, 1])
+    assert np.array_equal(out, expected)
+
+
+def test_filter_and_remap_empty_selection(force_numba):
+    sv = _make_spike_vector([10, 20, 30], [0, 1, 2])
+    mapping = np.full(3, -1, dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    assert out.size == 0
+    assert out.dtype == np.dtype(minimum_spike_dtype)
+
+
+def test_filter_and_remap_empty_input(force_numba):
+    sv = np.empty(0, dtype=minimum_spike_dtype)
+    mapping = np.array([0, 1, 2], dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    assert out.size == 0
+    assert out.dtype == np.dtype(minimum_spike_dtype)
+
+
+def test_filter_and_remap_preserves_tie_order(force_numba):
+    # Two cotemporal spikes at sample 100 (units 1 and 2). After dropping unit 0,
+    # the two cotemporals must appear in their original relative order — the kernel
+    # never reorders within ties.
+    sv = _make_spike_vector(
+        [50, 100, 100, 200],
+        [0, 1, 2, 1],
+    )
+    mapping = np.array([-1, 0, 1], dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    expected = _make_spike_vector([100, 100, 200], [0, 1, 0])
+    assert np.array_equal(out, expected)
+
+
+def test_filter_and_remap_segment_index_preserved(force_numba):
+    sv = _make_spike_vector([10, 20, 30, 40], [0, 1, 0, 1], segments=[0, 0, 1, 1])
+    mapping = np.array([0, 1], dtype=np.int64)
+    out = filter_and_remap_spike_vector(sv, mapping)
+    assert np.array_equal(out["segment_index"], [0, 0, 1, 1])
+    assert np.array_equal(out["sample_index"], [10, 20, 30, 40])
+    assert np.array_equal(out["unit_index"], [0, 1, 0, 1])
 
 
 def test_random_spikes_selection():
