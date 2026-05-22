@@ -5,6 +5,7 @@ import importlib.metadata
 __version__ = importlib.metadata.version("spikeinterface")
 
 from .core import *
+from .generation import generate_ground_truth_recording
 
 import warnings
 
