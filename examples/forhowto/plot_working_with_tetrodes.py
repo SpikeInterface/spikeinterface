@@ -11,7 +11,7 @@ We'll start by importing some functions we'll use in this How To guide
 
 import spikeinterface.preprocessing as spre
 from spikeinterface.widgets import plot_traces, plot_probe_map
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 
 from probeinterface import generate_tetrode, ProbeGroup
 

@@ -8,6 +8,7 @@ After spike sorting, you might want to validate the 'goodness' of the sorted uni
 """
 
 import spikeinterface.core as si
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.metrics import (
     compute_snrs,
     compute_presence_ratios,
@@ -17,7 +18,7 @@ from spikeinterface.metrics import (
 ##############################################################################
 # First, let's generate a simulated recording and sorting
 
-recording, sorting = si.generate_ground_truth_recording()
+recording, sorting = generate_ground_truth_recording()
 print(recording)
 print(sorting)
 

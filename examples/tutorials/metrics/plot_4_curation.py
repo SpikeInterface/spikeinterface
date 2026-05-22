@@ -11,13 +11,14 @@ quality metrics that you have calculated.
 # Import the modules and/or functions necessary from spikeinterface
 
 import spikeinterface.core as si
+from spikeinterface.generation import generate_ground_truth_recording
 
 
 ##############################################################################
 # Let's generate a simulated dataset, and imagine that the ground-truth
 # sorting is in fact the output of a sorter.
 
-recording, sorting = si.generate_ground_truth_recording()
+recording, sorting = generate_ground_truth_recording()
 print(recording)
 print(sorting)
 
