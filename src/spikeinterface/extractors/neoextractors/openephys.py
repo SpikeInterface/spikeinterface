@@ -321,14 +321,12 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             if "NI-DAQmx" not in stream_name:
                 settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
-                if Path(settings_file).is_file():
-                    probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=oe_stream_name, raise_error=False
+                if Path(settings_file).is_file() and probeinterface.has_neuropixels_probes(
+                    settings_file, stream_name=oe_stream_name
+                ):
+                    probe = probeinterface.read_openephys_neuropixels(
+                        settings_file=settings_file, stream_name=oe_stream_name
                     )
-                else:
-                    probe = None
-
-                if probe is not None:
                     if probe.shank_ids is not None:
                         self.set_probe(probe, in_place=True, group_mode="by_shank")
                     else:

@@ -1,8 +1,5 @@
 from pathlib import Path
 
-import packaging
-
-import packaging.version
 import probeinterface
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -56,11 +53,8 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
-        probegroup = None  # TODO remove once probeinterface is updated to 0.2.22 in the pyproject.toml
-        if packaging.version.parse(probeinterface.__version__) > packaging.version.parse("0.2.21"):
-            probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
-
-        if probegroup is not None:
+        if probeinterface.has_spikegadgets_neuropixels_probes(file_path):
+            probegroup = probeinterface.read_spikegadgets_neuropixels(file_path)
             self.set_probegroup(probegroup, in_place=True)
 
     @classmethod
