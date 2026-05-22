@@ -5,7 +5,15 @@ import importlib.metadata
 __version__ = importlib.metadata.version("spikeinterface")
 
 from .core import *
-from .generation import generate_ground_truth_recording
+
+
+def __getattr__(name):
+    if name == "generate_ground_truth_recording":
+        from .generation.ground_truth_generator import generate_ground_truth_recording
+
+        return generate_ground_truth_recording
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 import warnings
 
