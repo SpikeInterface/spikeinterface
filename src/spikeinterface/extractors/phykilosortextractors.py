@@ -358,10 +358,6 @@ def read_kilosort_as_analyzer(
     sorting = read_phy(phy_path)
     sampling_frequency = sorting.sampling_frequency
 
-    # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
-    # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-    duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
-
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
     elif (phy_path / "channel_positions.npy").is_file():
@@ -395,6 +391,11 @@ def read_kilosort_as_analyzer(
 
     else:
         user_gave_recording = False
+
+        # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
+        # to errors later. To avoid this, we pad the recording with an extra second of blank time.
+        duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
+
         # to make the initial analyzer, we'll use a fake recording and set it to None later
         recordings = []
         for probe in probegroup.probes:
