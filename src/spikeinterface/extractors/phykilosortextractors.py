@@ -391,7 +391,7 @@ def read_kilosort_as_analyzer(
         if len(new_device_channel_indices) != len(all_contact_positions):
             raise ValueError("The channel locations in your `recording` and the probe channel locations do not match.")
 
-        recording.get_probe().set_device_channel_indices(new_device_channel_indices)
+        recording.get_probegroup().set_global_device_channel_indices(new_device_channel_indices)
 
     else:
         user_gave_recording = False
