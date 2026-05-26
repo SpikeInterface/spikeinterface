@@ -319,12 +319,12 @@ class TridesclousPeeler(BaseTemplateMatching):
                 # noise_levels=None,
             )
 
-        self.detector_margin0 = self.fast_spike_detector.get_trace_margin()
-        self.detector_margin1 = self.fine_spike_detector.get_trace_margin() if use_fine_detector else 0
+        self.detector_margin0 = self.fast_spike_detector.get_margin()
+        self.detector_margin1 = self.fine_spike_detector.get_margin() if use_fine_detector else 0
         self.peeler_margin = max(self.nbefore, self.nafter) * 2
         self.margin = max(self.peeler_margin, self.detector_margin0, self.detector_margin1)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -506,7 +506,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             peak_detector = self.fast_spike_detector
 
         # print('peak_detector', peak_detector)
-        detector_margin = peak_detector.get_trace_margin()
+        detector_margin = peak_detector.get_margin()
 
         if self.peeler_margin > detector_margin:
             margin_shift = self.peeler_margin - detector_margin
