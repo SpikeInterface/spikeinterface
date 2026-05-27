@@ -59,7 +59,7 @@ class LupinSorter(ComponentsBasedSorter):
         "template_sparsify_threshold": 1.0,
         "template_min_snr_ptp": 4.0,
         "template_max_jitter_ms": 0.2,
-        "template_matching_engine": "circus-omp",
+        "template_matching_engine": "wobble",
         "min_firing_rate": 0.1,
         "gather_mode": "memory",
         "job_kwargs": {},
