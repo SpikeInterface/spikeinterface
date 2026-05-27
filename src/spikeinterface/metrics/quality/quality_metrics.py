@@ -115,8 +115,6 @@ class ComputeQualityMetrics(BaseMetricExtension):
             metric_names = [m for m in metric_names if m not in pc_metric_names]
 
         if use_valid_periods:
-            if periods is not None:
-                raise ValueError("If use_valid_periods is True, periods should not be provided.")
             periods = self.sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
 
         return super()._set_params(
@@ -124,6 +122,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
+            use_valid_periods=use_valid_periods,
             periods=periods,
             peak_sign=peak_sign,
             seed=seed,
