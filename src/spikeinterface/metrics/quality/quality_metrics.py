@@ -6,6 +6,7 @@ import numpy as np
 from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
+from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype
 
 from .misc_metrics import misc_metrics_list
 from .pca_metrics import pca_metrics_list
@@ -115,7 +116,12 @@ class ComputeQualityMetrics(BaseMetricExtension):
             metric_names = [m for m in metric_names if m not in pc_metric_names]
 
         if use_valid_periods:
-            periods = self.sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
+            valid_periods = self.sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
+            if periods is not None:
+                provided_periods = cast_periods_to_unit_period_dtype(np.asarray(periods))
+                if not np.array_equal(valid_periods, provided_periods):
+                    raise ValueError("Provided periods do not match valid periods from the sorting analyzer.")
+            periods = valid_periods
 
         return super()._set_params(
             metric_names=metric_names,
