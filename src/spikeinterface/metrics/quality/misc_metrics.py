@@ -986,7 +986,7 @@ def compute_amplitude_cutoffs(
     Notes
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" or "amplitude_scalings" extensions.
+    Amplitudes are extracted from the "amplitude_scalings" extension.
 
     References
     ----------
@@ -1002,10 +1002,7 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    available_extension = (
-        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
-    )
-    extension = sorting_analyzer.get_extension(available_extension)
+    extension = sorting_analyzer.get_extension("amplitude_scalings")
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
@@ -1043,7 +1040,7 @@ class AmplitudeCutoff(BaseMetric):
         "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
     }
     supports_periods = True
-    depend_on = ["spike_amplitudes|amplitude_scalings"]
+    depend_on = ["amplitude_scalings"]
 
 
 def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
