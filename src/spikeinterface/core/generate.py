@@ -1072,6 +1072,22 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     return spike_train
 
 
+def synthesize_amplitude_factor(
+    num_spikes: int,
+    amplitude_factor: np.ndarray | None = None,
+    amplitude_std: float | None = None,
+    seed: np.random.Generator | int | None = None,
+):
+    if amplitude_factor is not None:
+        assert amplitude_factor.shape == (num_spikes,)
+        return amplitude_factor
+    elif amplitude_std:
+        rng = np.random.default_rng(seed)
+        return rng.normal(loc=1, scale=amplitude_std, size=num_spikes)
+    else:
+        return None
+
+
 from spikeinterface.core.basesorting import BaseSortingSegment, BaseSorting
 
 
