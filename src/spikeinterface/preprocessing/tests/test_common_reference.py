@@ -170,6 +170,31 @@ def test_common_reference_groups(recording):
     assert np.allclose(traces[:, 1], 0)
 
 
+def test_common_reference_groups_cross(recording):
+    # "global" reference with groups AND a per-group ref_channel_ids: each group is
+    # referenced to a (possibly external) set of channels -> enables cross-group referencing.
+    original_traces = recording.get_traces()
+    groups = [["a", "c"], ["b", "d"]]
+    ref_channel_ids = [["b", "d"], ["a", "c"]]  # reference each group to the OTHER group's channels
+
+    rec_cross = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids=ref_channel_ids
+    )
+    traces = rec_cross.get_traces(channel_ids=["a", "b", "c", "d"])
+    # a, c (group 0) referenced to median of b, d
+    ref0 = np.median(original_traces[:, [1, 3]], axis=1)
+    assert np.allclose(traces[:, 0], original_traces[:, 0] - ref0, atol=0.01)
+    assert np.allclose(traces[:, 2], original_traces[:, 2] - ref0, atol=0.01)
+    # b, d (group 1) referenced to median of a, c
+    ref1 = np.median(original_traces[:, [0, 2]], axis=1)
+    assert np.allclose(traces[:, 1], original_traces[:, 1] - ref1, atol=0.01)
+    assert np.allclose(traces[:, 3], original_traces[:, 3] - ref1, atol=0.01)
+
+    # mismatched lengths raise
+    with pytest.raises(AssertionError):
+        common_reference(recording, reference="global", groups=groups, ref_channel_ids=[["b", "d"]])
+
+
 def test_min_local_radius():
     # Test that local radius smaller than the number of channels is handled correctly
     recording = generate_recording(durations=[1.0], num_channels=32)
