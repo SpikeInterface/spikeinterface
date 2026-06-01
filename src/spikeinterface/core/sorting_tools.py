@@ -996,3 +996,28 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     new_vector["unit_index"] = mapping[new_vector["unit_index"]]
 
     return new_vector, keep_mask_vector
+
+
+def is_spike_vector_sorted(spike_vector: np.ndarray) -> bool:
+    """Return True iff the spike vector is sorted by (segment_index, sample_index, unit_index).
+
+    O(n) sequential scan. Used to avoid an O(n log n) lexsort when the vector already
+    happens to be in canonical order.
+    """
+    n = len(spike_vector)
+    if n <= 1:
+        return True
+    seg = spike_vector["segment_index"]
+    samp = spike_vector["sample_index"]
+    unit = spike_vector["unit_index"]
+    d_seg = np.diff(seg)
+    if np.any(d_seg < 0):
+        return False
+    seg_eq = d_seg == 0
+    d_samp = np.diff(samp)
+    if np.any(d_samp[seg_eq] < 0):
+        return False
+    samp_eq = seg_eq & (d_samp == 0)
+    if np.any(np.diff(unit)[samp_eq] < 0):
+        return False
+    return True
