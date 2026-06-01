@@ -195,6 +195,23 @@ def test_common_reference_groups_cross(recording):
         common_reference(recording, reference="global", groups=groups, ref_channel_ids=[["b", "d"]])
 
 
+def test_common_reference_groups_complement(recording):
+    # ref_channel_ids="complement" shortcut: reference each group to all channels NOT in it.
+    groups = [["a", "c"], ["b", "d"]]
+    # complements of these groups within {a,b,c,d} are exactly [["b","d"], ["a","c"]]
+    explicit = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids=[["b", "d"], ["a", "c"]]
+    )
+    sugar = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids="complement"
+    )
+    assert np.allclose(sugar.get_traces(), explicit.get_traces(), atol=1e-6)
+
+    # "complement" requires groups
+    with pytest.raises(ValueError):
+        common_reference(recording, reference="global", ref_channel_ids="complement")
+
+
 def test_min_local_radius():
     # Test that local radius smaller than the number of channels is handled correctly
     recording = generate_recording(durations=[1.0], num_channels=32)
