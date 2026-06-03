@@ -10,6 +10,7 @@ from spikeinterface.core.generate import (
     generate_sorting,
     InjectTemplatesRecording,
     _ensure_seed,
+    synthesize_amplitude_factor,
 )
 from spikeinterface.core.template_tools import get_template_extremum_channel
 
@@ -327,6 +328,7 @@ def generate_hybrid_recording(
     upsample_factor: int | None = None,
     upsample_vector: np.ndarray | None = None,
     amplitude_std: float = 0.05,
+    amplitude_factor: np.ndarray | None = None,
     generate_sorting_kwargs: dict = dict(num_units=10, firing_rates=15, refractory_period_ms=4.0, seed=2205),
     generate_unit_locations_kwargs: dict = dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs: dict = dict(ms_before=1.0, ms_after=3.0),
@@ -499,10 +501,12 @@ def generate_hybrid_recording(
             upsample_factor = templates_array.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
 
-    if amplitude_std is not None:
-        amplitude_factor = rng.normal(loc=1, scale=amplitude_std, size=num_spikes)
-    else:
-        amplitude_factor = None
+    amplitude_factor = synthesize_amplitude_factor(
+        num_spikes,
+        amplitude_factor=amplitude_factor,
+        amplitude_std=amplitude_std,
+        seed=rng,
+    )
 
     if motion is not None:
         assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"

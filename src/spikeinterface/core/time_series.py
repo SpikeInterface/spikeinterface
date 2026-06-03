@@ -382,14 +382,20 @@ class TimeSeriesSegment(BaseSegment):
         BaseSegment.__init__(self)
 
     def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if self.time_vector is not None:
-            self.time_vector = np.asarray(self.time_vector)
-            return self.time_vector[start_frame:end_frame]
+            # Cache full times as numpy if start_frame and end_frame are None. If the user passes start_frame and
+            # end_frame, we slice the time vector and return the sliced version as numpy array.
+            # This is useful for very long recordings, where the full time vector might be too large to fit in memory.
+            if start_frame is None and end_frame is None:
+                self.time_vector = np.asarray(self.time_vector)
+                return self.time_vector
+            else:
+                start_frame = int(start_frame) if start_frame is not None else 0
+                end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+                return np.asarray(self.time_vector[start_frame:end_frame])
         else:
+            start_frame = int(start_frame) if start_frame is not None else 0
+            end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
             time_vector = np.arange(start_frame, end_frame, dtype="float64")
             time_vector /= self.sampling_frequency
             if self.t_start is not None:
