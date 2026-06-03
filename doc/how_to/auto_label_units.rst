@@ -183,7 +183,7 @@ file.
 
 .. code:: ipython3
 
-    bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True)
+    bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, split_non_somatic=True)
 
 .. code:: ipython3
 
