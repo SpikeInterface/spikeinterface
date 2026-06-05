@@ -34,7 +34,7 @@ class TimeSeries(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_sample_size_in_bytes(self) -> int:
+    def get_sample_size_in_bytes(self, dtype=None) -> int:
         raise NotImplementedError
 
     @abstractmethod
