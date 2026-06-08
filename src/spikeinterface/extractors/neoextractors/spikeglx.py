@@ -4,7 +4,10 @@ import warnings
 import probeinterface
 
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neuropixels_utils import (
+    get_neuropixels_sample_shifts_from_probe,
+    compute_saturation_threshold_from_probe,
+)
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
@@ -91,6 +94,11 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
             if sample_shifts is not None:
                 self.set_property("inter_sample_shift", sample_shifts)
+
+            # add saturation levels if available
+            saturation_threshold_uV = compute_saturation_threshold_from_probe(probe, self.stream_id)
+            if saturation_threshold_uV is not None:
+                self.annotate(saturation_threshold_uV=saturation_threshold_uV)
         else:
             warning_message = (
                 "Unable to find a corresponding metadata file for the recording. "

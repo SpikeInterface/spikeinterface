@@ -55,6 +55,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
 
         if probeinterface.has_spikegadgets_neuropixels_probes(file_path):
             probegroup = probeinterface.read_spikegadgets_neuropixels(file_path)
+            # TODO: add adc sample shifts and saturation levels if available in the probe metadata
             self.set_probegroup(probegroup, in_place=True)
 
     @classmethod
