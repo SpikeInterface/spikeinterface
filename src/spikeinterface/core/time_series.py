@@ -277,8 +277,8 @@ class TimeSeries(ABC):
                     # If the time_vector is writeable, shift in-place to avoid a copy.
                     rs.time_vector += shift
                 else:
-                    # If the time_vector is a memmap from `np.load(..., mmap_mode='r')`, 
-                    # in-place modification would error, so we shift a writable copy. 
+                    # If the time_vector is a memmap from `np.load(..., mmap_mode='r')`,
+                    # in-place modification would error, so we shift a writable copy.
                     rs.time_vector = rs.time_vector + shift
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
