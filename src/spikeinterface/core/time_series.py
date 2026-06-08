@@ -273,7 +273,13 @@ class TimeSeries(ABC):
             rs = self.segments[segment_index]
 
             if self.has_time_vector(segment_index=segment_index):
-                rs.time_vector += shift
+                if rs.time_vector.flags.writeable:
+                    # If the time_vector is writeable, shift in-place to avoid a copy.
+                    rs.time_vector += shift
+                else:
+                    # If the time_vector is a memmap from `np.load(..., mmap_mode='r')`, 
+                    # in-place modification would error, so we shift a writable copy. 
+                    rs.time_vector = rs.time_vector + shift
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
                 rs.t_start = new_start_time
