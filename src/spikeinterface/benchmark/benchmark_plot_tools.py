@@ -225,6 +225,7 @@ def plot_unit_counts(
     with_rectangle=True,
     revert_bad=True,
     xticks_rotation=45.0,
+    show_legend=True,
     figsize=None,
     ax=None,
 ):
@@ -339,7 +340,9 @@ def plot_unit_counts(
     xticklabels = labels_list
     ax.set_xticks(np.arange(len(xticklabels)) + 1.5 - width)
     ax.set_xticklabels(xticklabels, rotation=xticks_rotation)
-    ax.legend()
+
+    if show_legend:
+        ax.legend()
 
     despine(ax)
 
@@ -413,6 +416,7 @@ def _plot_performances_vs_metric(
     levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
+    show_scatter=True,
     with_sigmoid_fit=False,
     show_average_by_bin=True,
     scatter_size=4,
@@ -521,7 +525,9 @@ def _plot_performances_vs_metric(
             all_xs = np.concatenate(all_xs)
             all_ys = np.concatenate(all_ys)
 
-            ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size, alpha=scatter_alpha)
+            if show_scatter:
+                ax.scatter(all_xs, all_ys, marker=".", label=label, color=color, s=scatter_size, alpha=scatter_alpha)
+
             ax.set_ylabel(performance_name)
 
         ax.set_ylim(-0.05, 1.05)
@@ -543,6 +549,7 @@ def plot_performances_vs_snr(
     levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
+    show_scatter=True,
     with_sigmoid_fit=False,
     show_average_by_bin=True,
     scatter_size=4,
@@ -571,6 +578,8 @@ def plot_performances_vs_snr(
         The orientation of the plot.
     show_legend : bool, default True
         Show legend or not
+    show_scatter : bool, default True
+        Show scatter or not
     show_sigmoid_fit : bool, default True
         Show sigmoid that fit the performances.
     show_average_by_bin : bool, default False
@@ -600,6 +609,7 @@ def plot_performances_vs_snr(
         levels_to_group_by=levels_to_group_by,
         orientation=orientation,
         show_legend=show_legend,
+        show_scatter=show_scatter,
         with_sigmoid_fit=with_sigmoid_fit,
         show_average_by_bin=show_average_by_bin,
         scatter_size=scatter_size,
@@ -618,6 +628,7 @@ def plot_performances_vs_firing_rate(
     levels_to_group_by=None,
     orientation="vertical",
     show_legend=True,
+    show_scatter=True,
     with_sigmoid_fit=False,
     show_average_by_bin=True,
     scatter_size=4,
@@ -646,6 +657,8 @@ def plot_performances_vs_firing_rate(
         The orientation of the plot.
     show_legend : bool, default True
         Show legend or not
+    show_scatter : bool, default True
+        Show scatter or not
     show_sigmoid_fit : bool, default True
         Show sigmoid that fit the performances.
     show_average_by_bin : bool, default False
@@ -675,6 +688,7 @@ def plot_performances_vs_firing_rate(
         levels_to_group_by=levels_to_group_by,
         orientation=orientation,
         show_legend=show_legend,
+        show_scatter=show_scatter,
         with_sigmoid_fit=with_sigmoid_fit,
         show_average_by_bin=show_average_by_bin,
         scatter_size=scatter_size,

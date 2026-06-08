@@ -415,7 +415,7 @@ class SortingAnalyzer:
         """
         if format == "auto":
             # make better assumption and check for auto guess format
-            if Path(folder).suffix == ".zarr":
+            if Path(folder).suffix == ".zarr" or is_path_remote(folder):
                 format = "zarr"
             else:
                 format = "binary_folder"
@@ -659,10 +659,17 @@ class SortingAnalyzer:
         if sorting.check_serializability("json"):
             _write_object_array(zarr_root, "sorting_provenance", check_json(sort_dict), codec="json")
         elif sorting.check_serializability("pickle"):
-            _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
+            try:
+                _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
+            except Exception as e:
+                warnings.warn(
+                    "Failed to serialize sorting provenance with Pickle Codec! "
+                    "The sorting provenance link will be lost for future load"
+                )
         else:
             warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+                "The sorting provenance is not serializable! "
+                "The sorting provenance link will be lost for future load"
             )
 
         recording_info = zarr_root.create_group("recording_info")
