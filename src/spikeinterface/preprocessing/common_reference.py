@@ -63,9 +63,9 @@ class CommonReferenceRecording(BasePreprocessor):
         channels outside the group, enabling cross-group referencing (e.g. referencing each
         tetrode to the median of all channels on the other tetrodes). If None, each group is
         referenced to its own channels.
-        As a shortcut for that cross-group case, pass the string "complement" (with "global"
+        As a shortcut for that cross-group case, pass the string "out_of_group" (with "global"
         reference and "groups"): each group is then referenced to all channels NOT in it,
-        i.e. ref_channel_ids is auto-built as each group's complement.
+        i.e. ref_channel_ids is auto-built as each group's complement (its out-of-group channels).
     local_radius : tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
 
@@ -108,10 +108,10 @@ class CommonReferenceRecording(BasePreprocessor):
             raise ValueError("'operator' must be either 'median', 'average'")
 
         if reference == "global":
-            if ref_channel_ids == "complement":
-                # Convenience: reference each group to all channels NOT in it (its complement).
+            if ref_channel_ids == "out_of_group":
+                # Convenience: reference each group to all channels NOT in it (its out-of-group channels).
                 if groups is None:
-                    raise ValueError("ref_channel_ids='complement' requires 'groups' to be set")
+                    raise ValueError("ref_channel_ids='out_of_group' requires 'groups' to be set")
                 all_ids = list(recording.channel_ids)
                 ref_channel_ids = [[c for c in all_ids if c not in set(group)] for group in groups]
             if ref_channel_ids is not None:
