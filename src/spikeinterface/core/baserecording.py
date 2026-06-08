@@ -187,9 +187,15 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         """
         super().add_segment(recording_segment)
 
-    def get_sample_size_in_bytes(self):
+    def get_sample_size_in_bytes(self, dtype=None):
         """
         Returns the size of a single sample across all channels in bytes.
+
+        Parameters
+        ----------
+        dtype : data-type, optional
+            The data type to use for calculating the sample size. If None,
+            the recording's dtype is used.
 
         Returns
         -------
@@ -197,7 +203,8 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             The size of a single sample in bytes
         """
         num_channels = self.get_num_channels()
-        dtype_size_bytes = self.get_dtype().itemsize
+        dtype = self.get_dtype() if dtype is None else np.dtype(dtype)
+        dtype_size_bytes = dtype.itemsize
         sample_size = num_channels * dtype_size_bytes
         return sample_size
 
