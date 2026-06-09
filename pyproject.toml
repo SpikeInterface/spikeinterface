@@ -250,7 +250,9 @@ test-common = [
     "pytest-cov",
     "pytest-mock",
     "psutil",
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # FOR TESTING: use probeinterface zarrv3 branch
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
