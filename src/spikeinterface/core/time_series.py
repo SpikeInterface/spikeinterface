@@ -1,10 +1,25 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, TypeAlias
 import warnings
 
 import numpy as np
 
 from spikeinterface.core.base import BaseExtractor, BaseSegment
+
+if TYPE_CHECKING:
+    import zarr
+
+# A recording segment's time vector: a 1-D array of per-sample times (in seconds).
+# The backing store depends on how the recording was created/loaded:
+#   - np.ndarray : set_times() (writeable, in-memory)
+#   - np.memmap  : BinaryFolderRecording load via np.load(..., mmap_mode="r")
+#                  -- *read-only* ; see BaseRecording._extra_metadata_from_folder
+#   - zarr.Array : ZarrRecordingExtractor load
+#                  -- *read-only* ; see ZarrRecordingExtractor.__init__
+# Code reading `.time_vector` must not assume it is writeable (see `shift_times`).
+TimeVector: TypeAlias = "np.ndarray | zarr.Array"  # np.memmap is an np.ndarray subclass
 
 
 class TimeSeries(ABC):
@@ -146,8 +161,8 @@ class TimeSeries(ABC):
 
         Returns
         -------
-        np.array
-            The 1d times array
+        np.ndarray
+            The 1d times array. If the times were mem-mapped, loads them into memory.
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
@@ -211,8 +226,9 @@ class TimeSeries(ABC):
 
         Parameters
         ----------
-        times : 1d np.array
-            The time vector
+        times : 1d array-like
+            The time vector. Lazy/read-only input (e.g. memmap or zarr.Array) is loaded
+            into memory and cast to float64 before being stored on the segment.
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
         with_warning : bool, default: True
@@ -371,7 +387,23 @@ class TimeSeriesSegment(BaseSegment):
     """Per-segment time-series class. Provides time handling methods (sample/time conversion,
     start/end time, time vectors) on top of ``BaseSegment``."""
 
-    def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
+    def __init__(
+        self,
+        sampling_frequency: float | None = None,
+        t_start: float | None = None,
+        time_vector: TimeVector | None = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        sampling_frequency : float | None, default: None
+            Sampling frequency in Hz. Mutually exclusive with `time_vector`.
+        t_start : float | None, default: None
+            Start time (s) used when times are regular (no `time_vector`).
+        time_vector : TimeVector | None, default: None
+            Explicit per-sample times. May be a writeable np.ndarray, a read-only
+            np.memmap, or a lazy zarr.Array.
+        """
         # sampling_frequency and time_vector are exclusive
         if sampling_frequency is None:
             assert time_vector is not None, "Pass either 'sampling_frequency' or 'time_vector'"
@@ -382,7 +414,7 @@ class TimeSeriesSegment(BaseSegment):
 
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start
-        self.time_vector = time_vector
+        self.time_vector: TimeVector | None = time_vector
 
         BaseSegment.__init__(self)
 
