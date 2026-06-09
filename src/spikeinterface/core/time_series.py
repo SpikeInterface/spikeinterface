@@ -273,13 +273,12 @@ class TimeSeries(ABC):
             rs = self.segments[segment_index]
 
             if self.has_time_vector(segment_index=segment_index):
-                if rs.time_vector.flags.writeable:
-                    # If the time_vector is writeable, shift in-place to avoid a copy.
-                    rs.time_vector += shift
+                if isinstance(rs.time_vector, np.ndarray) and rs.time_vector.flags.writeable:
+                    # If this is an in-memory numpy array
+                    rs.time_vector += shift  # in-place, no copy
                 else:
-                    # If the time_vector is a memmap from `np.load(..., mmap_mode='r')`,
-                    # in-place modification would error, so we shift a writable copy.
-                    rs.time_vector = rs.time_vector + shift
+                    # If this is a read-only memmap or zarr.Array
+                    rs.time_vector = np.asarray(rs.time_vector) + shift
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
                 rs.t_start = new_start_time
