@@ -5,7 +5,7 @@ import platform
 
 import numpy as np
 
-from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording
+from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording, ms_to_samples
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
     extract_waveforms_to_single_buffer,
@@ -56,8 +56,8 @@ def test_waveform_tools(create_cache_folder):
     recording, sorting = get_dataset()
     sampling_frequency = recording.sampling_frequency
 
-    nbefore = int(3.0 * sampling_frequency / 1000.0)
-    nafter = int(4.0 * sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(3.0, sampling_frequency)
+    nafter = ms_to_samples(4.0, sampling_frequency)
 
     dtype = recording.get_dtype()
     # return_in_uV = False
@@ -164,8 +164,8 @@ def test_estimate_templates_with_accumulator():
     ms_before = 1.0
     ms_after = 1.5
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     spikes = sorting.to_spike_vector()
     # take one spikes every 10
@@ -218,8 +218,8 @@ def test_estimate_templates():
     ms_before = 1.0
     ms_after = 1.5
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     spikes = sorting.to_spike_vector()
     # take one spikes every 10

@@ -5,6 +5,7 @@ from spikeinterface.core import (
     get_channel_distances,
     get_template_extremum_channel,
 )
+from spikeinterface.core.core_tools import ms_to_samples
 
 from spikeinterface.sortingcomponents.peak_detection.method_list import (
     LocallyExclusivePeakDetector,
@@ -132,8 +133,8 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         self.peak_sign = peak_sign
 
-        nbefore_short = int(ms_before * sr / 1000.0)
-        nafter_short = int(ms_after * sr / 1000.0)
+        nbefore_short = ms_to_samples(ms_before, sr)
+        nafter_short = ms_to_samples(ms_after, sr)
         assert nbefore_short <= templates.nbefore
         assert nafter_short <= templates.nafter
         self.nbefore_short = nbefore_short
@@ -318,12 +319,12 @@ class TridesclousPeeler(BaseTemplateMatching):
                 # noise_levels=None,
             )
 
-        self.detector_margin0 = self.fast_spike_detector.get_trace_margin()
-        self.detector_margin1 = self.fine_spike_detector.get_trace_margin() if use_fine_detector else 0
+        self.detector_margin0 = self.fast_spike_detector.get_margin()
+        self.detector_margin1 = self.fine_spike_detector.get_margin() if use_fine_detector else 0
         self.peeler_margin = max(self.nbefore, self.nafter) * 2
         self.margin = max(self.peeler_margin, self.detector_margin0, self.detector_margin1)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -505,7 +506,7 @@ class TridesclousPeeler(BaseTemplateMatching):
             peak_detector = self.fast_spike_detector
 
         # print('peak_detector', peak_detector)
-        detector_margin = peak_detector.get_trace_margin()
+        detector_margin = peak_detector.get_margin()
 
         if self.peeler_margin > detector_margin:
             margin_shift = self.peeler_margin - detector_margin

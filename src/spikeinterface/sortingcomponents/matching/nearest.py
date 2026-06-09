@@ -94,7 +94,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             self.lookup_tables["templates"][i] = np.flatnonzero(self.neighborhood_mask[i])
             self.lookup_tables["channels"][i] = np.flatnonzero(self.sparsity_mask[i])
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -191,7 +191,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         projected_temporal_templates = self.svd_model.transform(temporal_templates)
         self.svd_templates = from_temporal_representation(projected_temporal_templates, self.num_channels)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

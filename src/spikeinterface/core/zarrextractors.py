@@ -397,6 +397,51 @@ def resolve_zarr_path(folder_path: str | Path):
         return folder_path, folder_path_kwarg
 
 
+def _write_object_array(
+    group,
+    name: str,
+    data,
+    codec: str = "json",
+    overwrite: bool = True,
+):
+    """
+    Write a length-1 object-dtype array holding a Python dict/list/object.
+
+    Centralizes the v2/v3 codec-placement difference for object blobs: under zarr-v2
+    the object codec goes in ``object_codec=``; under zarr-v3 it goes in ``filters=``
+    (wrapped via ``numcodecs.zarr3.*``). The helper picks the right path automatically.
+
+    Parameters
+    ----------
+    group : zarr.Group
+        The zarr group to write into.
+    name : str
+        Name of the array inside ``group``.
+    data : Any
+        The Python object to store. Wrapped into ``np.array([data], dtype=object)``.
+    codec : {"json", "pickle"}, default: "json"
+        Which object codec to use.
+    overwrite : bool, default: True
+        Whether to overwrite an existing array with the same name.
+    """
+    import numcodecs
+
+    if codec == "json":
+        codec_instance = numcodecs.JSON()
+    elif codec == "pickle":
+        codec_instance = numcodecs.Pickle()
+    else:
+        raise ValueError(f"codec must be 'json' or 'pickle', got {codec!r}")
+
+    arr = np.array([data], dtype=object)
+    return group.create_dataset(
+        name=name,
+        data=arr,
+        object_codec=codec_instance,
+        overwrite=overwrite,
+    )
+
+
 def get_default_zarr_compressor(clevel: int = 5):
     """
     Return default Zarr compressor object for good preformance in int16
@@ -716,6 +761,8 @@ def add_traces_to_zarr(
         If True, output is verbose (when chunks are used)
     {}
     """
+    from .job_tools import TimeSeriesChunkExecutor
+
     assert dataset_paths is not None, "Provide 'file_path'"
 
     if not isinstance(dataset_paths, list):
@@ -745,13 +792,13 @@ def add_traces_to_zarr(
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     init_args = (recording, zarr_datasets, dtype)
-    executor = ChunkRecordingExecutor(
+    executor = TimeSeriesChunkExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
     )
     executor.run()
 
 
-# used by write_zarr_recording + ChunkRecordingExecutor
+# used by write_zarr_recording + TimeSeriesChunkExecutor
 def _init_zarr_worker(recording, zarr_datasets, dtype):
     import zarr
 
@@ -764,7 +811,7 @@ def _init_zarr_worker(recording, zarr_datasets, dtype):
     return worker_ctx
 
 
-# used by write_zarr_recording + ChunkRecordingExecutor
+# used by write_zarr_recording + TimeSeriesChunkExecutor
 def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     import gc
 

@@ -41,7 +41,7 @@ from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
 
 
@@ -415,7 +415,7 @@ class SortingAnalyzer:
         """
         if format == "auto":
             # make better assumption and check for auto guess format
-            if Path(folder).suffix == ".zarr":
+            if Path(folder).suffix == ".zarr" or is_path_remote(folder):
                 format = "zarr"
             else:
                 format = "binary_folder"
@@ -618,7 +618,6 @@ class SortingAnalyzer:
     def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
         import zarr
-        import numcodecs
         from .zarrextractors import add_sorting_to_zarr_group
 
         if is_path_remote(folder):
@@ -667,7 +666,8 @@ class SortingAnalyzer:
             zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
         else:
             warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+                "The sorting provenance is not serializable! "
+                "The sorting provenance link will be lost for future load"
             )
 
         recording_info = zarr_root.create_group("recording_info")
@@ -2715,8 +2715,6 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            import numcodecs
-
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 

@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class, ms_to_samples
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core import NumpySorting, estimate_templates
@@ -170,8 +170,8 @@ class RemoveArtifactsRecording(BasePreprocessor):
                     list_triggers, list_labels, recording.get_sampling_frequency()
                 )
 
-                nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-                nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+                nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+                nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
                 templates = estimate_templates(
                     recording=recording,

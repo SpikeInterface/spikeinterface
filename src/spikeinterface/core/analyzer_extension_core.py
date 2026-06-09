@@ -21,6 +21,7 @@ from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection, select_sorting_periods_mask, spike_vector_to_indices
 from .job_tools import fix_job_kwargs, split_job_kwargs
+from .core_tools import ms_to_samples
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -170,11 +171,11 @@ class ComputeWaveforms(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        return int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
 
     @property
     def nafter(self):
-        return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
 
     def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
@@ -540,12 +541,12 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
         return nbefore
 
     @property
     def nafter(self):
-        nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        nafter = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
         return nafter
 
     def _select_extension_data(self, unit_ids):

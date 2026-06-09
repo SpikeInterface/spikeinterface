@@ -86,6 +86,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     In addition, it also uses a full Orthogonal Matching Pursuit engine to reconstruct the traces, leading to more spikes
     being discovered. The code is much faster and memory efficient, inheriting from all the preprocessing possibilities of spikeinterface"""
 
+    installation_mesg = "\tpip install 'spikeinterface[spykingcircus2]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[spykingcircus2]'"
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        spykingcircus2_deps = ["scipy", "numba", "hdbscan"]
+
+        for package_name in spykingcircus2_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
+
     @classmethod
     def get_sorter_version(cls):
         return "2025.12"
@@ -272,7 +286,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                 np.save(clustering_folder / "prototype.npy", prototype)
 
         if skip_peaks:
-            detect_pipeline_kwargs["recording_slices"] = get_shuffled_recording_slices(
+            detect_pipeline_kwargs["slices"] = get_shuffled_recording_slices(
                 recording_w,
                 job_kwargs=job_kwargs,
                 seed=params["seed"],

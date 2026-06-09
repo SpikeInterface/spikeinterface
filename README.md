@@ -52,7 +52,7 @@ SpikeInterface is a Python package designed to unify preexisting spike sorting t
 
 - Bombcell [Bombcell: automated curation and cell classification of spike-sorted electrophysiology data](https://doi.org/10.5281/zenodo.8172822>) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/auto_label_units.html#bombcell))
 - SLAy. [SLAy-ing oversplitting errors in high-density electrophysiology spike sorting](https://www.biorxiv.org/content/10.1101/2025.06.20.660590v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/modules/curation.html#auto-merging-units))
-- Lupin, Spykingcicus2 and Tridesclous2. [Opening the black box: a modular approach to spike sorting](https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
+- Lupin, Spykingcircus2 and Tridesclous2. [Opening the black box: a modular approach to spike sorting](https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
 - rtsort. [RT-Sort: An action potential propagation-based algorithm for real time spike detection and sorting with millisecond latencies](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438) ([docs](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters))
 - MEDiCINe. [MEDiCINe: Motion Correction for Neural Electrophysiology Recordings](https://www.eneuro.org/content/12/3/ENEURO.0529-24.2025) ([docs](https://spikeinterface.readthedocs.io/en/latest/how_to/handle_drift.html))
 - UnitRefine. [UnitRefine: A Community Toolbox for Automated Spike Sorting Curation](https://www.biorxiv.org/content/10.1101/2025.03.30.645770v2) ([docs](https://spikeinterface.readthedocs.io/en/latest/tutorials_custom_index.html#automated-curation-tutorials))
@@ -73,7 +73,7 @@ With SpikeInterface, users can:
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
 - export a report and/or export to phy
 - curate your sorting with several strategies (ml-based, metrics based, manual, ...)
-- offer a powerful Qt-based or we-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui) for manual curation that replace phy.
+- offer a powerful Qt-based or web-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui) for manual curation that replaces phy.
 - have powerful sorting components to build your own sorter.
 - have a full motion/drift correction framework
 
