@@ -39,7 +39,6 @@ def test_silence(create_cache_folder):
     data1 = rec.get_traces(0, 400, 600)
     data2 = rec.get_traces(0, 500, 700)
     assert np.all(data1[100:] == data2[:100])
-
     traces_mix = rec0.get_traces(segment_index=0, start_frame=900, end_frame=5100)
     traces_original = rec.get_traces(segment_index=0, start_frame=900, end_frame=5100)
     assert np.all(traces_original[100:-100] == traces_mix[100:-100])
@@ -47,6 +46,49 @@ def test_silence(create_cache_folder):
     assert np.all(traces_mix[-100:] == 0)
     assert not np.all(traces_mix[:200] == 0)
     assert not np.all(traces_mix[:-200] == 0)
+
+
+def test_silence_with_apodization(create_cache_folder):
+
+    cache_folder = create_cache_folder
+
+    rec = generate_recording()
+
+    periods = np.array([(0, 0, 1000), (0, 5000, 6000)], dtype=base_period_dtype)
+    # test that the apodization creates a taper
+    apodization_samples = 10
+    rec2 = silence_periods(rec, periods=periods, mode="apodization", apodization_samples=apodization_samples)
+    traces_in0 = rec2.get_traces(segment_index=0, start_frame=0, end_frame=1000)
+    traces_in1 = rec2.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
+    # all apodized traces
+    assert np.all(traces_in0 == 0)
+    assert np.all(traces_in1 == 0)
+
+    # at margins, traces should not be all zero, but should be apodized
+    apodized_traces_in0 = rec2.get_traces(segment_index=0, start_frame=1000, end_frame=1000 + apodization_samples)
+    apodized_traces_in1 = rec2.get_traces(segment_index=0, start_frame=5000 - apodization_samples, end_frame=5000)
+    traces_raw_in0 = rec.get_traces(segment_index=0, start_frame=1000, end_frame=1000 + apodization_samples)
+    traces_raw_in1 = rec.get_traces(segment_index=0, start_frame=5000 - apodization_samples, end_frame=5000)
+    # the apodized traces should be less than the raw traces in absolute value,
+    # since they are multiplied by a cosine taper between 0 and 1
+    assert np.all(np.abs(apodized_traces_in0) <= np.abs(traces_raw_in0))
+    assert np.all(np.abs(apodized_traces_in1) <= np.abs(traces_raw_in1))
+
+    # check that margins are handled correctly with apodization
+    extra_samples = 50
+    traces_at_offset = rec2.get_traces(segment_index=0, start_frame=998, end_frame=1002)
+    traces_at_offset_extended = rec2.get_traces(
+        segment_index=0, start_frame=998 - extra_samples, end_frame=1002 + extra_samples
+    )
+    # the traces at offset should be apodized, and the extended traces should have the same apodization in the overlapping region
+    assert np.array_equal(traces_at_offset, traces_at_offset_extended[extra_samples:-extra_samples])
+
+    traces_at_onset = rec2.get_traces(segment_index=0, start_frame=4997, end_frame=5003)
+    traces_at_onset_extended = rec2.get_traces(
+        segment_index=0, start_frame=4997 - extra_samples, end_frame=5003 + extra_samples
+    )
+    # the traces at onset should be apodized, and the extended traces should have the same apodization in the overlapping region
+    assert np.array_equal(traces_at_onset, traces_at_onset_extended[extra_samples:-extra_samples])
 
 
 if __name__ == "__main__":

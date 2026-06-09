@@ -143,10 +143,6 @@ class TracesWidget(BaseWidget):
                 raise ValueError('You must provide "segment_index" for multisegment recordings.')
             segment_index = 0
 
-        if not rec0.has_time_vector(segment_index=segment_index):
-            times = None
-        else:
-            times = rec0.get_times(segment_index=segment_index)
         t_start = rec0.get_start_time(segment_index=segment_index)
         t_end = rec0.get_end_time(segment_index=segment_index)
 
@@ -172,7 +168,7 @@ class TracesWidget(BaseWidget):
         cmap = cmap
 
         times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
-            recordings, channel_ids, time_range, segment_index, return_in_uV=return_in_uV, times=times
+            recordings, channel_ids, segment_index, time_range=time_range, return_in_uV=return_in_uV
         )
 
         list_traces = [traces * scale for traces in list_traces]
@@ -405,25 +401,12 @@ class TracesWidget(BaseWidget):
                 self.figure.canvas.header_visible = False
                 plt.show()
 
-        if not self.rec0.has_time_vector(segment_index=data_plot["segment_index"]):
-            times = None
-            t_starts = [
-                rec0.get_start_time(segment_index=segment_index) for segment_index in range(rec0.get_num_segments())
-            ]
-        else:
-            times = [
-                np.array(self.rec0.get_times(segment_index=segment_index))
-                for segment_index in range(self.rec0.get_num_segments())
-            ]
-            t_starts = None
-
         # some widgets
         self.time_slider = TimeSlider(
             durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
             sampling_frequency=rec0.sampling_frequency,
-            time_range=data_plot["time_range"],
-            times=times,
-            t_starts=t_starts,
+            frame_range=data_plot["frame_range"],
+            rec0=rec0,
         )
         # handle times
         if data_plot["events"] is not None:
@@ -559,24 +542,17 @@ class TracesWidget(BaseWidget):
 
         start_frame, end_frame, segment_index = self.time_slider.value
 
-        if not self.rec0.has_time_vector(segment_index=segment_index):
-            times = None
-            time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency + self.rec0.get_start_time(
-                segment_index=segment_index
-            )
-        else:
-            times = self.rec0.get_times(segment_index=segment_index)
-            time_range = np.array([times[start_frame], times[end_frame]])
+        frame_range = np.array([start_frame, end_frame])
 
         self._selected_recordings = {k: self.recordings[k] for k in self._get_layers()}
         times_in_range, list_traces, frame_range, channel_ids = _get_trace_list(
             self._selected_recordings,
             channel_ids,
-            time_range,
             segment_index,
             return_in_uV=self.return_in_uV,
-            times=times,
+            frame_range=frame_range,
         )
+        time_range = np.array([times_in_range[0], times_in_range[-1]])
 
         self._channel_ids = channel_ids
         self._list_traces = list_traces
@@ -640,11 +616,10 @@ class TracesWidget(BaseWidget):
             handle_display_and_url,
             import_figpack_or_sortingview,
         )
+        import importlib.util
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)
         vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
-
-        import importlib.util
 
         spec = importlib.util.find_spec("pyvips")
         if spec is None:
@@ -705,25 +680,28 @@ class TracesWidget(BaseWidget):
         app.exec()
 
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_in_uV=False, times=None):
+def _get_trace_list(recordings, channel_ids, segment_index, time_range=None, return_in_uV=False, frame_range=None):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
-
-    fs = rec0.get_sampling_frequency()
 
     if return_in_uV:
         assert all(
             rec.has_scaleable_traces() for rec in recordings.values()
         ), "Some recording layers do not have scaled traces. Use `return_in_uV=False`"
-    if times is not None:
-        frame_range = np.searchsorted(times, time_range)
-        times = times[frame_range[0] : frame_range[1]]
-    else:
-        frame_range = rec0.time_to_sample_index(time_range, segment_index=segment_index)
+
+    assert time_range is not None or frame_range is not None, "You must provide either time_range or frame_range"
+
+    if frame_range is None:
+        # use the sampling-frequency approximation to avoid loading the full time vector
+        t_start = rec0.get_start_time(segment_index=segment_index)
+        fs = rec0.get_sampling_frequency()
+        frame_range = np.round((np.asarray(time_range) - t_start) * fs).astype(np.int64)
         a_max = rec0.get_num_frames(segment_index=segment_index)
         frame_range = np.clip(frame_range, 0, a_max)
-        times = np.arange(frame_range[0], frame_range[1]) / fs + rec0.get_start_time(segment_index=segment_index)
+
+    # lazily load only the needed time slice
+    times_in_range = rec0.get_times(segment_index=segment_index, start_frame=frame_range[0], end_frame=frame_range[1])
 
     list_traces = []
     for rec_name, rec in recordings.items():
@@ -737,4 +715,4 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_i
 
         list_traces.append(traces)
 
-    return times, list_traces, frame_range, channel_ids
+    return times_in_range, list_traces, frame_range, channel_ids

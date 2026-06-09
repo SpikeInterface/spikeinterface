@@ -201,9 +201,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
         ):
-            assert (
-                self.sorting_analyzer.get_channel_locations().shape[1] == 2
-            ), "If multi-channel metrics are computed, channel locations must be 2D."
+            if self.sorting_analyzer.get_channel_locations().shape[1] == 3:
+                warnings.warn(
+                    "Multi-channel metrics assume 2D channel locations. We will assume the first two dimensions are the physically relevant ones"
+                )
 
         if metric_names is None:
             metric_names = get_single_channel_template_metric_names()
@@ -260,7 +261,9 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         )
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
 
-        channel_locations = sorting_analyzer.get_channel_locations()
+        analyzer_channel_locations = sorting_analyzer.get_channel_locations()
+        # the template metrics only work for 2D probes. We warn users with 3D locations above.
+        channel_locations = analyzer_channel_locations[:, :2]
 
         main_channel_templates = []
         peaks_info = []
