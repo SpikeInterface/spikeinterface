@@ -380,7 +380,7 @@ class TestTimeHandling:
         """
         Shift times on a recording loaded from disk as a read-only np.memmap
         (binary folder) and a lazy zarr.Array (zarr). Neither supports an in-place
-        `+=`, so `shift_times` must shift a writable copy. 
+        `+=`, so `shift_times` must shift a writable copy.
         """
         _, times_recording, all_times = self._get_fixture_data(request, "time_vector_recording")
 
@@ -395,12 +395,10 @@ class TestTimeHandling:
             assert not (isinstance(tv, np.ndarray) and tv.flags.writeable)
 
         shift = 123.456
-        loaded.shift_times(shift)  
+        loaded.shift_times(shift)
 
         for idx in range(loaded.get_num_segments()):
-            assert np.allclose(
-                loaded.get_times(segment_index=idx), all_times[idx] + shift, rtol=0, atol=1e-8
-            )
+            assert np.allclose(loaded.get_times(segment_index=idx), all_times[idx] + shift, rtol=0, atol=1e-8)
 
     def _store_all_times(self, recording):
         """
