@@ -5,10 +5,11 @@ from pathlib import Path
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
+from .base import BaseExtractor
 from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, _shared_job_kwargs_doc
 
 
 class BaseRecording(BaseRecordingSnippets, TimeSeries):
