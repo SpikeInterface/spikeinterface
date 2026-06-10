@@ -55,6 +55,12 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+
+Version 0.104.4
+===============
+
+* Minor release with bug fixes
+
 Version 0.104.3
 ===============
 
