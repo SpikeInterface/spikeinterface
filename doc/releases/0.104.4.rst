@@ -1,19 +1,15 @@
-.. _release0.104.3:
+.. _release0.104.4:
 
-SpikeInterface 0.104.3 release notes
+SpikeInterface 0.104.4 release notes
 ------------------------------------
 
-April 22th 2025
+June 10th 2026
 
 Minor release with bug fixes
 
 preprocessing:
 
-* Fix filter kwargs (#4543)
-
-widgets:
-
-* Fix sortingview "backend" in plot_sorting_summary (#4554)
+* Hotfix: overflow error in correct LSB (#4610)
 
 
 Contributors:
