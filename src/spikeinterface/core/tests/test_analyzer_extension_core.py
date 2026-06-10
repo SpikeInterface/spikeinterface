@@ -91,7 +91,7 @@ def test_ComputeRandomSpikes(format, sparse, create_cache_folder):
 
     print("Checking results")
     _check_result_extension(sorting_analyzer, "random_spikes", cache_folder)
-    print("Delering extension")
+    print("Deleting extension")
     sorting_analyzer.delete_extension("random_spikes")
 
     print("Re-computing random spikes")

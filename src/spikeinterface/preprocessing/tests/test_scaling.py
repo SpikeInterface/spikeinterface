@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core.generate import generate_recording
 from spikeinterface.preprocessing.preprocessing_classes import scale_to_uV, CenterRecording, scale_to_physical_units
 
 

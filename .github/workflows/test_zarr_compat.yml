@@ -1,0 +1,47 @@
+name: Test zarr backwards compatibility
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+    paths:
+      - "src/spikeinterface/core/zarrextractors.py"
+      - "src/spikeinterface/core/zarrrecordingextractor.py"
+      - "src/spikeinterface/core/tests/test_zarr_backwards_compat.py"
+      - ".github/workflows/test_zarr_compat.yml"
+      - ".github/scripts/generate_zarr_v2_fixtures.py"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-zarr-compat:
+    name: zarr v2 -> v3 backwards compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SI 0.104.0 with zarr v2
+        run: pip install "spikeinterface==0.104.0" "zarr<3"
+
+      - name: Generate zarr v2 fixtures
+        run: python .github/scripts/generate_zarr_v2_fixtures.py --output /tmp/zarr_v2_fixtures
+
+      - name: Install current SI with zarr v3
+        run: pip install -e ".[test_core]"
+
+      - name: Check zarr version is v3
+        run: python -c "import zarr; v = zarr.__version__; print(f'zarr {v}'); assert int(v.split('.')[0]) >= 3"
+
+      - name: Run backward compatibility tests
+        env:
+          ZARR_V2_FIXTURES_PATH: /tmp/zarr_v2_fixtures
+        run: pytest src/spikeinterface/core/tests/test_zarr_backwards_compat.py -v

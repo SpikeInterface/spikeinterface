@@ -10,50 +10,56 @@ from spikeinterface.core import (
     generate_sorting,
     load,
 )
-from spikeinterface.core.zarrextractors import add_sorting_to_zarr_group, get_default_zarr_compressor
+from spikeinterface.core.testing import check_recordings_equal
+from spikeinterface.core.zarr_tools import check_compressors_match
+from spikeinterface.core.zarrextractors import (
+    add_sorting_to_zarr_group,
+    get_default_zarr_compressor,
+)
 
 
 def test_zarr_compression_options(tmp_path):
-    from numcodecs import Blosc, Delta, FixedScaleOffset
+    from zarr.codecs.numcodecs import Delta, FixedScaleOffset
+    from zarr.codecs import BloscCodec, BloscShuffle
 
     recording = generate_recording(durations=[2])
     recording.set_times(recording.get_times() + 100)
 
     # store in root standard normal way
     # default compressor
-    defaut_compressor = get_default_zarr_compressor()
+    default_compressor = get_default_zarr_compressor()
 
     # other compressor
-    other_compressor1 = Blosc(cname="zlib", clevel=3, shuffle=Blosc.NOSHUFFLE)
-    other_compressor2 = Blosc(cname="blosclz", clevel=8, shuffle=Blosc.AUTOSHUFFLE)
+    other_compressor1 = BloscCodec(cname="zlib", clevel=3, shuffle=BloscShuffle.noshuffle)
+    other_compressor2 = BloscCodec(cname="blosclz", clevel=8, shuffle=BloscShuffle.shuffle)
 
     # timestamps compressors / filters
     default_filters = None
-    other_filters1 = [FixedScaleOffset(scale=5, offset=2, dtype=recording.get_dtype())]
+    other_filters1 = [FixedScaleOffset(scale=5, offset=2, dtype=recording.get_dtype().str)]
     other_filters2 = [Delta(dtype="float64")]
 
     # default
     ZarrRecordingExtractor.write_recording(recording, tmp_path / "rec_default.zarr")
     rec_default = ZarrRecordingExtractor(tmp_path / "rec_default.zarr")
-    assert rec_default._root["traces_seg0"].compressor == defaut_compressor
-    assert rec_default._root["traces_seg0"].filters == default_filters
-    assert rec_default._root["times_seg0"].compressor == defaut_compressor
-    assert rec_default._root["times_seg0"].filters == default_filters
+    check_compressors_match(rec_default._root["traces_seg0"].compressors[0], default_compressor)
+    check_compressors_match(rec_default._root["times_seg0"].compressors[0], default_compressor)
+    check_compressors_match(rec_default._root["traces_seg0"].filters, default_filters)
+    check_compressors_match(rec_default._root["times_seg0"].filters, default_filters)
 
     # now with other compressor
     ZarrRecordingExtractor.write_recording(
         recording,
         tmp_path / "rec_other.zarr",
-        compressor=defaut_compressor,
+        compressors=default_compressor,
         filters=default_filters,
         compressor_by_dataset={"traces": other_compressor1, "times": other_compressor2},
         filters_by_dataset={"traces": other_filters1, "times": other_filters2},
     )
     rec_other = ZarrRecordingExtractor(tmp_path / "rec_other.zarr")
-    assert rec_other._root["traces_seg0"].compressor == other_compressor1
-    assert rec_other._root["traces_seg0"].filters == other_filters1
-    assert rec_other._root["times_seg0"].compressor == other_compressor2
-    assert rec_other._root["times_seg0"].filters == other_filters2
+    check_compressors_match(rec_other._root["traces_seg0"].compressors[0], other_compressor1)
+    check_compressors_match(rec_other._root["traces_seg0"].filters, other_filters1)
+    check_compressors_match(rec_other._root["times_seg0"].compressors[0], other_compressor2)
+    check_compressors_match(rec_other._root["times_seg0"].filters, other_filters2)
 
 
 def test_ZarrSortingExtractor(tmp_path):
@@ -73,6 +79,46 @@ def test_ZarrSortingExtractor(tmp_path):
     sorting = ZarrSortingExtractor(folder, zarr_group="sorting")
     # and reaload
     sorting = load(sorting.to_dict())
+
+
+def test_sharding_options(tmp_path):
+    recording = generate_recording(durations=[10], num_channels=20)
+    folder = tmp_path / "zarr_sharding"
+
+    # explicitly specify chunks and shards
+    ZarrRecordingExtractor.write_recording(recording, folder, chunks=(1000, 5), shards=(5000, 10), n_jobs=2)
+    recording_zarr = ZarrRecordingExtractor(folder)
+    assert recording_zarr._root["traces_seg0"].chunks == (1000, 5)
+    assert recording_zarr._root["traces_seg0"].shards == (5000, 10)
+    check_recordings_equal(recording, recording_zarr)
+
+    # specify shard_factor and chunk_size
+    folder = tmp_path / "zarr_sharding_factor"
+    ZarrRecordingExtractor.write_recording(
+        recording, folder, chunk_size=1000, channel_chunk_size=2, shard_factor=5, n_jobs=2
+    )
+    recording_zarr = ZarrRecordingExtractor(folder)
+    assert recording_zarr._root["traces_seg0"].chunks == (1000, 2)
+    assert recording_zarr._root["traces_seg0"].shards == (5000, 10)
+    check_recordings_equal(recording, recording_zarr)
+
+    # raise error if both shards and shard_factor are provided
+    with pytest.raises(ValueError):
+        ZarrRecordingExtractor.write_recording(
+            recording, folder, chunk_size=1000, channel_chunk_size=2, shard_factor=5, shards=(5000, 10), n_jobs=2
+        )
+
+    # raise error if shards is smaller than chunks
+    with pytest.raises(AssertionError):
+        ZarrRecordingExtractor.write_recording(
+            recording, folder, chunk_size=1000, channel_chunk_size=2, shards=(500, 10), n_jobs=2
+        )
+
+    # raise error if shards is not a multiple of chunks
+    with pytest.raises(AssertionError):
+        ZarrRecordingExtractor.write_recording(
+            recording, folder, chunk_size=1000, channel_chunk_size=2, shards=(5500, 10), n_jobs=2
+        )
 
 
 if __name__ == "__main__":
