@@ -1,7 +1,13 @@
 from pathlib import Path
+import warnings
+import numpy as np
 
 import probeinterface
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.extractors.neuropixels_utils import (
+    get_neuropixels_sample_shifts_from_probe,
+    compute_saturation_threshold_from_probe,
+)
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 
@@ -55,8 +61,26 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
 
         if probeinterface.has_spikegadgets_neuropixels_probes(file_path):
             probegroup = probeinterface.read_spikegadgets_neuropixels(file_path)
-            # TODO: add adc sample shifts and saturation levels if available in the probe metadata
             self.set_probegroup(probegroup, in_place=True)
+
+            # get inter-sample shifts based on the probe information and mux channels
+            sample_shifts = np.array([])
+            saturation_thresholds_uV = []
+            for probe in probegroup.probes:
+                sample_shifts_probe = get_neuropixels_sample_shifts_from_probe(probe)
+                if sample_shifts_probe is not None:
+                    sample_shifts = np.concatenate([sample_shifts, sample_shifts_probe])
+                # add saturation levels if available
+                saturation_threshold_uV_probe = compute_saturation_threshold_from_probe(probe, self.stream_id)
+                if saturation_threshold_uV_probe is not None:
+                    saturation_thresholds_uV.append(saturation_threshold_uV_probe)
+
+            if len(sample_shifts) > self.get_num_channels():
+                self.set_property("inter_sample_shift", sample_shifts)
+            if len(set(saturation_thresholds_uV)) == 1:
+                self.annotate(saturation_threshold_uV=saturation_thresholds_uV[0])
+            else:
+                warnings.warn("Multiple saturation thresholds found for different probes, unable to annotate.")
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
