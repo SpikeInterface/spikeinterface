@@ -104,7 +104,10 @@ def check_recordings_equal(
 
 
 def check_sortings_equal(
-    SX1: BaseSorting, SX2: BaseSorting, check_annotations: bool = False, check_properties: bool = False,
+    SX1: BaseSorting,
+    SX2: BaseSorting,
+    check_annotations: bool = False,
+    check_properties: bool = False,
     check_exact_lexsort: bool = True,
 ) -> None:
     assert SX1.get_num_segments() == SX2.get_num_segments()
