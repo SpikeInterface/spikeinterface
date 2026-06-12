@@ -875,6 +875,7 @@ class BaseSorting(BaseExtractor):
         instance the `UnitsSelectionSorting` implementation.
         """
 
+        
         num_seg = self.get_num_segments()
         spikes = []
         segment_slices = np.zeros((num_seg, 2), dtype="int64")
@@ -908,7 +909,8 @@ class BaseSorting(BaseExtractor):
             spikes.append(spikes_in_seg)
 
         spikes = np.concatenate(spikes)
-        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        # the spikes are not lexsorted here because the previous loop ensure that the spike vector is constructucted alway the same way.
+        # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
