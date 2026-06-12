@@ -11,8 +11,10 @@ import sys
 from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from contextlib import ExitStack, contextmanager
 import multiprocessing
 import threading
+import weakref
 from threadpoolctl import threadpool_limits
 
 from spikeinterface.core.core_tools import convert_string_to_bytes, convert_bytes_to_str, convert_seconds_to_str
@@ -759,3 +761,137 @@ def get_poolexecutor(n_jobs):
         return MockPoolExecutor
     else:
         return ProcessPoolExecutor
+
+
+# ---------------------------------------------------------------------------
+# Intra-call thread fan-out utilities (used by ``get_traces_multi_thread``)
+#
+# These let a single ``get_traces`` call internally spend a thread budget
+# (``max_threads_per_worker`` from job_kwargs) without exposing per-class
+# init kwargs.  Each segment that benefits from intra-call parallelism
+# overrides ``BaseRecordingSegment.get_traces_multi_thread`` and picks
+# the mechanism it actually needs:
+#
+#   - explicit Python-thread fan-out  → ``get_inner_pool``
+#   - BLAS / OpenMP cap (matmuls)     → ``thread_budget(blas=True)``
+#   - numba ``prange`` parallelism    → ``thread_budget(numba=True)``
+#
+# All three compose, but most segments use only one.
+
+# Module-global per-caller-thread pool registry.  Keyed by
+# ``Thread → {max_threads → ThreadPoolExecutor}`` so that the same calling
+# thread reusing the same budget gets the same pool across calls and across
+# segments (a chained pipeline reuses one pool per (Thread, max_threads)
+# pair, not one per segment).
+#
+# Identity-stable: never re-bound, only ``.clear()``ed in the post-fork
+# guard, so callers that imported ``_inner_pools`` keep a valid reference.
+_inner_pools: "weakref.WeakKeyDictionary[threading.Thread, dict]" = weakref.WeakKeyDictionary()
+_inner_pools_lock = threading.Lock()
+_inner_pools_pid: int = os.getpid()
+
+
+def _shutdown_inner_pools(sized_dict):
+    """Finalizer for a thread's pool dict: shut down all its pools.
+
+    ``wait=False`` to avoid blocking the finalizer thread.  In-flight tasks
+    would be cancelled, but the owning thread submits + joins synchronously,
+    so no such tasks exist when it actually exits.
+    """
+    for pool in sized_dict.values():
+        pool.shutdown(wait=False)
+
+
+def get_inner_pool(max_threads: int) -> ThreadPoolExecutor | None:
+    """Per-caller-thread ``ThreadPoolExecutor`` of size ``max_threads``.
+
+    Same calling thread + same ``max_threads`` returns the same pool —
+    across calls, across segments.  Different calling threads get distinct
+    pools so concurrent outer workers never queue on a shared inner pool
+    (the pathology that otherwise dominates when CRE ``n_jobs`` exceeds the
+    inner pool size).
+
+    Returns ``None`` for ``max_threads <= 1`` so callers can keep a single
+    serial-fallback branch.
+
+    Pools are owned by the calling ``Thread`` (via ``WeakKeyDictionary``),
+    so when the thread is garbage-collected its pools are shut down
+    automatically.
+
+    A pid guard clears the registry after ``os.fork()``: in a forked child
+    the parent's ``ThreadPoolExecutor``s reference Thread objects whose OS
+    threads were not copied across, so submitting to them would deadlock.
+    Pickled (spawn / forkserver) workers come up with their own module-load
+    state and never see this.
+    """
+    if max_threads <= 1:
+        return None
+
+    global _inner_pools_pid
+    pid = os.getpid()
+    if _inner_pools_pid != pid:
+        with _inner_pools_lock:
+            if _inner_pools_pid != pid:
+                _inner_pools.clear()
+                _inner_pools_pid = pid
+
+    thread = threading.current_thread()
+    sized = _inner_pools.get(thread)
+    if sized is None:
+        with _inner_pools_lock:
+            sized = _inner_pools.get(thread)
+            if sized is None:
+                sized = {}
+                _inner_pools[thread] = sized
+                weakref.finalize(thread, _shutdown_inner_pools, sized)
+    pool = sized.get(max_threads)
+    if pool is None:
+        with _inner_pools_lock:
+            pool = sized.get(max_threads)
+            if pool is None:
+                pool = ThreadPoolExecutor(max_workers=max_threads)
+                sized[max_threads] = pool
+    return pool
+
+
+@contextmanager
+def thread_budget(max_threads: int, *, blas: bool = False, numba: bool = False):
+    """Cap underlying thread runtimes for the duration of the context.
+
+    Caller picks which mechanisms apply — the rest are left alone.  Compose
+    with ``get_inner_pool`` for explicit Python-thread fan-out (a separate
+    mechanism that doesn't need a context manager).
+
+    Parameters
+    ----------
+    max_threads : int
+        Per-mechanism thread cap.  ``<= 1`` is a no-op (still enters the
+        context but caps to 1, which is what ``threadpool_limits`` /
+        ``numba.set_num_threads`` do anyway).
+    blas : bool, default False
+        Apply ``threadpool_limits(limits=max_threads)`` — caps the C-level
+        thread pools used by BLAS (OpenBLAS / MKL / BLIS) and OpenMP
+        (libgomp / libomp).
+    numba : bool, default False
+        Apply ``numba.set_num_threads(max_threads)`` for the duration of the
+        scope.  Restored on exit.  Only meaningful for ``@njit(parallel=True)``
+        kernels using ``prange``; harmless otherwise.
+
+    Notes
+    -----
+    threadpoolctl can sometimes reach numba's threading layer (when numba
+    is configured to use OpenMP), but this is unreliable across
+    ``NUMBA_THREADING_LAYER`` choices.  Use ``numba=True`` explicitly when
+    a segment actually contains a numba parallel kernel — don't rely on
+    ``blas=True`` to reach it.
+    """
+    with ExitStack() as stack:
+        if blas:
+            stack.enter_context(threadpool_limits(limits=max_threads))
+        if numba:
+            import numba as _nb
+
+            prev = _nb.get_num_threads()
+            _nb.set_num_threads(max(1, max_threads))
+            stack.callback(_nb.set_num_threads, prev)
+        yield
