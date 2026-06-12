@@ -30,7 +30,7 @@ def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
                 alpha=(200.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2406,
     )
     if format == "memory":
