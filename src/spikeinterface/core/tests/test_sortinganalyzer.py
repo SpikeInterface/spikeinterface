@@ -210,9 +210,12 @@ def test_create_by_dict():
     Interally, this aggregates the dicts of recordings and sortings. This test checks that the
     unit structure is maintained from the dicts to the analyzer. Then checks that the function
     fails if the dict keys are different for the recordings and the sortings.
+
+    Note, in this tests sparse is False because units are randomlly assign to differents of the
+    recording and they can have no channels
     """
 
-    rec, sort = generate_ground_truth_recording(num_channels=6)
+    rec, sort = generate_ground_truth_recording(num_channels=6, seed=2205)
 
     rec.set_property(key="group", values=[1, 2, 1, 1, 2, 2])
     sort.set_property(key="group", values=[2, 2, 2, 1, 2, 2, 2, 1, 2, 1])
@@ -220,7 +223,7 @@ def test_create_by_dict():
     unit_ids = sort.unit_ids
     split_sort = sort.split_by("group")
     split_rec = rec.split_by("group")
-    analyzer = create_sorting_analyzer(split_sort, split_rec)
+    analyzer = create_sorting_analyzer(split_sort, split_rec, sparse=False)
     analyzer_unit_ids = analyzer.unit_ids
 
     assert set(analyzer.unit_ids) == set(sort.unit_ids)
@@ -236,7 +239,7 @@ def test_create_by_dict():
     }
 
     with pytest.raises(ValueError):
-        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"))
+        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"), sparse=False)
 
     # make a dict of sortings, in a different order than the recording. This should
     # still work
@@ -244,7 +247,7 @@ def test_create_by_dict():
         2: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 2]),
         1: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 1]),
     }
-    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"))
+    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"), sparse=False)
     assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
 
@@ -715,12 +718,13 @@ def test_runtime_dependencies(dataset):
 
 
 if __name__ == "__main__":
-    tmp_path = Path("test_SortingAnalyzer")
-    dataset = get_dataset()
-    test_SortingAnalyzer_memory(tmp_path, dataset)
-    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    test_SortingAnalyzer_zarr(tmp_path, dataset)
-    test_SortingAnalyzer_tmp_recording(dataset)
-    test_extension()
-    test_extension_params()
-    test_runtime_dependencies()
+    # tmp_path = Path("test_SortingAnalyzer")
+    # dataset = get_dataset()
+    # test_SortingAnalyzer_memory(tmp_path, dataset)
+    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    # test_SortingAnalyzer_zarr(tmp_path, dataset)
+    # test_SortingAnalyzer_tmp_recording(dataset)
+    # test_extension()
+    # test_extension_params()
+    # test_runtime_dependencies()
+    test_create_by_dict()
