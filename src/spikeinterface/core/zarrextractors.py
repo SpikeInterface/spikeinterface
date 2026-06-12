@@ -294,7 +294,10 @@ class ZarrSortingExtractor(BaseSorting):
         spikes["unit_index"] = spikes_group["unit_index"][:]
         for i, (start, end) in enumerate(segment_slices_list):
             spikes["segment_index"][start:end] = i
-        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        # we do not need to lexsort at init (very high cost) because there already sorted by frame before to be saved.
+        # During version 0.104.X this was fully lexsorted in the file but this is not annoying.
+        # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+
         self._cached_spike_vector = spikes
 
         for segment_index in range(num_segments):

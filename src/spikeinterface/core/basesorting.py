@@ -908,7 +908,8 @@ class BaseSorting(BaseExtractor):
             spikes.append(spikes_in_seg)
 
         spikes = np.concatenate(spikes)
-        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        # the spikes are not lexsorted here because the previous loop ensure that the spike vector is constructucted alway the same way.
+        # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
