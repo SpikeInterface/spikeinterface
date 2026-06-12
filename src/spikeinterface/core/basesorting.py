@@ -875,7 +875,6 @@ class BaseSorting(BaseExtractor):
         instance the `UnitsSelectionSorting` implementation.
         """
 
-        
         num_seg = self.get_num_segments()
         spikes = []
         segment_slices = np.zeros((num_seg, 2), dtype="int64")
