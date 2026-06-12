@@ -23,7 +23,7 @@ import spikeinterface
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
-from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
+from .recording_tools import get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
     check_json,
     retrieve_importing_provenance,
@@ -363,10 +363,6 @@ class SortingAnalyzer:
                     f"recording: {recording.sampling_frequency} - sorting: {sorting.sampling_frequency}. "
                     "Ensure that you are associating the correct Recording and Sorting when creating a SortingAnalyzer."
                 )
-        # check that multiple probes are non-overlapping
-        all_probes = recording.get_probegroup().probes
-        check_probe_do_not_overlap(all_probes)
-
         if has_exceeding_spikes(sorting=sorting, recording=recording):
             warnings.warn(
                 "Your sorting has spikes with samples times greater than your recording length. These spikes have been removed."
@@ -1562,14 +1558,30 @@ class SortingAnalyzer:
 
     def get_channel_locations(self) -> np.ndarray:
         # important note : contrary to recording
-        # this give all channel locations, so no kwargs like channel_ids and axes
+        # this give all channel locations, so no kwargs like channel_ids and axes.
+        #
+        # Resolve per-channel through the `wiring` property held in rec_attributes,
+        # matching BaseRecordingSnippets.get_channel_locations.
+        properties = self.rec_attributes.get("properties", {})
+        wiring = properties.get("wiring")
         probegroup = self.get_probegroup()
+
+        if wiring is not None:
+            probes_by_id = {p.annotations["probe_id"]: p for p in probegroup.probes}
+            ndim = probegroup.ndim
+            locations = np.zeros((len(wiring), ndim), dtype="float64")
+            for i, (probe_id, contact_id) in enumerate(wiring):
+                probe = probes_by_id[probe_id]
+                contact_idx = int(np.where(np.asarray(probe.contact_ids) == contact_id)[0][0])
+                locations[i, :ndim] = probe.contact_positions[contact_idx, :ndim]
+            return locations
+
+        # legacy fallback: pre-id-keyed probegroups were attached with dci = arange(N),
+        # so sorting by dci yielded channel order. Kept for loading older analyzers.
         probe_as_numpy_array = probegroup.to_numpy(complete=True)
-        # we need to sort by device_channel_indices to ensure the order of locations is correct
         probe_as_numpy_array = probe_as_numpy_array[np.argsort(probe_as_numpy_array["device_channel_indices"])]
         ndim = probegroup.ndim
         locations = np.zeros((probe_as_numpy_array.size, ndim), dtype="float64")
-        # here we only loop through xy because only 2d locations are supported
         for i, dim in enumerate(["x", "y"][:ndim]):
             locations[:, i] = probe_as_numpy_array[dim]
         return locations

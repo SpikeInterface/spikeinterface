@@ -11,7 +11,7 @@ class BaseSnippets(BaseRecordingSnippets):
     Abstract class representing several multichannel snippets.
     """
 
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = ["group", "location", "wiring", "gain_to_uV", "offset_to_uV"]
     _main_features = []
 
     def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
@@ -259,9 +259,11 @@ class BaseSnippets(BaseRecordingSnippets):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
+        if self.has_probe() and not cached.has_probe():
+            # Share the probegroup by reference; see BaseRecording._save for
+            # the rationale (avoids re-running _set_probes validation on a
+            # child whose parent's dci exceeds the child's channel count).
+            cached._probegroup = self._probegroup
 
         return cached
 
