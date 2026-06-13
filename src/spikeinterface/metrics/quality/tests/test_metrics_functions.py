@@ -6,10 +6,10 @@ from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
     add_synchrony_to_sorting,
-    generate_ground_truth_recording,
     create_sorting_analyzer,
     synthesize_random_firings,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 
 from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, create_regular_periods
 
@@ -84,7 +84,7 @@ def _sorting_analyzer_violations():
         sampling_frequency=sorting.sampling_frequency,
         num_channels=6,
         sorting=sorting,
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)

@@ -107,7 +107,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
                 dtype=recording.dtype,
                 seed=seed,
-                strategy="on_the_fly",
                 noise_block_size=int(recording.sampling_frequency),
             )
             noise_generator = ScaleRecording(mock_noise, gain=noise_levels, dtype=recording.dtype)

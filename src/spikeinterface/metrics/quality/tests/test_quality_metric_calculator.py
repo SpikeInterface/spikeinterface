@@ -2,11 +2,11 @@ import pytest
 import numpy as np
 
 from spikeinterface.core import (
-    generate_ground_truth_recording,
     create_sorting_analyzer,
     NumpySorting,
     aggregate_units,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 
 from spikeinterface.metrics.quality.misc_metrics import compute_snrs, compute_drift_metrics
 

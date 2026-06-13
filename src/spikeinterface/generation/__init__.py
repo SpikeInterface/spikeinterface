@@ -15,6 +15,8 @@ from .hybrid_tools import (
 )
 from .noise_tools import generate_noise, NoiseGeneratorRecording, noise_generator_recording
 
+from .ground_truth_generator import generate_ground_truth_recording
+
 from .splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
 
 from .drifting_generator import (
@@ -37,7 +39,6 @@ from spikeinterface.core.generate import (
     generate_snippets,
     generate_templates,
     generate_recording_by_size,
-    generate_ground_truth_recording,
     add_synchrony_to_sorting,
     synthesize_random_firings,
     inject_some_duplicate_units,

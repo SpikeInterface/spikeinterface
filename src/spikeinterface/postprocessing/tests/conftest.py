@@ -1,9 +1,9 @@
 import pytest
 
 from spikeinterface.core import (
-    generate_ground_truth_recording,
     create_sorting_analyzer,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 
 
 def _small_sorting_analyzer():

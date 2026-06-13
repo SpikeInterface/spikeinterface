@@ -3,11 +3,11 @@ import shutil
 import numpy as np
 
 from spikeinterface.core import (
-    generate_ground_truth_recording,
     create_sorting_analyzer,
     load_sorting_analyzer,
     estimate_sparsity,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.sortinganalyzer import get_extension_class
 
 extensions_which_allow_unit_ids = ["unit_locations"]
@@ -30,7 +30,7 @@ def get_dataset():
                 alpha=(100.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
     return recording, sorting

@@ -48,7 +48,6 @@ from .generate import (
     generate_recording_by_size,
     InjectTemplatesRecording,
     inject_templates,
-    generate_ground_truth_recording,
 )
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
@@ -194,6 +193,9 @@ from .waveforms_extractor_backwards_compatibility import (
 )
 
 
+# Do not remove this hook when the import deprecation period ends: it is also load-time backward
+# compatibility. JSON/pickle saved by older versions store the old class path, and deserialization
+# resolves the class via getattr() on this module, which this hook redirects to spikeinterface.generation.
 def __getattr__(name):
     if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
         import warnings
@@ -213,4 +215,18 @@ def __getattr__(name):
             "noise_generator_recording": noise_generator_recording,
         }
         return _map[name]
+    if name == "generate_ground_truth_recording":
+        import warnings
+
+        warnings.warn(
+            "Importing generate_ground_truth_recording from spikeinterface.core is deprecated. "
+            "Import from spikeinterface.generation instead: "
+            "`from spikeinterface.generation import generate_ground_truth_recording`. "
+            "This will be removed in version 0.106.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from spikeinterface.generation.ground_truth_generator import generate_ground_truth_recording
+
+        return generate_ground_truth_recording
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

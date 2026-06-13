@@ -1,6 +1,6 @@
 import pytest
 
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 

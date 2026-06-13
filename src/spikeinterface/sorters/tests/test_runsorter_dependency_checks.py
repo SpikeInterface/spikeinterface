@@ -1,6 +1,6 @@
 import pytest
 import platform
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.sorters.utils import has_spython, has_docker_python, has_docker, has_singularity
 from spikeinterface.sorters import run_sorter
 import sys

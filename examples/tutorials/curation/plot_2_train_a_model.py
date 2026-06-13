@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import spikeinterface.core as si
 import spikeinterface.curation as sc
 import spikeinterface.widgets as sw
+from spikeinterface.generation import generate_ground_truth_recording
 
 # Note, you can set the number of cores you use using e.g.
 # si.set_global_job_kwargs(n_jobs = 8)
@@ -37,8 +38,8 @@ import spikeinterface.widgets as sw
 # `load your own recording <https://spikeinterface.readthedocs.io/en/latest/modules/extractors.html>`_
 # and `do a sorting <https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html>`_ on your data.)
 
-recording, sorting_1 = si.generate_ground_truth_recording(num_channels=4, seed=1, num_units=5)
-_, sorting_2 =si.generate_ground_truth_recording(num_channels=4, seed=2, num_units=5)
+recording, sorting_1 = generate_ground_truth_recording(num_channels=4, seed=1, num_units=5)
+_, sorting_2 = generate_ground_truth_recording(num_channels=4, seed=2, num_units=5)
 
 both_sortings = si.aggregate_units([sorting_1, sorting_2])
 

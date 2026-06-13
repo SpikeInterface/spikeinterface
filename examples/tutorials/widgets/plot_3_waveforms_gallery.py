@@ -10,11 +10,12 @@ import matplotlib.pyplot as plt
 import spikeinterface as si
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
+from spikeinterface.generation import generate_ground_truth_recording
 
 ##############################################################################
 # First, let's generate a simulated dataset
 
-recording, sorting = si.generate_ground_truth_recording()
+recording, sorting = generate_ground_truth_recording()
 print(recording)
 print(sorting)
 

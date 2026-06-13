@@ -3,7 +3,7 @@ import shutil
 
 import pytest
 
-from spikeinterface import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.core_tools import is_editable_mode
 
 import spikeinterface.sorters as ss

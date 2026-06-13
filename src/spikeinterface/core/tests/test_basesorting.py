@@ -15,12 +15,12 @@ from spikeinterface.core import (
     SharedMemorySorting,
     NpzFolderSorting,
     NumpyFolderSorting,
-    generate_ground_truth_recording,
     generate_sorting,
     create_sorting_npz,
     generate_sorting,
     load,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 

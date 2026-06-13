@@ -2,7 +2,8 @@ import shutil
 import pytest
 import numpy as np
 
-from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
+from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
 
 # def setup_module():

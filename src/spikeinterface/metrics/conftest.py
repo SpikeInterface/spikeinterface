@@ -1,9 +1,9 @@
 import pytest
 
 from spikeinterface.core import (
-    generate_ground_truth_recording,
     create_sorting_analyzer,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
@@ -65,7 +65,7 @@ def sorting_analyzer_simple():
                 alpha=(200.0, 500.0),
             )
         ),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=1205,
     )
 

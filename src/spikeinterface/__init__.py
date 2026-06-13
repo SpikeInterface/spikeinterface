@@ -6,6 +6,25 @@ __version__ = importlib.metadata.version("spikeinterface")
 
 from .core import *
 
+
+def __getattr__(name):
+    if name == "generate_ground_truth_recording":
+        import warnings
+
+        warnings.warn(
+            "Importing generate_ground_truth_recording from spikeinterface is deprecated. "
+            "Import from spikeinterface.generation instead: "
+            "`from spikeinterface.generation import generate_ground_truth_recording`. "
+            "This will be removed in version 0.106.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from .generation.ground_truth_generator import generate_ground_truth_recording
+
+        return generate_ground_truth_recording
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 import warnings
 
 warnings.filterwarnings("ignore", message="distutils Version classes are deprecated")

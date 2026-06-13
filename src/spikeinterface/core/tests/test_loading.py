@@ -2,7 +2,6 @@ import pytest
 
 import numpy as np
 from spikeinterface import (
-    generate_ground_truth_recording,
     create_sorting_analyzer,
     load,
     ms_to_samples,
@@ -10,6 +9,7 @@ from spikeinterface import (
     Templates,
     aggregate_channels,
 )
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.motion import Motion
 from spikeinterface.core.generate import generate_unit_locations, generate_templates
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal

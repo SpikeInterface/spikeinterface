@@ -1,7 +1,7 @@
 from spikeinterface.generation import split_sorting_by_amplitudes, split_sorting_by_times
 
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.core.generate import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 
 
 def test_split_by_times():

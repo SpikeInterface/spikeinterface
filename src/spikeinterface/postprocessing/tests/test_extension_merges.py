@@ -1,6 +1,7 @@
 import numpy as np
 
-from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
+from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.generation import generate_ground_truth_recording
 
 
 def test_correlograms_merge():

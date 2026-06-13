@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import spikeinterface.core as si
 import spikeinterface.curation as sc
 import spikeinterface.widgets as sw
+from spikeinterface.generation import generate_ground_truth_recording
 
 # note: you can use more cores using e.g.
 # si.set_global_jobs_kwargs(n_jobs = 8)
@@ -69,7 +70,7 @@ print(model.feature_names_in_)
 # bunch of extensions. Follow these links for more info on `recordings <https://spikeinterface.readthedocs.io/en/latest/modules/extractors.html>`_, `sortings <https://spikeinterface.readthedocs.io/en/latest/modules/sorters.html>`_, `sorting analyzers <https://spikeinterface.readthedocs.io/en/latest/tutorials/core/plot_4_sorting_analyzer.html#sphx-glr-tutorials-core-plot-4-sorting-analyzer-py>`_
 # and `extensions <https://spikeinterface.readthedocs.io/en/latest/modules/postprocessing.html>`_.
 
-recording, sorting = si.generate_ground_truth_recording(num_channels=4, seed=4, num_units=10)
+recording, sorting = generate_ground_truth_recording(num_channels=4, seed=4, num_units=10)
 sorting_analyzer = si.create_sorting_analyzer(sorting=sorting, recording=recording)
 sorting_analyzer.compute(['noise_levels','random_spikes','waveforms','templates','spike_locations','spike_amplitudes','correlograms','principal_components','quality_metrics','template_metrics'])
 sorting_analyzer.compute('template_metrics', include_multi_channel_metrics=True)

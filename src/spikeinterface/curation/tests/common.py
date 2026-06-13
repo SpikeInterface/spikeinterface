@@ -1,6 +1,7 @@
 import pytest
 
-from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer, aggregate_units
+from spikeinterface.core import create_sorting_analyzer, aggregate_units
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.generate import inject_some_split_units
 from spikeinterface.curation import train_model
 from pathlib import Path
@@ -25,7 +26,7 @@ def make_sorting_analyzer(sparse=True, num_units=5, durations=[300.0]):
         num_channels=4,
         num_units=num_units,
         generate_sorting_kwargs=dict(firing_rates=20.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
 

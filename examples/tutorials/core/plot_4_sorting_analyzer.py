@@ -27,7 +27,8 @@ Here is the how!
 
 import matplotlib.pyplot as plt
 
-from spikeinterface import create_sorting_analyzer, load_sorting_analyzer, generate_ground_truth_recording
+from spikeinterface import create_sorting_analyzer, load_sorting_analyzer
+from spikeinterface.generation import generate_ground_truth_recording
 
 ##############################################################################
 # First let's generate a simulated recording and sorting

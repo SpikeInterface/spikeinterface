@@ -1,6 +1,6 @@
 import pytest
 
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors.extractor_classes import SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor
 

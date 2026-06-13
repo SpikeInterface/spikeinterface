@@ -12,13 +12,12 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 import numpy as np
 
 from spikeinterface.core import (
-    generate_ground_truth_recording,
     estimate_templates,
     Templates,
     create_sorting_analyzer,
     ms_to_samples,
 )
-from spikeinterface.generation import generate_drifting_recording
+from spikeinterface.generation import generate_drifting_recording, generate_ground_truth_recording
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
@@ -39,7 +38,7 @@ def make_dataset(job_kwargs={}):
             contact_shape_params={"radius": 6},
         ),
         generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
 

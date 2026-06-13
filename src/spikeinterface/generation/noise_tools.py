@@ -33,7 +33,7 @@ class NoiseGeneratorRecording(BaseRecording):
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
         The seed for np.random.default_rng.
-    strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
+    strategy : "tile_pregenerated" | "on_the_fly", default: "on_the_fly"
         The strategy of generating noise chunk:
           * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
                                  very fast and cusume only one noise block.
@@ -57,7 +57,7 @@ class NoiseGeneratorRecording(BaseRecording):
         cov_matrix: np.ndarray | None = None,
         dtype: np.dtype | str | None = "float32",
         seed: int | None = None,
-        strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
+        strategy: Literal["tile_pregenerated", "on_the_fly"] = "on_the_fly",
         noise_block_size: int = 30000,
     ):
 
@@ -284,7 +284,6 @@ def generate_noise(
         sampling_frequency=sampling_frequency,
         durations=durations,
         dtype=dtype,
-        strategy="on_the_fly",
         noise_levels=noise_levels,
         cov_matrix=cov_matrix,
         seed=seed,

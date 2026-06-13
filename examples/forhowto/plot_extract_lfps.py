@@ -52,7 +52,7 @@ import spikeinterface as si
 import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 import spikeinterface.widgets as sw
-from spikeinterface.core import generate_ground_truth_recording
+from spikeinterface.generation import generate_ground_truth_recording
 
 ##############################################################################
 # 1. Generate simulated recording with low-frequency signals

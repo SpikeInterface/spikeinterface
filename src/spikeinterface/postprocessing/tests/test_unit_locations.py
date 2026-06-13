@@ -2,7 +2,8 @@ from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerE
 from spikeinterface.postprocessing import ComputeUnitLocations
 import pytest
 from probeinterface import Probe
-from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
+from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.generation import generate_ground_truth_recording
 import numpy as np
 
 
