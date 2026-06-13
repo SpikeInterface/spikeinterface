@@ -2266,6 +2266,9 @@ def generate_unit_locations(
     return units_locations
 
 
+# Do not remove this hook when the import deprecation period ends: it is also load-time backward
+# compatibility. JSON/pickle saved by older versions store the old class path, and deserialization
+# resolves the class via getattr() on this module, which this hook redirects to spikeinterface.generation.
 def __getattr__(name):
     if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
         import warnings
