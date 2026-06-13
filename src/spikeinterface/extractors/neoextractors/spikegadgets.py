@@ -56,9 +56,8 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         )
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
-        probegroup = None  # TODO remove once probeinterface is updated to 0.2.22 in the pyproject.toml
-        if packaging.version.parse(probeinterface.__version__) > packaging.version.parse("0.2.21"):
-            probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
+        probegroup = probeinterface.read_spikegadgets(file_path, raise_error=False)
+        # TODO: add adc sample shifts and saturation levels if available in the probe metadata
 
         if probegroup is not None:
             self.set_probegroup(probegroup, in_place=True)
