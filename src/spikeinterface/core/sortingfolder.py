@@ -24,7 +24,7 @@ class NumpyFolderSorting(BaseSorting):
     mode = "folder"
     name = "NumpyFolder"
 
-    def __init__(self, folder_path):
+    def __init__(self, folder_path, mmap_mode=None):
         folder_path = Path(folder_path)
 
         with open(folder_path / "numpysorting_info.json", "r") as f:
@@ -36,7 +36,7 @@ class NumpyFolderSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.spikes = np.load(folder_path / "spikes.npy")
+        self.spikes = np.load(folder_path / "spikes.npy", mmap_mode=mmap_mode)
 
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
@@ -47,7 +47,7 @@ class NumpyFolderSorting(BaseSorting):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
-        self._kwargs = dict(folder_path=str(folder_path.absolute()))
+        self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
     @staticmethod
     def write_sorting(sorting, save_path):
