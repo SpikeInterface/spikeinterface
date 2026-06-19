@@ -289,6 +289,8 @@ class ZarrSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
+        # TODO: make a virtual memmap view of the spike vector or override to_spike_vector to behave like
+        # a memmap
         spikes = np.zeros(len(spikes_group["sample_index"]), dtype=minimum_spike_dtype)
         spikes["sample_index"] = spikes_group["sample_index"][:]
         spikes["unit_index"] = spikes_group["unit_index"][:]
