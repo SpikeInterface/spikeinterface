@@ -168,6 +168,26 @@ widgets = [
     "distinctipy",
 ]
 
+lupin = [
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "torch"
+]
+
+spykingcircus2 = [
+    "scipy",
+    "hdbscan",
+    "numba",
+]
+
+tridesclous2= [
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "torch",
+]
+
 # `full` installs every module's optional feature deps. Defined as the union of
 # per-module extras so adding a dep to a module propagates here automatically.
 full = [
@@ -244,6 +264,11 @@ test-streaming-extractors = [
     {include-group = "test-common"},
     "pooch>=1.8.2",
     "datalad>=1.0.2",
+    "remfile",
+    "requests",
+    "aiohttp",
+    "fsspec",
+    "s3fs",
 ]
 
 test-preprocessing = [
@@ -254,13 +279,24 @@ test-preprocessing = [
     "torch",  # preprocessing tests exercise sortingcomponents.motion.dredge
 ]
 
-test-postprocessing = [{include-group = "test-common"}]
+test-postprocessing = [
+    {include-group = "test-common"},
+    "pandas<3",
+    ]
 test-metrics = [{include-group = "test-common"}]
-test-comparison = [{include-group = "test-common"}]
+
+test-comparison = [
+    {include-group = "test-common"},
+    "numba>=0.59"
+    ]
+
 test-sorters-internal = [
     {include-group = "test-common"},
-    "torch",  # spyking_circus2 template matching
-    "hdbscan>=0.8.33",  # simplesorter / tridesclous2
+    "scipy",
+    "torch",
+    "hdbscan>=0.8.33",
+    "numba",
+    "scikit-learn",
 ]
 test-sorters = [{include-group = "test-sorters-internal"}]
 test-curation = [{include-group = "test-common"}]
@@ -278,8 +314,15 @@ test-exporters = [{include-group = "test-common"}]
 test-sortingcomponents = [
     {include-group = "test-common"},
     "torch",  # neural network peak detection, motion, matching
+    "huggingface_hub", # for `test_single_channel_toy_denoiser_in_peak_pipeline`
 ]
-test-generation = [{include-group = "test-common"}]
+test-generation = [
+    {include-group = "test-common"},
+    "fsspec",
+    "s3fs",
+    "numba>=0.59", # numba and sklearn needed for motion correction of
+    "scikit-learn", # syntheic data used in `test_generate_hybrid_motion`
+    ]
 
 # Aggregate group for workflows that run the full test suite (nightly codecov).
 test-all = [

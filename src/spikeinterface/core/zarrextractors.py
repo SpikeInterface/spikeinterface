@@ -382,6 +382,51 @@ def resolve_zarr_path(folder_path: str | Path):
         return folder_path, folder_path_kwarg
 
 
+def _write_object_array(
+    group,
+    name: str,
+    data,
+    codec: str = "json",
+    overwrite: bool = True,
+):
+    """
+    Write a length-1 object-dtype array holding a Python dict/list/object.
+
+    Centralizes the v2/v3 codec-placement difference for object blobs: under zarr-v2
+    the object codec goes in ``object_codec=``; under zarr-v3 it goes in ``filters=``
+    (wrapped via ``numcodecs.zarr3.*``). The helper picks the right path automatically.
+
+    Parameters
+    ----------
+    group : zarr.Group
+        The zarr group to write into.
+    name : str
+        Name of the array inside ``group``.
+    data : Any
+        The Python object to store. Wrapped into ``np.array([data], dtype=object)``.
+    codec : {"json", "pickle"}, default: "json"
+        Which object codec to use.
+    overwrite : bool, default: True
+        Whether to overwrite an existing array with the same name.
+    """
+    import numcodecs
+
+    if codec == "json":
+        codec_instance = numcodecs.JSON()
+    elif codec == "pickle":
+        codec_instance = numcodecs.Pickle()
+    else:
+        raise ValueError(f"codec must be 'json' or 'pickle', got {codec!r}")
+
+    arr = np.array([data], dtype=object)
+    return group.create_dataset(
+        name=name,
+        data=arr,
+        object_codec=codec_instance,
+        overwrite=overwrite,
+    )
+
+
 def get_default_zarr_compressor(clevel: int = 5):
     """
     Return default Zarr compressor object for good preformance in int16
