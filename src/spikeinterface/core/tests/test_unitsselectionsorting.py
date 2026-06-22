@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface.core import UnitsSelectionSorting
 from spikeinterface.core.numpyextractors import NumpySorting
+from spikeinterface.core.sorting_tools import is_spike_vector_sorted
 
 from spikeinterface.core.generate import generate_sorting
 
@@ -41,7 +41,7 @@ def test_failure_with_non_unique_unit_ids():
     seed = 10
     sorting = generate_sorting(num_units=3, durations=[0.100], sampling_frequency=30000.0, seed=seed)
     with pytest.raises(AssertionError):
-        sorting2 = UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
+        UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
 
 
 def test_compute_and_cache_spike_vector():
@@ -89,6 +89,8 @@ def test_uss_get_unit_spike_trains_with_renamed_ids(use_cache):
 def test_spike_vector_sorted_after_reorder_with_cotemporal_spikes():
     """USS spike vector must be correctly sorted even when selection reverses unit order
     and co-temporal spikes exist (same sample_index, different units)."""
+    from spikeinterface.core.basesorting import BaseSorting
+
     # Build a sorting with guaranteed co-temporal spikes:
     # units 0, 1, 2 all fire at sample 100 and 200
     samples = np.array([100, 100, 100, 200, 200, 200, 300, 400], dtype=np.int64)
@@ -102,19 +104,77 @@ def test_spike_vector_sorted_after_reorder_with_cotemporal_spikes():
 
     spike_vector = sub.to_spike_vector()
 
-    # Spike vector must be sorted by (segment_index, sample_index, unit_index)
-    n = len(spike_vector)
-    if n > 1:
-        seg = spike_vector["segment_index"]
-        samp = spike_vector["sample_index"]
-        unit = spike_vector["unit_index"]
-        d_seg = np.diff(seg)
-        assert np.all(d_seg >= 0), "segment_index not non-decreasing"
-        seg_eq = d_seg == 0
-        d_samp = np.diff(samp)
-        assert np.all(d_samp[seg_eq] >= 0), "sample_index not non-decreasing within segment"
-        samp_eq = seg_eq & (d_samp == 0)
-        assert np.all(np.diff(unit)[samp_eq] >= 0), "unit_index not non-decreasing within same sample"
+    sub._cached_spike_vector = None
+    sub._cached_spike_vector_segment_slices = None
+    BaseSorting._compute_and_cache_spike_vector(sub)
+    base_vector = sub._cached_spike_vector
+
+    assert np.array_equal(spike_vector, base_vector)
+    assert np.all(spike_vector["segment_index"] == 0)
+    assert is_spike_vector_sorted(spike_vector)
+
+
+def test_compute_and_cache_spike_vector_identity_selection_shares_parent_cache():
+    """A USS that selects all of its parent's units in parent order should reuse the
+    parent's cached spike vector by reference, not rebuild it."""
+    from spikeinterface.core.basesorting import BaseSorting
+
+    sorting = generate_sorting(num_units=4, durations=[0.100, 0.100], sampling_frequency=30000.0)
+
+    # First USS: identity selection over `sorting`. Force its cache.
+    uss1 = UnitsSelectionSorting(sorting, unit_ids=list(sorting.unit_ids))
+    uss1._compute_and_cache_spike_vector()
+    assert uss1._cached_spike_vector is not None
+
+    # Second USS: identity selection over uss1, with renamed ids to exercise the
+    # rename-only path. The cached spike vector must be the same Python object.
+    renamed = [f"r{uid}" for uid in uss1.unit_ids]
+    uss2 = UnitsSelectionSorting(uss1, unit_ids=list(uss1.unit_ids), renamed_unit_ids=renamed)
+    uss2._compute_and_cache_spike_vector()
+    assert uss2._cached_spike_vector is uss1._cached_spike_vector
+    if uss1._cached_spike_vector_segment_slices is not None:
+        assert uss2._cached_spike_vector_segment_slices is uss1._cached_spike_vector_segment_slices
+
+    # Belt-and-suspenders: the shared vector must still match the slow base-class path.
+    uss2._cached_spike_vector = None
+    uss2._cached_spike_vector_segment_slices = None
+    BaseSorting._compute_and_cache_spike_vector(uss2)
+    base_vector = uss2._cached_spike_vector
+    assert np.array_equal(uss1._cached_spike_vector, base_vector)
+
+
+def test_to_reordered_spike_vector_identity_selection_shares_parent_cache():
+    """A USS that selects all of its parent's units in parent order should reuse the
+    parent's lexsorted spike vector cache by reference, not re-run the counting sort."""
+    sorting = generate_sorting(num_units=5, durations=[0.200, 0.200], sampling_frequency=30000.0)
+
+    # Identity selection, with renamed ids to also exercise the rename-only path.
+    renamed = [f"r{uid}" for uid in sorting.unit_ids]
+    uss = UnitsSelectionSorting(sorting, unit_ids=list(sorting.unit_ids), renamed_unit_ids=renamed)
+
+    for lexsort in [
+        ("sample_index", "segment_index", "unit_index"),
+        ("sample_index", "unit_index", "segment_index"),
+    ]:
+        # Force the parent to build the lexsorted cache.
+        parent_ordered, _, parent_slices = sorting.to_reordered_spike_vector(
+            lexsort=lexsort, return_order=True, return_slices=True
+        )
+        key = str(lexsort)
+        assert key in sorting._cached_lexsorted_spike_vector
+
+        # Reset USS cache and force a build through the override.
+        uss._cached_lexsorted_spike_vector = {}
+        uss_ordered, _, uss_slices = uss.to_reordered_spike_vector(
+            lexsort=lexsort, return_order=True, return_slices=True
+        )
+
+        # The cache entry must be the *same* dict object as the parent's.
+        assert (
+            uss._cached_lexsorted_spike_vector[key] is sorting._cached_lexsorted_spike_vector[key]
+        ), f"identity USS did not share parent lexsorted cache for {lexsort}"
+        assert uss_ordered is parent_ordered
+        assert uss_slices is parent_slices
 
 
 if __name__ == "__main__":

@@ -155,6 +155,131 @@ def test_BaseSorting(create_cache_folder):
         assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
 
 
+def _reference_reordered_spike_vector(spikes, lexsort, num_units, num_segments):
+    """Pre-optimization reference: np.lexsort + nested searchsorted.
+
+    Mirrors the implementation that lived in `to_reordered_spike_vector`
+    before the counting-sort rewrite. Used to assert byte-for-byte parity
+    of the new implementation.
+    """
+    order = np.lexsort((spikes[lexsort[0]], spikes[lexsort[1]], spikes[lexsort[2]]))
+    ordered_spikes = spikes[order]
+
+    if lexsort == ("sample_index", "segment_index", "unit_index"):
+        slices = np.zeros((num_units, num_segments, 2), dtype=np.int64)
+        unit_slices = np.searchsorted(ordered_spikes["unit_index"], np.arange(num_units + 1), side="left")
+        for unit_index in range(num_units):
+            u0 = unit_slices[unit_index]
+            u1 = unit_slices[unit_index + 1]
+            seg_slices = np.searchsorted(
+                ordered_spikes[u0:u1]["segment_index"], np.arange(num_segments + 1), side="left"
+            )
+            for segment_index in range(num_segments):
+                s0 = seg_slices[segment_index]
+                s1 = seg_slices[segment_index + 1]
+                slices[unit_index, segment_index, :] = [u0 + s0, u0 + s1]
+    elif lexsort == ("sample_index", "unit_index", "segment_index"):
+        slices = np.zeros((num_segments, num_units, 2), dtype=np.int64)
+        seg_slices = np.searchsorted(ordered_spikes["segment_index"], np.arange(num_segments + 1), side="left")
+        for segment_index in range(num_segments):
+            s0 = seg_slices[segment_index]
+            s1 = seg_slices[segment_index + 1]
+            unit_slices = np.searchsorted(ordered_spikes[s0:s1]["unit_index"], np.arange(num_units + 1), side="left")
+            for unit_index in range(num_units):
+                u0 = unit_slices[unit_index]
+                u1 = unit_slices[unit_index + 1]
+                slices[segment_index, unit_index, :] = [s0 + u0, s0 + u1]
+    else:
+        raise ValueError(lexsort)
+
+    return ordered_spikes, order, slices
+
+
+def test_to_reordered_spike_vector_parity():
+    """The counting-sort rewrite must match the prior np.lexsort implementation."""
+    rng = np.random.default_rng(42)
+    num_units = 6
+    num_segments = 3
+    sampling_frequency = 30_000.0
+
+    # Build per-segment, per-unit spike trains with deliberate cotemporal spikes
+    # (multiple units firing at the same sample_index) so the unit-index tiebreaker
+    # is exercised.
+    spike_dicts = []
+    for seg in range(num_segments):
+        seg_dict = {}
+        for u in range(num_units):
+            n = int(rng.integers(50, 200))
+            times = np.sort(rng.integers(0, 10_000, size=n))
+            # Inject a handful of cotemporal spikes that collide with the unit-0 train.
+            if u > 0 and n > 5:
+                times[:5] = np.array([100, 200, 300, 400, 500]) + seg * 10
+                times = np.sort(times)
+            seg_dict[str(u)] = times.astype("int64")
+        spike_dicts.append(seg_dict)
+
+    sorting = NumpySorting.from_unit_dict(spike_dicts, sampling_frequency)
+    spikes = sorting.to_spike_vector()
+
+    for lexsort in [
+        ("sample_index", "segment_index", "unit_index"),
+        ("sample_index", "unit_index", "segment_index"),
+    ]:
+        # Clear the cache between iterations so each call exercises the fresh build.
+        sorting._cached_lexsorted_spike_vector = {}
+
+        ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
+            lexsort=lexsort, return_order=True, return_slices=True
+        )
+
+        ref_ordered, ref_order, ref_slices = _reference_reordered_spike_vector(spikes, lexsort, num_units, num_segments)
+
+        # ordered_spikes must agree with the reference exactly (cotemporal spikes
+        # are now ordered by unit_index — stable counting sort by bucket preserves
+        # the canonical unit-index ordering within each tied sample_index).
+        assert np.array_equal(ordered_spikes, ref_ordered), f"ordered mismatch for {lexsort}"
+        # The invariant `spikes[order] == ordered_spikes` must hold; the exact
+        # `order` permutation can differ from np.lexsort's because stable counting
+        # sort and np.lexsort may pick different tie-break orderings of source rows
+        # that map to the same destination (different source rows can carry the
+        # same (sample, unit, segment) triple).
+        assert np.array_equal(spikes[order], ordered_spikes)
+        assert np.array_equal(slices, ref_slices), f"slices mismatch for {lexsort}"
+
+        # Each (unit, segment) — or (segment, unit) — slice must yield exactly the
+        # spikes for that group, with monotonic sample_index.
+        if lexsort == ("sample_index", "segment_index", "unit_index"):
+            for u in range(num_units):
+                for s in range(num_segments):
+                    s0, s1 = slices[u, s]
+                    block = ordered_spikes[s0:s1]
+                    assert np.all(block["unit_index"] == u)
+                    assert np.all(block["segment_index"] == s)
+                    assert np.all(np.diff(block["sample_index"]) >= 0)
+        else:
+            for s in range(num_segments):
+                for u in range(num_units):
+                    s0, s1 = slices[s, u]
+                    block = ordered_spikes[s0:s1]
+                    assert np.all(block["unit_index"] == u)
+                    assert np.all(block["segment_index"] == s)
+                    assert np.all(np.diff(block["sample_index"]) >= 0)
+
+
+def test_to_reordered_spike_vector_empty():
+    """An empty sorting must round-trip through the counting-sort path."""
+    sorting = NumpySorting.from_unit_dict({"0": np.array([], dtype="int64")}, 30_000.0)
+    ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
+        lexsort=("sample_index", "segment_index", "unit_index"),
+        return_order=True,
+        return_slices=True,
+    )
+    assert ordered_spikes.size == 0
+    assert order.size == 0
+    assert slices.shape == (1, 1, 2)
+    assert np.array_equal(slices, np.zeros((1, 1, 2), dtype=np.int64))
+
+
 def test_npy_sorting():
     sfreq = 10
     spike_times_0 = {

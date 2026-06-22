@@ -5,7 +5,7 @@ from typing import Literal
 
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor, unit_period_dtype
+from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -236,14 +236,14 @@ def random_spikes_selection(
 
             elif method == "percentage":
                 if percentage is None or not (0 < percentage <= 1):
-                    raise ValueError(f"percentage must be in the interval (0, 1]")
+                    raise ValueError("percentage must be in the interval (0, 1]")
 
                 rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "maximum_rate":
                 if maximum_rate is None:
-                    raise ValueError(f"maximum_rate must be defined")
+                    raise ValueError("maximum_rate must be defined")
 
                 t_duration = np.sum(get_segment_durations(sorting))
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
@@ -949,6 +949,9 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
       * select unit and recompute quickly the "unit_index" in the spike vector
       * merging/spliting periods or spikes and update the "unit_index" in the vector
 
+    Do not use this if you are operating on `minimum_spike_dtype` inputs! In such cases,
+    it is much more efficient to use a dense LUT + `filter_and_remap_spike_vector()`
+    (see `UnitSelectionSorting._compute_and_cache_spike_vector()`).
 
     Parameters
     ----------
@@ -998,26 +1001,434 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     return new_vector, keep_mask_vector
 
 
-def is_spike_vector_sorted(spike_vector: np.ndarray) -> bool:
+def is_spike_vector_sorted(
+    spike_vector: np.ndarray, *, chunk_size: int | None = 10_000_000, assume_single_segment: bool = False
+) -> bool:
     """Return True iff the spike vector is sorted by (segment_index, sample_index, unit_index).
 
-    O(n) sequential scan. Used to avoid an O(n log n) lexsort when the vector already
-    happens to be in canonical order.
+    This is an O(n) sequential scan used to avoid an O(n log n) lexsort when the
+    vector already happens to be in canonical order.
+
+    The strategy is: compare pairs of adjacent spikes in chunks to avoid allocating
+    (possibly big) temporary arrays for diffs.
+
+    Each adjacent pair has to be fully "lexsorted":
+
+    * segment_index is nondecreasing;
+    * within the same segment, sample_index is nondecreasing;
+    * within the same segment and same sample, unit_index is nondecreasing.
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray
+        Spike vector with fields "sample_index", "unit_index", and
+        "segment_index".
+    chunk_size : int | None, default 10_000_000
+        Number of adjacent pairs to check per chunk. None checks the full vector
+        in one chunk.
+    assume_single_segment : bool, default False
+        If True, skip segment_index checks and require only sample_index/unit_index
+        ordering.
     """
     n = len(spike_vector)
     if n <= 1:
         return True
-    seg = spike_vector["segment_index"]
-    samp = spike_vector["sample_index"]
-    unit = spike_vector["unit_index"]
-    d_seg = np.diff(seg)
-    if np.any(d_seg < 0):
-        return False
-    seg_eq = d_seg == 0
-    d_samp = np.diff(samp)
-    if np.any(d_samp[seg_eq] < 0):
-        return False
-    samp_eq = seg_eq & (d_samp == 0)
-    if np.any(np.diff(unit)[samp_eq] < 0):
-        return False
+
+    if chunk_size is None:
+        chunk_size = n - 1
+    elif chunk_size < 1:
+        raise ValueError("chunk_size must be >= 1 or None")
+
+    sample_index = spike_vector["sample_index"]
+    unit_index = spike_vector["unit_index"]
+
+    if assume_single_segment:
+        for start in range(0, n - 1, chunk_size):
+            stop = min(start + chunk_size, n - 1)
+
+            # Compare each sample_index value to the following one. The shifted
+            # slices have equal length and represent adjacent spike pairs.
+            sample0 = sample_index[start:stop]
+            sample1 = sample_index[start + 1 : stop + 1]
+            if np.any(sample1 < sample0):
+                return False
+
+            # Unit order only matters for cotemporal (same sample) spikes
+            same_sample = sample1 == sample0
+            if np.any((unit_index[start + 1 : stop + 1] < unit_index[start:stop]) & same_sample):
+                return False
+
+        return True
+
+    segment_index = spike_vector["segment_index"]
+
+    for start in range(0, n - 1, chunk_size):
+        stop = min(start + chunk_size, n - 1)
+
+        # First enforce segment ordering. Later checks are masked to adjacent
+        # pairs in the same segment because sample/unit ordering is segment-local.
+        segment0 = segment_index[start:stop]
+        segment1 = segment_index[start + 1 : stop + 1]
+        if np.any(segment1 < segment0):
+            return False
+
+        same_segment = segment1 == segment0
+
+        sample0 = sample_index[start:stop]
+        sample1 = sample_index[start + 1 : stop + 1]
+        if np.any((sample1 < sample0) & same_segment):
+            return False
+
+        # Unit order is only part of canonical order for cotemporal spikes.
+        same_sample = same_segment & (sample1 == sample0)
+        if np.any((unit_index[start + 1 : stop + 1] < unit_index[start:stop]) & same_sample):
+            return False
+
     return True
+
+
+def build_spike_vector_from_sorted_arrays(
+    sample_indices: np.ndarray,
+    unit_indices: np.ndarray,
+    segment_index: int = 0,
+) -> np.ndarray:
+    """Build a `minimum_spike_dtype` spike vector when sample_indices is already sorted.
+
+    Some sorting extractors (notably Phy/Kilosort) hold their spike samples in
+    a flat array that is already monotonic non-decreasing in `sample_index`.
+    Building the spike vector then only requires sorting `unit_index` *within*
+    runs of equal `sample_index` — a single O(N) pass, instead of an O(N log N)
+    global `np.lexsort`.
+
+    Parameters
+    ----------
+    sample_indices : np.ndarray
+        1-D integer array of spike sample positions. Expected to be monotonic
+        non-decreasing; if a violation is detected the function falls back to
+        a global lexsort so the result is still correct.
+    unit_indices : np.ndarray
+        1-D integer array, parallel to `sample_indices`, giving each spike's
+        unit index (position in the parent sorting's `unit_ids`).
+    segment_index : int, default 0
+        Value to broadcast into the output `segment_index` field.
+
+    Returns
+    -------
+    spikes : np.ndarray
+        Structured array of length `sample_indices.size` with dtype
+        `minimum_spike_dtype`. The ordering is identical to what you would
+        get by building the structured array from the inputs and then
+        applying ``np.lexsort((unit_indices, sample_indices))`` — i.e.
+        primary key `sample_index` ascending, secondary key `unit_index`
+        ascending within ties.
+    """
+    n = sample_indices.size
+    if unit_indices.size != n:
+        raise ValueError(f"sample_indices and unit_indices must have the same length; got {n} and {unit_indices.size}.")
+
+    if n == 0:
+        return np.empty(0, dtype=minimum_spike_dtype)
+
+    # Since the numba kernel is compiled for int64, this ensures we don't re-JIT if,
+    # for examples, the caller passes unit ids as int32. More importantly, this allows
+    # the kernel to index with a constant stride no matter what (e.g. if the caller
+    # passes a non-contiguous view like `arr[::2]`), and costs nothing if no-op.
+    sample_arr = np.ascontiguousarray(sample_indices, dtype=np.int64)
+    unit_arr = np.ascontiguousarray(unit_indices, dtype=np.int64)
+
+    if HAVE_NUMBA:
+        # Allocate the output as a flat (N, 3) int64 buffer and let one numba
+        # kernel pass do everything: monotonicity check, unit-index
+        # tie resolution, and writing all three fields.
+        flat = np.empty((n, 3), dtype=np.int64)
+        is_monotonic = _build_spike_vector_kernel(sample_arr, unit_arr, int(segment_index), flat)
+        if is_monotonic:
+            # NB: This is zero-copy, because the (N, 3) int64 layout matches
+            # `minimum_spike_dtype` exactly.
+            return flat.view(minimum_spike_dtype).reshape(n)
+
+    # Fallback: caller's sample_indices invariant did not hold (or numba
+    # is unavailable). Do a global lexsort. ='(
+    spikes = np.empty(n, dtype=minimum_spike_dtype)
+    spikes["segment_index"] = segment_index
+    order = np.lexsort((unit_arr, sample_arr))
+    spikes["sample_index"] = sample_arr[order]
+    spikes["unit_index"] = unit_arr[order]
+    return spikes
+
+
+def filter_and_remap_spike_vector(
+    spike_vector: np.ndarray,
+    unit_mapping: np.ndarray,
+) -> np.ndarray:
+    """Filter a `minimum_spike_dtype` spike vector by unit and remap unit_index in one pass.
+
+    For each spike `i` in `spike_vector`:
+      * look up ``new_idx = unit_mapping[spike_vector[i]["unit_index"]]``,
+      * if ``new_idx >= 0``, copy the spike to the output with that new unit_index;
+      * otherwise drop it.
+
+    Spikes are written in their original order in `spike_vector`, so if the input
+    is sorted by ``(segment_index, sample_index, parent_unit_index)`` and
+    `unit_mapping`, restricted to its kept entries, is monotonic increasing,
+    then the output is also sorted by ``(segment_index, sample_index, new_unit_index)``.
+
+    If `unit_mapping` is not order-preserving, the caller is responsible for re-sorting
+    cotemporal spike groups (e.g. by calling `is_spike_vector_sorted` + `np.lexsort`).
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray
+        Structured array with dtype `minimum_spike_dtype`.
+    unit_mapping : np.ndarray
+        1-D int64 array of length ``parent_num_units``. ``unit_mapping[old]``
+        gives the new unit_index, or any negative value to drop the spike.
+
+    Returns
+    -------
+    out : np.ndarray
+        Structured array of `minimum_spike_dtype`, length `n_kept`.
+    """
+    n_parent = spike_vector.size
+    if n_parent == 0:
+        return np.empty(0, dtype=minimum_spike_dtype)
+
+    # See implementation note in `build_spike_vector_from_sorted_arrays()`
+    mapping_arr = np.ascontiguousarray(unit_mapping, dtype=np.int64)
+
+    if HAVE_NUMBA:
+        # Same trick as `build_spike_vector_from_sorted_arrays()`:
+        # These flat-buffier views are zero-copy because the (N, 3) int64 layouts match
+        # `minimum_spike_dtype` exactly.
+        parent_flat = spike_vector.view(np.int64).reshape(n_parent, 3)
+        out_flat = np.empty((n_parent, 3), dtype=np.int64)
+        n_kept = _filter_and_remap_kernel(parent_flat, mapping_arr, out_flat)
+        return out_flat[:n_kept].view(minimum_spike_dtype).reshape(n_kept)
+
+    # NumPy fallback: bool-mask + remap.
+    old_unit_idx = spike_vector["unit_index"]
+    new_unit_idx_full = mapping_arr[old_unit_idx]
+    keep = new_unit_idx_full >= 0
+    out = spike_vector[keep].copy()
+    out["unit_index"] = new_unit_idx_full[keep]
+    return out
+
+
+def reorder_spike_vector_by_buckets(
+    spike_vector: np.ndarray,
+    bucket_index: np.ndarray,
+    num_buckets: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Stable counting-sort of a `minimum_spike_dtype` spike vector by precomputed
+    bucket index.
+
+    If numba is available, runs in O(N) using a kernel based on the algorithm described
+    in Cormen, Leiserson, Rivest, and Stein (CLRS) Chapter 8.2. Uses the same
+    flat-buffer view trick as `build_spike_vector_from_sorted_arrays()` and
+    `filter_and_remap_spike_vector()` to avoid intermediate copies.
+
+    Stability means rows are emitted in input order within each bucket,
+    so any pre-existing sort within a bucket
+    (e.g. ascending `sample_index` within a (segment, unit) group) is preserved.
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray
+        Structured array with dtype `minimum_spike_dtype`.
+    bucket_index : np.ndarray
+        1-D integer array of length ``spike_vector.size`` giving the
+        destination bucket for each spike. Values must be in
+        ``[0, num_buckets)``.
+    num_buckets : int
+        Total number of buckets.
+
+    Returns
+    -------
+    ordered_spikes : np.ndarray
+        Structured array of `minimum_spike_dtype`, same length as input,
+        with rows grouped by `bucket_index`.
+    order : np.ndarray
+        1-D int64 array such that ``spike_vector[order] == ordered_spikes``.
+    counts : np.ndarray
+        1-D int64 array of length `num_buckets`, the number of spikes in
+        each bucket.
+    """
+    n = spike_vector.size
+    if n == 0:
+        return (
+            np.empty(0, dtype=minimum_spike_dtype),
+            np.empty(0, dtype=np.int64),
+            np.zeros(int(num_buckets), dtype=np.int64),
+        )
+
+    # See implementation note in `build_spike_vector_from_sorted_arrays()`.
+    bucket_arr = np.ascontiguousarray(bucket_index, dtype=np.int64)
+    if bucket_arr.size != n:
+        raise ValueError(f"bucket_index and spike_vector must have the same length; got {bucket_arr.size} and {n}.")
+
+    if HAVE_NUMBA:
+        # Same trick as `build_spike_vector_from_sorted_arrays()`:
+        # These flat-buffier views are zero-copy because the (N, 3) int64 layouts match
+        # `minimum_spike_dtype` exactly.
+        in_flat = spike_vector.view(np.int64).reshape(n, 3)
+        out_flat = np.empty((n, 3), dtype=np.int64)
+        order = np.empty(n, dtype=np.int64)
+        counts = np.empty(int(num_buckets), dtype=np.int64)
+        _reorder_spike_vector_kernel(in_flat, bucket_arr, int(num_buckets), out_flat, order, counts)
+        ordered_spikes = out_flat.view(minimum_spike_dtype).reshape(n)
+        return ordered_spikes, order, counts
+
+    # NumPy fallback: stable argsort by bucket, then fancy-index the structured array.
+    order = np.argsort(bucket_arr, kind="stable")
+    ordered_spikes = spike_vector[order]
+    counts = np.bincount(bucket_arr, minlength=int(num_buckets)).astype(np.int64, copy=False)
+    return ordered_spikes, order, counts
+
+
+if HAVE_NUMBA:
+    import numba
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _build_spike_vector_kernel(sample_indices, unit_indices, segment_index, flat_out):
+        """Single-pass build of a `minimum_spike_dtype` spike vector.
+
+        Walks `sample_indices` once and, for each spike, writes all three
+        fields (sample_index, unit_index, segment_index) into `flat_out`
+        — a contiguous (N, 3) int64 buffer whose memory layout matches
+        `minimum_spike_dtype` exactly.
+
+        While walking, the kernel also:
+          * verifies `sample_indices` is monotonic non-decreasing — returns
+            False at the first violation (caller falls back to a global
+            lexsort),
+          * insertion-sorts `unit_indices` within each run of equal
+            `sample_indices` before emitting that run. Runs of length 1
+            (the common case for Kilosort/Phy output) skip the sort
+            entirely.
+        """
+        n = sample_indices.shape[0]
+        i = 0
+        # Walk one tie-run at a time: [i, j) is the next run of equal sample_indices.
+        while i < n:
+            # Monotonicity guard — bail out and lexsort instead of it fails
+            if i > 0 and sample_indices[i] < sample_indices[i - 1]:
+                return False
+
+            # Find the end of the current tie-run.
+            j = i + 1
+            while j < n and sample_indices[j] == sample_indices[i]:
+                j += 1
+
+            sample = sample_indices[i]
+            if j - i == 1:
+                # Fast path: no co-temporal spikes.
+                # Column order (0, 1, 2) matches minimum_spike_dtype field order
+                # (sample_index, unit_index, segment_index). Essential!
+                flat_out[i, 0] = sample
+                flat_out[i, 1] = unit_indices[i]
+                flat_out[i, 2] = segment_index
+            else:
+                # Tied run: sort unit_indices within the run.
+                # In practice, runs are short (single-digit numbers of spikes) and rare
+                # (single-digit percentage of total spikes), so the per-run allocation
+                # + insertion sort are cheap.
+                run_len = j - i
+
+                # Stage the tied unit_indices into a small working buffer.
+                # This _could_ be expensive if the runs were long, but I tested
+                # with/without, and this _always_ wins.
+                buf = np.empty(run_len, dtype=np.int64)
+                for k in range(run_len):
+                    buf[k] = unit_indices[i + k]
+
+                # Insertion-sort the buffer in place. Beats anything fancier on
+                # tiny arrays (maybe because there is zero setup cost).
+                for k in range(1, run_len):
+                    key = buf[k]
+                    m = k - 1
+                    while m >= 0 and buf[m] > key:
+                        buf[m + 1] = buf[m]
+                        m -= 1
+                    buf[m + 1] = key
+
+                # Emit the run with sorted unit_indices.
+                for k in range(run_len):
+                    flat_out[i + k, 0] = sample
+                    flat_out[i + k, 1] = buf[k]
+                    flat_out[i + k, 2] = segment_index
+
+            # Advance past the run we just emitted.
+            i = j
+
+        return True
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _filter_and_remap_kernel(parent_flat, unit_mapping, out_flat):
+        """Single-pass filter + remap for a (N, 3) int64 spike-vector view.
+
+        For each row i of `parent_flat` (columns 0/1/2 = sample, unit, segment):
+          look up ``new_unit = unit_mapping[parent_flat[i, 1]]``; if it is
+          non-negative, copy (sample, new_unit, segment) to ``out_flat[write_pos]``
+          and advance `write_pos`.
+
+        Returns the number of spikes written. The caller is expected to slice
+        `out_flat[:n_kept]` and view as `minimum_spike_dtype`.
+
+        Spikes are emitted in the order they appear in `parent_flat`, so
+        ordering on (segment_index, sample_index) is preserved automatically;
+        unit_index ordering within tied sample_index groups follows whatever
+        `unit_mapping` does to the parent's unit_index values.
+        """
+        n = parent_flat.shape[0]
+        write_pos = 0
+        for i in range(n):
+            new_unit = unit_mapping[parent_flat[i, 1]]
+            if new_unit >= 0:
+                # Column order (0, 1, 2) is coupled to minimum_spike_dtype field order
+                # (sample_index, unit_index, segment_index) — keep them in sync.
+                out_flat[write_pos, 0] = parent_flat[i, 0]
+                out_flat[write_pos, 1] = new_unit
+                out_flat[write_pos, 2] = parent_flat[i, 2]
+                write_pos += 1
+        return write_pos
+
+    @numba.jit(nopython=True, nogil=True, cache=True)
+    def _reorder_spike_vector_kernel(in_flat, bucket_index, num_buckets, out_flat, order, counts):
+        """Stable counting-sort of a (N, 3) int64 spike-vector flat-buffer view by bucket.
+
+        Adapted from Cormen, Leiserson, Rivest, and Stein (CLRS) Chapter 8.2.
+
+        Two O(N) passes:
+          1. histogram `bucket_index` into `counts`,
+          2. cumulative-sum to per-bucket write positions, then scatter each
+             row of `in_flat` to its destination in `out_flat` and record the
+             source index in `order` so that ``in[order] == out``.
+
+        Stability: within each bucket, rows keep their input order, so any
+        ordering already present in `in_flat` (e.g. ascending sample_index
+        within a (segment, unit) group) carries over to `out_flat`.
+        """
+        n = in_flat.shape[0]
+
+        for b in range(num_buckets):
+            counts[b] = 0
+        for i in range(n):
+            counts[bucket_index[i]] += 1
+
+        # Exclusive prefix sum into a local write_pos buffer. `counts` keeps
+        # the per-bucket sizes (the caller uses them to derive slices).
+        # (If slices weren't needed, maybe this could be done in-place in `counts`?)
+        write_pos = np.empty(num_buckets, dtype=np.int64)
+        running = 0
+        for b in range(num_buckets):
+            write_pos[b] = running
+            running += counts[b]
+
+        for i in range(n):
+            b = bucket_index[i]
+            pos = write_pos[b]
+            out_flat[pos, 0] = in_flat[i, 0]
+            out_flat[pos, 1] = in_flat[i, 1]
+            out_flat[pos, 2] = in_flat[i, 2]
+            order[pos] = i
+            write_pos[b] = pos + 1

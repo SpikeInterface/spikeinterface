@@ -1,7 +1,7 @@
 import numpy as np
 
 from .basesorting import BaseSorting, BaseSortingSegment
-from .sorting_tools import is_spike_vector_sorted
+from .sorting_tools import filter_and_remap_spike_vector, is_spike_vector_sorted
 
 
 class UnitsSelectionSorting(BaseSorting):
@@ -47,33 +47,83 @@ class UnitsSelectionSorting(BaseSorting):
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
     def _compute_and_cache_spike_vector(self) -> None:
-        from spikeinterface.core.sorting_tools import remap_unit_indices_in_vector
-
         if self._parent_sorting._cached_spike_vector is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
             if self._parent_sorting._cached_spike_vector is None:
                 return
 
-        spike_vector, _ = remap_unit_indices_in_vector(
-            vector=self._parent_sorting._cached_spike_vector,
-            all_old_unit_ids=self._parent_sorting.unit_ids,
-            all_new_unit_ids=self._unit_ids,
+        parent_unit_ids = self._parent_sorting.unit_ids
+
+        # If the user requested an "identity selection" (all parent units, in
+        # parent order, possibly renamed), the cached parent spike vector is
+        # identical to the one we want — share the reference and skip the rest.
+        # See `_is_identity_selection` for the definition.
+        if self._is_identity_selection():
+            self._cached_spike_vector = self._parent_sorting._cached_spike_vector
+            parent_slices = self._parent_sorting._cached_spike_vector_segment_slices
+            if parent_slices is not None:
+                self._cached_spike_vector_segment_slices = parent_slices
+            return
+
+        # Build a dense LUT from parent unit_index -> new unit_index (-1 = drop).
+        parent_id_to_pos = {uid: i for i, uid in enumerate(parent_unit_ids)}
+        unit_mapping = np.full(parent_unit_ids.size, -1, dtype=np.int64)
+        for new_idx, uid in enumerate(self._unit_ids):
+            unit_mapping[parent_id_to_pos[uid]] = new_idx
+
+        spike_vector = filter_and_remap_spike_vector(
+            spike_vector=self._parent_sorting._cached_spike_vector,
+            unit_mapping=unit_mapping,
         )
 
         # The parent's spike vector is sorted by (segment_index, sample_index, unit_index).
-        # Boolean filtering by unit preserves that order; the remap only changes unit_index
-        # values. The result stays sorted iff the selected unit_ids appear in the same
-        # relative order as in the parent (an O(k) check). If not, the vector may still
-        # happen to be sorted -- verify with an O(n) scan before falling back to O(n log n)
-        # lexsort.
-        if not self._is_order_preserving_selection() and not is_spike_vector_sorted(spike_vector):
-            sort_indices = np.lexsort(
-                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-            )
+        # Filtering preserves that order and the remap only changes unit_index values.
+        # The result stays sorted iff the selected unit_ids appear in the same relative
+        # order as in the parent (an O(k) check). If not, the vector may still happen to
+        # be sorted -- verify with an O(n) scan before falling back to O(n log n) lexsort.
+        assume_single_segment = self.get_num_segments() == 1
+        if not self._is_order_preserving_selection() and not is_spike_vector_sorted(
+            spike_vector, assume_single_segment=assume_single_segment
+        ):
+            if assume_single_segment:
+                sort_indices = np.lexsort((spike_vector["unit_index"], spike_vector["sample_index"]))
+            else:
+                sort_indices = np.lexsort(
+                    (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+                )
             spike_vector = spike_vector[sort_indices]
 
         self._cached_spike_vector = spike_vector
+
+    def _is_identity_selection(self) -> bool:
+        """Return True if self._unit_ids are exactly the parent's unit_ids, in parent order.
+
+        Renaming via ``renamed_unit_ids`` does not affect this — the spike vector
+        carries unit *indices*, not ids. When True, every cached form of the
+        parent's spike vector (canonical, lexsorted, etc.) can be shared with
+        ``self`` by reference.
+        """
+        parent_unit_ids = self._parent_sorting.unit_ids
+        return self._unit_ids.size == parent_unit_ids.size and np.array_equal(self._unit_ids, parent_unit_ids)
+
+    def to_reordered_spike_vector(
+        self, lexsort=("sample_index", "segment_index", "unit_index"), return_order=True, return_slices=True
+    ):
+        # On an identity selection, the parent's lexsorted cache is exactly
+        # what we'd compute — just reference it so we don't re-run the counting sort!
+        if self._is_identity_selection():
+            key = str(tuple(lexsort))
+            if key not in self._cached_lexsorted_spike_vector:
+                # Force the parent to populate its own cache (a no-op if already
+                # cached) before we share the entry.
+                self._parent_sorting.to_reordered_spike_vector(lexsort=lexsort, return_order=True, return_slices=True)
+                parent_entry = self._parent_sorting._cached_lexsorted_spike_vector.get(key)
+                if parent_entry is not None:
+                    self._cached_lexsorted_spike_vector[key] = parent_entry
+        return super().to_reordered_spike_vector(
+            lexsort=lexsort, return_order=return_order, return_slices=return_slices
+        )
 
     def _is_order_preserving_selection(self) -> bool:
         """Return True if self._unit_ids appear in the same relative order as in the parent.
