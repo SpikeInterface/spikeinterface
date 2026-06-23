@@ -381,7 +381,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     extension_name = "templates"
     depend_on = ["random_spikes|waveforms"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True

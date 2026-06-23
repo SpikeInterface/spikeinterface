@@ -351,6 +351,7 @@ class SortingAnalyzer:
         self.return_in_uV = return_in_uV
         self.main_channel_peak_sign = main_channel_peak_sign
         self.main_channel_peak_mode = main_channel_peak_mode
+        self._main_channel_index = None
 
         # For backward compatibility
         self.return_scaled = return_in_uV
@@ -663,71 +664,112 @@ class SortingAnalyzer:
 
         return new_settings
 
-    def _handle_backward_compatibility_settings_post_init(self):
+    @property
+    def main_channel_index(self):
+        if self._main_channel_index is None:
+            sorting_main_channel_index = self.get_sorting_property("main_channel_index")
+            if sorting_main_channel_index is not None:
+                self._main_channel_index = sorting_main_channel_index
+            else:
+                self._main_channel_index = self.compute_main_channel_backwards_compatibility()
+
+        return self._main_channel_index
+
+    def compute_main_channel_backwards_compatibility(self):
         """
-        backward compatibility after the __init__ to :
-          * main_channel_index
+        Computes the `main_channel_index` for an old analyzer. Logic is:
 
-        Note :
-         * see also _handle_backward_compatibility_settings_pre_init
-         * there is also something at extension level to handle changes in paramaters with deferents mechanism
+        1) If you have the `templates` extension: use this to find the main_channel_index, with
+        default settings and restricted to the sparsity of the analyzer.
+
+        2) If you do not have the `templates` extension but do have `waveforms`: compute
+        `templates`, then go to 1)
+
+        3) If you do not have `templates` or `waveforms`, but do have `sparsity = True`, we
+        will take the "average" channel as the `main_channel_index`
+
+        4) Failing that, if you have an attached `recording`, compute the `main_channel_index`
+        using the accumulator.
+
+        5) If you have a dense analyzer with no `templates`, `waveforms` or `recording`, your
+        analyzer is not compatible with newer versions of SpikeInterface. Raise an error
+        and ask the user to attach a recording.
         """
 
-        if "main_channel_index" not in self.sorting.get_property_keys():
+        warnings.warn(
+            "This sorting analyzer is from an an older version of spikeinterface. "
+            "For future compatibility we will compute the `main_channel_indices`."
+        )
 
-            warnings.warn(
-                "This loaded analyzer is from an older verion main_channel_index need to be computed from templates"
+        main_channel_index = None
+
+        templates_array = None
+        peak_sign = "both"
+        peak_mode = "extremum"
+
+        # Case 1
+        if self.has_extension("templates"):
+            templates = self.get_extension("templates")
+            for k in ("average", "median"):
+                if k in templates.data:
+                    from .template_tools import _get_main_channel_from_template_array
+
+                    templates_array = templates.data[k]
+                    break
+        else:
+            # Case 2 - from waveforms
+            if self.has_extension("waveforms") and self.has_extension("random_spikes"):
+                from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+
+                templates = ComputeTemplates(self)
+                templates_array = templates.data["average"]
+
+        if templates_array is not None:
+            from .template_tools import _get_main_channel_from_template_array
+
+            main_channel_index = _get_main_channel_from_template_array(
+                templates_array, peak_mode, peak_sign, templates.nbefore
             )
 
-            main_channel_index = None
-            if self.has_extension("templates"):
-                # first try to load templates extension
-                ext = self.get_extension("templates")
+        # Case 3
+        if self.is_sparse():
+            channel_locations = self.get_channel_locations()
+            sparsity = self.sparsity
+            main_channel_index = []
+            for channel_indices in sparsity.unit_id_to_channel_indices.values():
+                unit_channel_locations = channel_locations[channel_indices]
+                average_unit_channel_location = np.average(unit_channel_locations, axis=0)
+                distance_from_average_channel = np.linalg.norm(
+                    channel_locations - average_unit_channel_location, axis=1
+                )
+                closest_channel_index = np.argmin(distance_from_average_channel)
+                main_channel_index.append(closest_channel_index)
 
-                for k in ("average", "median"):
-                    if k in ext.data:
-                        from .template_tools import _get_main_channel_from_template_array
+            return main_channel_index
 
-                        templates_array = ext.data[k]
-                        # TODO @alessio @chris : we need to discuss this
-                        peak_sign = "both"  # or "neg" ?????
-                        peak_mode = "extremum"
-                        main_channel_index = _get_main_channel_from_template_array(
-                            templates_array, peak_mode, peak_sign, ext.nbefore
-                        )
-                        break
+        # Case 4
+        if self.has_recording() or self.has_temporary_recording():
+            from .template_tools import estimate_main_channel_from_recording
 
-            if main_channel_index is None:
-                if not self.has_recording():
-                    # TODO @alessio @chris : we need to discuss this
-                    # what to do in this case ???????
-                    raise ValueError(
-                        "This analyzer cannot be load and is from an old version, the recording is not available"
-                    )
-                else:
+            main_channel_index = estimate_main_channel_from_recording(
+                self.recording,
+                self.sorting,
+                peak_sign=peak_sign,
+                peak_mode=peak_mode,
+                num_spikes_for_main_channel=100,
+            )
 
-                    # otherwise we need to estimate the
+            return main_channel_index
 
-                    from .template_tools import estimate_main_channel_from_recording
+        raise ValueError(
+            "This analyzer is dense, and has no attached recording, waveforms or templates. Hence we cannot estimate the `main_channel_indices`, making the analyzer incompatible with newer versions of spikeinterface. Please attach a recording to continue, or re-create your analyzer from scratch."
+        )
 
-                    # TODO @alessio @chris : we need to discuss this
-                    peak_sign = "both"  # or "neg" ?????
-                    peak_mode = "extremum"
-
-                    main_channel_index = estimate_main_channel_from_recording(
-                        self.recording,
-                        self.sorting,
-                        peak_sign=peak_sign,
-                        peak_mode=peak_mode,
-                        num_spikes_for_main_channel=100,
-                        seed=None,
-                    )
-
-            # this is only in memory
-            self.sorting.set_property("main_channel_index", main_channel_index)
-            # TODO @alessio @chris : we need to discuss this
-            # this save also to disk but maybe there is no write for the analyzer...
-            self.set_sorting_property("main_channel_index", main_channel_index, save=True)
+        # # this is only in memory
+        # self.sorting.set_property("main_channel_index", main_channel_index)
+        # # TODO @alessio @chris : we need to discuss this
+        # # this save also to disk but maybe there is no write for the analyzer...
+        # self.set_sorting_property("main_channel_index", main_channel_index, save=True)
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
