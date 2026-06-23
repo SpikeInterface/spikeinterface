@@ -89,7 +89,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
 
         self.model = model
         # add segment
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = DeepInterpolatedRecordingSegment(
                 segment,
                 self.model,

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Literal
 
 import numpy as np
 
@@ -413,7 +413,7 @@ def get_template_extremum_amplitude(
     peak_sign: "neg" | "pos" | "both" = "neg",
     peak_mode: "extremum" | "at_index" | "peak_to_peak" = "at_index",
     abs_value: bool = True,
-    operator: str = "average",
+    operator: Literal["average", "median"] = "average",
 ):
     """
     Depracted will be removed in 0.105.0.

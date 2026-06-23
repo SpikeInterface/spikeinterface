@@ -5,6 +5,7 @@ from spikeinterface import (
     generate_ground_truth_recording,
     create_sorting_analyzer,
     load,
+    ms_to_samples,
     SortingAnalyzer,
     Templates,
     aggregate_channels,
@@ -71,7 +72,7 @@ def generate_templates_object():
     templates = Templates(
         templates_array=templates_arr,
         sampling_frequency=sampling_frequency,
-        nbefore=int(ms_before * sampling_frequency / 1000),
+        nbefore=ms_to_samples(ms_before, sampling_frequency),
         probe=probe,
     )
     return templates

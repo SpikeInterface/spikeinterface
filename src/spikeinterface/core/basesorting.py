@@ -1,4 +1,3 @@
-from __future__ import annotations
 import warnings
 
 from copy import deepcopy
@@ -20,7 +19,6 @@ class BaseSorting(BaseExtractor):
     def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = float(sampling_frequency)
-        self._sorting_segments: list[BaseSortingSegment] = []
         # this weak link is to handle times from a recording object
         self._recording = None
         self._sorting_info = None
@@ -66,6 +64,16 @@ class BaseSorting(BaseExtractor):
         return html_repr
 
     @property
+    def segments(self) -> list["BaseSortingSegment"]:
+        """List of sorting segments."""
+        return self._segments
+
+    @property
+    def _sorting_segments(self) -> list["BaseSortingSegment"]:
+        """For backward compatibility, we keep _sorting_segments."""
+        return self._segments
+
+    @property
     def unit_ids(self):
         return self._main_ids
 
@@ -79,15 +87,11 @@ class BaseSorting(BaseExtractor):
     def get_num_units(self) -> int:
         return len(self.get_unit_ids())
 
-    def add_sorting_segment(self, sorting_segment):
-        self._sorting_segments.append(sorting_segment)
-        sorting_segment.set_parent_extractor(self)
+    def add_sorting_segment(self, sorting_segment: "BaseSortingSegment") -> None:
+        super().add_segment(sorting_segment)
 
     def get_sampling_frequency(self) -> float:
         return self._sampling_frequency
-
-    def get_num_segments(self) -> int:
-        return len(self._sorting_segments)
 
     def get_num_samples(self, segment_index=None) -> int:
         """Returns the number of samples of the associated recording for a segment.
@@ -203,7 +207,7 @@ class BaseSorting(BaseExtractor):
                 end = np.searchsorted(spike_frames, end_frame)
                 spike_frames = spike_frames[:end]
         else:
-            segment = self._sorting_segments[segment_index]
+            segment = self.segments[segment_index]
             spike_frames = segment.get_unit_spike_train(
                 unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
             ).astype("int64")
@@ -247,7 +251,7 @@ class BaseSorting(BaseExtractor):
             Spike times in seconds
         """
         segment_index = self._check_segment_index(segment_index)
-        segment = self._sorting_segments[segment_index]
+        segment = self.segments[segment_index]
 
         # If sorting has a registered recording, get the frames and get the times from the recording
         # Note that this take into account the segment start time of the recording
@@ -277,9 +281,18 @@ class BaseSorting(BaseExtractor):
 
         # Use the native spiking times if available
         # Some instances might implement a method themselves to access spike times directly without having to convert
-        # (e.g. NWB extractors)
+        # (e.g. NWB extractors). The native times already include the extractor's `_native_t_start`,
+        # so we apply only the shift (`_t_start - _native_t_start`) on top.
         if hasattr(segment, "get_unit_spike_train_in_seconds"):
-            return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
+            spike_times = segment.get_unit_spike_train_in_seconds(
+                unit_id=unit_id, start_time=start_time, end_time=end_time
+            )
+            t_start = segment._t_start if segment._t_start is not None else 0
+            native_t_start = segment._native_t_start if segment._native_t_start is not None else 0
+            shift = t_start - native_t_start
+            if shift != 0:
+                spike_times = spike_times + shift
+            return spike_times
 
         # If no recording attached and all back to frame-based conversion
         # Get spike train in frames and convert to times using traditional method
@@ -326,6 +339,15 @@ class BaseSorting(BaseExtractor):
                     "Might be necessary for further postprocessing."
                 )
         self._recording = recording
+        # Copy the recording's start times into the sorting segments. This way,
+        # the sorting preserves the start time even if the recording is later
+        # detached (e.g. analyzer saved and reloaded without the recording).
+        # Also update `_native_t_start` so any subsequent `shift_times` call measures
+        # its delta from the recording's start time (not the extractor's original value).
+        for segment_index, segment in enumerate(self.segments):
+            start_time = recording.get_start_time(segment_index=segment_index)
+            segment._t_start = start_time
+            segment._native_t_start = start_time
 
     @property
     def sorting_info(self):
@@ -351,7 +373,102 @@ class BaseSorting(BaseExtractor):
         else:
             return False
 
-    def get_times(self, segment_index=None):
+    def get_start_time(self, segment_index: int | None = None) -> float:
+        """Get the start time of the sorting segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The start time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        return segment._t_start if segment._t_start is not None else 0.0
+
+    def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
+        """
+        Shift all times by a scalar value.
+
+        This modifies the sorting's own time offset without touching the registered
+        recording. When a recording is registered, the shift is applied on top of
+        the recording's time basis when resolving timestamps.
+
+        Parameters
+        ----------
+        shift : int | float
+            The shift to apply. If positive, times will be increased by `shift`.
+            If negative, times will be decreased.
+        segment_index : int | None
+            The segment on which to shift the times.
+            If `None`, all segments will be shifted.
+        """
+        if segment_index is None:
+            segments_to_shift = range(self.get_num_segments())
+        else:
+            segments_to_shift = (segment_index,)
+
+        for segment_index in segments_to_shift:
+            segment = self.segments[segment_index]
+            segment._t_start = (segment._t_start if segment._t_start is not None else 0) + shift
+
+    def get_end_time(self, segment_index: int | None = None) -> float:
+        """Get the end time of the sorting segment.
+
+        If a recording is registered, returns the recording's end time (plus any
+        shift applied via `shift_times`). Otherwise returns the time of the last
+        spike in the segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The end time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            segment = self.segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            return self._recording.get_end_time(segment_index=segment_index) + shift
+        else:
+            last_spike_frame = self.get_last_spike_frame(segment_index=segment_index)
+            return self.sample_index_to_time(last_spike_frame, segment_index=segment_index)
+
+    def get_last_spike_frame(self, segment_index: int | None = None) -> int:
+        """Get the frame index of the last spike in a segment across all units.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        int
+            The frame index of the last spike, or 0 if no spikes exist.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        spike_vector = self.to_spike_vector(concatenated=False)
+        spikes_in_segment = spike_vector[segment_index]
+        if len(spikes_in_segment) == 0:
+            return 0
+        return int(np.max(spikes_in_segment["sample_index"]))
+
+    def get_times(
+        self,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+    ):
         """
         Get time vector for a registered recording segment.
 
@@ -359,11 +476,19 @@ class BaseSorting(BaseExtractor):
             * if the segment has a time_vector, then it is returned
             * if not, a time_vector is constructed on the fly with sampling frequency
 
+        Any shift applied via `shift_times` is added to the returned times.
+
         If there is no registered recording it returns None
         """
         segment_index = self._check_segment_index(segment_index)
         if self.has_recording():
-            return self._recording.get_times(segment_index=segment_index)
+            times = self._recording.get_times(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
+            segment = self.segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            if shift != 0:
+                times = times + shift
+            return times
         else:
             return None
 
@@ -500,7 +625,7 @@ class BaseSorting(BaseExtractor):
         """
         return self.to_spike_vector().size
 
-    def select_units(self, unit_ids, renamed_unit_ids=None) -> BaseSorting:
+    def select_units(self, unit_ids, renamed_unit_ids=None) -> "BaseSorting":
         """
         Returns a new sorting object which contains only a selected subset of units.
 
@@ -522,7 +647,7 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
-    def rename_units(self, new_unit_ids: np.ndarray | list) -> BaseSorting:
+    def rename_units(self, new_unit_ids: np.ndarray | list) -> "BaseSorting":
         """
         Returns a new sorting object with renamed units.
 
@@ -543,7 +668,7 @@ class BaseSorting(BaseExtractor):
         sub_sorting = UnitsSelectionSorting(self, renamed_unit_ids=new_unit_ids)
         return sub_sorting
 
-    def remove_units(self, remove_unit_ids) -> BaseSorting:
+    def remove_units(self, remove_unit_ids) -> "BaseSorting":
         """
         Returns a new sorting object with contains only a selected subset of units.
 
@@ -616,7 +741,7 @@ class BaseSorting(BaseExtractor):
         )
         return sub_sorting
 
-    def time_slice(self, start_time: float | None, end_time: float | None) -> BaseSorting:
+    def time_slice(self, start_time: float | None, end_time: float | None) -> "BaseSorting":
         """
         Returns a new sorting object, restricted to the time interval [start_time, end_time].
 
@@ -705,11 +830,13 @@ class BaseSorting(BaseExtractor):
         """
         Transform time in seconds into sample index
         """
+        segment = self.segments[segment_index]
+        t_start = segment._t_start if segment._t_start is not None else 0
         if self.has_recording():
-            sample_index = self._recording.time_to_sample_index(time, segment_index=segment_index)
+            # Subtract the sorting's shift (relative to the recording's start) before delegating
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            sample_index = self._recording.time_to_sample_index(time - shift, segment_index=segment_index)
         else:
-            segment = self._sorting_segments[segment_index]
-            t_start = segment._t_start if segment._t_start is not None else 0
             sample_index = round((time - t_start) * self.get_sampling_frequency())
 
         return sample_index
@@ -721,11 +848,13 @@ class BaseSorting(BaseExtractor):
         Transform sample index into time in seconds
         """
         segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        t_start = segment._t_start if segment._t_start is not None else 0
         if self.has_recording():
-            return self._recording.sample_index_to_time(sample_index, segment_index=segment_index)
+            # Add the sorting's shift (relative to the recording's start) after delegating
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            return self._recording.sample_index_to_time(sample_index, segment_index=segment_index) + shift
         else:
-            segment = self._sorting_segments[segment_index]
-            t_start = segment._t_start if segment._t_start is not None else 0
             return (sample_index / self.get_sampling_frequency()) + t_start
 
     def precompute_spike_trains(self):
@@ -757,7 +886,7 @@ class BaseSorting(BaseExtractor):
             sample_indices = []
             unit_indices = []
             for u, unit_id in enumerate(self.unit_ids):
-                segment = self._sorting_segments[segment_index]
+                segment = self.segments[segment_index]
                 spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
                     "int64"
                 )
@@ -1085,6 +1214,11 @@ class BaseSortingSegment(BaseSegment):
 
     def __init__(self, t_start=None):
         self._t_start = t_start
+        # Immutable reference to the start time as set by the extractor at init.
+        # Used to compute the user-applied shift as `_t_start - _native_t_start`,
+        # so `shift_times` can correctly propagate through extractors that return
+        # native absolute times (e.g. NWB) without double-counting the extractor's offset.
+        self._native_t_start = t_start
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(

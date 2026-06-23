@@ -463,9 +463,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
             # upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
-            parent_recording_segment = (
-                None if parent_recording is None else parent_recording._recording_segments[segment_index]
-            )
+            parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectDriftingTemplatesRecordingSegment(
                 self.dtype,
                 self.spike_vector[start:end],

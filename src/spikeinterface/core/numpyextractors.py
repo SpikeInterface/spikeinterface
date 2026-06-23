@@ -198,7 +198,7 @@ class SharedMemoryRecording(BaseRecording):
         }
 
     def __del__(self):
-        self._recording_segments = []
+        self._segments = []
         for shm in self.shms:
             shm.close()
             if self.main_shm_owner:

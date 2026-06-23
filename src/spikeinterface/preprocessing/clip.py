@@ -33,7 +33,7 @@ class ClipRecording(BasePreprocessor):
         value_max = a_max
 
         BasePreprocessor.__init__(self, recording)
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ClipRecordingSegment(parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 
@@ -130,7 +130,7 @@ class BlankSaturationRecording(BasePreprocessor):
                 value_max = fill_value
 
         BasePreprocessor.__init__(self, recording)
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ClipRecordingSegment(parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 

@@ -16,6 +16,7 @@ from spikeinterface.core import (
     estimate_templates,
     Templates,
     create_sorting_analyzer,
+    ms_to_samples,
 )
 from spikeinterface.generation import generate_drifting_recording
 
@@ -54,8 +55,8 @@ def make_dataset(job_kwargs={}):
 def compute_gt_templates(recording, gt_sorting, ms_before=2.0, ms_after=3.0, return_in_uV=False, **job_kwargs):
     spikes = gt_sorting.to_spike_vector()  # [spike_indices]
     fs = recording.sampling_frequency
-    nbefore = int(ms_before * fs / 1000)
-    nafter = int(ms_after * fs / 1000)
+    nbefore = ms_to_samples(ms_before, fs)
+    nafter = ms_to_samples(ms_after, fs)
     templates_array = estimate_templates(
         recording,
         spikes,

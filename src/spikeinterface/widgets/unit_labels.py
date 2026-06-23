@@ -1,7 +1,5 @@
 """Widgets for visualizing unit labeling results."""
 
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.curation.curation_tools import is_threshold_disabled

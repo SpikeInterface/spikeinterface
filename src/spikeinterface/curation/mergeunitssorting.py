@@ -68,7 +68,7 @@ class MergeUnitsSorting(BaseSorting):
             rm_dup_delta = None
         else:
             rm_dup_delta = int(delta_time_ms / 1000 * sampling_frequency)
-        for parent_segment in self._parent_sorting._sorting_segments:
+        for parent_segment in self._parent_sorting.segments:
             sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 

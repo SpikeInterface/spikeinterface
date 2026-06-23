@@ -2,7 +2,7 @@ import warnings
 from typing import Literal
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, Templates
+from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
 
 from spikeinterface.core.generate import (
     generate_templates,
@@ -10,6 +10,7 @@ from spikeinterface.core.generate import (
     generate_sorting,
     InjectTemplatesRecording,
     _ensure_seed,
+    synthesize_amplitude_factor,
 )
 
 from spikeinterface.core.motion import Motion
@@ -70,8 +71,8 @@ def estimate_templates_from_recording(
     spikes = sorting.to_spike_vector()
     unit_ids = sorting.unit_ids
     sampling_frequency = recording.get_sampling_frequency()
-    nbefore = int(ms_before * sampling_frequency / 1000.0)
-    nafter = int(ms_after * sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
 
     job_kwargs = job_kwargs or {}
     templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs)
@@ -324,6 +325,7 @@ def generate_hybrid_recording(
     upsample_factor: int | None = None,
     upsample_vector: np.ndarray | None = None,
     amplitude_std: float = 0.05,
+    amplitude_factor: np.ndarray | None = None,
     generate_sorting_kwargs: dict = dict(num_units=10, firing_rates=15, refractory_period_ms=4.0, seed=2205),
     generate_unit_locations_kwargs: dict = dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs: dict = dict(ms_before=1.0, ms_after=3.0),
@@ -437,8 +439,8 @@ def generate_hybrid_recording(
         )
         ms_before = generate_templates_kwargs["ms_before"]
         ms_after = generate_templates_kwargs["ms_after"]
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
         templates_ = Templates(templates_array, sampling_frequency, nbefore, True, None, None, None, probe)
     else:
         from spikeinterface.postprocessing.localization_tools import compute_monopolar_triangulation
@@ -496,10 +498,12 @@ def generate_hybrid_recording(
             upsample_factor = templates_array.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
 
-    if amplitude_std is not None:
-        amplitude_factor = rng.normal(loc=1, scale=amplitude_std, size=num_spikes)
-    else:
-        amplitude_factor = None
+    amplitude_factor = synthesize_amplitude_factor(
+        num_spikes,
+        amplitude_factor=amplitude_factor,
+        amplitude_std=amplitude_std,
+        seed=rng,
+    )
 
     if motion is not None:
         assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"

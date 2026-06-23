@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Literal
 
 import warnings
 import importlib.util
@@ -106,7 +106,7 @@ def compute_monopolar_triangulation(
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-        local_contact_locations = contact_locations[chan_inds, :]
+        local_contact_locations = contact_locations[chan_inds, :2]
 
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :][:, chan_inds]
@@ -184,7 +184,7 @@ def compute_center_of_mass(
     unit_location = np.zeros((len(unit_ids), 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
-        local_contact_locations = contact_locations[chan_inds, :]
+        local_contact_locations = contact_locations[chan_inds, :2]
 
         wf = templates[i, :, :]
 
@@ -249,7 +249,7 @@ def compute_grid_convolution(
     unit_location: np.array
     """
 
-    contact_locations = sorting_analyzer_or_templates.get_channel_locations()
+    contact_locations = sorting_analyzer_or_templates.get_channel_locations()[:, :2]
 
     templates = get_dense_templates_array(
         sorting_analyzer_or_templates, return_in_uV=get_return_in_uV(sorting_analyzer_or_templates)

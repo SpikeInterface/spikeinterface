@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import shutil
 from typing import Any
@@ -87,6 +85,8 @@ class BaseExtractor:
                 self._main_ids.dtype.kind in "uiSU"
             ), f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
 
+        self._segments: "list[BaseSegment]" = []
+
         # dict at object level
         self._annotations = {}
 
@@ -142,11 +142,18 @@ class BaseExtractor:
             # we remove the annotation if it exists
             _ = self._annotations.pop("name", None)
 
-    def get_num_segments(self) -> int:
-        # This is implemented in BaseRecording or BaseSorting
-        raise NotImplementedError
+    @property
+    def segments(self) -> "list[BaseSegment]":
+        return self._segments
 
-    def get_parent(self) -> BaseExtractor | None:
+    def add_segment(self, segment: "BaseSegment") -> None:
+        self._segments.append(segment)
+        segment.set_parent_extractor(self)
+
+    def get_num_segments(self) -> int:
+        return len(self._segments)
+
+    def get_parent(self) -> "BaseExtractor | None":
         """Returns parent object if it exists, otherwise None"""
         return getattr(self, "_parent", None)
 
@@ -381,7 +388,7 @@ class BaseExtractor:
 
     def copy_metadata(
         self,
-        other: BaseExtractor,
+        other: "BaseExtractor",
         only_main: bool = False,
         ids: Iterable | slice | None = None,
         skip_properties: Iterable[str] | None = None,
@@ -570,7 +577,7 @@ class BaseExtractor:
         return dump_dict
 
     @staticmethod
-    def from_dict(dictionary: dict, base_folder: Path | str | None = None) -> BaseExtractor:
+    def from_dict(dictionary: dict, base_folder: Path | str | None = None) -> "BaseExtractor":
         """
         Instantiate extractor from dictionary
 
@@ -624,7 +631,7 @@ class BaseExtractor:
             values = self.get_property(key)
             np.save(prop_folder / (key + ".npy"), values)
 
-    def clone(self) -> BaseExtractor:
+    def clone(self) -> "BaseExtractor":
         """
         Clones an existing extractor into a new instance.
         """
@@ -816,7 +823,7 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_or_folder_path: str | Path, base_folder: Path | str | bool | None = None) -> BaseExtractor:
+    def load(file_or_folder_path: str | Path, base_folder: Path | str | bool | None = None) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
@@ -839,7 +846,7 @@ class BaseExtractor:
         return (instance_constructor, intialization_args)
 
     @staticmethod
-    def load_from_folder(folder) -> BaseExtractor:
+    def load_from_folder(folder) -> "BaseExtractor":
         return BaseExtractor.load(folder)
 
     def _save(self, folder, **save_kwargs):
@@ -855,7 +862,7 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
-    def save(self, **kwargs) -> BaseExtractor:
+    def save(self, **kwargs) -> "BaseExtractor":
         """
         Save a SpikeInterface object.
 
@@ -891,7 +898,7 @@ class BaseExtractor:
 
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
-    def save_to_memory(self, sharedmem=True, **save_kwargs) -> BaseExtractor:
+    def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
         save_kwargs.pop("format", None)
 
         cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
@@ -1092,7 +1099,7 @@ class BaseExtractor:
         return cached
 
 
-def _load_extractor_from_dict(dic) -> BaseExtractor:
+def _load_extractor_from_dict(dic) -> "BaseExtractor":
     """
     Convert a dictionary into an instance of BaseExtractor or its subclass.
 
@@ -1138,14 +1145,8 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
     is_old_version = not _check_same_version(class_name, dic["version"])
-    if is_old_version:
-        warnings.warn(
-            f"Versions are not the same. This might lead to compatibility errors. "
-            f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
-        )
-
-        if hasattr(extractor_class, "_handle_backward_compatibility"):
-            new_kwargs = extractor_class._handle_backward_compatibility(new_kwargs, dic)
+    if is_old_version and hasattr(extractor_class, "_handle_backward_compatibility"):
+        new_kwargs = extractor_class._handle_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
     extractor = extractor_class(**new_kwargs)

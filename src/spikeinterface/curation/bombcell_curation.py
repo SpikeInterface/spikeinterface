@@ -8,8 +8,6 @@ Unit Labels:
     non_soma: Non-somatic units (axonal)
 """
 
-from __future__ import annotations
-
 import operator
 from pathlib import Path
 import json
@@ -87,7 +85,7 @@ def bombcell_label_units(
     thresholds: dict | str | Path | None = None,
     label_non_somatic: bool = True,
     split_non_somatic_good_mua: bool = False,
-    external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None,
+    external_metrics: "pd.DataFrame | list[pd.DataFrame] | None" = None,
 ) -> "pd.DataFrame":
     """
     Label units based on quality metrics and template metrics using Bombcell logic:

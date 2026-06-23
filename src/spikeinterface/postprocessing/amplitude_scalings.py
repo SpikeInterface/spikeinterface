@@ -87,7 +87,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
 
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
-            cut_out_before = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_before = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_before <= nbefore
             ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
@@ -95,7 +95,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             cut_out_before = nbefore
 
         if self.params["ms_after"] is not None:
-            cut_out_after = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_after = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_after <= nafter
             ), f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
@@ -328,7 +328,7 @@ class AmplitudeScalingNode(PipelineNode):
         # TODO: switch to collision mask and return that (to use concatenation)
         return (scalings, spike_collision_mask)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self._margin
 
 

@@ -107,5 +107,5 @@ class SpikeAmplitudeNode(PipelineNode):
 
         return amplitudes
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self._margin

@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Literal
 
 import numpy as np
 
@@ -7,6 +7,7 @@ from .baserecording import BaseRecording
 from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
 from .waveform_tools import estimate_templates_with_accumulator
+from .core_tools import ms_to_samples
 
 _sparsity_doc = """
     method : str
@@ -640,13 +641,15 @@ class ChannelSparsity:
 def compute_sparsity(
     templates_or_sorting_analyzer: "Templates | SortingAnalyzer",
     noise_levels: np.ndarray | None = None,
-    method: "radius" | "best_channels" | "closest_channels" | "snr" | "amplitude" | "energy" | "by_property" = "radius",
-    peak_sign: "neg" | "pos" | "both" = "neg",
+    method: Literal[
+        "radius", "best_channels", "closest_channels", "snr", "amplitude", "energy", "by_property"
+    ] = "radius",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
     num_channels: int | None = 5,
     radius_um: float | None = 100.0,
     threshold: float | None = 5,
     by_property: str | None = None,
-    amplitude_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+    amplitude_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
 ) -> ChannelSparsity:
     """
     Compute channel sparsity from a `SortingAnalyzer` for each template with several methods.
@@ -739,12 +742,12 @@ def estimate_sparsity(
     num_spikes_for_sparsity: int = 100,
     ms_before: float = 1.0,
     ms_after: float = 2.5,
-    method: "radius" | "best_channels" | "closest_channels" | "amplitude" | "snr" | "by_property" = "radius",
-    peak_sign: "neg" | "pos" | "both" = "neg",
+    method: Literal["radius", "best_channels", "closest_channels", "amplitude", "snr", "by_property"] = "radius",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
     radius_um: float = 100.0,
     num_channels: int = 5,
     threshold: float | None = 5,
-    amplitude_mode: "extremum" | "peak_to_peak" = "extremum",
+    amplitude_mode: Literal["extremum", "peak_to_peak"] = "extremum",
     by_property: str | None = None,
     noise_levels: np.ndarray | list | None = None,
     main_channel_index: np.ndarray | list | None = None,
@@ -813,8 +816,8 @@ def estimate_sparsity(
         )
 
     elif method != "by_property":
-        nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-        nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+        nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
         num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
         random_spikes_indices = random_spikes_selection(

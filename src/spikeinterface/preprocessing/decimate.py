@@ -65,7 +65,7 @@ class DecimateRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             self.add_recording_segment(
                 DecimateRecordingSegment(
                     parent_segment,

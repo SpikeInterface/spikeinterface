@@ -223,7 +223,7 @@ def interpolate_motion_on_traces(
 
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
-        # in ChunkRecordingExecutor)
+        # in TimeSeriesChunkExecutor)
         np.matmul(traces[frames_in_bin], drift_kernel, out=traces_corrected[frames_in_bin])
         current_start_index = next_start_index
 
@@ -422,7 +422,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
             )
 
-        for segment_index, parent_segment in enumerate(recording._recording_segments):
+        for segment_index, parent_segment in enumerate(recording.segments):
             # finish the per-segment part of the time bin logic
             if interpolation_time_bin_centers_s is None:
                 # in this case, interpolation_time_bin_size_s is set.
