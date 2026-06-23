@@ -1,3 +1,5 @@
+from typing import Literal
+
 import numpy as np
 import json
 from dataclasses import dataclass, field, astuple, replace
@@ -483,10 +485,10 @@ class Templates:
         return channel_locations
 
     def get_main_channels(self,
-        peak_sign: "neg" | "both" | "pos" = "both",
-        peak_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
+        peak_sign : Literal["neg","both","pos"] = "both",
+        peak_mode : Literal["extremum","at_index","peak_to_peak"] = "extremum",
         outputs="index",
-        with_dict=True
+        with_dict=False,
     ):
         from .template_tools import _get_main_channel_from_template_array
 
