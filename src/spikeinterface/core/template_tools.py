@@ -10,7 +10,6 @@ from .sortinganalyzer import SortingAnalyzer
 import warnings
 
 
-
 def get_dense_templates_array(
     one_object: Templates | SortingAnalyzer, return_in_uV: bool = True, operator="average"
 ) -> np.ndarray:
@@ -52,6 +51,7 @@ def get_dense_templates_array(
         raise ValueError("Input should be Templates or SortingAnalyzer")
     return templates_array
 
+
 def get_main_channel_templates_array(one_object: Templates | SortingAnalyzer, return_in_uV: bool = True):
     """
     Return dense templates as numpy array from either a Templates object or a SortingAnalyzer.
@@ -79,7 +79,6 @@ def get_main_channel_templates_array(one_object: Templates | SortingAnalyzer, re
     return main_channel_templates
 
 
-
 def _get_nbefore(one_object):
     if isinstance(one_object, Templates):
         return one_object.nbefore
@@ -94,8 +93,8 @@ def _get_nbefore(one_object):
 
 def get_template_amplitudes(
     templates_or_sorting_analyzer,
-    peak_sign: None | "neg" | "pos" | "both" = None,
-    peak_mode: None | "extremum" | "at_index" | "peak_to_peak" = None,
+    peak_sign: None | Literal["neg", "pos", "both"] = None,
+    peak_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
     # return_in_uV: bool = True,
     abs_value: bool = True,
     operator: str = "average",
@@ -129,8 +128,12 @@ def get_template_amplitudes(
     """
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        assert peak_sign is None, "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
-        assert peak_mode is None, "get_template_amplitudes() peak_mode is now contained in SortingAnalyzer, should be None here"
+        assert (
+            peak_sign is None
+        ), "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
+        assert (
+            peak_mode is None
+        ), "get_template_amplitudes() peak_mode is now contained in SortingAnalyzer, should be None here"
         peak_sign = templates_or_sorting_analyzer.main_channel_peak_sign
         peak_mode = templates_or_sorting_analyzer.main_channel_peak_mode
         return_in_uV = templates_or_sorting_analyzer.return_in_uV
@@ -144,7 +147,11 @@ def get_template_amplitudes(
             peak_mode = "extremum"
 
     assert peak_sign in ("both", "neg", "pos"), "'peak_sign' must be 'both', 'neg', or 'pos'"
-    assert peak_mode in ("extremum", "at_index", "peak_to_peak"), "'mode' must be 'extremum', 'at_index', or 'peak_to_peak'"
+    assert peak_mode in (
+        "extremum",
+        "at_index",
+        "peak_to_peak",
+    ), "'mode' must be 'extremum', 'at_index', or 'peak_to_peak'"
 
     unit_ids = templates_or_sorting_analyzer.unit_ids
     before = _get_nbefore(templates_or_sorting_analyzer)
@@ -181,7 +188,6 @@ def get_template_amplitudes(
     return peak_values
 
 
-
 def _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore):
     # Step1 : max on time axis
     if peak_mode == "extremum":
@@ -198,7 +204,7 @@ def _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign,
             values = templates_array[:, nbefore, :]
     elif peak_mode == "peak_to_peak":
         values = np.ptp(templates_array, axis=1)
-    
+
     # Step2: max on channel axis
     main_channel_index = np.argmax(values, axis=1)
 
@@ -206,15 +212,15 @@ def _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign,
 
 
 def estimate_main_channel_from_recording(
-        recording,
-        sorting,
-        peak_sign: "neg" | "both" | "pos" = "both",
-        peak_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
-        num_spikes_for_main_channel=100,
-        ms_before = 1.0,
-        ms_after = 2.5,
-        seed=None,
-        **job_kwargs
+    recording,
+    sorting,
+    peak_sign: Literal["neg", "both", "pos"] = "both",
+    peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+    num_spikes_for_main_channel=100,
+    ms_before=1.0,
+    ms_after=2.5,
+    seed=None,
+    **job_kwargs,
 ):
     """
     Estimate the main channel from recording using `estimate_templates_with_accumulator()`
@@ -223,10 +229,9 @@ def estimate_main_channel_from_recording(
 
     if peak_sign == "pos":
         warnings.warn(
-            "estimate_main_channel_from_recording() with peak_sign='pos' is a strange case maybe you " \
+            "estimate_main_channel_from_recording() with peak_sign='pos' is a strange case maybe you "
             "should revert the traces instead"
         )
-
 
     nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
     nafter = int(ms_after * recording.sampling_frequency / 1000.0)
@@ -259,15 +264,12 @@ def estimate_main_channel_from_recording(
     return main_channel_index
 
 
-
-
-
 # TODO remove this in 0.105.0
 def get_template_extremum_channel(
     templates_or_sorting_analyzer,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    peak_mode: "extremum" | "at_index" | "peak_to_peak" = "extremum",
-    outputs: "id" | "index" = "id",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+    outputs: Literal["id", "index"] = "id",
     operator: str = "average",
 ):
     """
@@ -304,17 +306,19 @@ def get_template_extremum_channel(
     warnings.warn("get_template_extremum_channel() is deprecated use analyzer.get_main_channels() instead")
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        assert peak_sign is None, "get_template_extremum_channel() peak_sign is now contained in SortingAnalyzer, should be None here"
+        assert (
+            peak_sign is None
+        ), "get_template_extremum_channel() peak_sign is now contained in SortingAnalyzer, should be None here"
         main_channels = templates_or_sorting_analyzer.get_main_channels(outputs=outputs, with_dict=True)
     elif isinstance(templates_or_sorting_analyzer, Templates):
         if peak_sign is None:
             warnings.warn("get_template_extremum_channel() with Templates should provide a peak_sign")
             peak_sign = "both"
-        main_channels = templates_or_sorting_analyzer.get_main_channels(outputs=outputs, peak_sign=peak_sign, with_dict=True)
-    
+        main_channels = templates_or_sorting_analyzer.get_main_channels(
+            outputs=outputs, peak_sign=peak_sign, with_dict=True
+        )
+
     return main_channels
-
-
 
 
 # TODO remove this in 0.105.0
@@ -340,9 +344,10 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
         Dictionary with unit ids as keys and shifts as values
     """
 
-    warnings.warn("get_template_extremum_channel_peak_shift() is deprecated use get_template_main_channel_peak_shift() instead"
-                  "Will be removed in 0.105.0"
-                  )
+    warnings.warn(
+        "get_template_extremum_channel_peak_shift() is deprecated use get_template_main_channel_peak_shift() instead"
+        "Will be removed in 0.105.0"
+    )
 
     return get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None, with_dict=True)
 
@@ -368,7 +373,6 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
     shifts : dict
         Dictionary with unit ids as keys and shifts as values
     """
-    
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
         assert peak_sign is None
@@ -378,12 +382,13 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
         if peak_sign is None:
             warnings.warn("get_template_main_channel_peak_shift() with Templates should provide a peak_sign")
             peak_sign = "both"
-        main_channels = templates_or_sorting_analyzer.get_main_channels(outputs="index", peak_sign=peak_sign, with_dict=False)
+        main_channels = templates_or_sorting_analyzer.get_main_channels(
+            outputs="index", peak_sign=peak_sign, with_dict=False
+        )
 
     unit_ids = templates_or_sorting_analyzer.unit_ids
     nbefore = _get_nbefore(templates_or_sorting_analyzer)
 
-    
     main_channel_templates = get_main_channel_templates_array(templates_or_sorting_analyzer)
 
     shifts = []
@@ -410,15 +415,15 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
 # TODO remove this in 0.105.0
 def get_template_extremum_amplitude(
     templates_or_sorting_analyzer,
-    peak_sign: "neg" | "pos" | "both" = "neg",
-    peak_mode: "extremum" | "at_index" | "peak_to_peak" = "at_index",
+    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "at_index",
     abs_value: bool = True,
     operator: Literal["average", "median"] = "average",
 ):
     """
     Depracted will be removed in 0.105.0.
     Use get_template_main_channel_amplitude() instead.
-  
+
     Computes amplitudes on the best channel.
 
     Parameters
@@ -445,21 +450,22 @@ def get_template_extremum_amplitude(
         Dictionary with unit ids as keys and amplitudes as values
     """
 
-    warnings.warn("get_template_extremum_amplitude() is deprecated use get_template_main_channel_amplitude() instead"
-                  "Will be removed in 0.105.0"
-                  )
+    warnings.warn(
+        "get_template_extremum_amplitude() is deprecated use get_template_main_channel_amplitude() instead"
+        "Will be removed in 0.105.0"
+    )
     return get_template_main_channel_amplitude(
         templates_or_sorting_analyzer,
         peak_sign=peak_sign,
         peak_mode=peak_mode,
         abs_value=abs_value,
-
     )
+
 
 def get_template_main_channel_amplitude(
     templates_or_sorting_analyzer,
-    peak_sign: None | "neg" | "pos" | "both" = None,
-    peak_mode: None | "extremum" | "at_index" | "peak_to_peak" = None,
+    peak_sign: None | Literal["neg", "pos", "both"] = None,
+    peak_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
     abs_value: bool = True,
     with_dict=True,
 ):
@@ -492,7 +498,9 @@ def get_template_main_channel_amplitude(
         if peak_sign is None:
             warnings.warn("get_template_main_channel_peak_shift() with Templates should provide a peak_sign")
             peak_sign = "both"
-        main_channels = templates_or_sorting_analyzer.get_main_channels(outputs="index", peak_sign=peak_sign, with_dict=False)
+        main_channels = templates_or_sorting_analyzer.get_main_channels(
+            outputs="index", peak_sign=peak_sign, with_dict=False
+        )
 
     extremum_amplitudes = get_template_amplitudes(
         templates_or_sorting_analyzer, peak_sign=peak_sign, peak_mode=peak_mode, abs_value=abs_value

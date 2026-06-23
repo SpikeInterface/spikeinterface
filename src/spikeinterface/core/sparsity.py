@@ -321,7 +321,7 @@ class ChannelSparsity:
         mask = np.zeros(
             (templates_or_sorting_analyzer.unit_ids.size, templates_or_sorting_analyzer.channel_ids.size), dtype="bool"
         )
-        peak_values = get_template_amplitudes(templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode)
+        peak_values = get_template_amplitudes(templates_or_sorting_analyzer)
         for unit_ind, unit_id in enumerate(templates_or_sorting_analyzer.unit_ids):
             chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
             chan_inds = chan_inds[:num_channels]
@@ -330,7 +330,7 @@ class ChannelSparsity:
 
     ## Some convinient function to compute sparsity from several strategy
     @classmethod
-    def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign="neg"):
+    def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign=None):
         """
         Construct sparsity from N closest channels
         Use the "num_channels" argument to specify the number of channels.
@@ -394,7 +394,6 @@ class ChannelSparsity:
             mask[unit_ind, chan_inds] = True
         return cls(mask, unit_ids, channel_ids)
 
-
     @classmethod
     def from_radius(cls, templates_or_sorting_analyzer, radius_um):
         """
@@ -420,15 +419,16 @@ class ChannelSparsity:
             templates_or_sorting_analyzer.channel_ids,
             main_channel_index,
             channel_locations,
-            radius_um)
+            radius_um,
+        )
 
     @classmethod
     def from_snr(
         cls,
         templates_or_sorting_analyzer,
         threshold,
-        amplitude_mode="extremum",
-        peak_sign="neg",
+        amplitude_mode=None,
+        peak_sign=None,
         noise_levels=None,
     ):
         """
@@ -479,7 +479,7 @@ class ChannelSparsity:
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
         peak_values = get_template_amplitudes(
-            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_in_uV=return_in_uV
+            templates_or_sorting_analyzer, peak_sign=peak_sign, peak_mode=amplitude_mode
         )
 
         for unit_ind, unit_id in enumerate(unit_ids):
@@ -488,7 +488,7 @@ class ChannelSparsity:
         return cls(mask, unit_ids, channel_ids)
 
     @classmethod
-    def from_amplitude(cls, templates_or_sorting_analyzer, threshold, amplitude_mode="extremum", peak_sign="neg"):
+    def from_amplitude(cls, templates_or_sorting_analyzer, threshold, amplitude_mode=None, peak_sign=None):
         """
         Construct sparsity from a threshold based on template amplitude.
         The amplitude is computed with the specified amplitude mode and it is assumed
@@ -534,7 +534,7 @@ class ChannelSparsity:
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
         peak_values = get_template_amplitudes(
-            templates_or_sorting_analyzer, peak_sign=peak_sign, mode=amplitude_mode, return_in_uV=True
+            templates_or_sorting_analyzer, peak_sign=peak_sign, peak_mode=amplitude_mode
         )
 
         for unit_ind, unit_id in enumerate(unit_ids):
@@ -695,29 +695,25 @@ def compute_sparsity(
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
-        sparsity = ChannelSparsity.from_best_channels(templates_or_sorting_analyzer, num_channels, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_best_channels(templates_or_sorting_analyzer, num_channels)
     elif method == "closest_channels":
         assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
         sparsity = ChannelSparsity.from_closest_channels(templates_or_sorting_analyzer, num_channels)
     elif method == "radius":
         assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
-        sparsity = ChannelSparsity.from_radius(templates_or_sorting_analyzer, radius_um, peak_sign=peak_sign)
+        sparsity = ChannelSparsity.from_radius(templates_or_sorting_analyzer, radius_um)
     elif method == "snr":
         assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_snr(
             templates_or_sorting_analyzer,
             threshold,
             noise_levels=noise_levels,
-            peak_sign=peak_sign,
-            amplitude_mode=amplitude_mode,
         )
     elif method == "amplitude":
         assert threshold is not None, "For the 'amplitude' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_amplitude(
             templates_or_sorting_analyzer,
             threshold,
-            amplitude_mode=amplitude_mode,
-            peak_sign=peak_sign,
         )
     elif method == "energy":
         assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
@@ -760,7 +756,7 @@ def estimate_sparsity(
     These can be computed with the `get_noise_levels()` function.
 
     If main_channel_index is given and method="radius" then there is not need estimate
-    the templates otherwise the templates must be estimated using 
+    the templates otherwise the templates must be estimated using
     `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
     the recording.
 
@@ -782,7 +778,7 @@ def estimate_sparsity(
         Noise levels required for the "snr" and "energy" methods. You can use the
         `get_noise_levels()` function to compute them.
     main_channel_index : np.array | None, default: None
-        Main channel indicies can be provided in case of method="radius", this avoid the 
+        Main channel indicies can be provided in case of method="radius", this avoid the
         `estimate_templates_with_accumulator()` which is slow.
     {}
 
@@ -808,7 +804,7 @@ def estimate_sparsity(
         chan_locs = recording.get_channel_locations()
         probe = recording.create_dummy_probe_from_locations(chan_locs)
 
-    if method == "radius" and  main_channel_index is not None:
+    if method == "radius" and main_channel_index is not None:
         assert main_channel_index.size == sorting.unit_ids.size
         chan_locs = recording.get_channel_locations()
         sparsity = ChannelSparsity.from_radius_and_main_channel(
