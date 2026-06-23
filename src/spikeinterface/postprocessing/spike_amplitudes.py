@@ -15,7 +15,7 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
     Parameters
     ----------
-    
+
     """
 
     extension_name = "spike_amplitudes"

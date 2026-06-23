@@ -56,9 +56,8 @@ def test_get_template_amplitudes(sorting_analyzer):
     peak_values = get_template_amplitudes(sorting_analyzer)
     templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
     peak_values = get_template_amplitudes(templates, peak_sign="both", peak_mode="extremum", abs_value=True)
-    peak_to_peak_values = get_template_amplitudes(templates,  peak_sign="both", peak_mode="peak_to_peak")
+    peak_to_peak_values = get_template_amplitudes(templates, peak_sign="both", peak_mode="peak_to_peak")
     assert np.all(ptp > p for ptp, p in zip(peak_to_peak_values.values(), peak_values.values()))
-
 
 
 def test_get_template_main_channel_peak_shift(sorting_analyzer):

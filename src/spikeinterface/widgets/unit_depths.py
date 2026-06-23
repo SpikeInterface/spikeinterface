@@ -22,9 +22,7 @@ class UnitDepthsWidget(BaseWidget):
         The dimension of unit_locations that is depth
     """
 
-    def __init__(
-        self, sorting_analyzer, unit_colors=None, depth_axis=1, backend=None, **backend_kwargs
-    ):
+    def __init__(self, sorting_analyzer, unit_colors=None, depth_axis=1, backend=None, **backend_kwargs):
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 

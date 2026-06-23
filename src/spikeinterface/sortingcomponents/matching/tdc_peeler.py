@@ -221,9 +221,10 @@ class TridesclousPeeler(BaseTemplateMatching):
             self.sparse_templates_array_static = templates.templates_array
             self.dtype = self.sparse_templates_array_static.dtype
 
-
         # as numpy vector
-        self.main_channels = templates.get_main_channels(main_channel_peak_sign=peak_sign, outputs="index", with_dict=False)
+        self.main_channels = templates.get_main_channels(
+            main_channel_peak_sign=peak_sign, outputs="index", with_dict=False
+        )
 
         channel_locations = templates.probe.contact_positions
         unit_locations = channel_locations[self.main_channels]

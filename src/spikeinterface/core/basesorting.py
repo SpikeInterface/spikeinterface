@@ -12,6 +12,7 @@ class BaseSorting(BaseExtractor):
     """
     Abstract class representing several segment several units and relative spiketrains.
     """
+
     _main_properties = [
         "main_channel_index",
     ]

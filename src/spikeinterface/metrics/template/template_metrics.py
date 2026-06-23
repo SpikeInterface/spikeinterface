@@ -255,12 +255,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-
         extremum_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         operator = self.params["template_operator"]
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
-
 
         analyzer_channel_locations = sorting_analyzer.get_channel_locations()
         # the template metrics only work for 2D probes. We warn users with 3D locations above.

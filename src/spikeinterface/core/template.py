@@ -484,9 +484,10 @@ class Templates:
         channel_locations = self.probe.contact_positions
         return channel_locations
 
-    def get_main_channels(self,
-        peak_sign : Literal["neg","both","pos"] = "both",
-        peak_mode : Literal["extremum","at_index","peak_to_peak"] = "extremum",
+    def get_main_channels(
+        self,
+        peak_sign: Literal["neg", "both", "pos"] = "both",
+        peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
         outputs="index",
         with_dict=False,
     ):
@@ -501,9 +502,8 @@ class Templates:
             main_chans = self.channel_ids[main_channel_index]
         else:
             raise ValueError("wrong outputs")
-        
+
         if with_dict:
             return dict(zip(self.unit_ids, main_chans))
         else:
             return main_chans
-

@@ -175,7 +175,6 @@ def compute_snrs(
 
     channel_ids = sorting_analyzer.channel_ids
 
-
     main_channel_index = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
     unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=True)
 

@@ -128,7 +128,6 @@ def select_templates(
     # get template amplitudes and depth
     main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
-
     mask = np.ones(templates.num_units, dtype=bool)
     if min_amplitude is not None or max_amplitude is not None:
         # filter amplitudes

@@ -1,7 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.template_tools import  get_dense_templates_array, _get_nbefore
+from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
@@ -103,7 +103,6 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             cut_out_after = nafter
 
         extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
-
 
         # collisions
         handle_collisions = self.params["handle_collisions"]

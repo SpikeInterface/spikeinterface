@@ -147,6 +147,7 @@ class PeakRetriever(PeakSource):
 
 # TODO sam replace extremum_channels_indices by main_channel_index
 
+
 # this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
     """
