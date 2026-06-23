@@ -1139,7 +1139,7 @@ class SortingAnalyzer:
 
     def get_main_channels(self, outputs="index", with_dict=False):
         """ """
-        main_channel_index = self.get_sorting_property("main_channel_index")
+        main_channel_index = self.main_channel_index
         if outputs == "index":
             main_chans = main_channel_index
         elif outputs == "id":

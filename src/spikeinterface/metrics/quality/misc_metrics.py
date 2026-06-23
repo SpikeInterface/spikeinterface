@@ -173,19 +173,14 @@ def compute_snrs(
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
-    channel_ids = sorting_analyzer.channel_ids
-
-    main_channel_index = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
-    unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=True)
-
-    # make a dict to access by chan_id
-    noise_levels = dict(zip(channel_ids, noise_levels))
+    main_channel_index = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
+    unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=False)
 
     snrs = {}
-    for unit_id in unit_ids:
-        chan_ind = main_channel_index[unit_id]
+    for unit_index, unit_id in enumerate(unit_ids):
+        chan_ind = main_channel_index[unit_index]
         noise = noise_levels[chan_ind]
-        amplitude = unit_amplitudes[unit_id]
+        amplitude = unit_amplitudes[unit_index]
         snrs[unit_id] = np.abs(amplitude) / noise
 
     return snrs
@@ -194,7 +189,7 @@ def compute_snrs(
 class SNR(BaseMetric):
     metric_name = "snr"
     metric_function = compute_snrs
-    metric_params = {"peak_sign": "both", "peak_mode": "extremum"}
+    metric_params = {}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
     depend_on = ["noise_levels", "templates"]

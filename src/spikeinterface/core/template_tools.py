@@ -393,8 +393,7 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
 
     shifts = []
     for unit_ind, unit_id in enumerate(unit_ids):
-        chan_ind = main_channels[unit_ind]
-        template = main_channel_templates[chan_ind]
+        template = main_channel_templates[unit_ind]
         if peak_sign == "both":
             peak_pos = np.argmax(np.abs(template))
         elif peak_sign == "neg":
@@ -513,6 +512,7 @@ def get_template_main_channel_amplitude(
         unit_amplitudes.append(extremum_amplitudes[unit_id][chan_ind])
 
     if with_dict:
-        unit_amplitudes = dict(zip())
+        unit_amplitudes_dict = dict(zip(unit_ids, unit_amplitudes))
+        return unit_amplitudes_dict
 
     return unit_amplitudes
