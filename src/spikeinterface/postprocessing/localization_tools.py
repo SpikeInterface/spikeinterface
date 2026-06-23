@@ -688,7 +688,7 @@ def compute_location_max_channel(
         unit_ids = np.asarray(unit_ids)
     unit_locations = np.zeros((unit_ids.size, 2), dtype="float32")
     for i, unit_id in enumerate(unit_ids):
-        unit_locations[i, :] = contact_locations[extremum_channels_index[unit_id]]
+        unit_locations[i, :] = contact_locations[extremum_channels_index[unit_id], :2]
 
     return unit_locations
 
