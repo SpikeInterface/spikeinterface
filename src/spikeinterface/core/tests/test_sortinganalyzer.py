@@ -119,7 +119,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
     assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
-    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
@@ -201,7 +201,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
     assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
-    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
 def test_create_by_dict():
@@ -323,6 +323,60 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     # check that locations are correct
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
+
+
+def test_load_in_lazy_mode_binary(tmp_path, dataset):
+    recording, sorting = dataset
+
+    folder = tmp_path / "test_SortingAnalyzer_binary_folder"
+    if folder.exists():
+        shutil.rmtree(folder)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="binary_folder", folder=folder, sparse=False, sparsity=None
+    )
+
+    sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
+    # load in lazy mode and check that extension data are memmap
+    sorting_analyzer_lazy = load_sorting_analyzer(folder, format="auto", lazy=True)
+    template_ext = sorting_analyzer_lazy.get_extension("templates")
+    template_data = template_ext.data
+    for key, value in template_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, np.memmap)
+    spike_amplitudes_ext = sorting_analyzer_lazy.get_extension("spike_amplitudes")
+    spike_amplitudes_data = spike_amplitudes_ext.data
+    for key, value in spike_amplitudes_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, np.memmap)
+
+
+def test_load_in_lazy_mode_zarr(tmp_path, dataset):
+    import zarr
+
+    recording, sorting = dataset
+
+    folder = tmp_path / "test_SortingAnalyzer_zarr_folder.zarr"
+    if folder.exists():
+        shutil.rmtree(folder)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+    )
+
+    sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
+    # load in lazy mode and check that extension data are zarr arrays
+    sorting_analyzer_lazy = load_sorting_analyzer(folder, format="auto", lazy=True)
+    template_ext = sorting_analyzer_lazy.get_extension("templates")
+    template_data = template_ext.data
+    for key, value in template_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, zarr.Array)
+    spike_amplitudes_ext = sorting_analyzer_lazy.get_extension("spike_amplitudes")
+    spike_amplitudes_data = spike_amplitudes_ext.data
+    for key, value in spike_amplitudes_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, zarr.Array)
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):

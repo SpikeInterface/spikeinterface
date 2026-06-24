@@ -437,7 +437,7 @@ class SortingAnalyzer:
                 folder, recording=recording, backend_options=backend_options, lazy=lazy
             )
 
-        if not is_path_remote(str(folder)):
+        if not is_path_remote(str(folder)) and not lazy:
             if load_extensions:
                 sorting_analyzer.load_all_saved_extension()
 
@@ -1008,6 +1008,11 @@ class SortingAnalyzer:
         new_sorting_analyzer : SortingAnalyzer
             The newly created SortingAnalyzer object.
         """
+        if self._lazy:
+            raise ValueError(
+                "Cannot save, select, merge or split units when the SortingAnalyzer is lazy. "
+                "Please load the SortingAnalyzer with lazy=False."
+            )
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
