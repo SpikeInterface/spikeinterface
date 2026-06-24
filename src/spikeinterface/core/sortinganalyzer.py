@@ -739,10 +739,20 @@ class SortingAnalyzer:
                     "Please consider re-generating the SortingAnalyzer object."
                 )
 
-        # TODO: make a Virtual memmap of ZarrSorting spike vector
-        copy_spike_vector = False if lazy else True
+        if lazy:
+            copy_spike_vector = False
+            lazy_spike_vector = True
+        else:
+            copy_spike_vector = True
+            lazy_spike_vector = False
+
         sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting", storage_options=storage_options),
+            ZarrSortingExtractor(
+                folder,
+                zarr_group="sorting",
+                storage_options=storage_options,
+                lazy_spike_vector=lazy_spike_vector,
+            ),
             with_metadata=True,
             copy_spike_vector=copy_spike_vector,
         )

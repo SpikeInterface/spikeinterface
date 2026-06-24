@@ -337,8 +337,11 @@ def test_load_in_lazy_mode_binary(tmp_path, dataset):
     )
 
     sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
-    # load in lazy mode and check that extension data are memmap
+    # load in lazy mode and check that spike vector and extension data are memmap
     sorting_analyzer_lazy = load_sorting_analyzer(folder, format="auto", lazy=True)
+
+    assert isinstance(sorting_analyzer_lazy.sorting.to_spike_vector(), np.memmap)
+
     template_ext = sorting_analyzer_lazy.get_extension("templates")
     template_data = template_ext.data
     for key, value in template_data.items():
@@ -353,6 +356,7 @@ def test_load_in_lazy_mode_binary(tmp_path, dataset):
 
 def test_load_in_lazy_mode_zarr(tmp_path, dataset):
     import zarr
+    from spikeinterface.core.zarrextractors import ZarrSpikeVector
 
     recording, sorting = dataset
 
@@ -365,8 +369,11 @@ def test_load_in_lazy_mode_zarr(tmp_path, dataset):
     )
 
     sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
-    # load in lazy mode and check that extension data are zarr arrays
+    # load in lazy mode and check that spikevector is ZarrSpikeVector andextension data are zarr arrays
     sorting_analyzer_lazy = load_sorting_analyzer(folder, format="auto", lazy=True)
+
+    assert isinstance(sorting_analyzer_lazy.sorting.to_spike_vector(), ZarrSpikeVector)
+
     template_ext = sorting_analyzer_lazy.get_extension("templates")
     template_data = template_ext.data
     for key, value in template_data.items():
