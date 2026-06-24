@@ -437,7 +437,12 @@ class ZarrSortingExtractor(BaseSorting):
         if annotations is not None:
             self.annotate(**annotations)
 
-        self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options, "zarr_group": zarr_group}
+        self._kwargs = {
+            "folder_path": folder_path_kwarg,
+            "storage_options": storage_options,
+            "zarr_group": zarr_group,
+            "lazy_spike_vector": lazy_spike_vector,
+        }
 
     @staticmethod
     def write_sorting(sorting: BaseSorting, folder_path: str | Path, storage_options: dict | None = None, **kwargs):
