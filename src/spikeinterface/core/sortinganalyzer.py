@@ -283,6 +283,7 @@ class SortingAnalyzer:
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
         backend_options: dict | None = None,
+        lazy: bool = False,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -307,6 +308,9 @@ class SortingAnalyzer:
         # - saving_options: dict | None
         # (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
         self._backend_options = {} if backend_options is None else backend_options
+
+        # the lazy flag is used to load the extensions in a lazy way (only when needed)
+        self._lazy = lazy
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -549,6 +553,7 @@ class SortingAnalyzer:
         else:
             numpy_folder_kwargs = dict()
             copy_spike_vector = True
+
         sorting = NumpySorting.from_sorting(
             NumpyFolderSorting(folder / "sorting", **numpy_folder_kwargs),
             with_metadata=True,
@@ -613,6 +618,7 @@ class SortingAnalyzer:
             sparsity=sparsity,
             return_in_uV=return_in_uV,
             backend_options=backend_options,
+            lazy=lazy,
         )
         sorting_analyzer.folder = folder
 
@@ -733,13 +739,12 @@ class SortingAnalyzer:
                     "Please consider re-generating the SortingAnalyzer object."
                 )
 
-        # load internal sorting in memory
-        if lazy:
-            copy_spike_vector = False
+        # TODO: make a Virtual memmap of ZarrSorting spike vector
+        copy_spike_vector = False if lazy else True
         sorting = NumpySorting.from_sorting(
             ZarrSortingExtractor(folder, zarr_group="sorting", storage_options=storage_options),
             with_metadata=True,
-            copy_spike_vector=True,
+            copy_spike_vector=copy_spike_vector,
         )
 
         # load recording if possible
@@ -784,6 +789,7 @@ class SortingAnalyzer:
             sparsity=sparsity,
             return_in_uV=return_in_uV,
             backend_options=backend_options,
+            lazy=lazy,
         )
         sorting_analyzer.folder = folder
 
@@ -1908,7 +1914,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         return saved_extension_names
 
-    def get_extension(self, extension_name: str, lazy: bool = False):
+    def get_extension(self, extension_name: str):
         """
         Get a AnalyzerExtension.
         If not loaded then load is automatic.
@@ -1920,13 +1926,13 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             return self.extensions[extension_name]
 
         elif self.format != "memory" and self.has_extension(extension_name):
-            self.load_extension(extension_name, lazy=lazy)
+            self.load_extension(extension_name)
             return self.extensions[extension_name]
 
         else:
             return None
 
-    def load_extension(self, extension_name: str, lazy: bool = False):
+    def load_extension(self, extension_name: str):
         """
         Load an extension from a folder or zarr into the `ResultSorting.extensions` dict.
 
@@ -1934,8 +1940,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         ----------
         extension_name : str
             The extension name.
-        lazy : bool, default: False
-            If True, array data are not loaded in memory, but kept as memmap/zarr arrays
 
         Returns
         -------
@@ -1952,7 +1956,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         if extension_class is None:
             return None
 
-        extension_instance = extension_class.load(self, lazy=lazy)
+        extension_instance = extension_class.load(self, lazy=self._lazy)
 
         self.extensions[extension_name] = extension_instance
 
@@ -2563,9 +2567,8 @@ class AnalyzerExtension:
                         ext_data = json.load(f)
                 elif ext_data_file.suffix == ".npy":
                     # The lazy loading of an extension is complicated because if we compute again
-                    # and have a link to the old buffer on windows then it fails
-                    # ext_data = np.load(ext_data_file, mmap_mode="r")
-                    # so we go back to full loading
+                    # and have a link to the old buffer on windows then it fails.
+                    # So, by default, we use full loading, but lazy can be requested on demand.
                     kwargs = dict(mmap_mode="r") if lazy else dict()
                     ext_data = np.load(ext_data_file, **kwargs)
                 elif ext_data_file.suffix == ".csv":
@@ -2603,11 +2606,7 @@ class AnalyzerExtension:
                 elif "object" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 else:
-                    # this load in memmory
-                    if lazy:
-                        ext_data = ext_data_
-                    else:
-                        ext_data = np.array(ext_data_)
+                    ext_data = ext_data_ if lazy else np.array(ext_data_[:])
                 self.set_data(ext_data_name, ext_data)
 
         if len(self.data) == 0:
