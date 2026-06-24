@@ -5,6 +5,7 @@ import json
 import numpy as np
 
 from spikeinterface.core import get_channel_distances, fix_job_kwargs
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import (
@@ -48,8 +49,8 @@ def extract_peaks_svd(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     # Step 1 : select a few peaks to fit the SVD
     if svd_model is None:

@@ -125,6 +125,7 @@ class SortingSummaryWidget(BaseWidget):
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)
         vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
+        backend = "sortingview" if use_sortingview else "figpack"
 
         dp = to_attr(data_plot)
         sorting_analyzer = dp.sorting_analyzer
@@ -141,7 +142,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
         v_average_waveforms = UnitTemplatesWidget(
             sorting_analyzer,
@@ -150,7 +151,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
         v_cross_correlograms = CrossCorrelogramsWidget(
             sorting_analyzer,
@@ -159,7 +160,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
 
         v_unit_locations = UnitLocationsWidget(
@@ -168,7 +169,7 @@ class SortingSummaryWidget(BaseWidget):
             hide_unit_selector=True,
             generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
 
         w = TemplateSimilarityWidget(
@@ -177,7 +178,7 @@ class SortingSummaryWidget(BaseWidget):
             immediate_plot=False,
             generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         )
         similarity = w.data_plot["similarity"]
 

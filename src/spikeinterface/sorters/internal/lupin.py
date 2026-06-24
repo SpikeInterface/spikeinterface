@@ -8,6 +8,7 @@ from spikeinterface.core import (
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
+    ms_to_samples,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -58,7 +59,7 @@ class LupinSorter(ComponentsBasedSorter):
         "template_sparsify_threshold": 1.0,
         "template_min_snr_ptp": 4.0,
         "template_max_jitter_ms": 0.2,
-        "template_matching_engine": "circus-omp",
+        "template_matching_engine": "wobble",
         "min_firing_rate": 0.1,
         "gather_mode": "memory",
         "job_kwargs": {},
@@ -101,7 +102,21 @@ class LupinSorter(ComponentsBasedSorter):
         "debug": "Save debug files",
     }
 
+    installation_mesg = "\tpip install 'spikeinterface[lupin]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[lupin]'"
+
     handle_multi_segment = True
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        lupin_deps = ["scipy", "numba", "sklearn", "torch"]
+
+        for package_name in lupin_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
 
     @classmethod
     def get_sorter_version(cls):
@@ -332,8 +347,8 @@ class LupinSorter(ComponentsBasedSorter):
         )
 
         # Template are sparse from radius using unit_location
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
         templates_array = estimate_templates_with_accumulator(
             recording,
             sorting_pre_peeler.to_spike_vector(),

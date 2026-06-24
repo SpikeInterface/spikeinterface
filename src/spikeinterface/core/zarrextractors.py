@@ -9,7 +9,7 @@ from .base import minimum_spike_dtype, _get_class_from_string
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import define_function_from_class, check_json, is_path_remote, retrieve_importing_provenance
-from .job_tools import split_job_kwargs, fix_job_kwargs, ensure_chunk_size, ChunkRecordingExecutor
+from .job_tools import split_job_kwargs, fix_job_kwargs, ensure_chunk_size, TimeSeriesChunkExecutor
 
 zarr.config.set({"default_zarr_version": 3})
 
@@ -745,13 +745,13 @@ def add_traces_to_zarr(
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     init_args = (recording, zarr_datasets, dtype)
-    executor = ChunkRecordingExecutor(
+    executor = TimeSeriesChunkExecutor(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
     )
     executor.run()
 
 
-# used by write_zarr_recording + ChunkRecordingExecutor
+# used by write_zarr_recording + TimeSeriesChunkExecutor
 def _init_zarr_worker(recording, zarr_datasets, dtype):
     import zarr
 
@@ -764,7 +764,7 @@ def _init_zarr_worker(recording, zarr_datasets, dtype):
     return worker_ctx
 
 
-# used by write_zarr_recording + ChunkRecordingExecutor
+# used by write_zarr_recording + TimeSeriesChunkExecutor
 def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     import gc
 

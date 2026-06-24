@@ -11,6 +11,7 @@ from spikeinterface.core import (
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
+    ms_to_samples,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -95,6 +96,20 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     }
 
     handle_multi_segment = True
+
+    installation_mesg = "\tpip install 'spikeinterface[tridesclous2]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[tridesclous2]'"
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        tridesclous2_deps = ["scipy", "numba", "hdbscan"]
+
+        for package_name in tridesclous2_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
 
     @classmethod
     def get_sorter_version(cls):
@@ -291,8 +306,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
 
         templates_array = estimate_templates_with_accumulator(
             recording_for_peeler,

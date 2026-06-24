@@ -415,7 +415,7 @@ class SortingAnalyzer:
         """
         if format == "auto":
             # make better assumption and check for auto guess format
-            if Path(folder).suffix == ".zarr":
+            if Path(folder).suffix == ".zarr" or is_path_remote(folder):
                 format = "zarr"
             else:
                 format = "binary_folder"
@@ -618,7 +618,6 @@ class SortingAnalyzer:
     def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
         # used by create and save_as
         import zarr
-        import numcodecs
         from .zarrextractors import add_sorting_to_zarr_group
 
         if is_path_remote(folder):
@@ -667,7 +666,8 @@ class SortingAnalyzer:
             zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
         else:
             warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+                "The sorting provenance is not serializable! "
+                "The sorting provenance link will be lost for future load"
             )
 
         recording_info = zarr_root.create_group("recording_info")
@@ -2022,6 +2022,10 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         -------
         metrics_df : pandas.DataFrame
             A concatenated dataframe with all available metrics.
+
+        Note
+        ----
+        Duplicated columns are removed (can happen if several metric extensions have a metric with the same name).
         """
         import pandas as pd
         from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
@@ -2040,6 +2044,10 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             metrics_df = pd.concat(all_metrics_data, axis=1)
         else:
             metrics_df = pd.DataFrame(index=self.unit_ids)
+
+        # Remove duplicated columns (can happen if several metric extensions have a metric with the same name)
+        metrics_df = metrics_df.loc[:, ~metrics_df.columns.duplicated()]
+
         return metrics_df
 
 
@@ -2715,8 +2723,6 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            import numcodecs
-
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 

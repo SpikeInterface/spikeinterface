@@ -156,6 +156,38 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         probe = recording.get_probe()
         np.testing.assert_array_equal(recording.channel_ids, probe.contact_annotations["settings_channel_key"])
 
+    def test_timestamp_loading_multi_level(self):
+        """
+        Test that we can load the sync timestamps from different levels of the folder structure and
+        that they are the same.
+        """
+        recording_folder = (
+            local_folder / "openephysbinary/v0.6.x_neuropixels_with_sync/Record Node 104/experiment1/recording1"
+        )
+        stream_name = "Record Node 104#Neuropix-PXI-100.ProbeA-AP"
+        block_index = 0
+
+        recording_from_recording_folder = self.ExtractorClass(
+            recording_folder,
+            stream_name=stream_name,
+            block_index=block_index,
+            load_sync_timestamps=True,
+        )
+        assert recording_from_recording_folder.has_time_vector()
+        timestamps_recording = recording_from_recording_folder.get_times()
+        parent_folder = recording_folder
+        for _ in range(3):
+            parent_folder = parent_folder.parent
+            recording_from_parent = self.ExtractorClass(
+                parent_folder,
+                stream_name=stream_name,
+                block_index=block_index,
+                load_sync_timestamps=True,
+            )
+            assert recording_from_parent.has_time_vector()
+            timestamps_parent = recording_from_parent.get_times()
+            np.testing.assert_array_equal(timestamps_recording, timestamps_parent)
+
 
 class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = OpenEphysBinaryEventExtractor
