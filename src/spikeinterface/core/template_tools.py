@@ -98,6 +98,7 @@ def get_template_amplitudes(
     # return_in_uV: bool = True,
     abs_value: bool = True,
     operator: str = "average",
+    override_peak_error: bool = False,
 ):
     """
     Get amplitude per channel for each unit.
@@ -128,14 +129,17 @@ def get_template_amplitudes(
     """
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        assert (
-            peak_sign is None
-        ), "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
-        assert (
-            peak_mode is None
-        ), "get_template_amplitudes() peak_mode is now contained in SortingAnalyzer, should be None here"
-        peak_sign = templates_or_sorting_analyzer.main_channel_peak_sign
-        peak_mode = templates_or_sorting_analyzer.main_channel_peak_mode
+        if not override_peak_error:
+            assert (
+                peak_sign is None
+            ), "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
+            assert (
+                peak_mode is None
+            ), "get_template_amplitudes() peak_mode is now contained in SortingAnalyzer, should be None here"
+        if peak_sign is None:
+            peak_sign = templates_or_sorting_analyzer.main_channel_peak_sign
+        if peak_mode is None:
+            peak_mode = templates_or_sorting_analyzer.main_channel_peak_mode
         return_in_uV = templates_or_sorting_analyzer.return_in_uV
     elif isinstance(templates_or_sorting_analyzer, Templates):
         return_in_uV = templates_or_sorting_analyzer.is_in_uV

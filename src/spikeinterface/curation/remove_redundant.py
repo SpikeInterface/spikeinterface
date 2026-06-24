@@ -17,7 +17,6 @@ def remove_redundant_units(
     agreement_threshold: float = 0.2,
     duplicate_threshold: float = 0.8,
     remove_strategy: str = "minimum_shift",
-    peak_sign: str = "neg",
     extra_outputs: bool = False,
 ) -> BaseSorting | tuple[BaseSorting, list[tuple[int, int]]]:
     """
@@ -52,9 +51,6 @@ def remove_redundant_units(
                              If shifts are equal then the "highest_amplitude" is used
             * "highest_amplitude" : keep the unit with the best amplitude on unshifted max.
             * "max_spikes" : keep the unit with more spikes
-
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Used when remove_strategy="highest_amplitude"
     extra_outputs : bool, default: False
         If True, will return the redundant pairs.
     unit_peak_shifts : dict
@@ -98,7 +94,7 @@ def remove_redundant_units(
 
     if remove_strategy in ("minimum_shift", "highest_amplitude"):
         # this is the values at spike index !
-        peak_values = get_template_amplitudes(sorting_analyzer, peak_sign=peak_sign, mode="at_index")
+        peak_values = get_template_amplitudes(sorting_analyzer, peak_mode="at_index", override_peak_error=True)
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":

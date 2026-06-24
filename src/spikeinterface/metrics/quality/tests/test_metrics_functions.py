@@ -639,15 +639,20 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     )
 
     # check that, when parameters are changed, the data and metadata are updated
-    old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
+    old_presence_ratio_data = deepcopy(quality_metric_extension.get_data()["presence_ratio"].values)
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+        {
+            "quality_metrics": {
+                "metric_names": ["presence_ratio"],
+                "metric_params": {"presence_ratio": {"bin_duration_s": "10"}},
+            }
+        }
     )
     new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
-    new_snr_data = new_quality_metric_extension.get_data()["snr"].values
+    new_presence_ratio_data = new_quality_metric_extension.get_data()["presence_ratio"].values
 
-    assert np.all(old_snr_data != new_snr_data)
-    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
+    assert np.all(old_presence_ratio_data != new_presence_ratio_data)
+    assert new_quality_metric_extension.params["metric_params"]["presence_ratio"]["bin_duration_s"] == "10"
 
 
 def test_metric_names_in_same_order(small_sorting_analyzer):

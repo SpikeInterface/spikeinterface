@@ -177,7 +177,8 @@ def compute_snrs(
     unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=False)
 
     snrs = {}
-    for unit_index, unit_id in enumerate(unit_ids):
+    for unit_id in unit_ids:
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
         chan_ind = main_channel_index[unit_index]
         noise = noise_levels[chan_ind]
         amplitude = unit_amplitudes[unit_index]
