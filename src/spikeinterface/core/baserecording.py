@@ -654,9 +654,15 @@ class BaseRecordingSegment(TimeSeriesSegment):
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
 
+    # Segments that know their channel count at construction (e.g. BinaryRecordingSegment,
+    # which needs it before being attached to a parent to compute the on-disk layout) set
+    # self.num_channels. Segments that don't leave this default and inherit the count from the
+    # parent recording, which is always attached by the time get_traces runs.
+    num_channels = None
+
     def get_num_channels(self) -> int:
-        # Segments are always attached to a parent recording via `add_segment`, so the
-        # channel count is inherited from the container recording.
+        if self.num_channels is not None:
+            return self.num_channels
         return self.parent_extractor.get_num_channels()
 
     def get_traces(

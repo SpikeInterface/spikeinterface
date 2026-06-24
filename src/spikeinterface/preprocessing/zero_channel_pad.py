@@ -73,7 +73,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         if isinstance(channel_indices, (np.ndarray, list)):
             num_channels = len(channel_indices)
         elif channel_indices == slice(None):
-            num_channels = self.num_channels
+            num_channels = self.get_num_channels()
         else:
             raise ValueError(f"Unsupported channel_indices type: {type(channel_indices)} raise an issue on github ")
 
@@ -185,7 +185,7 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
         self.channel_mapping = channel_mapping
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = np.zeros((end_frame - start_frame, self.num_channels))
+        traces = np.zeros((end_frame - start_frame, self.get_num_channels()))
         traces[:, self.channel_mapping] = self.parent_recording_segment.get_traces(
             start_frame=start_frame, end_frame=end_frame, channel_indices=self.channel_mapping
         )
