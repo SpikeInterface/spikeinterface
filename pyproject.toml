@@ -226,7 +226,7 @@ docs = [
     "MEArec", # Use as an example
     "pandas<3", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
-    "numba", # For many postprocessing functions
+    "numba>=0.59", # For many postprocessing functions
     "networkx",
     "seaborn",
     "skops", # For automated curation
