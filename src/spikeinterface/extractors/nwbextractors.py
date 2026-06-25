@@ -156,9 +156,6 @@ def read_nwbfile(
     return nwbfile
 
 
-1
-
-
 def _retrieve_electrical_series_pynwb(
     nwbfile: "NWBFile", electrical_series_path: Optional[str] = None
 ) -> "ElectricalSeries":
@@ -380,11 +377,12 @@ class _NWBReader:
     ``self.electrodes_table`` and ``self.electrodes_indices``; ``close`` releases the handle.
     """
 
-    def __init__(self, *, reading_method, electrical_series_path=None, unit_table_path=None):
+    def __init__(self, *, reading_method, electrical_series_path=None, unit_table_path=None, timeseries_path=None):
         assert reading_method in ("use_pynwb", "use_hdf5", "use_zarr"), f"Unknown reading_method {reading_method}"
         self.reading_method = reading_method
         self.electrical_series_path = electrical_series_path
         self.unit_table_path = unit_table_path
+        self.timeseries_path = timeseries_path
         self.file = None
         self.nwbfile = None
         self.series = None
@@ -571,6 +569,64 @@ class _NWBReader:
         sampling_frequency, t_start, _ = self.time_info(samples_for_rate_estimation)
         return sampling_frequency, t_start
 
+    # --- generic TimeSeries (time-series recording) --------------------------------------------
+    def load_timeseries(
+        self, *, file_path=None, file=None, stream_mode=None, cache=False, stream_cache_path=None, storage_options=None
+    ):
+        # Open the handle and bind a generic TimeSeries as self.series (no electrodes table).
+        self._open_handle(
+            file_path=file_path,
+            file=file,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+            storage_options=storage_options,
+        )
+        if self.reading_method == "use_pynwb":
+            self.series = self._retrieve_timeseries_pynwb()
+        else:
+            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
+            self.series = self._locate_timeseries(backend)
+
+    def _retrieve_timeseries_pynwb(self):
+        from pynwb.base import TimeSeries
+
+        time_series_dict = {}
+        for item in self.nwbfile.all_children():
+            if isinstance(item, TimeSeries):
+                time_series_dict[item.data.name.replace("/data", "")[1:]] = item
+        if self.timeseries_path is not None:
+            if self.timeseries_path not in time_series_dict:
+                raise ValueError(f"TimeSeries {self.timeseries_path} not found in file")
+        elif len(time_series_dict) == 1:
+            self.timeseries_path = list(time_series_dict.keys())[0]
+        else:
+            raise ValueError(
+                f"Multiple TimeSeries found! Specify 'timeseries_path'. Options: {list(time_series_dict.keys())}"
+            )
+        return time_series_dict[self.timeseries_path]
+
+    def _locate_timeseries(self, backend):
+        if self.timeseries_path is None:
+            available = _find_timeseries_from_backend(self.file, backend=backend)
+            if len(available) != 1:
+                raise ValueError(f"Multiple TimeSeries found! Specify 'timeseries_path'. Options: {available}")
+            self.timeseries_path = available[0]
+        try:
+            return self.file[self.timeseries_path]
+        except KeyError:
+            available = _find_timeseries_from_backend(self.file, backend=backend)
+            raise ValueError(f"{self.timeseries_path} not found! Available options: {available}")
+
+    @staticmethod
+    def available_timeseries(file_path, stream_mode=None, storage_options=None):
+        """Paths of every TimeSeries in the file, read directly (without pynwb)."""
+        backend = _NWBReader._storage_backend(file_path, stream_mode=stream_mode)
+        file_handle = read_file_from_backend(
+            file_path=file_path, stream_mode=stream_mode, storage_options=storage_options
+        )
+        return _find_timeseries_from_backend(file_handle, backend=backend)
+
     def _locate_electrical_series(self, backend):
         # Resolve electrical_series_path (auto-discovering it when the file has exactly one series)
         # and return the series handle, raising a helpful error that lists the options on failure.
@@ -731,43 +787,6 @@ class _NWBReader:
         if "group_name" not in self.column_names:
             return None
         return self.read_electrode_property("group_name")
-
-
-class _BaseNWBExtractor:
-    "A class for common methods for NWB extractors."
-
-    def _close_hdf5_file(self):
-        has_hdf5_backend = hasattr(self, "_file")
-        if has_hdf5_backend:
-            import h5py
-
-            main_file_id = self._file.id
-            open_object_ids_main = h5py.h5f.get_obj_ids(main_file_id, types=h5py.h5f.OBJ_ALL)
-            for object_id in open_object_ids_main:
-                object_name = h5py.h5i.get_name(object_id).decode("utf-8")
-                try:
-                    object_id.close()
-                except:
-                    import warnings
-
-                    warnings.warn(f"Error closing object {object_name}")
-
-    def __del__(self):
-        # Avoid impossible import errors during deletion to reduce logging noise
-        if getattr(sys, "meta_path", None) is None:
-            return
-
-        # backend mode
-        if hasattr(self, "_file"):
-            if hasattr(self._file, "store"):
-                self._file.store.close()
-            else:
-                self._close_hdf5_file()
-        # pynwb mode
-        elif hasattr(self, "_nwbfile"):
-            io = self._nwbfile.get_read_io()
-            if io is not None:
-                io.close()
 
 
 class NwbRecordingExtractor(BaseRecording):
@@ -1387,7 +1406,7 @@ def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
     return result
 
 
-class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
+class NwbTimeSeriesExtractor(BaseRecording):
     """Load a TimeSeries from an NWBFile as a RecordingExtractor.
 
     Parameters
@@ -1454,22 +1473,34 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
         self.storage_options = storage_options
         self.timeseries_path = timeseries_path
 
-        if self.stream_mode is None and file is None:
-            self.backend = _get_backend_from_local_file(file_path)
-        else:
-            self.backend = "zarr" if self.stream_mode == "zarr" else "hdf5"
+        if use_pynwb and not HAVE_PYNWB:
+            raise ImportError(self.installation_mesg)
 
         if use_pynwb:
-            if not HAVE_PYNWB:
-                raise ImportError(self.installation_mesg)
-
-            channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = self._fetch_recording_segment_info(
-                file, cache, load_time_vector, samples_for_rate_estimation
-            )
+            reading_method = "use_pynwb"
         else:
-            channel_ids, sampling_frequency, dtype, segment_data, times_kwargs = (
-                self._fetch_recording_segment_info_backend(file, cache, load_time_vector, samples_for_rate_estimation)
-            )
+            reading_method = f"use_{_NWBReader._storage_backend(file_path, file, stream_mode)}"
+
+        self._reader = _NWBReader(reading_method=reading_method, timeseries_path=timeseries_path)
+        self._reader.load_timeseries(
+            file_path=file_path,
+            file=file,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+            storage_options=storage_options,
+        )
+        self.timeseries_path = self._reader.timeseries_path
+
+        sampling_frequency, t_start, timestamps = self._reader.time_info(samples_for_rate_estimation)
+        if load_time_vector and timestamps is not None:
+            times_kwargs = dict(time_vector=timestamps)
+        else:
+            times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
+        segment_data = self._reader.data()
+        num_channels = 1 if segment_data.ndim == 1 else segment_data.shape[1]
+        channel_ids = np.arange(num_channels)
+        dtype = self._reader.dtype()
 
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbTimeSeriesSegment(
@@ -1498,138 +1529,17 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
             "file": file,
         }
 
-        if use_pynwb:
+        if reading_method == "use_pynwb":
             self.extra_requirements.append("pynwb")
-        else:
-            if self.backend == "hdf5":
-                self.extra_requirements.append("h5py")
-            if self.backend == "zarr":
-                self.extra_requirements.append("zarr")
+        elif reading_method == "use_hdf5":
+            self.extra_requirements.append("h5py")
+        elif reading_method == "use_zarr":
+            self.extra_requirements.append("zarr")
 
         if self.stream_mode == "fsspec":
             self.extra_requirements.append("fsspec")
         elif self.stream_mode == "remfile":
             self.extra_requirements.append("remfile")
-
-    def _fetch_recording_segment_info(self, file, cache, load_time_vector, samples_for_rate_estimation):
-        self._nwbfile = read_nwbfile(
-            backend=self.backend,
-            file_path=self.file_path,
-            file=file,
-            stream_mode=self.stream_mode,
-            cache=cache,
-            stream_cache_path=self.stream_cache_path,
-            storage_options=self.storage_options,
-        )
-
-        from pynwb.base import TimeSeries
-
-        time_series_dict: dict[str, TimeSeries] = {}
-
-        for item in self._nwbfile.all_children():
-            if isinstance(item, TimeSeries):
-                time_series_dict[item.data.name.replace("/data", "")[1:]] = item
-
-        if self.timeseries_path is not None:
-            if self.timeseries_path not in time_series_dict:
-                raise ValueError(f"TimeSeries {self.timeseries_path} not found in file")
-
-        else:
-            if len(time_series_dict) == 1:
-                self.timeseries_path = list(time_series_dict.keys())[0]
-            else:
-                raise ValueError(
-                    f"Multiple TimeSeries found! Specify 'timeseries_path'. Options: {list(time_series_dict.keys())}"
-                )
-
-        timeseries = time_series_dict[self.timeseries_path]
-
-        # Get sampling frequency and timing info
-        if hasattr(timeseries, "rate") and timeseries.rate is not None:
-            sampling_frequency = timeseries.rate
-            t_start = timeseries.starting_time if hasattr(timeseries, "starting_time") else 0
-            timestamps = None
-        elif hasattr(timeseries, "timestamps"):
-            timestamps = timeseries.timestamps
-            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
-            t_start = timestamps[0]
-        else:
-            raise ValueError("TimeSeries must have either starting_time or timestamps")
-
-        if load_time_vector and timestamps is not None:
-            times_kwargs = dict(time_vector=timestamps)
-        else:
-            times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
-
-        # Create channel IDs based on data shape
-        data = timeseries.data
-        if data.ndim == 1:
-            num_channels = 1
-        else:
-            num_channels = data.shape[1]
-        channel_ids = np.arange(num_channels)
-        dtype = data.dtype
-
-        return channel_ids, sampling_frequency, dtype, data, times_kwargs
-
-    def _fetch_recording_segment_info_backend(self, file, cache, load_time_vector, samples_for_rate_estimation):
-        open_file = read_file_from_backend(
-            file_path=self.file_path,
-            file=file,
-            stream_mode=self.stream_mode,
-            cache=cache,
-            stream_cache_path=self.stream_cache_path,
-            storage_options=self.storage_options,
-        )
-
-        # If timeseries_path not provided, find all TimeSeries objects
-        if self.timeseries_path is None:
-            available_timeseries = _find_timeseries_from_backend(open_file, backend=self.backend)
-            if len(available_timeseries) == 1:
-                self.timeseries_path = available_timeseries[0]
-            else:
-                raise ValueError(
-                    f"Multiple TimeSeries found! Specify 'timeseries_path'. Options: {available_timeseries}"
-                )
-
-        # Get TimeSeries object
-        try:
-            timeseries = open_file[self.timeseries_path]
-        except KeyError:
-            available_timeseries = _find_timeseries_from_backend(open_file, backend=self.backend)
-            raise ValueError(f"{self.timeseries_path} not found! Available options: {available_timeseries}")
-
-        # Get timing information
-        if "starting_time" in timeseries:
-            t_start = timeseries["starting_time"][()]
-            sampling_frequency = timeseries["starting_time"].attrs["rate"]
-            timestamps = None
-        elif "timestamps" in timeseries:
-            timestamps = timeseries["timestamps"][:]
-            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
-            t_start = timestamps[0]
-        else:
-            raise ValueError("TimeSeries must have either starting_time or timestamps")
-
-        if load_time_vector and timestamps is not None:
-            times_kwargs = dict(time_vector=timestamps)
-        else:
-            times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
-
-        # Create channel IDs based on data shape
-        data = timeseries["data"]
-        if data.ndim == 1:
-            num_channels = 1
-        else:
-            num_channels = data.shape[1]
-        channel_ids = np.arange(num_channels)
-        dtype = data.dtype
-
-        # Store for later use
-        self.timeseries = timeseries
-        self._file = open_file
-
-        return channel_ids, sampling_frequency, dtype, data, times_kwargs
 
     @staticmethod
     def fetch_available_timeseries_paths(
@@ -1654,22 +1564,7 @@ class NwbTimeSeriesExtractor(BaseRecording, _BaseNWBExtractor):
         list[str]
             List of paths to TimeSeries objects.
         """
-        if stream_mode is None:
-            backend = _get_backend_from_local_file(file_path)
-        else:
-            backend = "zarr" if stream_mode == "zarr" else "hdf5"
-
-        file_handle = read_file_from_backend(
-            file_path=file_path,
-            stream_mode=stream_mode,
-            storage_options=storage_options,
-        )
-
-        timeseries_paths = _find_timeseries_from_backend(
-            file_handle,
-            backend=backend,
-        )
-        return timeseries_paths
+        return _NWBReader.available_timeseries(file_path, stream_mode=stream_mode, storage_options=storage_options)
 
 
 class NwbTimeSeriesSegment(BaseRecordingSegment):
