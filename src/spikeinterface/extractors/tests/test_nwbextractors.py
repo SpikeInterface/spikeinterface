@@ -255,6 +255,63 @@ def test_nwb_extractor_offset_from_electrodes_table(generate_nwbfile, use_pynwb)
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_electrodes_region_out_of_order(tmp_path, use_pynwb):
+    """An ElectricalSeries may reference its electrodes in any order (e.g. channels reordered by
+    depth during processing). h5py rejects fancy indexing with non-increasing indices, so reading
+    such a file used to raise "Indexing elements must be in increasing order" (GH-4619)."""
+    from pynwb import NWBHDF5IO
+    from pynwb.ecephys import ElectricalSeries
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.testing.mock.device import mock_Device
+    from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
+
+    nwbfile = mock_NWBFile()
+    device = mock_Device(name="probe")
+    nwbfile.add_device(device)
+    nwbfile.add_electrode_column(name="channel_name", description="channel name")
+    nwbfile.add_electrode_column(name="rel_x", description="rel_x")
+    nwbfile.add_electrode_column(name="rel_y", description="rel_y")
+    nwbfile.add_electrode_column(name="property", description="A property")
+    nwbfile.add_electrode_column(name="offset", description="offset")
+    electrode_group = mock_ElectrodeGroup(device=device)
+    nwbfile.add_electrode_group(electrode_group)
+
+    num_electrodes = 5
+    for index in range(num_electrodes):
+        nwbfile.add_electrode(
+            id=index,
+            group=electrode_group,
+            location="brain",
+            channel_name=f"ch{index}",
+            rel_x=float(index),
+            rel_y=float(index),
+            property=f"prop{index}",
+            offset=float(index),
+        )
+
+    # The region is deliberately not in increasing order.
+    region = [4, 2, 0, 3, 1]
+    electrode_region = nwbfile.create_electrode_table_region(region=region, description="electrodes")
+    data = np.random.default_rng(0).random(size=(100, num_electrodes))
+    electrical_series = ElectricalSeries(name="ElectricalSeries", data=data, electrodes=electrode_region, rate=30_000.0)
+    nwbfile.add_acquisition(electrical_series)
+
+    nwbfile_path = tmp_path / "out_of_order.nwb"
+    with NWBHDF5IO(str(nwbfile_path), mode="w") as io:
+        io.write(nwbfile)
+
+    recording = NwbRecordingExtractor(
+        nwbfile_path, electrical_series_path="acquisition/ElectricalSeries", use_pynwb=use_pynwb
+    )
+
+    # Everything pulled from the electrodes table must follow the region order, not the table order.
+    assert np.array_equal(recording.channel_ids, np.array([f"ch{i}" for i in region]))
+    assert np.array_equal(recording.get_channel_locations(), np.array([[float(i), float(i)] for i in region]))
+    assert np.array_equal(recording.get_property("property"), np.array([f"prop{i}" for i in region]))
+    assert np.array_equal(recording.get_channel_offsets(), np.array([float(i) for i in region]) * 1e6)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_nwb_extractor_offset_from_series(generate_nwbfile, use_pynwb):
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
     path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile

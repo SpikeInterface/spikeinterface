@@ -34,7 +34,9 @@ class MClustSortingExtractor(BaseSorting):
         ext = None
 
         for e in ext_list:
-            files = Path(folder_path).glob(f"*.{e}")
+            # `glob` returns a lazy generator, which is always truthy; materialize it so the
+            # `if files` check actually reflects whether any file with this extension exists.
+            files = sorted(Path(folder_path).glob(f"*.{e}"))
             if files:
                 ext = e
                 break
@@ -61,6 +63,13 @@ class MClustSortingExtractor(BaseSorting):
                     line = f.readline()
                     reading_header = not line.decode("utf-8").startswith(end_header_str)
                 times = np.fromfile(f, dtype=dataformat)
+            # MClust 3.x writes big-endian uint64 timestamps into the plain `.t` suffix, but
+            # `dataformat` is uint32 for any non-`64` extension. Reading 64-bit values as 32-bit
+            # produces interleaved zero/value word pairs (the high word is zero for timestamps that
+            # fit in 32 bits), so dropping zero words lets both 32- and 64-bit `.t` files load. This
+            # matches the community reference loader.
+            if ext.startswith("t") and dataformat == ">u4":
+                times = times[times > 0]
             if ext.startswith("t"):
                 times = times / 10000
             else:
