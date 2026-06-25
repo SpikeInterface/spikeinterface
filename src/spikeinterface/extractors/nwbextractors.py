@@ -1299,6 +1299,31 @@ class NwbSortingExtractor(BaseSorting):
 
         return properties
 
+    @staticmethod
+    def fetch_available_units_tables(
+        file_path: str | Path,
+        stream_mode: Optional[Literal["fsspec", "remfile", "zarr"]] = None,
+        storage_options: dict | None = None,
+    ) -> list[str]:
+        """
+        Retrieves the paths to all Units tables within an NWB (Neurodata Without Borders) file.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the NWB (Neurodata Without Borders) file.
+        stream_mode : "fsspec" | "remfile" | "zarr" | None, optional
+            Determines the streaming mode for reading the file.
+        storage_options : dict | None, default: None
+            Additional kwargs (e.g. AWS credentials) passed to zarr.open. Only used with "zarr" stream_mode.
+
+        Returns
+        -------
+        list of str
+            Paths to all Units tables found in the file.
+        """
+        return _NWBReader.available_units_tables(file_path, stream_mode=stream_mode, storage_options=storage_options)
+
 
 class NwbSortingSegment(BaseSortingSegment):
     def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
