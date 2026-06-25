@@ -369,34 +369,28 @@ def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, elect
     return electrodes_indices
 
 
-class _NwbGeneralReader:
+class _NWBReader:
     """Read an NWB recording (its ElectricalSeries and electrodes table) for one storage format.
 
-    SpikeInterface can read an NWB file three ways, and they used to be spread across parallel
-    ``*_pynwb`` / ``*_backend`` methods with ``if use_pynwb`` / ``if backend == "zarr"`` branches
-    throughout the extractor. This single reader stores the choice in ``self.reading_method`` (one of
-    ``"use_pynwb"``, ``"use_hdf5"``, ``"use_zarr"``), and every method switches on that one variable,
-    so the recording extractor talks to one object and never branches on format itself.
+    SpikeInterface can read an NWB file three ways; the choice is stored in ``self.reading_method``
+    (``"use_pynwb"`` / ``"use_hdf5"`` / ``"use_zarr"``), and every method switches on that one
+    variable, so the extractor talks to one object and never branches on format itself.
 
-    ``load`` opens the file, locates the series, and sets ``self.nwbfile`` (pynwb) or ``self.file`` (raw) and populates ``self.series``,
-    ``self.electrodes_table`` and ``self.electrodes_indices``.
+    ``load`` opens the file handle, locates the ElectricalSeries, and binds ``self.series``,
+    ``self.electrodes_table`` and ``self.electrodes_indices``; ``close`` releases the handle.
     """
 
-    def __init__(
-        self,
-        *,
-        reading_method,
-        electrical_series_path=None,
-    ):
+    def __init__(self, *, reading_method, electrical_series_path=None, unit_table_path=None):
         assert reading_method in ("use_pynwb", "use_hdf5", "use_zarr"), f"Unknown reading_method {reading_method}"
         self.reading_method = reading_method
         self.electrical_series_path = electrical_series_path
-
+        self.unit_table_path = unit_table_path
         self.file = None
         self.nwbfile = None
         self.series = None
         self.electrodes_table = None
         self.electrodes_indices = None
+        self.units_table = None
 
     @staticmethod
     def _storage_backend(file_path=None, file=None, stream_mode=None):
@@ -405,18 +399,9 @@ class _NwbGeneralReader:
             return _get_backend_from_local_file(file_path)
         return "zarr" if stream_mode == "zarr" else "hdf5"
 
-    @staticmethod
-    def available_electrical_series(file_path, stream_mode=None, storage_options=None):
-        """Paths of every ElectricalSeries in the file, read directly (without pynwb)."""
-        backend = _NwbGeneralReader._storage_backend(file_path, stream_mode=stream_mode)
-        file_handle = read_file_from_backend(
-            file_path=file_path, stream_mode=stream_mode, storage_options=storage_options
-        )
-        return _find_neurodata_type_from_backend(file_handle, neurodata_type="ElectricalSeries", backend=backend)
-
-    def load(self, *, file_path=None, file=None, stream_mode=None, cache=False, stream_cache_path=None):
+    def _open_handle(self, *, file_path, file, stream_mode, cache, stream_cache_path, storage_options=None):
+        # Open the file handle: a pynwb NWBFile, or a raw h5py.File / zarr group.
         if self.reading_method == "use_pynwb":
-            # pynwb opens hdf5 or zarr transparently; detect which only to pick its IO class.
             self.nwbfile = read_nwbfile(
                 backend=self._storage_backend(file_path, file, stream_mode),
                 file_path=file_path,
@@ -424,24 +409,167 @@ class _NwbGeneralReader:
                 stream_mode=stream_mode,
                 cache=cache,
                 stream_cache_path=stream_cache_path,
+                storage_options=storage_options,
             )
-            self.series = _retrieve_electrical_series_pynwb(self.nwbfile, self.electrical_series_path)
-            self.electrodes_indices = self.series.electrodes.data[:]
-            self.electrodes_table = self.nwbfile.electrodes
         else:
-            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
             self.file = read_file_from_backend(
                 file_path=file_path,
                 file=file,
                 stream_mode=stream_mode,
                 cache=cache,
                 stream_cache_path=stream_cache_path,
+                storage_options=storage_options,
             )
+
+    def _read_column(self, table, name, indices=None):
+        # Materialize a table column to numpy (h5py only fancy-indexes increasing, GH-4619), optionally
+        # reorder to `indices`, and decode HDF5 byte-strings once on behalf of every caller.
+        values = np.asarray(table[name][:])
+        if indices is not None:
+            values = values[indices]
+        if values.dtype.kind in ("S", "O"):
+            values = np.array([v.decode("utf-8") if isinstance(v, bytes) else v for v in values])
+        return values
+
+    def close(self):
+        # Release the open handle (raw hdf5 / zarr store, or the pynwb read IO).
+        if self.file is not None:
+            if hasattr(self.file, "store"):  # zarr
+                self.file.store.close()
+            else:  # hdf5: close every object still open on the file id
+                import h5py
+
+                for object_id in h5py.h5f.get_obj_ids(self.file.id, types=h5py.h5f.OBJ_ALL):
+                    try:
+                        object_id.close()
+                    except Exception:
+                        warnings.warn(f"Error closing object {h5py.h5i.get_name(object_id).decode('utf-8')}")
+        elif self.nwbfile is not None:
+            io = self.nwbfile.get_read_io()
+            if io is not None:
+                io.close()
+
+    def __del__(self):
+        # Release the file handle on garbage collection.
+        if getattr(sys, "meta_path", None) is None:  # avoid import errors during interpreter shutdown
+            return
+        self.close()
+
+    @staticmethod
+    def available_electrical_series(file_path, stream_mode=None, storage_options=None):
+        """Paths of every ElectricalSeries in the file, read directly (without pynwb)."""
+        backend = _NWBReader._storage_backend(file_path, stream_mode=stream_mode)
+        file_handle = read_file_from_backend(
+            file_path=file_path, stream_mode=stream_mode, storage_options=storage_options
+        )
+        return _find_neurodata_type_from_backend(file_handle, neurodata_type="ElectricalSeries", backend=backend)
+
+    def load_recording(
+        self, *, file_path=None, file=None, stream_mode=None, cache=False, stream_cache_path=None, storage_options=None
+    ):
+        # Open the handle and bind the ElectricalSeries + electrodes table.
+        self._open_handle(
+            file_path=file_path,
+            file=file,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+            storage_options=storage_options,
+        )
+        if self.reading_method == "use_pynwb":
+            self.series = _retrieve_electrical_series_pynwb(self.nwbfile, self.electrical_series_path)
+            self.electrodes_indices = self.series.electrodes.data[:]
+            self.electrodes_table = self.nwbfile.electrodes
+        else:
+            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
             self.series = self._locate_electrical_series(backend)
             self.electrodes_indices = _retrieve_electrodes_indices_from_electrical_series_backend(
                 self.file, self.series, backend
             )
             self.electrodes_table = self.file["/general/extracellular_ephys/electrodes"]
+
+    def load_units(
+        self, *, file_path=None, file=None, stream_mode=None, cache=False, stream_cache_path=None, storage_options=None
+    ):
+        # Open the handle and bind the Units table.
+        self._open_handle(
+            file_path=file_path,
+            file=file,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+            storage_options=storage_options,
+        )
+        if self.reading_method == "use_pynwb":
+            if self.unit_table_path == "units":
+                self.units_table = self.nwbfile.units
+            else:
+                self.units_table = _retrieve_unit_table_pynwb(self.nwbfile, unit_table_path=self.unit_table_path)
+        else:
+            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
+            self.units_table = self._locate_units_table(backend)
+
+    def _locate_units_table(self, backend):
+        # Resolve unit_table_path (auto-discovering it when the file has exactly one Units table)
+        # and return the table handle, raising a helpful error that lists the options on failure.
+        if self.unit_table_path is None:
+            available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
+            if len(available) != 1:
+                raise ValueError(
+                    "Multiple Units tables found in the file. "
+                    "Please specify the 'unit_table_path' argument:"
+                    f"Available options are: {available}."
+                )
+            self.unit_table_path = available[0]
+        try:
+            return self.file[self.unit_table_path]
+        except KeyError:
+            available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
+            raise ValueError(
+                f"{self.unit_table_path} not found in the NWB file!" f"Available options are: {available}."
+            )
+
+    @staticmethod
+    def available_units_tables(file_path, stream_mode=None, storage_options=None):
+        """Paths of every Units table in the file, read directly (without pynwb)."""
+        backend = _NWBReader._storage_backend(file_path, stream_mode=stream_mode)
+        file_handle = read_file_from_backend(
+            file_path=file_path, stream_mode=stream_mode, storage_options=storage_options
+        )
+        return _find_neurodata_type_from_backend(file_handle, neurodata_type="Units", backend=backend)
+
+    @property
+    def units_column_names(self):
+        if self.reading_method == "use_pynwb":
+            return [column.name for column in self.units_table.columns]
+        return list(self.units_table.keys())
+
+    def unit_ids(self):
+        if "unit_name" in self.units_column_names:
+            return list(self._read_column(self.units_table, "unit_name"))
+        if self.reading_method == "use_pynwb":
+            return list(np.asarray(self.units_table.id[:]))
+        return list(np.asarray(self.units_table["id"][:]))
+
+    def spike_times(self):
+        if self.reading_method == "use_pynwb":
+            return {column.name: column for column in self.units_table.columns}["spike_times"].data
+        return self.units_table["spike_times"]
+
+    def spike_times_index(self):
+        if self.reading_method == "use_pynwb":
+            return {column.name: column for column in self.units_table.columns}["spike_times_index"].data
+        return self.units_table["spike_times_index"]
+
+    def rate_and_t_start_from_electrical_series(self, samples_for_rate_estimation):
+        # Locate the ElectricalSeries the sorting came from and read its rate / t_start.
+        if self.reading_method == "use_pynwb":
+            self.series = _retrieve_electrical_series_pynwb(self.nwbfile, self.electrical_series_path)
+        else:
+            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
+            self.series = self._locate_electrical_series(backend)
+        sampling_frequency, t_start, _ = self.time_info(samples_for_rate_estimation)
+        return sampling_frequency, t_start
 
     def _locate_electrical_series(self, backend):
         # Resolve electrical_series_path (auto-discovering it when the file has exactly one series)
@@ -463,24 +591,6 @@ class _NwbGeneralReader:
                 f"{self.electrical_series_path} not found in the NWB file!" f"Available options are: {available}."
             )
 
-    def close(self):
-        # Release the open handle on garbage collection (raw hdf5 / zarr store, or the pynwb read IO).
-        if self.file is not None:
-            if hasattr(self.file, "store"):  # zarr
-                self.file.store.close()
-            else:  # hdf5: close every object still open on the file id
-                import h5py
-
-                for object_id in h5py.h5f.get_obj_ids(self.file.id, types=h5py.h5f.OBJ_ALL):
-                    try:
-                        object_id.close()
-                    except Exception:
-                        warnings.warn(f"Error closing object {h5py.h5i.get_name(object_id).decode('utf-8')}")
-        elif self.nwbfile is not None:
-            io = self.nwbfile.get_read_io()
-            if io is not None:
-                io.close()
-
     # --- electrodes table ----------------------------------------------------------------------
     @property
     def column_names(self):
@@ -492,14 +602,8 @@ class _NwbGeneralReader:
             return list(self.electrodes_table.attrs["colnames"])
 
     def read_electrode_property(self, name):
-        # The electrodes region may reference rows in any order, but h5py only fancy-indexes in
-        # strictly increasing order, so materialize the column to numpy first (GH-4619). A pynwb
-        # VectorData and a raw h5py/zarr dataset both support ``[name][:]``. HDF5 stores strings as
-        # bytes, so decode string columns here once, on behalf of every caller.
-        values = np.asarray(self.electrodes_table[name][:])[self.electrodes_indices]
-        if values.dtype.kind in ("S", "O"):
-            values = np.array([v.decode("utf-8") if isinstance(v, bytes) else v for v in values])
-        return values
+        # An electrode property is one electrodes-table column, reordered to this series' channels.
+        return self._read_column(self.electrodes_table, name, self.electrodes_indices)
 
     def _read_ids(self):
         if self.reading_method == "use_pynwb":
@@ -772,18 +876,19 @@ class NwbRecordingExtractor(BaseRecording):
         if use_pynwb:
             reading_method = "use_pynwb"  # the reader detects hdf5 vs zarr itself for pynwb
         else:
-            reading_method = f"use_{_NwbGeneralReader._storage_backend(file_path, file, self.stream_mode)}"
+            reading_method = f"use_{_NWBReader._storage_backend(file_path, file, self.stream_mode)}"
 
-        self._reader = _NwbGeneralReader(
+        self._reader = _NWBReader(
             reading_method=reading_method,
             electrical_series_path=self.electrical_series_path,
         )
-        self._reader.load(
+        self._reader.load_recording(
             file_path=self.file_path,
             file=file,
             stream_mode=self.stream_mode,
             cache=cache,
             stream_cache_path=self.stream_cache_path,
+            storage_options=self.storage_options,
         )
         self.electrical_series_path = self._reader.electrical_series_path
 
@@ -880,14 +985,6 @@ class NwbRecordingExtractor(BaseRecording):
         if self.stream_mode == "remfile":
             self.extra_requirements.append("remfile")
 
-    def __del__(self):
-        # Avoid impossible import errors during interpreter shutdown to reduce logging noise.
-        if getattr(sys, "meta_path", None) is None:
-            return
-        reader = getattr(self, "_reader", None)  # may be unset if __init__ raised early
-        if reader is not None:
-            reader.close()
-
     @staticmethod
     def fetch_available_electrical_series_paths(
         file_path: str | Path,
@@ -923,7 +1020,7 @@ class NwbRecordingExtractor(BaseRecording):
             - "processing/my_custom_module/MyContainer/ElectricalSeries2"
         """
 
-        return _NwbGeneralReader.available_electrical_series(
+        return _NWBReader.available_electrical_series(
             file_path, stream_mode=stream_mode, storage_options=storage_options
         )
 
@@ -963,7 +1060,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
+class NwbSortingExtractor(BaseSorting):
     """Load an NWBFile as a SortingExtractor.
 
     Parameters
@@ -1041,27 +1138,49 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
         self.t_start = t_start
         self.provided_or_electrical_series_sampling_frequency = sampling_frequency
         self.storage_options = storage_options
-        self.units_table = None
 
-        if self.stream_mode is None:
-            self.backend = _get_backend_from_local_file(file_path)
-        else:
-            if self.stream_mode == "zarr":
-                self.backend = "zarr"
-            else:
-                self.backend = "hdf5"
+        if use_pynwb and not HAVE_PYNWB:
+            raise ImportError(self.installation_mesg)
 
         if use_pynwb:
-            if not HAVE_PYNWB:
-                raise ImportError(self.installation_mesg)
-
-            unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_pynwb(
-                unit_table_path=unit_table_path, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
-            )
+            reading_method = "use_pynwb"
         else:
-            unit_ids, spike_times_data, spike_times_index_data = self._fetch_sorting_segment_info_backend(
-                unit_table_path=unit_table_path, samples_for_rate_estimation=samples_for_rate_estimation, cache=cache
+            reading_method = f"use_{_NWBReader._storage_backend(file_path, stream_mode=stream_mode)}"
+
+        self._reader = _NWBReader(
+            reading_method=reading_method,
+            electrical_series_path=electrical_series_path,
+            unit_table_path=unit_table_path,
+        )
+        self._reader.load_units(
+            file_path=file_path,
+            stream_mode=stream_mode,
+            cache=cache,
+            stream_cache_path=stream_cache_path,
+            storage_options=storage_options,
+        )
+        self.units_table = self._reader.units_table
+
+        # A sorting needs a sampling_frequency and t_start; when not provided, take them from the
+        # ElectricalSeries the sorting was computed from.
+        if self.provided_or_electrical_series_sampling_frequency is None or self.t_start is None:
+            series_sampling_frequency, series_t_start = self._reader.rate_and_t_start_from_electrical_series(
+                samples_for_rate_estimation
             )
+            if self.provided_or_electrical_series_sampling_frequency is None:
+                self.provided_or_electrical_series_sampling_frequency = series_sampling_frequency
+            if self.t_start is None:
+                self.t_start = series_t_start
+        assert (
+            self.provided_or_electrical_series_sampling_frequency is not None
+        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
+        assert (
+            self.t_start is not None
+        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
+
+        unit_ids = self._reader.unit_ids()
+        spike_times_data = self._reader.spike_times()
+        spike_times_index_data = self._reader.spike_times_index()
 
         BaseSorting.__init__(
             self, sampling_frequency=self.provided_or_electrical_series_sampling_frequency, unit_ids=unit_ids
@@ -1077,16 +1196,17 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
 
         # fetch and add sorting properties
         if load_unit_properties:
-            if use_pynwb:
-                columns = [c.name for c in self.units_table.columns]
-                self.extra_requirements.append("pynwb")
-            else:
-                columns = list(self.units_table.keys())
-                self.extra_requirements.append("h5py")
-            properties = self._fetch_properties(columns)
+            properties = self._fetch_properties(self._reader.units_column_names)
             for property_name, property_values in properties.items():
                 values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
                 self.set_property(property_name, values)
+
+        if reading_method == "use_pynwb":
+            self.extra_requirements.append("pynwb")
+        elif reading_method == "use_hdf5":
+            self.extra_requirements.append("h5py")
+        elif reading_method == "use_zarr":
+            self.extra_requirements.append("zarr")
         if stream_mode is not None:
             self.extra_requirements.append(stream_mode)
 
@@ -1114,154 +1234,6 @@ class NwbSortingExtractor(BaseSorting, _BaseNWBExtractor):
             "load_unit_properties": load_unit_properties,
             "t_start": self.t_start,
         }
-
-    def _fetch_sorting_segment_info_pynwb(
-        self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
-    ):
-        self._nwbfile = read_nwbfile(
-            backend=self.backend,
-            file_path=self.file_path,
-            stream_mode=self.stream_mode,
-            cache=cache,
-            stream_cache_path=self.stream_cache_path,
-            storage_options=self.storage_options,
-        )
-
-        timestamps = None
-        if self.provided_or_electrical_series_sampling_frequency is None:
-            # defines the electrical series from where the sorting came from
-            # important to know the sampling_frequency
-            self.electrical_series = _retrieve_electrical_series_pynwb(self._nwbfile, self.electrical_series_path)
-            # get rate
-            if self.electrical_series.rate is not None:
-                self.provided_or_electrical_series_sampling_frequency = self.electrical_series.rate
-                self.t_start = self.electrical_series.starting_time
-            else:
-                if hasattr(self.electrical_series, "timestamps"):
-                    if self.electrical_series.timestamps is not None:
-                        timestamps = self.electrical_series.timestamps
-                        self.provided_or_electrical_series_sampling_frequency = 1 / np.median(
-                            np.diff(timestamps[:samples_for_rate_estimation])
-                        )
-                        self.t_start = timestamps[0]
-        assert (
-            self.provided_or_electrical_series_sampling_frequency is not None
-        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
-        assert (
-            self.t_start is not None
-        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
-        if unit_table_path == "units":
-            units_table = self._nwbfile.units
-        else:
-            units_table = _retrieve_unit_table_pynwb(self._nwbfile, unit_table_path=unit_table_path)
-
-        name_to_column_data = {c.name: c for c in units_table.columns}
-        spike_times_data = name_to_column_data.pop("spike_times").data
-        spike_times_index_data = name_to_column_data.pop("spike_times_index").data
-
-        units_ids = name_to_column_data.pop("unit_name", None)
-        if units_ids is None:
-            units_ids = units_table["id"].data
-
-        # need this for later
-        self.units_table = units_table
-
-        return units_ids, spike_times_data, spike_times_index_data
-
-    def _fetch_sorting_segment_info_backend(
-        self, unit_table_path: str = None, samples_for_rate_estimation: int = 1000, cache: bool = False
-    ):
-        open_file = read_file_from_backend(
-            file_path=self.file_path,
-            stream_mode=self.stream_mode,
-            cache=cache,
-            stream_cache_path=self.stream_cache_path,
-            storage_options=self.storage_options,
-        )
-
-        timestamps = None
-
-        if self.provided_or_electrical_series_sampling_frequency is None or self.t_start is None:
-            # defines the electrical series from where the sorting came from
-            # important to know the sampling_frequency
-            available_electrical_series = _find_neurodata_type_from_backend(
-                open_file, neurodata_type="ElectricalSeries", backend=self.backend
-            )
-            if self.electrical_series_path is None:
-                if len(available_electrical_series) == 1:
-                    self.electrical_series_path = available_electrical_series[0]
-                else:
-                    raise ValueError(
-                        "Multiple ElectricalSeries found in the file. "
-                        "Please specify the 'electrical_series_path' argument:"
-                        f"Available options are: {available_electrical_series}."
-                    )
-            else:
-                if self.electrical_series_path not in available_electrical_series:
-                    raise ValueError(
-                        f"'{self.electrical_series_path}' not found in the file. "
-                        f"Available options are: {available_electrical_series}"
-                    )
-            electrical_series = open_file[self.electrical_series_path]
-
-            # Get sampling frequency
-            if "starting_time" in electrical_series.keys():
-                self.t_start = electrical_series["starting_time"][()]
-                self.provided_or_electrical_series_sampling_frequency = electrical_series["starting_time"].attrs["rate"]
-            elif "timestamps" in electrical_series.keys():
-                timestamps = electrical_series["timestamps"][:]
-                self.t_start = timestamps[0]
-                self.provided_or_electrical_series_sampling_frequency = 1.0 / np.median(
-                    np.diff(timestamps[:samples_for_rate_estimation])
-                )
-
-        assert (
-            self.provided_or_electrical_series_sampling_frequency is not None
-        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
-        assert (
-            self.t_start is not None
-        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
-
-        if unit_table_path is None:
-            available_unit_table_paths = _find_neurodata_type_from_backend(
-                open_file, neurodata_type="Units", backend=self.backend
-            )
-            if len(available_unit_table_paths) == 1:
-                unit_table_path = available_unit_table_paths[0]
-            else:
-                raise ValueError(
-                    "Multiple Units tables found in the file. "
-                    "Please specify the 'unit_table_path' argument:"
-                    f"Available options are: {available_unit_table_paths}."
-                )
-        # Try to open the unit table. If it fails, raise an error with the available options.
-        try:
-            units_table = open_file[unit_table_path]
-        except KeyError:
-            available_unit_table_paths = _find_neurodata_type_from_backend(
-                open_file, neurodata_type="Units", backend=self.backend
-            )
-            raise ValueError(
-                f"{unit_table_path} not found in the NWB file!" f"Available options are: {available_unit_table_paths}."
-            )
-        self.units_table_location = unit_table_path
-        units_table = open_file[self.units_table_location]
-
-        spike_times_data = units_table["spike_times"]
-        spike_times_index_data = units_table["spike_times_index"]
-
-        if "unit_name" in units_table:
-            unit_ids = units_table["unit_name"]
-        else:
-            unit_ids = units_table["id"]
-
-        decode_to_string = lambda x: x.decode("utf-8") if isinstance(x, bytes) else x
-        unit_ids = [decode_to_string(id) for id in unit_ids]
-
-        # need this for later
-        self.units_table = units_table
-
-        return unit_ids, spike_times_data, spike_times_index_data
 
     def _fetch_properties(self, columns):
         units_table = self.units_table
