@@ -244,6 +244,7 @@ def estimate_main_channel_from_recording(
     templates_array = get_templates_array_from_recording_and_sorting(
         recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed
     )
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
 
     main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore)
 
