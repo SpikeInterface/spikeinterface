@@ -653,7 +653,7 @@ def nearest_neighbors_isolation(
         if sorting_analyzer.is_sparse():
             sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
         closest_chans_target_unit = sparsity.unit_id_to_channel_indices[this_unit_id]
         n_channels_target_unit = len(closest_chans_target_unit)
         # select other units that have a minimum spatial overlap with target unit
@@ -867,7 +867,7 @@ def nearest_neighbors_noise_overlap(
         if sorting_analyzer.is_sparse():
             sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
         noise_cluster = noise_cluster[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
         # compute weighted noise snippet (Z)
