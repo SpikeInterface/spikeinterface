@@ -12,10 +12,6 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
     Needs "templates" to be computed first.
     Computes spike amplitudes from the template's peak channel for every spike.
-
-    Parameters
-    ----------
-
     """
 
     extension_name = "spike_amplitudes"

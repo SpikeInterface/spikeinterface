@@ -644,12 +644,10 @@ def compute_sparsity(
     method: Literal[
         "radius", "best_channels", "closest_channels", "snr", "amplitude", "energy", "by_property"
     ] = "radius",
-    peak_sign: Literal["neg", "pos", "both"] = "neg",
     num_channels: int | None = 5,
     radius_um: float | None = 100.0,
     threshold: float | None = 5,
     by_property: str | None = None,
-    amplitude_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
 ) -> ChannelSparsity:
     """
     Compute channel sparsity from a `SortingAnalyzer` for each template with several methods.
@@ -739,7 +737,7 @@ def estimate_sparsity(
     ms_before: float = 1.0,
     ms_after: float = 2.5,
     method: Literal["radius", "best_channels", "closest_channels", "amplitude", "snr", "by_property"] = "radius",
-    peak_sign: Literal["neg", "pos", "both"] = "neg",
+    peak_sign: Literal["neg", "pos", "both"] = "both",
     radius_um: float = 100.0,
     num_channels: int = 5,
     threshold: float | None = 5,
@@ -789,6 +787,7 @@ def estimate_sparsity(
     """
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
+    from .template_tools import get_templates_array_from_recording_and_sorting
 
     assert method in ("radius", "best_channels", "closest_channels", "snr", "amplitude", "by_property"), (
         f"method={method} is not available for `estimate_sparsity()`. "
@@ -812,31 +811,13 @@ def estimate_sparsity(
         )
 
     elif method != "by_property":
+
+        templates_array = get_templates_array_from_recording_and_sorting(
+            recording, sorting, ms_before, ms_after, num_spikes_for_sparsity, 2205, **job_kwargs
+        )
+
         nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
-        nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
-        num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
-        random_spikes_indices = random_spikes_selection(
-            sorting,
-            num_samples,
-            method="uniform",
-            max_spikes_per_unit=num_spikes_for_sparsity,
-            margin_size=max(nbefore, nafter),
-            seed=2205,
-        )
-        spikes = sorting.to_spike_vector()
-        spikes = spikes[random_spikes_indices]
-
-        templates_array = estimate_templates_with_accumulator(
-            recording,
-            spikes,
-            sorting.unit_ids,
-            nbefore,
-            nafter,
-            return_in_uV=False,
-            job_name="estimate_sparsity",
-            **job_kwargs,
-        )
         templates = Templates(
             templates_array=templates_array,
             sampling_frequency=recording.sampling_frequency,

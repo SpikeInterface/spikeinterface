@@ -238,7 +238,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
-        peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
         min_thresh_detect_peaks_troughs = self.params.get("min_thresh_detect_peaks_troughs", 0.3)
         edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.09)

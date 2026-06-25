@@ -162,9 +162,7 @@ def compute_center_of_mass(
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
     if sorting_analyzer_or_templates.sparsity is None:
-        sparsity = compute_sparsity(
-            sorting_analyzer_or_templates, peak_sign=peak_sign, method="radius", radius_um=radius_um
-        )
+        sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
     else:
         sparsity = sorting_analyzer_or_templates.sparsity
 
@@ -206,7 +204,7 @@ def compute_center_of_mass(
 def compute_grid_convolution(
     sorting_analyzer_or_templates: SortingAnalyzer | Templates,
     unit_ids=None,
-    peak_sign: str = "neg",
+    invert_prototype_waveform: bool = True,
     radius_um: float = 40.0,
     upsampling_um: float = 5,
     sigma_ms: float = 0.25,
@@ -224,8 +222,8 @@ def compute_grid_convolution(
         A SortingAnalyzer or Templates object
     unit_ids: str | int | None
         A list of unit_id to restrci the computation
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Sign of the template to compute best channels
+    invert_prototype_waveform: bool, default: True
+        If True, will multiply the prototype waveform by -1
     radius_um : float, default: 40.0
         Radius to consider for the fake templates
     upsampling_um : float, default: 5
@@ -270,7 +268,7 @@ def compute_grid_convolution(
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
         prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
-        if peak_sign == "neg":
+        if invert_prototype_waveform:
             prototype *= -1
 
     prototype = prototype[:, np.newaxis]

@@ -152,12 +152,14 @@ def compute_snrs(
         A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the SNR. If None, all units are used.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the template to compute best channels.
-    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
-        How to compute the amplitude.
-        Extremum takes the maxima/minima
-        At_index takes the value at t=sorting_analyzer.nbefore.
+    peak_sign_for_signal : "neg" | "pos" | "both", default: "neg"
+        Which extremum of the template to use for the "signal". Use either the minimum ("neg"),
+        maximum ("pos") or absmax ("both")
+    peak_mode_for_signal : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+        How to compute the amplitude:
+        "extremum" takes the maxima/minima
+        "at_index" takes the value at t=sorting_analyzer.nbefore.
+        "peak_to_peak" takes the difference between the maximum and minimum
     operator : "median" | "average", default: "median"
         The operator to apply to retrieve templates and amplitudes.
 

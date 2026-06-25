@@ -241,6 +241,19 @@ def estimate_main_channel_from_recording(
             "should revert the traces instead"
         )
 
+    templates_array = get_templates_array_from_recording_and_sorting(
+        recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed
+    )
+
+    main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore)
+
+    return main_channel_index
+
+
+def get_templates_array_from_recording_and_sorting(
+    recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed, **job_kwargs
+):
+
     sampling_frequency = recording.sampling_frequency
     nbefore = ms_to_samples(ms_before, sampling_frequency)
     nafter = ms_to_samples(ms_after, sampling_frequency)
@@ -268,9 +281,7 @@ def estimate_main_channel_from_recording(
         **job_kwargs,
     )
 
-    main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore)
-
-    return main_channel_index
+    return templates_array
 
 
 # TODO remove this in 0.106.0
