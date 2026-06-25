@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.104.6.rst
   releases/0.104.5.rst
   releases/0.104.4.rst
   releases/0.104.3.rst
@@ -57,30 +58,10 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
-Version 0.104.5
-===============
+Versions 0.104.1/6
+==================
 
-* Minor release with bug fixes
-
-Version 0.104.4
-===============
-
-* Minor release with bug fixes
-
-Version 0.104.3
-===============
-
-* Minor release with bug fixes
-
-Version 0.104.2
-===============
-
-* Minor release with bug fixes
-
-Version 0.104.1
-===============
-
-* Minor release with bug fixes
+* Minor releases with bug fixes
 
 Version 0.104.0
 ===============
@@ -105,16 +86,11 @@ Version 0.104.0
     * The function to do UnitRefine curation has been renamed from ``auto_label_units`` to ``unitrefine_label_units`` (see :py:func:`~spikeinterface.curation.unitrefine_label_units`)
     * Remove support for Python 3.9
 
-Version 0.103.2
-===============
+Versions 0.103.1/2
+==================
 
-* Minor release with bug fixes
+* Minor releases with bug fixes
 
-
-Version 0.103.1
-===============
-
-* Minor release with bug fixes
 
 Version 0.103.0
 ===============
@@ -132,20 +108,10 @@ Version 0.103.0
     * Unsigned integers not automatically cast to signed integers anymore in preprocessing (#3982) (see :ref:`unsigned_to_signed`)
 
 
-Version 0.102.3
-===============
+Versions 0.102.1/3
+==================
 
-* Minor release with bug fixes
-
-Version 0.102.2
-===============
-
-* Minor release with bug fixes
-
-Version 0.102.1
-===============
-
-* Minor release with bug fixes
+* Minor releases with bug fixes
 
 Version 0.102.0
 ===============
@@ -157,10 +123,10 @@ Version 0.102.0
 * Multi-segment handling of motion interpolation (#3659)
 * Support for Numpy 2.0 and Zarr<3.0 (#3481,#3598)
 
-Version 0.101.2
-===============
+Versions 0.101.1/2
+==================
 
-* Minor release with bug fixes
+* Minor releases with bug fixes
 
 Version 0.101.1
 ===============
