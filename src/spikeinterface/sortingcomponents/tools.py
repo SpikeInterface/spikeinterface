@@ -602,7 +602,6 @@ def clean_templates(
         sparsity = compute_sparsity(
             templates,
             method="snr",
-            amplitude_mode="peak_to_peak",
             noise_levels=noise_levels,
             threshold=sparsify_threshold,
         )
@@ -637,7 +636,6 @@ def clean_templates(
         sparsity = compute_sparsity(
             templates.to_dense(),
             method="snr",
-            amplitude_mode="peak_to_peak",
             noise_levels=noise_levels,
             threshold=min_snr,
         )

@@ -376,7 +376,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     sparsity_snr = compute_sparsity(
                         dense_templates,
                         method="snr",
-                        amplitude_mode="peak_to_peak",
                         noise_levels=noise_levels,
                         threshold=threshold,
                     )
