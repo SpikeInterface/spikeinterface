@@ -101,9 +101,11 @@ def generate_unit_table_view(
         units_tables = make_units_table_from_sorting(sorting)
         # analyzer = None
 
+    unit_ids = make_serializable(sorting.unit_ids)
+
     if unit_properties is None:
         ut_columns = []
-        ut_rows = [vv_views.UnitsTableRow(unit_id=u, values={}) for u in sorting.unit_ids]
+        ut_rows = [vv_views.UnitsTableRow(unit_id=u, values={}) for u in unit_ids]
     else:
         # keep only selected columns
         unit_properties = np.array(unit_properties)
@@ -125,7 +127,7 @@ def generate_unit_table_view(
                 ut_columns.append(vv_views.UnitsTableColumn(key=col, label=col, dtype=txt_dtype))
 
         ut_rows = []
-        for unit_index, unit_id in enumerate(sorting.unit_ids):
+        for unit_index, unit_id in enumerate(unit_ids):
             row_values = {}
             for col in unit_properties:
                 values = units_tables[col].to_numpy()
