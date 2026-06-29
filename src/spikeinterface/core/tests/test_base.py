@@ -4,9 +4,15 @@ but check only for BaseRecording general methods.
 """
 
 from typing import Sequence
+
 import numpy as np
+
+from spikeinterface.core import (
+    concatenate_recordings,
+    generate_ground_truth_recording,
+    generate_recording,
+)
 from spikeinterface.core.base import BaseExtractor
-from spikeinterface.core import generate_recording, generate_ground_truth_recording, concatenate_recordings
 
 
 class DummyDictExtractor(BaseExtractor):
@@ -23,7 +29,8 @@ def make_nested_extractors(extractor):
         [extractor_with_parent_list, extractor_with_parent_list]
     )
     extractor_with_parent_dict = DummyDictExtractor(
-        main_ids=extractor._main_ids, base_dicts=dict(a=extractor, b=extractor, c=extractor)
+        main_ids=extractor._main_ids,
+        base_dicts=dict(a=extractor, b=extractor, c=extractor),
     )
     return (
         extractor_wih_parent,
@@ -67,7 +74,9 @@ def test_check_if_serializable():
 
 
 def test_name_and_repr():
-    test_recording, test_sorting = generate_ground_truth_recording(seed=0, durations=[2])
+    test_recording, test_sorting = generate_ground_truth_recording(
+        seed=0, durations=[2]
+    )
     assert test_recording.name == "GroundTruthRecording"
     assert test_sorting.name == "GroundTruthSorting"
 
@@ -115,10 +124,14 @@ def test_setting_incomplete_properties():
     recording = recording.rename_channels(new_channel_ids=channel_ids)
 
     incomplete_values = ["value"] * (num_channels - 1)
-    recording.set_property(key="incomplete_property", ids=channel_ids[:-1], values=incomplete_values)
+    recording.set_property(
+        key="incomplete_property", ids=channel_ids[:-1], values=incomplete_values
+    )
 
     property_in_recording = recording.get_property("incomplete_property")
-    expected_array = np.array(incomplete_values + [""])  # Spikeinterface defines missing values as empty strings
+    expected_array = np.array(
+        incomplete_values + [""]
+    )  # Spikeinterface defines missing values as empty strings
     assert np.array_equal(property_in_recording, expected_array)
 
 
@@ -143,4 +156,4 @@ def test_setting_properties_with_custom_missing_value():
 
 if __name__ == "__main__":
     test_check_if_memory_serializable()
-    test_check_if_serializable()
+    # test_check_if_serializable()

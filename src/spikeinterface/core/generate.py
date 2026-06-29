@@ -803,7 +803,9 @@ def synthesize_poisson_spike_vector(
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
-    sort_indices = np.argsort(spike_frames, kind="stable")  # I profiled the different kinds, this is the fastest.
+    # the stable is important because this garanty to be equivalent to
+    # np.lexsort((unit_indices, spike_frames, ))
+    sort_indices = np.argsort(spike_frames, stable=True)
 
     unit_indices = unit_indices[sort_indices]
     spike_frames = spike_frames[sort_indices]

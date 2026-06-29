@@ -39,7 +39,8 @@ def test_NpzFolderSorting(create_cache_folder):
 
     sorting_loaded = NpzFolderSorting(folder)
     # the NpzFolderSorting is a by unit storage and te lexsort is not maintain always so check_exact_lexsort=False
-    check_sortings_equal(sorting_loaded, sorting, check_exact_lexsort=False)
+    # check_sortings_equal(sorting_loaded, sorting, check_exact_lexsort=False)
+    check_sortings_equal(sorting_loaded, sorting, check_exact_lexsort=True)
     assert np.array_equal(sorting_loaded.unit_ids, sorting.unit_ids)
 
     # Note changing the class do not necessarily maintain the internal internal.
@@ -52,5 +53,9 @@ def test_NpzFolderSorting(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_NumpyFolderSorting()
-    test_NpzFolderSorting()
+    import tempfile
+    from pathlib import Path
+    cache_folder = Path(tempfile.mkdtemp())
+
+    test_NumpyFolderSorting(cache_folder)
+    test_NpzFolderSorting(cache_folder)
