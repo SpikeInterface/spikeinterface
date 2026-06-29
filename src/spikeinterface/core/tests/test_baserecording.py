@@ -12,7 +12,13 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe, ProbeGroup, generate_linear_probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load, get_default_zarr_compressor
+from spikeinterface.core import (
+    BinaryRecordingExtractor,
+    NumpyRecording,
+    load,
+    get_default_zarr_compressor,
+    aggregate_channels,
+)
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
@@ -197,15 +203,15 @@ def test_BaseRecording(create_cache_folder):
     )
     probe.create_auto_shape()
 
-    rec_p = rec.set_probe(probe, group_mode="auto")
+    rec_p = rec.select_channels_with_probe(probe, group_mode="auto")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
-    rec_p = rec.set_probe(probe, group_mode="by_shank")
+    rec_p = rec.select_channels_with_probe(probe, group_mode="by_shank")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
-    rec_p = rec.set_probe(probe, group_mode="by_probe")
+    rec_p = rec.select_channels_with_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
@@ -248,13 +254,13 @@ def test_BaseRecording(create_cache_folder):
     probe.create_auto_shape()
     traces = np.zeros((1000, 12), dtype="int16")
     rec = NumpyRecording([traces], 30000.0)
-    rec1 = rec.set_probe(probe, group_mode="auto")
+    rec1 = rec.select_channels_with_probe(probe, group_mode="auto")
     assert np.unique(rec1.get_property("group")).size == 4
-    rec2 = rec.set_probe(probe, group_mode="by_probe")
+    rec2 = rec.select_channels_with_probe(probe, group_mode="by_probe")
     assert np.unique(rec2.get_property("group")).size == 1
-    rec3 = rec.set_probe(probe, group_mode="by_shank")
+    rec3 = rec.select_channels_with_probe(probe, group_mode="by_shank")
     assert np.unique(rec3.get_property("group")).size == 2
-    rec4 = rec.set_probe(probe, group_mode="by_side")
+    rec4 = rec.select_channels_with_probe(probe, group_mode="by_side")
     assert np.unique(rec4.get_property("group")).size == 4
 
     # set unconnected probe
@@ -264,7 +270,7 @@ def test_BaseRecording(create_cache_folder):
     probe.set_device_channel_indices([-1, -1, -1])
     probe.create_auto_shape()
 
-    rec_empty_probe = rec.set_probe(probe, group_mode="by_shank")
+    rec_empty_probe = rec.select_channels_with_probe(probe, group_mode="by_shank")
     assert rec_empty_probe.channel_ids.size == 0
 
     # test scaling parameters
@@ -427,32 +433,46 @@ def test_json_pickle_equivalence(create_cache_folder):
                 assert np.all(value == data_pickle[key])
 
 
-def test_interleaved_probegroups():
-    recording = generate_recording(durations=[1.0], num_channels=16)
+def test_probes_info_annotation_backward_compat():
+    """
+    Regression test: SI versions before #4300 stored per-probe metadata in a
+    'probes_info' annotation on the recording rather than inside the ProbeGroup.
+    set_probegroup() must migrate those annotations onto the probe objects and
+    remove the stale 'probes_info' entry from the recording annotations.
+    """
+    from probeinterface import generate_linear_probe, ProbeGroup
 
-    probe1 = generate_linear_probe(num_elec=8, ypitch=20.0)
-    probe2_overlap = probe1.copy()
+    # Simulate probegroup as read from an old probegroup.json: probes exist but
+    # have no name/manufacturer annotations (old probeinterface did not write them).
+    probe_A = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe_A.move([0.0, 0.0])
+    probe_A.set_device_channel_indices(np.arange(8))
 
-    probegroup_overlap = ProbeGroup()
-    probegroup_overlap.add_probe(probe1)
-    probegroup_overlap.add_probe(probe2_overlap)
-    probegroup_overlap.set_global_device_channel_indices(np.arange(16))
+    probe_B = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe_B.move([500.0, 0.0])
+    probe_B.set_device_channel_indices(np.arange(8, 16))
 
-    # setting overlapping probes should raise an error
-    with pytest.raises(Exception):
-        recording.set_probegroup(probegroup_overlap)
+    pg = ProbeGroup()
+    pg.add_probe(probe_A)
+    pg.add_probe(probe_B)
 
-    probe2 = probe1.copy()
-    probe2.move([100.0, 100.0])
-    probegroup = ProbeGroup()
-    probegroup.add_probe(probe1)
-    probegroup.add_probe(probe2)
-    probegroup.set_global_device_channel_indices(np.random.permutation(16))
+    rec = NumpyRecording([np.zeros((100, 16), dtype="int16")], sampling_frequency=30000.0)
 
-    recording.set_probegroup(probegroup)
-    probegroup_set = recording.get_probegroup()
-    # check that the probe group is correctly set, by sorting the device channel indices
-    assert np.array_equal(probegroup_set.get_global_device_channel_indices()["device_channel_indices"], np.arange(16))
+    # Inject the old-style annotation that SI used to write alongside the probegroup.
+    rec._annotations["probes_info"] = [
+        {"name": "probe_A", "manufacturer": "vendor_X"},
+        {"name": "probe_B", "manufacturer": "vendor_Y"},
+    ]
+
+    rec.set_probegroup(pg)  # new default: in_place=None → always in-place
+
+    probes = rec.get_probes()
+    assert len(probes) == 2
+    probe_names = {p.annotations.get("name") for p in probes}
+    assert probe_names == {"probe_A", "probe_B"}, "Probe names must be migrated from probes_info"
+    manufacturers = {p.annotations.get("manufacturer") for p in probes}
+    assert manufacturers == {"vendor_X", "vendor_Y"}, "Manufacturers must be migrated from probes_info"
+    assert "probes_info" not in rec._annotations, "probes_info annotation must be consumed after migration"
 
 
 def test_rename_channels():

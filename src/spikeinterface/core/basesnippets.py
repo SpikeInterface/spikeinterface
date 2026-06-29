@@ -261,7 +261,7 @@ class BaseSnippets(BaseRecordingSnippets):
 
         if self.has_probe():
             probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup, in_place=True)
+            cached.set_probegroup(probegroup)
 
         return cached
 

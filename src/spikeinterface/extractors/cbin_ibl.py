@@ -102,9 +102,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
             probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
-                self.set_probe(probe, in_place=True, group_mode="by_shank")
+                self.set_probe(probe, group_mode="by_shank")
             else:
-                self.set_probe(probe, in_place=True)
+                self.set_probe(probe)
 
             sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
             self.set_property("inter_sample_shift", sample_shifts)

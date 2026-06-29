@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import Literal
 import warnings
 import numpy as np
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .recording_tools import check_probe_do_not_overlap
+from .recording_tools import _set_group_property_based_on_probegroup
 
 from warnings import warn
 
@@ -75,140 +76,199 @@ class BaseRecordingSnippets(BaseExtractor):
         """
         self._probegroup = None
 
-    def set_probe(self, probe, group_mode="auto", in_place=False):
+    def set_probe(
+        self,
+        probe: Probe,
+        group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto",
+        in_place: bool | None = None,
+    ) -> None:
         """
-        Attach a list of Probe object to a recording.
+        Attach a Probe object to a recording.
 
         Parameters
         ----------
-        probe_or_probegroup: Probe, list of Probe, or ProbeGroup
-            The probe(s) to be attached to the recording
+        probe: Probe
+            The probe to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
             How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-        in_place: bool
-            False by default.
-            Useful internally when extractor do self.set_probegroup(probe)
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks
+            and two sides are present.
+        in_place: (deprecated) bool | None, default: None
+            Deprecated argument to indicate whether to modify the recording in place
+            or return a new recording. The function is always in place now.
+            Use the `recording.select_channels_with_probegroup()` method instead of `in_place=False`
+            to return a new recording with a channel selection to match the probe/probegroup.
 
-        Returns
-        -------
-        sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself)
+        Notes
+        -----
+        Internally, this will construct a ProbeGroup with the probe and call `set_probegroup()`.
         """
-        assert isinstance(probe, Probe), "must give Probe"
+        assert isinstance(probe, Probe), "The input must be a Probe object"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
-        return self._set_probes(probegroup, group_mode=group_mode, in_place=in_place)
+        # TODO: remove return in 0.106.0 after removing in_place argument
+        return self.set_probegroup(probegroup, group_mode=group_mode, in_place=in_place)
 
-    def set_probegroup(self, probegroup, group_mode="auto", in_place=False, raise_if_overlapping_probes=True):
+    def set_probegroup(
+        self,
+        probegroup: ProbeGroup | dict,
+        group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto",
+        in_place: bool | None = None,
+    ) -> None:
         """
-        Attach a ProbeGroup to a recording.
-        For this ProbeGroup.get_global_device_channel_indices() is used to link contacts to recording channels.
-        If some contacts of the probe group are not connected (device_channel_indices=-1)
-        then the recording is "sliced" and only connected channel are kept.
-
-        The probe group order is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
-
-        Parameters
-        ----------
-        probe_or_probegroup: Probe, list of Probe, or ProbeGroup
-            The probe(s) to be attached to the recording
-        group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
-            How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-        in_place: bool
-            False by default.
-            Useful internally when extractor do self.set_probegroup(probe)
-        raise_if_overlapping_probes: bool
-            If True, raises an error if the probes overlap. If False, it will just warn
-
-        Returns
-        -------
-        sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself)
-        """
-        return self._set_probes(
-            probegroup,
-            group_mode=group_mode,
-            in_place=in_place,
-            raise_if_overlapping_probes=raise_if_overlapping_probes,
-        )
-
-    def _set_probes(self, probe_or_probegroup, group_mode="auto", in_place=False, raise_if_overlapping_probes=True):
-        """
-        Attach a list of Probe objects or a ProbeGroup to a recording.
+        Attach a ProbeGroup or dict to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
-        If some contacts of the Probe are not connected (device_channel_indices=-1)
-        then the recording is "sliced" and only connected channel are kept.
+        After removing unconnected contacts, the number of connected contacts must match the
+        number of channels in the recording. If this is not the case, use the `recording.select_with_probegroup()`
+        method instead to return a new recording with a channel selection to match the probe/probegroup.
 
-        The probe order is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
-
+        Note: The probe order of the probegroup is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
 
         Parameters
         ----------
-        probe_or_probegroup: Probe, list of Probes, ProbeGroup, or dict
+        probe_or_probegroup: ProbeGroup, or dict
             The probe(s) to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
             How to add the "group" property.
             "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-        in_place: bool
-            False by default.
-            Useful internally when extractor do self.set_probegroup(probe)
-        raise_if_overlapping_probes: bool
-            If True, raises an error if the probes overlap. If False, it will just warn
+        in_place: (deprecated) bool | None, default: None
+            Deprecated argument to indicate whether to modify the recording in place
+            or return a new recording. The function is always in place now.
+            Use the `recording.select_channels_with_probegroup()` method instead of `in_place=False`
+            to return a new recording with a channel selection to match the probe/probegroup.
+        """
+        if in_place is not None:
+            warnings.warn(
+                "The 'in_place' argument is deprecated and will be removed in version 0.106.0. "
+                "The `set_probe/probegroup()` are always in place and assume that the probe/probegroup has the "
+                "same number of connected contacts as the number of channels in the recording. "
+                "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
+                "a channel selection to match the probe/probegroup.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if not in_place:
+                return self.select_channels_with_probegroup(probegroup, group_mode=group_mode)
+
+        # Handle several input possibilities: Probe or dict
+        if isinstance(probegroup, dict):
+            probegroup = ProbeGroup.from_dict(probegroup)
+
+        probegroup_sorted = self._get_probegroup_based_on_device_channel_indices(probegroup)
+
+        if probegroup_sorted.get_contact_count() != self.get_num_channels():
+            raise ValueError(
+                "The probe/probegroup must have the same number of connected contacts "
+                f"as the number of channels as the recording, but the probe has {probegroup.get_contact_count()} "
+                f"connected channels and the recording has {self.get_num_channels()} channels. "
+                "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
+                "a channel selection to match the probe/probegroup."
+            )
+        probegroup_sorted.set_global_device_channel_indices(np.arange(probegroup_sorted.get_contact_count()))
+        self._probegroup = probegroup_sorted
+
+        # Handle and set channel groups
+        _set_group_property_based_on_probegroup(self, probegroup_sorted, group_mode=group_mode)
+
+    def select_channels_with_probe(
+        self, probe: Probe, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto"
+    ) -> "BaseRecordingSnippets":
+        """
+        Returns a new recording with channels selected based on the probe.
+
+        Parameters
+        ----------
+        probe: Probe
+            The probe to be used for channel selection
+        group_mode: "auto" | "by_probe" | "by_shank" |
+            "by_side", default: "auto"
+            How to add the "group" property.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
 
         Returns
         -------
         sub_recording: BaseRecording
             A view of the recording (ChannelSlice or clone or itself)
         """
-        assert group_mode in (
-            "auto",
-            "by_probe",
-            "by_shank",
-            "by_side",
-        ), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
+        assert isinstance(probe, Probe), "The input must be a Probe object"
+        probegroup = ProbeGroup()
+        probegroup.add_probe(probe)
+        return self.select_channels_with_probegroup(probegroup, group_mode=group_mode)
 
-        # handle several input possibilities
-        if isinstance(probe_or_probegroup, Probe):
-            probegroup = ProbeGroup()
-            probegroup.add_probe(probe_or_probegroup)
-        elif isinstance(probe_or_probegroup, ProbeGroup):
-            probegroup = probe_or_probegroup
-        elif isinstance(probe_or_probegroup, list):
-            assert all([isinstance(e, Probe) for e in probe_or_probegroup])
-            probegroup = ProbeGroup()
-            for probe in probe_or_probegroup:
-                probegroup.add_probe(probe)
-        elif isinstance(probe_or_probegroup, dict):
-            probegroup = ProbeGroup.from_dict(probe_or_probegroup)
+    def select_channels_with_probegroup(
+        self, probegroup: ProbeGroup, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto"
+    ) -> "BaseRecordingSnippets":
+        """
+        Selects channels based on the given ProbeGroup and returns a new recording with the selected channels.
+
+        Parameters
+        ----------
+        probegroup: ProbeGroup
+            The probegroup to be used for channel selection
+        group_mode: "auto" | "by_probe" | "by_shank" |
+            "by_side", default: "auto"
+            How to add the "group" property.
+            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks
+            and two sides are present.
+
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself)
+        """
+        probegroup_sorted = self._get_probegroup_based_on_device_channel_indices(probegroup)
+        if probegroup_sorted.get_contact_count() > 0:
+            sorted_dci = probegroup_sorted.get_global_device_channel_indices()["device_channel_indices"]
+            new_channel_ids = self.channel_ids[sorted_dci]
+            probegroup_sorted.set_global_device_channel_indices(np.arange(len(new_channel_ids)))
+            if np.array_equal(new_channel_ids, self.channel_ids):
+                sub_recording = self.clone()
+            else:
+                sub_recording = self.select_channels(new_channel_ids)
+            sub_recording._probegroup = probegroup_sorted
+            _set_group_property_based_on_probegroup(sub_recording, probegroup_sorted, group_mode=group_mode)
         else:
-            raise ValueError("must give Probe or ProbeGroup or list of Probe")
+            sub_recording = self.select_channels([])  # empty recording
+            sub_recording._probegroup = ProbeGroup()  # empty probegroup
+        return sub_recording
 
-        # check that the probe do not overlap
-        num_probes = len(probegroup.probes)
-        if num_probes > 1 and raise_if_overlapping_probes:
-            check_probe_do_not_overlap(probegroup.probes)
+    def _get_probegroup_based_on_device_channel_indices(self, probegroup: ProbeGroup) -> ProbeGroup:
+        """
+        Returns a new probegroup sorted based on their device_channel_indices.
+        This is useful to ensure that the probes are ordered correctly when attached to a recording.
+        Also checks that the device_channel_indices are consistent with the recording channel count and
+        contacts are unique across probes in the probegroup.
 
-        # handle not connected channels
+        Parameters
+        ----------
+        probegroup : ProbeGroup
+            The probegroup to be sorted.
+
+        Returns
+        -------
+        ProbeGroup
+            The sorted probegroup.
+        """
+        if not isinstance(probegroup, ProbeGroup):
+            raise ValueError("The input must be a ProbeGroup or dict")
+
         assert all(
             probe.device_channel_indices is not None for probe in probegroup.probes
         ), "Probe must have device_channel_indices"
 
-        probe_as_numpy_array = probegroup.to_numpy(complete=True)
+        # Remove unconnected contacts and slice the probe group accordingly
         device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
-        keep = device_channel_indices >= 0
-        if np.any(~keep):
-            warn("The given probes have unconnected contacts: they are removed")
-        device_channel_indices = device_channel_indices[keep]
-        probe_as_numpy_array = probe_as_numpy_array[keep]
-        if len(device_channel_indices) > 0:
-            probegroup = probegroup.get_slice(device_channel_indices)
-            order = np.argsort(device_channel_indices)
-            device_channel_indices = device_channel_indices[order]
-            probegroup.set_global_device_channel_indices(np.arange(len(device_channel_indices)))
+        keep_indices = np.flatnonzero(device_channel_indices >= 0)
+        if len(keep_indices) < len(device_channel_indices):
+            warn(
+                f"The given probes have {len(device_channel_indices) - len(keep_indices)} unconnected contacts: "
+                "they will be removed"
+            )
+            probegroup = probegroup.get_slice(keep_indices)
+            device_channel_indices = device_channel_indices[keep_indices]
 
-            # check TODO: Where did this came from?
+        if len(device_channel_indices) > 0:
+            # Check consistency of device_channel_indices with the recording channel count
             number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
             if number_of_device_channel_indices >= self.get_num_channels():
                 error_msg = (
@@ -220,56 +280,26 @@ class BaseRecordingSnippets(BaseExtractor):
                     f"recording channels are the following: {self.get_channel_ids()} \n"
                 )
                 raise ValueError(error_msg)
+            # Now slice the probe using the device channel indices to match the recording channel_ids
+            order = np.argsort(device_channel_indices)
+            probegroup = probegroup.get_slice(order)
         else:
-            warn("No connected channel in the probe! The probe will be attached but no channel will be selected.")
+            warn(
+                "No connected channels in the probegroup! "
+                "The probegroup will be attached but no channel will be selected."
+            )
             probegroup = ProbeGroup()  # empty probegroup
 
-        new_channel_ids = self.channel_ids[device_channel_indices]
+        # In some older SI versions, before #4300, the probe annotations were
+        # saved to the recording annotations as `probes_info`. If this is the
+        # case, we can copy the annotations to the probegroup and delete the
+        # `probes_info` from the recording annotations.
+        if "probes_info" in self._annotations:
+            probes_info = self._annotations.pop("probes_info")
+            for probe, probe_info in zip(probegroup.probes, probes_info):
+                probe.annotations.update(probe_info)
 
-        # create recording : channel slice or clone or self
-        if in_place:
-            if not np.array_equal(new_channel_ids, self.get_channel_ids()):
-                raise Exception("set_probe(inplace=True) must have all channel indices")
-            sub_recording = self
-        else:
-            if np.array_equal(new_channel_ids, self.get_channel_ids()):
-                sub_recording = self.clone()
-            else:
-                sub_recording = self.select_channels(new_channel_ids)
-
-        # Set probegroup
-        sub_recording._probegroup = probegroup
-
-        # handle groups
-        has_shank_id = "shank_ids" in probe_as_numpy_array.dtype.fields
-        has_contact_side = "contact_sides" in probe_as_numpy_array.dtype.fields
-        if group_mode == "auto":
-            group_keys = ["probe_index"]
-            if has_shank_id:
-                group_keys += ["shank_ids"]
-            if has_contact_side:
-                group_keys += ["contact_sides"]
-        elif group_mode == "by_probe":
-            group_keys = ["probe_index"]
-        elif group_mode == "by_shank":
-            assert has_shank_id, "shank_ids is None in probe, you cannot group by shank"
-            group_keys = ["probe_index", "shank_ids"]
-        elif group_mode == "by_side":
-            assert has_contact_side, "contact_sides is None in probe, you cannot group by side"
-            if has_shank_id:
-                group_keys = ["probe_index", "shank_ids", "contact_sides"]
-            else:
-                group_keys = ["probe_index", "contact_sides"]
-        groups = np.zeros(probe_as_numpy_array.size, dtype="int64")
-        unique_keys = np.unique(probe_as_numpy_array[group_keys])
-        for group, a in enumerate(unique_keys):
-            mask = np.ones(probe_as_numpy_array.size, dtype=bool)
-            for k in group_keys:
-                mask &= probe_as_numpy_array[k] == a[k]
-            groups[mask] = group
-        sub_recording.set_property("group", groups, ids=None)
-
-        return sub_recording
+        return probegroup
 
     def get_probe(self):
         probes = self.get_probes()
@@ -285,51 +315,24 @@ class BaseRecordingSnippets(BaseExtractor):
             raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
         return self._probegroup
 
-    # def _build_probegroup_from_properties(self):
-    #     # location and create a dummy probe
-    #     arr = self.get_property("contact_vector")
-    #     if arr is None:
-    #         positions = self.get_property("location")
-    #         if positions is None:
-    #             return None
-    #         else:
-    #             warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
-    #             probe = self.create_dummy_probe_from_locations(positions)
-    #             #  probe.create_auto_shape()
-    #             probegroup = ProbeGroup()
-    #             probegroup.add_probe(probe)
-    #     else:
-    #         probegroup = ProbeGroup.from_numpy(arr)
-
-    #         if "probes_info" in self.get_annotation_keys():
-    #             probes_info = self.get_annotation("probes_info")
-    #             for probe, probe_info in zip(probegroup.probes, probes_info):
-    #                 probe.annotations = probe_info
-
-    #         for probe_index, probe in enumerate(probegroup.probes):
-    #             contour = self.get_annotation(f"probe_{probe_index}_planar_contour")
-    #             if contour is not None:
-    #                 probe.set_planar_contour(contour)
-    #             self.delete_annotation(f"probe_{probe_index}_planar_contour")
-    #         # delete contact_vector as it is not needed anymore
-    #         self.delete_property("contact_vector")
-    #     return probegroup
-
     def _extra_metadata_copy(self, other):
         if self._probegroup is not None:
             other._probegroup = self._probegroup.copy()
 
     def _extra_metadata_from_folder(self, folder):
-        # load probe
+        # load probe from folder
+        # Note: we don't need any fix for legacy probegroups, since the
+        # set_probegroup() method will handle the device_channel_indices
+        # sorting and global contact order
         folder = Path(folder)
         probe_file = folder / "probegroup.json"
         legacy_probe_file = folder / "probe.json"
         if probe_file.is_file():
             probegroup = read_probeinterface(probe_file)
-            self.set_probegroup(probegroup, in_place=True)
+            self.set_probegroup(probegroup)
         elif legacy_probe_file.is_file():
             probegroup = read_probeinterface(legacy_probe_file)
-            self.set_probegroup(probegroup, in_place=True)
+            self.set_probegroup(probegroup)
 
         # remove "contact_vector" property if present as it is not needed anymore
         if "contact_vector" in self.get_property_keys():
@@ -345,7 +348,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # load probe
         if "probegroup" in dump_dict:
             probegroup = dump_dict["probegroup"]
-            self.set_probegroup(probegroup, in_place=True)
+            self.set_probegroup(probegroup)
 
     def _extra_metadata_to_dict(self, dump_dict):
         # save probe
@@ -405,7 +408,7 @@ class BaseRecordingSnippets(BaseExtractor):
         probe = self.create_dummy_probe_from_locations(
             np.array(locations), shape=shape, shape_params=shape_params, axes=axes
         )
-        self.set_probe(probe, in_place=True)
+        self.set_probe(probe)
 
     def set_channel_locations(self, locations, channel_ids=None):
         warnings.warn(
@@ -503,7 +506,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         probe2d = self.get_probe().to_2d(axes=axes)
         recording2d = self.clone()
-        recording2d.set_probe(probe2d, in_place=True)
+        recording2d.set_probe(probe2d)
 
         return recording2d
 

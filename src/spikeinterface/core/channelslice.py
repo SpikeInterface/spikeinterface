@@ -66,7 +66,7 @@ class ChannelSliceRecording(BaseRecording):
             parent_probegroup = self._parent.get_probegroup()
             sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(self._channel_ids)))
-            self.set_probegroup(sliced_probegroup, in_place=True)
+            self.set_probegroup(sliced_probegroup)
 
         # update dump dict
         self._kwargs = {
@@ -157,7 +157,7 @@ class ChannelSliceSnippets(BaseSnippets):
             parent_probegroup = self._parent_snippets.get_probegroup()
             sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(self._channel_ids)))
-            self.set_probegroup(sliced_probegroup, in_place=True)
+            self.set_probegroup(sliced_probegroup)
 
         # update dump dict
         self._kwargs = {

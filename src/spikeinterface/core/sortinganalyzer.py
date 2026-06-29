@@ -23,7 +23,7 @@ import spikeinterface
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
-from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
+from .recording_tools import get_rec_attributes, do_recording_attributes_match
 from .core_tools import (
     check_json,
     retrieve_importing_provenance,

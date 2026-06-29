@@ -8,7 +8,8 @@ import numpy.typing as npt
 
 import numpy as np
 
-from .core_tools import add_suffix, make_shared_array
+from probeinterface import ProbeGroup
+
 from .job_tools import (
     ensure_chunk_size,
     divide_segment_into_chunks,
@@ -683,44 +684,60 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
     return order_f, order_r
 
 
-def check_probe_do_not_overlap(probes):
+def _set_group_property_based_on_probegroup(
+    recording, probegroup: ProbeGroup, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"]
+):
     """
-    When several probes this check that that they do not overlap in space
-    and so channel positions can be safely concatenated.
+    Set the group property for a recording based on a ProbeGroup.
+    Use "auto" (default) to automatically determine the grouping based on the available
+    information in the ProbeGroup (default: probe + shank + side if available).
 
-    Raises
-    ------
-    Exception :
-        If probes are overlapping
-
-    Returns
-    -------
-    None : None
-        If the check is successful
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    probegroup : ProbeGroup
+        The ProbeGroup object
+    group_mode : {"auto", "by_probe", "by_shank", "by_side"}
+        The mode for grouping channels
     """
-    for i in range(len(probes)):
-        probe_i = probes[i]
-        # check that all positions in probe_j are outside probe_i boundaries
-        x_bounds_i = [
-            np.min(probe_i.contact_positions[:, 0]),
-            np.max(probe_i.contact_positions[:, 0]),
-        ]
-        y_bounds_i = [
-            np.min(probe_i.contact_positions[:, 1]),
-            np.max(probe_i.contact_positions[:, 1]),
-        ]
+    if not isinstance(probegroup, ProbeGroup):
+        raise ValueError("`probegroup` must be a ProbeGroup instance.")
+    assert group_mode in (
+        "auto",
+        "by_probe",
+        "by_shank",
+        "by_side",
+    ), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
 
-        for j in range(i + 1, len(probes)):
-            probe_j = probes[j]
-            if np.any(
-                np.array(
-                    [
-                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
-                        for cp in probe_j.contact_positions
-                    ]
-                )
-            ):
-                raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
+    probe_array = probegroup.to_numpy(complete=True)
+    has_shank_id = "shank_ids" in probe_array.dtype.fields
+    has_contact_side = "contact_sides" in probe_array.dtype.fields
+    if group_mode == "auto":
+        group_keys = ["probe_index"]
+        if has_shank_id:
+            group_keys += ["shank_ids"]
+        if has_contact_side:
+            group_keys += ["contact_sides"]
+    elif group_mode == "by_probe":
+        group_keys = ["probe_index"]
+    elif group_mode == "by_shank":
+        assert has_shank_id, "shank_ids is None in probe, you cannot group by shank"
+        group_keys = ["probe_index", "shank_ids"]
+    elif group_mode == "by_side":
+        assert has_contact_side, "contact_sides is None in probe, you cannot group by side"
+        if has_shank_id:
+            group_keys = ["probe_index", "shank_ids", "contact_sides"]
+        else:
+            group_keys = ["probe_index", "contact_sides"]
+    groups = np.zeros(probe_array.size, dtype="int64")
+    unique_keys = np.unique(probe_array[group_keys])
+    for group, a in enumerate(unique_keys):
+        mask = np.ones(probe_array.size, dtype=bool)
+        for k in group_keys:
+            mask &= probe_array[k] == a[k]
+        groups[mask] = group
+    recording.set_property("group", groups, ids=None)
 
 
 def get_rec_attributes(recording):
