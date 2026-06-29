@@ -2410,6 +2410,10 @@ def generate_ground_truth_recording(
     else:
         num_channels = probe.get_contact_count()
 
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
+    assert (nbefore + nafter) == templates.shape[1]
+
     if templates is None:
         channel_locations = probe.contact_positions
         unit_locations = generate_unit_locations(
@@ -2432,6 +2436,11 @@ def generate_ground_truth_recording(
 
     else:
         assert templates.shape[0] == num_units
+        from .template_tools import _get_main_channel_from_template_array
+
+        main_channel_indices = _get_main_channel_from_template_array(
+            templates, peak_mode="extremum", peak_sign="both", nbefore=nbefore
+        )
 
     if templates.ndim == 3:
         upsample_vector = None
@@ -2439,10 +2448,6 @@ def generate_ground_truth_recording(
         if upsample_vector is None:
             upsample_factor = templates.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
-
-    nbefore = ms_to_samples(ms_before, sampling_frequency)
-    nafter = ms_to_samples(ms_after, sampling_frequency)
-    assert (nbefore + nafter) == templates.shape[1]
 
     # construct recording
     from spikeinterface.generation.noise_tools import NoiseGeneratorRecording
