@@ -37,6 +37,7 @@ backend_kwargs_desc = {
         "figlabel": "The figurl figure label, default: None",
         "inline": "If True, the widget is displayed inline in the cell, default: None",
         "height": "The height of the figpack View in jupyter, default: None",
+        "wait_for_input": "If True, the widget waits for user input before continuing, default: False",
     },
     "ipywidgets": {
         "width_cm": "Width of the figure in cm, default: 10",
@@ -57,7 +58,7 @@ backend_kwargs_desc = {
 
 default_backend_kwargs = {
     "matplotlib": {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None},
-    "figpack": {"generate_url": True, "display": True, "figlabel": None, "inline": None, "height": None},
+    "figpack": {"display": True, "figlabel": None, "inline": None, "height": None, "wait_for_input": False},
     "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
     "ephyviewer": {},
     "spikeinterface_gui": {},

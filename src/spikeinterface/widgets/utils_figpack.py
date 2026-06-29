@@ -74,10 +74,11 @@ def handle_display_and_url(widget, view, **backend_kwargs):
         else:
             figlabel = backend_kwargs.get("figlabel")
             inline = backend_kwargs.get("inline", None)
+            wait_for_input = backend_kwargs.get("wait_for_input", False)
             if inline is None and is_notebook():
                 inline = True
             height = backend_kwargs.get("height", None)
-            url = view.show(title=figlabel, inline=inline, inline_height=height)
+            url = view.show(title=figlabel, inline=inline, inline_height=height, wait_for_input=wait_for_input)
             print(url)
 
     return url
