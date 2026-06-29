@@ -2412,7 +2412,6 @@ def generate_ground_truth_recording(
 
     nbefore = ms_to_samples(ms_before, sampling_frequency)
     nafter = ms_to_samples(ms_after, sampling_frequency)
-    assert (nbefore + nafter) == templates.shape[1]
 
     if templates is None:
         channel_locations = probe.contact_positions
@@ -2441,6 +2440,8 @@ def generate_ground_truth_recording(
         main_channel_indices = _get_main_channel_from_template_array(
             templates, peak_mode="extremum", peak_sign="both", nbefore=nbefore
         )
+
+    assert (nbefore + nafter) == templates.shape[1]
 
     if templates.ndim == 3:
         upsample_vector = None
