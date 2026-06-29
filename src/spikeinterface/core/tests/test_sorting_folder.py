@@ -55,6 +55,7 @@ def test_NpzFolderSorting(create_cache_folder):
 if __name__ == "__main__":
     import tempfile
     from pathlib import Path
+
     cache_folder = Path(tempfile.mkdtemp())
 
     test_NumpyFolderSorting(cache_folder)

@@ -895,7 +895,7 @@ class BaseSorting(BaseExtractor):
                 unit_indices = np.concatenate(unit_indices, dtype="int64")
                 # here we only do a sort by indices a lexsort on sample_indices
                 # the stable=True is equivalent to np.lexsort((unit_indices, sample_indices, ))
-                # because because we construct by looping on unit_ids 
+                # because because we construct by looping on unit_ids
                 order = np.argsort(sample_indices, stable=True)
                 sample_indices = sample_indices[order]
                 unit_indices = unit_indices[order]

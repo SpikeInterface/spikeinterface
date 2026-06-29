@@ -74,9 +74,7 @@ def test_check_if_serializable():
 
 
 def test_name_and_repr():
-    test_recording, test_sorting = generate_ground_truth_recording(
-        seed=0, durations=[2]
-    )
+    test_recording, test_sorting = generate_ground_truth_recording(seed=0, durations=[2])
     assert test_recording.name == "GroundTruthRecording"
     assert test_sorting.name == "GroundTruthSorting"
 
@@ -124,14 +122,10 @@ def test_setting_incomplete_properties():
     recording = recording.rename_channels(new_channel_ids=channel_ids)
 
     incomplete_values = ["value"] * (num_channels - 1)
-    recording.set_property(
-        key="incomplete_property", ids=channel_ids[:-1], values=incomplete_values
-    )
+    recording.set_property(key="incomplete_property", ids=channel_ids[:-1], values=incomplete_values)
 
     property_in_recording = recording.get_property("incomplete_property")
-    expected_array = np.array(
-        incomplete_values + [""]
-    )  # Spikeinterface defines missing values as empty strings
+    expected_array = np.array(incomplete_values + [""])  # Spikeinterface defines missing values as empty strings
     assert np.array_equal(property_in_recording, expected_array)
 
 
