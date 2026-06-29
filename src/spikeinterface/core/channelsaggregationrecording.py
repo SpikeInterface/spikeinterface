@@ -106,11 +106,10 @@ class ChannelsAggregationRecording(BaseRecording):
             ), "Contact positions are not unique! Cannot aggregate recordings."
 
             # Now make a new probegroup with all probes and set global device channel indices
-            all_probes = []
-            for probegroup in all_probegroups:
-                all_probes.extend([p.copy() for p in probegroup.probes])
             probegroup_agg = ProbeGroup()
-            probegroup_agg.probes = all_probes
+            for probegroup in all_probegroups:
+                for probe in probegroup.probes:
+                    probegroup_agg.add_probe(probe.copy())
             probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
             self.set_probegroup(probegroup_agg)
 

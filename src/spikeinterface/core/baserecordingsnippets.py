@@ -264,8 +264,12 @@ class BaseRecordingSnippets(BaseExtractor):
                 f"The given probes have {len(device_channel_indices) - len(keep_indices)} unconnected contacts: "
                 "they will be removed"
             )
-            probegroup = probegroup.get_slice(keep_indices)
-            device_channel_indices = device_channel_indices[keep_indices]
+            if len(keep_indices) == 0:
+                probegorup = ProbeGroup()  # empty probegroup
+                device_channel_indices = np.array([], dtype="int64")
+            else:
+                probegroup = probegroup.get_slice(keep_indices)
+                device_channel_indices = device_channel_indices[keep_indices]
 
         if len(device_channel_indices) > 0:
             # Check consistency of device_channel_indices with the recording channel count
