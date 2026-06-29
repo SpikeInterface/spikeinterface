@@ -182,7 +182,7 @@ def generate_sorting(
                 num_samples - border_size_samples, num_samples, num_spikes_per_border
             )
             spikes_in_seg = np.concatenate([spikes_in_seg, spikes_on_borders])
-            order = np.argsort(spikes_in_seg["sample_index"])
+            order = np.argsort(spikes_in_seg["sample_index"], stable=True)
             spikes_in_seg = spikes_in_seg[order]
 
         spikes.append(spikes_in_seg)
@@ -894,7 +894,7 @@ def synthesize_random_firings(
     times = np.concatenate(times)
     labels = np.concatenate(labels)
 
-    sort_inds = np.argsort(times)
+    sort_inds = np.argsort(times, stable=True)
     times = times[sort_inds]
     labels = labels[sort_inds]
 

@@ -19,7 +19,7 @@ def test_alf_sorting_extractor():
         spike_times.append(st)
         spike_clusters.append(st * 0 + i)
     spike_times = np.concatenate(spike_times)
-    ordre = np.argsort(spike_times)
+    ordre = np.argsort(spike_times, stable=True)
     spike_times = spike_times[ordre]
     spike_clusters = np.concatenate(spike_clusters)[ordre]
 
