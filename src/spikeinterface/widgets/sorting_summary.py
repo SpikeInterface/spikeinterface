@@ -140,7 +140,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             max_spikes_per_unit=dp.max_amplitudes_per_unit,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -149,7 +148,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             sparsity=sparsity,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -158,7 +156,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -167,7 +164,6 @@ class SortingSummaryWidget(BaseWidget):
             sorting_analyzer,
             unit_ids=unit_ids,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -176,7 +172,6 @@ class SortingSummaryWidget(BaseWidget):
             sorting_analyzer,
             unit_ids=unit_ids,
             immediate_plot=False,
-            generate_url=False,
             display=False,
             backend=backend,
         )
