@@ -69,7 +69,7 @@ pg.add_probe(probe_B)
 n_total = n_A + n_B
 traces2 = np.arange(1000 * n_total, dtype="int16").reshape(1000, n_total)
 rec_two = NumpyRecording([traces2], sampling_frequency=30000.0)
-rec_two.set_probegroup(pg)  # old API: in_place=False, returns new recording
+rec_two = rec_two.set_probegroup(pg)  # old API: in_place=False, returns new recording
 
 rec_two.save(folder=str(OUTPUT_DIR / "two_probe_binary"))
 rec_two.save(folder=str(OUTPUT_DIR / "two_probe.zarr"), format="zarr")
