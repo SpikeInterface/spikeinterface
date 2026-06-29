@@ -20,8 +20,8 @@ def test_alf_sorting_extractor():
         spike_clusters.append(st * 0 + i)
     spike_times = np.concatenate(spike_times)
     order = np.argsort(spike_times, stable=True)
-spike_times = spike_times[order]
-spike_clusters = np.concatenate(spike_clusters)[order]
+    spike_times = spike_times[order]
+    spike_clusters = np.concatenate(spike_clusters)[order]
 
     with tempfile.TemporaryDirectory() as td:
         folder_path = Path(td)
