@@ -803,7 +803,7 @@ def synthesize_poisson_spike_vector(
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
-    # the stable is important because this garanty to be equivalent to
+    # the stable is important because this guarantees to be equivalent to
     # np.lexsort((unit_indices, spike_frames, ))
     sort_indices = np.argsort(spike_frames, stable=True)
 
