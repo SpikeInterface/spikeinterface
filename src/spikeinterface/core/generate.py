@@ -2428,8 +2428,7 @@ def generate_ground_truth_recording(
         )
         sorting.set_property("gt_unit_locations", unit_locations)
         distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :2], axis=2)
-        main_channel_index = np.argmin(distances, axis=1)
-        sorting.set_property("main_channel_index", main_channel_index)
+        main_channel_indices = np.argmin(distances, axis=1)
 
     else:
         assert templates.shape[0] == num_units
@@ -2469,6 +2468,9 @@ def generate_ground_truth_recording(
     recording.set_probe(probe, in_place=True)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
+
+    main_channel_ids = recording.channel_ids[main_channel_indices]
+    sorting.set_property("main_channel_id", main_channel_ids)
 
     recording.name = "GroundTruthRecording"
     sorting.name = "GroundTruthSorting"

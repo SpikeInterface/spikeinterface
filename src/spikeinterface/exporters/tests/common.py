@@ -28,7 +28,7 @@ def make_sorting_analyzer(sparse=True, with_group=False):
         initial_sorting_analyzer = create_sorting_analyzer(
             sorting=sorting, recording=recording, format="memory", sparse=True
         )
-        main_channels = initial_sorting_analyzer.main_channel_index
+        main_channels = initial_sorting_analyzer.main_channel_indices
         sorting_groups = [0 if main_channel < 4 else 1 for main_channel in main_channels]
         recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
         sorting.set_property("group", sorting_groups)

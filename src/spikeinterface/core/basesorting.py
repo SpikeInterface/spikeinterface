@@ -14,7 +14,7 @@ class BaseSorting(BaseExtractor):
     """
 
     _main_properties = [
-        "main_channel_index",
+        "main_channel_id",
     ]
 
     def __init__(self, sampling_frequency: float, unit_ids: list):

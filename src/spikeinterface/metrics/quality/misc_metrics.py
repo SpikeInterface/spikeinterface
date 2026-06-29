@@ -152,14 +152,11 @@ def compute_snrs(
         A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the SNR. If None, all units are used.
-    peak_sign_for_signal : "neg" | "pos" | "both", default: "neg"
-        Which extremum of the template to use for the "signal". Use either the minimum ("neg"),
-        maximum ("pos") or absmax ("both")
-    peak_mode_for_signal : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+    method : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
         How to compute the amplitude:
-        "extremum" takes the maxima/minima
-        "at_index" takes the value at t=sorting_analyzer.nbefore.
-        "peak_to_peak" takes the difference between the maximum and minimum
+          - "extremum" takes the abs of the extremal value
+          - "at_index" takes the value at t=sorting_analyzer.nbefore
+          - "peak_to_peak" takes the difference between the maximum and minimum
     operator : "median" | "average", default: "median"
         The operator to apply to retrieve templates and amplitudes.
 
@@ -175,13 +172,13 @@ def compute_snrs(
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
-    main_channel_index = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
     unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=False)
 
     snrs = {}
     for unit_id in unit_ids:
         unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
-        chan_ind = main_channel_index[unit_index]
+        chan_ind = main_channel_indices[unit_index]
         noise = noise_levels[chan_ind]
         amplitude = unit_amplitudes[unit_index]
         snrs[unit_id] = np.abs(amplitude) / noise
@@ -195,7 +192,7 @@ class SNR(BaseMetric):
     metric_params = {}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
-    depend_on = ["noise_levels", "templates"]
+    depend_on = ["method"]
 
 
 # This is from Bombcell, but the "default" SNR metric adapted using median + peak_sign="both" gives more robust results,

@@ -494,12 +494,14 @@ class Templates:
         from .template_tools import _get_main_channel_from_template_array
 
         templates_array = self.get_dense_templates()
-        main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, self.nbefore)
+        main_channel_indices = _get_main_channel_from_template_array(
+            templates_array, peak_mode, peak_sign, self.nbefore
+        )
 
         if outputs == "index":
-            main_chans = main_channel_index
+            main_chans = main_channel_indices
         elif outputs == "id":
-            main_chans = self.channel_ids[main_channel_index]
+            main_chans = self.channel_ids[main_channel_indices]
         else:
             raise ValueError("wrong outputs")
 

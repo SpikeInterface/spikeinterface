@@ -54,9 +54,9 @@ def create_sorting_analyzer(
     recording,
     format="memory",
     folder=None,
-    main_channel_index=None,
-    main_channel_peak_sign="both",
-    main_channel_peak_mode="extremum",
+    main_channel_indices=None,
+    peak_sign="both",
+    peak_mode="extremum",
     num_spikes_for_main_channel=100,
     sparse=True,
     sparsity=None,
@@ -77,8 +77,8 @@ def create_sorting_analyzer(
 
     This object will be also use used for plotting purpose.
 
-    The main_channel_index can be externally provided. If not then this is taken from
-    sorting property. If not then the main_channel_index is estimated using
+    The main_channel_indices can be externally provided. If not then this is taken from
+    sorting property. If not then the main_channel_indices is estimated using
     `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
     the recording.
 
@@ -95,11 +95,11 @@ def create_sorting_analyzer(
         The mode to store analyzer. If "folder", the analyzer is stored on disk in the specified folder.
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the analyzer is stored in RAM. Use this option carefully!
-    main_channel_index : None | np.array
-        The main_channel_index can be externally provided
-    main_channel_peak_sign : "both" | "neg"
-        In case when the main_channel_index is estimated wich sign to consider "both" or "neg".
-    main_channel_peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    main_channel_indices : None | np.array
+        The main_channel_indices can be externally provided
+    peak_sign : "both" | "neg"
+        In case when the main_channel_indices is estimated, which sign to consider "both" or "neg".
+    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
@@ -211,19 +211,21 @@ def create_sorting_analyzer(
                     shutil.rmtree(folder)
 
     # retrieve or compute the main channel index per unit
-    if main_channel_index is None:
-        if "main_channel_index" in sorting.get_property_keys():
-            main_channel_index = sorting.get_property("main_channel_index")
+    # id based get
+    if main_channel_indices is None:
+        if "main_channel_indices" in sorting.get_property_keys():
+            main_channel_ids = sorting.get_property("main_channel_id")
+            main_channel_indices = recording.ids_to_indices(main_channel_ids)
 
-    if main_channel_index is None:
+    if main_channel_indices is None:
         # this is weird but due to the cyclic import
         from .template_tools import estimate_main_channel_from_recording
 
-        main_channel_index = estimate_main_channel_from_recording(
+        main_channel_indices = estimate_main_channel_from_recording(
             recording,
             sorting,
-            peak_sign=main_channel_peak_sign,
-            peak_mode=main_channel_peak_mode,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
             num_spikes_for_main_channel=num_spikes_for_main_channel,
             seed=seed,
             **job_kwargs,
@@ -240,10 +242,10 @@ def create_sorting_analyzer(
             recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
         assert all(
-            sparsity.mask[u, c] for u, c in enumerate(main_channel_index)
-        ), "sparsity si not constistentent with main_channel_index"
+            sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)
+        ), "sparsity si not constistentent with main_channel_indices"
     elif sparse:
-        sparsity = estimate_sparsity(sorting, recording, main_channel_index=main_channel_index, **sparsity_kwargs)
+        sparsity = estimate_sparsity(sorting, recording, main_channel_indices=main_channel_indices, **sparsity_kwargs)
     else:
         sparsity = None
 
@@ -265,9 +267,9 @@ def create_sorting_analyzer(
         recording,
         format=format,
         folder=folder,
-        main_channel_index=main_channel_index,
-        main_channel_peak_sign=main_channel_peak_sign,
-        main_channel_peak_mode=main_channel_peak_mode,
+        main_channel_indices=main_channel_indices,
+        peak_sign=peak_sign,
+        peak_mode=peak_mode,
         sparsity=sparsity,
         return_in_uV=return_in_uV,
         backend_options=backend_options,
@@ -337,8 +339,8 @@ class SortingAnalyzer:
         format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
-        main_channel_peak_sign="both",
-        main_channel_peak_mode="extremum",
+        peak_sign="both",
+        peak_mode="extremum",
         backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
@@ -349,9 +351,9 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_in_uV = return_in_uV
-        self.main_channel_peak_sign = main_channel_peak_sign
-        self.main_channel_peak_mode = main_channel_peak_mode
-        self._main_channel_index = None
+        self.peak_sign = peak_sign
+        self.peak_mode = peak_mode
+        self._main_channel_indices = None
 
         # For backward compatibility
         self.return_scaled = return_in_uV
@@ -405,16 +407,18 @@ class SortingAnalyzer:
             "zarr",
         ] = "memory",
         folder=None,
-        main_channel_index=None,
+        main_channel_indices=None,
         sparsity=None,
         return_scaled=None,
         return_in_uV=True,
-        main_channel_peak_sign="both",
-        main_channel_peak_mode="extremum",
+        peak_sign="both",
+        peak_mode="extremum",
         backend_options=None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
-        assert main_channel_index is not None, "To create a SortingAnalyzer you need to specify the main_channel_index"
+        assert (
+            main_channel_indices is not None
+        ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
 
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
@@ -453,8 +457,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
-                main_channel_peak_sign,
-                main_channel_peak_mode,
+                peak_sign,
+                peak_mode,
                 rec_attributes=None,
             )
         elif format == "binary_folder":
@@ -464,8 +468,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
-                main_channel_peak_sign,
-                main_channel_peak_mode,
+                peak_sign,
+                peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -479,15 +483,16 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
-                main_channel_peak_sign,
-                main_channel_peak_mode,
+                peak_sign,
+                peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
         else:
             raise ValueError("SortingAnalyzer.create: wrong format")
 
-        sorting_analyzer.set_sorting_property("main_channel_index", main_channel_index, save=True)
+        main_channel_ids = sorting_analyzer.channel_ids[main_channel_indices]
+        sorting_analyzer.set_sorting_property("main_channel_id", main_channel_ids, save=True)
 
         return sorting_analyzer
 
@@ -521,9 +526,7 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(
-        cls, sorting, recording, sparsity, return_in_uV, main_channel_peak_sign, main_channel_peak_mode, rec_attributes
-    ):
+    def create_memory(cls, sorting, recording, sparsity, return_in_uV, peak_sign, peak_mode, rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -544,8 +547,8 @@ class SortingAnalyzer:
             format="memory",
             sparsity=sparsity,
             return_in_uV=return_in_uV,
-            main_channel_peak_sign=main_channel_peak_sign,
-            main_channel_peak_mode=main_channel_peak_mode,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
         )
         return sorting_analyzer
 
@@ -557,8 +560,8 @@ class SortingAnalyzer:
         recording,
         sparsity,
         return_in_uV,
-        main_channel_peak_sign,
-        main_channel_peak_mode,
+        peak_sign,
+        peak_mode,
         rec_attributes,
         backend_options,
     ):
@@ -625,8 +628,8 @@ class SortingAnalyzer:
         settings_file = folder / f"settings.json"
         settings = dict(
             return_in_uV=return_in_uV,
-            main_channel_peak_sign=main_channel_peak_sign,
-            main_channel_peak_mode=main_channel_peak_mode,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
         )
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
@@ -638,8 +641,8 @@ class SortingAnalyzer:
         """
         backward compatibility before the __init__ to handle the settings:
           * return_scaled > return_in_uV
-          * main_channel_peak_sign
-          * main_channel_peak_mode
+          * peak_sign
+          * peak_mode
 
         Note :
          * see also _handle_backward_compatibility_settings_post_init
@@ -656,30 +659,33 @@ class SortingAnalyzer:
             # old version did not have settings at all
             new_settings["return_in_uV"] = True
 
-        if "main_channel_peak_sign" not in settings:
-            # before 0.104.0 was not in main_channel_peak_sign
+        if "peak_sign" not in settings:
+            # before 0.104.0 was not in peak_sign
             # TODO make something more fancy that exlore the previous params of extension
-            new_settings["main_channel_peak_sign"] = "both"
-            new_settings["main_channel_peak_mode"] = "extremum"
+            new_settings["peak_sign"] = "both"
+            new_settings["peak_mode"] = "extremum"
 
         return new_settings
 
     @property
-    def main_channel_index(self):
-        if self._main_channel_index is None:
-            sorting_main_channel_index = self.get_sorting_property("main_channel_index")
-            if sorting_main_channel_index is not None:
-                self._main_channel_index = sorting_main_channel_index
+    def main_channel_indices(self):
+        if self._main_channel_indices is None:
+            sorting_main_channel_ids = self.get_sorting_property("main_channel_id")
+            if sorting_main_channel_ids is not None:
+                main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
+                self._main_channel_indices = main_channel_indices
             else:
-                self._main_channel_index = self.compute_main_channel_backwards_compatibility()
+                self._main_channel_indices = self.compute_main_channel_backwards_compatibility()
+                main_channel_ids = self.channel_ids[self._main_channel_indices]
+                self.set_sorting_property("main_channel_id", main_channel_ids, save=False)
 
-        return self._main_channel_index
+        return self._main_channel_indices
 
     def compute_main_channel_backwards_compatibility(self):
         """
-        Computes the `main_channel_index` for an old analyzer. Logic is:
+        Computes the `main_channel_indices` for an old analyzer. Logic is:
 
-        1) If you have the `templates` extension: use this to find the main_channel_index, with
+        1) If you have the `templates` extension: use this to find the main_channel_indices, with
         default settings and restricted to the sparsity of the analyzer.
 
         2) If you do not have the `templates` extension but do have `waveforms`: compute
@@ -688,7 +694,7 @@ class SortingAnalyzer:
         3) If you do not have `templates` or `waveforms`, but do have `sparsity = True`, we
         will take the "average" channel as the `main_channel_index`
 
-        4) Failing that, if you have an attached `recording`, compute the `main_channel_index`
+        4) Failing that, if you have an attached `recording`, compute the `main_channel_indices`
         using the accumulator.
 
         5) If you have a dense analyzer with no `templates`, `waveforms` or `recording`, your
@@ -699,9 +705,10 @@ class SortingAnalyzer:
         warnings.warn(
             "This sorting analyzer is from an an older version of spikeinterface. "
             "For future compatibility we will compute the `main_channel_indices`."
+            "Save???"
         )
 
-        main_channel_index = None
+        main_channel_indices = None
 
         templates_array = None
         peak_sign = "both"
@@ -727,7 +734,7 @@ class SortingAnalyzer:
         if templates_array is not None:
             from .template_tools import _get_main_channel_from_template_array
 
-            main_channel_index = _get_main_channel_from_template_array(
+            main_channel_indices = _get_main_channel_from_template_array(
                 templates_array, peak_mode, peak_sign, templates.nbefore
             )
 
@@ -735,7 +742,7 @@ class SortingAnalyzer:
         if self.is_sparse():
             channel_locations = self.get_channel_locations()
             sparsity = self.sparsity
-            main_channel_index = []
+            main_channel_indices = []
             for channel_indices in sparsity.unit_id_to_channel_indices.values():
                 unit_channel_locations = channel_locations[channel_indices]
                 average_unit_channel_location = np.average(unit_channel_locations, axis=0)
@@ -743,15 +750,15 @@ class SortingAnalyzer:
                     channel_locations - average_unit_channel_location, axis=1
                 )
                 closest_channel_index = np.argmin(distance_from_average_channel)
-                main_channel_index.append(closest_channel_index)
+                main_channel_indices.append(closest_channel_index)
 
-            return main_channel_index
+            return main_channel_indices
 
         # Case 4
         if self.has_recording() or self.has_temporary_recording():
             from .template_tools import estimate_main_channel_from_recording
 
-            main_channel_index = estimate_main_channel_from_recording(
+            main_channel_indices = estimate_main_channel_from_recording(
                 self.recording,
                 self.sorting,
                 peak_sign=peak_sign,
@@ -759,17 +766,11 @@ class SortingAnalyzer:
                 num_spikes_for_main_channel=100,
             )
 
-            return main_channel_index
+            return main_channel_indices
 
         raise ValueError(
             "This analyzer is dense, and has no attached recording, waveforms or templates. Hence we cannot estimate the `main_channel_indices`, making the analyzer incompatible with newer versions of spikeinterface. Please attach a recording to continue, or re-create your analyzer from scratch."
         )
-
-        # # this is only in memory
-        # self.sorting.set_property("main_channel_index", main_channel_index)
-        # # TODO @alessio @chris : we need to discuss this
-        # # this save also to disk but maybe there is no write for the analyzer...
-        # self.set_sorting_property("main_channel_index", main_channel_index, save=True)
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
@@ -846,8 +847,8 @@ class SortingAnalyzer:
             format="binary_folder",
             sparsity=sparsity,
             return_in_uV=settings["return_in_uV"],
-            main_channel_peak_sign=settings["main_channel_peak_sign"],
-            main_channel_peak_mode=settings["main_channel_peak_mode"],
+            peak_sign=settings["peak_sign"],
+            peak_mode=settings["peak_mode"],
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -869,8 +870,8 @@ class SortingAnalyzer:
         recording,
         sparsity,
         return_in_uV,
-        main_channel_peak_sign,
-        main_channel_peak_mode,
+        peak_sign,
+        peak_mode,
         rec_attributes,
         backend_options,
     ):
@@ -898,8 +899,8 @@ class SortingAnalyzer:
 
         settings = dict(
             return_in_uV=return_in_uV,
-            main_channel_peak_sign=main_channel_peak_sign,
-            main_channel_peak_mode=main_channel_peak_mode,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
         )
         zarr_root.attrs["settings"] = check_json(settings)
 
@@ -1033,8 +1034,8 @@ class SortingAnalyzer:
             format="zarr",
             sparsity=sparsity,
             return_in_uV=settings["return_in_uV"],
-            main_channel_peak_sign=settings["main_channel_peak_sign"],
-            main_channel_peak_mode=settings["main_channel_peak_mode"],
+            peak_sign=settings["peak_sign"],
+            peak_mode=settings["peak_mode"],
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -1139,11 +1140,11 @@ class SortingAnalyzer:
 
     def get_main_channels(self, outputs="index", with_dict=False):
         """ """
-        main_channel_index = self.main_channel_index
+        main_channel_indices = self.main_channel_indices
         if outputs == "index":
-            main_chans = main_channel_index
+            main_chans = main_channel_indices
         elif outputs == "id":
-            main_chans = self.channel_ids[main_channel_index]
+            main_chans = self.channel_ids[main_channel_indices]
         else:
             raise ValueError("wrong outputs")
 
@@ -1377,8 +1378,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
-                self.main_channel_peak_sign,
-                self.main_channel_peak_mode,
+                self.peak_sign,
+                self.peak_mode,
                 self.rec_attributes,
             )
 
@@ -1392,8 +1393,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
-                self.main_channel_peak_sign,
-                self.main_channel_peak_mode,
+                self.peak_sign,
+                self.peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1407,8 +1408,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
-                self.main_channel_peak_sign,
-                self.main_channel_peak_mode,
+                self.peak_sign,
+                self.peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
             )

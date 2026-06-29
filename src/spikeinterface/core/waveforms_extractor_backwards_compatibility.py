@@ -496,8 +496,8 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
         sorting,
         recording,
         sparsity=sparsity,
-        main_channel_peak_mode="extremum",
-        main_channel_peak_sign="neg",
+        peak_mode="extremum",
+        peak_sign="neg",
         return_in_uV=return_in_uV,
         rec_attributes=rec_attributes,
     )

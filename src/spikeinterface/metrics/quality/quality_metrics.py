@@ -77,6 +77,12 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if "peak_sign" in self.params["metric_params"]["amplitude_median"]:
                 del self.params["metric_params"]["amplitude_median"]["peak_sign"]
 
+        if "snr" in self.params["metric_names"]:
+            print(f"{self.params['metric_names']=}")
+            if "peak_mode" in self.params["metric_params"]["snr"]:
+                self.params["metric_params"]["snr"]["method"] = self.params["metric_params"]["snr"]["peak_mode"]
+                del self.params["metric_params"]["snr"]["peak_mode"]
+
         # TODO: update this once `main_channel_index` PR is merged
         # global peak_sign used to find appropriate channels for pca metric computation
         # If not found, use a "peak_sign" set by any metric

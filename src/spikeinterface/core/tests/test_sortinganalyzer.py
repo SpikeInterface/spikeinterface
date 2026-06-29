@@ -35,13 +35,6 @@ def get_dataset():
         seed=2205,
     )
 
-    # TODO: the tests or the sorting analyzer make assumptions about the ids being integers
-    # So keeping this the way it was
-    integer_channel_ids = [int(id) for id in recording.get_channel_ids()]
-    integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
-
-    recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
-    sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
 
@@ -53,10 +46,18 @@ def dataset():
 def test_SortingAnalyzer_memory(tmp_path, dataset):
     recording, sorting = dataset
 
-    # Note the sorting contain already main_channel_index
+    # Note the sorting contain already main_channel_ids
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
-    assert np.array_equal(sorting_analyzer.get_main_channels(), sorting.get_property("main_channel_index"))
+
+    main_channel_ids = sorting.get_property("main_channel_id")
+    main_channel_indices = recording.ids_to_indices(main_channel_ids)
+
+    print(f"{main_channel_ids=}", flush=True)
+    print(f"{main_channel_indices=}", flush=True)
+    print(f"{sorting_analyzer.get_main_channels()=}", flush=True)
+
+    assert np.array_equal(sorting_analyzer.get_main_channels(), main_channel_indices)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
@@ -84,10 +85,10 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
-    # Create when main_channel_index is not given : this is estimated
+    # Create when main_channel_indices is not given : this is estimated
     sorting2 = sorting.clone()
-    sorting2._properties.pop("main_channel_index")
-    print(sorting2.get_property("main_channel_index"))
+    sorting2._properties.pop("main_channel_id")
+    print(sorting2.get_property("main_channel_id"))
     sorting_analyzer = create_sorting_analyzer(sorting2, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
 
@@ -109,7 +110,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
     assert len(select_units_sorting_analyer.unit_ids) == 1
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
@@ -163,9 +164,9 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
     assert len(select_units_sorting_analyer.unit_ids) == 1
-    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=[1])
+    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=["1"])
     assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
     assert 1 not in remove_units_sorting_analyer.unit_ids
 
@@ -451,10 +452,10 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], format=format, folder=folder, return_new_unit_ids=True
+            merge_unit_groups=[["0", "1"]], format=format, folder=folder, return_new_unit_ids=True
         )
-        assert 0 not in sorting_analyzer4.unit_ids
-        assert 1 not in sorting_analyzer4.unit_ids
+        assert "0" not in sorting_analyzer4.unit_ids
+        assert "1" not in sorting_analyzer4.unit_ids
         assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
         is_merged_values = sorting_analyzer4.sorting.get_property("is_merged")
         assert is_merged_values[sorting_analyzer4.sorting.ids_to_indices(new_unit_ids)][0]
@@ -469,19 +470,19 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer5, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]],
-            new_unit_ids=[50],
+            merge_unit_groups=[["0", "1"]],
+            new_unit_ids=["50"],
             format=format,
             folder=folder,
             merging_mode="hard",
             return_new_unit_ids=True,
         )
-        assert 0 not in sorting_analyzer5.unit_ids
-        assert 1 not in sorting_analyzer5.unit_ids
+        assert "0" not in sorting_analyzer5.unit_ids
+        assert "1" not in sorting_analyzer5.unit_ids
         assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
-        assert 50 in sorting_analyzer5.unit_ids
+        assert "50" in sorting_analyzer5.unit_ids
         is_merged_values = sorting_analyzer5.sorting.get_property("is_merged")
-        assert is_merged_values[sorting_analyzer5.sorting.id_to_index(50)]
+        assert is_merged_values[sorting_analyzer5.sorting.id_to_index("50")]
 
         # test splitting
         if format != "memory":
@@ -589,7 +590,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_data["result_three"][unit_ind] = arr[keep_unit_index]
             else:
-                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                id = list(new_unit_ids).index(unit_id)
                 keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_groups[id])
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 

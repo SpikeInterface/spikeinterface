@@ -98,7 +98,6 @@ def get_template_amplitudes(
     peak_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
     abs_value: bool = True,
     operator: str = "average",
-    override_peak_error: bool = False,
 ):
     """
     Get amplitude on every channel for each unit.
@@ -111,7 +110,6 @@ def get_template_amplitudes(
         Used only when input is Templates.
         Sign of the template to find extremum channels
     peak_mode : None |  "extremum" | "at_index" | "peak_to_peak", default: None
-        Used only when input is Templates.
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
@@ -129,17 +127,13 @@ def get_template_amplitudes(
     """
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        if not override_peak_error:
-            assert (
-                peak_sign is None
-            ), "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
-            assert (
-                peak_mode is None
-            ), "get_template_amplitudes() peak_mode is now contained in SortingAnalyzer, should be None here"
+        assert (
+            peak_sign is None
+        ), "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
         if peak_sign is None:
-            peak_sign = templates_or_sorting_analyzer.main_channel_peak_sign
+            peak_sign = templates_or_sorting_analyzer.peak_sign
         if peak_mode is None:
-            peak_mode = templates_or_sorting_analyzer.main_channel_peak_mode
+            peak_mode = templates_or_sorting_analyzer.peak_mode
         return_in_uV = templates_or_sorting_analyzer.return_in_uV
     elif isinstance(templates_or_sorting_analyzer, Templates):
         return_in_uV = templates_or_sorting_analyzer.is_in_uV
@@ -214,9 +208,9 @@ def _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign,
         values = np.ptp(templates_array, axis=1)
 
     # Step2: max on channel axis
-    main_channel_index = np.argmax(values, axis=1)
+    main_channel_indices = np.argmax(values, axis=1)
 
-    return main_channel_index
+    return main_channel_indices
 
 
 def estimate_main_channel_from_recording(
@@ -246,9 +240,9 @@ def estimate_main_channel_from_recording(
     )
     nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
 
-    main_channel_index = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore)
+    main_channel_indices = _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore)
 
-    return main_channel_index
+    return main_channel_indices
 
 
 def get_templates_array_from_recording_and_sorting(
@@ -278,7 +272,7 @@ def get_templates_array_from_recording_and_sorting(
         nbefore,
         nafter,
         return_in_uV=False,
-        job_name="estimate_main_channel",
+        job_name="estimate_templates",
         **job_kwargs,
     )
 
@@ -400,7 +394,7 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
         assert peak_sign is None
-        peak_sign = templates_or_sorting_analyzer.main_channel_peak_sign
+        peak_sign = templates_or_sorting_analyzer.peak_sign
     elif isinstance(templates_or_sorting_analyzer, Templates):
         if peak_sign is None:
             warnings.warn("get_template_main_channel_peak_shift() with Templates should provide a peak_sign")
