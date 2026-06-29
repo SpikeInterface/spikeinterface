@@ -20,19 +20,20 @@ class BaseTemplateMatching(PeakDetector):
             templates, Templates
         ), f"The templates supplied is of type {type(templates)} and must be a Templates"
         self.templates = templates
+        self.recording = recording
         PeakDetector.__init__(self, recording, return_output=return_output, parents=None)
 
     def get_dtype(self):
         return np.dtype(_base_matching_dtype)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         raise NotImplementedError
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         spikes = self.compute_matching(traces, start_frame, end_frame, segment_index)
         spikes["segment_index"] = segment_index
 
-        margin = self.get_trace_margin()
+        margin = self.get_margin()
         if margin > 0 and spikes.size > 0:
             keep = (spikes["sample_index"] >= margin) & (spikes["sample_index"] < (traces.shape[0] - margin))
             spikes = spikes[keep]

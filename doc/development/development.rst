@@ -65,9 +65,30 @@ Note that you should install spikeinterface before running the tests. You can do
 
 .. code-block:: bash
 
-    pip install -e .[test,extractors,full]
+    pip install -e .[extractors,full] --group test-all
 
-You can change the :code:`[test,extractors,full]` to install only the dependencies you need. The dependencies are specified in the :code:`pyproject.toml` file in the root of the repository.
+You can change the :code:`[extractors,full]` extras to install only the runtime dependencies you need, and swap :code:`--group test-all` for a per-module test group (for example :code:`--group test-postprocessing`). Both lists are defined in :code:`pyproject.toml`: feature extras live under :code:`[project.optional-dependencies]` and test groups under :code:`[dependency-groups]` (PEP 735). Note that :code:`--group` requires pip 25.1+ or uv.
+
+With :code:`uv`, you can run the tests for a single module without creating and activating a virtual environment explicitly. :code:`uv run` resolves the project, extras, and dependency groups on the fly. The general pattern is:
+
+.. code-block:: bash
+
+    uv run --extra <module> --group test-<module> pytest src/spikeinterface/<module>/tests
+
+For example:
+
+.. code-block:: bash
+
+    uv run --extra postprocessing --group test-postprocessing pytest src/spikeinterface/postprocessing/tests
+    uv run --extra sortingcomponents --group test-sortingcomponents pytest src/spikeinterface/sortingcomponents/tests
+
+To replicate the nightly CI environment and run the whole suite at once:
+
+.. code-block:: bash
+
+    uv run --extra extractors --extra streaming_extractors --extra full --group test-all pytest
+
+Both :code:`--extra` and :code:`--group` lists are enumerated in :code:`pyproject.toml`. Some modules' tests happen to work with just :code:`--group test-<module>` because the group pulls the runtime deps transitively (preprocessing is one such case), but declaring the matching :code:`--extra` explicitly is the reliable pattern.
 
 The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can
 find the full tests in the :code:`.github/workflows/full_test.yml` file.

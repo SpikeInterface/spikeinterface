@@ -7,8 +7,9 @@ from spikeinterface.generation import (
     make_linear_displacement,
     DriftingTemplates,
     InjectDriftingTemplatesRecording,
+    NoiseGeneratorRecording,
 )
-from spikeinterface.core.generate import generate_templates, generate_sorting, NoiseGeneratorRecording
+from spikeinterface.core.generate import generate_templates, generate_sorting
 from spikeinterface.core import Templates, BaseRecording
 
 from probeinterface import generate_multi_columns_probe

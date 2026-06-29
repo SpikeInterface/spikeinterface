@@ -56,7 +56,7 @@ class IterativePeakDetector(PeakDetector):
         self.num_iterations = num_iterations
         self.tresholds = tresholds
 
-    def get_trace_margin(self) -> int:
+    def get_margin(self) -> int:
         """
         Calculate the maximum trace margin from the internal pipeline.
         Using the strategy as use by the Node pipeline
@@ -68,10 +68,10 @@ class IterativePeakDetector(PeakDetector):
             The maximum trace margin.
         """
         internal_pipeline = (self.peak_detector_node, self.waveform_extraction_node, self.waveform_denoising_node)
-        pipeline_margin = (node.get_trace_margin() for node in internal_pipeline if hasattr(node, "get_trace_margin"))
+        pipeline_margin = [node.get_margin() for node in internal_pipeline]
         return max(pipeline_margin)
 
-    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform the iterative peak detection, waveform extraction, and denoising.
 
@@ -94,7 +94,7 @@ class IterativePeakDetector(PeakDetector):
             A tuple containing a single ndarray with the detected peaks.
         """
 
-        traces_chunk = np.array(traces_chunk, copy=True, dtype="float32")
+        traces_chunk = np.array(traces, copy=True, dtype="float32")
         local_peaks_list = []
         all_waveforms = []
 
@@ -110,7 +110,7 @@ class IterativePeakDetector(PeakDetector):
                 )
 
             (local_peaks,) = self.peak_detector_node.compute(
-                traces=traces_chunk,
+                traces_chunk,
                 start_frame=start_frame,
                 end_frame=end_frame,
                 segment_index=segment_index,
@@ -124,9 +124,9 @@ class IterativePeakDetector(PeakDetector):
             if local_peaks.size == 0:
                 break
 
-            waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
+            waveforms = self.waveform_extraction_node.compute(traces_chunk, peaks=local_peaks)
             denoised_waveforms = self.waveform_denoising_node.compute(
-                traces=traces_chunk, peaks=local_peaks, waveforms=waveforms
+                traces_chunk, peaks=local_peaks, waveforms=waveforms
             )
 
             self.substract_waveforms_from_traces(
