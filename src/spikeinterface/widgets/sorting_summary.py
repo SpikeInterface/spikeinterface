@@ -203,7 +203,7 @@ class SortingSummaryWidget(BaseWidget):
                 curation_kwargs = {"default_label_options": dp.label_choices}
             v_curation = curation_class(**curation_kwargs)
             v1 = vv_base.Splitter(
-                direction="vertical", item1=vv_views.LayoutItem(v_units_table), item2=vv_views.LayoutItem(v_curation)
+                direction="vertical", item1=vv_base.LayoutItem(v_units_table), item2=vv_base.LayoutItem(v_curation)
             )
         else:
             v1 = v_units_table
