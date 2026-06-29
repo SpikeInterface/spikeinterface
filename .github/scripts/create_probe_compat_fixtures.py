@@ -42,7 +42,7 @@ rec_single = NumpyRecording([traces], sampling_frequency=30000.0)
 rec_single = rec_single.set_probe(probe)  # old API: in_place=False, returns new recording
 
 rec_single.save(folder=str(OUTPUT_DIR / "single_probe_binary"))
-rec_single.save(str(OUTPUT_DIR / "single_probe.zarr"), format="zarr")
+rec_single.save(folder=str(OUTPUT_DIR / "single_probe.zarr"), format="zarr")
 
 # -----------------------------------------------------------------------
 # Fixture 2: two probes with per-probe name/manufacturer
@@ -72,7 +72,7 @@ rec_two = NumpyRecording([traces2], sampling_frequency=30000.0)
 rec_two.set_probegroup(pg)  # old API: in_place=False, returns new recording
 
 rec_two.save(folder=str(OUTPUT_DIR / "two_probe_binary"))
-rec_two.save(str(OUTPUT_DIR / "two_probe.zarr"), format="zarr")
+rec_two.save(folder=str(OUTPUT_DIR / "two_probe.zarr"), format="zarr")
 
 # -----------------------------------------------------------------------
 # Fixture 3: probe with shuffled device_channel_indices
@@ -91,6 +91,6 @@ rec_sh = NumpyRecording([traces3], sampling_frequency=30000.0)
 rec_sh = rec_sh.set_probe(probe_sh)  # old API
 
 rec_sh.save(folder=str(OUTPUT_DIR / "shuffled_probe_binary"))
-rec_sh.save(str(OUTPUT_DIR / "shuffled_probe.zarr"), format="zarr")
+rec_sh.save(folder=str(OUTPUT_DIR / "shuffled_probe.zarr"), format="zarr")
 
 print(f"Fixtures written to: {OUTPUT_DIR.resolve()}")
