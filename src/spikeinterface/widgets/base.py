@@ -32,7 +32,6 @@ backend_kwargs_desc = {
         "figtitle": "The figure title, default: None",
     },
     "figpack": {
-        "generate_url": "If True, the figurl URL is generated and printed, default: True",
         "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell, default: True.",
         "figlabel": "The figurl figure label, default: None",
         "inline": "If True, the widget is displayed inline in the cell, default: None",
