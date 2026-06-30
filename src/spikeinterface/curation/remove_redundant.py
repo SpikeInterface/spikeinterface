@@ -94,7 +94,7 @@ def remove_redundant_units(
 
     if remove_strategy in ("minimum_shift", "highest_amplitude"):
         # this is the values at spike index !
-        peak_values = get_template_amplitudes(sorting_analyzer, peak_mode="at_index", override_peak_error=True)
+        peak_values = get_template_amplitudes(sorting_analyzer, peak_mode="at_index")
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":

@@ -945,7 +945,9 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     """
     rng = np.random.default_rng(seed)
 
-    other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
+    other_ids = np.arange(
+        np.max(sorting.unit_ids.astype(int)) + 1, np.max(sorting.unit_ids.astype(int)) + num + 1
+    ).astype(sorting.unit_ids.dtype)
     shifts = rng.integers(low=-max_shift, high=max_shift, size=num)
 
     shifts[shifts == 0] += max_shift
