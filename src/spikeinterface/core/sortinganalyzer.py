@@ -213,7 +213,7 @@ def create_sorting_analyzer(
     # retrieve or compute the main channel index per unit
     # id based get
     if main_channel_indices is None:
-        if "main_channel_indices" in sorting.get_property_keys():
+        if "main_channel_id" in sorting.get_property_keys():
             main_channel_ids = sorting.get_property("main_channel_id")
             main_channel_indices = recording.ids_to_indices(main_channel_ids)
 

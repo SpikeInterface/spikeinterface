@@ -75,11 +75,6 @@ def get_dataset_to_merge():
         seed=2205,
     )
 
-    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
-    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
-    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
-    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
-
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
     analyzer_raw = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
@@ -105,11 +100,6 @@ def get_dataset_to_split():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
-
-    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
-    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
-    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
-    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
@@ -164,8 +154,12 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
     # soft must faster
     assert t_soft < t_hard
     np.testing.assert_array_equal(analyzer_merged_hard.unit_ids, analyzer_merged_soft.unit_ids)
-    new_unit_ids = list(np.arange(max(split_unit_ids) + 1, max(split_unit_ids) + 1 + len(merges)))
-    np.testing.assert_array_equal(analyzer_merged_hard.unit_ids, list(unmerged_unit_ids) + new_unit_ids)
+    new_unit_ids = list(
+        np.arange(max(split_unit_ids.astype(int)) + 1, max(split_unit_ids.astype(int)) + 1 + len(merges))
+    )
+    new_unit_ids = [str(unit_id) for unit_id in new_unit_ids]
+
+    assert set(analyzer_merged_hard.unit_ids) == set(list(unmerged_unit_ids) + new_unit_ids)
 
     for ext in extension_dict:
         # 1. check that data are exactly the same for unchanged units between hard/soft/original
@@ -212,7 +206,9 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
             else:
                 data_hard = data_hard_merged
                 data_soft = data_soft_merged
-            if data_hard.dtype.fields is None:
+            if data_soft.dtype.kind in ["U", "S"]:
+                assert np.all(data_hard == data_soft)
+            elif data_hard.dtype.fields is None:
                 if not np.allclose(data_hard, data_soft, rtol=rtol):
                     max_error = np.max(np.abs(data_hard - data_soft))
                     raise Exception(f"Failed for {ext} - max error {max_error}")
@@ -288,7 +284,9 @@ def test_SortingAnalyzer_split_all_extensions(dataset_to_split, sparse):
             else:
                 data_soft = data_split_soft
                 data_hard = data_split_hard
-            if data_soft.dtype.fields is None:
+            if data_soft.dtype.kind in ["U", "S"]:
+                assert np.all(data_hard == data_soft)
+            elif data_soft.dtype.fields is None:
                 if not np.allclose(data_hard, data_soft, rtol=rtol):
                     max_error = np.max(np.abs(data_hard - data_soft))
                     raise Exception(f"Failed for {ext} - max error {max_error}")

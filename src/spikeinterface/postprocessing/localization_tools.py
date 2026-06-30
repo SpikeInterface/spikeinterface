@@ -162,7 +162,9 @@ def compute_center_of_mass(
     assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
 
     if sorting_analyzer_or_templates.sparsity is None:
-        sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
+        sparsity = compute_sparsity(
+            sorting_analyzer_or_templates, method="radius", radius_um=radius_um, peak_sign="neg"
+        )
     else:
         sparsity = sorting_analyzer_or_templates.sparsity
 

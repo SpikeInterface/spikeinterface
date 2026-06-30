@@ -1007,12 +1007,20 @@ def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=Fa
         The dictionary with the split unit_ids. Returned only if output_ids is True.
     """
     unit_ids = sorting.unit_ids
-    assert unit_ids.dtype.kind == "i"
 
-    m = np.max(unit_ids) + 1
+    unit_ids_integer = unit_ids.dtype.kind == "i"
+    if not unit_ids_integer:
+        assert np.char.isdigit(unit_ids.astype(str)).all(), "Not all Unit IDs are parsable as integers"
+
+    integer_unit_ids = unit_ids.astype(int)
+
+    m = np.max(integer_unit_ids) + 1
     other_ids = {}
     for unit_id in split_ids:
-        other_ids[unit_id] = np.arange(m, m + num_split, dtype=unit_ids.dtype)
+        new_ids = np.arange(m, m + num_split).astype(int)
+        if not unit_ids_integer:
+            new_ids = [str(new_id) for new_id in new_ids]
+        other_ids[unit_id] = new_ids
         m += num_split
 
     rng = np.random.default_rng(seed)
