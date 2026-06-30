@@ -525,13 +525,13 @@ def test_synchrony_metrics(sorting_analyzer_simple, periods_simple):
 
 def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
 
-    unit_ids_subset = [3, 7]
+    unit_ids_subset = ["3", "7"]
 
     synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, unit_ids=unit_ids_subset)
 
-    assert list(synchrony_metrics.sync_spike_2.keys()) == [3, 7]
-    assert list(synchrony_metrics.sync_spike_4.keys()) == [3, 7]
-    assert list(synchrony_metrics.sync_spike_8.keys()) == [3, 7]
+    assert list(synchrony_metrics.sync_spike_2.keys()) == ["3", "7"]
+    assert list(synchrony_metrics.sync_spike_4.keys()) == ["3", "7"]
+    assert list(synchrony_metrics.sync_spike_8.keys()) == ["3", "7"]
 
 
 def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):

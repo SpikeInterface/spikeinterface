@@ -215,6 +215,14 @@ def create_sorting_analyzer(
     if main_channel_indices is None:
         if "main_channel_id" in sorting.get_property_keys():
             main_channel_ids = sorting.get_property("main_channel_id")
+            # If there is a unit with no spikes, the `main_channel_id` will default to ''. To avoid this triggering an error
+            # we give the no-spikes unit a random `main_channel_id`. TODO: improve this.
+            if main_channel_ids.dtype.kind in ["S", "U"]:
+                if "" in main_channel_ids:
+                    random_channel_id = recording.channel_ids[0]
+                    main_channel_ids = [
+                        channel_id if channel_id != "" else random_channel_id for channel_id in main_channel_ids
+                    ]
             main_channel_indices = recording.ids_to_indices(main_channel_ids)
 
     if main_channel_indices is None:
@@ -671,7 +679,7 @@ class SortingAnalyzer:
     def main_channel_indices(self):
         if self._main_channel_indices is None:
             sorting_main_channel_ids = self.get_sorting_property("main_channel_id")
-            if sorting_main_channel_ids is not None:
+            if sorting_main_channel_ids is not None and self.has_recording():
                 main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
                 self._main_channel_indices = main_channel_indices
             else:

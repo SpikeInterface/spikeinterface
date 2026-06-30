@@ -139,10 +139,7 @@ class PresenceRatio(BaseMetric):
     supports_periods = True
 
 
-def compute_snrs(
-    sorting_analyzer,
-    unit_ids=None,
-):
+def compute_snrs(sorting_analyzer, unit_ids=None, method="extremum"):
     """
     Compute signal to noise ratio.
 
@@ -173,7 +170,7 @@ def compute_snrs(
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
-    unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=False)
+    unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=False, peak_mode=method)
 
     snrs = {}
     for unit_id in unit_ids:
@@ -189,10 +186,10 @@ def compute_snrs(
 class SNR(BaseMetric):
     metric_name = "snr"
     metric_function = compute_snrs
-    metric_params = {}
+    metric_params = {"method": "extremum"}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
-    depend_on = ["method"]
+    depend_on = ["noise_levels", "templates"]
 
 
 # This is from Bombcell, but the "default" SNR metric adapted using median + peak_sign="both" gives more robust results,

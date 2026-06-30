@@ -71,12 +71,13 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
         skip_pc_metrics=False,
         seed=2205,
     )
-    print(metrics.columns)
     assert "isolation_distance" in metrics.columns
 
 
 def test_merging_quality_metrics(sorting_analyzer_simple):
 
+    # from copy import deepcopy
+    # sorting_analyzer = deepcopy(sorting_analyzer_simple)
     sorting_analyzer = sorting_analyzer_simple
 
     metrics = compute_quality_metrics(
@@ -88,7 +89,7 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     )
 
     # sorting_analyzer_simple has ten units
-    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
+    new_sorting_analyzer = sorting_analyzer.merge_units([["0", "1"]])
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # we should copy over the metrics after merge
@@ -114,6 +115,9 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
     # make a copy and make it recordingless
     sorting_analyzer_norec = sorting_analyzer.save_as(format="memory")
+
+    # keep the same `main_channel_indices` as before
+    sorting_analyzer_norec._main_channel_indices = sorting_analyzer._main_channel_indices
     sorting_analyzer_norec.delete_extension("quality_metrics")
     sorting_analyzer_norec._recording = None
     assert not sorting_analyzer_norec.has_recording()
