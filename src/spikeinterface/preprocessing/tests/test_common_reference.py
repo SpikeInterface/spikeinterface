@@ -209,5 +209,37 @@ def test_local_car_vs_cmr_performance():
     assert car_time < cmr_time
 
 
+def test_cmr_parallel_median_matches_stock():
+    """``get_traces_multi_thread`` must produce bit-identical median output."""
+    from spikeinterface import NumpyRecording
+
+    rng = np.random.default_rng(0)
+    T, C = 60_000, 64
+    traces = (rng.standard_normal((T, C)) * 100).astype("float32")
+    rec = NumpyRecording([traces], sampling_frequency=30_000.0)
+    cmr = common_reference(rec, reference="global", operator="median")
+    ref = cmr.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    out = cmr.get_traces_multi_thread(start_frame=5_000, end_frame=T - 5_000, max_threads=8)
+    np.testing.assert_array_equal(out, ref)
+
+
+def test_cmr_parallel_average_matches_stock():
+    """Same invariant for the mean (CAR) operator; tolerate float rounding."""
+    from spikeinterface import NumpyRecording
+
+    rng = np.random.default_rng(0)
+    T, C = 60_000, 64
+    traces = (rng.standard_normal((T, C)) * 100).astype("float32")
+    rec = NumpyRecording([traces], sampling_frequency=30_000.0)
+    cmr = common_reference(rec, reference="global", operator="average")
+    ref = cmr.get_traces(start_frame=5_000, end_frame=T - 5_000)
+    out = cmr.get_traces_multi_thread(start_frame=5_000, end_frame=T - 5_000, max_threads=8)
+    # Mean across different block partitions can differ by 1 ULP due to
+    # non-associative float summation.
+    np.testing.assert_allclose(out, ref, rtol=1e-5, atol=1e-4)
+
+
 if __name__ == "__main__":
     test_local_car_vs_cmr_performance()
+    test_cmr_parallel_median_matches_stock()
+    test_cmr_parallel_average_matches_stock()
