@@ -24,6 +24,7 @@ on:
       - '.github/workflows/cross_version_serialization.yml'
   schedule:
     - cron: '0 4 * * 0'  # weekly, Sunday 04:00 UTC
+  workflow_dispatch:  # manual runs (only available once this workflow is on the default branch)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -67,7 +68,10 @@ jobs:
           pytest src/spikeinterface/core/tests/test_cross_version_serialization.py -v
 
   weekly-matrix:
-    if: github.event_name == 'schedule'
+    # TEMPORARY: 'pull_request' is here only to exercise the matrix once in CI on this PR.
+    # Remove it before merge so the matrix runs on schedule / manual dispatch only (it is
+    # heavy: several old installs). Production trigger is schedule + workflow_dispatch.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     name: Load fixtures from ${{ matrix.si-version }}
     runs-on: ubuntu-latest
     strategy:
