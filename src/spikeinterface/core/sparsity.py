@@ -446,7 +446,7 @@ class ChannelSparsity:
             if the `noise_levels` extension is present.
         peak_sign : "neg" | "pos" | "both"
             Sign of the template to compute amplitudes.
-        amplitude_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+        amplitude_mode : None | "extremum" | "at_index" | "peak_to_peak", default: None
             Mode to compute the amplitude of the templates for the "snr" method.
 
         Returns
@@ -499,7 +499,7 @@ class ChannelSparsity:
             A Templates or a SortingAnalyzer object.
         threshold : float
             Threshold for "amplitude" method (in uV).
-        amplitude_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+        amplitude_mode : None | "extremum" | "at_index" | "peak_to_peak", default: None
             Mode to compute the amplitude of the templates.
 
         Returns
@@ -708,8 +708,8 @@ def compute_sparsity(
             templates_or_sorting_analyzer,
             threshold,
             noise_levels=noise_levels,
-            amplitude_mode=amplitude_mode,
             peak_sign=peak_sign,
+            amplitude_mode=amplitude_mode,
         )
     elif method == "amplitude":
         assert threshold is not None, "For the 'amplitude' method, 'threshold' needs to be given"
@@ -759,9 +759,9 @@ def estimate_sparsity(
     For the "snr" method, `noise_levels` must passed with the `noise_levels` argument.
     These can be computed with the `get_noise_levels()` function.
 
-    If main_channel_indices are given and method="radius" then there is not need estimate
-    the templates otherwise the templates must be estimated using
-    `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
+    If main_channel_indices are given and method="radius" then there is no need to estimate
+    the templates; otherwise the templates must be estimated using
+    `estimate_templates_with_accumulator()`  which is fast and parallel but needs to traverse
     the recording.
 
     Note that the "energy" method is not supported because it requires a `SortingAnalyzer` object.
@@ -782,8 +782,7 @@ def estimate_sparsity(
         Noise levels required for the "snr" and "energy" methods. You can use the
         `get_noise_levels()` function to compute them.
     main_channel_indices : np.array | None, default: None
-        Main channel indicies can be provided in case of method="radius", this avoid the
-        `estimate_templates_with_accumulator()` which is slow.
+        Main channel indicies for the case of method="radius"
     {}
 
     Returns

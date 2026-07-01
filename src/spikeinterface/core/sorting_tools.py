@@ -514,7 +514,7 @@ def set_properties_after_merging(
                 new_values[new_index] = merge_values[0]
             elif (not same_property_values) and key == "main_channel_id":
                 # Main channel id is special. For now, if there is a disagreement, we take the value of the unit
-                # with the most spikes
+                # with the most spikes. TODO: overwrite this for analyzer if templates exist.
                 num_spikes_per_unit = sorting_pre_merge.count_num_spikes_per_unit(unit_ids=merge_group)
                 max_unit_index = np.argmax(num_spikes_per_unit.values())
                 new_values[new_index] = merge_values[max_unit_index]

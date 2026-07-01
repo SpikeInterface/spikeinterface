@@ -69,7 +69,7 @@ def get_main_channel_templates_array(one_object: Templates | SortingAnalyzer, re
     main_channel_templates : np.ndarray
         The dense templates (num_units, num_samples)
     """
-    # TODO later: do not load the dense templates array if this is not necessary (when sprse internally)
+    # TODO later: do not load the dense templates array if this is not necessary (when sparse internally)
     main_channels = one_object.get_main_channels(outputs="index", with_dict=False)
     templates_array = get_dense_templates_array(one_object, return_in_uV=return_in_uV)
     num_units = templates_array.shape[0]
@@ -106,10 +106,12 @@ def get_template_amplitudes(
     ----------
     templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
-    peak_sign :  None | "neg" | "pos" | "both"
+    peak_sign :  None | "neg" | "pos" | "both", default: None
+        For `sorting_analyzer` input, `peak_sign` must be None. Then uses the peak_mode of the analyzer.
         Used only when input is Templates.
         Sign of the template to find extremum channels
     peak_mode : None |  "extremum" | "at_index" | "peak_to_peak", default: None
+        For `sorting_analyzer` input, `peak_mode` must be None. Then uses the peak_mode of the analyzer.
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
@@ -188,8 +190,8 @@ def get_template_amplitudes(
 
 def _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign, nbefore):
     """
-    Get the main channel for each template in a `templates_array`, which has dimensions
-    (num_units) x (num time samples) x (num channels)
+    Get the main channel index for each template in a `templates_array`, which has
+    dimensions (num_units) x (num time samples) x (num channels)
     """
     # Step1 : max on time axis
     if peak_mode == "extremum":
@@ -216,8 +218,8 @@ def _get_main_channel_from_template_array(templates_array, peak_mode, peak_sign,
 def estimate_main_channel_from_recording(
     recording,
     sorting,
-    peak_sign: Literal["neg", "both", "pos"] = "both",
-    peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+    peak_sign: None | Literal["neg", "both", "pos"] = None,
+    peak_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
     num_spikes_for_main_channel=100,
     ms_before=1.0,
     ms_after=2.5,
@@ -229,11 +231,10 @@ def estimate_main_channel_from_recording(
 
     """
 
-    if peak_sign == "pos":
-        warnings.warn(
-            "estimate_main_channel_from_recording() with peak_sign='pos' is a strange case maybe you "
-            "should revert the traces instead"
-        )
+    if peak_sign is None:
+        raise ValueError("You must provide `peak_sign` in `estimate_main_channel_from_recording`")
+    if peak_mode is None:
+        raise ValueError("You must provide `peak_mode` in `estimate_main_channel_from_recording`")
 
     templates_array = get_templates_array_from_recording_and_sorting(
         recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed
@@ -425,7 +426,7 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
     return shifts
 
 
-# TODO remove this in 0.105.0
+# TODO remove this in 0.106.0
 def get_template_extremum_amplitude(
     templates_or_sorting_analyzer,
     peak_sign: Literal["neg", "pos", "both"] = "neg",
@@ -434,7 +435,7 @@ def get_template_extremum_amplitude(
     operator: Literal["average", "median"] = "average",
 ):
     """
-    Depracted will be removed in 0.105.0.
+    Depracted will be removed in 0.106.0.
     Use get_template_main_channel_amplitude() instead.
 
     Computes amplitudes on the best channel.
@@ -490,9 +491,9 @@ def get_template_main_channel_amplitude(
     ----------
     templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
-    peak_sign :  "neg" | "pos" | "both"
+    peak_sign :  None | "neg" | "pos" | "both", default: None
         Sign of the template to find extremum channels
-    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    peak_mode : None | "extremum" | "at_index" | "peak_to_peak", default: None
         Where the amplitude is computed
         * "extremum": take the peak value (max or min depending on `peak_sign`)
         * "at_index": take value at `nbefore` index

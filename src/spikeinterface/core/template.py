@@ -488,9 +488,27 @@ class Templates:
         self,
         peak_sign: Literal["neg", "both", "pos"] = "both",
         peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
-        outputs="index",
+        outputs: Literal["index", "id"] = "index",
         with_dict=False,
     ):
+        """
+        Returns the main_channels of the Templates object.
+
+        Parameters
+        ----------
+        peak_sign :  "neg" | "pos" | "both", default: "both
+            Sign of the template to find extremum channels
+        peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+            Where the amplitude is computed
+            * "extremum": take the peak value (max or min depending on `peak_sign`)
+            * "at_index": take value at `nbefore` index
+            * "peak_to_peak": take the peak-to-peak amplitude
+        outputs = "index" | "id", default: "index"
+            Return either the channel indices, or the channel ids
+        with_dict: bool, default: False
+            If False, returns just the channel informatiom. If True, returns a dict
+            with keys equal to the unit ids and values their channel information
+        """
         from .template_tools import _get_main_channel_from_template_array
 
         templates_array = self.get_dense_templates()

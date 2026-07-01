@@ -78,7 +78,6 @@ class ComputeQualityMetrics(BaseMetricExtension):
                 del self.params["metric_params"]["amplitude_median"]["peak_sign"]
 
         if "snr" in self.params["metric_names"]:
-            print(f"{self.params['metric_names']=}")
             if "peak_mode" in self.params["metric_params"]["snr"]:
                 self.params["metric_params"]["snr"]["method"] = self.params["metric_params"]["snr"]["peak_mode"]
                 del self.params["metric_params"]["snr"]["peak_mode"]

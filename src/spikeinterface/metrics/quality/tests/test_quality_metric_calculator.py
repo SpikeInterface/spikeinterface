@@ -76,8 +76,6 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
 
 def test_merging_quality_metrics(sorting_analyzer_simple):
 
-    # from copy import deepcopy
-    # sorting_analyzer = deepcopy(sorting_analyzer_simple)
     sorting_analyzer = sorting_analyzer_simple
 
     metrics = compute_quality_metrics(

@@ -11,7 +11,6 @@ class TestSpikeLocationsExtension(AnalyzerExtensionCommonTestSuite):
             dict(method="center_of_mass"),
             dict(method="center_of_mass", spike_retriever_kwargs=dict(channel_from_template=True)),
             dict(method="center_of_mass", spike_retriever_kwargs=dict(channel_from_template=False)),
-            dict(method="center_of_mass"),
             dict(method="monopolar_triangulation"),
             dict(method="grid_convolution"),
         ],

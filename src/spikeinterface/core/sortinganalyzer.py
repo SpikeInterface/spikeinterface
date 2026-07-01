@@ -77,8 +77,8 @@ def create_sorting_analyzer(
 
     This object will be also use used for plotting purpose.
 
-    The main_channel_indices can be externally provided. If not then this is taken from
-    sorting property. If not then the main_channel_indices is estimated using
+    The main_channel_indices can be externally provided. If not, then this is taken from
+    sorting property. If not, then the main_channel_indices is estimated using
     `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
     the recording.
 
@@ -97,9 +97,9 @@ def create_sorting_analyzer(
         If "memory" is used, the analyzer is stored in RAM. Use this option carefully!
     main_channel_indices : None | np.array
         The main_channel_indices can be externally provided
-    peak_sign : "both" | "neg"
-        In case when the main_channel_indices is estimated, which sign to consider "both" or "neg".
-    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    peak_sign : "both" | "neg" | "pos"
+        When main channel is estimated, the peak sign used to find the main channel.
+    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
@@ -131,8 +131,8 @@ def create_sorting_analyzer(
 
             * storage_options: dict | None (fsspec storage options)
             * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
-    sparsity_kwargs : dict | None
-        Dict given to estimate the sparsity.
+    sparsity_kwargs : dict | None, default None
+        Dict of kwargs that is passed to `estimate_sparsity`.
 
     Returns
     -------
@@ -199,19 +199,15 @@ def create_sorting_analyzer(
             **job_kwargs,
         )
 
-    if format != "memory":
-        if format == "zarr":
-            if not is_path_remote(folder):
-                folder = clean_zarr_folder_name(folder)
-        if not is_path_remote(folder):
-            if Path(folder).is_dir():
-                if not overwrite:
-                    raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
-                else:
-                    shutil.rmtree(folder)
+    if format != "memory" and not is_path_remote(folder):
+        folder = clean_zarr_folder_name(folder) if format == "zarr" else folder
+        if Path(folder).is_dir():
+            if overwrite:
+                shutil.rmtree(folder)
+            else:
+                raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
-    # retrieve or compute the main channel index per unit
-    # id based get
+    # retrieve or compute the main channel index per unit id
     if main_channel_indices is None:
         if "main_channel_id" in sorting.get_property_keys():
             main_channel_ids = sorting.get_property("main_channel_id")
@@ -457,8 +453,6 @@ class SortingAnalyzer:
 
             sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
 
-        # This will ensure that the sorting saved always will have this main_channel
-
         if format == "memory":
             sorting_analyzer = cls.create_memory(
                 sorting,
@@ -500,7 +494,7 @@ class SortingAnalyzer:
             raise ValueError("SortingAnalyzer.create: wrong format")
 
         main_channel_ids = sorting_analyzer.channel_ids[main_channel_indices]
-        sorting_analyzer.set_sorting_property("main_channel_id", main_channel_ids, save=True)
+        sorting_analyzer.set_sorting_property("main_channel_id", main_channel_ids, save=False)
 
         return sorting_analyzer
 
@@ -669,7 +663,7 @@ class SortingAnalyzer:
 
         if "peak_sign" not in settings:
             # before 0.104.0 was not in peak_sign
-            # TODO make something more fancy that exlore the previous params of extension
+            # TODO make something more fancy that explore the previous params of extension
             new_settings["peak_sign"] = "both"
             new_settings["peak_mode"] = "extremum"
 
@@ -691,7 +685,8 @@ class SortingAnalyzer:
 
     def compute_main_channel_backwards_compatibility(self):
         """
-        Computes the `main_channel_indices` for an old analyzer. Logic is:
+        Computes the `main_channel_indices` for an old analyzer, with `peak_sign` = "both"
+         and `peak_mode` = "extremum". Logic is:
 
         1) If you have the `templates` extension: use this to find the main_channel_indices, with
         default settings and restricted to the sparsity of the analyzer.
@@ -712,8 +707,8 @@ class SortingAnalyzer:
 
         warnings.warn(
             "This sorting analyzer is from an an older version of spikeinterface. "
-            "For future compatibility we will compute the `main_channel_indices`."
-            "Save???"
+            "For future compatibility we will compute the `main_channel_indices`. "
+            "To keep this information on disk, please save your analyzer using `analyzer.save_as()`."
         )
 
         main_channel_indices = None
@@ -783,8 +778,6 @@ class SortingAnalyzer:
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
         from .loading import load
-
-        # TODO check that sorting has main_channel_index and ensure backward compatibility
 
         folder = Path(folder)
         assert folder.is_dir(), f"This folder does not exists {folder}"
@@ -974,8 +967,6 @@ class SortingAnalyzer:
         import zarr
         from .loading import load
 
-        # TODO check that sorting has main_channel_index and ensure backward compatibility
-
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
 
@@ -1146,8 +1137,18 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
 
-    def get_main_channels(self, outputs="index", with_dict=False):
-        """ """
+    def get_main_channels(self, outputs: Literal["index", "id"] = "index", with_dict: bool = False):
+        """
+        Returns the main_channels of the analyzer.
+
+        Parameters
+        ----------
+        outputs = "index" | "id", default: "index"
+            Return either the channel indices, or the channel ids
+        with_dict: bool, default: False
+            If False, returns just the channel informatiom. If True, returns a dict
+            with keys equal to the unit ids and values their channel information
+        """
         main_channel_indices = self.main_channel_indices
         if outputs == "index":
             main_chans = main_channel_indices

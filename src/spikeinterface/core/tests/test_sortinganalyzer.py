@@ -46,16 +46,12 @@ def dataset():
 def test_SortingAnalyzer_memory(tmp_path, dataset):
     recording, sorting = dataset
 
-    # Note the sorting contain already main_channel_ids
+    # The sorting contain already main_channel_ids
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     main_channel_ids = sorting.get_property("main_channel_id")
     main_channel_indices = recording.ids_to_indices(main_channel_ids)
-
-    print(f"{main_channel_ids=}", flush=True)
-    print(f"{main_channel_indices=}", flush=True)
-    print(f"{sorting_analyzer.get_main_channels()=}", flush=True)
 
     assert np.array_equal(sorting_analyzer.get_main_channels(), main_channel_indices)
 
@@ -88,7 +84,6 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     # Create when main_channel_indices is not given : this is estimated
     sorting2 = sorting.clone()
     sorting2._properties.pop("main_channel_id")
-    print(sorting2.get_property("main_channel_id"))
     sorting_analyzer = create_sorting_analyzer(sorting2, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
 
@@ -733,9 +728,9 @@ if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()
     test_SortingAnalyzer_memory(tmp_path, dataset)
-    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    # test_SortingAnalyzer_zarr(tmp_path, dataset)
-    # test_SortingAnalyzer_tmp_recording(dataset)
-    # test_extension()
-    # test_extension_params()
-    # test_runtime_dependencies(dataset)
+    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    test_SortingAnalyzer_tmp_recording(dataset)
+    test_extension()
+    test_extension_params()
+    test_runtime_dependencies(dataset)

@@ -40,11 +40,6 @@ class UnitsSelectionSorting(BaseSorting):
         parent_sorting.copy_metadata(self, only_main=False, ids=self._unit_ids)
         self._parent = parent_sorting
 
-        # if parent_sorting.get_property('main_channel_id') is not None:
-        #     main_channel_id = parent_sorting.get_property('main_channel_id')
-        #     new_main_channel_id = [inverted_conversion[channel_id] for channel_id in main_channel_id]
-        #     self.set_property('main_channel_id', new_main_channel_id)
-
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
 

@@ -303,13 +303,13 @@ def test_compute_sparsity():
     # this is needed for method="energy"
 
     # using object SortingAnalyzer
-    # sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2)
-    # sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0)
-    # sparsity = compute_sparsity(sorting_analyzer, method="closest_channels", num_channels=2)
-    # sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5)
-    # sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5)
-    # sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
-    # sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
+    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2)
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0)
+    sparsity = compute_sparsity(sorting_analyzer, method="closest_channels", num_channels=2)
+    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
 
     # using object Templates
     templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
@@ -328,6 +328,6 @@ def test_compute_sparsity():
 
 
 if __name__ == "__main__":
-    test_ChannelSparsity()
-    test_estimate_sparsity()
+    # test_ChannelSparsity()
+    # test_estimate_sparsity()
     test_compute_sparsity()
