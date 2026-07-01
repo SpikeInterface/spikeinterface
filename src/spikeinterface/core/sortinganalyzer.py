@@ -207,6 +207,15 @@ def create_sorting_analyzer(
             else:
                 raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
+    if main_channel_indices is not None:
+        if len(main_channel_indices) != sorting.get_num_units():
+            raise ValueError("len(main_channel_indices) must equal the number of units in the `sorting`")
+
+    if main_channel_indices is not None and sparsity_kwargs.get("method") != "radius":
+        raise ValueError(
+            'You can either pass `main_channel_indices` or a sparsity method not equal to "radius", but not both.'
+        )
+
     # retrieve or compute the main channel index per unit id
     if main_channel_indices is None:
         if "main_channel_id" in sorting.get_property_keys():
@@ -249,7 +258,14 @@ def create_sorting_analyzer(
             sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)
         ), "sparsity si not constistentent with main_channel_indices"
     elif sparse:
-        sparsity = estimate_sparsity(sorting, recording, main_channel_indices=main_channel_indices, **sparsity_kwargs)
+        sparsity = estimate_sparsity(
+            sorting,
+            recording,
+            main_channel_indices=main_channel_indices,
+            peak_sign=peak_sign,
+            amplitude_mode=peak_mode,
+            **sparsity_kwargs,
+        )
     else:
         sparsity = None
 
@@ -677,13 +693,13 @@ class SortingAnalyzer:
                 main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
                 self._main_channel_indices = main_channel_indices
             else:
-                self._main_channel_indices = self.compute_main_channel_backwards_compatibility()
+                self._main_channel_indices = self._compute_main_channel_backwards_compatibility()
                 main_channel_ids = self.channel_ids[self._main_channel_indices]
                 self.set_sorting_property("main_channel_id", main_channel_ids, save=False)
 
         return self._main_channel_indices
 
-    def compute_main_channel_backwards_compatibility(self):
+    def _compute_main_channel_backwards_compatibility(self):
         """
         Computes the `main_channel_indices` for an old analyzer, with `peak_sign` = "both"
          and `peak_mode` = "extremum". Logic is:
