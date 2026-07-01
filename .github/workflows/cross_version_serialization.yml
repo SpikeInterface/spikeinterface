@@ -1,0 +1,104 @@
+name: Cross-version serialization
+
+# Loads objects serialized by an old spikeinterface release with the current code, to
+# catch changes that silently break loading of old saved files (moved classes, changed
+# constructor signatures, changed on-disk encodings).
+#
+# Delivery model: Live generation. Fixtures are regenerated from a real old install each
+# run in an isolated uv environment (nothing committed). Per-PR runs against the previous
+# release only, for speed; the full version matrix runs weekly.
+#
+# Version floor: the matrix starts at the oldest release that installs cleanly on the CI
+# Python. 0.100/0.101 are excluded for now (numcodecs dependency rot on Python 3.11).
+# "Testable floor = support floor" is a deliberate, provisional choice; revisit with the
+# team. See obsidian probe/serialization proposal notes.
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+    paths:
+      - 'src/spikeinterface/core/**'
+      - '.github/scripts/serialization/**'
+      - '.github/workflows/cross_version_serialization.yml'
+  schedule:
+    - cron: '0 4 * * 0'  # weekly, Sunday 04:00 UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  per-pr-previous-release:
+    if: github.event_name == 'pull_request'
+    name: Load fixtures from previous release (0.104.*)
+    runs-on: ubuntu-latest
+    env:
+      SI_SERIALIZATION_FIXTURES_DIR: ${{ github.workspace }}/serialization_fixtures
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.11'
+          enable-cache: false
+
+      # Generate fixtures with the previous release in an isolated environment (no
+      # pollution of the environment the branch is later installed into).
+      - name: Generate fixtures with spikeinterface 0.104.*
+        run: |
+          uv run --isolated --no-project --python 3.11 \
+            --with "spikeinterface[core]==0.104.*" --with scipy \
+            python .github/scripts/serialization/generate_fixtures.py "$SI_SERIALIZATION_FIXTURES_DIR"
+
+      # Install this branch (plus scipy for the preprocessing-chain fixture) and load.
+      - name: Load fixtures with the branch
+        run: |
+          uv pip install --system -e . --group test-core
+          uv pip install --system scipy
+          pytest src/spikeinterface/core/tests/test_cross_version_serialization.py -v
+
+  weekly-matrix:
+    if: github.event_name == 'schedule'
+    name: Load fixtures from ${{ matrix.si-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        si-version: ["0.102.3", "0.103.2", "0.104.0"]
+    env:
+      SI_SERIALIZATION_FIXTURES_DIR: ${{ github.workspace }}/serialization_fixtures
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.11'
+          enable-cache: false
+
+      - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
+        run: |
+          uv run --isolated --no-project --python 3.11 \
+            --with "spikeinterface[core]==${{ matrix.si-version }}" --with scipy \
+            python .github/scripts/serialization/generate_fixtures.py "$SI_SERIALIZATION_FIXTURES_DIR"
+
+      - name: Load fixtures with the branch
+        run: |
+          uv pip install --system -e . --group test-core
+          uv pip install --system scipy
+          pytest src/spikeinterface/core/tests/test_cross_version_serialization.py -v
