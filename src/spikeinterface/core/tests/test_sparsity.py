@@ -287,7 +287,6 @@ def test_estimate_sparsity():
         progress_bar=True,
         n_jobs=1,
     )
-    print(noise_levels)
 
 
 def test_compute_sparsity():
@@ -317,14 +316,18 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(
         templates, method="best_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
     )
-    sparsity = compute_sparsity(templates, method="radius", radius_um=50.0)
+    sparsity = compute_sparsity(
+        templates, method="radius", radius_um=50.0, peak_sign="both", amplitude_mode="peak_to_peak"
+    )
     sparsity = compute_sparsity(
         templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg", amplitude_mode="extremum"
     )
     sparsity = compute_sparsity(
         templates, method="amplitude", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
     )
-    sparsity = compute_sparsity(templates, method="closest_channels", num_channels=2)
+    sparsity = compute_sparsity(
+        templates, method="closest_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
+    )
 
 
 if __name__ == "__main__":

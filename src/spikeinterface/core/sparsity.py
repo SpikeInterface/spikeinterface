@@ -712,10 +712,14 @@ def compute_sparsity(
         )
     elif method == "closest_channels":
         assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
-        sparsity = ChannelSparsity.from_closest_channels(templates_or_sorting_analyzer, num_channels)
+        sparsity = ChannelSparsity.from_closest_channels(
+            templates_or_sorting_analyzer, num_channels, peak_sign=peak_sign, peak_mode=amplitude_mode
+        )
     elif method == "radius":
         assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
-        sparsity = ChannelSparsity.from_radius(templates_or_sorting_analyzer, radius_um)
+        sparsity = ChannelSparsity.from_radius(
+            templates_or_sorting_analyzer, radius_um, peak_sign=peak_sign, peak_mode=amplitude_mode
+        )
     elif method == "snr":
         assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_snr(
@@ -854,10 +858,12 @@ def estimate_sparsity(
             )
         elif method == "closest_channels":
             assert num_channels is not None, "For the 'closest_channels' method, 'num_channels' needs to be given"
-            sparsity = ChannelSparsity.from_closest_channels(templates, num_channels)
+            sparsity = ChannelSparsity.from_closest_channels(
+                templates, num_channels, peak_sign=peak_sign, peak_mode=amplitude_mode
+            )
         elif method == "radius":
             assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
-            sparsity = ChannelSparsity.from_radius(templates, radius_um)
+            sparsity = ChannelSparsity.from_radius(templates, radius_um, peak_sign=peak_sign, peak_mode=amplitude_mode)
         elif method == "snr":
             assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
             assert noise_levels is not None, (
