@@ -450,7 +450,7 @@ def generate_hybrid_recording(
         ), "templates and recording should have the same number of channels"
         nbefore = templates.nbefore
         nafter = templates.nafter
-        unit_locations = compute_monopolar_triangulation(templates)
+        unit_locations = compute_monopolar_triangulation(templates, peak_sign="both", peak_mode="extremum")
 
         channel_locations_rel = channel_locations - channel_locations[0]
         templates_locations = templates.get_channel_locations()

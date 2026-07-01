@@ -24,6 +24,8 @@ def compute_monopolar_triangulation(
     return_alpha: bool = False,
     enforce_decrease: bool = False,
     feature: str = "ptp",
+    peak_sign=None,
+    peak_mode=None,
 ) -> np.ndarray:
     """
     Localize unit with monopolar triangulation.
@@ -63,6 +65,10 @@ def compute_monopolar_triangulation(
         monopolar triangulation are peak-to-peak amplitudes ("ptp", default),
         energy ("energy", as L2 norm) or voltages at the center of the waveform
         ("peak_voltage")
+    peak_sign : None | "neg" | "pos" | "both", default: None
+        If sparsity not given, peak_sign used to compute sparsity.
+    amplitude_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+        If sparsity not given, amplitude_mode used to compute sparsity.
 
     Returns
     -------
@@ -77,7 +83,13 @@ def compute_monopolar_triangulation(
     contact_locations = sorting_analyzer_or_templates.get_channel_locations()
 
     if sorting_analyzer_or_templates.sparsity is None:
-        sparsity = compute_sparsity(sorting_analyzer_or_templates, method="radius", radius_um=radius_um)
+        sparsity = compute_sparsity(
+            sorting_analyzer_or_templates,
+            method="radius",
+            radius_um=radius_um,
+            peak_sign=peak_sign,
+            amplitude_mode=peak_mode,
+        )
     else:
         sparsity = sorting_analyzer_or_templates.sparsity
 
