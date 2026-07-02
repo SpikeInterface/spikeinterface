@@ -510,7 +510,7 @@ class SortingAnalyzer:
             raise ValueError("SortingAnalyzer.create: wrong format")
 
         main_channel_ids = sorting_analyzer.channel_ids[main_channel_indices]
-        sorting_analyzer.set_sorting_property("main_channel_id", main_channel_ids, save=False)
+        sorting_analyzer.set_sorting_property("main_channel_id", main_channel_ids, save=True)
 
         return sorting_analyzer
 
