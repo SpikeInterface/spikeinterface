@@ -20,7 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         si-version:
-          - '0.101.*'
           - '0.102.*'
           - '0.103.*'
           - '0.104.*'
