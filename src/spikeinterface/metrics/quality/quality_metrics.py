@@ -88,7 +88,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
 
         metrics_which_used_to_have_peak_sign = ["sd_ratio", "nn_isolation", "nn_noise_overlap", "nn_advanced"]
         for metric_name in metrics_which_used_to_have_peak_sign:
-            if metric_name in self.params["metric_names"]:
+            if metric_name in self.params["metric_params"]:
                 if "peak_sign" in self.params["metric_params"][metric_name]:
                     del self.params["metric_params"][metric_name]["peak_sign"]
 
