@@ -57,14 +57,13 @@ jobs:
       - name: Generate fixtures with spikeinterface 0.104.*
         run: |
           uv run --isolated --no-project --python 3.11 \
-            --with "spikeinterface[core]==0.104.*" --with scipy \
+            --with "spikeinterface[core]==0.104.*" \
             python .github/scripts/serialization/generate_fixtures.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
-      # Install this branch (plus scipy for the preprocessing-chain fixture) and load.
+      # Install this branch and load the fixtures.
       - name: Load fixtures with the branch
         run: |
           uv pip install --system -e . --group test-core
-          uv pip install --system scipy
           pytest src/spikeinterface/core/tests/test_cross_version_serialization.py -v
 
   weekly-matrix:
@@ -97,11 +96,10 @@ jobs:
       - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
         run: |
           uv run --isolated --no-project --python 3.11 \
-            --with "spikeinterface[core]==${{ matrix.si-version }}" --with scipy \
+            --with "spikeinterface[core]==${{ matrix.si-version }}" \
             python .github/scripts/serialization/generate_fixtures.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
       - name: Load fixtures with the branch
         run: |
           uv pip install --system -e . --group test-core
-          uv pip install --system scipy
           pytest src/spikeinterface/core/tests/test_cross_version_serialization.py -v

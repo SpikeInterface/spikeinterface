@@ -13,9 +13,10 @@ Two axes are covered, chosen per entry via "formats":
   - "json" / "pickle": dump_to_json / dump_to_pickle store only the recipe (class path
     + kwargs). Both reload through the same from_dict path. Targets the moved-class and
     changed-signature axes. Does NOT carry properties/annotations.
-  - "folder" / "zarr": save() materializes the full state (traces, properties,
-    annotations, probe) to disk. Targets the on-disk encoding axis: property and
-    annotation preservation, and the probe representation.
+  - "binary" / "zarr" (recordings) and "numpy_folder" (sortings): save() materializes
+    the full state (traces or spike trains, properties, annotations, probe) to disk.
+    Targets the on-disk encoding axis: property and annotation preservation, and the
+    probe representation. "binary" is recording-only, hence "numpy_folder" for sortings.
 """
 
 
@@ -25,8 +26,10 @@ def fixture_relpath(entry_id, fmt):
         return f"{entry_id}.json"
     if fmt == "pickle":
         return f"{entry_id}.pkl"
-    if fmt == "folder":
-        return f"{entry_id}_folder"
+    if fmt == "binary":
+        return f"{entry_id}_binary"
+    if fmt == "numpy_folder":
+        return f"{entry_id}_numpy_folder"
     if fmt == "zarr":
         return f"{entry_id}.zarr"
     raise ValueError(f"unknown format {fmt!r}")
@@ -68,7 +71,7 @@ def _check_mock_recording(rec):
     assert rec.get_num_segments() == 1
 
 
-# --- folder/zarr (materialized) entries: encoding axis ---------------------------
+# --- binary/zarr/numpy_folder (materialized) entries: encoding axis --------------
 
 
 def _build_recording_with_properties():
@@ -152,10 +155,12 @@ def _check_recording_with_interleaved_probes(rec):
 
 def _build_preprocessed_chain():
     from spikeinterface.core import generate_recording
-    from spikeinterface.preprocessing import bandpass_filter, common_reference
+    from spikeinterface.preprocessing import common_reference, scale
 
     rec = generate_recording(num_channels=4, durations=[1.0], sampling_frequency=30000.0, seed=0)
-    return common_reference(bandpass_filter(rec, freq_min=300.0, freq_max=6000.0))
+    # Two nested scipy-free preprocessing wrappers (scale then common_reference): this
+    # exercises recursive parent reload without pulling scipy into the environments.
+    return common_reference(scale(rec, gain=2.0))
 
 
 def _check_preprocessed_chain(rec):
@@ -196,19 +201,19 @@ BATTERY = [
         "id": "recording_with_properties",
         "build": _build_recording_with_properties,
         "check": _check_recording_with_properties,
-        "formats": ["folder", "zarr"],
+        "formats": ["binary", "zarr"],
     },
     {
         "id": "recording_with_probe",
         "build": _build_recording_with_probe,
         "check": _check_recording_with_probe,
-        "formats": ["folder", "zarr"],
+        "formats": ["binary", "zarr"],
     },
     {
         "id": "recording_with_interleaved_probes",
         "build": _build_recording_with_interleaved_probes,
         "check": _check_recording_with_interleaved_probes,
-        "formats": ["folder", "zarr"],
+        "formats": ["binary", "zarr"],
     },
     {
         "id": "preprocessed_chain",
@@ -216,5 +221,10 @@ BATTERY = [
         "check": _check_preprocessed_chain,
         "formats": ["json", "pickle"],
     },
-    {"id": "sorting", "build": _build_sorting, "check": _check_sorting, "formats": ["folder"]},
+    {
+        "id": "sorting",
+        "build": _build_sorting,
+        "check": _check_sorting,
+        "formats": ["numpy_folder"],
+    },
 ]

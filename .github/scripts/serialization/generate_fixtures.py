@@ -31,10 +31,10 @@ for entry in BATTERY:
             obj.dump_to_json(dest)
         elif fmt == "pickle":
             obj.dump_to_pickle(dest)
-        elif fmt == "folder":
-            # No explicit format: save() picks the right default per object type
-            # (binary for recordings, numpy_folder for sortings).
-            obj.save(folder=dest, overwrite=True)
+        elif fmt == "binary":
+            obj.save(folder=dest, format="binary", overwrite=True)
+        elif fmt == "numpy_folder":
+            obj.save(folder=dest, format="numpy_folder", overwrite=True)
         elif fmt == "zarr":
             obj.save(folder=dest, format="zarr", overwrite=True)
         print(f"  wrote {dest.name} ({fmt})")
