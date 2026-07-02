@@ -17,7 +17,7 @@ from pathlib import Path
 import spikeinterface
 
 sys.path.insert(0, str(Path(__file__).parent))
-from battery import BATTERY, fixture_relpath  # noqa: E402
+from battery import BATTERY, FIXTURE_SUFFIX  # noqa: E402
 
 out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("serialization_fixtures")
 out_dir.mkdir(parents=True, exist_ok=True)  # do not rmtree an arbitrary path; overwrite in place
@@ -26,7 +26,7 @@ print(f"Generating serialization fixtures with spikeinterface {spikeinterface.__
 for entry in BATTERY:
     obj = entry["build"]()
     for fmt in entry["formats"]:
-        dest = out_dir / fixture_relpath(entry["id"], fmt)
+        dest = out_dir / f"{entry['id']}{FIXTURE_SUFFIX[fmt]}"
         if fmt == "json":
             obj.dump_to_json(dest)
         elif fmt == "pickle":

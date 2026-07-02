@@ -20,19 +20,16 @@ Two axes are covered, chosen per entry via "formats":
 """
 
 
-def fixture_relpath(entry_id, fmt):
-    """Path (relative to the fixtures dir) where a given entry/format is written and read."""
-    if fmt == "json":
-        return f"{entry_id}.json"
-    if fmt == "pickle":
-        return f"{entry_id}.pkl"
-    if fmt == "binary":
-        return f"{entry_id}_binary"
-    if fmt == "numpy_folder":
-        return f"{entry_id}_numpy_folder"
-    if fmt == "zarr":
-        return f"{entry_id}.zarr"
-    raise ValueError(f"unknown format {fmt!r}")
+# Filename suffix per format, relative to the fixtures dir (folder formats use a suffix
+# rather than an extension). Both the generator and the loader build a fixture path as
+# f"{entry_id}{FIXTURE_SUFFIX[fmt]}", so the writer and reader agree by construction.
+FIXTURE_SUFFIX = {
+    "json": ".json",
+    "pickle": ".pkl",
+    "binary": "_binary",
+    "numpy_folder": "_numpy_folder",
+    "zarr": ".zarr",
+}
 
 
 # --- json (recipe) entries: moved class + a second class -------------------------
