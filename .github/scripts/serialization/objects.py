@@ -1,5 +1,5 @@
 """
-Battery of canonical serializable objects for cross-version serialization testing.
+Canonical serializable objects for cross-version serialization testing.
 
 This module is imported and executed under OLD spikeinterface installs to generate
 fixtures, so the builders may use ONLY public API that existed in the oldest version
@@ -181,7 +181,7 @@ def _check_sorting(sorting):
     assert spike_train.ndim == 1
 
 
-BATTERY = [
+OBJECTS = [
     {
         "id": "noise_generator_recording",
         "build": _build_noise_generator_recording,

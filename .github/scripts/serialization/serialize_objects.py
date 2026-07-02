@@ -5,7 +5,7 @@ Generate cross-version serialization fixtures with the *installed* spikeinterfac
 Run this under an OLD spikeinterface release to produce the fixtures that the current
 code then loads (see src/spikeinterface/core/tests/test_cross_version_serialization.py):
 
-    python generate_fixtures.py [output_dir]
+    python serialize_objects.py [output_dir]
 
 If output_dir is omitted, fixtures are written to ./serialization_fixtures.
 The CI workflow cross_version_serialization.yml does this automatically.
@@ -17,13 +17,13 @@ from pathlib import Path
 import spikeinterface
 
 sys.path.insert(0, str(Path(__file__).parent))
-from battery import BATTERY, FIXTURE_SUFFIX  # noqa: E402
+from objects import OBJECTS, FIXTURE_SUFFIX  # noqa: E402
 
 out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("serialization_fixtures")
 out_dir.mkdir(parents=True, exist_ok=True)  # do not rmtree an arbitrary path; overwrite in place
 
 print(f"Generating serialization fixtures with spikeinterface {spikeinterface.__version__}")
-for entry in BATTERY:
+for entry in OBJECTS:
     obj = entry["build"]()
     for fmt in entry["formats"]:
         dest = out_dir / f"{entry['id']}{FIXTURE_SUFFIX[fmt]}"

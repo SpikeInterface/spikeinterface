@@ -105,9 +105,9 @@ jobs:
         run: |
           uv run --isolated --no-project --python 3.11 \
             --with "spikeinterface[core]==${{ matrix.si-version }}" \
-            python .github/scripts/serialization/generate_fixtures.py "$SI_SERIALIZATION_FIXTURES_DIR"
+            python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
       - name: Load fixtures with the branch
         run: |
           uv pip install --system -e . --group test-core
-          pytest .github/scripts/serialization/test_load.py -v
+          pytest .github/scripts/serialization/test_cross_version_compatibility.py -v

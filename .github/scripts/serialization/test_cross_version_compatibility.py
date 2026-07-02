@@ -4,8 +4,8 @@ they reload correctly.
 
 This test is workflow-only: it lives outside src/ so the normal test suite does not
 collect it, and cross_version_serialization.yml invokes it by path after generating the
-fixtures (pointed to by SI_SERIALIZATION_FIXTURES_DIR). Because it sits next to battery.py,
-it imports the shared battery directly.
+fixtures (pointed to by SI_SERIALIZATION_FIXTURES_DIR). Because it sits next to objects.py,
+it imports the shared objects directly.
 """
 
 import os
@@ -15,11 +15,11 @@ import pytest
 
 from spikeinterface.core import load
 
-from battery import BATTERY, FIXTURE_SUFFIX
+from objects import OBJECTS, FIXTURE_SUFFIX
 
 FIXTURES_DIR = Path(os.environ.get("SI_SERIALIZATION_FIXTURES_DIR", "serialization_fixtures"))
 
-_CASES = [(entry, fmt) for entry in BATTERY for fmt in entry["formats"]]
+_CASES = [(entry, fmt) for entry in OBJECTS for fmt in entry["formats"]]
 
 
 @pytest.mark.parametrize("entry,fmt", _CASES, ids=[f"{entry['id']}-{fmt}" for entry, fmt in _CASES])
