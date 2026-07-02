@@ -35,11 +35,11 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
     def _handle_backward_compatibility_on_load(self):
         # For backwards compatibility - this renames spike_retriver_kwargs to spike_retriever_kwargs
         if "spike_retriver_kwargs" in self.params:
-            del self.params["spike_retriever_kwargs"]
+            self.params["spike_retriever_kwargs"] = self.params.pop("spike_retriver_kwargs")
 
-        # removal of peak_sign from extensions
-        if "peak_sign" in self.params:
-            del self.params["peak_sign"]
+            # removal of peak_sign from extensions
+            if "peak_sign" in self.params["spike_retriever_kwargs"]:
+                del self.params["spike_retriever_kwargs"]["peak_sign"]
 
     def _set_params(
         self,
