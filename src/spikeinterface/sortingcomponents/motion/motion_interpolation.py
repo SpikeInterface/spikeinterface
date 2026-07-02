@@ -410,7 +410,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 channel_indices = recording.ids_to_indices(channel_ids)
                 probegroup_sliced = probegroup.get_slice(channel_indices)
                 probegroup_sliced.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
-                self.set_probegroup(probegroup_sliced)
+                self.set_probegroup(probegroup_sliced, in_place=True)
 
         # handle manual interpolation_time_bin_centers_s
         # the case where interpolation_time_bin_size_s is set is handled per-segment below

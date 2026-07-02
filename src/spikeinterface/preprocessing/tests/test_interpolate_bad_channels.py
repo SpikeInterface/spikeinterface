@@ -132,7 +132,7 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     new_positions = probe.contact_positions.copy()
     new_positions[:, 0] = x_new  # column 0 is x
     recording._probegroup.probes[0]._contact_positions = new_positions
-    recording.set_probe(probe)
+    recording.set_probe(probe, in_place=True)
 
     # generate random bad channel locations
     bad_channel_indexes = rng.choice(num_channels, rng.integers(1, int(num_channels / 5)), replace=False)
@@ -180,7 +180,7 @@ def test_output_values():
     probe = pi.Probe(ndim=2)
     probe.set_contacts(positions=probe_locs)
     probe.set_device_channel_indices(np.arange(len(probe_locs)))
-    recording.set_probe(probe)
+    recording.set_probe(probe, in_place=True)
 
     # Run interpolation in SI and check the interpolated channel
     # 0 is a linear combination of other channels

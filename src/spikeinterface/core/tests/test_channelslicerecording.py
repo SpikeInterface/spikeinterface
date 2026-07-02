@@ -60,7 +60,7 @@ def test_ChannelSliceRecording(create_cache_folder):
     # with probe and after save()
     probe = probeinterface.generate_linear_probe(num_elec=num_chan)
     probe.set_device_channel_indices(np.arange(num_chan))
-    rec.set_probe(probe)
+    rec.set_probe(probe, in_place=True)
     rec_sliced3 = ChannelSliceRecording(rec, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
     probe3 = rec_sliced3.get_probe()
     locations3 = probe3.contact_positions
@@ -117,7 +117,7 @@ def test_select_channels_preserves_probe_metadata():
     probegroup.add_probe(probe_B)
 
     recording = generate_recording(durations=[1.0], num_channels=16, set_probe=False)
-    recording.set_probegroup(probegroup)
+    recording.set_probegroup(probegroup, in_place=True)
 
     # Drop all of probe A, keep only probe B
     sub = recording.select_channels(recording.channel_ids[8:])

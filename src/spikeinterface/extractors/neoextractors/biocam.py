@@ -72,7 +72,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         probe = probeinterface.read_3brain(file_path, **probe_kwargs)
         rows = probe.contact_annotations["row"]
         cols = probe.contact_annotations["col"]
-        self.set_probe(probe)
+        self.set_probe(probe, in_place=True)
         self.set_property("row", rows)
         self.set_property("col", cols)
 

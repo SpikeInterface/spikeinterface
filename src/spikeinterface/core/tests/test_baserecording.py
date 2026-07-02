@@ -203,15 +203,15 @@ def test_BaseRecording(create_cache_folder):
     )
     probe.create_auto_shape()
 
-    rec_p = rec.select_channels_with_probe(probe, group_mode="auto")
+    rec_p = rec.set_probe(probe, group_mode="auto")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
-    rec_p = rec.select_channels_with_probe(probe, group_mode="by_shank")
+    rec_p = rec.set_probe(probe, group_mode="by_shank")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
-    rec_p = rec.select_channels_with_probe(probe, group_mode="by_probe")
+    rec_p = rec.set_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
@@ -254,13 +254,13 @@ def test_BaseRecording(create_cache_folder):
     probe.create_auto_shape()
     traces = np.zeros((1000, 12), dtype="int16")
     rec = NumpyRecording([traces], 30000.0)
-    rec1 = rec.select_channels_with_probe(probe, group_mode="auto")
+    rec1 = rec.set_probe(probe, group_mode="auto")
     assert np.unique(rec1.get_property("group")).size == 4
-    rec2 = rec.select_channels_with_probe(probe, group_mode="by_probe")
+    rec2 = rec.set_probe(probe, group_mode="by_probe")
     assert np.unique(rec2.get_property("group")).size == 1
-    rec3 = rec.select_channels_with_probe(probe, group_mode="by_shank")
+    rec3 = rec.set_probe(probe, group_mode="by_shank")
     assert np.unique(rec3.get_property("group")).size == 2
-    rec4 = rec.select_channels_with_probe(probe, group_mode="by_side")
+    rec4 = rec.set_probe(probe, group_mode="by_side")
     assert np.unique(rec4.get_property("group")).size == 4
 
     # set unconnected probe
@@ -270,7 +270,7 @@ def test_BaseRecording(create_cache_folder):
     probe.set_device_channel_indices([-1, -1, -1])
     probe.create_auto_shape()
 
-    rec_empty_probe = rec.select_channels_with_probe(probe, group_mode="by_shank")
+    rec_empty_probe = rec.set_probe(probe, group_mode="by_shank")
     assert rec_empty_probe.channel_ids.size == 0
 
     # test scaling parameters
@@ -464,7 +464,7 @@ def test_probes_info_annotation_backward_compat():
         {"name": "probe_B", "manufacturer": "vendor_Y"},
     ]
 
-    rec.set_probegroup(pg)  # new default: in_place=None → always in-place
+    rec = rec.set_probegroup(pg)
 
     probes = rec.get_probes()
     assert len(probes) == 2

@@ -19,8 +19,6 @@ spikeinterface.core
     .. automethod:: BaseRecording.set_probe
     .. automethod:: BaseRecording.set_probegroup
     .. automethod:: BaseRecording.reset_probe
-    .. automethod:: BaseRecording.select_channels_with_probe
-    .. automethod:: BaseRecording.select_channels_with_probegroup
     .. automethod:: BaseRecording.split_by
     .. autoclass:: BaseSorting
         :members:

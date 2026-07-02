@@ -477,7 +477,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             )
             self.add_recording_segment(recording_segment)
 
-        self.set_probe(drifting_templates.probe)
+        self.set_probe(drifting_templates.probe, in_place=True)
 
         # templates are too large, we don't serialize them to JSON
         self._serializability["json"] = False

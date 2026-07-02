@@ -14,7 +14,7 @@ def _make_rec_with_named_probe(name, manufacturer, x_shift):
     probe.set_device_channel_indices(np.arange(8))
     probe.create_auto_shape()
     rec = generate_recording(num_channels=8, durations=[1.0], set_probe=False)
-    rec.set_probe(probe)
+    rec.set_probe(probe, in_place=True)
     return rec
 
 

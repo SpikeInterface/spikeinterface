@@ -111,7 +111,7 @@ class ChannelsAggregationRecording(BaseRecording):
                 for probe in probegroup.probes:
                     probegroup_agg.add_probe(probe.copy())
             probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
-            self.set_probegroup(probegroup_agg)
+            self.set_probegroup(probegroup_agg, in_place=True)
 
         # finally add segments, we need a channel mapping
         ch_id = 0

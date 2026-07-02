@@ -80,10 +80,14 @@ class BaseRecordingSnippets(BaseExtractor):
         self,
         probe: Probe,
         group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto",
-        in_place: bool | None = None,
-    ) -> None:
+        in_place: bool = False,
+    ) -> "BaseRecordingSnippets":
         """
         Attach a Probe object to a recording.
+
+        For this Probe.device_channel_indices is used to link contacts to recording channels.
+        If some contacts of the Probe are not connected (device_channel_indices=-1)
+        then the recording is "sliced" and only connected channels are kept.
 
         Parameters
         ----------
@@ -93,11 +97,14 @@ class BaseRecordingSnippets(BaseExtractor):
             How to add the "group" property.
             "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks
             and two sides are present.
-        in_place: (deprecated) bool | None, default: None
-            Deprecated argument to indicate whether to modify the recording in place
-            or return a new recording. The function is always in place now.
-            Use the `recording.select_channels_with_probegroup()` method instead of `in_place=False`
-            to return a new recording with a channel selection to match the probe/probegroup.
+        in_place: bool, default: False
+            If False, a new recording (view or channel selection) is returned.
+            If True, the recording is modified in place, which requires all channels to be connected.
+
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself)
 
         Notes
         -----
@@ -106,130 +113,73 @@ class BaseRecordingSnippets(BaseExtractor):
         assert isinstance(probe, Probe), "The input must be a Probe object"
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
-        # TODO: remove return in 0.106.0 after removing in_place argument
         return self.set_probegroup(probegroup, group_mode=group_mode, in_place=in_place)
 
     def set_probegroup(
         self,
         probegroup: ProbeGroup | dict,
         group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto",
-        in_place: bool | None = None,
-    ) -> None:
+        in_place: bool = False,
+    ) -> "BaseRecordingSnippets":
         """
         Attach a ProbeGroup or dict to a recording.
         For this Probe.device_channel_indices is used to link contacts to recording channels.
-        After removing unconnected contacts, the number of connected contacts must match the
-        number of channels in the recording. If this is not the case, use the `recording.select_with_probegroup()`
-        method instead to return a new recording with a channel selection to match the probe/probegroup.
+        If some contacts of the Probe are not connected (device_channel_indices=-1)
+        then the recording is "sliced" and only connected channels are kept.
 
         Note: The probe order of the probegroup is not kept. Channel ids are re-ordered to match the channel_ids of the recording.
 
         Parameters
         ----------
-        probe_or_probegroup: ProbeGroup, or dict
+        probegroup: ProbeGroup, or dict
             The probe(s) to be attached to the recording
         group_mode: "auto" | "by_probe" | "by_shank" | "by_side", default: "auto"
             How to add the "group" property.
             "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-        in_place: (deprecated) bool | None, default: None
-            Deprecated argument to indicate whether to modify the recording in place
-            or return a new recording. The function is always in place now.
-            Use the `recording.select_channels_with_probegroup()` method instead of `in_place=False`
-            to return a new recording with a channel selection to match the probe/probegroup.
-        """
-        if in_place is not None:
-            warnings.warn(
-                "The 'in_place' argument is deprecated and will be removed in version 0.106.0. "
-                "The `set_probe/probegroup()` are always in place and assume that the probe/probegroup has the "
-                "same number of connected contacts as the number of channels in the recording. "
-                "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
-                "a channel selection to match the probe/probegroup.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if not in_place:
-                return self.select_channels_with_probegroup(probegroup, group_mode=group_mode)
+        in_place: bool, default: False
+            If False, a new recording (view or channel selection) is returned.
+            If True, the recording is modified in place, which requires all channels to be connected.
 
-        # Handle several input possibilities: Probe or dict
+        Returns
+        -------
+        sub_recording: BaseRecording
+            A view of the recording (ChannelSlice or clone or itself)
+        """
+        # Handle several input possibilities: ProbeGroup or dict
         if isinstance(probegroup, dict):
             probegroup = ProbeGroup.from_dict(probegroup)
 
         probegroup_sorted = self._get_probegroup_based_on_device_channel_indices(probegroup)
 
-        if probegroup_sorted.get_contact_count() != self.get_num_channels():
-            raise ValueError(
-                "The probe/probegroup must have the same number of connected contacts "
-                f"as the number of channels as the recording, but the probe has {probegroup.get_contact_count()} "
-                f"connected channels and the recording has {self.get_num_channels()} channels. "
-                "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
-                "a channel selection to match the probe/probegroup."
-            )
-        probegroup_sorted.set_global_device_channel_indices(np.arange(probegroup_sorted.get_contact_count()))
-        self._probegroup = probegroup_sorted
-
-        # Handle and set channel groups
-        _set_group_property_based_on_probegroup(self, probegroup_sorted, group_mode=group_mode)
-
-    def select_channels_with_probe(
-        self, probe: Probe, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto"
-    ) -> "BaseRecordingSnippets":
-        """
-        Returns a new recording with channels selected based on the probe.
-
-        Parameters
-        ----------
-        probe: Probe
-            The probe to be used for channel selection
-        group_mode: "auto" | "by_probe" | "by_shank" |
-            "by_side", default: "auto"
-            How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks and two sides are present.
-
-        Returns
-        -------
-        sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself)
-        """
-        assert isinstance(probe, Probe), "The input must be a Probe object"
-        probegroup = ProbeGroup()
-        probegroup.add_probe(probe)
-        return self.select_channels_with_probegroup(probegroup, group_mode=group_mode)
-
-    def select_channels_with_probegroup(
-        self, probegroup: ProbeGroup, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto"
-    ) -> "BaseRecordingSnippets":
-        """
-        Selects channels based on the given ProbeGroup and returns a new recording with the selected channels.
-
-        Parameters
-        ----------
-        probegroup: ProbeGroup
-            The probegroup to be used for channel selection
-        group_mode: "auto" | "by_probe" | "by_shank" |
-            "by_side", default: "auto"
-            How to add the "group" property.
-            "auto" is the best splitting possible that can be all at once when multiple probes, multiple shanks
-            and two sides are present.
-
-        Returns
-        -------
-        sub_recording: BaseRecording
-            A view of the recording (ChannelSlice or clone or itself)
-        """
-        probegroup_sorted = self._get_probegroup_based_on_device_channel_indices(probegroup)
         if probegroup_sorted.get_contact_count() > 0:
             sorted_dci = probegroup_sorted.get_global_device_channel_indices()["device_channel_indices"]
             new_channel_ids = self.channel_ids[sorted_dci]
-            probegroup_sorted.set_global_device_channel_indices(np.arange(len(new_channel_ids)))
-            if np.array_equal(new_channel_ids, self.channel_ids):
+        else:
+            new_channel_ids = self.channel_ids[[]]  # empty selection
+
+        # create recording: itself (in place), clone or channel slice
+        if in_place:
+            if not np.array_equal(new_channel_ids, self.get_channel_ids()):
+                raise ValueError(
+                    "set_probe(in_place=True) requires the probe/probegroup to have the same number of connected "
+                    "contacts as the number of channels in the recording. Use in_place=False to return a new "
+                    "recording with a channel selection to match the probe/probegroup."
+                )
+            sub_recording = self
+        else:
+            if np.array_equal(new_channel_ids, self.get_channel_ids()):
                 sub_recording = self.clone()
             else:
                 sub_recording = self.select_channels(new_channel_ids)
+
+        if probegroup_sorted.get_contact_count() > 0:
+            probegroup_sorted.set_global_device_channel_indices(np.arange(probegroup_sorted.get_contact_count()))
             sub_recording._probegroup = probegroup_sorted
+            # Handle and set channel groups
             _set_group_property_based_on_probegroup(sub_recording, probegroup_sorted, group_mode=group_mode)
         else:
-            sub_recording = self.select_channels([])  # empty recording
             sub_recording._probegroup = ProbeGroup()  # empty probegroup
+
         return sub_recording
 
     def _get_probegroup_based_on_device_channel_indices(self, probegroup: ProbeGroup) -> ProbeGroup:
@@ -333,10 +283,10 @@ class BaseRecordingSnippets(BaseExtractor):
         legacy_probe_file = folder / "probe.json"
         if probe_file.is_file():
             probegroup = read_probeinterface(probe_file)
-            self.set_probegroup(probegroup)
+            self.set_probegroup(probegroup, in_place=True)
         elif legacy_probe_file.is_file():
             probegroup = read_probeinterface(legacy_probe_file)
-            self.set_probegroup(probegroup)
+            self.set_probegroup(probegroup, in_place=True)
 
         # remove "contact_vector" property if present as it is not needed anymore
         if "contact_vector" in self.get_property_keys():
@@ -352,7 +302,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # load probe
         if "probegroup" in dump_dict:
             probegroup = dump_dict["probegroup"]
-            self.set_probegroup(probegroup)
+            self.set_probegroup(probegroup, in_place=True)
 
     def _extra_metadata_to_dict(self, dump_dict):
         # save probe
@@ -412,7 +362,7 @@ class BaseRecordingSnippets(BaseExtractor):
         probe = self.create_dummy_probe_from_locations(
             np.array(locations), shape=shape, shape_params=shape_params, axes=axes
         )
-        self.set_probe(probe)
+        self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):
         warnings.warn(
@@ -510,7 +460,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         probe2d = self.get_probe().to_2d(axes=axes)
         recording2d = self.clone()
-        recording2d.set_probe(probe2d)
+        recording2d.set_probe(probe2d, in_place=True)
 
         return recording2d
 

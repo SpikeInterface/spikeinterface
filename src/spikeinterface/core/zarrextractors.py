@@ -180,7 +180,7 @@ class ZarrRecordingExtractor(BaseRecording):
         probe_dict = self._root.attrs.get("probegroup", self._root.attrs.get("probe", None))
         if probe_dict is not None:
             probegroup = ProbeGroup.from_dict(probe_dict)
-            self.set_probegroup(probegroup)
+            self.set_probegroup(probegroup, in_place=True)
 
         # load properties
         if "properties" in self._root:
