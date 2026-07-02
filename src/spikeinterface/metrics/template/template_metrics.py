@@ -68,8 +68,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
         Default parameters can be obtained with: `si.metrics.template_metrics.get_default_template_metrics_params()`
-    peak_sign : {"neg", "pos", "both"}, default: "both"
-        Whether to use the positive ("pos"), negative ("neg"), or both ("both") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
     include_multi_channel_metrics : bool, default: False
@@ -169,6 +167,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             if "waveform_ratios" not in self.params["metric_names"]:
                 self.params["metric_names"].append("waveform_ratios")
 
+        # removal of peak_sign from metrics - was only ever a "global" param
+        if "peak_sign" in self.params:
+            del self.params["peak_sign"]
+
         # If original analyzer doesn't have "peaks_data" or "main_channel_templates",
         # then we can't save this tmp data (important for merges/splits)
         if "peaks_data" not in self.data:
@@ -182,7 +184,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         metrics_to_compute: list[str] | None = None,
         periods=None,
         # common extension kwargs
-        peak_sign="both",
         template_operator="average",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
@@ -217,7 +218,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
             periods=periods,  # template metrics do not use periods
-            peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
             template_operator=template_operator,
             include_multi_channel_metrics=include_multi_channel_metrics,

@@ -1330,7 +1330,6 @@ def compute_sd_ratio(
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
     correct_for_template_itself: bool = True,
-    peak_sign: str = "neg",
     **job_kwargs,
 ):
     """
@@ -1356,8 +1355,6 @@ def compute_sd_ratio(
     correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The peak sign used to select the template extremum channel.
     **job_kwargs : dict, default: {}
         Keyword arguments sent to get_noise_levels.
 
@@ -1468,7 +1465,6 @@ class SDRatio(BaseMetric):
         "censored_period_ms": 4.0,
         "correct_for_drift": True,
         "correct_for_template_itself": True,
-        "peak_sign": "neg",
     }
     metric_columns = {"sd_ratio": float}
     metric_descriptions = {
