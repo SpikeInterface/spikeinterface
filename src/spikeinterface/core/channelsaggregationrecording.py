@@ -111,7 +111,9 @@ class ChannelsAggregationRecording(BaseRecording):
                 for probe in probegroup.probes:
                     probegroup_agg.add_probe(probe.copy())
             probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
-            self.set_probegroup(probegroup_agg)
+            # contact positions are already checked to be unique above; probe bounding
+            # boxes may overlap when aggregating channels split from a single probe
+            self.set_probegroup(probegroup_agg, check_overlap=False)
         elif len(all_probegroups) > 0 and len(all_probegroups) < len(recording_list):
             raise ValueError(
                 "Some recordings have probes while others do not. Cannot aggregate recordings with inconsistent probe information."

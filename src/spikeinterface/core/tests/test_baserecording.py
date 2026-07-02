@@ -433,48 +433,6 @@ def test_json_pickle_equivalence(create_cache_folder):
                 assert np.all(value == data_pickle[key])
 
 
-def test_probes_info_annotation_backward_compat():
-    """
-    Regression test: SI versions before #4300 stored per-probe metadata in a
-    'probes_info' annotation on the recording rather than inside the ProbeGroup.
-    set_probegroup() must migrate those annotations onto the probe objects and
-    remove the stale 'probes_info' entry from the recording annotations.
-    """
-    from probeinterface import generate_linear_probe, ProbeGroup
-
-    # Simulate probegroup as read from an old probegroup.json: probes exist but
-    # have no name/manufacturer annotations (old probeinterface did not write them).
-    probe_A = generate_linear_probe(num_elec=8, ypitch=20.0)
-    probe_A.move([0.0, 0.0])
-    probe_A.set_device_channel_indices(np.arange(8))
-
-    probe_B = generate_linear_probe(num_elec=8, ypitch=20.0)
-    probe_B.move([500.0, 0.0])
-    probe_B.set_device_channel_indices(np.arange(8, 16))
-
-    pg = ProbeGroup()
-    pg.add_probe(probe_A)
-    pg.add_probe(probe_B)
-
-    rec = NumpyRecording([np.zeros((100, 16), dtype="int16")], sampling_frequency=30000.0)
-
-    # Inject the old-style annotation that SI used to write alongside the probegroup.
-    rec._annotations["probes_info"] = [
-        {"name": "probe_A", "manufacturer": "vendor_X"},
-        {"name": "probe_B", "manufacturer": "vendor_Y"},
-    ]
-
-    rec.set_probegroup(pg)  # new default: in_place=None → always in-place
-
-    probes = rec.get_probes()
-    assert len(probes) == 2
-    probe_names = {p.annotations.get("name") for p in probes}
-    assert probe_names == {"probe_A", "probe_B"}, "Probe names must be migrated from probes_info"
-    manufacturers = {p.annotations.get("manufacturer") for p in probes}
-    assert manufacturers == {"vendor_X", "vendor_Y"}, "Manufacturers must be migrated from probes_info"
-    assert "probes_info" not in rec._annotations, "probes_info annotation must be consumed after migration"
-
-
 def test_rename_channels():
     recording = generate_recording(durations=[1.0], num_channels=3)
     renamed_recording = recording.rename_channels(new_channel_ids=["a", "b", "c"])

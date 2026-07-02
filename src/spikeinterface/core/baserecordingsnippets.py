@@ -70,7 +70,7 @@ class BaseRecordingSnippets(BaseExtractor):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
 
-    def reset_probe(self):
+    def remove_probe(self):
         """
         Removes probe information
         """
@@ -114,6 +114,7 @@ class BaseRecordingSnippets(BaseExtractor):
         probegroup: ProbeGroup,
         group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto",
         in_place: bool | None = None,
+        check_overlap: bool = True,
     ) -> None:
         """
         Attach a ProbeGroup or dict to a recording.
@@ -136,6 +137,11 @@ class BaseRecordingSnippets(BaseExtractor):
             or return a new recording. The function is always in place now.
             Use the `recording.select_channels_with_probegroup()` method instead of `in_place=False`
             to return a new recording with a channel selection to match the probe/probegroup.
+        check_overlap: bool, default: True
+            If True, check that the probes in the probegroup do not overlap in space.
+            This should be set to False when aggregating recordings whose probes share
+            the same physical space (e.g. channels split by group from a single probe),
+            where contact positions are unique but probe bounding boxes may overlap.
         """
         if in_place is not None:
             warnings.warn(
@@ -150,7 +156,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if not in_place:
                 return self.select_channels_with_probegroup(probegroup, group_mode=group_mode)
 
-        if len(probegroup.probes) > 0:
+        if check_overlap and len(probegroup.probes) > 0:
             check_probe_do_not_overlap(probegroup.probes)
 
         probegroup_sorted = self._get_probegroup_based_on_device_channel_indices(probegroup)
@@ -482,7 +488,7 @@ class BaseRecordingSnippets(BaseExtractor):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.reset_probe()
+        self.remove_probe()
 
     def set_channel_groups(self, groups, channel_ids=None):
         if "probes" in self._annotations:
