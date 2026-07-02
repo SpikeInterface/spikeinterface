@@ -452,7 +452,7 @@ filters_by_dataset: dict | None, default: None
         for segment_index, rs in enumerate(self.segments):
             time_file = folder / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
-                time_vector = np.load(time_file)
+                time_vector = np.load(time_file, mmap_mode="r")
                 rs.time_vector = time_vector
 
     def _extra_metadata_to_folder(self, folder):

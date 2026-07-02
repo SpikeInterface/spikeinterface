@@ -62,6 +62,10 @@ def write_binary(
     if add_file_extension:
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
+    # Resolve dtype to a concrete type. This is important because the (possibly None) dtype is
+    # passed to the workers, and `np.dtype(None)` resolves to float64, which would corrupt the output.
+    dtype = dtype if dtype is not None else time_series.get_dtype()
+
     sample_size_bytes = time_series.get_sample_size_in_bytes(dtype=dtype)
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}

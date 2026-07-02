@@ -25,8 +25,11 @@ dependencies = [
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=3,<4",
-    "neo>=0.14.4",
-    "probeinterface>=0.3.2",
+    # for release we need pypi, so this needs to be commented
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo>=0.14.4",
+    # "probeinterface>=0.3.2",
     "packaging",
     "pydantic",
 ]
@@ -227,12 +230,6 @@ docs = [
     "skops", # For automated curation
     "scikit-learn<1.8", # For automated curation
     "huggingface_hub", # For automated curation
-
-    # for release we need pypi, so this needs to be commented
-    # FOR TESTING: use probeinterface zarrv3 branch
-    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 ]
 
 dev = [
@@ -242,18 +239,12 @@ dev = [
 ]
 
 [dependency-groups]
-# Shared test infrastructure used by every per-module group. The neo and
-# probeinterface git pins match CI behavior before the PEP 735 migration.
-# For a release, comment the two git lines out.
+# Shared test infrastructure used by every per-module group.
 test-common = [
     "pytest",
     "pytest-cov",
     "pytest-mock",
     "psutil",
-    # FOR TESTING: use probeinterface zarrv3 branch
-    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test-core = [

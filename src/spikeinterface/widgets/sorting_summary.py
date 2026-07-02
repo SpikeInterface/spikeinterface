@@ -140,7 +140,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             max_spikes_per_unit=dp.max_amplitudes_per_unit,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -149,7 +148,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             sparsity=sparsity,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -158,7 +156,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -167,7 +164,6 @@ class SortingSummaryWidget(BaseWidget):
             sorting_analyzer,
             unit_ids=unit_ids,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
             backend=backend,
         ).view
@@ -176,7 +172,6 @@ class SortingSummaryWidget(BaseWidget):
             sorting_analyzer,
             unit_ids=unit_ids,
             immediate_plot=False,
-            generate_url=False,
             display=False,
             backend=backend,
         )
@@ -202,11 +197,13 @@ class SortingSummaryWidget(BaseWidget):
         if dp.curation:
             if use_sortingview:
                 curation_class = vv_views.SortingCuration2
+                curation_kwargs = {"label_choices": dp.label_choices}
             else:
                 curation_class = vv_views.SortingCuration
-            v_curation = curation_class(label_choices=dp.label_choices)
+                curation_kwargs = {"default_label_options": dp.label_choices}
+            v_curation = curation_class(**curation_kwargs)
             v1 = vv_base.Splitter(
-                direction="vertical", item1=vv_views.LayoutItem(v_units_table), item2=vv_views.LayoutItem(v_curation)
+                direction="vertical", item1=vv_base.LayoutItem(v_units_table), item2=vv_base.LayoutItem(v_curation)
             )
         else:
             v1 = v_units_table
