@@ -14,7 +14,6 @@ def export_report(
     remove_if_exists=False,
     format="png",
     show_figures=False,
-    peak_sign="neg",
     force_computation=False,
     **job_kwargs,
 ):
@@ -34,8 +33,6 @@ def export_report(
         If True and the output folder exists, it is removed
     format : str, default: "png"
         The output figure format (any format handled by matplotlib)
-    peak_sign : "neg" or "pos", default: "neg"
-        used to compute amplitudes and metrics
     show_figures : bool, default: False
         If True, figures are shown. If False, figures are closed after saving
     force_computation :  bool, default: False

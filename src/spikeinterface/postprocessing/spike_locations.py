@@ -37,6 +37,10 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         if "spike_retriver_kwargs" in self.params:
             self.params["spike_retriever_kwargs"] = self.params.pop("spike_retriver_kwargs")
 
+        # removal of peak_sign from extensions
+        if "peak_sign" in self.params:
+            del self.params["peak_sign"]
+
     def _set_params(
         self,
         ms_before=0.5,

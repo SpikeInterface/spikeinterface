@@ -496,7 +496,6 @@ def _make_templates(
         "operators": ["average"],
         "ms_before": ms_before,
         "ms_after": ms_after,
-        "peak_sign": "both",
     }
 
     template_extension.params = params
