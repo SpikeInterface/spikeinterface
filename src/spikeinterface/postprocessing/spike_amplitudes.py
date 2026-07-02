@@ -17,6 +17,7 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
     extension_name = "spike_amplitudes"
     depend_on = ["templates"]
     nodepipeline_variables = ["amplitudes"]
+    need_backward_compatibility_on_load = True
 
     def _handle_backward_compatibility_on_load(self):
         # removal of peak_sign from extensions
