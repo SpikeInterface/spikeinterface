@@ -5,13 +5,10 @@ name: Cross-version serialization
 # constructor signatures, changed on-disk encodings).
 #
 # Delivery model: Live generation. Fixtures are regenerated from a real old install each
-# run in an isolated uv environment (nothing committed). Per-PR runs against the previous
-# release only, for speed; the full version matrix runs weekly.
-#
-# Version floor: the matrix starts at the oldest release that installs cleanly on the CI
-# Python. 0.100/0.101 are excluded for now (numcodecs dependency rot on Python 3.11).
-# "Testable floor = support floor" is a deliberate, provisional choice; revisit with the
-# team. See obsidian probe/serialization proposal notes.
+# run in an isolated uv environment (nothing committed). The version list is computed
+# from PyPI (latest patch of each minor at or above MIN_VERSION_TO_TEST): on a pull
+# request only the latest released minor is tested; the full matrix runs weekly and on
+# manual dispatch.
 
 on:
   pull_request:
@@ -24,58 +21,62 @@ on:
       - '.github/workflows/cross_version_serialization.yml'
   schedule:
     - cron: '0 4 * * 0'  # weekly, Sunday 04:00 UTC
-  workflow_dispatch:  # manual runs (only available once this workflow is on the default branch)
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  per-pr-previous-release:
-    if: github.event_name == 'pull_request'
-    name: Load fixtures from previous release (0.104.*)
+  versions:
+    name: Select versions
     runs-on: ubuntu-latest
-    env:
-      SI_SERIALIZATION_FIXTURES_DIR: ${{ github.workspace }}/serialization_fixtures
+    outputs:
+      list: ${{ steps.set.outputs.list }}
     steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: '3.11'
-          enable-cache: false
-
-      # Generate fixtures with the previous release in an isolated environment (no
-      # pollution of the environment the branch is later installed into).
-      - name: Generate fixtures with spikeinterface 0.104.*
+      - id: set
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          # Support floor: oldest minor to test. Below this, installs fail on the CI
+          # Python (numcodecs dependency rot in 0.100/0.101). Raise when 0.102 rots.
+          MIN_VERSION_TO_TEST: "0.102"
         run: |
-          uv run --isolated --no-project --python 3.11 \
-            --with "spikeinterface[core]==0.104.*" \
-            python .github/scripts/serialization/generate_fixtures.py "$SI_SERIALIZATION_FIXTURES_DIR"
+          python -m pip install -q packaging
+          available_versions=$(python -m pip index versions spikeinterface | sed -n 's/.*Available versions: //p')
 
-      # Install this branch and load the fixtures.
-      - name: Load fixtures with the branch
-        run: |
-          uv pip install --system -e . --group test-core
-          pytest src/spikeinterface/core/tests/test_cross_version_serialization.py -v
+          versions_to_test=$(AVAILABLE_VERSIONS="$available_versions" python -c "
+          import json, os
+          from itertools import groupby
+          from packaging.version import Version
 
-  weekly-matrix:
-    # Heavy (several old installs): runs weekly on schedule, or manually via
-    # workflow_dispatch once this workflow is on the default branch. Not on every PR.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+          floor = Version(os.environ['MIN_VERSION_TO_TEST'])
+          available = sorted(Version(v.strip()) for v in os.environ['AVAILABLE_VERSIONS'].split(','))
+
+          # exclude prereleases and versions below the floor, then take the latest
+          # patch of each minor
+          candidates = [v for v in available if not v.is_prerelease and (v.major, v.minor) >= (floor.major, floor.minor)]
+          minor_releases = [max(group) for _, group in groupby(candidates, key=lambda v: (v.major, v.minor))]
+
+          # on a pull request, test only the latest minor
+          if os.environ.get('GITHUB_EVENT_NAME') == 'pull_request':
+              minor_releases = minor_releases[-1:]
+
+          print(json.dumps([str(v) for v in minor_releases]))
+          ")
+
+          echo "list=$versions_to_test" >> "$GITHUB_OUTPUT"
+
+  cross-version:
+    needs: versions
     name: Load fixtures from ${{ matrix.si-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        si-version: ["0.102.3", "0.103.2", "0.104.0"]
+        si-version: ${{ fromJSON(needs.versions.outputs.list) }}
     env:
       SI_SERIALIZATION_FIXTURES_DIR: ${{ github.workspace }}/serialization_fixtures
     steps:
