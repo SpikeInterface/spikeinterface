@@ -74,10 +74,11 @@ def handle_display_and_url(widget, view, **backend_kwargs):
         else:
             figlabel = backend_kwargs.get("figlabel")
             inline = backend_kwargs.get("inline", None)
+            wait_for_input = backend_kwargs.get("wait_for_input", False)
             if inline is None and is_notebook():
                 inline = True
             height = backend_kwargs.get("height", None)
-            url = view.show(title=figlabel, inline=inline, inline_height=height)
+            url = view.show(title=figlabel, inline=inline, inline_height=height, wait_for_input=wait_for_input)
             print(url)
 
     return url
@@ -101,9 +102,11 @@ def generate_unit_table_view(
         units_tables = make_units_table_from_sorting(sorting)
         # analyzer = None
 
+    unit_ids = make_serializable(sorting.unit_ids)
+
     if unit_properties is None:
         ut_columns = []
-        ut_rows = [vv_views.UnitsTableRow(unit_id=u, values={}) for u in sorting.unit_ids]
+        ut_rows = [vv_views.UnitsTableRow(unit_id=u, values={}) for u in unit_ids]
     else:
         # keep only selected columns
         unit_properties = np.array(unit_properties)
@@ -125,7 +128,7 @@ def generate_unit_table_view(
                 ut_columns.append(vv_views.UnitsTableColumn(key=col, label=col, dtype=txt_dtype))
 
         ut_rows = []
-        for unit_index, unit_id in enumerate(sorting.unit_ids):
+        for unit_index, unit_id in enumerate(unit_ids):
             row_values = {}
             for col in unit_properties:
                 values = units_tables[col].to_numpy()
