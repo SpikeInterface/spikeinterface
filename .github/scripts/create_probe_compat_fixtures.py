@@ -8,6 +8,9 @@ files consumed by test_probe_backward_compat.py:
     python create_probe_compat_fixtures.py [output_dir]
 
 If output_dir is omitted, fixtures are written to ./probe_compat_fixtures.
+
+Note: we use `in_place=True` since a bug (fixed in #4300) prevented probes_info to be properly
+saved as annotations in the probegroup when using `in_place=False` in spikeinterface 0.104.*.
 """
 
 import sys
@@ -39,10 +42,12 @@ probe.create_auto_shape()
 
 traces = np.arange(1000 * n, dtype="int16").reshape(1000, n)
 rec_single = NumpyRecording([traces], sampling_frequency=30000.0)
-rec_single = rec_single.set_probe(probe)  # old API: in_place=False, returns new recording
+rec_single.set_probe(probe, in_place=True)
 
-rec_single.save(folder=str(OUTPUT_DIR / "single_probe_binary"))
-rec_single.save(folder=str(OUTPUT_DIR / "single_probe.zarr"), format="zarr")
+rec_single_bin = rec_single.save(folder=str(OUTPUT_DIR / "single_probe_binary"))
+rec_single_zarr = rec_single.save(folder=str(OUTPUT_DIR / "single_probe.zarr"), format="zarr")
+rec_single_bin.dump_to_json(str(OUTPUT_DIR / "single_probe.json"))
+rec_single_bin.dump_to_pickle(str(OUTPUT_DIR / "single_probe.pkl"))
 
 # -----------------------------------------------------------------------
 # Fixture 2: two probes with per-probe name/manufacturer
@@ -69,10 +74,12 @@ pg.add_probe(probe_B)
 n_total = n_A + n_B
 traces2 = np.arange(1000 * n_total, dtype="int16").reshape(1000, n_total)
 rec_two = NumpyRecording([traces2], sampling_frequency=30000.0)
-rec_two = rec_two.set_probegroup(pg)  # old API: in_place=False, returns new recording
+rec_two.set_probegroup(pg, in_place=True)
 
-rec_two.save(folder=str(OUTPUT_DIR / "two_probe_binary"))
-rec_two.save(folder=str(OUTPUT_DIR / "two_probe.zarr"), format="zarr")
+rec_two_bin = rec_two.save(folder=str(OUTPUT_DIR / "two_probe_binary"))
+rec_two_zarr = rec_two.save(folder=str(OUTPUT_DIR / "two_probe.zarr"), format="zarr")
+rec_two_bin.dump_to_json(str(OUTPUT_DIR / "two_probe.json"))
+rec_two_bin.dump_to_pickle(str(OUTPUT_DIR / "two_probe.pkl"))
 
 # -----------------------------------------------------------------------
 # Fixture 3: probe with shuffled device_channel_indices
@@ -88,9 +95,11 @@ probe_sh.set_device_channel_indices(shuffled_dci)
 # is mapped to the contact whose dci equals j.
 traces3 = np.arange(1000 * n, dtype="int16").reshape(1000, n)
 rec_sh = NumpyRecording([traces3], sampling_frequency=30000.0)
-rec_sh = rec_sh.set_probe(probe_sh)  # old API
+rec_sh.set_probe(probe_sh, in_place=True)
 
-rec_sh.save(folder=str(OUTPUT_DIR / "shuffled_probe_binary"))
-rec_sh.save(folder=str(OUTPUT_DIR / "shuffled_probe.zarr"), format="zarr")
+rec_sh_bin = rec_sh.save(folder=str(OUTPUT_DIR / "shuffled_probe_binary"))
+rec_sh_zarr = rec_sh.save(folder=str(OUTPUT_DIR / "shuffled_probe.zarr"), format="zarr")
+rec_sh_bin.dump_to_json(str(OUTPUT_DIR / "shuffled_probe.json"))
+rec_sh_bin.dump_to_pickle(str(OUTPUT_DIR / "shuffled_probe.pkl"))
 
 print(f"Fixtures written to: {OUTPUT_DIR.resolve()}")

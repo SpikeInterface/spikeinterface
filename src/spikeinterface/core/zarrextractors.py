@@ -177,10 +177,33 @@ class ZarrRecordingExtractor(BaseRecording):
                 total_nbytes_stored += nbytes_stored_segment
 
         # load probe
-        probe_dict = self._root.attrs.get("probegroup", self._root.attrs.get("probe", None))
+        probe_dict = self._root.attrs.get("probegroup", None)
+        probe_dict_legacy = self._root.attrs.get("probe", None)
+        probegroup = None
         if probe_dict is not None:
             probegroup = ProbeGroup.from_dict(probe_dict)
-            self.set_probegroup(probegroup)
+            self._probegroup = probegroup
+        elif probe_dict_legacy is not None:
+            probegroup = ProbeGroup.from_dict(probe_dict_legacy)
+            order = np.argsort(probegroup.to_numpy(complete=True)["device_channel_indices"])
+            if not np.array_equal(order, np.arange(len(order))):
+                # In spikeinterface version < 0.105.0, the order was saved in the contact vector, but not
+                # in the probegroup. We need to check if the order is correct and if not, we need to reorder
+                # the probegroup to match the channel ids.
+                probegroup = probegroup.get_slice(order)
+
+            # In some older SI versions, before #4300, the probe annotations were
+            # saved to the recording annotations as `probes_info`. If this is the
+            # case, we can copy the annotations to the probegroup and delete the
+            # `probes_info` from the recording annotations.
+            si_annotations = self._root.attrs.get("annotations", {})
+            if "probes_info" in si_annotations:
+                probes_info = si_annotations.pop("probes_info")
+                for probe, probe_info in zip(probegroup.probes, probes_info):
+                    probe.annotations.update(probe_info)
+
+        if probegroup is not None:
+            self._probegroup = probegroup
 
         # load properties
         if "properties" in self._root:

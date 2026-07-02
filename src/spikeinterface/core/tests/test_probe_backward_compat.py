@@ -95,7 +95,7 @@ def test_shuffled_probe_binary_compat():
 
 
 # ---------------------------------------------------------------------------
-# JSON dump fixtures
+# Zarr dump fixtures
 # ---------------------------------------------------------------------------
 
 
@@ -109,3 +109,37 @@ def test_two_probe_zarr_compat():
 
 def test_shuffled_probe_zarr_compat():
     _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe.zarr"))
+
+
+# ---------------------------------------------------------------------------
+# JSON dump fixtures
+# ---------------------------------------------------------------------------
+
+
+def test_single_probe_json_compat():
+    _check_single_probe(load(FIXTURES_DIR / "single_probe.json"))
+
+
+def test_two_probe_json_compat():
+    _check_two_probes(load(FIXTURES_DIR / "two_probe.json"))
+
+
+def test_shuffled_probe_json_compat():
+    _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe.json"))
+
+
+# ---------------------------------------------------------------------------
+# Pickle dump fixtures
+# ---------------------------------------------------------------------------
+
+
+def test_single_probe_pickle_compat():
+    _check_single_probe(load(FIXTURES_DIR / "single_probe.pkl"))
+
+
+def test_two_probe_pickle_compat():
+    _check_two_probes(load(FIXTURES_DIR / "two_probe.pkl"))
+
+
+def test_shuffled_probe_pickle_compat():
+    _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe.pkl"))

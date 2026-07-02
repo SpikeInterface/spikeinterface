@@ -14,8 +14,16 @@ concurrency:
 
 jobs:
   probe-backward-compat:
-    name: Probe compat (SI 0.104.* → current)
+    name: Probe compat (SI ${{ matrix.si-version }} → current)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        si-version:
+          - '0.101.*'
+          - '0.102.*'
+          - '0.103.*'
+          - '0.104.*'
     env:
       SI_PROBE_COMPAT_FIXTURES_DIR: ${{ github.workspace }}/probe_compat_fixtures
 
@@ -37,8 +45,8 @@ jobs:
       # Step 1: install the OLD release and create fixtures.
       # The fixture script uses the old in_place=False default (returns a new recording),
       # saves to binary folder + JSON, and writes a known probe name/manufacturer/contact_ids.
-      - name: Install spikeinterface 0.104.* to create fixtures
-        run: uv pip install --system "spikeinterface[core]==0.104.*"
+      - name: Install spikeinterface ${{ matrix.si-version }} to create fixtures
+        run: uv pip install --system "spikeinterface[core]==${{ matrix.si-version }}"
 
       - name: Create compatibility fixtures with old version
         run: python .github/scripts/create_probe_compat_fixtures.py "$SI_PROBE_COMPAT_FIXTURES_DIR"

@@ -112,6 +112,10 @@ class ChannelsAggregationRecording(BaseRecording):
                     probegroup_agg.add_probe(probe.copy())
             probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
             self.set_probegroup(probegroup_agg)
+        elif len(all_probegroups) > 0 and len(all_probegroups) < len(recording_list):
+            raise ValueError(
+                "Some recordings have probes while others do not. Cannot aggregate recordings with inconsistent probe information."
+            )
 
         # finally add segments, we need a channel mapping
         ch_id = 0

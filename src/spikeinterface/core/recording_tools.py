@@ -684,6 +684,46 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
     return order_f, order_r
 
 
+def check_probe_do_not_overlap(probes):
+    """
+    When several probes this check that that they do not overlap in space
+    and so channel positions can be safely concatenated.
+
+    Raises
+    ------
+    Exception :
+        If probes are overlapping
+
+    Returns
+    -------
+    None : None
+        If the check is successful
+    """
+    for i in range(len(probes)):
+        probe_i = probes[i]
+        # check that all positions in probe_j are outside probe_i boundaries
+        x_bounds_i = [
+            np.min(probe_i.contact_positions[:, 0]),
+            np.max(probe_i.contact_positions[:, 0]),
+        ]
+        y_bounds_i = [
+            np.min(probe_i.contact_positions[:, 1]),
+            np.max(probe_i.contact_positions[:, 1]),
+        ]
+
+        for j in range(i + 1, len(probes)):
+            probe_j = probes[j]
+            if np.any(
+                np.array(
+                    [
+                        x_bounds_i[0] <= cp[0] <= x_bounds_i[1] and y_bounds_i[0] <= cp[1] <= y_bounds_i[1]
+                        for cp in probe_j.contact_positions
+                    ]
+                )
+            ):
+                raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
+
+
 def _set_group_property_based_on_probegroup(
     recording, probegroup: ProbeGroup, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"]
 ):

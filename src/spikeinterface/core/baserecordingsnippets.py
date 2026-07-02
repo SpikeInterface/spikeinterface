@@ -6,7 +6,7 @@ import numpy as np
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 from .base import BaseExtractor
-from .recording_tools import _set_group_property_based_on_probegroup
+from .recording_tools import _set_group_property_based_on_probegroup, check_probe_do_not_overlap
 
 from warnings import warn
 
@@ -111,7 +111,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_probegroup(
         self,
-        probegroup: ProbeGroup | dict,
+        probegroup: ProbeGroup,
         group_mode: Literal["auto", "by_probe", "by_shank", "by_side"] = "auto",
         in_place: bool | None = None,
     ) -> None:
@@ -150,9 +150,8 @@ class BaseRecordingSnippets(BaseExtractor):
             if not in_place:
                 return self.select_channels_with_probegroup(probegroup, group_mode=group_mode)
 
-        # Handle several input possibilities: Probe or dict
-        if isinstance(probegroup, dict):
-            probegroup = ProbeGroup.from_dict(probegroup)
+        if len(probegroup.probes) > 0:
+            check_probe_do_not_overlap(probegroup.probes)
 
         probegroup_sorted = self._get_probegroup_based_on_device_channel_indices(probegroup)
 
@@ -164,7 +163,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
                 "a channel selection to match the probe/probegroup."
             )
-        probegroup_sorted.set_global_device_channel_indices(np.arange(probegroup_sorted.get_contact_count()))
+        # probegroup_sorted.set_global_device_channel_indices(np.arange(probegroup_sorted.get_contact_count()))
         self._probegroup = probegroup_sorted
 
         # Handle and set channel groups
@@ -294,15 +293,6 @@ class BaseRecordingSnippets(BaseExtractor):
             )
             probegroup = ProbeGroup()  # empty probegroup
 
-        # In some older SI versions, before #4300, the probe annotations were
-        # saved to the recording annotations as `probes_info`. If this is the
-        # case, we can copy the annotations to the probegroup and delete the
-        # `probes_info` from the recording annotations.
-        if "probes_info" in self._annotations:
-            probes_info = self._annotations.pop("probes_info")
-            for probe, probe_info in zip(probegroup.probes, probes_info):
-                probe.annotations.update(probe_info)
-
         return probegroup
 
     def get_probe(self):
@@ -349,16 +339,58 @@ class BaseRecordingSnippets(BaseExtractor):
             write_probeinterface(folder / "probegroup.json", probegroup)
 
     def _extra_metadata_from_dict(self, dump_dict):
-        # load probe
+        # load probe and hanlde backward-compatibility with legacy "contact_vector"/"location" property
         if "probegroup" in dump_dict:
+            # this is for SI>=0.105.0
             probegroup = dump_dict["probegroup"]
-            self.set_probegroup(probegroup)
+            self._probegroup = ProbeGroup.from_dict(probegroup)
 
     def _extra_metadata_to_dict(self, dump_dict):
         # save probe
         if self.has_probe():
             probegroup = self.get_probegroup()
-            dump_dict["probegroup"] = probegroup
+            dump_dict["probegroup"] = probegroup.to_dict()
+
+    def _handle_extractor_backward_compatibility(self):
+        """
+        This handles backward compatibility for recordings that were saved with older versions of spikeinterface.
+
+        Options:
+
+        1. "contact_vector" property: This was used in versions < 0.105.0 to store probe information, when saved to
+           pickle
+        2. "location" property: This was used in versions < 0.105.0 to store probe information, when saved to JSON
+           (no contact_vector saved)
+        3. probe annotation: probe annotations and contours were saved as recording properties in versions < 0.105.0,
+           but now they are saved in the probegroup. This method will copy the annotations and the contour to the probes
+           in the the probegroup and remove the annotations from the recording.
+        """
+        if self._probegroup is None:
+            check_for_probes_info = False
+            if "contact_vector" in self.get_property_keys():
+                # this is for SI<0.105.0 and from pickle
+                contact_vector = self.get_property("contact_vector")
+                probegroup = ProbeGroup.from_numpy(contact_vector=contact_vector)
+                self._probegroup = probegroup
+                check_for_probes_info = True
+            elif "location" in self.get_property_keys():
+                # this is for SI<0.105.0 and from JSON (no contact_vector saved)
+                locations = self.get_property("location")
+                self.set_dummy_probe_from_locations(locations)
+                check_for_probes_info = True
+
+            if check_for_probes_info:
+                for i, probe in enumerate(self._probegroup.probes):
+                    if "probes_info" in self._annotations:
+                        probe_dict = self._annotations["probes_info"][i]
+                        probe.annotations.update(probe_dict)
+                    if f"probe_{i}_planar_contour" in self._annotations:
+                        contour = self.get_annotation(f"probe_{i}_planar_contour")
+                        if contour is not None:
+                            probe.set_planar_contour(contour)
+                        self.delete_annotation(f"probe_{i}_planar_contour")
+        if "probes_info" in self._annotations:
+            self._annotations.pop("probes_info")
 
     def create_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
         """

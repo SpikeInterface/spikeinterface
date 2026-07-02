@@ -1190,8 +1190,8 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
     is_old_version = not _check_same_version(class_name, dic["version"])
-    if is_old_version and hasattr(extractor_class, "_handle_backward_compatibility"):
-        new_kwargs = extractor_class._handle_backward_compatibility(new_kwargs, dic)
+    if is_old_version and hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
+        new_kwargs = extractor_class._handle_kwargs_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
     extractor = extractor_class(**new_kwargs)
@@ -1201,6 +1201,8 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
         extractor.set_property(k, v)
 
     extractor._extra_metadata_from_dict(dic)
+    if hasattr(extractor, "_handle_extractor_backward_compatibility"):
+        extractor._handle_extractor_backward_compatibility()
 
     return extractor
 
