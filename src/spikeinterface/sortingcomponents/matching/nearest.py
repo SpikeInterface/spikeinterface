@@ -71,6 +71,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
                     templates,
                     method="radius",
                     radius_um=sparsity_radius_um,
+                    peak_sign=self.peak_sign,
                 )
             else:
                 sparsity = templates.sparsity

@@ -400,7 +400,7 @@ class ChannelSparsity:
         return cls(mask, unit_ids, channel_ids)
 
     @classmethod
-    def from_radius(cls, templates_or_sorting_analyzer, radius_um, peak_sign, peak_mode):
+    def from_radius(cls, templates_or_sorting_analyzer, radius_um, peak_sign=None, peak_mode=None):
         """
         Construct sparsity from a radius around the main channel.
         Use the "radius_um" argument to specify the radius in um.
@@ -657,11 +657,11 @@ def compute_sparsity(
         "radius", "best_channels", "closest_channels", "snr", "amplitude", "energy", "by_property"
     ] = "radius",
     peak_sign: None | Literal["neg", "pos", "both"] = None,
+    amplitude_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
     num_channels: int | None = 5,
     radius_um: float | None = 100.0,
     threshold: float | None = 5,
     by_property: str | None = None,
-    amplitude_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
 ) -> ChannelSparsity:
     """
     Compute channel sparsity from a `SortingAnalyzer` for each template with several methods.
@@ -704,6 +704,12 @@ def compute_sparsity(
         assert isinstance(
             templates_or_sorting_analyzer, SortingAnalyzer
         ), f"compute_sparsity(method='{method}') need SortingAnalyzer"
+        assert (
+            peak_sign is None
+        ), "When using `compute_sparsity` with an analyzer, `peak_sign` must be None. The `peak_sign is set when you create the analyzer."
+        assert (
+            amplitude_mode is None
+        ), "When using `compute_sparsity` with an analyzer, `amplitude_mode` must be None. The `peak_mode` is set when you create the analyzer."
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"

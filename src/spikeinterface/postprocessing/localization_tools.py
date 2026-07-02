@@ -175,7 +175,7 @@ def compute_center_of_mass(
 
     if sorting_analyzer_or_templates.sparsity is None:
         sparsity = compute_sparsity(
-            sorting_analyzer_or_templates, method="radius", radius_um=radius_um, peak_sign="neg"
+            sorting_analyzer_or_templates, method="radius", radius_um=radius_um, peak_sign=peak_sign
         )
     else:
         sparsity = sorting_analyzer_or_templates.sparsity
