@@ -103,3 +103,35 @@ rec_sh_bin.dump_to_json(str(OUTPUT_DIR / "shuffled_probe.json"))
 rec_sh_bin.dump_to_pickle(str(OUTPUT_DIR / "shuffled_probe.pkl"))
 
 print(f"Fixtures written to: {OUTPUT_DIR.resolve()}")
+
+# -----------------------------------------------------------------------
+# Fixture 4: two probes with interleaved device_channel_indices
+# -----------------------------------------------------------------------
+n = 8
+probe_A = generate_linear_probe(num_elec=n, ypitch=20.0)
+probe_A.move([0.0, 0.0])
+probe_A.annotate(name="probe_A", manufacturer="vendor_X")
+probe_A.set_contact_ids([f"a{i}" for i in range(n)])
+probe_A.set_device_channel_indices(np.arange(0, 2 * n, 2))  # even indices
+probe_A.create_auto_shape()
+
+probe_B = generate_linear_probe(num_elec=n, ypitch=20.0)
+probe_B.move([500.0, 0.0])
+probe_B.annotate(name="probe_B", manufacturer="vendor_Y")
+probe_B.set_contact_ids([f"b{i}" for i in range(n)])
+probe_B.set_device_channel_indices(np.arange(1, 2 * n, 2))  # odd indices
+probe_B.create_auto_shape()
+
+pg = ProbeGroup()
+pg.add_probe(probe_A)
+pg.add_probe(probe_B)
+
+n_total = 2 * n
+traces2 = np.arange(1000 * n_total, dtype="int16").reshape(1000, n_total)
+rec_two_inter = NumpyRecording([traces2], sampling_frequency=30000.0)
+rec_two_inter.set_probegroup(pg, in_place=True)
+
+rec_two_inter_bin = rec_two_inter.save(folder=str(OUTPUT_DIR / "two_probe_interleaved_binary"))
+rec_two_inter_zarr = rec_two_inter.save(folder=str(OUTPUT_DIR / "two_probe_interleaved.zarr"), format="zarr")
+rec_two_inter_bin.dump_to_json(str(OUTPUT_DIR / "two_probe_interleaved.json"))
+rec_two_inter_bin.dump_to_pickle(str(OUTPUT_DIR / "two_probe_interleaved.pkl"))

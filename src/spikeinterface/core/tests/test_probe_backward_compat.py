@@ -94,6 +94,10 @@ def test_shuffled_probe_binary_compat():
     _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe_binary"))
 
 
+def test_interleaved_probe_binary_compat():
+    _check_two_probes(load(FIXTURES_DIR / "two_probe_interleaved_binary"))
+
+
 # ---------------------------------------------------------------------------
 # Zarr dump fixtures
 # ---------------------------------------------------------------------------
@@ -109,6 +113,10 @@ def test_two_probe_zarr_compat():
 
 def test_shuffled_probe_zarr_compat():
     _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe.zarr"))
+
+
+def test_interleaved_probe_zarr_compat():
+    _check_two_probes(load(FIXTURES_DIR / "two_probe_interleaved.zarr"))
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +136,10 @@ def test_shuffled_probe_json_compat():
     _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe.json"))
 
 
+def test_interleaved_probe_json_compat():
+    _check_two_probes(load(FIXTURES_DIR / "two_probe_interleaved.json"))
+
+
 # ---------------------------------------------------------------------------
 # Pickle dump fixtures
 # ---------------------------------------------------------------------------
@@ -143,3 +155,7 @@ def test_two_probe_pickle_compat():
 
 def test_shuffled_probe_pickle_compat():
     _check_shuffled_probe(load(FIXTURES_DIR / "shuffled_probe.pkl"))
+
+
+def test_interleaved_probe_pickle_compat():
+    _check_two_probes(load(FIXTURES_DIR / "two_probe_interleaved.pkl"))
