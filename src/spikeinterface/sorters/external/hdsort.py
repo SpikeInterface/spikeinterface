@@ -276,8 +276,8 @@ class HDSortSorter(BaseSorter):
                 [("electrode", np.int32), ("x", np.float64), ("y", np.float64), ("channel", np.int32)]
             )
 
-            locations = recording.get_property("location")
-            assert locations is not None, "'location' property is needed to run HDSort"
+            assert recording.has_probe(), "The recording must have a probe to run HDSort"
+            locations = recording.get_channel_locations()
 
             with h5py.File(save_path, "w") as f:
                 f.create_group("ephys")
