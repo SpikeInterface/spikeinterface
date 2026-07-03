@@ -146,11 +146,8 @@ class BaseRecordingSnippets(BaseExtractor):
         if in_place is not None:
             warnings.warn(
                 "The 'in_place' argument is deprecated and will be removed in version 0.106.0. "
-                "The `set_probe/probegroup()` are always in place and assume that the probe/probegroup has the "
-                "same number of connected contacts as the number of channels in the recording. "
-                "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
-                "a channel selection to match the probe/probegroup.",
-                DeprecationWarning,
+                "The `set_probe/probegroup()` are now always in place; please remove the in_place argument.",
+                FutureWarning,
                 stacklevel=2,
             )
             if not in_place:
