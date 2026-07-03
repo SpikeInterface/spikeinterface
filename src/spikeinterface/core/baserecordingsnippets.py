@@ -166,6 +166,15 @@ class BaseRecordingSnippets(BaseExtractor):
                 "Use the `recording.select_channels_with_probegroup()` method instead to return a new recording with "
                 "a channel selection to match the probe/probegroup."
             )
+
+        device_channel_indices = probegroup_sorted.get_global_device_channel_indices()["device_channel_indices"]
+        if not np.array_equal(device_channel_indices, np.arange(self.get_num_channels())):
+            raise ValueError(
+                "`device_channel_indices` is wrong! "
+                "It should contain only values [0...n-1] after ordering, "
+                f"but they are: {device_channel_indices}"
+            )
+
         # probegroup_sorted.set_global_device_channel_indices(np.arange(probegroup_sorted.get_contact_count()))
         self._probegroup = probegroup_sorted
 
@@ -262,12 +271,7 @@ class BaseRecordingSnippets(BaseExtractor):
         device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
         keep_indices = np.flatnonzero(device_channel_indices >= 0)
         if len(keep_indices) < len(device_channel_indices):
-            warn(
-                f"The given probes have {len(device_channel_indices) - len(keep_indices)} unconnected contacts: "
-                "they will be removed"
-            )
             if len(keep_indices) == 0:
-                probegorup = ProbeGroup()  # empty probegroup
                 device_channel_indices = np.array([], dtype="int64")
             else:
                 probegroup = probegroup.get_slice(keep_indices)
