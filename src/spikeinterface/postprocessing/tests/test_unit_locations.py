@@ -46,12 +46,14 @@ def test_2d_and_3d_unit_localization():
     analyzer_3D.compute(["random_spikes", "templates"])
 
     # make a 2D synthetic recording
-    positions_2D = positions_3D[:, 0:2]
+    recording_2D = recording_3D
 
+    positions_2D = positions_3D[:, 0:2]
     probe_2D = Probe(ndim=2, si_units="um")
     probe_2D.set_contacts(positions=positions_2D)
     probe_2D.set_device_channel_indices(np.arange(4))
-    recording_2D = recording_3D.set_probe(probe=probe_2D)
+    recording_2D.set_probe(probe=probe_2D)
+
     sorting_2D = sorting_3D
 
     analyzer_2D = create_sorting_analyzer(sorting_2D, recording_2D, sparse=False)

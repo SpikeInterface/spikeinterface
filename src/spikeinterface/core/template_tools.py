@@ -284,12 +284,12 @@ def get_templates_array_from_recording_and_sorting(
 def get_template_extremum_channel(
     templates_or_sorting_analyzer,
     peak_sign: Literal["neg", "pos", "both"] = "neg",
-    peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+    mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
     outputs: Literal["id", "index"] = "id",
     operator: str = "average",
 ):
     """
-    Deprecated will be removed in 0.106.0.
+    Deprecated - will be removed in 0.106.0.
     Use analyzer.get_main_channels() or tempates.get_main_channels(peak_sign=...) instead.
 
 
@@ -301,7 +301,7 @@ def get_template_extremum_channel(
         A Templates or a SortingAnalyzer object
     peak_sign :  "neg" | "pos" | "both"
         Sign of the template to find extremum channels
-    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
+    mode : "extremum" | "at_index" | "peak_to_peak", default: "at_index"
         Where the amplitude is computed
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
@@ -315,24 +315,19 @@ def get_template_extremum_channel(
 
     Returns
     -------
-    main_channels : dict
+    extremum_channels : dict
         Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
     warnings.warn(
         "get_template_extremum_channel() is deprecated and will be removed in version 0.106.0 use analyzer.get_main_channels() instead",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        assert (
-            peak_sign is None
-        ), "get_template_extremum_channel() peak_sign is now contained in SortingAnalyzer, should be None here"
         main_channels = templates_or_sorting_analyzer.get_main_channels(outputs=outputs, with_dict=True)
     elif isinstance(templates_or_sorting_analyzer, Templates):
-        if peak_sign is None:
-            warnings.warn("get_template_extremum_channel() with Templates should provide a peak_sign")
-            peak_sign = "both"
+        peak_sign = "both"
         main_channels = templates_or_sorting_analyzer.get_main_channels(
             outputs=outputs, peak_sign=peak_sign, with_dict=True
         )
@@ -341,9 +336,9 @@ def get_template_extremum_channel(
 
 
 # TODO remove this in 0.106.0
-def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None):
+def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None, operator=None):
     """
-    Depracted will be removed in 0.106.0.
+    Deprecated - will be removed in 0.106.0.
     Use get_template_main_channel_peak_shift() instead.
 
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
@@ -366,7 +361,7 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
     warnings.warn(
         "get_template_extremum_channel_peak_shift() is deprecated use get_template_main_channel_peak_shift() instead"
         "Will be removed in 0.106.0",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
     return get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None, with_dict=True)
 
@@ -467,7 +462,7 @@ def get_template_extremum_amplitude(
     warnings.warn(
         "get_template_extremum_amplitude() is deprecated use get_template_main_channel_amplitude() instead"
         "Will be removed in 0.106.0",
-        category=DeprecationWarning,
+        category=FutureWarning,
     )
     return get_template_main_channel_amplitude(
         templates_or_sorting_analyzer,

@@ -7,11 +7,8 @@ from .utils import get_unit_colors
 from .traces import TracesWidget
 from spikeinterface.core import ChannelSparsity
 from spikeinterface.core.core_tools import ms_to_samples
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.core.basesorting import BaseSorting
-from spikeinterface.postprocessing import compute_unit_locations
 
 
 class SpikesOnTracesWidget(BaseWidget):

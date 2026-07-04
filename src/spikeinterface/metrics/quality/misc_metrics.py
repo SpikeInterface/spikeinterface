@@ -254,7 +254,7 @@ class SNR(BaseMetric):
 #     baseline_samples = min(baseline_samples, nbefore)  # Can't exceed nbefore
 
 #     # Get peak channel for each unit from templates
-#     extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
+#     extremum_channels_ids = sorting_analyzer.get_main_channels()
 
 #     snrs = {}
 #     for unit_id in unit_ids:

@@ -68,7 +68,7 @@ def test_get_template_main_channel_peak_shift(sorting_analyzer):
 
     # DEBUG
     # import matplotlib.pyplot as plt
-    # extremum_channels_ids = get_template_extremum_channel(we, peak_sign='both')
+    # extremum_channels_ids = we.get_main_channels(peak_sign='both')
     # for unit_id in we.unit_ids:
     #     chan_id = extremum_channels_ids[unit_id]
     #     chan_ind = we.recording.id_to_index(chan_id)
