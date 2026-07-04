@@ -378,14 +378,17 @@ class ChannelSparsity:
 
         Parameters
         ----------
+        unit_ids : np.ndarray
+            All unit ids of underlying sorting
+        channel_ids : np.ndarray
+            All channel ids of underlying recording
         main_channel_indices : np.array
             Main channel index per units.
         channel_locations : np.array
-            Channel locations of the recording.
+            Channel locations of underlying recording.
         radius_um : float
             Radius in um for "radius" method.
-        peak_sign : "neg" | "pos" | "both"
-            Sign of the template to compute best channels.
+
 
         Returns
         -------
@@ -483,10 +486,8 @@ class ChannelSparsity:
             ext = templates_or_sorting_analyzer.get_extension("noise_levels")
             assert ext is not None, "To compute sparsity from snr you need to compute 'noise_levels' first"
             noise_levels = ext.data["noise_levels"]
-            return_in_uV = templates_or_sorting_analyzer.return_in_uV
         elif isinstance(templates_or_sorting_analyzer, Templates):
             assert noise_levels is not None, "To compute sparsity from snr you need to provide noise_levels"
-            return_in_uV = templates_or_sorting_analyzer.is_in_uV
 
         mask = np.zeros((unit_ids.size, channel_ids.size), dtype="bool")
 
@@ -816,7 +817,7 @@ def estimate_sparsity(
     """
     # Can't be done at module because this is a cyclic import, too bad
     from .template import Templates
-    from .template_tools import get_templates_array_from_recording_and_sorting
+    from .template_tools import _get_templates_array_from_recording_and_sorting
 
     assert method in ("radius", "best_channels", "closest_channels", "snr", "amplitude", "by_property"), (
         f"method={method} is not available for `estimate_sparsity()`. "
@@ -841,7 +842,7 @@ def estimate_sparsity(
 
     elif method != "by_property":
 
-        templates_array = get_templates_array_from_recording_and_sorting(
+        templates_array = _get_templates_array_from_recording_and_sorting(
             recording, sorting, ms_before, ms_after, num_spikes_for_sparsity, 2205, **job_kwargs
         )
 

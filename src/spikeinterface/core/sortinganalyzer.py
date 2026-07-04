@@ -44,9 +44,6 @@ from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
 
-from .waveform_tools import estimate_templates_with_accumulator
-from .sorting_tools import random_spikes_selection
-
 
 # high level function
 def create_sorting_analyzer(
@@ -256,7 +253,7 @@ def create_sorting_analyzer(
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
         assert all(
             sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)
-        ), "sparsity si not constistentent with main_channel_indices"
+        ), "sparsity is not consistent with main_channel_indices"
     elif sparse:
         sparsity = estimate_sparsity(
             sorting,
@@ -359,8 +356,8 @@ class SortingAnalyzer:
         format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
-        peak_sign="both",
-        peak_mode="extremum",
+        peak_sign: Literal["both", "neg", "pos"] = "both",
+        peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
         backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
@@ -677,8 +674,11 @@ class SortingAnalyzer:
             new_settings["return_in_uV"] = True
 
         if "peak_sign" not in settings:
-            # before 0.104.0 was not in peak_sign
+            # before 0.104.0 peak_sign was not in settings.
             # TODO make something more fancy that explore the previous params of extension
+            # We decided to not do something fancy, as the `peak_sign`s in different
+            # extensions may not match the `peak_sign` that was used to create the analyzer.
+            # So instead we make it simple and use the current defaults
             new_settings["peak_sign"] = "both"
             new_settings["peak_mode"] = "extremum"
 
@@ -703,11 +703,12 @@ class SortingAnalyzer:
         Computes the `main_channel_indices` for an old analyzer, with `peak_sign` = "both"
          and `peak_mode` = "extremum". Logic is:
 
-        1) If you have the `templates` extension: use this to find the main_channel_indices, with
-        default settings and restricted to the sparsity of the analyzer.
+        1) If you have the `templates` extension: use this to find the main_channel_indices.
+        This will naturally be restricted to the sparsity of the analyzer, since the templates
+        are only non-zero on the sparsity mask.
 
         2) If you do not have the `templates` extension but do have `waveforms`: compute
-        `templates`, then go to 1)
+        `templates` in memory, then go to 1)
 
         3) If you do not have `templates` or `waveforms`, but do have `sparsity = True`, we
         will take the "average" channel as the `main_channel_index`
@@ -737,8 +738,6 @@ class SortingAnalyzer:
             templates = self.get_extension("templates")
             for k in ("average", "median"):
                 if k in templates.data:
-                    from .template_tools import _get_main_channel_from_template_array
-
                     templates_array = templates.data[k]
                     break
         else:

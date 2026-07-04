@@ -7,8 +7,8 @@ from spikeinterface.core import generate_ground_truth_recording, create_sorting_
 from spikeinterface import Templates
 from spikeinterface.core import (
     get_template_amplitudes,
-    get_template_main_channel_peak_shift,
-    get_template_main_channel_amplitude,
+    get_template_peak_shift_on_main_channel,
+    get_template_amplitude_on_main_channel,
 )
 
 
@@ -60,11 +60,11 @@ def test_get_template_amplitudes(sorting_analyzer):
     assert np.all(ptp > p for ptp, p in zip(peak_to_peak_values.values(), peak_values.values()))
 
 
-def test_get_template_main_channel_peak_shift(sorting_analyzer):
-    shifts = get_template_main_channel_peak_shift(sorting_analyzer)
+def test_get_template_peak_shift_on_main_channel(sorting_analyzer):
+    shifts = get_template_peak_shift_on_main_channel(sorting_analyzer)
     print(shifts)
     templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
-    shifts = get_template_main_channel_peak_shift(templates, peak_sign="both")
+    shifts = get_template_peak_shift_on_main_channel(templates, peak_sign="both")
 
     # DEBUG
     # import matplotlib.pyplot as plt
@@ -82,14 +82,14 @@ def test_get_template_main_channel_peak_shift(sorting_analyzer):
     #     plt.show()
 
 
-def test_get_template_main_channel_amplitude(sorting_analyzer):
+def test_get_template_amplitude_on_main_channel(sorting_analyzer):
 
-    extremum_channels_ids = get_template_main_channel_amplitude(sorting_analyzer)
+    extremum_channels_ids = get_template_amplitude_on_main_channel(sorting_analyzer)
     print(extremum_channels_ids)
 
     templates = _get_templates_object_from_sorting_analyzer(sorting_analyzer)
 
-    extremum_channels_ids = get_template_main_channel_amplitude(templates, peak_sign="both", peak_mode="extremum")
+    extremum_channels_ids = get_template_amplitude_on_main_channel(templates, peak_sign="both", peak_mode="extremum")
 
 
 if __name__ == "__main__":
@@ -99,5 +99,5 @@ if __name__ == "__main__":
     print(sorting_analyzer)
 
     test_get_template_amplitudes(sorting_analyzer)
-    test_get_template_main_channel_peak_shift(sorting_analyzer)
-    test_get_template_main_channel_amplitude(sorting_analyzer)
+    test_get_template_peak_shift_on_main_channel(sorting_analyzer)
+    test_get_template_amplitude_on_main_channel(sorting_analyzer)

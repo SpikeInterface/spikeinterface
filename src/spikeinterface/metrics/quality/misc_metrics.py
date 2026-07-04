@@ -17,7 +17,7 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.template_tools import (
-    get_template_main_channel_amplitude,
+    get_template_amplitude_on_main_channel,
     get_dense_templates_array,
 )
 from spikeinterface.metrics.spiketrain.metrics import NumSpikes, FiringRate
@@ -170,7 +170,7 @@ def compute_snrs(sorting_analyzer, unit_ids=None, method="extremum"):
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
     main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
-    unit_amplitudes = get_template_main_channel_amplitude(sorting_analyzer, with_dict=False, peak_mode=method)
+    unit_amplitudes = get_template_amplitude_on_main_channel(sorting_analyzer, with_dict=False, peak_mode=method)
 
     snrs = {}
     for unit_id in unit_ids:

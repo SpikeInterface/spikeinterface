@@ -2,7 +2,7 @@ import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
-from spikeinterface.core.template_tools import get_template_main_channel_peak_shift
+from spikeinterface.core.template_tools import get_template_peak_shift_on_main_channel
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, find_parent_of_type
 
 
@@ -35,7 +35,7 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
         extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
-        peak_shifts = get_template_main_channel_peak_shift(self.sorting_analyzer, with_dict=True)
+        peak_shifts = get_template_peak_shift_on_main_channel(self.sorting_analyzer, with_dict=True)
 
         spike_retriever_node = SpikeRetriever(
             sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channels_indices

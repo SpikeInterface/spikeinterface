@@ -107,15 +107,15 @@ def get_template_amplitudes(
     templates_or_sorting_analyzer : Templates | SortingAnalyzer
         A Templates or a SortingAnalyzer object
     peak_sign :  None | "neg" | "pos" | "both", default: None
-        For `sorting_analyzer` input, `peak_sign` must be None. Then uses the peak_mode of the analyzer.
         Used only when input is Templates.
         Sign of the template to find extremum channels
+        For `sorting_analyzer` input, `peak_sign` must be None. Then uses `peak_mode` of the analyzer.
     peak_mode : None |  "extremum" | "at_index" | "peak_to_peak", default: None
-        For `sorting_analyzer` input, `peak_mode` must be None. Then uses the peak_mode of the analyzer.
-        Where the amplitude is computed
+        How the amplitude is computed:
         * "extremum" : take the peak value (max or min depending on `peak_sign`)
         * "at_index" : take value at `nbefore` index
         * "peak_to_peak" : take the peak-to-peak amplitude
+        If None, for `sorting_analyzer` input, uses `peak_mode` of the analyzer.
     abs_value : bool = True
         Whether the extremum amplitude should be returned as an absolute value or not
     operator : str, default: "average"
@@ -227,8 +227,7 @@ def estimate_main_channel_from_recording(
     **job_kwargs,
 ):
     """
-    Estimate the main channel from recording using `estimate_templates_with_accumulator()`
-
+    Estimate the main channel indices from a recording and sorting
     """
 
     if peak_sign is None:
@@ -236,8 +235,8 @@ def estimate_main_channel_from_recording(
     if peak_mode is None:
         raise ValueError("You must provide `peak_mode` in `estimate_main_channel_from_recording`")
 
-    templates_array = get_templates_array_from_recording_and_sorting(
-        recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed
+    templates_array = _get_templates_array_from_recording_and_sorting(
+        recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed, **job_kwargs
     )
     nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
 
@@ -246,9 +245,12 @@ def estimate_main_channel_from_recording(
     return main_channel_indices
 
 
-def get_templates_array_from_recording_and_sorting(
+def _get_templates_array_from_recording_and_sorting(
     recording, sorting, ms_before, ms_after, num_spikes_for_main_channel, seed, **job_kwargs
 ):
+    """
+    Estimate the templates array from recording using `estimate_templates_with_accumulator()`
+    """
 
     sampling_frequency = recording.sampling_frequency
     nbefore = ms_to_samples(ms_before, sampling_frequency)
@@ -291,7 +293,6 @@ def get_template_extremum_channel(
     """
     Deprecated - will be removed in 0.106.0.
     Use analyzer.get_main_channels() or tempates.get_main_channels(peak_sign=...) instead.
-
 
     Compute the channel with the extremum peak for each unit.
 
@@ -339,7 +340,7 @@ def get_template_extremum_channel(
 def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None, operator=None):
     """
     Deprecated - will be removed in 0.106.0.
-    Use get_template_main_channel_peak_shift() instead.
+    Use get_template_peak_shift_on_main_channel() instead.
 
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -359,14 +360,14 @@ def get_template_extremum_channel_peak_shift(templates_or_sorting_analyzer, peak
     """
 
     warnings.warn(
-        "get_template_extremum_channel_peak_shift() is deprecated use get_template_main_channel_peak_shift() instead"
+        "get_template_extremum_channel_peak_shift() is deprecated use get_template_peak_shift_on_main_channel() instead"
         "Will be removed in 0.106.0",
         category=FutureWarning,
     )
-    return get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None, with_dict=True)
+    return get_template_peak_shift_on_main_channel(templates_or_sorting_analyzer, peak_sign=None, with_dict=True)
 
 
-def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sign=None, with_dict=True):
+def get_template_peak_shift_on_main_channel(templates_or_sorting_analyzer, peak_sign=None, with_dict=True):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -393,7 +394,7 @@ def get_template_main_channel_peak_shift(templates_or_sorting_analyzer, peak_sig
         peak_sign = templates_or_sorting_analyzer.peak_sign
     elif isinstance(templates_or_sorting_analyzer, Templates):
         if peak_sign is None:
-            warnings.warn("get_template_main_channel_peak_shift() with Templates should provide a peak_sign")
+            warnings.warn("get_template_peak_shift_on_main_channel() with Templates should provide a peak_sign")
             peak_sign = "both"
 
     unit_ids = templates_or_sorting_analyzer.unit_ids
@@ -431,7 +432,7 @@ def get_template_extremum_amplitude(
 ):
     """
     Depracted will be removed in 0.106.0.
-    Use get_template_main_channel_amplitude() instead.
+    Use get_template_amplitude_on_main_channel() instead.
 
     Computes amplitudes on the best channel.
 
@@ -460,11 +461,11 @@ def get_template_extremum_amplitude(
     """
 
     warnings.warn(
-        "get_template_extremum_amplitude() is deprecated use get_template_main_channel_amplitude() instead"
+        "get_template_extremum_amplitude() is deprecated use get_template_amplitude_on_main_channel() instead"
         "Will be removed in 0.106.0",
         category=FutureWarning,
     )
-    return get_template_main_channel_amplitude(
+    return get_template_amplitude_on_main_channel(
         templates_or_sorting_analyzer,
         peak_sign=peak_sign,
         peak_mode=peak_mode,
@@ -472,7 +473,7 @@ def get_template_extremum_amplitude(
     )
 
 
-def get_template_main_channel_amplitude(
+def get_template_amplitude_on_main_channel(
     templates_or_sorting_analyzer,
     peak_sign: None | Literal["neg", "pos", "both"] = None,
     peak_mode: None | Literal["extremum", "at_index", "peak_to_peak"] = None,
@@ -480,7 +481,7 @@ def get_template_main_channel_amplitude(
     with_dict=True,
 ):
     """
-    Computes amplitudes on the best channel.
+    Computes amplitudes on the main channel.
 
     Parameters
     ----------
@@ -506,7 +507,7 @@ def get_template_main_channel_amplitude(
         main_channels = templates_or_sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
     elif isinstance(templates_or_sorting_analyzer, Templates):
         if peak_sign is None:
-            warnings.warn("get_template_main_channel_peak_shift() with Templates should provide a peak_sign")
+            warnings.warn("get_template_peak_shift_on_main_channel() with Templates should provide a peak_sign")
             peak_sign = "both"
         main_channels = templates_or_sorting_analyzer.get_main_channels(
             outputs="index", peak_sign=peak_sign, with_dict=False
