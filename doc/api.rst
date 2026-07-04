@@ -81,9 +81,8 @@ spikeinterface.core
     .. autofunction:: get_chunk_with_margin
     .. autofunction:: order_channels_by_depth
     .. autofunction:: get_template_amplitudes
-    .. autofunction:: get_template_extremum_channel
-    .. autofunction:: get_template_extremum_channel_peak_shift
-    .. autofunction:: get_template_extremum_amplitude
+    .. autofunction:: get_template_peak_shift_on_main_channel
+    .. autofunction:: get_template_amplitude_on_main_channel
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording
