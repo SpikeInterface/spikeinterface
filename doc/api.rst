@@ -18,7 +18,7 @@ spikeinterface.core
     .. automethod:: BaseRecording.remove_channels
     .. automethod:: BaseRecording.set_probe
     .. automethod:: BaseRecording.set_probegroup
-    .. automethod:: BaseRecording.reset_probe
+    .. automethod:: BaseRecording.remove_probe
     .. automethod:: BaseRecording.select_channels_with_probe
     .. automethod:: BaseRecording.select_channels_with_probegroup
     .. automethod:: BaseRecording.split_by
@@ -103,7 +103,7 @@ Low-level
 .. automodule:: spikeinterface.core
     :noindex:
 
-    .. autoclass:: ChunkRecordingExecutor
+    .. autoclass:: TimeSeriesChunkExecutor
 
 
 Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)
