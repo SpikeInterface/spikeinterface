@@ -918,6 +918,8 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_vector_segment_slices = segment_slices
 
     # TODO sam : change extremum_channel_inds to main_channel_index with vector
+    # Should not deprecate extremum_channel_inds: the channel _indices_ are a
+    # recording property, so should come externally from the user
     def to_spike_vector(
         self,
         concatenated=True,
@@ -939,7 +941,6 @@ class BaseSorting(BaseExtractor):
             If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
             This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=True)
-
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.
@@ -953,24 +954,18 @@ class BaseSorting(BaseExtractor):
 
         """
 
-        spike_dtype = minimum_spike_dtype
-        if extremum_channel_inds is not None:
-            spike_dtype = spike_dtype + [("channel_index", "int64")]
-            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
-
         if self._cached_spike_vector is None:
             self._compute_and_cache_spike_vector()
 
-        # the cache already exists
         if extremum_channel_inds is None:
             spikes = self._cached_spike_vector
         else:
+            spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
-            spikes["sample_index"] = self._cached_spike_vector["sample_index"]
-            spikes["unit_index"] = self._cached_spike_vector["unit_index"]
-            spikes["segment_index"] = self._cached_spike_vector["segment_index"]
-            if extremum_channel_inds is not None:
-                spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
+            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
+
+            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+            spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
 
         if not concatenated:
             segment_slices = self._get_spike_vector_segment_slices()
