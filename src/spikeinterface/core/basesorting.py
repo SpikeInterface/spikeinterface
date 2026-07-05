@@ -917,13 +917,13 @@ class BaseSorting(BaseExtractor):
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
 
+    # TODO sam : change extremum_channel_inds to main_channel_index with vector
     def to_spike_vector(
         self,
         concatenated=True,
         extremum_channel_inds=None,
         use_cache=True,
         return_slices=False,
-        with_channel_index=False,
     ) -> np.ndarray | list[np.ndarray]:
         """
         Construct a unique structured numpy vector concatenating all spikes
@@ -936,52 +936,41 @@ class BaseSorting(BaseExtractor):
             With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
         extremum_channel_inds : None or dict, default: None
-            Deprecated. If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
+            If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
             This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=True)
-        with_channel_index : bool, default: False
-            If True, the returned spike array has a `channel_index` field.
-        return_slices, bool, default False
-            If True, function also returns segment slices
+
+        use_cache : bool, default: True
+            When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
+            This caching only occurs when extremum_channel_inds=None.
 
         Returns
         -------
         spikes : np.array
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
-            Or ("sample_index", "unit_index", "segment_index", "channel_index") if with_channel_index
+            Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
             is given
 
         """
 
+        spike_dtype = minimum_spike_dtype
         if extremum_channel_inds is not None:
-            warnings.warn(
-                "`extremum_channel_inds` in `to_spike_vector` has been deprecated and will be"
-                "removed in version 0.106.0. To get a spike vector with extremal channels, pass"
-                "`with_channel_index = True`. `to_spike_vector` will now using the `sorting`s `main_channel_id`.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            with_channel_index = True
+            spike_dtype = spike_dtype + [("channel_index", "int64")]
+            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
 
         if self._cached_spike_vector is None:
             self._compute_and_cache_spike_vector()
 
-        if not with_channel_index:
+        # the cache already exists
+        if extremum_channel_inds is None:
             spikes = self._cached_spike_vector
         else:
-            spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
-
-            main_channel_ids = self.get_property("main_channel_id")
-            if main_channel_ids is None:
-                raise ValueError(
-                    "Sorting does not contain property `main_channel_id`s. Set them using"
-                    'sorting.set_property("main_channel_id", main_channel_ids).'
-                )
-
-            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
-            main_channel_indices = self.ids_to_indices(main_channel_ids)
-            spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
+            spikes["sample_index"] = self._cached_spike_vector["sample_index"]
+            spikes["unit_index"] = self._cached_spike_vector["unit_index"]
+            spikes["segment_index"] = self._cached_spike_vector["segment_index"]
+            if extremum_channel_inds is not None:
+                spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
 
         if not concatenated:
             segment_slices = self._get_spike_vector_segment_slices()
