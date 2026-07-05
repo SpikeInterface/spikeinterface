@@ -630,10 +630,7 @@ class DummyPipelineAnalyzerExtension(BaseSpikeVectorExtension):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        extremum_channel_inds = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
-        spike_retriever_node = SpikeRetriever(
-            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
-        )
+        spike_retriever_node = SpikeRetriever(sorting, recording, channel_from_template=True)
         spike_amplitudes_node = AmplitudeExtractionNode(
             recording,
             parents=[spike_retriever_node],

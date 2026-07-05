@@ -33,12 +33,12 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
         return_in_uV = self.sorting_analyzer.return_in_uV
 
-        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
-
         peak_shifts = get_template_peak_shift_on_main_channel(self.sorting_analyzer, with_dict=True)
 
         spike_retriever_node = SpikeRetriever(
-            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
+            sorting,
+            recording,
+            channel_from_template=True,
         )
         spike_amplitudes_node = SpikeAmplitudeNode(
             recording,

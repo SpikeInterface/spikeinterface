@@ -90,15 +90,12 @@ def test_run_node_pipeline(cache_folder_creation):
     peak_retriever_few = PeakRetriever(recording, peaks[: peaks.size // 2])
 
     # channel index is from template
-    spike_retriever_T = SpikeRetriever(
-        sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
-    )
+    spike_retriever_T = SpikeRetriever(sorting, recording, channel_from_template=True)
     # channel index is per spike
     spike_retriever_S = SpikeRetriever(
         sorting,
         recording,
         channel_from_template=False,
-        extremum_channel_inds=extremum_channel_inds,
         radius_um=50,
         peak_sign="neg",
     )

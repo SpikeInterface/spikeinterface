@@ -4,6 +4,7 @@ from typing import Type
 
 import struct
 import copy
+import warnings
 
 from pathlib import Path
 
@@ -145,10 +146,6 @@ class PeakRetriever(PeakSource):
         return (local_peaks,)
 
 
-# TODO sam replace extremum_channels_indices by main_channel_index
-
-
-# this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
     """
     This class is useful to inject a sorting object in the node pipepline mechanism.
@@ -167,7 +164,7 @@ class SpikeRetriever(PeakSource):
     recording : BaseRecording
         The recording object.
     channel_from_template : bool, default: True
-        If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
+        If True, then the channel_index is taken from the sorting object.
         If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds : dict of int | None, default: None
         The extremum channel index dict given from template.
@@ -195,7 +192,13 @@ class SpikeRetriever(PeakSource):
 
         self.channel_from_template = channel_from_template
 
-        assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
+        if extremum_channel_inds is not None:
+            warnings.warn(
+                "`extremum_channel_inds` has been deprecated. The SpikeRetriever will now use `main_channel_ids` "
+                "from the given sorting.",
+                category=FutureWarning,
+                stacklevel=2,
+            )
 
         self._dtype = spike_peak_dtype
 
@@ -203,6 +206,9 @@ class SpikeRetriever(PeakSource):
         if include_spikes_in_margin:
             self._dtype = spike_peak_dtype + [("in_margin", "bool")]
 
+        main_channel_ids = sorting.get_property("main_channel_id")
+        assert main_channel_ids is not None, "SpikeRetriever needs the sorting to have `main_channel_id`s."
+        extremum_channel_inds = dict(zip(sorting.unit_ids, recording.ids_to_indices(main_channel_ids)))
         self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
 
         if not channel_from_template:
