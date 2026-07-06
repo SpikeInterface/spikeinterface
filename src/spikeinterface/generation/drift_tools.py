@@ -46,14 +46,14 @@ def interpolate_templates(
 
     dest_locations_dims = dest_locations.ndim
 
+    num_channels = dest_locations.shape[-2]
+    num_templates, num_samples = templates_array.shape[:2]
+
     if dest_locations_dims == 2:
-        new_shape = (*templates_array.shape[:2], len(dest_locations))
+        new_shape = (num_templates, num_samples, num_channels)
     elif dest_locations_dims == 3:
-        new_shape = (
-            dest_locations.shape[0],
-            *templates_array.shape[:2],
-            dest_locations.shape[1],
-        )
+        num_motions = dest_locations.shape[0]
+        new_shape = (num_motions, num_templates, num_samples, num_channels)
     else:
         raise ValueError(f"Incorrect dimensions for dest_locations: {dest_locations.ndim}. Dimensions can be 2 or 3. ")
 
@@ -66,15 +66,13 @@ def interpolate_templates(
             if interpolation_method == "thin_plate":
 
                 tps_interpolator = scipy.interpolate.RBFInterpolator(
-                    source_locations,
-                    template,
-                    kernel="thin_plate_spline",
+                    source_locations, template, kernel="thin_plate_spline", neighbors=12
                 )
                 if dest_locations_dims == 2:
                     interp_template = tps_interpolator(dest_locations)
                 elif dest_locations_dims == 3:
-                    interp_template = np.zeros((new_shape[0], new_shape[2]))
-                    for a in range(dest_locations.shape[0]):
+                    interp_template = np.zeros((num_motions, num_channels))
+                    for a in range(num_motions):
                         interp_template[a, :] = tps_interpolator(dest_locations[a])
 
             else:
