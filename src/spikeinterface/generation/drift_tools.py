@@ -43,9 +43,12 @@ def interpolate_templates(
 
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
-    if dest_locations.ndim == 2:
+
+    dest_locations_dims = dest_locations.ndim
+
+    if dest_locations_dims == 2:
         new_shape = (*templates_array.shape[:2], len(dest_locations))
-    elif dest_locations.ndim == 3:
+    elif dest_locations_dims == 3:
         new_shape = (
             dest_locations.shape[0],
             *templates_array.shape[:2],
@@ -61,21 +64,27 @@ def interpolate_templates(
             template = templates_array[template_index, sample_index, :]
 
             if interpolation_method == "thin_plate":
+
                 tps_interpolator = scipy.interpolate.RBFInterpolator(
                     source_locations,
                     template,
                     kernel="thin_plate_spline",
                 )
-                interp_template = tps_interpolator(dest_locations)
+                if dest_locations_dims == 2:
+                    interp_template = tps_interpolator(dest_locations)
+                elif dest_locations_dims == 3:
+                    interp_template = np.zeros((new_shape[1], new_shape[2]))
+                    for a in range(dest_locations.shape[0]):
+                        interp_template = tps_interpolator(dest_locations[a])
 
             else:
                 interp_template = scipy.interpolate.griddata(
                     source_locations, template, dest_locations, method=interpolation_method, fill_value=0
                 )
 
-            if dest_locations.ndim == 2:
+            if dest_locations_dims == 2:
                 new_templates_array[template_index, sample_index, :] = interp_template
-            elif dest_locations.ndim == 3:
+            elif dest_locations_dims == 3:
                 new_templates_array[:, template_index, sample_index, :] = interp_template
 
     return new_templates_array
