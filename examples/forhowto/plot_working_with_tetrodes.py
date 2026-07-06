@@ -62,15 +62,15 @@ tetrode_group.set_global_device_channel_indices(range(8))
 # We can now attach the :code:`tetrode_group` to our recording. To check if this worked, we'll
 # plot the probe map
 
-recording_with_probe = recording.set_probegroup(tetrode_group)
-plot_probe_map(recording_with_probe)
+recording.set_probegroup(tetrode_group)
+plot_probe_map(recording)
 
 ##############################################################################
 # Looks good! Now that the recording is aware of the probe geometry, we can
 # begin a standard spike sorting pipeline. First, we can apply preprocessing.
 # Note that we apply this preprocessing on the entire bundle of tetrodes.
 
-preprocessed_recording = spre.bandpass_filter(recording_with_probe)
+preprocessed_recording = spre.bandpass_filter(recording)
 
 ##############################################################################
 # WARNING: a very common preprocessing step is to apply a common median

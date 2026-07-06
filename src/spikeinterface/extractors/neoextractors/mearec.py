@@ -55,7 +55,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
         probe = probeinterface.read_mearec(file_path)
         probe.annotations["mearec_name"] = str(probe.annotations["mearec_name"])
-        self.set_probe(probe, in_place=True)
+        self.set_probe(probe)
         self.annotate(is_filtered=True)
 
         if hasattr(self.neo_reader._recgen, "gain_to_uV"):

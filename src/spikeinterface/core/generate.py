@@ -86,7 +86,7 @@ def generate_recording(
         if ndim == 3:
             probe = probe.to_3d()
         probe.set_device_channel_indices(np.arange(num_channels))
-        recording.set_probe(probe, in_place=True)
+        recording.set_probe(probe)
 
     recording.name = "SyntheticRecording"
 
@@ -168,7 +168,6 @@ def generate_sorting(
         spikes_in_seg["sample_index"] = samples
         spikes_in_seg["unit_index"] = labels
         spikes_in_seg["segment_index"] = segment_index
-        spikes.append(spikes_in_seg)
 
         if add_spikes_on_borders:
             spikes_on_borders = np.zeros(2 * num_spikes_per_border, dtype=minimum_spike_dtype)
@@ -182,10 +181,15 @@ def generate_sorting(
             spikes_on_borders["sample_index"][num_spikes_per_border:] = rng.integers(
                 num_samples - border_size_samples, num_samples, num_spikes_per_border
             )
-            spikes.append(spikes_on_borders)
+            spikes_in_seg = np.concatenate([spikes_in_seg, spikes_on_borders])
+            order = np.argsort(spikes_in_seg["sample_index"], stable=True)
+            spikes_in_seg = spikes_in_seg[order]
+
+        spikes.append(spikes_in_seg)
 
     spikes = np.concatenate(spikes)
-    spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+    # the spikes do not need a full lexsort because synthesize_poisson_spike_vector() guarantees spikes will be sorted already
+    # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
@@ -675,7 +679,7 @@ def generate_snippets(
 
     if set_probe:
         probe = recording.get_probe()
-        snippets = snippets.set_probe(probe)
+        snippets.set_probe(probe)
 
     return snippets, sorting
 
@@ -799,7 +803,9 @@ def synthesize_poisson_spike_vector(
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
-    sort_indices = np.argsort(spike_frames, kind="stable")  # I profiled the different kinds, this is the fastest.
+    # the `stable` is important because this guarantees result is equivalent to
+    # np.lexsort((unit_indices, spike_frames, ))
+    sort_indices = np.argsort(spike_frames, stable=True)
 
     unit_indices = unit_indices[sort_indices]
     spike_frames = spike_frames[sort_indices]
@@ -888,7 +894,7 @@ def synthesize_random_firings(
     times = np.concatenate(times)
     labels = np.concatenate(labels)
 
-    sort_inds = np.argsort(times)
+    sort_inds = np.argsort(times, stable=True)
     times = times[sort_inds]
     labels = labels[sort_inds]
 
@@ -1070,6 +1076,22 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     spike_train = np.sort(np.concatenate((spike_train, viol_times)))
 
     return spike_train
+
+
+def synthesize_amplitude_factor(
+    num_spikes: int,
+    amplitude_factor: np.ndarray | None = None,
+    amplitude_std: float | None = None,
+    seed: np.random.Generator | int | None = None,
+):
+    if amplitude_factor is not None:
+        assert amplitude_factor.shape == (num_spikes,)
+        return amplitude_factor
+    elif amplitude_std:
+        rng = np.random.default_rng(seed)
+        return rng.normal(loc=1, scale=amplitude_std, size=num_spikes)
+    else:
+        return None
 
 
 from spikeinterface.core.basesorting import BaseSortingSegment, BaseSorting
@@ -2446,7 +2468,7 @@ def generate_ground_truth_recording(
         upsample_vector=upsample_vector,
     )
     recording.annotate(is_filtered=True)
-    recording.set_probe(probe, in_place=True)
+    recording.set_probe(probe)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
 
