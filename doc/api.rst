@@ -16,6 +16,12 @@ spikeinterface.core
     .. automethod:: BaseRecording.dump_to_json
     .. automethod:: BaseRecording.dump_to_pickle
     .. automethod:: BaseRecording.remove_channels
+    .. automethod:: BaseRecording.set_probe
+    .. automethod:: BaseRecording.set_probegroup
+    .. automethod:: BaseRecording.reset_probe
+    .. automethod:: BaseRecording.select_channels_with_probe
+    .. automethod:: BaseRecording.select_channels_with_probegroup
+    .. automethod:: BaseRecording.split_by
     .. autoclass:: BaseSorting
         :members:
     .. automethod:: BaseSorting.save
@@ -25,6 +31,8 @@ spikeinterface.core
     .. automethod:: BaseSorting.dump
     .. automethod:: BaseSorting.dump_to_json
     .. automethod:: BaseSorting.dump_to_pickle
+    .. automethod:: BaseSorting.split_by
+    .. automethod:: BaseSorting.register_recording
     .. autoclass:: BaseSnippets
         :members:
     .. automethod:: BaseSnippets.save

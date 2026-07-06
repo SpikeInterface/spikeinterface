@@ -18,6 +18,7 @@ from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_sorting,
     generate_templates,
+    synthesize_amplitude_factor,
     _ensure_unit_params,
     _ensure_seed,
 )
@@ -366,6 +367,8 @@ def generate_drifting_recording(
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
     noise=None,
     generate_noise_kwargs=dict(noise_levels=(6.0, 8.0), spatial_decay=25.0),
+    amplitude_std: float | None = None,
+    amplitude_factor: np.ndarray | None = None,
     extra_outputs=False,
     seed=None,
 ):
@@ -405,6 +408,11 @@ def generate_drifting_recording(
         Noise generator used to generate background noise
     generate_noise_kwargs : dict
         Parameters given to generate_noise() if no noise is None
+    amplitude_std : float, default: 0.05
+        The standard deviation of the modulation to apply to the spikes when injecting them
+        into the recording.
+    amplitude_factor: np.ndarray, optional
+        Optional fixed per-spike amplitude modulation
     extra_outputs : bool, default False
         Return optionaly a dict with more variables.
     seed : None ot int
@@ -559,6 +567,13 @@ def generate_drifting_recording(
         assert noise.probe.get_contact_count() == probe.get_contact_count(), "Noise num channels mismatch"
         assert noise.get_total_duration() == duration, "Noise duration should be the same as the recording duration"
 
+    amplitude_factor = synthesize_amplitude_factor(
+        num_spikes=sorting.count_total_num_spikes(),
+        amplitude_factor=amplitude_factor,
+        amplitude_std=amplitude_std,
+        seed=seed,
+    )
+
     static_recording = InjectDriftingTemplatesRecording(
         sorting=sorting,
         parent_recording=noise,
@@ -567,7 +582,7 @@ def generate_drifting_recording(
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=np.zeros_like(displacement_unit_factor),
         num_samples=[int(duration * sampling_frequency)],
-        amplitude_factor=None,
+        amplitude_factor=amplitude_factor,
     )
 
     drifting_recording = InjectDriftingTemplatesRecording(
@@ -578,7 +593,7 @@ def generate_drifting_recording(
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=displacement_unit_factor,
         num_samples=[int(duration * sampling_frequency)],
-        amplitude_factor=None,
+        amplitude_factor=amplitude_factor,
     )
 
     if extra_outputs:
