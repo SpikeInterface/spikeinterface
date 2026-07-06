@@ -60,7 +60,7 @@ def _sorting_violation():
     spike_times = np.concatenate(trains)
     spike_labels = np.concatenate(labels)
 
-    order = np.argsort(spike_times)
+    order = np.argsort(spike_times, stable=True)
     max_num_samples = np.floor(max_time * sampling_frequency) - 1
     indexes = np.arange(0, max_time + 1, 1 / sampling_frequency)
     spike_times = np.searchsorted(indexes, spike_times[order], side="left")
