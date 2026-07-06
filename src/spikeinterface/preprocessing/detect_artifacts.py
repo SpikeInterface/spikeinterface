@@ -4,19 +4,24 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.base import base_period_dtype
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.recording_tools import get_random_data_chunks
+from spikeinterface.core.node_pipeline import PeakDetector, run_node_pipeline, PipelineNode
 from spikeinterface.preprocessing.rectify import RectifyRecording
 from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
 from spikeinterface.preprocessing.filter_gaussian import GaussianFilterRecording
-from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.recording_tools import get_noise_levels, get_random_data_chunks
-from spikeinterface.core.node_pipeline import PeakDetector, base_peak_dtype, run_node_pipeline, PipelineNode
+from spikeinterface.preprocessing.silence_periods import SilencedPeriodsRecording
 
 artifact_dtype = base_period_dtype
 
-# this will be extend with channel boundaries if needed
-# extended_artifact_dtype = artifact_dtype + [
-#     # TODO
-# ]
+signed_artifact_dtype = np.dtype(artifact_dtype + [("sign", "U8")])
+
+
+def _indent_docstring(docstring: str, indent: int = 4) -> str:
+    indent_str = " " * indent
+    indented_lines = [(indent_str + line) if line.strip() else line for line in docstring.splitlines()]
+    return "\n".join(indented_lines)
 
 
 def _collapse_events(events: np.ndarray) -> np.ndarray:
@@ -77,6 +82,7 @@ class _DetectSaturation(PipelineNode):
         saturation_threshold_uV: float,
         diff_threshold_uV: float | None,
         proportion: float,
+        signed: bool,
     ) -> None:
         """
         Parameters
@@ -91,6 +97,11 @@ class _DetectSaturation(PipelineNode):
         proportion : float
             Fraction of channels that must exceed the threshold for a sample to
             be labelled as saturated (0 < proportion < 1).
+        signed : bool
+            If ``True``, the sign of the saturation is returned as an additional field in the output array, with values
+            ``"positive"`` for positive saturation and ``"negative"`` for negative saturation.  If ``False``,
+            the output array has the standard ``artifact_dtype`` with fields ``"start_sample_index"``, ``"end_sample_index"``,
+            and ``"segment_index"``.
         """
         PipelineNode.__init__(self, recording, return_output=True)
 
@@ -102,6 +113,7 @@ class _DetectSaturation(PipelineNode):
         # slightly lower than the documented saturation point of the probe
         self.sampling_frequency = recording.get_sampling_frequency()
         self.proportion = proportion
+        self.signed = signed
         self._dtype = np.dtype(artifact_dtype)
         self.gain = recording.get_channel_gains()
         self.offset = recording.get_channel_offsets()
@@ -121,6 +133,27 @@ class _DetectSaturation(PipelineNode):
     def get_dtype(self) -> np.dtype:
         """Return the NumPy dtype of the output array produced by :meth:`compute`."""
         return self._dtype
+
+    def detect_in_chunk(self, traces, saturation_threshold, diff_threshold, proportion) -> np.ndarray:
+        saturation = np.mean(traces > saturation_threshold, axis=1)
+        detected_by_value = saturation > proportion
+
+        if diff_threshold is not None:
+            # then compute the derivative of the voltage saturation
+            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) >= diff_threshold, axis=1)
+
+            # Note this means the velocity is not checked for the last sample in the
+            # check because we are taking the forward derivative
+            n_diff_saturated = np.r_[n_diff_saturated, 0]
+
+            # if either of those reaches more than the proportion of channels labels the sample as saturated
+            detected_by_diff = n_diff_saturated > proportion
+            saturation = np.logical_or(detected_by_value, detected_by_diff)
+        else:
+            saturation = detected_by_value
+
+        intervals = np.flatnonzero(np.diff(saturation, prepend=False, append=False))
+        return intervals
 
     def compute(
         self,
@@ -165,33 +198,62 @@ class _DetectSaturation(PipelineNode):
         # cast to float32 to prevent overflow when applying thresholds in unscaled ADC units
         traces = traces.astype("float32")
 
-        saturation = np.mean(np.abs(traces) > self.saturation_threshold_unscaled, axis=1)
-        detected_by_value = saturation > self.proportion
+        if not self.signed:
+            traces = np.abs(traces)
+            intervals = self.detect_in_chunk(
+                traces, self.saturation_threshold_unscaled, self.diff_threshold_unscaled, self.proportion
+            )
+            n_events = len(intervals) // 2  # Number of saturation periods
+            events = np.zeros(n_events, dtype=artifact_dtype)
 
-        if self.diff_threshold_unscaled is not None:
-            # then compute the derivative of the voltage saturation
-            n_diff_saturated = np.mean(np.abs(np.diff(traces, axis=0)) >= self.diff_threshold_unscaled, axis=1)
-
-            # Note this means the velocity is not checked for the last sample in the
-            # check because we are taking the forward derivative
-            n_diff_saturated = np.r_[n_diff_saturated, 0]
-
-            # if either of those reaches more than the proportion of channels labels the sample as saturated
-            detected_by_diff = n_diff_saturated > self.proportion
-            saturation = np.logical_or(detected_by_value, detected_by_diff)
+            for i, (start, stop) in enumerate(zip(intervals[::2], intervals[1::2])):
+                events[i]["start_sample_index"] = start + start_frame
+                events[i]["end_sample_index"] = stop + start_frame
+                events[i]["segment_index"] = segment_index
         else:
-            saturation = detected_by_value
+            all_events = []
+            for sign in (1, -1):
+                traces_signed = sign * traces
+                intervals = self.detect_in_chunk(
+                    traces_signed, self.saturation_threshold_unscaled, self.diff_threshold_unscaled, self.proportion
+                )
+                n_events = len(intervals) // 2  # Number of saturation periods
+                events = np.zeros(n_events, dtype=signed_artifact_dtype)
+                events["sign"] = "positive" if sign == 1 else "negative"
 
-        intervals = np.flatnonzero(np.diff(saturation, prepend=False, append=False))
-        n_events = len(intervals) // 2  # Number of saturation periods
-        events = np.zeros(n_events, dtype=artifact_dtype)
-
-        for i, (start, stop) in enumerate(zip(intervals[::2], intervals[1::2])):
-            events[i]["start_sample_index"] = start + start_frame
-            events[i]["end_sample_index"] = stop + start_frame
-            events[i]["segment_index"] = segment_index
+                for i, (start, stop) in enumerate(zip(intervals[::2], intervals[1::2])):
+                    events[i]["start_sample_index"] = start + start_frame
+                    events[i]["end_sample_index"] = stop + start_frame
+                    events[i]["segment_index"] = segment_index
+                all_events.append(events)
+            all_events = np.concatenate(all_events)
+            # sort by start sample index
+            order = np.argsort(all_events["start_sample_index"])
+            events = all_events[order]
 
         return (events,)
+
+
+_detect_saturation_periods_params = """saturation_threshold_uV : float | None, default: None
+    Voltage saturation threshold in μV.  The appropriate value depends on
+    the probe and amplifier gain settings; for Neuropixels 1.0 probes IBL
+    recommend **1200 μV**.  NP2 probes are harder to saturate than NP1.
+    If ``None``, the value is read from the ``"saturation_threshold_uV"``
+    annotation of ``recording``.
+diff_threshold_uV : float | None, default: None
+    First-derivative threshold in μV/sample.  Periods where the
+    sample-to-sample voltage change exceeds this value in the required
+    fraction of channels are flagged as saturation.  Pass ``None`` to
+    disable derivative-based detection and rely solely on
+    ``saturation_threshold_uV``.  IBL use **300 μV/sample** for NP1 probes.
+proportion : float, default: 0.2
+    Fraction of channels (0 < proportion < 1) that must exceed the
+    threshold for a sample to be considered saturated.
+signed : bool, default: False
+    If ``True``, the sign of the saturation is returned as an additional field in the output array, with values
+    ``"positive"`` for positive saturation and ``"negative"`` for negative saturation.  If ``False``,
+    the output array has the standard ``artifact_dtype`` with fields ``"start_sample_index"``, ``"end_sample_index"``,
+    and ``"segment_index"``."""
 
 
 def detect_saturation_periods(
@@ -199,6 +261,7 @@ def detect_saturation_periods(
     saturation_threshold_uV: float | None = None,
     diff_threshold_uV: float | None = None,
     proportion: float = 0.2,
+    signed: bool = False,
     job_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
@@ -224,21 +287,7 @@ def detect_saturation_periods(
     ----------
     recording : BaseRecording
         The recording on which to detect saturation events.
-    saturation_threshold_uV : float | None, default: None
-        Voltage saturation threshold in μV.  The appropriate value depends on
-        the probe and amplifier gain settings; for Neuropixels 1.0 probes IBL
-        recommend **1200 μV**.  NP2 probes are harder to saturate than NP1.
-        If ``None``, the value is read from the ``"saturation_threshold_uV"``
-        annotation of ``recording``.
-    diff_threshold_uV : float | None, default: None
-        First-derivative threshold in μV/sample.  Periods where the
-        sample-to-sample voltage change exceeds this value in the required
-        fraction of channels are flagged as saturation.  Pass ``None`` to
-        disable derivative-based detection and rely solely on
-        ``saturation_threshold_uV``.  IBL use **300 μV/sample** for NP1 probes.
-    proportion : float, default: 0.2
-        Fraction of channels (0 < proportion < 1) that must exceed the
-        threshold for a sample to be considered saturated.
+    {}
     job_kwargs : dict | None, default: None
         Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
         ``n_jobs``, ``chunk_duration``).
@@ -270,12 +319,16 @@ def detect_saturation_periods(
         saturation_threshold_uV=saturation_threshold_uV,
         diff_threshold_uV=diff_threshold_uV,
         proportion=proportion,
+        signed=signed,
     )
 
     saturation_periods = run_node_pipeline(
         recording, [node0], job_kwargs=job_kwargs, job_name="detect saturation artifacts", check_for_peak_source=False
     )
     return _collapse_events(saturation_periods)
+
+
+detect_saturation_periods.__doc__ = detect_saturation_periods.__doc__.format(_detect_saturation_periods_params)
 
 
 ## detect_artifact_periods_by_envelope zone
@@ -382,6 +435,23 @@ class _DetectThresholdCrossing(PeakDetector):
         return (threshold_crossings,)
 
 
+_detect_artifacts_by_envelope_params = """detect_threshold : float, default: 5
+    Detection threshold as a multiple of the estimated per-channel noise
+    level of the envelope.
+freq_max : float, default: 20.0
+    Cut-off frequency (Hz) for the Gaussian low-pass filter applied to the
+    rectified signal when building the envelope.
+seed : int | None, default: None
+    Random seed forwarded to :func:`~spikeinterface.core.get_noise_levels`.
+    If ``None``, ``get_noise_levels`` uses ``seed=0``.
+job_kwargs : dict | None, default: None
+    Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
+    ``n_jobs``, ``chunk_duration``).
+random_slices_kwargs : dict | None, default: None
+    Additional keyword arguments forwarded to the ``random_slices_kwargs``
+    argument of :func:`~spikeinterface.core.get_noise_levels`."""
+
+
 def detect_artifact_periods_by_envelope(
     recording: BaseRecording,
     detect_threshold: float = 5,
@@ -410,21 +480,7 @@ def detect_artifact_periods_by_envelope(
     ----------
     recording : BaseRecording
         The recording extractor from which to detect artefact periods.
-    detect_threshold : float, default: 5
-        Detection threshold as a multiple of the estimated per-channel noise
-        level of the envelope.
-    freq_max : float, default: 20.0
-        Cut-off frequency (Hz) for the Gaussian low-pass filter applied to the
-        rectified signal when building the envelope.
-    seed : int | None, default: None
-        Random seed forwarded to :func:`~spikeinterface.core.get_noise_levels`.
-        If ``None``, ``get_noise_levels`` uses ``seed=0``.
-    job_kwargs : dict | None, default: None
-        Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
-        ``n_jobs``, ``chunk_duration``).
-    random_slices_kwargs : dict | None, default: None
-        Additional keyword arguments forwarded to the ``random_slices_kwargs``
-        argument of :func:`~spikeinterface.core.get_noise_levels`.
+    {}
     return_envelope : bool, default: False
         If ``True``, also return the intermediate envelope recording so that it
         can be inspected or plotted.
@@ -475,13 +531,17 @@ def detect_artifact_periods_by_envelope(
 
     artifacts = _transform_internal_dtype_to_artifact_dtype(threshold_crossings, recording)
 
-    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
     artifacts = _collapse_events(artifacts)
 
     if return_envelope:
         return artifacts, envelope
     else:
         return artifacts
+
+
+detect_artifact_periods_by_envelope.__doc__ = detect_artifact_periods_by_envelope.__doc__.format(
+    _detect_artifacts_by_envelope_params
+)
 
 
 def _transform_internal_dtype_to_artifact_dtype(
@@ -522,7 +582,6 @@ def _transform_internal_dtype_to_artifact_dtype(
     for seg_index in range(num_seg):
         mask = artifacts["segment_index"] == seg_index
         sub_thr = artifacts[mask]
-        print(sub_thr)
         if len(sub_thr) > 0:
             if not sub_thr["front"][0]:
                 local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))
@@ -561,35 +620,41 @@ def detect_artifact_periods(
     job_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
-    Detect artifact periods using one of several available methods.
+        Detect artifact periods using one of several available methods.
 
-    Available methods:
+        Available methods:
 
-    * ``"envelope"``: detects artifacts as threshold crossings of a low-pass-filtered, rectified
-      channel envelope.
-    * ``"saturation"``: detects amplifier saturation events by a voltage threshold and/or a derivative threshold.
+        * ``"envelope"``: detects artifacts as threshold crossings of a low-pass-filtered, rectified
+          channel envelope.
+        * ``"saturation"``: detects amplifier saturation events by a voltage threshold and/or a derivative threshold.
 
-    See the documentation of each sub-function for a full description of their
-    parameters, which can be forwarded via ``method_kwargs``.
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording on which to detect artifact periods.
+        method : "envelope" | "saturation", default: "envelope"
+            Detection method to use.
+        method_kwargs : dict | None, default: None
+            Additional keyword arguments forwarded to the selected detection
+            function.  Pass ``None`` to use that function's defaults.
 
-    Parameters
-    ----------
-    recording : BaseRecording
-        The recording on which to detect artifact periods.
-    method : {"envelope", "saturation"}, default: "envelope"
-        Detection method to use.
-    method_kwargs : dict | None, default: None
-        Additional keyword arguments forwarded to the selected detection
-        function.  Pass ``None`` to use that function's defaults.
-    job_kwargs : dict | None, default: None
-        Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
-        ``n_jobs``, ``chunk_duration``).
+            Method-specific parameters include:
 
-    Returns
-    -------
-    np.ndarray
-        Array with dtype ``artifact_dtype`` describing each detected artifact
-        period.
+            - ``"envelope"``
+
+    {artifacts_by_envelope_params}
+            - ``"saturation"``, see :func:`detect_saturation_periods`
+
+    {saturation_periods_params}
+        job_kwargs : dict | None, default: None
+            Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
+            ``n_jobs``, ``chunk_duration``).
+
+        Returns
+        -------
+        np.ndarray
+            Array with dtype ``artifact_dtype`` describing each detected artifact
+            period.
     """
     assert (
         method in _method_to_function
@@ -600,3 +665,122 @@ def detect_artifact_periods(
     artifact_periods = _method_to_function[method](recording, job_kwargs=job_kwargs, **method_kwargs)
 
     return artifact_periods
+
+
+detect_artifact_periods.__doc__ = detect_artifact_periods.__doc__.format(
+    artifacts_by_envelope_params=_indent_docstring(_detect_artifacts_by_envelope_params, 12),
+    saturation_periods_params=_indent_docstring(_detect_saturation_periods_params, 12),
+)
+
+
+class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
+    """
+        Detect and remove artifact periods using one of several available methods.
+
+        Available methods:
+
+        * ``"envelope"``: detects artifacts as threshold crossings of a low-pass-filtered, rectified
+          channel envelope.
+        * ``"saturation"``: detects amplifier saturation events by a voltage threshold and/or a derivative threshold.
+
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording on which to detect artifact periods.
+        recording_to_detect : BaseRecording | None, default: None
+            The recording on which to perform artifact detection.
+            If ``None``, the same recording passed in ``recording`` is used.  This allows users to perform detection on
+            the another recording (e.g. the raw recording) while applying the silencing to the `recording`.
+        method : "envelope" | "saturation", default: "envelope"
+            Detection method to use.
+        method_kwargs : dict | None, default: None
+            Additional keyword arguments forwarded to the selected detection
+            function.  Pass ``None`` to use that function's defaults.
+
+            Method-specific parameters include:
+
+            - ``"envelope"``
+
+    {artifacts_by_envelope_params}
+            - ``"saturation"``, see :func:`detect_saturation_periods`
+
+    {saturation_periods_params}
+        job_kwargs : dict | None, default: None
+            Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
+            ``n_jobs``, ``chunk_duration``).
+        noise_levels_kwargs : dict | None, default: None
+            Keyword arguments for `spikeinterface.core.get_noise_levels()` function.
+
+        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
+        mode : "zeros" | "noise" | "apodization", default: "zeros"
+            Determines what periods are replaced by. Can be one of the following:
+
+            - "zeros": Artifacts are replaced by zeros.
+
+            - "noise": The periods are filled with a gaussion noise that has the
+                    same variance that the one in the recordings, on a per channel
+                    basis
+            - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization_samples`)
+        apodization_samples : int, default: 7
+            The factor used for the cosine taper when mode is "apodization". Higher values create a wider taper.
+        seed : int | None, default: None
+            Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+        artifact_periods : np.ndarray | None, default: None
+            Optionally, pre-computed artifact periods can be passed directly to the constructor to skip the
+            detection step. If ``None``, artifact periods are detected on the fly using the specified method
+    """
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        recording_to_detect: BaseRecording | None = None,
+        method: Literal["envelope", "saturation"] = "envelope",
+        method_kwargs: dict | None = None,
+        job_kwargs: dict | None = None,
+        mode: Literal["zeros", "noise", "apodization"] = "zeros",
+        noise_levels_kwargs: dict | None = None,
+        apodization: int = 7,
+        seed: int | None = None,
+        artifact_periods=None,
+    ) -> None:
+        if artifact_periods is not None:
+            artifact_periods = artifact_periods
+        else:
+            if recording_to_detect is None:
+                recording_to_detect = recording
+            artifact_periods = detect_artifact_periods(
+                recording_to_detect, method=method, method_kwargs=method_kwargs, job_kwargs=job_kwargs
+            )
+        super().__init__(
+            recording,
+            periods=artifact_periods,
+            mode=mode,
+            noise_levels_kwargs=noise_levels_kwargs,
+            seed=seed,
+            apodization=apodization,
+        )
+
+        self._kwargs = dict(
+            recording=recording,
+            recording_to_detect=recording_to_detect,
+            method=method,
+            method_kwargs=method_kwargs,
+            job_kwargs=job_kwargs,
+            mode=mode,
+            noise_levels_kwargs=noise_levels_kwargs,
+            seed=seed,
+            artifact_periods=artifact_periods,
+            apodization=apodization,
+        )
+
+
+# function for API
+detect_and_remove_artifacts = define_function_handling_dict_from_class(
+    source_class=DetectAndRemoveArtifactsRecording, name="detect_and_remove_artifacts"
+)
+
+detect_and_remove_artifacts.__doc__ = detect_and_remove_artifacts.__doc__.format(
+    artifacts_by_envelope_params=_indent_docstring(_detect_artifacts_by_envelope_params, 12),
+    saturation_periods_params=_indent_docstring(_detect_saturation_periods_params, 12),
+)
