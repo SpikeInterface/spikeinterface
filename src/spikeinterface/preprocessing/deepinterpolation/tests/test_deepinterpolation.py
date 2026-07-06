@@ -22,7 +22,7 @@ if tensorflow_spec is not None:
             HAVE_DEEPINTERPOLATION = True
         else:
             warn("DeepInterpolation version >=0.2.0 is required for the tests. Skipping...")
-        HAVE_DEEPINTERPOLATION = False
+            HAVE_DEEPINTERPOLATION = False
     else:
         HAVE_DEEPINTERPOLATION = False
 else:
