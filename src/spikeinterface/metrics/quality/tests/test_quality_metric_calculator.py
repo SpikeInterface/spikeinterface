@@ -145,6 +145,7 @@ def test_empty_units(sorting_analyzer_simple):
         {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
         sampling_frequency=sorting_analyzer.sampling_frequency,
     )
+    empty_sorting.set_property("main_channel_id", ["1", "1", "1"])
     sorting_empty = aggregate_units([sorting_analyzer.sorting, empty_sorting])
     assert len(sorting_empty.get_empty_unit_ids()) == 3
 
