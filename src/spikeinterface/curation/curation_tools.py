@@ -1,12 +1,13 @@
 from typing import Literal
+import importlib.util
 
 import numpy as np
 
-try:
+if importlib.util.find_spec("numba") is not None:
     import numba
 
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 _methods = ("keep_first", "random", "keep_last", "keep_first_iterative", "keep_last_iterative")

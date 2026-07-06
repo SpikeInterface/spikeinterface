@@ -27,7 +27,7 @@ def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
         Motion-corrected peak locations
     """
     if recording is None:
-        raise ValueError("compute_peak_displacements need recording to be not None")
+        raise ValueError("`compute_peak_displacements` requires the `recording` to not be None")
 
     channel_locations = recording.get_channel_locations()
 

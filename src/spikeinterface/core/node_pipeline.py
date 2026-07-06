@@ -1,13 +1,9 @@
-""" """
-
 from typing import Type
-
 import struct
 import copy
 import warnings
 
 from pathlib import Path
-
 
 import numpy as np
 

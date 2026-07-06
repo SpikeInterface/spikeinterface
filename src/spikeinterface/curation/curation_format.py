@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 import numpy as np
-from itertools import chain
 
 from spikeinterface.core import BaseSorting, SortingAnalyzer, apply_merges_to_sorting, apply_splits_to_sorting
 from spikeinterface.curation.curation_model import Curation, SequentialCuration

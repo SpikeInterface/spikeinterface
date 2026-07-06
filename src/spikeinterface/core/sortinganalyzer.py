@@ -1,5 +1,4 @@
 from typing import Literal, Optional, Any, Iterable
-
 from pathlib import Path
 from itertools import chain
 import os
@@ -17,9 +16,7 @@ from time import perf_counter
 import numpy as np
 
 import probeinterface
-
 import spikeinterface
-
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 from spikeinterface.core.waveform_tools import has_exceeding_spikes
 

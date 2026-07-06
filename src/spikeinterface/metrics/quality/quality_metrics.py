@@ -1,6 +1,7 @@
 """Classes and functions for computing multiple quality metrics."""
 
 import warnings
+
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
