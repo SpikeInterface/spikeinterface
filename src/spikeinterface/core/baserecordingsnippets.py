@@ -484,7 +484,7 @@ class BaseRecordingSnippets(BaseExtractor):
         warnings.warn(
             (
                 "clear_channel_locations() is deprecated and will be removed in version 0.106.0. "
-                "If you want to remove probe information, use `reset_probe()`."
+                "If you want to remove probe information, use `remove_probe()`."
             ),
             DeprecationWarning,
             stacklevel=2,

@@ -33,19 +33,8 @@ def test_2d_and_3d_unit_localization():
     2D and 3D channel locations.
     """
 
-    # make a 2D synthetic recording
-    positions_2D = [[0, 0], [0, 1], [1, 0], [1, 1]]
-
-    probe = Probe(ndim=2, si_units="um")
-    probe.set_contacts(positions=positions_2D)
-    probe.set_device_channel_indices(np.arange(4))
-
-    recording, sorting = generate_ground_truth_recording(num_channels=4, num_units=2, probe=probe, seed=1205)
-    analyzer_2D = create_sorting_analyzer(sorting, recording, sparse=False)
-    analyzer_2D.compute(["random_spikes", "templates"])
-
     # make a 3D synthetic recording
-    positions_3D = [[0, 0, 10], [0, 1, 15], [1, 0, 20], [1, 1, 100]]
+    positions_3D = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 0]])
 
     probe = Probe(ndim=3, si_units="um")
     probe.set_contacts(positions=positions_3D, plane_axes=[[[1, 0, 0], [0, 1, 0]] * 4])
@@ -55,6 +44,20 @@ def test_2d_and_3d_unit_localization():
     recording_3D, sorting_3D = generate_ground_truth_recording(num_channels=4, num_units=2, probe=probe, seed=1205)
     analyzer_3D = create_sorting_analyzer(sorting_3D, recording_3D, sparse=False)
     analyzer_3D.compute(["random_spikes", "templates"])
+
+    # make a 2D synthetic recording
+    recording_2D = recording_3D
+
+    positions_2D = positions_3D[:, 0:2]
+    probe_2D = Probe(ndim=2, si_units="um")
+    probe_2D.set_contacts(positions=positions_2D)
+    probe_2D.set_device_channel_indices(np.arange(4))
+    recording_2D.set_probe(probe=probe_2D)
+
+    sorting_2D = sorting_3D
+
+    analyzer_2D = create_sorting_analyzer(sorting_2D, recording_2D, sparse=False)
+    analyzer_2D.compute(["random_spikes", "templates"])
 
     for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation", "max_channel"]:
 

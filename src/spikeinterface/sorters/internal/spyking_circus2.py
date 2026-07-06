@@ -370,12 +370,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     job_kwargs=job_kwargs,
                 )
 
-                sparsity = compute_sparsity(dense_templates, method="radius", radius_um=radius_um)
+                sparsity = compute_sparsity(
+                    dense_templates, method="radius", radius_um=radius_um, peak_sign="neg", amplitude_mode="extremum"
+                )
                 threshold = params["cleaning"].get("sparsify_threshold", None)
                 if threshold is not None:
                     sparsity_snr = compute_sparsity(
                         dense_templates,
                         method="snr",
+                        peak_sign="neg",
                         amplitude_mode="peak_to_peak",
                         noise_levels=noise_levels,
                         threshold=threshold,
