@@ -951,7 +951,9 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     """
     rng = np.random.default_rng(seed)
 
-    other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
+    other_ids = np.arange(
+        np.max(sorting.unit_ids.astype(int)) + 1, np.max(sorting.unit_ids.astype(int)) + num + 1
+    ).astype(sorting.unit_ids.dtype)
     shifts = rng.integers(low=-max_shift, high=max_shift, size=num)
 
     shifts[shifts == 0] += max_shift
@@ -1013,12 +1015,20 @@ def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=Fa
         The dictionary with the split unit_ids. Returned only if output_ids is True.
     """
     unit_ids = sorting.unit_ids
-    assert unit_ids.dtype.kind == "i"
 
-    m = np.max(unit_ids) + 1
+    unit_ids_integer = unit_ids.dtype.kind == "i"
+    if not unit_ids_integer:
+        assert np.char.isdigit(unit_ids.astype(str)).all(), "Not all Unit IDs are parsable as integers"
+
+    integer_unit_ids = unit_ids.astype(int)
+
+    m = np.max(integer_unit_ids) + 1
     other_ids = {}
     for unit_id in split_ids:
-        other_ids[unit_id] = np.arange(m, m + num_split, dtype=unit_ids.dtype)
+        new_ids = np.arange(m, m + num_split).astype(int)
+        if not unit_ids_integer:
+            new_ids = [str(new_id) for new_id in new_ids]
+        other_ids[unit_id] = new_ids
         m += num_split
 
     rng = np.random.default_rng(seed)
@@ -2416,6 +2426,9 @@ def generate_ground_truth_recording(
     else:
         num_channels = probe.get_contact_count()
 
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
+
     if templates is None:
         channel_locations = probe.contact_positions
         unit_locations = generate_unit_locations(
@@ -2433,8 +2446,18 @@ def generate_ground_truth_recording(
             **generate_templates_kwargs,
         )
         sorting.set_property("gt_unit_locations", unit_locations)
+        distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :2], axis=2)
+        main_channel_indices = np.argmin(distances, axis=1)
+
     else:
         assert templates.shape[0] == num_units
+        from .template_tools import _get_main_channel_from_template_array
+
+        main_channel_indices = _get_main_channel_from_template_array(
+            templates, peak_mode="extremum", peak_sign="both", nbefore=nbefore
+        )
+
+    assert (nbefore + nafter) == templates.shape[1]
 
     if templates.ndim == 3:
         upsample_vector = None
@@ -2442,10 +2465,6 @@ def generate_ground_truth_recording(
         if upsample_vector is None:
             upsample_factor = templates.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
-
-    nbefore = ms_to_samples(ms_before, sampling_frequency)
-    nafter = ms_to_samples(ms_after, sampling_frequency)
-    assert (nbefore + nafter) == templates.shape[1]
 
     # construct recording
     from spikeinterface.generation.noise_tools import NoiseGeneratorRecording
@@ -2471,6 +2490,9 @@ def generate_ground_truth_recording(
     recording.set_probe(probe)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
+
+    main_channel_ids = recording.channel_ids[main_channel_indices]
+    sorting.set_property("main_channel_id", main_channel_ids)
 
     recording.name = "GroundTruthRecording"
     sorting.name = "GroundTruthSorting"

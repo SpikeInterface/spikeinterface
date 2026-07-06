@@ -307,7 +307,6 @@ with center of mass (:code:`method="center_of_mass"` - fast, but less accurate),
         input="spike_locations",
         ms_before=0.5,
         ms_after=0.5,
-        peak_sign="neg",
         method="center_of_mass"
     )
 
