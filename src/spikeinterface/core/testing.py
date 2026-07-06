@@ -118,7 +118,7 @@ def check_sortings_equal(
     s2 = SX2.to_spike_vector()
     if not check_exact_lexsort:
         # 2 sorting can be equal even if the internal lexsort is not the same.
-        # spiketrains still wiwll be the same per units
+        # spiketrains still will be the same per units
         s1 = s1[np.lexsort((s1["unit_index"], s1["sample_index"], s1["segment_index"]))]
         s2 = s2[np.lexsort((s2["unit_index"], s2["sample_index"], s2["segment_index"]))]
     assert_array_equal(s1, s2)
