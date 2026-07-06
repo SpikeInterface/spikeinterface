@@ -62,7 +62,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     api
     development/development
     whatisnew
-    goverance
+    governance
     authors
     references
 
