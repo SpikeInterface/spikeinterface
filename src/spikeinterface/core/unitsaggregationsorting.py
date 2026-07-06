@@ -1,5 +1,5 @@
-import math
 import warnings
+
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class

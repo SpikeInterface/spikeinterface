@@ -1,9 +1,8 @@
 import warnings
-
 import json
-import warnings
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from .curation_format import (
     apply_curation,
@@ -13,6 +12,7 @@ from .curation_model import Curation, Merge
 
 
 def get_kachery():
+
     try:
         import kachery as ka
 
@@ -64,7 +64,7 @@ def apply_sortingview_curation(
     """
 
     if verbose is not None:
-        warnings.warn("versobe in apply_sortingview_curation() is deprecated")
+        warnings.warn("verbose in apply_sortingview_curation() is deprecated")
 
     # download
     if Path(uri_or_json).suffix == ".json" and not str(uri_or_json).startswith("gh://"):

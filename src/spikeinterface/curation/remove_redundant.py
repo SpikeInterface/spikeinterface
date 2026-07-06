@@ -1,8 +1,8 @@
 import numpy as np
+
+
 from spikeinterface import BaseSorting
-
 from spikeinterface import SortingAnalyzer
-
 from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
 from spikeinterface.postprocessing import align_sorting
 

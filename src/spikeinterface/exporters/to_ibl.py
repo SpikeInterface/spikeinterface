@@ -1,7 +1,6 @@
 from importlib.util import find_spec
 import re
 import shutil
-import warnings
 from pathlib import Path
 
 import numpy as np
@@ -9,7 +8,6 @@ import numpy as np
 from spikeinterface.core import SortingAnalyzer, BaseRecording, get_random_data_chunks
 from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor, _shared_job_kwargs_doc
 from spikeinterface.core.template_tools import get_template_extremum_channel
-from spikeinterface.exporters import export_to_phy
 
 
 def export_to_ibl_gui(

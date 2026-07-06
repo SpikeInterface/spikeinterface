@@ -10,7 +10,7 @@
 # github.com/flatironinstitute/isosplit5/blob/master/matlab/jisotonic5_mex.cpp
 # Python (C++/PyBind) implementation: https://github.com/magland/isosplit5_python
 #
-# Translate again by Samuel Garcia in Agust 2025 by mixing Charlie's python code and the new isisplot6 code
+# Translated again by Samuel Garcia in Agust 2025 by mixing Charlie's python code and the new isisplot6 code
 # https://github.com/magland/isosplit6
 # Add also and mainly the isosplit algo in spikeinterface.
 #

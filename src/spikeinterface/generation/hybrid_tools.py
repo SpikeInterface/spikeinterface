@@ -1,9 +1,9 @@
 import warnings
 from typing import Literal
+
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
-
 from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
@@ -13,9 +13,7 @@ from spikeinterface.core.generate import (
     synthesize_amplitude_factor,
 )
 from spikeinterface.core.template_tools import get_template_extremum_channel
-
 from spikeinterface.core.motion import Motion
-
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
     DriftingTemplates,

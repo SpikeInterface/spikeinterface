@@ -1,6 +1,5 @@
 import warnings
 import importlib.util
-
 from typing import Literal
 
 import numpy as np

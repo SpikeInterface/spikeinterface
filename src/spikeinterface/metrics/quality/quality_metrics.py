@@ -1,6 +1,7 @@
 """Classes and functions for computing multiple quality metrics."""
 
 import warnings
+
 import numpy as np
 
 from spikeinterface.core.template_tools import get_template_extremum_channel
