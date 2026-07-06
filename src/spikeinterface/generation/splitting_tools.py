@@ -108,9 +108,9 @@ def split_sorting_by_amplitudes(
     rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
 
-    extremum_channel_inds = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds, concatenated=False)
+    spikes = sorting_analyzer.sorting.to_spike_vector(main_channel_indices=main_channel_indices, concatenated=False)
     new_spikes = spikes[0].copy()
     amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     nb_splits = int(splitting_probability * len(sorting_analyzer.sorting.unit_ids))
