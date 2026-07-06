@@ -39,7 +39,7 @@ def interpolate_templates(
     new_templates_array : np.array
         shape = (num_templates, num_samples, num_channels) or = (num_motions, num_templates, num_samples, num_channel)
     """
-    from scipy.interpolate import griddata
+    from scipy.interpolate import griddata, RBFInterpolator
 
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
@@ -65,9 +65,7 @@ def interpolate_templates(
 
             if interpolation_method == "thin_plate":
 
-                tps_interpolator = scipy.interpolate.RBFInterpolator(
-                    source_locations, template, kernel="thin_plate_spline", neighbors=12
-                )
+                tps_interpolator = RBFInterpolator(source_locations, template, kernel="thin_plate_spline", neighbors=12)
                 if dest_locations_dims == 2:
                     interp_template = tps_interpolator(dest_locations)
                 elif dest_locations_dims == 3:
@@ -76,7 +74,7 @@ def interpolate_templates(
                         interp_template[a, :] = tps_interpolator(dest_locations[a])
 
             else:
-                interp_template = scipy.interpolate.griddata(
+                interp_template = griddata(
                     source_locations, template, dest_locations, method=interpolation_method, fill_value=0
                 )
 
