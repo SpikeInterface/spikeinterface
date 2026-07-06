@@ -86,7 +86,7 @@ def generate_recording(
         if ndim == 3:
             probe = probe.to_3d()
         probe.set_device_channel_indices(np.arange(num_channels))
-        recording.set_probe(probe, in_place=True)
+        recording.set_probe(probe)
 
     recording.name = "SyntheticRecording"
 
@@ -679,7 +679,7 @@ def generate_snippets(
 
     if set_probe:
         probe = recording.get_probe()
-        snippets = snippets.set_probe(probe)
+        snippets.set_probe(probe)
 
     return snippets, sorting
 
@@ -2468,7 +2468,7 @@ def generate_ground_truth_recording(
         upsample_vector=upsample_vector,
     )
     recording.annotate(is_filtered=True)
-    recording.set_probe(probe, in_place=True)
+    recording.set_probe(probe)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
 
