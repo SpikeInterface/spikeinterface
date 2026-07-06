@@ -8,6 +8,7 @@ import numpy as np
 from spikeinterface.core import SortingAnalyzer, BaseRecording, get_random_data_chunks
 from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor, _shared_job_kwargs_doc
 
+
 def export_to_ibl_gui(
     sorting_analyzer: SortingAnalyzer,
     output_folder: str | Path,
