@@ -12,6 +12,7 @@
 #
 import os
 import shutil
+import datetime
 import importlib.util
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -49,7 +50,7 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022-2026, SpikeInterface Team'
+copyright = f'2022-{datetime.date.today().year}, SpikeInterface Team'
 author = 'SpikeInterface Team'
 
 
