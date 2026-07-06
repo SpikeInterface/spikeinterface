@@ -188,7 +188,7 @@ def generate_sorting(
         spikes.append(spikes_in_seg)
 
     spikes = np.concatenate(spikes)
-    # the spikes do not need a full lexsort because synthesize_poisson_spike_vector() garanty spikes to sorted by frame already
+    # the spikes do not need a full lexsort because synthesize_poisson_spike_vector() guarantees spikes will be sorted already
     # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
