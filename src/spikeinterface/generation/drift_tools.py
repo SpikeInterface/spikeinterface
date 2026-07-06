@@ -1,4 +1,5 @@
 import math
+from typing import Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -7,7 +8,12 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from probeinterface import Probe
 
 
-def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
+def interpolate_templates(
+    templates_array: np.ndarray,
+    source_locations: np.ndarray,
+    dest_locations: np.ndarray,
+    interpolation_method: Literal["cubic", "linear", "nearest", "thin_plate"] = "cubic",
+):
     """
     Interpolate templates_array to new positions.
     Useful to create motion or to remap templates_array form probeA to probeB.
@@ -53,9 +59,20 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
     for template_index in range(templates_array.shape[0]):
         for sample_index in range(templates_array.shape[1]):
             template = templates_array[template_index, sample_index, :]
-            interp_template = scipy.interpolate.griddata(
-                source_locations, template, dest_locations, method=interpolation_method, fill_value=0
-            )
+
+            if interpolation_method == "thin_plate":
+                tps_interpolator = scipy.interpolate.RBFInterpolator(
+                    source_locations,
+                    template,
+                    kernel="thin_plate_spline",
+                )
+                interp_template = tps_interpolator(dest_locations)
+
+            else:
+                interp_template = scipy.interpolate.griddata(
+                    source_locations, template, dest_locations, method=interpolation_method, fill_value=0
+                )
+
             if dest_locations.ndim == 2:
                 new_templates_array[template_index, sample_index, :] = interp_template
             elif dest_locations.ndim == 3:
