@@ -80,9 +80,9 @@ def test_run_node_pipeline(cache_folder_creation):
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    peaks = sorting_to_peaks(sorting, main_channel_indices, spike_peak_dtype)
     # print(peaks.size)
 
     peak_retriever = PeakRetriever(recording, peaks)
@@ -199,9 +199,9 @@ def test_skip_after_n_peaks_and_recording_slices():
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    peaks = sorting_to_peaks(sorting, main_channel_indices, spike_peak_dtype)
     # print(peaks.size)
 
     node0 = PeakRetriever(recording, peaks)

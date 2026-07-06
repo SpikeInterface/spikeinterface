@@ -98,8 +98,8 @@ def export_to_ibl_gui(
         output_folder.mkdir(parents=True, exist_ok=True)
 
     ### Save spikes info ###
-    extremum_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
-    spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_indices)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
+    spikes = sorting_analyzer.sorting.to_spike_vector(main_channel_indices=main_channel_indices)
 
     # spikes.clusters
     np.save(output_folder / "spikes.clusters.npy", spikes["unit_index"].astype("int32"))

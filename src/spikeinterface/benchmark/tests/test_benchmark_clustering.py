@@ -31,9 +31,9 @@ def test_benchmark_clustering(create_cache_folder):
 
         # sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
         # sorting_analyzer.compute(["random_spikes", "templates"])
-        extremum_channel_inds = gt_analyzer.get_main_channels(outputs="index", with_dict=True)
+        main_channel_indices = gt_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-        spikes = gt_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        spikes = gt_analyzer.sorting.to_spike_vector(main_channel_indices=main_channel_indices)
         peaks[dataset] = spikes
 
     cases = {}
