@@ -218,7 +218,7 @@ def test_quality_metrics_with_periods():
         seed=2205,
     )
 
-    # test failure when both periods and use_valid_periods are set
+    # test failure when periods and valid_unit_periods do not match
     with pytest.raises(ValueError):
         compute_quality_metrics(
             sorting_analyzer,
@@ -228,6 +228,17 @@ def test_quality_metrics_with_periods():
             periods=periods,
             seed=2205,
         )
+
+    # should not fail if external periods are the same as valid unit periods
+    valid_periods = sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
+    metrics_ext_periods = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=True,
+        periods=valid_periods,
+        seed=2205,
+    )
 
     # test failure if use valid_periods is True but valid_unit_periods extension is missing
     sorting_analyzer.delete_extension("valid_unit_periods")

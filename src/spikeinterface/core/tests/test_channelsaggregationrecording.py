@@ -1,8 +1,21 @@
 import numpy as np
+from probeinterface import generate_linear_probe
 
 from spikeinterface.core import aggregate_channels
 from spikeinterface.core import generate_recording
 from spikeinterface.core.testing import check_recordings_equal
+
+
+def _make_rec_with_named_probe(name, manufacturer, x_shift):
+    """Helper: single-probe recording with annotated name and manufacturer."""
+    probe = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe.move([x_shift, 0.0])
+    probe.annotate(name=name, manufacturer=manufacturer)
+    probe.set_device_channel_indices(np.arange(8))
+    probe.create_auto_shape()
+    rec = generate_recording(num_channels=8, durations=[1.0], set_probe=False)
+    rec.set_probe(probe)
+    return rec
 
 
 def test_channelsaggregationrecording():
@@ -260,6 +273,52 @@ def test_channel_aggregation_with_string_dtypes_of_different_size():
     aggregated_recording_channel_ids = list(aggregated_recording.get_channel_ids())
     assert aggregated_recording_channel_ids == ["8", "9", "10", "11"]
     assert aggregated_recording.channel_ids.dtype == np.dtype("<U2")
+
+
+def test_aggregate_channels_preserves_probe_metadata():
+    """Regression test for #4545: aggregate_channels must preserve per-probe name/manufacturer."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+    combined = aggregate_channels([rec_A, rec_B])
+
+    probes = combined.get_probes()
+    assert len(probes) == 2
+    probe_names = {p.annotations.get("name") for p in probes}
+    manufacturers = {p.annotations.get("manufacturer") for p in probes}
+    assert probe_names == {"probe_A", "probe_B"}
+    assert manufacturers == {"vendor_X", "vendor_Y"}
+
+
+def test_aggregate_channels_group_reindexing():
+    """Regression test for #4546: groups must be unique per probe after aggregate_channels."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+    combined = aggregate_channels([rec_A, rec_B])
+
+    groups = combined.get_property("group")
+    assert len(np.unique(groups)) == 2, "Each probe must have a distinct group index"
+
+    # Group values assigned to probe A channels and probe B channels must be disjoint
+    groups_A = set(groups[:8].tolist())
+    groups_B = set(groups[8:].tolist())
+    assert groups_A.isdisjoint(groups_B), "Group values must not overlap between the two probes"
+
+
+def test_aggregate_channels_split_by_round_trip():
+    """Regression test for #4549: aggregate then split_by(group) must recover one recording per probe."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+    combined = aggregate_channels([rec_A, rec_B])
+
+    parts = combined.split_by("group")
+    assert len(parts) == 2, "split_by must yield one sub-recording per probe"
+
+    recovered_names = set()
+    for sub in parts.values():
+        assert sub.has_probe()
+        assert len(sub.get_probes()) == 1
+        recovered_names.add(sub.get_probe().annotations.get("name"))
+    assert recovered_names == {"probe_A", "probe_B"}
 
 
 if __name__ == "__main__":

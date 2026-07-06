@@ -750,7 +750,9 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
 
         # If channel names are present, use them as channel_ids instead of the electrode ids
         if "channel_name" in electrode_table_columns:
-            channel_names = electrodes_table["channel_name"]
+            # Materialize the column to numpy first: the electrodes region can reference rows in
+            # any order, but h5py only fancy-indexes with strictly increasing indices.
+            channel_names = electrodes_table["channel_name"][:]
             channel_ids = channel_names[electrodes_indices]
             # Decode if bytes with utf-8
             channel_ids = [x.decode("utf-8") if isinstance(x, bytes) else x for x in channel_ids]
@@ -774,15 +776,17 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
             if "rel_y" in electrodes_table:
                 ndim = 3 if "rel_z" in electrodes_table else 2
                 locations = np.zeros((self.get_num_channels(), ndim), dtype=float)
-                locations[:, 0] = electrodes_table["rel_x"][electrodes_indices]
-                locations[:, 1] = electrodes_table["rel_y"][electrodes_indices]
+                # Materialize each column to numpy first: the electrodes region can reference rows in
+                # any order, but h5py only fancy-indexes with strictly increasing indices.
+                locations[:, 0] = electrodes_table["rel_x"][:][electrodes_indices]
+                locations[:, 1] = electrodes_table["rel_y"][:][electrodes_indices]
                 if "rel_z" in electrodes_table:
-                    locations[:, 2] = electrodes_table["rel_z"][electrodes_indices]
+                    locations[:, 2] = electrodes_table["rel_z"][:][electrodes_indices]
 
         # Channel groups
         groups = None
         if "group_name" in electrodes_table:
-            groups = electrodes_table["group_name"][electrodes_indices][:]
+            groups = electrodes_table["group_name"][:][electrodes_indices]
         if groups is not None:
             groups = np.array([x.decode("utf-8") if isinstance(x, bytes) else x for x in groups])
         return locations, groups
@@ -809,7 +813,9 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
                 continue
             else:
                 column_name = rename_properties.get(column, column)
-                properties[column_name] = electrodes_table[column][electrodes_indices]
+                # Materialize the column to numpy first: the electrodes region can reference rows in
+                # any order, but h5py only fancy-indexes with strictly increasing indices.
+                properties[column_name] = electrodes_table[column][:][electrodes_indices]
 
         return properties
 
@@ -833,7 +839,8 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         # Channel offsets
         offset = self.electrical_series.offset if hasattr(self.electrical_series, "offset") else 0
         if offset == 0 and "offset" in electrodes_table:
-            offset = electrodes_table["offset"].data[electrodes_indices]
+            # See note in _fetch_locations_and_groups: materialize to numpy before reordering.
+            offset = electrodes_table["offset"].data[:][electrodes_indices]
         offsets = offset * 1e6
 
         locations, groups = self._fetch_locations_and_groups(electrodes_table, electrodes_indices)
@@ -865,7 +872,8 @@ class NwbRecordingExtractor(BaseRecording, _BaseNWBExtractor):
         # Channel offsets
         offset = data_attributes["offset"] if "offset" in data_attributes else 0
         if offset == 0 and "offset" in electrodes_table:
-            offset = electrodes_table["offset"][electrodes_indices]
+            # See note in _fetch_locations_and_groups: materialize to numpy before reordering.
+            offset = electrodes_table["offset"][:][electrodes_indices]
         offsets = offset * 1e6
 
         # Channel locations and groups
