@@ -10,8 +10,8 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 numba_spec = importlib.util.find_spec("numba")
 networkx_spec = importlib.util.find_spec("networkx")
-scipy_spec = importlib.find_spec("scipy")
-sklearn_spec = importlib.find_spec("sklearn")
+scipy_spec = importlib.util.find_spec("scipy")
+sklearn_spec = importlib.util.find_spec("sklearn")
 
 if numba_spec is not None and networkx_spec is not None and scipy_spec is not None and sklearn_spec is not None:
     import numba
