@@ -2,7 +2,7 @@ import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
+from spikeinterface.core.template_tools import get_template_peak_shift_on_main_channel
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, find_parent_of_type
 
 
@@ -12,34 +12,33 @@ class ComputeSpikeAmplitudes(BaseSpikeVectorExtension):
 
     Needs "templates" to be computed first.
     Computes spike amplitudes from the template's peak channel for every spike.
-
-    Parameters
-    ----------
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Sign of the template to compute extremum channel used to retrieve spike amplitudes.
     """
 
     extension_name = "spike_amplitudes"
     depend_on = ["templates"]
     nodepipeline_variables = ["amplitudes"]
+    need_backward_compatibility_on_load = True
 
-    def _set_params(self, peak_sign="neg"):
-        return super()._set_params(peak_sign=peak_sign)
+    def _handle_backward_compatibility_on_load(self):
+        # removal of peak_sign from extensions
+        if "peak_sign" in self.params:
+            del self.params["peak_sign"]
+
+    def _set_params(self):
+        return super()._set_params()
 
     def _get_pipeline_nodes(self):
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        peak_sign = self.params["peak_sign"]
         return_in_uV = self.sorting_analyzer.return_in_uV
 
-        extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
-        )
-        peak_shifts = get_template_extremum_channel_peak_shift(self.sorting_analyzer, peak_sign=peak_sign)
+        peak_shifts = get_template_peak_shift_on_main_channel(self.sorting_analyzer, with_dict=True)
 
         spike_retriever_node = SpikeRetriever(
-            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channels_indices
+            sorting,
+            recording,
+            channel_from_template=True,
         )
         spike_amplitudes_node = SpikeAmplitudeNode(
             recording,

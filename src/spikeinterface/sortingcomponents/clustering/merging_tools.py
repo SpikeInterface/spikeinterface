@@ -1,22 +1,27 @@
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
+import importlib.util
 
 
 import numpy as np
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
-try:
+numba_spec = importlib.util.find_spec("numba")
+networkx_spec = importlib.util.find_spec("networkx")
+scipy_spec = importlib.util.find_spec("scipy")
+sklearn_spec = importlib.util.find_spec("sklearn")
+
+if numba_spec is not None and networkx_spec is not None and scipy_spec is not None and sklearn_spec is not None:
     import numba
-    import networkx as nx
+    import networkx
     import scipy.spatial
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
     from .isosplit_isocut import isocut
-
-except:
+else:
     pass
+
 from .tools import aggregate_sparse_features, FeaturesLoader
 
 DEBUG = False

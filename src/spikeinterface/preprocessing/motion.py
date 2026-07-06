@@ -5,8 +5,9 @@ import shutil
 import time
 import inspect
 from pathlib import Path
-import numpy as np
 from typing import Literal
+
+import numpy as np
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc

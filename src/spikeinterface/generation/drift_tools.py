@@ -39,7 +39,7 @@ def interpolate_templates(
     new_templates_array : np.array
         shape = (num_templates, num_samples, num_channels) or = (num_motions, num_templates, num_samples, num_channel)
     """
-    import scipy.interpolate
+    from scipy.interpolate import griddata
 
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
@@ -369,7 +369,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         # TODO handle upsample vector
         # upsample_vector: list[int] | None = None,
     ):
-        import scipy.spatial
+        from scipy.spatial import distance
 
         assert isinstance(
             drifting_templates, DriftingTemplates
@@ -472,7 +472,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
                 # we go to indices by the nearest precomputed displacements
                 # this is (num_spike, ) relate to indices
-                inds = np.argmin(scipy.spatial.distance.cdist(displacements, summed_displacement), axis=0)
+                inds = np.argmin(distance.cdist(displacements, summed_displacement), axis=0)
                 # just by paranoia
                 inds = np.clip(inds, 0, displacements.shape[0] - 1)
                 # this also cast to int64
@@ -501,7 +501,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             )
             self.add_recording_segment(recording_segment)
 
-        self.set_probe(drifting_templates.probe, in_place=True)
+        self.set_probe(drifting_templates.probe)
 
         # templates are too large, we don't serialize them to JSON
         self._serializability["json"] = False
