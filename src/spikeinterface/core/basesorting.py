@@ -166,7 +166,7 @@ class BaseSorting(BaseExtractor):
             per unit and per segment compact in memory.
             Using the cache makes the first call quite slow but then future calls are very fast.
 
-        Note : if use_cache=False but the good lexsorted cache is already computed then it will be used anyway.
+        Note: if use_cache=False, but the lexsorted cache is already computed then it will be used anyway.
 
         Returns
         -------

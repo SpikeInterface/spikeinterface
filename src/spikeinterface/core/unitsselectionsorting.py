@@ -63,13 +63,12 @@ class UnitsSelectionSorting(BaseSorting):
         # check if order is preserved
         pos = np.searchsorted(self._parent_sorting.unit_ids, self.unit_ids)
         order_is_preserved = np.all(np.diff(pos) > 0)
-        print("order_is_preserved", order_is_preserved)
 
         if not order_is_preserved:
-            # note from Sam:
-            # this can be a very high cost and make big dataset very slow
+            # Note: this can be a very high cost and make big dataset very slow
             # the only goal of this is to ensure the unit_index order when the sample is the same
-            # (and maybe this is not so usefull!!! : to be discussed)
+            # TODO: maybe we can remove it, if we don't guarantee the order of unit_index
+            # when sample_index is the same, but it can be a problem for some downstream analysis
 
             # lexsort by segment_index, sample_index, unit_index
             sort_indices = np.lexsort(
