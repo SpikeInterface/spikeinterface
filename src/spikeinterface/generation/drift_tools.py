@@ -73,9 +73,9 @@ def interpolate_templates(
                 if dest_locations_dims == 2:
                     interp_template = tps_interpolator(dest_locations)
                 elif dest_locations_dims == 3:
-                    interp_template = np.zeros((new_shape[1], new_shape[2]))
+                    interp_template = np.zeros((new_shape[0], new_shape[2]))
                     for a in range(dest_locations.shape[0]):
-                        interp_template = tps_interpolator(dest_locations[a])
+                        interp_template[a, :] = tps_interpolator(dest_locations[a])
 
             else:
                 interp_template = scipy.interpolate.griddata(
