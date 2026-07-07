@@ -1780,17 +1780,17 @@ def read_nwb_as_analyzer(
         colnames = units.colnames
         units = units.to_dataframe(index=True)
     else:
-        units_dset = sorting._file["units"]
+        units_dset = sorting.units_table
         units = _create_df_from_nwb_table(units_dset)
         colnames = units.columns
 
     electrodes_indices = None
     if use_pynwb:
-        electrodes_table = sorting._nwbfile.electrodes.to_dataframe(index=True)
+        electrodes_table = sorting._reader.nwbfile.electrodes.to_dataframe(index=True)
         if "electrodes" in colnames:
             electrodes_indices = units["electrodes"]
     else:
-        electrodes_table = _create_df_from_nwb_table(sorting._file["/general/extracellular_ephys/electrodes"])
+        electrodes_table = _create_df_from_nwb_table(sorting._reader.file["/general/extracellular_ephys/electrodes"])
         if "electrodes" in colnames:
             electrodes_indices = electrodes_indices = units["electrodes"][:]
 
@@ -1798,7 +1798,7 @@ def read_nwb_as_analyzer(
         # here we assume all groups are the same for each unit, so we just check one.
         if "group_name" in electrodes_table.columns:
             group_names = np.array([electrodes_table.iloc[int(ei[0])]["group_name"] for ei in electrodes_indices])
-            if len(np.unique(group_names)) > 0:
+            if len(np.unique(group_names)) > 1:
                 if group_name is None:
                     raise Exception(
                         f"More than one group, use group_name option to select units. Available groups: {np.unique(group_names)}"
@@ -1854,7 +1854,13 @@ def read_nwb_as_analyzer(
 
     # instantiate analyzer
     analyzer = SortingAnalyzer.create_memory(
-        sorting=sorting, recording=recording, sparsity=None, rec_attributes=rec_attributes, return_in_uV=True
+        sorting=sorting,
+        recording=recording,
+        sparsity=None,
+        return_in_uV=True,
+        peak_sign="neg",
+        peak_mode="extremum",
+        rec_attributes=rec_attributes,
     )
 
     # templates
