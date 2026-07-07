@@ -4,7 +4,7 @@ import importlib.util
 import numpy as np
 
 if importlib.util.find_spec("numba") is not None:
-    import numba
+    from numba import jit
 
     HAVE_NUMBA = True
 else:
@@ -103,7 +103,7 @@ def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period):
         N = len(spike_train)
         is_duplicate = np.zeros(N, dtype=np.bool_)
@@ -119,7 +119,7 @@ if HAVE_NUMBA:
 
         return np.nonzero(is_duplicate)[0]
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def _find_duplicated_spikes_keep_last_iterative(spike_train, censored_period):
         N = len(spike_train)
         is_duplicate = np.zeros(N, dtype=np.bool_)
