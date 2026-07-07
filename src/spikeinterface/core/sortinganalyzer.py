@@ -178,55 +178,8 @@ def create_sorting_analyzer(
         aggregated_recording = aggregate_channels(recording)
         aggregated_sorting = aggregate_units(sorting)
 
-        if sparsity is None:
-            if sparsity_kwargs.get("method", "") != "by_property" and not set_sparsity_by_dict_key:
-                # this is weird but due to the cyclic import
-                from .template_tools import estimate_main_channel_from_recording
-
-                # In this case we estimate and construct sparsity by property
-                sparsity_mask = np.zeros(
-                    (aggregated_sorting.get_num_units(), aggregated_recording.get_num_channels()), dtype=bool
-                )
-                main_channel_indices = np.zeros(aggregated_sorting.get_num_units(), dtype=int)
-                i_unit = 0
-                i_channel = 0
-                for key in sorting.keys():
-                    recording_single = recording[key]
-                    sorting_single = sorting[key]
-                    num_units = sorting_single.get_num_units()
-                    num_channels = recording_single.get_num_channels()
-
-                    main_channel_indices_single = estimate_main_channel_from_recording(
-                        recording_single,
-                        sorting_single,
-                        peak_sign=peak_sign,
-                        peak_mode=peak_mode,
-                        num_spikes_for_main_channel=num_spikes_for_main_channel,
-                        seed=seed,
-                        **job_kwargs,
-                    )
-                    sparsity_partial = estimate_sparsity(
-                        sorting_single,
-                        recording_single,
-                        main_channel_indices=main_channel_indices_single,
-                        peak_sign=peak_sign,
-                        amplitude_mode=peak_mode,
-                        **sparsity_kwargs,
-                    )
-                    sparsity_mask[i_unit : i_unit + num_units, i_channel : i_channel + num_channels] = (
-                        sparsity_partial.mask
-                    )
-                    main_channel_indices[i_unit : i_unit + num_units] = main_channel_indices_single + i_channel
-                    i_unit += num_units
-                    i_channel += num_channels
-                sparsity = ChannelSparsity(
-                    unit_ids=aggregated_sorting.unit_ids,
-                    channel_ids=aggregated_recording.channel_ids,
-                    mask=sparsity_mask,
-                )
-                sparsity_kwargs = {}
-            elif set_sparsity_by_dict_key:
-                sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
+        if set_sparsity_by_dict_key:
+            sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
 
         return create_sorting_analyzer(
             sorting=aggregated_sorting,
@@ -1266,37 +1219,6 @@ class SortingAnalyzer:
             return dict(zip(self.unit_ids, main_chans))
         else:
             return main_chans
-
-    def is_aggregated(self):
-        """
-        Returns True if the SortingAnalyzer is aggregated, False otherwise.
-        """
-        return (
-            "aggregation_key" in self.get_sorting_property_keys()
-            and "aggregation_key" in self.get_recording_property_keys()
-        )
-
-    def split(self):
-        """
-        Returns a dictionary of SortingAnalyzer objects, split by the aggregation_key.
-        The keys of the dictionary are the unique values of the aggregation_key, and the values
-        are the SortingAnalyzer objects corresponding to each unique value.
-        """
-        if not self.is_aggregated():
-            raise ValueError("SortingAnalyzer is not aggregated")
-
-        units_aggregation_key = self.get_sorting_property("aggregation_key")
-        channel_aggregation_key = self.get_recording_property("aggregation_key")
-        unique_keys = np.unique(units_aggregation_key)
-        split_analyzers = {}
-        for key in unique_keys:
-            unit_ids = self.unit_ids[units_aggregation_key == key]
-            channel_ids = self.channel_ids[channel_aggregation_key == key]
-            analyzer_units = self.select_units(unit_ids)
-            analyzer_split = analyzer_units.select_channels(channel_ids)
-            split_analyzers[key] = analyzer_split
-
-        return split_analyzers
 
     def are_units_mergeable(
         self,
