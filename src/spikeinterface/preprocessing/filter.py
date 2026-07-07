@@ -285,7 +285,7 @@ class BandpassFilterRecording(FilterRecording):
         self._kwargs.update(filter_kwargs)
 
     @classmethod
-    def _handle_backward_compatibility(cls, old_kwargs, full_dict):
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
         new_kwargs = old_kwargs.copy()
         is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
         if "ignore_low_freq_error" not in new_kwargs:
@@ -354,7 +354,7 @@ class HighpassFilterRecording(FilterRecording):
         self._kwargs.update(filter_kwargs)
 
     @classmethod
-    def _handle_backward_compatibility(cls, old_kwargs, full_dict):
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
         new_kwargs = old_kwargs.copy()
         is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
         if "ignore_low_freq_error" not in new_kwargs:

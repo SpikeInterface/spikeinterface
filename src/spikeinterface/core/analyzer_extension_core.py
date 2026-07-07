@@ -381,7 +381,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     extension_name = "templates"
     depend_on = ["random_spikes|waveforms"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
@@ -437,6 +437,9 @@ class ComputeTemplates(AnalyzerExtension):
             self._compute_and_append_from_waveforms(self.params["operators"])
 
         else:
+            if not self.sorting_analyzer.has_recording():
+                raise ValueError("Extension Templates requires the recording if Waveforms are not computed.")
+
             bad_operator_list = [
                 operator for operator in self.params["operators"] if operator not in ("average", "std")
             ]

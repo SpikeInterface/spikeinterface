@@ -42,4 +42,7 @@ def test_mda_extractors(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_mda_extractors()
+    import tempfile
+
+    cache_folder = Path(tempfile.mkdtemp())
+    test_mda_extractors(cache_folder)

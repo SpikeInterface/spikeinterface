@@ -1,16 +1,17 @@
 import numpy as np
 import scipy.signal
+import importlib.util
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 from spikeinterface.core import get_chunk_with_margin
 
-try:
+if importlib.util.find_spec("pyopencl") is not None:
     import pyopencl
 
     mf = pyopencl.mem_flags
     HAVE_PYOPENCL = True
-except ImportError:
+else:
     HAVE_PYOPENCL = False
 
 

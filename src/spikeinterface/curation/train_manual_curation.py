@@ -1,7 +1,9 @@
-import os
 import warnings
-import numpy as np
 import json
+from pathlib import Path
+
+import numpy as np
+
 import spikeinterface
 from spikeinterface.core.job_tools import fix_job_kwargs
 
@@ -13,7 +15,6 @@ from spikeinterface.metrics import (
     get_quality_pca_metric_list,
     get_template_metric_list,
 )
-from pathlib import Path
 
 
 def get_default_classifier_search_spaces():

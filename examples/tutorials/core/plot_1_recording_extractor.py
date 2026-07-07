@@ -70,7 +70,7 @@ probe = generate_linear_probe(num_elec=7, ypitch=20, contact_shapes="circle", co
 probe.set_device_channel_indices(np.arange(7))
 
 # then we need to actually set the probe to the recording object
-recording = recording.set_probe(probe)
+recording.set_probe(probe)
 plot_probe(probe)
 
 ##############################################################################

@@ -4,7 +4,7 @@ import warnings
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
-from spikeinterface.core import get_template_extremum_channel, get_template_extremum_amplitude
+from spikeinterface.core import get_template_amplitude_on_main_channel
 from spikeinterface.postprocessing import compute_correlograms
 
 
@@ -14,7 +14,6 @@ def export_report(
     remove_if_exists=False,
     format="png",
     show_figures=False,
-    peak_sign="neg",
     force_computation=False,
     **job_kwargs,
 ):
@@ -34,8 +33,6 @@ def export_report(
         If True and the output folder exists, it is removed
     format : str, default: "png"
         The output figure format (any format handled by matplotlib)
-    peak_sign : "neg" or "pos", default: "neg"
-        used to compute amplitudes and metrics
     show_figures : bool, default: False
         If True, figures are shown. If False, figures are closed after saving
     force_computation :  bool, default: False
@@ -99,10 +96,11 @@ def export_report(
     # unit list
     units = pd.DataFrame(index=unit_ids)  #  , columns=['max_on_channel_id', 'amplitude'])
     units.index.name = "unit_id"
-    units["max_on_channel_id"] = pd.Series(
-        get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign, outputs="id")
-    )
-    units["amplitude"] = pd.Series(get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign))
+    # max_on_channel_id is kept (oold name)
+    units["max_on_channel_id"] = sorting_analyzer.get_main_channels(outputs="id", with_dict=False)
+    units["main_channel_id"] = sorting_analyzer.get_main_channels(outputs="id", with_dict=False)
+
+    units["amplitude"] = pd.Series(get_template_amplitude_on_main_channel(sorting_analyzer))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 
     unit_colors = sw.get_unit_colors(sorting)
