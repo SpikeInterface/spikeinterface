@@ -101,9 +101,9 @@ class ChannelsAggregationRecording(BaseRecording):
             for probegroup in all_probegroups:
                 for probe in probegroup.probes:
                     all_positions.extend(probe.contact_positions)
-            # assert len(np.unique(np.array(all_positions), axis=0)) == len(
-            #     all_positions
-            # ), "Contact positions are not unique! Cannot aggregate recordings."
+            assert len(np.unique(np.array(all_positions), axis=0)) == len(
+                all_positions
+            ), "Contact positions are not unique! Cannot aggregate recordings."
 
             # Now make a new probegroup with all probes and set global device channel indices
             probegroup_agg = ProbeGroup()

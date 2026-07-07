@@ -2685,6 +2685,7 @@ class AnalyzerExtension:
       * _set_params()
       * _run()
       * _select_units_extension_data()
+      * _select_channels_extension_data()
       * _merge_extension_data()
       * _split_extension_data()
       * _get_data()
