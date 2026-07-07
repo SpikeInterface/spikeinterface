@@ -702,12 +702,39 @@ def test_sorting_sampling_frequency_missing_raises(tmp_path, use_pynwb):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         NwbSortingExtractor(
             file_path=file_path,
             t_start=0.0,
             use_pynwb=use_pynwb,
         )
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_t_start_defaults_to_zero_without_electrical_series(tmp_path, use_pynwb):
+    """A units-only file with no ElectricalSeries needs no t_start: it defaults to 0, and the
+    sampling_frequency comes from Units.resolution."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
+    nwbfile = mock_NWBFile()
+    sampling_frequency = 30_000.0
+    spike_times = np.array([1.0, 2.0, 3.0])
+    nwbfile.add_unit(spike_times=spike_times)
+    nwbfile.units.resolution = 1.0 / sampling_frequency
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    # neither sampling_frequency nor t_start provided, and there is no ElectricalSeries
+    sorting_extractor = NwbSortingExtractor(file_path=file_path, use_pynwb=use_pynwb)
+
+    assert sorting_extractor.sampling_frequency == sampling_frequency
+    # t_start defaulted to 0, so frames are the session-relative sample indices
+    extracted_frames = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
+    expected_frames = (spike_times * sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames, expected_frames)
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
