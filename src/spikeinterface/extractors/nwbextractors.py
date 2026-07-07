@@ -425,25 +425,21 @@ class _NWBReader:
         column = table[name]
         # A DynamicTableRegion column (e.g. IBL's `max_electrode`) holds a per-row index into another
         # table. On the pynwb path `column[:]` resolves the region into a DataFrame of the referenced
-        # rows; read the raw per-row indices instead so every backend returns the same plain array.
-        if self._column_is_dynamic_table_region(column):
-            column = column.data if self.reading_method == "use_pynwb" else column
+        # rows, so read the raw per-row indices (`column.data`) instead. The raw hdf5/zarr dataset is
+        # already those indices, so nothing is unwrapped there. This keeps every backend returning the
+        # same plain array. The pynwb-only import is safe here: this branch runs only when
+        # reading_method is "use_pynwb", where pynwb (and hdmf) are present.
+        if self.reading_method == "use_pynwb":
+            from hdmf.common import DynamicTableRegion
+
+            if isinstance(column, DynamicTableRegion):
+                column = column.data
         values = np.asarray(column[:])
         if indices is not None:
             values = values[indices]
         if values.dtype.kind in ("S", "O"):
             values = np.array([v.decode("utf-8") if isinstance(v, bytes) else v for v in values])
         return values
-
-    def _column_is_dynamic_table_region(self, column):
-        # A per-row reference into another table, recognized across the pynwb object and the raw
-        # hdf5/zarr dataset representations. The pynwb-only import is safe here without a guard:
-        # this branch runs only when reading_method is "use_pynwb", where pynwb (and hdmf) are present.
-        if self.reading_method == "use_pynwb":
-            from hdmf.common import DynamicTableRegion
-
-            return isinstance(column, DynamicTableRegion)
-        return column.attrs.get("neurodata_type") == "DynamicTableRegion"
 
     def close(self):
         # Release the open handle (raw hdf5 / zarr store, or the pynwb read IO).
