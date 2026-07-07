@@ -559,6 +559,24 @@ class _NWBReader:
             return {column.name: column for column in self.units_table.columns}["spike_times_index"].data
         return self.units_table["spike_times_index"]
 
+    def sampling_frequency_from_units_metadata(self):
+        # The Units.resolution attribute documents the precision of the spike times, typically
+        # 1 / sampling_rate (in seconds). When present it lets a units-only file (one with no
+        # ElectricalSeries) report a sampling frequency. It is spike-native, so it is preferred over
+        # the ElectricalSeries rate, which may belong to a series the sorting was not computed from.
+        # pynwb exposes it as Units.resolution; the raw hdf5 / zarr layout stores it as an attribute
+        # of the spike_times dataset.
+        if self.reading_method == "use_pynwb":
+            resolution = getattr(self.units_table, "resolution", None)
+        else:
+            resolution = self.units_table["spike_times"].attrs.get("resolution", None)
+        if resolution is None:
+            return None
+        resolution = float(resolution)
+        if not np.isfinite(resolution) or resolution <= 0:
+            return None
+        return 1.0 / resolution
+
     def rate_and_t_start_from_electrical_series(self, samples_for_rate_estimation):
         # Locate the ElectricalSeries the sorting came from and read its rate / t_start.
         if self.reading_method == "use_pynwb":
@@ -1155,7 +1173,7 @@ class NwbSortingExtractor(BaseSorting):
         self.electrical_series_path = electrical_series_path
         self.file_path = file_path
         self.t_start = t_start
-        self.provided_or_electrical_series_sampling_frequency = sampling_frequency
+        self.provided_sampling_frequency = sampling_frequency
         self.storage_options = storage_options
 
         if use_pynwb and not HAVE_PYNWB:
@@ -1180,18 +1198,26 @@ class NwbSortingExtractor(BaseSorting):
         )
         self.units_table = self._reader.units_table
 
-        # A sorting needs a sampling_frequency and t_start; when not provided, take them from the
-        # ElectricalSeries the sorting was computed from.
-        if self.provided_or_electrical_series_sampling_frequency is None or self.t_start is None:
+        # A sorting needs a sampling_frequency and t_start. Resolve the sampling_frequency in order of
+        # preference: the provided argument, then the spike-native Units.resolution attribute, then the
+        # ElectricalSeries rate. Units.resolution is preferred over the ElectricalSeries because the
+        # ElectricalSeries in the file is not necessarily the one the sorting was computed from.
+        sampling_frequency = self.provided_sampling_frequency
+        if sampling_frequency is None:
+            sampling_frequency = self._reader.sampling_frequency_from_units_metadata()
+
+        # The ElectricalSeries still supplies t_start (Units.resolution carries no time origin), and the
+        # sampling_frequency as a last resort when Units.resolution was absent.
+        if sampling_frequency is None or self.t_start is None:
             series_sampling_frequency, series_t_start = self._reader.rate_and_t_start_from_electrical_series(
                 samples_for_rate_estimation
             )
-            if self.provided_or_electrical_series_sampling_frequency is None:
-                self.provided_or_electrical_series_sampling_frequency = series_sampling_frequency
+            if sampling_frequency is None:
+                sampling_frequency = series_sampling_frequency
             if self.t_start is None:
                 self.t_start = series_t_start
         assert (
-            self.provided_or_electrical_series_sampling_frequency is not None
+            sampling_frequency is not None
         ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
         assert (
             self.t_start is not None
@@ -1201,9 +1227,7 @@ class NwbSortingExtractor(BaseSorting):
         spike_times_data = self._reader.spike_times()
         spike_times_index_data = self._reader.spike_times_index()
 
-        BaseSorting.__init__(
-            self, sampling_frequency=self.provided_or_electrical_series_sampling_frequency, unit_ids=unit_ids
-        )
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
         sorting_segment = NwbSortingSegment(
             spike_times_data=spike_times_data,

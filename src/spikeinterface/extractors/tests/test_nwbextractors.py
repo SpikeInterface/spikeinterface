@@ -582,6 +582,135 @@ def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_sampling_frequency_from_units_resolution(tmp_path, use_pynwb):
+    """sampling_frequency is inferred from Units.resolution when it is not provided and there is no
+    ElectricalSeries (a units-only file)."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
+    nwbfile = mock_NWBFile()
+
+    t_start = 10.0
+    sampling_frequency = 30_000.0
+    spike_times = np.array([0.0, 1.0, 2.0]) + t_start
+    nwbfile.add_unit(spike_times=spike_times)
+    # resolution documents the precision of the spike times, typically 1 / sampling_rate
+    nwbfile.units.resolution = 1.0 / sampling_frequency
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    # sampling_frequency is not passed; t_start is, since resolution carries no time origin
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        t_start=t_start,
+        use_pynwb=use_pynwb,
+    )
+
+    assert sorting_extractor.sampling_frequency == sampling_frequency
+
+    extracted_frames = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
+    expected_frames = ((spike_times - t_start) * sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames, expected_frames)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_sampling_frequency_explicit_argument_wins_over_resolution(tmp_path, use_pynwb):
+    """An explicit sampling_frequency argument takes precedence over Units.resolution."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
+    nwbfile = mock_NWBFile()
+
+    provided_sampling_frequency = 25_000.0
+    resolution_sampling_frequency = 30_000.0
+    nwbfile.add_unit(spike_times=np.array([10.0, 11.0, 12.0]))
+    nwbfile.units.resolution = 1.0 / resolution_sampling_frequency
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=provided_sampling_frequency,
+        t_start=0.0,
+        use_pynwb=use_pynwb,
+    )
+
+    assert sorting_extractor.sampling_frequency == provided_sampling_frequency
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_sampling_frequency_resolution_wins_over_electrical_series(tmp_path, use_pynwb):
+    """Units.resolution is spike-native and takes precedence over the ElectricalSeries rate, while
+    t_start still comes from the ElectricalSeries."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.ecephys import ElectricalSeries
+    from pynwb.testing.mock.ecephys import mock_electrodes
+
+    nwbfile = mock_NWBFile()
+    electrical_series_name = "ElectricalSeries"
+    t_start = 10.0
+    series_sampling_frequency = 25_000.0  # a different (e.g. LFP) series rate
+    resolution_sampling_frequency = 30_000.0  # the true sorting rate
+    electrodes = mock_electrodes(n_electrodes=5, nwbfile=nwbfile)
+    electrical_series = ElectricalSeries(
+        name=electrical_series_name,
+        starting_time=t_start,
+        rate=series_sampling_frequency,
+        data=np.ones((10, 5)),
+        electrodes=electrodes,
+    )
+    nwbfile.add_acquisition(electrical_series)
+
+    spike_times = np.array([0.0, 1.0, 2.0]) + t_start
+    nwbfile.add_unit(spike_times=spike_times)
+    nwbfile.units.resolution = 1.0 / resolution_sampling_frequency
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        electrical_series_path=f"acquisition/{electrical_series_name}",
+        use_pynwb=use_pynwb,
+    )
+
+    # rate comes from resolution, not from the ElectricalSeries
+    assert sorting_extractor.sampling_frequency == resolution_sampling_frequency
+    # t_start still comes from the ElectricalSeries
+    extracted_frames = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
+    expected_frames = ((spike_times - t_start) * resolution_sampling_frequency).astype("int64")
+    np.testing.assert_allclose(extracted_frames, expected_frames)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_sampling_frequency_missing_raises(tmp_path, use_pynwb):
+    """With no sampling_frequency argument, no Units.resolution, and no ElectricalSeries, extraction
+    raises rather than guessing a rate."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+
+    nwbfile = mock_NWBFile()
+    nwbfile.add_unit(spike_times=np.array([10.0, 11.0, 12.0]))
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    with pytest.raises(ValueError):
+        NwbSortingExtractor(
+            file_path=file_path,
+            t_start=0.0,
+            use_pynwb=use_pynwb,
+        )
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_get_unit_spike_train_in_seconds(tmp_path, use_pynwb):
     """Test that get_unit_spike_train_in_seconds returns accurate timestamps without double conversion."""
     from pynwb import NWBHDF5IO
