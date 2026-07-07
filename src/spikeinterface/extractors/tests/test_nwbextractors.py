@@ -476,6 +476,58 @@ def test_sorting_extraction_of_ragged_arrays(tmp_path, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_extraction_with_dynamic_table_region_column(tmp_path, use_pynwb):
+    """A non-ragged Units column stored as a DynamicTableRegion (e.g. IBL's ``max_electrode``)
+    must not break unit-property loading. On the pynwb path, indexing the region returns a
+    DataFrame of the referenced rows, which the loader then collapses to the target table's
+    column names, producing the wrong number of values. This guards against that."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.testing.mock.device import mock_Device
+    from pynwb.testing.mock.ecephys import mock_ElectrodeGroup
+
+    nwbfile = mock_NWBFile()
+
+    # electrodes table: the region target
+    device = mock_Device()
+    nwbfile.add_device(device)
+    electrode_group = mock_ElectrodeGroup(device=device)
+    nwbfile.add_electrode_group(electrode_group)
+    for index in range(5):
+        nwbfile.add_electrode(id=index, location="brain", group=electrode_group)
+
+    # per-unit single-index region column, like IBL's `max_electrode`
+    nwbfile.add_unit_column(
+        name="max_electrode",
+        description="peak electrode for the unit, stored as a DynamicTableRegion",
+        table=nwbfile.electrodes,
+    )
+    nwbfile.add_unit(spike_times=np.array([0.0, 1.0, 2.0]), max_electrode=0)
+    nwbfile.add_unit(spike_times=np.array([0.0, 1.0, 2.0, 3.0]), max_electrode=3)
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting_extractor = NwbSortingExtractor(
+        file_path=file_path,
+        sampling_frequency=10.0,
+        t_start=0,
+        use_pynwb=use_pynwb,
+    )
+
+    assert sorting_extractor.get_num_units() == 2
+
+    # `max_electrode` must load as the raw per-unit electrode indices, exactly the values written.
+    # Before the fix, the pynwb path resolved the DynamicTableRegion to a DataFrame of the
+    # referenced electrode rows and the loader then iterated it, collapsing it to that table's
+    # column names, so set_property got one value per electrodes-table column (not per unit) and
+    # raised an AssertionError.
+    assert "max_electrode" in sorting_extractor.get_property_keys()
+    np.testing.assert_array_equal(sorting_extractor.get_property("max_electrode"), [0, 3])
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_sorting_extraction_start_time(tmp_path, use_pynwb):
 
     from pynwb import NWBHDF5IO

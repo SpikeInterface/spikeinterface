@@ -429,7 +429,19 @@ class _NWBReader:
     def _read_column(self, table, name, indices=None):
         # Materialize a table column to numpy (h5py only fancy-indexes increasing, GH-4619), optionally
         # reorder to `indices`, and decode HDF5 byte-strings once on behalf of every caller.
-        values = np.asarray(table[name][:])
+        column = table[name]
+        # A DynamicTableRegion column (e.g. IBL's `max_electrode`) holds a per-row index into another
+        # table. On the pynwb path `column[:]` resolves the region into a DataFrame of the referenced
+        # rows, so read the raw per-row indices (`column.data`) instead. The raw hdf5/zarr dataset is
+        # already those indices, so nothing is unwrapped there. This keeps every backend returning the
+        # same plain array. The pynwb-only import is safe here: this branch runs only when
+        # reading_method is "use_pynwb", where pynwb (and hdmf) are present.
+        if self.reading_method == "use_pynwb":
+            from hdmf.common import DynamicTableRegion
+
+            if isinstance(column, DynamicTableRegion):
+                column = column.data
+        values = np.asarray(column[:])
         if indices is not None:
             values = values[indices]
         if values.dtype.kind in ("S", "O"):
@@ -565,6 +577,53 @@ class _NWBReader:
         if self.reading_method == "use_pynwb":
             return {column.name: column for column in self.units_table.columns}["spike_times_index"].data
         return self.units_table["spike_times_index"]
+
+    def fetch_unit_properties(self):
+        # Return the unit-table columns as a name -> per-unit values mapping in a backend-independent
+        # format. Skips id / spike-time columns, index columns, nested ragged arrays, and ragged
+        # columns whose per-unit shapes are unequal.
+        columns = self.units_column_names
+
+        properties_to_skip = ["spike_times", "spike_times_index", "unit_name", "id"]
+        index_columns = [name for name in columns if name.endswith("_index")]
+        nested_ragged_array_properties = [name for name in columns if f"{name}_index_index" in columns]
+        skip_properties = properties_to_skip + index_columns + nested_ragged_array_properties
+        properties_to_add = [name for name in columns if name not in skip_properties]
+
+        properties = dict()
+        for property_name in properties_to_add:
+            corresponding_index_name = f"{property_name}_index"
+            not_ragged_array = corresponding_index_name not in columns
+            if not_ragged_array:
+                # _read_column materializes a plain, decoded, DynamicTableRegion-safe per-unit array
+                values = self._read_column(self.units_table, property_name)
+            else:  # TODO if we want we could make this recursive to handle nested ragged arrays
+                data = self.units_table[property_name][:]
+                data_index = self.units_table[corresponding_index_name]
+                if hasattr(data_index, "data"):
+                    # for pynwb we need to get the data from the data attribute
+                    data_index = data_index.data[:]
+                else:
+                    data_index = data_index[:]
+                index_spacing = np.diff(data_index, prepend=0)
+                all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
+                if all_index_spacing_are_the_same:
+                    if hasattr(self.units_table[corresponding_index_name], "data"):
+                        # ragged array indexing is handled by pynwb
+                        values = data
+                    else:
+                        # ravel array based on data_index
+                        start_indices = [0] + list(data_index[:-1])
+                        end_indices = list(data_index)
+                        values = [
+                            data[start_index:end_index] for start_index, end_index in zip(start_indices, end_indices)
+                        ]
+                else:
+                    warnings.warn(f"Skipping {property_name} because of unequal shapes across units")
+                    continue
+            properties[property_name] = values
+
+        return properties
 
     def rate_and_t_start_from_electrical_series(self, samples_for_rate_estimation):
         # Locate the ElectricalSeries the sorting came from and read its rate / t_start.
@@ -1222,10 +1281,8 @@ class NwbSortingExtractor(BaseSorting):
 
         # fetch and add sorting properties
         if load_unit_properties:
-            properties = self._fetch_properties(self._reader.units_column_names)
-            for property_name, property_values in properties.items():
-                values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
-                self.set_property(property_name, values)
+            for property_name, property_values in self._reader.fetch_unit_properties().items():
+                self.set_property(property_name, property_values)
 
         if reading_method == "use_pynwb":
             self.extra_requirements.append("pynwb")
@@ -1260,51 +1317,6 @@ class NwbSortingExtractor(BaseSorting):
             "load_unit_properties": load_unit_properties,
             "t_start": self.t_start,
         }
-
-    def _fetch_properties(self, columns):
-        units_table = self.units_table
-
-        properties_to_skip = ["spike_times", "spike_times_index", "unit_name", "id"]
-        index_columns = [name for name in columns if name.endswith("_index")]
-        nested_ragged_array_properties = [name for name in columns if f"{name}_index_index" in columns]
-
-        # Filter those properties that are nested ragged arrays
-        skip_properties = properties_to_skip + index_columns + nested_ragged_array_properties
-        properties_to_add = [name for name in columns if name not in skip_properties]
-
-        properties = dict()
-        for property_name in properties_to_add:
-            data = units_table[property_name][:]
-            corresponding_index_name = f"{property_name}_index"
-            not_ragged_array = corresponding_index_name not in columns
-            if not_ragged_array:
-                values = data[:]
-            else:  # TODO if we want we could make this recursive to handle nested ragged arrays
-                data_index = units_table[corresponding_index_name]
-                if hasattr(data_index, "data"):
-                    # for pynwb we need to get the data from the data attribute
-                    data_index = data_index.data[:]
-                else:
-                    data_index = data_index[:]
-                index_spacing = np.diff(data_index, prepend=0)
-                all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
-                if all_index_spacing_are_the_same:
-                    if hasattr(units_table[corresponding_index_name], "data"):
-                        # ragged array indexing is handled by pynwb
-                        values = data
-                    else:
-                        # ravel array based on data_index
-                        start_indices = [0] + list(data_index[:-1])
-                        end_indices = list(data_index)
-                        values = [
-                            data[start_index:end_index] for start_index, end_index in zip(start_indices, end_indices)
-                        ]
-                else:
-                    warnings.warn(f"Skipping {property_name} because of unequal shapes across units")
-                    continue
-            properties[property_name] = values
-
-        return properties
 
     @staticmethod
     def fetch_available_units_tables(
