@@ -1852,11 +1852,48 @@ def read_nwb_as_analyzer(
         probegroup = _create_dummy_probegroup_from_locations(locations)
         rec_attributes["probegroup"] = probegroup
 
+    # Per-unit sparsity and channel map from the Units `electrodes` region. Each unit's
+    # `waveform_mean` is stored only on a subset of channels (near its peak); the region gives
+    # which channels those are. We use it both for the analyzer sparsity and to scatter the
+    # waveforms onto their true channel positions instead of stacking the sparse block densely.
+    sparsity = None
+    unit_local_channels = None
+    if electrodes_indices is not None:
+        from spikeinterface.core.sparsity import ChannelSparsity
+
+        if recording is not None:
+            analyzer_channel_ids = list(recording.get_channel_ids())
+        else:
+            analyzer_channel_ids = list(channel_ids)
+        num_channels = len(analyzer_channel_ids)
+
+        if "channel_name" in electrodes_table.columns:
+            electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
+        else:
+            electrode_row_to_channel_id = electrodes_table.index.to_numpy()
+        position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
+
+        unit_local_channels = []
+        sparsity_mask = np.zeros((sorting.get_num_units(), num_channels), dtype=bool)
+        for unit_index, region in enumerate(electrodes_indices):
+            positions = [
+                position_of_channel_id[electrode_row_to_channel_id[int(electrode_row)]]
+                for electrode_row in region
+                if electrode_row_to_channel_id[int(electrode_row)] in position_of_channel_id
+            ]
+            unit_local_channels.append(positions)
+            sparsity_mask[unit_index, positions] = True
+        sparsity = ChannelSparsity(
+            mask=sparsity_mask,
+            unit_ids=np.asarray(sorting.unit_ids),
+            channel_ids=np.asarray(analyzer_channel_ids),
+        )
+
     # instantiate analyzer
     analyzer = SortingAnalyzer.create_memory(
         sorting=sorting,
         recording=recording,
-        sparsity=None,
+        sparsity=sparsity,
         return_in_uV=True,
         peak_sign="neg",
         peak_mode="extremum",
@@ -1864,34 +1901,35 @@ def read_nwb_as_analyzer(
     )
 
     # templates
-    if "waveform_mean" in units:
-        from spikeinterface.core.analyzer_extension_core import ComputeTemplates, ComputeRandomSpikes
+    if "waveform_mean" in units and unit_local_channels is not None:
+        from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-        # compute random spikes, which is a dependency for templates
-        # since we don't know the spike samples, we compute with method 'all'
+        # random spikes is a dependency for templates; the raw spike samples are not stored so we
+        # select all of them
         analyzer.compute("random_spikes", method="all")
 
-        # instantiate templates
+        waveform_mean = np.array([np.asarray(t, dtype="float") for t in units["waveform_mean"].values])
+        num_samples_template = waveform_mean.shape[1]
+
+        # scatter each unit's real waveform columns onto their channels; the NaN-padded columns of
+        # units with fewer channels are simply never touched
+        dense_templates = np.zeros((sorting.get_num_units(), num_samples_template, num_channels), dtype="float32")
+        for unit_index, positions in enumerate(unit_local_channels):
+            k = len(positions)
+            dense_templates[unit_index][:, positions] = waveform_mean[unit_index][:, :k]
+
+        # scalar alignment (nbefore): the sample where the average peak-channel amplitude is largest
+        peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
+        nbefore = int(np.argmax(peak_amplitude_per_sample))
+
         templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
-        templates_avg_data = np.array([t for t in units["waveform_mean"].values]).astype("float")
-        total_ms = templates_avg_data.shape[1] / analyzer.sampling_frequency * 1000
-        # estimate ms_before and ms_after from minimum point in the average template
-        nbefore = np.unravel_index(np.argmin(templates_avg_data, axis=1), templates_avg_data.shape)[1]
-        print(nbefore)
-        ms_before = int(nbefore / analyzer.sampling_frequency * 1000)
-        ms_after = int(total_ms - ms_before)
-        template_params = {}
-        template_params["ms_before"] = ms_before
-        template_params["ms_after"] = ms_after
-        template_params["operators"] = ["average", "std"]
-        templates_ext.set_params(**template_params)
-        templates_avg_data = np.array([t for t in units["waveform_mean"].values]).astype("float")
-        templates_ext.data["average"] = templates_avg_data
-        if "waveforms_sd" in units:
-            templates_std_data = np.array([t for t in units["waveform_sd"].values]).astype("float")
-        else:
-            templates_std_data = np.zeros_like(templates_avg_data)
-        templates_ext.data["std"] = templates_std_data
+        templates_ext.set_params(
+            ms_before=nbefore / analyzer.sampling_frequency * 1000,
+            ms_after=(num_samples_template - nbefore) / analyzer.sampling_frequency * 1000,
+            operators=["average", "std"],
+        )
+        templates_ext.data["average"] = dense_templates
+        templates_ext.data["std"] = np.zeros_like(dense_templates)
         templates_ext.run_info["run_completed"] = True
 
         analyzer.extensions["templates"] = templates_ext
@@ -1912,18 +1950,16 @@ def read_nwb_as_analyzer(
         if verbose:
             print("Adding template metrics")
         template_metrics_ext = ComputeTemplateMetrics(analyzer)
-        template_metrics_ext.data["metrics"] = template_metrics_df
-        template_metrics_ext.run_info["run_completed"] = True
         # cast to correct dtypes
-        template_metrics_ext._cast_metrics()
+        template_metrics_ext.data["metrics"] = template_metrics_ext._cast_metrics(template_metrics_df)
+        template_metrics_ext.run_info["run_completed"] = True
         analyzer.extensions["template_metrics"] = template_metrics_ext
     if len(quality_metric_df.columns) > 0:
         if verbose:
             print("Adding quality metrics")
         quality_metrics_ext = ComputeQualityMetrics(analyzer)
-        quality_metrics_ext.data["metrics"] = quality_metric_df
+        quality_metrics_ext.data["metrics"] = quality_metrics_ext._cast_metrics(quality_metric_df)
         quality_metrics_ext.run_info["run_completed"] = True
-        quality_metrics_ext._cast_metrics()
         analyzer.extensions["quality_metrics"] = quality_metrics_ext
 
     # compute extra required
