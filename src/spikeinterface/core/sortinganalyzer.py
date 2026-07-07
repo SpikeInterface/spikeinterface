@@ -177,7 +177,8 @@ def create_sorting_analyzer(
 
         if sparsity is None:
             if sparsity_kwargs.get("method", "") != "by_property" and not set_sparsity_by_dict_key:
-                # this is weird but due to the cyclic import
+                # In this case, we estimate the sparsity on different splitted groups and then we
+                # aggregate the sparsity_masks and main_channel_indices
                 from .template_tools import estimate_main_channel_from_recording
 
                 # In this case we estimate and construct sparsity by property
