@@ -1164,8 +1164,8 @@ class NwbSortingExtractor(BaseSorting):
         no ElectricalSeries in the file     Units.resolution else raises  defaults to 0
 
     When an ElectricalSeries is present but not named, the current release auto-selects it (emitting a
-    FutureWarning); from version 0.107.0 this will raise and error, and the time base must be set explicitly by
-    passing `electrical_series_path`, or `t_start` together with `sampling_frequency`.
+    FutureWarning); from version 0.107.0 this will raise an error, and the time base must be set
+    explicitly by passing `electrical_series_path`, or `t_start` together with `sampling_frequency`.
 
     Justification:
 
