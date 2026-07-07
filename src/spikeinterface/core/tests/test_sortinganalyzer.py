@@ -262,6 +262,21 @@ def test_create_by_dict():
     combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"), sparse=False)
     assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
+    # test with sparsity
+    analyzer_with_sparsity = create_sorting_analyzer(split_sort, split_rec, sparse=True)
+    assert analyzer_with_sparsity.sparsity is not None
+    # check that the main channel indices are correct
+    main_channel_indices = analyzer_with_sparsity.get_main_channels(outputs="index")
+    sparsity_mask = analyzer_with_sparsity.sparsity.mask
+    # check that sparsity mask is false on channels from other groups
+    unit_groups = analyzer_with_sparsity.get_sorting_property("aggregation_key")
+    recording_groups = analyzer_with_sparsity.recording.get_property("aggregation_key")
+    for i, main_channel_index in enumerate(main_channel_indices):
+        group = unit_groups[i]
+        other_group_channel_indices = np.flatnonzero(recording_groups != group)
+        assert not np.any(sparsity_mask[i][other_group_channel_indices])
+        assert sparsity_mask[i, main_channel_index]
+
 
 def test_load_without_runtime_info(tmp_path, dataset):
     import zarr
