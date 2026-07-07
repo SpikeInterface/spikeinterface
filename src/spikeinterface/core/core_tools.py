@@ -77,7 +77,6 @@ def read_python(path):
         dictionary containing parsed file
 
     """
-    from six import exec_
     import re
 
     path = Path(path).absolute()
@@ -659,7 +658,6 @@ def is_editable_mode() -> bool:
     Idea modified from here:
     https://stackoverflow.com/questions/43348746/how-to-detect-if-module-is-installed-in-editable-mode
     """
-    import importlib.metadata
     import json
 
     spikeinterface_dist = importlib.metadata.Distribution.from_name("spikeinterface").read_text("direct_url.json")
