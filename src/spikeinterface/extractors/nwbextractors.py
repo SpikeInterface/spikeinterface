@@ -571,7 +571,7 @@ class _NWBReader:
             return {column.name: column for column in self.units_table.columns}["spike_times_index"].data
         return self.units_table["spike_times_index"]
 
-    def sampling_frequency_from_units_metadata(self):
+    def _sampling_frequency_from_units_metadata(self):
         # The Units.resolution attribute documents the precision of the spike times, typically
         # 1 / sampling_rate (in seconds). When present it lets a units-only file (one with no
         # ElectricalSeries) report a sampling frequency. It is spike-native, so it is preferred over
@@ -589,7 +589,7 @@ class _NWBReader:
             return None
         return 1.0 / resolution
 
-    def has_electrical_series(self):
+    def _has_electrical_series(self):
         # Whether the file contains any ElectricalSeries at all. Used to decide, for a sorting, whether
         # there is a recording to align to: if there is none, t_start has no origin and defaults to 0.
         if self.reading_method == "use_pynwb":
@@ -604,7 +604,7 @@ class _NWBReader:
         file_has_electrical_series = len(electrical_series) > 0
         return file_has_electrical_series
 
-    def fetch_unit_properties(self):
+    def _fetch_unit_properties(self):
         # Return the unit-table columns as a name -> per-unit values mapping in a backend-independent
         # format. Skips id / spike-time columns, index columns, nested ragged arrays, and ragged
         # columns whose per-unit shapes are unequal.
@@ -1180,8 +1180,9 @@ class NwbSortingExtractor(BaseSorting):
         Path to NWB file.
     electrical_series_path : str or None, default: None
         Path of the ElectricalSeries to read the time base (`sampling_frequency` and `t_start`) from.
-        When given, it is the source of the time base. When omitted, the time base must be provided
-        directly (see `t_start` / `sampling_frequency`); no ElectricalSeries is ever auto-selected.
+        When given, it is the sole source of the time base and cannot be combined with an explicit
+        `sampling_frequency` or `t_start` (passing both raises). When omitted, the time base must be
+        provided directly (see `t_start` / `sampling_frequency`); no ElectricalSeries is auto-selected.
         See Notes.
     sampling_frequency : float or None, default: None
         The sampling frequency in Hz. If None, it is read from the named ElectricalSeries, or (when no
@@ -1222,14 +1223,16 @@ class NwbSortingExtractor(BaseSorting):
     Notes
     -----
     A `Units` table stores spikes as times in seconds, so the sorting needs a time base
-    (`sampling_frequency` and `t_start`) to convert them to samples. There are two ways to supply it:
-    name an ElectricalSeries with `electrical_series_path`, or provide it directly. No ElectricalSeries
-    is consulted unless it is named. Explicit `sampling_frequency` / `t_start` arguments always take
-    precedence. The time base is resolved as follows::
+    (`sampling_frequency` and `t_start`) to convert them to samples. There are two mutually exclusive
+    ways to supply it: name an ElectricalSeries with `electrical_series_path` (which yields both values
+    and cannot be combined with an explicit `sampling_frequency` or `t_start`), or provide the time base
+    directly. No ElectricalSeries is consulted unless it is named. The time base is resolved as follows::
 
         You provide                                   sampling_frequency            t_start
         --------------------------------------------  ----------------------------  --------------------------
-        electrical_series_path                        from that ElectricalSeries    from that ElectricalSeries
+        electrical_series_path (only)                 from that ElectricalSeries    from that ElectricalSeries
+        electrical_series_path AND sampling_frequency raises (mutually exclusive)   raises (mutually exclusive)
+          or t_start
         t_start (no electrical_series_path)           argument or Units.resolution  argument
                                                       (raises if neither)
         no t_start, file HAS an ElectricalSeries      n/a                           raises (name it or pass
@@ -1305,40 +1308,48 @@ class NwbSortingExtractor(BaseSorting):
         # (which yields both values), or provide it directly. No ElectricalSeries is ever consulted
         # unless it is named, because the ElectricalSeries in a file is not necessarily the one the
         # sorting was computed from.
+
+        # First, look for any ElectricalSeries in the file.
+        file_has_electrical_series = self._reader._has_electrical_series()
+        electrical_series_path_is_provided = electrical_series_path is not None
+        sampling_frequency_is_provided = self.provided_sampling_frequency is not None
+        t_start_is_provided = self.t_start is not None
         sampling_frequency = self.provided_sampling_frequency
 
-        if electrical_series_path is not None:
-            # Read both the rate and t_start from the named ElectricalSeries.
-            series_sampling_frequency, series_t_start = self._reader.rate_and_t_start_from_electrical_series(
+        if electrical_series_path_is_provided:
+            # The named ElectricalSeries is the sole source of the time base; it is not combined with an
+            # explicit sampling_frequency or t_start.
+            if sampling_frequency_is_provided or t_start_is_provided:
+                raise ValueError(
+                    "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and "
+                    "'t_start'), not both."
+                )
+            sampling_frequency, self.t_start = self._reader.rate_and_t_start_from_electrical_series(
                 samples_for_rate_estimation
             )
-            if sampling_frequency is None:
-                sampling_frequency = series_sampling_frequency
-            if self.t_start is None:
-                self.t_start = series_t_start
         else:
-            # No ElectricalSeries named: the user supplies the time base. sampling_frequency may be
-            # omitted when the Units table carries a 'resolution' attribute (read as 1 / resolution).
-            if sampling_frequency is None:
-                sampling_frequency = self._reader.sampling_frequency_from_units_metadata()
+            # No ElectricalSeries named. An unnamed recording is ambiguous (it may not be the one the
+            # sorting was computed from), so t_start must be given explicitly. With no recording in the
+            # file, anchor the frame grid at 0 (the spike times in seconds are preserved regardless).
+            unnamed_recording_needs_t_start = file_has_electrical_series and not t_start_is_provided
+            if unnamed_recording_needs_t_start:
+                raise ValueError(
+                    "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
+                    "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
+                )
 
-            # t_start has no origin to derive from. If a recording exists in the file but was not named,
-            # refuse to guess (defaulting to 0 would mis-anchor spikes against a real recording) and
-            # require it explicitly. If there is no recording at all, anchor the frame grid at 0.
-            if self.t_start is None:
-                if self._reader.has_electrical_series():
-                    raise ValueError(
-                        "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
-                        "'electrical_series_path' to read the time base from it, or pass 't_start' "
-                        "explicitly."
-                    )
+            no_recording_to_align_to = not file_has_electrical_series and not t_start_is_provided
+            if no_recording_to_align_to:
                 self.t_start = 0.0
 
-        if sampling_frequency is None:
-            raise ValueError(
-                "Couldn't determine the sampling frequency. Provide it with the 'sampling_frequency' "
-                "argument, set the Units table 'resolution' attribute, or pass 'electrical_series_path'."
-            )
+            # sampling_frequency: the argument, or the Units.resolution attribute.
+            if sampling_frequency is None:
+                sampling_frequency = self._reader._sampling_frequency_from_units_metadata()
+            if sampling_frequency is None:
+                raise ValueError(
+                    "Couldn't determine the sampling frequency. Provide it with the 'sampling_frequency' "
+                    "argument, set the Units table 'resolution' attribute, or pass 'electrical_series_path'."
+                )
 
         unit_ids = self._reader.unit_ids()
         spike_times_data = self._reader.spike_times()
@@ -1356,7 +1367,7 @@ class NwbSortingExtractor(BaseSorting):
 
         # fetch and add sorting properties
         if load_unit_properties:
-            for property_name, property_values in self._reader.fetch_unit_properties().items():
+            for property_name, property_values in self._reader._fetch_unit_properties().items():
                 self.set_property(property_name, property_values)
 
         if reading_method == "use_pynwb":

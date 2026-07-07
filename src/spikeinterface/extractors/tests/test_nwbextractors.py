@@ -739,6 +739,48 @@ def test_sorting_electrical_series_path_provides_time_base(tmp_path, use_pynwb):
     np.testing.assert_allclose(extracted_frames, expected_frames)
 
 
+@pytest.mark.parametrize("provided", ["sampling_frequency", "t_start"])
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_electrical_series_path_and_time_base_are_mutually_exclusive(tmp_path, use_pynwb, provided):
+    """Passing electrical_series_path together with an explicit sampling_frequency or t_start raises;
+    the two ways of supplying the time base are mutually exclusive."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.ecephys import ElectricalSeries
+    from pynwb.testing.mock.ecephys import mock_electrodes
+
+    nwbfile = mock_NWBFile()
+    electrical_series_name = "ElectricalSeries"
+    electrodes = mock_electrodes(n_electrodes=5, nwbfile=nwbfile)
+    electrical_series = ElectricalSeries(
+        name=electrical_series_name,
+        starting_time=10.0,
+        rate=30_000.0,
+        data=np.ones((10, 5)),
+        electrodes=electrodes,
+    )
+    nwbfile.add_acquisition(electrical_series)
+    nwbfile.add_unit(spike_times=np.array([10.0, 11.0, 12.0]))
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    extra_kwarg = {provided: 30_000.0 if provided == "sampling_frequency" else 0.0}
+    with pytest.raises(ValueError) as exc_info:
+        NwbSortingExtractor(
+            file_path=file_path,
+            electrical_series_path=f"acquisition/{electrical_series_name}",
+            use_pynwb=use_pynwb,
+            **extra_kwarg,
+        )
+    expected_error = (
+        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and "
+        "'t_start'), not both."
+    )
+    assert str(exc_info.value) == expected_error
+
+
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_sorting_sampling_frequency_missing_raises(tmp_path, use_pynwb):
     """With no sampling_frequency argument, no Units.resolution, and no ElectricalSeries, extraction
