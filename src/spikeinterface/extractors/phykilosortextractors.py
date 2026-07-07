@@ -149,6 +149,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             del cluster_info["id"]
 
         if remove_empty_units:
+
             unique_unit_ids_list = [int(clust) for clust in unique_unit_ids]
             cluster_info = cluster_info.query(f"cluster_id in {unique_unit_ids_list}")
 

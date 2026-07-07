@@ -170,6 +170,8 @@ class BaseSorting(BaseExtractor):
             per unit and per segment compact in memory.
             Using the cache makes the first call quite slow but then future calls are very fast.
 
+        Note: if use_cache=False, but the lexsorted cache is already computed then it will be used anyway.
+
         Returns
         -------
         spike_train : np.ndarray
@@ -192,9 +194,14 @@ class BaseSorting(BaseExtractor):
             )
 
         segment_index = self._check_segment_index(segment_index)
+
+        lexsort_key = ("sample_index", "segment_index", "unit_index")
+        if lexsort_key in self._cached_lexsorted_spike_vector.keys():
+            use_cache = True
+
         if use_cache:
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
-                lexsort=("sample_index", "segment_index", "unit_index"),
+                lexsort=lexsort_key,
                 return_order=False,
                 return_slices=True,
             )
