@@ -775,8 +775,7 @@ def test_sorting_electrical_series_path_and_time_base_are_mutually_exclusive(tmp
             **extra_kwarg,
         )
     expected_error = (
-        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and "
-        "'t_start'), not both."
+        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and " "'t_start'), not both."
     )
     assert str(exc_info.value) == expected_error
 
