@@ -695,9 +695,9 @@ def test_sorting_sampling_frequency_explicit_argument_wins_over_resolution(tmp_p
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
-def test_sorting_sampling_frequency_resolution_wins_over_electrical_series(tmp_path, use_pynwb):
-    """Units.resolution is spike-native and takes precedence over the ElectricalSeries rate, while
-    t_start still comes from the ElectricalSeries."""
+def test_sorting_electrical_series_path_provides_time_base(tmp_path, use_pynwb):
+    """When electrical_series_path is named, both sampling_frequency and t_start come from that
+    ElectricalSeries; Units.resolution is not consulted on this path."""
     from pynwb import NWBHDF5IO
     from pynwb.testing.mock.file import mock_NWBFile
     from pynwb.ecephys import ElectricalSeries
@@ -706,8 +706,8 @@ def test_sorting_sampling_frequency_resolution_wins_over_electrical_series(tmp_p
     nwbfile = mock_NWBFile()
     electrical_series_name = "ElectricalSeries"
     t_start = 10.0
-    series_sampling_frequency = 25_000.0  # a different (e.g. LFP) series rate
-    resolution_sampling_frequency = 30_000.0  # the true sorting rate
+    series_sampling_frequency = 25_000.0
+    resolution_sampling_frequency = 30_000.0  # present but ignored when the series is named
     electrodes = mock_electrodes(n_electrodes=5, nwbfile=nwbfile)
     electrical_series = ElectricalSeries(
         name=electrical_series_name,
@@ -732,11 +732,10 @@ def test_sorting_sampling_frequency_resolution_wins_over_electrical_series(tmp_p
         use_pynwb=use_pynwb,
     )
 
-    # rate comes from resolution, not from the ElectricalSeries
-    assert sorting_extractor.sampling_frequency == resolution_sampling_frequency
-    # t_start still comes from the ElectricalSeries
+    # both rate and t_start come from the named ElectricalSeries
+    assert sorting_extractor.sampling_frequency == series_sampling_frequency
     extracted_frames = sorting_extractor.get_unit_spike_train(unit_id=0, return_times=False)
-    expected_frames = ((spike_times - t_start) * resolution_sampling_frequency).astype("int64")
+    expected_frames = ((spike_times - t_start) * series_sampling_frequency).astype("int64")
     np.testing.assert_allclose(extracted_frames, expected_frames)
 
 
@@ -754,12 +753,53 @@ def test_sorting_sampling_frequency_missing_raises(tmp_path, use_pynwb):
     with NWBHDF5IO(path=file_path, mode="w") as io:
         io.write(nwbfile)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError) as exc_info:
         NwbSortingExtractor(
             file_path=file_path,
             t_start=0.0,
             use_pynwb=use_pynwb,
         )
+    expected_error = (
+        "Couldn't determine the sampling frequency. Provide it with the 'sampling_frequency' "
+        "argument, set the Units table 'resolution' attribute, or pass 'electrical_series_path'."
+    )
+    assert str(exc_info.value) == expected_error
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_unnamed_electrical_series_requires_t_start(tmp_path, use_pynwb):
+    """When the file contains an ElectricalSeries that is not named, t_start must be provided
+    explicitly; the series is never auto-selected."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.ecephys import ElectricalSeries
+    from pynwb.testing.mock.ecephys import mock_electrodes
+
+    nwbfile = mock_NWBFile()
+    electrodes = mock_electrodes(n_electrodes=5, nwbfile=nwbfile)
+    electrical_series = ElectricalSeries(
+        name="ElectricalSeries",
+        starting_time=10.0,
+        rate=30_000.0,
+        data=np.ones((10, 5)),
+        electrodes=electrodes,
+    )
+    nwbfile.add_acquisition(electrical_series)
+    nwbfile.add_unit(spike_times=np.array([10.0, 11.0, 12.0]))
+    # resolution is set so sampling_frequency is available; the missing t_start is what must raise
+    nwbfile.units.resolution = 1.0 / 30_000.0
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    with pytest.raises(ValueError) as exc_info:
+        NwbSortingExtractor(file_path=file_path, use_pynwb=use_pynwb)
+    expected_error = (
+        "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
+        "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
+    )
+    assert str(exc_info.value) == expected_error
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
