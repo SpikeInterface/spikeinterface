@@ -1591,9 +1591,8 @@ class SortingAnalyzer:
             The newly create sorting_analyzer with the selected channels
         """
         if self.has_recording() or self.has_temporary_recording():
-            recording = self.recording
-            new_recording = recording.select_channels(channel_ids)
-            new_rec_attributes = get_rec_attributes(new_recording)
+            new_recording = self.recording.select_channels(channel_ids)
+            new_rec_attributes = None
         else:
             new_recording = None
             new_rec_attributes = self.rec_attributes.copy()
@@ -1609,6 +1608,10 @@ class SortingAnalyzer:
                     else:
                         new_properties[key] = values
                 new_rec_attributes["properties"] = new_properties
+            if new_rec_attributes.get("probegroup") is not None:
+                slice_indices = self.channel_ids_to_indices(channel_ids)
+                new_probegroup = new_rec_attributes["probegroup"].get_slice(slice_indices)
+                new_rec_attributes["probegroup"] = new_probegroup
         if self.sparsity is not None:
             sparsity_mask = self.sparsity.mask[:, np.isin(self.channel_ids, channel_ids)]
             new_sparsity = ChannelSparsity(sparsity_mask, self.unit_ids, np.array(channel_ids))
