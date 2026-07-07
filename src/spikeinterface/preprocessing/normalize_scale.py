@@ -161,7 +161,6 @@ class ScaleRecording(BasePreprocessor):
             offset = np.asarray(offset)
         if offset.ndim == 1:
             offset = offset[None, :]
-        offset = offset.astype(dtype)
         assert offset.shape == (1, num_chans)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
