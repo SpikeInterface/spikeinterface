@@ -96,7 +96,7 @@ class ComputeCorrelograms(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_ccgs = self.data["ccgs"][unit_indices][:, unit_indices]
@@ -271,7 +271,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_acgs = self.data["acgs"][unit_indices]
@@ -1209,7 +1209,7 @@ class ComputeACG3D(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_acgs_3d = self.data["acgs_3d"][unit_indices]

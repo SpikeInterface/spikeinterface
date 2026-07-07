@@ -423,6 +423,10 @@ class ChannelSparsity:
         from .template import Templates
 
         if isinstance(templates_or_sorting_analyzer, Templates):
+            assert peak_sign is not None and peak_mode is not None, (
+                "When using `compute_sparsity` with a Templates object, "
+                "and `peak_sign` and `amplitude_mode` must be specified."
+            )
             main_channel_indices = templates_or_sorting_analyzer.get_main_channels(
                 outputs="index", peak_sign=peak_sign, peak_mode=peak_mode
             )
@@ -824,15 +828,6 @@ def estimate_sparsity(
         "Available methods are 'radius', 'best_channels', 'snr', 'amplitude', 'by_property'"
     )
 
-    if recording.get_probes() == 1:
-        # standard case
-        probe = recording.get_probe()
-    else:
-        # if many probe or no probe then we use channel location and create a dummy probe with all channels
-        # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
-        chan_locs = recording.get_channel_locations()
-        probe = recording.create_dummy_probe_from_locations(chan_locs)
-
     if method == "radius" and main_channel_indices is not None:
         assert len(main_channel_indices) == len(sorting.unit_ids)
         chan_locs = recording.get_channel_locations()
@@ -841,6 +836,14 @@ def estimate_sparsity(
         )
 
     elif method != "by_property":
+        if recording.get_probes() == 1:
+            # standard case
+            probe = recording.get_probe()
+        else:
+            # if many probe or no probe then we use channel location and create a dummy probe with all channels
+            # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
+            chan_locs = recording.get_channel_locations()
+            probe = recording.create_dummy_probe_from_locations(chan_locs)
 
         templates_array = _get_templates_array_from_recording_and_sorting(
             recording, sorting, ms_before, ms_after, num_spikes_for_sparsity, 2205, **job_kwargs

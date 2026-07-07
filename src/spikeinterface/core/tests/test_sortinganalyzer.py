@@ -555,7 +555,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         self.data["result_two"] = spikes["unit_index"].copy()
         self.data["result_three"] = np.zeros((len(self.sorting_analyzer.unit_ids), 2))
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()

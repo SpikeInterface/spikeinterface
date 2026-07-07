@@ -50,7 +50,7 @@ class ComputeUnitLocations(AnalyzerExtension):
         params.update(method_kwargs)
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         unit_inds = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_unit_location = self.data["unit_locations"][unit_inds]
         return dict(unit_locations=new_unit_location)
