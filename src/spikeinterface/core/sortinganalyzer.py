@@ -188,7 +188,6 @@ def create_sorting_analyzer(
             folder=folder,
             sparse=sparse,
             sparsity=sparsity,
-            main_channel_indices=main_channel_indices,
             return_scaled=return_scaled,
             return_in_uV=return_in_uV,
             overwrite=overwrite,
@@ -209,7 +208,7 @@ def create_sorting_analyzer(
         if len(main_channel_indices) != sorting.get_num_units():
             raise ValueError("len(main_channel_indices) must equal the number of units in the `sorting`")
 
-    if main_channel_indices is not None and sparsity is None and sparsity_kwargs.get("method") != "radius":
+    if main_channel_indices is not None and sparsity_kwargs.get("method") != "radius":
         raise ValueError(
             'You can either pass `main_channel_indices` or a sparsity method not equal to "radius", but not both.'
         )
