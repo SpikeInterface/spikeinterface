@@ -2,15 +2,8 @@ import shutil
 
 import numpy as np
 
-
 from spikeinterface.exporters import export_to_phy
-
-from spikeinterface.exporters.tests.common import (
-    make_sorting_analyzer,
-    sorting_analyzer_dense_for_export,
-    sorting_analyzer_sparse_for_export,
-    sorting_analyzer_with_group_for_export,
-)
+from spikeinterface.exporters.tests.common import make_sorting_analyzer
 
 
 def test_export_to_phy_dense(sorting_analyzer_dense_for_export, create_cache_folder):

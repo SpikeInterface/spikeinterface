@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 
 from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
 

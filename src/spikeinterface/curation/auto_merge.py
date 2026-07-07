@@ -995,11 +995,11 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
-    from scipy.signal import fftconvolve
+    from scipy.signal import fftconvolve, butter, filtfilt
 
     # OLD implementation : smooth correlogram by low pass filter
-    # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
-    # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
+    # b, a = butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
+    # correlograms_smoothed = filtfilt(b, a, correlograms, axis=2)
 
     # new implementation smooth by convolution with a Gaussian kernel
     if len(correlograms) == 0:  # fftconvolve will not return the correct shape.

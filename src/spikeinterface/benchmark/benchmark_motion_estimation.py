@@ -33,11 +33,11 @@ def get_gt_motion_from_unit_displacement(
     spatial_bins_um,
     direction_dim=1,
 ):
-    import scipy.interpolate
+    from scipy.interpolate import interp1d
 
     unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
-    f = scipy.interpolate.interp1d(times, unit_displacements, axis=0)
+    f = interp1d(times, unit_displacements, axis=0)
     unit_displacements = f(temporal_bins_s.clip(times[0], times[-1]))
 
     # spatial interpolataion of units discplacement
@@ -48,9 +48,7 @@ def get_gt_motion_from_unit_displacement(
         # non rigid
         gt_displacement = np.zeros((temporal_bins_s.size, spatial_bins_um.size))
         for t in range(temporal_bins_s.shape[0]):
-            f = scipy.interpolate.interp1d(
-                unit_locations[:, direction_dim], unit_displacements[t, :], fill_value="extrapolate"
-            )
+            f = interp1d(unit_locations[:, direction_dim], unit_displacements[t, :], fill_value="extrapolate")
             gt_displacement[t, :] = f(spatial_bins_um)
 
     gt_motion = Motion(

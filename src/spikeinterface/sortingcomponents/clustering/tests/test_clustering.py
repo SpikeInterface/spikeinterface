@@ -15,7 +15,7 @@ from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 import time
 
-import importlib
+import importlib.util
 
 
 def job_kwargs():

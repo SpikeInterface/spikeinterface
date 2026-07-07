@@ -103,14 +103,14 @@ class UnitPresenceWidget(BaseWidget):
         map[ind0, ind1] += 1
 
         if dp.smooth_sigma is not None:
-            import scipy.signal
+            from scipy.signal import oaconvolve
 
             n = int(dp.smooth_sigma * 5)
             bins = np.arange(-n, n + 1)
             smooth_kernel = np.exp(-(bins**2) / (2 * dp.smooth_sigma**2))
             smooth_kernel /= np.sum(smooth_kernel)
             smooth_kernel = smooth_kernel[np.newaxis, :]
-            map = scipy.signal.oaconvolve(map, smooth_kernel, mode="same", axes=1)
+            map = oaconvolve(map, smooth_kernel, mode="same", axes=1)
 
         extent = (dp.time_range[0], dp.time_range[1], len(unit_ids), 0) if dp.time_range is not None else None
         im = self.ax.imshow(
