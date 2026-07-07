@@ -10,7 +10,7 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 * Creating a new spike sorter.
 * Designing a new post-processing algorithm.
 * Enhancing documentation, including docstrings, tutorials, and examples.
-* Crafting tutorials for common workflows (e.g., spike sorting, post-processing, etc.).
+* Crafting tutorials for common workflows (e.g., spike sorting, postprocessing, etc.).
 * Writing unit tests to expand code coverage and use case scenarios.
 * Reporting bugs and issues.
 
@@ -384,12 +384,11 @@ In order to check if your spike sorter is installed, a :code:`try` - :code:`exce
 sorter is implemented in Python (installed with the package :code:`myspikesorter`), this block will look as follows:
 
 .. code-block:: python
-
-    try:
-        import myspikesorter
-        HAVE_MSS = True
-    except ImportError:
-        HAVE_MSS = False
+    import importlib.util
+    if importlib.util.find_spec("myspikesorter"):
+        HAVE_MYSORTER = True
+    else:
+        HAVE_MYSORTER = False
 
 Then, you can start creating a new class:
 
@@ -402,7 +401,7 @@ Then, you can start creating a new class:
     """
 
     sorter_name = 'myspikesorter'
-    installed = HAVE_MSS
+    installed = HAVE_MYSORTER
 
     _default_params = {
         'param1': None,
@@ -436,7 +435,7 @@ Now you can start filling out the required methods:
     def is_installed(cls):
 
         # Fill code to check sorter installation. It returns a boolean
-        return HAVE_MSS
+        return HAVE_MYSORTER
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
@@ -498,7 +497,7 @@ Checklist
 * In the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``) set ``DEV_MODE`` to ``False`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
-There can be large releases like:
+It can be a large release like:
 
 ``doc/releases/0.101.0.rst``
 
@@ -506,7 +505,7 @@ Which contain a section called "Main Changes" and minor releases which include o
 
 ``doc/releases/0.101.2.rst``
 
-To collect all the PRs and bug fixes we have a script in:
+To collect all the PRs and bug fixes we have a bash script in:
 ``doc/scripts/``
 called ``auto-release-notes.sh``. Run it with ``bash auto-release-notes.sh`` and it will create the release notes for the module specific changes.
 

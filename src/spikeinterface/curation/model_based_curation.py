@@ -1,15 +1,16 @@
-import numpy as np
 from pathlib import Path
 import json
 import warnings
 import re
 from packaging.version import parse
+from copy import deepcopy
+
+import numpy as np
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import (
     _format_metric_dataframe,
 )
-from copy import deepcopy
 
 
 class ModelBasedClassification:

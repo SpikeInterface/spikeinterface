@@ -64,11 +64,11 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         num_channels = recording.get_num_channels()
 
         if neighborhood_radius_um is not None:
-            best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
-            best_channels = np.array([best_channels[i] for i in templates.unit_ids])
+            main_channels = self.templates.get_main_channels(peak_sign=self.peak_sign, outputs="index", with_dict=False)
+
             channel_locations = recording.get_channel_locations()
             template_distances = np.linalg.norm(
-                channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :], axis=2
+                channel_locations[:, None] - channel_locations[main_channels][np.newaxis, :], axis=2
             )
             self.neighborhood_mask = template_distances <= neighborhood_radius_um
         else:
@@ -76,12 +76,14 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
         if support_radius_um is not None:
             if not templates.are_templates_sparse():
-                if sparsity_radius_um is not None:
-                    sparsity = compute_sparsity(
-                        templates, method="radius", radius_um=sparsity_radius_um, peak_sign=self.peak_sign
-                    )
-                else:
-                    raise ValueError("sparsity_radius_um should be provided if templates are not sparse")
+                from spikeinterface.core.sparsity import compute_sparsity
+
+                sparsity = compute_sparsity(
+                    templates,
+                    method="radius",
+                    radius_um=sparsity_radius_um,
+                    peak_sign=self.peak_sign,
+                )
             else:
                 sparsity = templates.sparsity
 

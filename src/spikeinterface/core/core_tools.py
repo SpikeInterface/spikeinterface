@@ -10,6 +10,7 @@ from math import prod
 from collections import namedtuple
 import inspect
 
+from probeinterface import ProbeGroup
 import numpy as np
 
 
@@ -146,6 +147,9 @@ class SIJsonEncoder(json.JSONEncoder):
             return str(obj)
 
         if isinstance(obj, Motion):
+            return obj.to_dict()
+
+        if isinstance(obj, ProbeGroup):
             return obj.to_dict()
 
         # The base-class handles the assertion
