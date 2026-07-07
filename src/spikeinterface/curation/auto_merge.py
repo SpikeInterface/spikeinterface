@@ -1,16 +1,15 @@
-from __future__ import annotations
-
 import warnings
-
 from typing import Tuple
-import numpy as np
 import math
+import importlib.util
 
-try:
+import numpy as np
+
+if importlib.util.find_spec("numba") is not None:
     import numba
 
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 from spikeinterface.core import SortingAnalyzer
@@ -71,9 +70,9 @@ _required_extensions = {
 
 _default_step_params = {
     "num_spikes": {"min_spikes": 100},
-    "snr": {"min_snr": 2},
+    "snr": {"min_snr": 2.0},
     "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "unit_locations": {"max_distance_um": 150},
+    "unit_locations": {"max_distance_um": 150.0},
     "correlogram": {
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
@@ -81,7 +80,7 @@ _default_step_params = {
         "adaptative_window_thresh": 0.5,
     },
     "template_similarity": {"similarity_method": "l1", "template_diff_thresh": 0.25},
-    "presence_distance": {"presence_distance_thresh": 100},
+    "presence_distance": {"presence_distance_thresh": 100.0},
     "knn": {"k_nn": 10},
     "cross_contamination": {
         "cc_thresh": 0.1,
@@ -90,7 +89,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "slay_score": {"k1": 0.25, "k2": 1, "slay_threshold": 0.5},
+    "slay_score": {"k1": 0.25, "k2": 1.0, "slay_threshold": 0.5},
 }
 
 
@@ -193,7 +192,6 @@ def compute_merge_unit_groups(
 
     However, it has been greatly consolidated and refined depending on the presets.
     """
-    import scipy
 
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
@@ -284,8 +282,9 @@ def compute_merge_unit_groups(
         elif step == "unit_locations":
             location_ext = sorting_analyzer.get_extension("unit_locations")
             unit_locations = location_ext.get_data()[:, :2]
+            from scipy.spatial import distance
 
-            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            unit_distances = distance.cdist(unit_locations, unit_locations, metric="euclidean")
             pair_mask = pair_mask & (unit_distances <= params["max_distance_um"])
             outs["unit_distances"] = unit_distances
 
@@ -536,7 +535,7 @@ def get_potential_auto_merge(
     corr_diff_thresh: float = 0.16,
     template_diff_thresh: float = 0.25,
     contamination_thresh: float = 0.2,
-    presence_distance_thresh: float = 100,
+    presence_distance_thresh: float = 100.0,
     p_value: float = 0.2,
     cc_thresh: float = 0.1,
     censored_period_ms: float = 0.3,
@@ -996,7 +995,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
-    import scipy.signal
+    from scipy.signal import fftconvolve
 
     # OLD implementation : smooth correlogram by low pass filter
     # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
@@ -1009,7 +1008,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     smooth_kernel = np.exp(-(bins**2) / (2 * sigma_smooth_ms**2))
     smooth_kernel /= np.sum(smooth_kernel)
     smooth_kernel = smooth_kernel[None, None, :]
-    correlograms_smoothed = scipy.signal.fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
+    correlograms_smoothed = fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
 
     return correlograms_smoothed
 
@@ -1032,13 +1031,13 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     unit_window : int
         Index at which the adaptive window has been calculated.
     """
-    import scipy.signal
+    from scipy.signal import find_peaks
 
     if np.sum(np.abs(auto_corr)) == 0:
         return 20.0
 
     derivative_2 = -np.gradient(np.gradient(auto_corr))
-    peaks = scipy.signal.find_peaks(derivative_2)[0]
+    peaks = find_peaks(derivative_2)[0]
 
     keep = auto_corr[peaks] >= threshold
     peaks = peaks[keep]
@@ -1214,7 +1213,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
     d : float
         The presence distance between the two units.
     """
-    import scipy
+    from scipy.stats import wasserstein_distance
 
     distances = []
     if num_samples is not None:
@@ -1246,7 +1245,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
         h2 = h2.astype(float)
 
         xaxis = bins[1:] / sorting.sampling_frequency
-        d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
+        d = wasserstein_distance(xaxis, xaxis, h1, h2)
         distances.append(d)
 
     return np.mean(d)
@@ -1317,13 +1316,14 @@ def binom_sf(x: int, n: float, p: float) -> float:
         The survival function of the binomial distribution.
     """
 
-    import scipy
+    from scipy.stats import binom
+    from scipy.interpolate import interp1d
 
     n_array = np.arange(math.floor(n - 2), math.ceil(n + 3), 1)
     n_array = n_array[n_array >= 0]
 
-    res = [scipy.stats.binom.sf(x, n_, p) for n_ in n_array]
-    f = scipy.interpolate.interp1d(n_array, res, kind="quadratic")
+    res = [binom.sf(x, n_, p) for n_ in n_array]
+    f = interp1d(n_array, res, kind="quadratic")
 
     return f(n)
 

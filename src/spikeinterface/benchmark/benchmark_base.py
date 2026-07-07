@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import shutil
 import json
@@ -65,6 +63,10 @@ class BenchmarkStudy:
                 assert isinstance(key, tuple), f"Case key {key} for cases is not homogeneous"
                 num_levels = len(reference)
                 assert len(key) == num_levels, f"Case key {key} for cases is not homogeneous, tuple negth differ"
+                if levels is None:
+                    levels = [f"level{i}" for i in range(num_levels)]
+                else:
+                    levels = list(levels)
             else:
                 raise ValueError("Keys for cases must str or tuple")
         return levels
@@ -290,6 +292,39 @@ class BenchmarkStudy:
             self.remove_benchmark(key)
         (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
 
+    def set_precomputed_results(self, precomputed_results, verbose=False):
+        """Set precomputed results for some cases. This is useful when you want to compute results outside of the benchmark and
+        then set them in the benchmark.
+
+        Parameters
+        ----------
+        precomputed_results : dict
+            A dict with the same keys as cases and values are dict with the results to set for each case.
+            The keys of the inner dict must be the same as the keys of the benchmark result.
+            'run_time' is a special key that will be set to 0.0 if not present in the precomputed results.
+        verbose : bool, default: False
+             Whether to print the keys of the precomputed results when setting them.
+        """
+
+        for key in precomputed_results.keys():
+            assert key in self.cases, f"Key {key} in precomputed_results is not in cases"
+            benchmark = self.create_benchmark(key)
+            if verbose:
+                print("### Set benchmark", key, "###")
+
+            for k, v in precomputed_results[key].items():
+                benchmark.result[k] = v
+            if "run_time" not in benchmark.result:
+                benchmark.result["run_time"] = 0.0
+                if verbose:
+                    print(f"Warning: 'run_time' is not in the precomputed results for key {key}, setting it to 0.0")
+
+            self.benchmarks[key] = benchmark
+            bench_folder = self.folder / "results" / self.key_to_str(key)
+            bench_folder.mkdir(exist_ok=True)
+            benchmark.save_run(bench_folder)
+            benchmark.save_main(bench_folder)
+
     def run(self, case_keys=None, keep=True, verbose=False, **job_kwargs):
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -452,27 +487,6 @@ class BenchmarkStudy:
             assert benchmark is not None, f"Benchmkark for key {key} has not been run yet!"
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
-
-    def create_sorting_analyzer_gt(self, case_keys=None, return_in_uV=True, random_params={}, **job_kwargs):
-        print("###### Study.create_sorting_analyzer_gt() is not used anymore!!!!!!")
-        # if case_keys is None:
-        #     case_keys = self.cases.keys()
-
-        # base_folder = self.folder / "sorting_analyzer"
-        # base_folder.mkdir(exist_ok=True)
-
-        # dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
-        # dataset_keys = set(dataset_keys)
-        # for dataset_key in dataset_keys:
-        #     # the waveforms depend on the dataset key
-        #     folder = base_folder / self.key_to_str(dataset_key)
-        #     recording, gt_sorting = self.datasets[dataset_key]
-        #     sorting_analyzer = create_sorting_analyzer(
-        #         gt_sorting, recording, format="binary_folder", folder=folder, return_in_uV=return_in_uV
-        #     )
-        #     sorting_analyzer.compute("random_spikes", **random_params)
-        #     sorting_analyzer.compute("templates", **job_kwargs)
-        #     sorting_analyzer.compute("noise_levels")
 
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
@@ -673,8 +687,6 @@ class Benchmark:
                     with open(file, mode="rb") as f:
                         result[k] = pickle.load(f)
             elif format == "sorting":
-                from spikeinterface.core import load_extractor
-
                 sorting_folder = folder / k
                 if sorting_folder.exists():
                     result[k] = load(sorting_folder)

@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Optional
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -27,6 +24,11 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     use_names_as_ids : bool, default: False
         Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
         names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
+    gap_tolerance_ms : float | None, default: None
+        Maximum acceptable gap size in milliseconds for automatic segmentation.
+        If None (default), an error is raised when timestamp gaps are detected.
+        If a value is provided, gaps smaller than this threshold are ignored and
+        gaps larger than this threshold create new segments.
 
     """
 
@@ -39,8 +41,11 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         stream_name=None,
         all_annotations: bool = False,
         use_names_as_ids: bool = False,
+        gap_tolerance_ms: float | None = None,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        if gap_tolerance_ms is not None:
+            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
         neo_kwargs["load_nev"] = False  # Avoid loading spikes release in neo 0.12.0
 
         # trick to avoid to select automatically the correct stream_id
@@ -55,7 +60,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
             use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
-        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute()), "gap_tolerance_ms": gap_tolerance_ms})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
@@ -85,6 +90,11 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     nsx_to_load : int | list | str, default: None
         IDs of nsX file from which to load data, e.g., if set to 5 only data from the ns5 file are loaded.
         If 'all', then all nsX will be loaded. If None, all nsX files will be loaded. If empty list, no nsX files will be loaded.
+    gap_tolerance_ms : float | None, default: None
+        Maximum acceptable gap size in milliseconds for automatic segmentation.
+        If None (default), an error is raised when timestamp gaps are detected.
+        If a value is provided, gaps smaller than this threshold are ignored and
+        gaps larger than this threshold create new segments.
     """
 
     NeoRawIOClass = "BlackrockRawIO"
@@ -93,12 +103,15 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     def __init__(
         self,
         file_path,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
-        sampling_frequency: Optional[float] = None,
-        nsx_to_load: Optional[int | list | str] = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
+        sampling_frequency: float | None = None,
+        nsx_to_load: int | list | str | None = None,
+        gap_tolerance_ms: float | None = None,
     ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        if gap_tolerance_ms is not None:
+            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
         NeoBaseSortingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -113,6 +126,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,
+            "gap_tolerance_ms": gap_tolerance_ms,
         }
 
     @classmethod

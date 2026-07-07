@@ -1,26 +1,28 @@
-from __future__ import annotations
-
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
+import importlib.util
 
 
 import numpy as np
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
-try:
+numba_spec = importlib.util.find_spec("numba")
+networkx_spec = importlib.util.find_spec("networkx")
+scipy_spec = importlib.util.find_spec("scipy")
+sklearn_spec = importlib.util.find_spec("sklearn")
+
+if numba_spec is not None and networkx_spec is not None and scipy_spec is not None and sklearn_spec is not None:
     import numba
-    import networkx as nx
+    import networkx
     import scipy.spatial
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
     from .isosplit_isocut import isocut
-
-except:
+else:
     pass
-from .tools import aggregate_sparse_features, FeaturesLoader
 
+from .tools import aggregate_sparse_features, FeaturesLoader
 
 DEBUG = False
 
@@ -559,13 +561,13 @@ def merge_peak_labels_from_templates(
     if not use_lags:
         lags = None
 
-    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids = (
+    clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids, time_shifts = (
         _apply_pair_mask_on_labels_and_recompute_templates(
             pair_mask, peak_labels, unit_ids, templates_array, template_sparse_mask, lags
         )
     )
 
-    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids, time_shifts
 
 
 def _apply_pair_mask_on_labels_and_recompute_templates(
@@ -583,7 +585,10 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
     clean_labels = peak_labels.copy()
     n_components, group_labels = connected_components(pair_mask, directed=False, return_labels=True)
 
-    # print("merges", templates_array.shape[0], "to", n_components)
+    if lags is not None:
+        time_shifts = np.zeros(len(peak_labels), dtype=np.int32)
+    else:
+        time_shifts = None
 
     merge_template_array = templates_array.copy()
     merge_sparsity_mask = template_sparse_mask.copy()
@@ -606,10 +611,15 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
 
             for i, l in enumerate(merge_group):
                 label = unit_ids[l]
-                weights[i] = np.sum(peak_labels == label)
+                mask = peak_labels == label
+                weights[i] = np.sum(mask)
                 if i > 0:
-                    clean_labels[peak_labels == label] = unit_ids[g0]
+                    clean_labels[mask] = unit_ids[g0]
                     keep_template[l] = False
+                    if lags is not None:
+                        shift = lags[l, g0]  # which is the same as  -lags[g0, l]
+                        time_shifts[mask] += shift
+
             weights /= weights.sum()
 
             if lags is None:
@@ -620,7 +630,7 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
                 # with shifts
                 accumulated_template = np.zeros_like(merge_template_array[g0, :, :])
                 for i, l in enumerate(merge_group):
-                    shift = -lags[g0, l]
+                    shift = lags[l, g0]  # which is the same as  -lags[g0, l]
                     if shift > 0:
                         # template is shifted to right
                         temp = np.zeros_like(accumulated_template)
@@ -640,4 +650,4 @@ def _apply_pair_mask_on_labels_and_recompute_templates(
     merge_template_array = merge_template_array[keep_template, :, :]
     merge_sparsity_mask = merge_sparsity_mask[keep_template, :]
 
-    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids
+    return clean_labels, merge_template_array, merge_sparsity_mask, new_unit_ids, time_shifts

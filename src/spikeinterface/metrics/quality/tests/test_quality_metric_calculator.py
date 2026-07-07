@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import (
@@ -72,7 +71,6 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
         skip_pc_metrics=False,
         seed=2205,
     )
-    print(metrics.columns)
     assert "isolation_distance" in metrics.columns
 
 
@@ -89,7 +87,7 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     )
 
     # sorting_analyzer_simple has ten units
-    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
+    new_sorting_analyzer = sorting_analyzer.merge_units([["0", "1"]])
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # we should copy over the metrics after merge
@@ -115,6 +113,9 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
     # make a copy and make it recordingless
     sorting_analyzer_norec = sorting_analyzer.save_as(format="memory")
+
+    # keep the same `main_channel_indices` as before
+    sorting_analyzer_norec._main_channel_indices = sorting_analyzer._main_channel_indices
     sorting_analyzer_norec.delete_extension("quality_metrics")
     sorting_analyzer_norec._recording = None
     assert not sorting_analyzer_norec.has_recording()
@@ -144,6 +145,7 @@ def test_empty_units(sorting_analyzer_simple):
         {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
         sampling_frequency=sorting_analyzer.sampling_frequency,
     )
+    empty_sorting.set_property("main_channel_id", ["1", "1", "1"])
     sorting_empty = aggregate_units([sorting_analyzer.sorting, empty_sorting])
     assert len(sorting_empty.get_empty_unit_ids()) == 3
 
@@ -168,7 +170,89 @@ def test_empty_units(sorting_analyzer_simple):
     for col in metrics_empty.columns:
         all_nans = np.all(isnull(metrics_empty.loc[empty_unit_ids, col].values))
         all_zeros = np.all(metrics_empty.loc[empty_unit_ids, col].values == 0)
-        assert all_nans or all_zeros
+        all_neg_ones = np.all(metrics_empty.loc[empty_unit_ids, col].values == -1)
+        assert all_nans or all_zeros or all_neg_ones, f"Column {col} failed the empty unit test"
+
+
+def test_quality_metrics_with_periods():
+    """
+    Test that quality metrics can be computed using valid unit periods.
+    """
+    from spikeinterface.core.base import unit_period_dtype
+
+    recording, sorting = generate_ground_truth_recording()
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory")
+
+    # compute dependencies
+    sorting_analyzer.compute(["random_spikes", "templates", "amplitude_scalings", "valid_unit_periods"], **job_kwargs)
+    print(sorting_analyzer)
+
+    # compute quality metrics using valid periods
+    metrics = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=True,
+        seed=2205,
+    )
+    print(metrics)
+
+    # test with external periods: 1 period per segment from 10 to 90% of recording
+    num_segments = recording.get_num_segments()
+    periods = np.zeros(len(sorting.unit_ids) * num_segments, dtype=unit_period_dtype)
+    for i, unit_id in enumerate(sorting.unit_ids):
+        unit_index = sorting.id_to_index(unit_id)
+        for segment_index in range(num_segments):
+            num_samples = recording.get_num_samples(segment_index=segment_index)
+            idx = i * num_segments + segment_index
+            periods[idx]["unit_index"] = unit_index
+            period_start = int(num_samples * 0.1)
+            period_end = int(num_samples * 0.9)
+            periods[idx]["start_sample_index"] = period_start
+            periods[idx]["end_sample_index"] = period_end
+            periods[idx]["segment_index"] = segment_index
+
+    metrics_ext_periods = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=False,
+        periods=periods,
+        seed=2205,
+    )
+
+    # test failure when periods and valid_unit_periods do not match
+    with pytest.raises(ValueError):
+        compute_quality_metrics(
+            sorting_analyzer,
+            metric_names=None,
+            skip_pc_metrics=True,
+            use_valid_periods=True,
+            periods=periods,
+            seed=2205,
+        )
+
+    # should not fail if external periods are the same as valid unit periods
+    valid_periods = sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
+    metrics_ext_periods = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=True,
+        periods=valid_periods,
+        seed=2205,
+    )
+
+    # test failure if use valid_periods is True but valid_unit_periods extension is missing
+    sorting_analyzer.delete_extension("valid_unit_periods")
+    with pytest.raises(AssertionError):
+        compute_quality_metrics(
+            sorting_analyzer,
+            metric_names=None,
+            skip_pc_metrics=True,
+            use_valid_periods=True,
+            seed=2205,
+        )
 
 
 if __name__ == "__main__":

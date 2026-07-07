@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.core.motion import ensure_time_bins
@@ -20,7 +18,7 @@ def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
         The motion object.
     recording : Recording
         The recording object. This is used to convert sample indices to times.
-    peak_locations: np.array | None
+    peak_locations: np.ndarray | None
         Optional : peaks location vector.
         Otherwise use the channel_index for location.
     Returns
@@ -29,7 +27,7 @@ def compute_peak_displacements(peaks, motion, recording, peak_locations=None):
         Motion-corrected peak locations
     """
     if recording is None:
-        raise ValueError("compute_peak_displacements need recording to be not None")
+        raise ValueError("`compute_peak_displacements` requires the `recording` to not be None")
 
     channel_locations = recording.get_channel_locations()
 
@@ -225,7 +223,7 @@ def interpolate_motion_on_traces(
 
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
-        # in ChunkRecordingExecutor)
+        # in TimeSeriesChunkExecutor)
         np.matmul(traces[frames_in_bin], drift_kernel, out=traces_corrected[frames_in_bin])
         current_start_index = next_start_index
 
@@ -304,9 +302,9 @@ class InterpolateMotionRecording(BasePreprocessor):
             * "nearest" : use neareast channel
 
     sigma_um : float, default: 20.0
-        Used in the "kriging" formula
+        Used in the "kriging" formula.
     p : int, default: 1
-        Used in the "kriging" formula
+        Used in the "kriging" formula to control the decay of the gaussian kernel.
     num_closest : int, default: 3
         Number of closest channels used by "idw" method for interpolation.
     border_mode : "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
@@ -407,11 +405,12 @@ class InterpolateMotionRecording(BasePreprocessor):
 
         if border_mode == "remove_channels":
             # change the wiring of the probe
-            # TODO this is also done in ChannelSliceRecording, this should be done in a common place
-            contact_vector = self.get_property("contact_vector")
-            if contact_vector is not None:
-                contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
-                self.set_property("contact_vector", contact_vector)
+            if recording.has_probe():
+                probegroup = recording.get_probegroup()
+                channel_indices = recording.ids_to_indices(channel_ids)
+                probegroup_sliced = probegroup.get_slice(channel_indices)
+                probegroup_sliced.set_global_device_channel_indices(np.arange(len(channel_ids), dtype="int64"))
+                self.set_probegroup(probegroup_sliced)
 
         # handle manual interpolation_time_bin_centers_s
         # the case where interpolation_time_bin_size_s is set is handled per-segment below
@@ -424,7 +423,7 @@ class InterpolateMotionRecording(BasePreprocessor):
                 interpolation_time_bin_centers_s, interpolation_time_bin_edges_s
             )
 
-        for segment_index, parent_segment in enumerate(recording._recording_segments):
+        for segment_index, parent_segment in enumerate(recording.segments):
             # finish the per-segment part of the time bin logic
             if interpolation_time_bin_centers_s is None:
                 # in this case, interpolation_time_bin_size_s is set.

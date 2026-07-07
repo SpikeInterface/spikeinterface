@@ -20,4 +20,5 @@ from .misc_metrics import (
     compute_sliding_rp_violations,
     compute_sd_ratio,
     compute_synchrony_metrics,
+    compute_refrac_period_violations,
 )

@@ -1,6 +1,4 @@
-from __future__ import annotations
-from typing import Literal, Optional, Any
-
+from typing import Literal, Optional, Any, Iterable
 from pathlib import Path
 from itertools import chain
 import os
@@ -18,13 +16,11 @@ from time import perf_counter
 import numpy as np
 
 import probeinterface
-
 import spikeinterface
-
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
-from .recording_tools import check_probe_do_not_overlap, get_rec_attributes, do_recording_attributes_match
+from .recording_tools import get_rec_attributes, do_recording_attributes_match, check_probe_do_not_overlap
 from .core_tools import (
     check_json,
     retrieve_importing_provenance,
@@ -42,7 +38,7 @@ from .job_tools import split_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
 
 
@@ -52,6 +48,10 @@ def create_sorting_analyzer(
     recording,
     format="memory",
     folder=None,
+    main_channel_indices=None,
+    peak_sign="both",
+    peak_mode="extremum",
+    num_spikes_for_main_channel=100,
     sparse=True,
     sparsity=None,
     set_sparsity_by_dict_key=False,
@@ -59,7 +59,9 @@ def create_sorting_analyzer(
     return_in_uV=True,
     overwrite=False,
     backend_options=None,
-    **sparsity_kwargs,
+    sparsity_kwargs=None,
+    seed=None,
+    **job_kwargs,
 ) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -68,6 +70,11 @@ def create_sorting_analyzer(
     templates, unit locations, spike locations, quality metrics ...
 
     This object will be also use used for plotting purpose.
+
+    The main_channel_indices can be externally provided. If not, then this is taken from
+    sorting property. If not, then the main_channel_indices is estimated using
+    `estimate_templates_with_accumulator()`  which is fast and parallel but need to traverse
+    the recording.
 
 
     Parameters
@@ -82,6 +89,17 @@ def create_sorting_analyzer(
         The mode to store analyzer. If "folder", the analyzer is stored on disk in the specified folder.
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the analyzer is stored in RAM. Use this option carefully!
+    main_channel_indices : None | np.array
+        The main_channel_indices can be externally provided
+    peak_sign : "both" | "neg" | "pos"
+        When main channel is estimated, the peak sign used to find the main channel.
+    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+        Where the amplitude is computed
+        * "extremum" : take the peak value (max or min depending on `peak_sign`)
+        * "at_index" : take value at `nbefore` index
+        * "peak_to_peak" : take the peak-to-peak amplitude
+    num_spikes_for_main_channel : int, default: 100
+        How many spikes per units to compute the main channel.
     sparse : bool, default: True
         If True, then a sparsity mask is computed using the `estimate_sparsity()` function using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
@@ -107,8 +125,8 @@ def create_sorting_analyzer(
 
             * storage_options: dict | None (fsspec storage options)
             * saving_options: dict | None (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
-
-    sparsity_kwargs : keyword arguments
+    sparsity_kwargs : dict | None, default None
+        Dict of kwargs that is passed to `estimate_sparsity`.
 
     Returns
     -------
@@ -144,6 +162,9 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
 
+    if sparsity_kwargs is None:
+        sparsity_kwargs = dict()
+
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
         if sorting.keys() != recording.keys():
@@ -168,19 +189,46 @@ def create_sorting_analyzer(
             return_in_uV=return_in_uV,
             overwrite=overwrite,
             backend_options=backend_options,
-            **sparsity_kwargs,
+            sparsity_kwargs=sparsity_kwargs,
+            **job_kwargs,
         )
 
-    if format != "memory":
-        if format == "zarr":
-            if not is_path_remote(folder):
-                folder = clean_zarr_folder_name(folder)
-        if not is_path_remote(folder):
-            if Path(folder).is_dir():
-                if not overwrite:
-                    raise ValueError(f"Folder already exists {folder}! Use overwrite=True to overwrite it.")
-                else:
-                    shutil.rmtree(folder)
+    if format != "memory" and not is_path_remote(folder):
+        folder = clean_zarr_folder_name(folder) if format == "zarr" else folder
+        if Path(folder).is_dir():
+            if overwrite:
+                shutil.rmtree(folder)
+            else:
+                raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
+
+    if main_channel_indices is not None:
+        if len(main_channel_indices) != sorting.get_num_units():
+            raise ValueError("len(main_channel_indices) must equal the number of units in the `sorting`")
+
+    if main_channel_indices is not None and sparsity_kwargs.get("method") != "radius":
+        raise ValueError(
+            'You can either pass `main_channel_indices` or a sparsity method not equal to "radius", but not both.'
+        )
+
+    # retrieve or compute the main channel index per unit id
+    if main_channel_indices is None:
+        if "main_channel_id" in sorting.get_property_keys():
+            main_channel_ids = sorting.get_property("main_channel_id")
+            main_channel_indices = recording.ids_to_indices(main_channel_ids)
+
+    if main_channel_indices is None:
+        # this is weird but due to the cyclic import
+        from .template_tools import estimate_main_channel_from_recording
+
+        main_channel_indices = estimate_main_channel_from_recording(
+            recording,
+            sorting,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            num_spikes_for_main_channel=num_spikes_for_main_channel,
+            seed=seed,
+            **job_kwargs,
+        )
 
     # handle sparsity
     if sparsity is not None:
@@ -192,8 +240,18 @@ def create_sorting_analyzer(
         assert np.array_equal(
             recording.channel_ids, sparsity.channel_ids
         ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        assert all(
+            sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)
+        ), "sparsity is not consistent with main_channel_indices"
     elif sparse:
-        sparsity = estimate_sparsity(sorting, recording, **sparsity_kwargs)
+        sparsity = estimate_sparsity(
+            sorting,
+            recording,
+            main_channel_indices=main_channel_indices,
+            peak_sign=peak_sign,
+            amplitude_mode=peak_mode,
+            **sparsity_kwargs,
+        )
     else:
         sparsity = None
 
@@ -215,6 +273,9 @@ def create_sorting_analyzer(
         recording,
         format=format,
         folder=folder,
+        main_channel_indices=main_channel_indices,
+        peak_sign=peak_sign,
+        peak_mode=peak_mode,
         sparsity=sparsity,
         return_in_uV=return_in_uV,
         backend_options=backend_options,
@@ -284,6 +345,8 @@ class SortingAnalyzer:
         format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
+        peak_sign: Literal["both", "neg", "pos"] = "both",
+        peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
         backend_options: dict | None = None,
     ):
         # very fast init because checks are done in load and create
@@ -294,6 +357,9 @@ class SortingAnalyzer:
         self.format = format
         self.sparsity = sparsity
         self.return_in_uV = return_in_uV
+        self.peak_sign = peak_sign
+        self.peak_mode = peak_mode
+        self._main_channel_indices = None
 
         # For backward compatibility
         self.return_scaled = return_in_uV
@@ -347,12 +413,19 @@ class SortingAnalyzer:
             "zarr",
         ] = "memory",
         folder=None,
+        main_channel_indices=None,
         sparsity=None,
         return_scaled=None,
         return_in_uV=True,
+        peak_sign="both",
+        peak_mode="extremum",
         backend_options=None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
+        assert (
+            main_channel_indices is not None
+        ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
+
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
             if math.isclose(sorting.sampling_frequency, recording.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
@@ -360,7 +433,7 @@ class SortingAnalyzer:
                     "Sorting and Recording have a small difference in sampling frequency. "
                     "This could be due to rounding of floats. Using the sampling frequency from the Recording."
                 )
-                # we make a copy here to change the smapling frequency
+                # we make a copy here to change the sampling frequency
                 sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
                 sorting._sampling_frequency = recording.sampling_frequency
             else:
@@ -371,7 +444,6 @@ class SortingAnalyzer:
                 )
         # check that multiple probes are non-overlapping
         all_probes = recording.get_probegroup().probes
-        check_probe_do_not_overlap(all_probes)
 
         if has_exceeding_spikes(sorting=sorting, recording=recording):
             warnings.warn(
@@ -383,7 +455,15 @@ class SortingAnalyzer:
             sorting = RemoveExcessSpikesSorting(sorting=sorting, recording=recording)
 
         if format == "memory":
-            sorting_analyzer = cls.create_memory(sorting, recording, sparsity, return_in_uV, rec_attributes=None)
+            sorting_analyzer = cls.create_memory(
+                sorting,
+                recording,
+                sparsity,
+                return_in_uV,
+                peak_sign,
+                peak_mode,
+                rec_attributes=None,
+            )
         elif format == "binary_folder":
             sorting_analyzer = cls.create_binary_folder(
                 folder,
@@ -391,6 +471,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
+                peak_sign,
+                peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
@@ -404,11 +486,16 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 return_in_uV,
+                peak_sign,
+                peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
             )
         else:
             raise ValueError("SortingAnalyzer.create: wrong format")
+
+        main_channel_ids = sorting_analyzer.channel_ids[main_channel_indices]
+        sorting_analyzer.set_sorting_property("main_channel_id", main_channel_ids, save=True)
 
         return sorting_analyzer
 
@@ -421,7 +508,7 @@ class SortingAnalyzer:
         """
         if format == "auto":
             # make better assumption and check for auto guess format
-            if Path(folder).suffix == ".zarr":
+            if Path(folder).suffix == ".zarr" or is_path_remote(folder):
                 format = "zarr"
             else:
                 format = "binary_folder"
@@ -442,7 +529,7 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, return_in_uV, rec_attributes):
+    def create_memory(cls, sorting, recording, sparsity, return_in_uV, peak_sign, peak_mode, rec_attributes):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -463,11 +550,24 @@ class SortingAnalyzer:
             format="memory",
             sparsity=sparsity,
             return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
         )
         return sorting_analyzer
 
     @classmethod
-    def create_binary_folder(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
+    def create_binary_folder(
+        cls,
+        folder,
+        sorting,
+        recording,
+        sparsity,
+        return_in_uV,
+        peak_sign,
+        peak_mode,
+        rec_attributes,
+        backend_options,
+    ):
         # used by create and save_as
 
         folder = Path(folder)
@@ -497,7 +597,7 @@ class SortingAnalyzer:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
-            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
+            warnings.warn("Recording not provided, instantiating SortingAnalyzer in recordingless mode.")
 
         if sorting.check_serializability("json"):
             sorting.dump(folder / "sorting_provenance.json", relative_to=folder)
@@ -531,11 +631,152 @@ class SortingAnalyzer:
         settings_file = folder / f"settings.json"
         settings = dict(
             return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
         )
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
 
         return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
+
+    @classmethod
+    def _handle_backward_compatibility_settings_pre_init(cls, settings, sorting, sparsity):
+        """
+        backward compatibility before the __init__ to handle the settings:
+          * return_scaled > return_in_uV
+          * peak_sign
+          * peak_mode
+
+        Note :
+         * see also _handle_backward_compatibility_settings_post_init
+         * there is also something at extension level to handle changes in paramaters with deferents mechanism
+        """
+
+        new_settings = dict()
+        new_settings.update(settings)
+        if "return_scaled" in settings:
+            new_settings["return_in_uV"] = new_settings.pop("return_scaled")
+        elif "return_in_uV" in settings:
+            pass
+        else:
+            # old version did not have settings at all
+            new_settings["return_in_uV"] = True
+
+        if "peak_sign" not in settings:
+            # before 0.104.0 peak_sign was not in settings.
+            # TODO make something more fancy that explore the previous params of extension
+            # We decided to not do something fancy, as the `peak_sign`s in different
+            # extensions may not match the `peak_sign` that was used to create the analyzer.
+            # So instead we make it simple and use the current defaults
+            new_settings["peak_sign"] = "both"
+            new_settings["peak_mode"] = "extremum"
+
+        return new_settings
+
+    @property
+    def main_channel_indices(self):
+        if self._main_channel_indices is None:
+            sorting_main_channel_ids = self.get_sorting_property("main_channel_id")
+            if sorting_main_channel_ids is not None and self.has_recording():
+                main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
+                self._main_channel_indices = main_channel_indices
+            else:
+                self._main_channel_indices = self._compute_main_channel_backwards_compatibility()
+                main_channel_ids = self.channel_ids[self._main_channel_indices]
+                self.set_sorting_property("main_channel_id", main_channel_ids, save=False)
+
+        return self._main_channel_indices
+
+    def _compute_main_channel_backwards_compatibility(self):
+        """
+        Computes the `main_channel_indices` for an old analyzer, with `peak_sign` = "both"
+         and `peak_mode` = "extremum". Logic is:
+
+        1) If you have the `templates` extension: use this to find the main_channel_indices.
+        This will naturally be restricted to the sparsity of the analyzer, since the templates
+        are only non-zero on the sparsity mask.
+
+        2) If you do not have the `templates` extension but do have `waveforms`: compute
+        `templates` in memory, then go to 1)
+
+        3) If you do not have `templates` or `waveforms`, but do have `sparsity = True`, we
+        will take the "average" channel as the `main_channel_index`
+
+        4) Failing that, if you have an attached `recording`, compute the `main_channel_indices`
+        using the accumulator.
+
+        5) If you have a dense analyzer with no `templates`, `waveforms` or `recording`, your
+        analyzer is not compatible with newer versions of SpikeInterface. Raise an error
+        and ask the user to attach a recording.
+        """
+
+        warnings.warn(
+            "This sorting analyzer is from an an older version of spikeinterface. "
+            "For future compatibility we will compute the `main_channel_indices`. "
+            "To keep this information on disk, please save your analyzer using `analyzer.save_as()`."
+        )
+
+        main_channel_indices = None
+
+        templates_array = None
+        peak_sign = "both"
+        peak_mode = "extremum"
+
+        # Case 1
+        if self.has_extension("templates"):
+            templates = self.get_extension("templates")
+            for k in ("average", "median"):
+                if k in templates.data:
+                    templates_array = templates.data[k]
+                    break
+        else:
+            # Case 2 - from waveforms
+            if self.has_extension("waveforms") and self.has_extension("random_spikes"):
+                from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+
+                templates = ComputeTemplates(self)
+                templates_array = templates.data["average"]
+
+        if templates_array is not None:
+            from .template_tools import _get_main_channel_from_template_array
+
+            main_channel_indices = _get_main_channel_from_template_array(
+                templates_array, peak_mode, peak_sign, templates.nbefore
+            )
+
+        # Case 3
+        if self.is_sparse():
+            channel_locations = self.get_channel_locations()
+            sparsity = self.sparsity
+            main_channel_indices = []
+            for channel_indices in sparsity.unit_id_to_channel_indices.values():
+                unit_channel_locations = channel_locations[channel_indices]
+                average_unit_channel_location = np.average(unit_channel_locations, axis=0)
+                distance_from_average_channel = np.linalg.norm(
+                    channel_locations - average_unit_channel_location, axis=1
+                )
+                closest_channel_index = np.argmin(distance_from_average_channel)
+                main_channel_indices.append(closest_channel_index)
+
+            return main_channel_indices
+
+        # Case 4
+        if self.has_recording() or self.has_temporary_recording():
+            from .template_tools import estimate_main_channel_from_recording
+
+            main_channel_indices = estimate_main_channel_from_recording(
+                self.recording,
+                self.sorting,
+                peak_sign=peak_sign,
+                peak_mode=peak_mode,
+                num_spikes_for_main_channel=100,
+            )
+
+            return main_channel_indices
+
+        raise ValueError(
+            "This analyzer is dense, and has no attached recording, waveforms or templates. Hence we cannot estimate the `main_channel_indices`, making the analyzer incompatible with newer versions of spikeinterface. Please attach a recording to continue, or re-create your analyzer from scratch."
+        )
 
     @classmethod
     def load_from_binary_folder(cls, folder, recording=None, backend_options=None):
@@ -549,21 +790,16 @@ class SortingAnalyzer:
             NumpyFolderSorting(folder / "sorting"), with_metadata=True, copy_spike_vector=True
         )
 
-        # load recording if possible
+        # Try to load the recording if not provided
         if recording is None:
-            # try to load the recording if not provided
-            for type in ("json", "pickle"):
-                filename = folder / f"recording.{type}"
+            for file_ext in ("json", "pickle"):
+                filename = folder / f"recording.{file_ext}"
                 if filename.exists():
                     try:
                         recording = load(filename, base_folder=folder)
                         break
                     except:
-                        recording = None
-        else:
-            # TODO maybe maybe not??? : do we need to check  attributes match internal rec_attributes
-            # Note this will make the loading too slow
-            pass
+                        pass
 
         # recording attributes
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
@@ -596,13 +832,17 @@ class SortingAnalyzer:
         if settings_file.exists():
             with open(settings_file, "r") as f:
                 settings = json.load(f)
+            need_to_create = False
         else:
+            need_to_create = True
+            settings = dict()
+
+        settings = cls._handle_backward_compatibility_settings_pre_init(settings, sorting, sparsity)
+
+        if need_to_create:
             warnings.warn("settings.json not found for this folder writing one with return_in_uV=True")
-            settings = dict(return_in_uV=True)
             with open(settings_file, "w") as f:
                 json.dump(check_json(settings), f, indent=4)
-
-        return_in_uV = settings.get("return_in_uV", settings.get("return_scaled", True))
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -610,7 +850,9 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="binary_folder",
             sparsity=sparsity,
-            return_in_uV=return_in_uV,
+            return_in_uV=settings["return_in_uV"],
+            peak_sign=settings["peak_sign"],
+            peak_mode=settings["peak_mode"],
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -625,10 +867,20 @@ class SortingAnalyzer:
         return zarr_root
 
     @classmethod
-    def create_zarr(cls, folder, sorting, recording, sparsity, return_in_uV, rec_attributes, backend_options):
+    def create_zarr(
+        cls,
+        folder,
+        sorting,
+        recording,
+        sparsity,
+        return_in_uV,
+        peak_sign,
+        peak_mode,
+        rec_attributes,
+        backend_options,
+    ):
         # used by create and save_as
         import zarr
-        import numcodecs
         from .zarrextractors import add_sorting_to_zarr_group
 
         if is_path_remote(folder):
@@ -649,7 +901,11 @@ class SortingAnalyzer:
         info = dict(version=spikeinterface.__version__, dev_mode=spikeinterface.DEV_MODE, object="SortingAnalyzer")
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
 
-        settings = dict(return_in_uV=return_in_uV)
+        settings = dict(
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+        )
         zarr_root.attrs["settings"] = check_json(settings)
 
         # the recording
@@ -657,13 +913,9 @@ class SortingAnalyzer:
         if recording is not None:
             rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
-                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.JSON())
-                zarr_rec = np.array([check_json(rec_dict)], dtype=object)
-                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.JSON())
+                _write_object_array(zarr_root, "recording", check_json(rec_dict), codec="json")
             elif recording.check_serializability("pickle"):
-                # zarr_root.create_dataset("recording", data=rec_dict, object_codec=numcodecs.Pickle())
-                zarr_rec = np.array([rec_dict], dtype=object)
-                zarr_root.create_dataset("recording", data=zarr_rec, object_codec=numcodecs.Pickle())
+                _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
             else:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
@@ -673,14 +925,19 @@ class SortingAnalyzer:
         # sorting provenance
         sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
         if sorting.check_serializability("json"):
-            zarr_sort = np.array([check_json(sort_dict)], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.JSON())
+            _write_object_array(zarr_root, "sorting_provenance", check_json(sort_dict), codec="json")
         elif sorting.check_serializability("pickle"):
-            zarr_sort = np.array([sort_dict], dtype=object)
-            zarr_root.create_dataset("sorting_provenance", data=zarr_sort, object_codec=numcodecs.Pickle())
+            try:
+                _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
+            except Exception as e:
+                warnings.warn(
+                    "Failed to serialize sorting provenance with Pickle Codec! "
+                    "The sorting provenance link will be lost for future load"
+                )
         else:
             warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
+                "The sorting provenance is not serializable! "
+                "The sorting provenance link will be lost for future load"
             )
 
         recording_info = zarr_root.create_group("recording_info")
@@ -769,9 +1026,8 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
-        return_in_uV = zarr_root.attrs["settings"].get(
-            "return_in_uV", zarr_root.attrs["settings"].get("return_scaled", True)
-        )
+        settings = zarr_root.attrs["settings"]
+        settings = cls._handle_backward_compatibility_settings_pre_init(settings, sorting, sparsity)
 
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
@@ -779,7 +1035,9 @@ class SortingAnalyzer:
             rec_attributes=rec_attributes,
             format="zarr",
             sparsity=sparsity,
-            return_in_uV=return_in_uV,
+            return_in_uV=settings["return_in_uV"],
+            peak_sign=settings["peak_sign"],
+            peak_mode=settings["peak_mode"],
             backend_options=backend_options,
         )
         sorting_analyzer.folder = folder
@@ -881,6 +1139,31 @@ class SortingAnalyzer:
             Array of values for the property
         """
         return self.sorting.get_property(key, ids=ids)
+
+    def get_main_channels(self, outputs: Literal["index", "id"] = "index", with_dict: bool = False):
+        """
+        Returns the main_channels of the analyzer.
+
+        Parameters
+        ----------
+        outputs = "index" | "id", default: "index"
+            Return either the channel indices, or the channel ids
+        with_dict: bool, default: False
+            If False, returns just the channel informatiom. If True, returns a dict
+            with keys equal to the unit ids and values their channel information
+        """
+        main_channel_indices = self.main_channel_indices
+        if outputs == "index":
+            main_chans = main_channel_indices
+        elif outputs == "id":
+            main_chans = self.channel_ids[main_channel_indices]
+        else:
+            raise ValueError("wrong outputs")
+
+        if with_dict:
+            return dict(zip(self.unit_ids, main_chans))
+        else:
+            return main_chans
 
     def are_units_mergeable(
         self,
@@ -1103,7 +1386,13 @@ class SortingAnalyzer:
         if format == "memory":
             # This make a copy of actual SortingAnalyzer
             new_sorting_analyzer = SortingAnalyzer.create_memory(
-                sorting_provenance, recording, sparsity, self.return_in_uV, self.rec_attributes
+                sorting_provenance,
+                recording,
+                sparsity,
+                self.return_in_uV,
+                self.peak_sign,
+                self.peak_mode,
+                self.rec_attributes,
             )
 
         elif format == "binary_folder":
@@ -1116,6 +1405,8 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
+                self.peak_sign,
+                self.peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
@@ -1129,22 +1420,20 @@ class SortingAnalyzer:
                 recording,
                 sparsity,
                 self.return_in_uV,
+                self.peak_sign,
+                self.peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
             )
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
 
-        # make a copy of extensions
-        # note that the copy of extension handle itself the slicing of units when necessary and also the saveing
-        sorted_extensions = _sort_extensions_by_dependency(self.extensions)
-        # hack: quality metrics are computed at last
-        qm_extension_params = sorted_extensions.pop("quality_metrics", None)
-        if qm_extension_params is not None:
-            sorted_extensions["quality_metrics"] = qm_extension_params
         recompute_dict = {}
-
-        for extension_name, extension in sorted_extensions.items():
+        extensions_to_compute = _sort_extensions_by_dependency(
+            {ext.extension_name: ext.params for ext in self.extensions.values()}
+        )
+        for extension_name in extensions_to_compute:
+            extension = self.extensions[extension_name]
             if merge_unit_groups is None and split_units is None:
                 # copy full or select
                 new_sorting_analyzer.extensions[extension_name] = extension.copy(
@@ -1721,7 +2010,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         for child in _get_children_dependencies(extension_name):
             if self.has_extension(child):
-                print(f"Deleting {child}")
+                if verbose:
+                    print(f"Deleting extension: {child}")
                 self.delete_extension(child)
 
         params, job_kwargs = split_job_kwargs(kwargs)
@@ -1731,7 +2021,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             assert (
                 self.has_recording() or self.has_temporary_recording()
             ), f"Extension {extension_name} requires the recording"
-        for dependency_name in extension_class.depend_on:
+        required_dependencies = extension_class.get_required_dependencies(**params)
+        for dependency_name in required_dependencies:
             if "|" in dependency_name:
                 ok = any(self.get_extension(name) is not None for name in dependency_name.split("|"))
             else:
@@ -1776,30 +2067,48 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+        # Check dependencies: either already computed or in the extensions to compute
+        extensions_to_compute = list(extensions.keys())
+        for extension_name, extension_params in extensions.items():
+            required_dependencies = get_extension_class(extension_name).get_required_dependencies(**extension_params)
+            for dependency_name in required_dependencies:
+                if "|" in dependency_name:
+                    ok = any(
+                        self.has_extension(name) or name in extensions_to_compute for name in dependency_name.split("|")
+                    )
+                else:
+                    ok = self.has_extension(dependency_name) or dependency_name in extensions_to_compute
+                assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
+        # Sort extensions by dependency order
         sorted_extensions = _sort_extensions_by_dependency(extensions)
 
         for extension_name in sorted_extensions.keys():
             for child in _get_children_dependencies(extension_name):
+                if verbose:
+                    print(f"Deleting extension: {child}")
                 self.delete_extension(child)
 
+        # Group extensions by pipeline usage, to run them together
+        # Extensions whose dependencies (required or optional) include pipeline extensions are run after the pipeline
         extensions_with_pipeline = {}
-        extensions_without_pipeline = {}
+        extensions_pre_pipeline = {}
         extensions_post_pipeline = {}
         for extension_name, extension_params in sorted_extensions.items():
-            if extension_name == "quality_metrics":
-                # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
-                # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
-                extensions_post_pipeline[extension_name] = extension_params
-                continue
             extension_class = get_extension_class(extension_name)
             if extension_class.use_nodepipeline:
                 extensions_with_pipeline[extension_name] = extension_params
+            elif any(
+                get_extension_class(d).use_nodepipeline
+                for d in extension_class.get_any_dependencies(**extension_params)
+                if d in sorted_extensions
+            ):
+                extensions_post_pipeline[extension_name] = extension_params
             else:
-                extensions_without_pipeline[extension_name] = extension_params
+                extensions_pre_pipeline[extension_name] = extension_params
 
         # First extensions without pipeline
-        for extension_name, extension_params in extensions_without_pipeline.items():
+        for extension_name, extension_params in extensions_pre_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
                 self.compute_one_extension(extension_name, save=save, verbose=verbose, **extension_params, **job_kwargs)
@@ -1854,10 +2163,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 if save:
                     extension_instance.save()
 
-        # PATCH: the quality metric is computed after the pipeline, since some of the metrics optionally require
-        # the output of the pipeline extensions (e.g., spike_amplitudes, spike_locations).
-        # An alternative could be to extend the "depend_on" attribute to use optional and to check if an extension
-        # depends on the output of the pipeline nodes (e.g. depend_on=["spike_amplitudes[optional]"])
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
             if extension_class.need_job_kwargs:
@@ -1931,6 +2236,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         ), "SortingAnalyzer.load_extension() does not work for format='memory' use SortingAnalyzer.get_extension() instead"
 
         extension_class = get_extension_class(extension_name)
+
+        if extension_class is None:
+            return None
 
         extension_instance = extension_class.load(self)
 
@@ -2008,20 +2316,32 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         -------
         metrics_df : pandas.DataFrame
             A concatenated dataframe with all available metrics.
+
+        Note
+        ----
+        Duplicated columns are removed (can happen if several metric extensions have a metric with the same name).
         """
         import pandas as pd
         from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 
         all_metrics_data = []
-        for extension_name, ext in self.extensions.items():
-            if isinstance(ext, BaseMetricExtension):
-                metric_data = ext.get_data()
-                all_metrics_data.append(metric_data)
+        for extension_name in get_available_analyzer_extensions():
+            extension_class = get_extension_class(extension_name)
+            if issubclass(extension_class, BaseMetricExtension):
+                # load available metric extensions even if not yet loaded
+                if self.has_extension(extension_name):
+                    ext = self.get_extension(extension_name)
+                    metric_data = ext.get_data()
+                    all_metrics_data.append(metric_data)
 
         if len(all_metrics_data) > 0:
             metrics_df = pd.concat(all_metrics_data, axis=1)
         else:
             metrics_df = pd.DataFrame(index=self.unit_ids)
+
+        # Remove duplicated columns (can happen if several metric extensions have a metric with the same name)
+        metrics_df = metrics_df.loc[:, ~metrics_df.columns.duplicated()]
+
         return metrics_df
 
 
@@ -2033,7 +2353,7 @@ def _sort_extensions_by_dependency(extensions):
     Parameters
     ----------
     extensions : dict
-        A dict of extensions.
+        A dict of extensions and their parameters.
 
     Returns
     -------
@@ -2042,16 +2362,30 @@ def _sort_extensions_by_dependency(extensions):
     """
 
     extensions_list = list(extensions.keys())
-    extension_params = list(extensions.values())
+    extension_params_list = list(extensions.values())
 
     i = 0
     while i < len(extensions_list):
 
         extension = extensions_list[i]
-        dependencies = get_extension_class(extension).depend_on
+        extension_params = extension_params_list[i]
+
+        required_dependencies = get_extension_class(extension).get_required_dependencies(**extension_params)
+        optional_dependencies = get_extension_class(extension).get_optional_dependencies(**extension_params)
+        for dependency in required_dependencies:
+            if "|" in dependency:
+                for dep in dependency.split("|"):
+                    if extension not in _extension_children[dep]:
+                        print(f"Adding missing dependency child link: {dep} -> {extension}")
+                        _extension_children[dep].append(extension)
+            else:
+                if extension not in _extension_children[dependency]:
+                    print(f"Adding missing dependency child link: {dependency} -> {extension}")
+                    _extension_children[dependency].append(extension)
 
         # Split cases with an "or" in them, and flatten into a list
-        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in dependencies]))
+        all_dependencies = required_dependencies + optional_dependencies
+        dependencies = list(chain.from_iterable([dependency.split("|") for dependency in all_dependencies]))
 
         # Should only iterate if nothing has happened.
         # Otherwise, should check the dependency which has just been moved => at position i
@@ -2063,8 +2397,8 @@ def _sort_extensions_by_dependency(extensions):
 
                 dependency_arg = extensions_list.index(dependency)
 
-                extension_params.pop(dependency_arg)
-                extension_params.insert(i, extensions[dependency])
+                extension_params_list.pop(dependency_arg)
+                extension_params_list.insert(i, extensions[dependency])
 
                 extensions_list.pop(dependency_arg)
                 extensions_list.insert(i, dependency)
@@ -2074,7 +2408,7 @@ def _sort_extensions_by_dependency(extensions):
         if did_nothing:
             i += 1
 
-    return dict(zip(extensions_list, extension_params))
+    return dict(zip(extensions_list, extension_params_list))
 
 
 global _possible_extensions
@@ -2135,7 +2469,7 @@ def register_result_extension(extension_class):
 
         # create the children dpendencies to be able to delete on re-compute
         _extension_children[extension_class.extension_name] = []
-        for parent_name in extension_class.depend_on:
+        for parent_name in extension_class.get_required_dependencies():
             if "|" in parent_name:
                 for name in parent_name.split("|"):
                     _extension_children[name].append(extension_class.extension_name)
@@ -2173,7 +2507,10 @@ def get_extension_class(extension_name: str, auto_import=True):
                     f"Extension '{extension_name}' is not registered, please import related module before use: 'import {module}'"
                 )
         else:
-            raise ValueError(f"Extension '{extension_name}' is unknown maybe this is an external extension or a typo.")
+            warnings.warn(
+                f"Extension '{extension_name}' is unknown. Maybe this is an external extension, a typo or was computed by a different version of SpikeInterface."
+            )
+            return None
 
     ext_class = extensions_dict[extension_name]
     return ext_class
@@ -2238,6 +2575,7 @@ class AnalyzerExtension:
       * _run()
       * _select_extension_data()
       * _merge_extension_data()
+      * _split_extension_data()
       * _get_data()
 
     The subclass must also set an `extension_name` class attribute which is not None by default.
@@ -2401,6 +2739,65 @@ class AnalyzerExtension:
         # If extension run not completed, or data has gone missing,
         # return None to indicate that the extension should be (re)computed.
         return None
+
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        """
+        Return required parent extensions that the extension
+        depends on. By default, retuired extensions are the ones in the
+        ``cls.depend_on`` attribute and optional extensions are an empty list.
+        The behavior can be overridden in sub-classes.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension depends on.
+        """
+        return cls.depend_on
+
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        """
+        Return optional parent extensions that the extension
+        depends on. By default, optional extensions are an empty list.
+        The behavior can be overridden in sub-classes.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension optionally depends on.
+        """
+        return []
+
+    @classmethod
+    def get_any_dependencies(cls, **params):
+        """
+        Return all parent extensions that the extension depends on.
+        Dependencies with "|" operator are flattened.
+
+        Returns
+        -------
+        list
+            A list of extension names that this extension depends on.
+        """
+        required = cls.get_required_dependencies(**params)
+        optional = cls.get_optional_dependencies(**params)
+        # flatten dependencies with "|"
+        all_dependencies = required + optional
+        all_dependencies = list(chain.from_iterable([dep.split("|") for dep in all_dependencies]))
+        return all_dependencies
+
+    @classmethod
+    def get_default_params(cls):
+        """
+        Get the default params for the extension.
+
+        Returns
+        -------
+        default_params : dict
+            The default parameters for the extension.
+        """
+        return get_default_analyzer_extension_params(cls.extension_name)
 
     def load_run_info(self):
         run_info = None
@@ -2598,8 +2995,9 @@ class AnalyzerExtension:
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
+                    ext_data_ = check_json(ext_data)
                     with (extension_folder / f"{ext_data_name}.json").open("w") as f:
-                        json.dump(ext_data, f)
+                        json.dump(ext_data_, f)
                 elif isinstance(ext_data, np.ndarray):
                     data_file = extension_folder / f"{ext_data_name}.npy"
                     if isinstance(ext_data, np.memmap) and data_file.exists():
@@ -2617,8 +3015,6 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            import numcodecs
-
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
@@ -2629,10 +3025,10 @@ class AnalyzerExtension:
             for ext_data_name, ext_data in self.data.items():
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
-                if isinstance(ext_data, dict):
-                    extension_group.create_dataset(
-                        name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.JSON()
-                    )
+                if isinstance(ext_data, (dict, list)):
+                    ext_data_ = check_json(ext_data)
+                    _write_object_array(extension_group, ext_data_name, ext_data_, codec="json")
+                    extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
                     extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
@@ -2651,9 +3047,7 @@ class AnalyzerExtension:
                 else:
                     # any object
                     try:
-                        extension_group.create_dataset(
-                            name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.Pickle()
-                        )
+                        _write_object_array(extension_group, ext_data_name, ext_data, codec="pickle")
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
                     extension_group[ext_data_name].attrs["object"] = True
@@ -2809,12 +3203,14 @@ _builtin_extensions = {
     # from postprocessing
     "amplitude_scalings": "spikeinterface.postprocessing",
     "correlograms": "spikeinterface.postprocessing",
+    "auto_correlograms": "spikeinterface.postprocessing",
     "isi_histograms": "spikeinterface.postprocessing",
     "principal_components": "spikeinterface.postprocessing",
     "spike_amplitudes": "spikeinterface.postprocessing",
     "spike_locations": "spikeinterface.postprocessing",
     "template_similarity": "spikeinterface.postprocessing",
     "unit_locations": "spikeinterface.postprocessing",
+    "valid_unit_periods": "spikeinterface.postprocessing",
     # from metrics
     "quality_metrics": "spikeinterface.metrics",
     "template_metrics": "spikeinterface.metrics",

@@ -81,7 +81,9 @@ Other variants are also implemented (but less tested or not so useful):
 * **'by_channel_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
 * **'locally_exclusive_torch'** (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
 
-**NOTE**: the torch implementations give slightly different results due to a different implementation.
+.. note::
+
+    The torch implementations give slightly different results due to a different implementation.
 
 Peak detection, as many of the other sorting components, can be run in parallel.
 
@@ -126,7 +128,7 @@ Currently, the following methods are implemented:
     see also `here <https://openreview.net/forum?id=ohfi44BZPC4>`_
     **'monopolar_triangulation'** has some variant with differents optimizers (default is 'minimize_with_log_penality')
   * **'grid_convolution'** : inspired by the Kilosort approach. This consists of a convolution of traces with waveform
-     prototypes with varying local spatial footprint on the probe.
+    prototypes with varying local spatial footprint on the probe.
 
 
 Please have a look at [Scopin2024]_, for details on these methods.
@@ -274,7 +276,7 @@ handle drift can benefit from drift estimation/correction.
 Especially for acute Neuropixels-like probes, this is a crucial step.
 
 The motion estimation step comes after peak detection and peak localization. Read more about
-it in the :ref:`_motion_correction` modules doc, and a more practical guide in the
+it in the :ref:`motion_correction` modules doc, and a more practical guide in the
 :ref:`handle-drift-in-your-recording` How To.
 
 Here is an example with non-rigid motion estimation:
@@ -311,7 +313,7 @@ We could now check the ``motion`` object and see if we need to apply a correctio
 
 Availables methods are:
 
-  * **'dredge_ap'** : the most mature method at the moement, done by [Windolf_b]_
+  * **'dredge_ap'** : the most mature method at the moment, done by [Windolf_b]_
   * **'decentralized'** : more or less the ancestor of 'dredge_ap'
   * **'iterative_template'** : this mimics the kilosort approach.
   * **'medicine'** : a more recent approach done in [Watters]_.
@@ -365,16 +367,16 @@ a label for every peak.
 Some methods have been implemented with various ideas in mind. We really hope that this list will be extended
 soon by talented people willing to improve it. This is a crucial and not totally resolved step.
 
-  * **'iterative-hdbscan'** : method used in spkyking-circus2. This performs local hdbscan clusetrings on
-     svd waveforms features.
-  * **'iterative-isosplit'** :  method used in tridesclous2. This performs local isosplit clusetrings on
-     svd waveforms features.
-  * **'hdbscan-positions'** : This performs a hdbscan clusetring based on the localizations of the spikes.
+  * **'iterative-hdbscan'** : method used in spkyking-circus2. This performs local hdbscan clustering on
+    svd waveforms features.
+  * **'iterative-isosplit'** :  method used in tridesclous2. This performs local isosplit clustering on
+    svd waveforms features.
+  * **'hdbscan-positions'** : This performs a hdbscan clustering based on the localizations of the spikes.
     This mimics the herdingspikes approach : make the clustering on spike position only but more flexible
     because more localization methods are availables.
   * **'random-projections'** : attempt to make the feature from waveforms with random projections instead of the
     good-old-school-pca.
-  * **'graph-clustering'** : attempt to resolve the clusetring globally and not locally. This constructs a global
+  * **'graph-clustering'** : attempt to resolve the clustering globally and not locally. This constructs a global
     but sparse distance matrix between all spikes. Can be slow. Then it performs 'classical' algos on
     graph (Louvain, Leiden or even HDBSCAN). Promising method but not as efficient as the 'iterative-isosplit' or
     'iterative-hdbscan'.

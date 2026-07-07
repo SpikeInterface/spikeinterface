@@ -1,11 +1,8 @@
-from __future__ import annotations
-
 import warnings
-
+import importlib.util
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
-
 
 import numpy as np
 
@@ -13,11 +10,11 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
 
-try:
+if importlib.util.find_spec("numba") is not None:
     import numba
-
-except:
-    pass  # isocut requires numba
+else:
+    pass
+# isocut requires numba
 
 # important all DEBUG and matplotlib are left in the code intentionally
 
@@ -74,9 +71,9 @@ def split_clusters(
     peak_labels = peak_labels.copy()
     split_count = np.zeros(peak_labels.size, dtype=int)
     recursion_level = 1
-    Executor = get_poolexecutor(n_jobs)
+    executor = get_poolexecutor(n_jobs)
 
-    with Executor(
+    with executor(
         max_workers=n_jobs,
         initializer=split_worker_init,
         mp_context=get_context(method=mp_context),
@@ -166,7 +163,6 @@ def split_worker_init(
     _ctx = {}
 
     _ctx["recording"] = recording
-    features_dict_or_folder
     _ctx["original_labels"] = original_labels
     _ctx["method"] = method
     _ctx["method_kwargs"] = method_kwargs

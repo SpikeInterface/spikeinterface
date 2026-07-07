@@ -2,8 +2,6 @@
 Some functions internally use by SortingComparison.
 """
 
-from __future__ import annotations
-
 from spikeinterface.core.basesorting import BaseSorting
 
 import numpy as np
@@ -569,7 +567,7 @@ def make_hungarian_match(agreement_scores, min_score):
 
 def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclassification=False):
     """
-    Makes the labelling at spike level for each spike train:
+    Makes the labeling at spike level for each spike train:
       * TP: true positive
       * CL: classification error
       * FN: False negative

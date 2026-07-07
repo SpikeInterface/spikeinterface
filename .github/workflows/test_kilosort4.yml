@@ -3,11 +3,11 @@ name: Testing Kilosort4
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 12 * * 0"  # Weekly on Sunday at noon UTC
+    - cron: "0 12 * * 0" # Weekly on Sunday at noon UTC
   pull_request:
     paths:
-      - '**/kilosort4.py'
-      - '**/test_kilosort4_ci.py'
+      - "**/kilosort4.py"
+      - "**/test_kilosort4_ci.py"
 
 jobs:
   versions:
@@ -18,17 +18,21 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: 3.12
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          pip install requests packaging
-          pip install .
+          uv pip install --system requests packaging
+          uv pip install --system .
 
       - name: Fetch package versions from PyPI
         run: |
@@ -52,21 +56,39 @@ jobs:
         ks_version: ${{ fromJson(needs.versions.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
       - name: Install SpikeInterface
         run: |
-          pip install -e .[test]
+          uv pip install --system -e .[full] --group test-sorters
         shell: bash
+
+      - name: Install legacy setuptools for KS4 < 4.0.19
+        if: matrix.ks_version == '4.0.16' || matrix.ks_version == '4.0.17' || matrix.ks_version == '4.0.18'
+        run: uv pip install --system setuptools==78.0.2
+
+      - name: Install legacy numpy for KS4 4.1.1 - 4.1.5
+        if: |
+          matrix.ks_version == '4.1.1' ||
+          matrix.ks_version == '4.1.2' ||
+          matrix.ks_version == '4.1.3' ||
+          matrix.ks_version == '4.1.4' ||
+          matrix.ks_version == '4.1.5' ||
+          matrix.ks_version == '4.1.6'
+        run: uv pip install --system "numpy<2.4"
 
       - name: Install Kilosort
         run: |
-          pip install kilosort==${{ matrix.ks_version }}
+          uv pip install --system kilosort==${{ matrix.ks_version }}
         shell: bash
 
       - name: Run new kilosort4 tests

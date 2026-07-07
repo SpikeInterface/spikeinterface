@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import numpy as np
-from typing import Optional
 from packaging.version import parse
+import importlib.metadata
 
 from .tf_utils import has_tf, import_tf
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
@@ -60,11 +58,10 @@ class DeepInterpolatedRecording(BasePreprocessor):
         use_gpu: bool = True,
         predict_workers: int = 1,
         disable_tf_logger: bool = True,
-        memory_gpu: Optional[int] = None,
+        memory_gpu: int | None = None,
     ):
-        import deepinterpolation
 
-        if parse(deepinterpolation.__version__) < parse("0.2.0"):
+        if parse(importlib.metadata.version("deepinterpolation")) < parse("0.2.0"):
             raise ImportError("DeepInterpolation version must be at least 0.2.0")
 
         assert has_tf(
@@ -92,7 +89,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
 
         self.model = model
         # add segment
-        for segment in recording._recording_segments:
+        for segment in recording.segments:
             recording_segment = DeepInterpolatedRecordingSegment(
                 segment,
                 self.model,

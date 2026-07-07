@@ -210,6 +210,25 @@ def test_estimate_sparsity():
     )
     assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(num_units) * 3)
 
+    # regression for #4126: closest_channels must work even when there are more units than channels
+    recording_small, sorting_many_units = generate_ground_truth_recording(
+        num_channels=4, num_units=6, durations=[10], seed=0
+    )
+    sparsity = estimate_sparsity(
+        sorting_many_units,
+        recording_small,
+        num_spikes_for_sparsity=20,
+        ms_before=1.0,
+        ms_after=2.0,
+        method="closest_channels",
+        num_channels=2,
+        chunk_duration="1s",
+        progress_bar=True,
+        n_jobs=1,
+    )
+    assert sparsity.mask.shape == (sorting_many_units.unit_ids.size, recording_small.channel_ids.size)
+    assert np.array_equal(np.sum(sparsity.mask, axis=1), np.ones(sorting_many_units.unit_ids.size) * 2)
+
     # by_property
     sparsity = estimate_sparsity(
         sorting,
@@ -268,7 +287,6 @@ def test_estimate_sparsity():
         progress_bar=True,
         n_jobs=1,
     )
-    print(noise_levels)
 
 
 def test_compute_sparsity():
@@ -284,25 +302,32 @@ def test_compute_sparsity():
     # this is needed for method="energy"
 
     # using object SortingAnalyzer
-    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
-    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2)
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0)
     sparsity = compute_sparsity(sorting_analyzer, method="closest_channels", num_channels=2)
-    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5, peak_sign="neg")
-    sparsity = compute_sparsity(
-        sorting_analyzer, method="snr", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
-    )
-    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
+    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5)
     sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
     sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
 
     # using object Templates
     templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
-    sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
-    sparsity = compute_sparsity(templates, method="closest_channels", num_channels=2)
+    sparsity = compute_sparsity(
+        templates, method="best_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
+    )
+    sparsity = compute_sparsity(
+        templates, method="radius", radius_um=50.0, peak_sign="both", amplitude_mode="peak_to_peak"
+    )
+    sparsity = compute_sparsity(
+        templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg", amplitude_mode="extremum"
+    )
+    sparsity = compute_sparsity(
+        templates, method="amplitude", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
+    )
+    sparsity = compute_sparsity(
+        templates, method="closest_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
+    )
 
 
 if __name__ == "__main__":

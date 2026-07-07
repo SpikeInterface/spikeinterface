@@ -1,8 +1,5 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
 from spikeinterface.core import get_noise_levels, get_channel_distances
 
@@ -14,6 +11,9 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
     name = "nearest"
     need_noise_levels = True
+    # this is because numba
+    need_first_call_before_pipeline = True
+
     params_doc = """
     peak_sign : 'neg' | 'pos' | 'both'
         The peak sign to use for detection
@@ -33,7 +33,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         templates,
         return_output=True,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         detect_threshold=5,
         noise_levels=None,
         detection_radius_um=100.0,
@@ -53,13 +53,11 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
         num_channels = recording.get_num_channels()
 
         if neighborhood_radius_um is not None:
-            from spikeinterface.core.template_tools import get_template_extremum_channel
+            main_channels = self.templates.get_main_channels(peak_sign=self.peak_sign, outputs="index", with_dict=False)
 
-            best_channels = get_template_extremum_channel(self.templates, peak_sign=self.peak_sign, outputs="index")
-            best_channels = np.array([best_channels[i] for i in templates.unit_ids])
             channel_locations = recording.get_channel_locations()
             template_distances = np.linalg.norm(
-                channel_locations[:, None] - channel_locations[best_channels][np.newaxis, :], axis=2
+                channel_locations[:, None] - channel_locations[main_channels][np.newaxis, :], axis=2
             )
             self.neighborhood_mask = template_distances <= neighborhood_radius_um
         else:
@@ -70,7 +68,10 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
                 from spikeinterface.core.sparsity import compute_sparsity
 
                 sparsity = compute_sparsity(
-                    templates, method="radius", radius_um=sparsity_radius_um, peak_sign=self.peak_sign
+                    templates,
+                    method="radius",
+                    radius_um=sparsity_radius_um,
+                    peak_sign=self.peak_sign,
                 )
             else:
                 sparsity = templates.sparsity
@@ -94,7 +95,7 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
             self.lookup_tables["templates"][i] = np.flatnonzero(self.neighborhood_mask[i])
             self.lookup_tables["channels"][i] = np.flatnonzero(self.sparsity_mask[i])
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -143,16 +144,13 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
 
     name = "nearest-svd"
     need_noise_levels = True
-    params_doc = (
-        NearestTemplatesPeeler.params_doc
-        + """
+    params_doc = NearestTemplatesPeeler.params_doc + """
     svd_model : The svd model used to project the waveforms
         The radius to use to select neighbour channels for locally exclusive detection.
     svd_radius_um : float
         The radius in um of the local neighboorhood used, centered on every detected peaks, to compute
         the distances with all the templates in the SVD space
     """
-    )
 
     def __init__(
         self,
@@ -161,7 +159,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         svd_model,
         return_output=True,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         detect_threshold=5,
         noise_levels=None,
         detection_radius_um=100.0,
@@ -194,7 +192,7 @@ class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
         projected_temporal_templates = self.svd_model.transform(temporal_templates)
         self.svd_templates = from_temporal_representation(projected_temporal_templates, self.num_channels)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

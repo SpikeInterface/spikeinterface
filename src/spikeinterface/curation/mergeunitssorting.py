@@ -1,9 +1,9 @@
-from __future__ import annotations
-from typing import Union
+from copy import deepcopy
+
 import numpy as np
+
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from copy import deepcopy
 from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
 
@@ -70,7 +70,7 @@ class MergeUnitsSorting(BaseSorting):
             rm_dup_delta = None
         else:
             rm_dup_delta = int(delta_time_ms / 1000 * sampling_frequency)
-        for parent_segment in self._parent_sorting._sorting_segments:
+        for parent_segment in self._parent_sorting.segments:
             sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 
@@ -149,8 +149,8 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         if unit_id in self.new_unit_ids:
             ind = self.new_unit_ids.index(unit_id)

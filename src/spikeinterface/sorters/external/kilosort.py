@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from pathlib import Path
 import os
-from typing import Union
 from warnings import warn
 import numpy as np
 
@@ -11,7 +8,7 @@ from .kilosortbase import KilosortBase
 from spikeinterface.sorters.utils import get_git_commit
 
 
-def check_if_installed(kilosort_path: Union[str, None]):
+def check_if_installed(kilosort_path: str | None):
     if kilosort_path is None:
         return False
     assert isinstance(kilosort_path, str)
@@ -31,7 +28,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
     sorter_name: str = "kilosort"
     compiled_name: str = "ks_compiled"
-    kilosort_path: Union[str, None] = os.getenv("KILOSORT_PATH", None)
+    kilosort_path: str | None = os.getenv("KILOSORT_PATH", None)
     requires_locations = False
     requires_gpu = "nvidia-optional"
 

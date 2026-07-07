@@ -2,9 +2,6 @@
 base class for sorters implementation.
 """
 
-from __future__ import annotations
-
-
 import time
 import copy
 from pathlib import Path
@@ -20,7 +17,6 @@ from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
-
 
 default_job_kwargs_description = {
     "n_jobs": "Number of jobs (when saving to binary) - default global",
@@ -109,12 +105,20 @@ class BaseSorter:
             raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
-            locations = recording.get_channel_locations()
-            if locations is None:
+            if not recording.has_probe():
                 raise RuntimeError(
                     "Channel locations are required for this spike sorter. "
                     "Locations can be added to the RecordingExtractor by loading a probe file "
                     "(.prb or .csv) or by setting them manually."
+                )
+            # check uniqueness of locations
+            locations = recording.get_channel_locations()
+            if len(locations) != len(set(map(tuple, locations))):
+                raise RuntimeError(
+                    "Channel locations are not unique! "
+                    "Please ensure that each channel has a unique location before running spike sorting. "
+                    "If you have multiple groups with overlapping channel locations, you can use the "
+                    "``run_sorter_by_property`` function to sort each group separately"
                 )
 
         if output_folder is None:

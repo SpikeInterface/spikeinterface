@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from .base import backend_kwargs_desc
@@ -11,6 +9,7 @@ from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .drift_templates import DriftingTemplatesWidget
 from .isi_distribution import ISIDistributionWidget
+from .metrics import MetricsHistogramsWidget
 from .motion import DriftRasterMapWidget, MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
 from .peak_activity import PeakActivityMapWidget
@@ -37,18 +36,23 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
+from .unit_labels import WaveformOverlayByLabelWidget
+from .unit_valid_periods import ValidUnitPeriodsWidget
+from .bombcell_curation import BombcellUpsetPlotWidget, plot_bombcell_unit_labeling_all
 
 widget_list = [
     AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
+    BombcellUpsetPlotWidget,
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
     DriftingTemplatesWidget,
     DriftRasterMapWidget,
     ISIDistributionWidget,
+    MetricsHistogramsWidget,
     LocationsWidget,
     MotionWidget,
     MotionInfoWidget,
@@ -75,6 +79,8 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
+    ValidUnitPeriodsWidget,
+    WaveformOverlayByLabelWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
@@ -123,11 +129,13 @@ plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
+plot_bombcell_labels_upset = BombcellUpsetPlotWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_drifting_templates = DriftingTemplatesWidget
 plot_drift_raster_map = DriftRasterMapWidget
+plot_valid_unit_periods = ValidUnitPeriodsWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_locations = LocationsWidget
 plot_motion = MotionWidget
@@ -148,6 +156,8 @@ plot_template_metrics = TemplateMetricsWidget
 plot_template_similarity = TemplateSimilarityWidget
 plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
+plot_unit_labels = WaveformOverlayByLabelWidget
+plot_metric_histograms = MetricsHistogramsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_unit_presence = UnitPresenceWidget
 plot_unit_probe_map = UnitProbeMapWidget

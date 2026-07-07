@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessorSegment
@@ -65,7 +63,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         # my geometry
         channel_locations = np.zeros(
             (n_pos_unique, parent_channel_locations.shape[1]),
-            dtype=parent_channel_locations.dtype,
+            dtype=np.float32,
         )
         # average other dimensions in the geometry
         other_dim = np.arange(parent_channel_locations.shape[1]) != dim
@@ -77,7 +75,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
 
         self.parent_recording = parent_recording
         self.num_channels = n_pos_unique
-        for segment in parent_recording._recording_segments:
+        for segment in parent_recording.segments:
             recording_segment = AverageAcrossDirectionRecordingSegment(
                 segment,
                 self.num_channels,

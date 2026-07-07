@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 import warnings
 from itertools import chain
@@ -8,7 +6,6 @@ import importlib.util
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_dense_templates_array
 from spikeinterface.core.sparsity import ChannelSparsity
-
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -58,13 +55,6 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             self.params["support"] = "union"
 
     def _set_params(self, method="cosine", max_lag_ms=0, support="union"):
-        if method == "cosine_similarity":
-            warnings.warn(
-                "The method 'cosine_similarity' is deprecated and will be removed in the next version. Use 'cosine' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            method = "cosine"
         params = dict(method=method, max_lag_ms=max_lag_ms, support=support)
         return params
 
@@ -91,6 +81,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
                 new_sorting_analyzer.sparsity.mask[keep, :], new_unit_ids, new_sorting_analyzer.channel_ids
             )
 
+        # TODO: soft merge template similarity
         new_similarity, _ = compute_similarity_with_templates_array(
             new_templates_array,
             all_templates_array,
@@ -159,16 +150,16 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
         n = all_new_unit_ids.size
         similarity = np.zeros((n, n), dtype=old_similarity.dtype)
 
+        local_mask = ~np.isin(all_new_unit_ids, new_unit_ids_f)
+        sub_units_ids = all_new_unit_ids[local_mask]
+        sub_units_inds = np.flatnonzero(local_mask)
+        old_units_inds = self.sorting_analyzer.sorting.ids_to_indices(sub_units_ids)
+
         # copy old similarity
-        for unit_ind1, unit_id1 in enumerate(all_new_unit_ids):
-            if unit_id1 not in new_unit_ids_f:
-                old_ind1 = self.sorting_analyzer.sorting.id_to_index(unit_id1)
-                for unit_ind2, unit_id2 in enumerate(all_new_unit_ids):
-                    if unit_id2 not in new_unit_ids_f:
-                        old_ind2 = self.sorting_analyzer.sorting.id_to_index(unit_id2)
-                        s = self.data["similarity"][old_ind1, old_ind2]
-                        similarity[unit_ind1, unit_ind2] = s
-                        similarity[unit_ind2, unit_ind1] = s
+        for old_ind1, unit_ind1 in zip(old_units_inds, sub_units_inds):
+            s = self.data["similarity"][old_ind1, old_units_inds]
+            similarity[unit_ind1, sub_units_inds] = s
+            similarity[sub_units_inds, unit_ind1] = s
 
         # insert new similarity both way
         for unit_ind, unit_id in enumerate(all_new_unit_ids):
@@ -235,9 +226,7 @@ def _compute_similarity_matrix_numpy(
             overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
             tgt_templates = tgt_sliced_templates[overlapping_templates]
             for gcount, j in enumerate(overlapping_templates):
-                # symmetric values are handled later
-                if same_array and j < i:
-                    # no need exhaustive looping when same template
+                if j < i and same_array:
                     continue
                 src = src_template[:, local_mask[j]].reshape(1, -1)
                 tgt = (tgt_templates[gcount][:, local_mask[j]]).reshape(1, -1)
@@ -262,8 +251,9 @@ def _compute_similarity_matrix_numpy(
                 if same_array:
                     distances[count, j, i] = distances[count, i, j]
 
-        if same_array and num_shifts != 0:
+        if same_array and shift != 0:
             distances[num_shifts_both_sides - count - 1] = distances[count].T
+
     return distances
 
 
@@ -274,14 +264,20 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
     def _compute_similarity_matrix_numba(
-        templates_array, other_templates_array, num_shifts, method, sparsity_mask, other_sparsity_mask, support="union"
+        templates_array,
+        other_templates_array,
+        num_shifts,
+        method,
+        sparsity_mask,
+        other_sparsity_mask,
+        support="union",
     ):
         num_templates = templates_array.shape[0]
         num_samples = templates_array.shape[1]
         num_channels = templates_array.shape[2]
         other_num_templates = other_templates_array.shape[0]
-
         num_shifts_both_sides = 2 * num_shifts + 1
+
         distances = np.ones((num_shifts_both_sides, num_templates, other_num_templates), dtype=np.float32)
         same_array = np.array_equal(templates_array, other_templates_array)
 
@@ -300,80 +296,89 @@ if HAVE_NUMBA:
         elif method == "cosine":
             metric = 2
 
-        for count in range(len(shift_loop)):
-            shift = shift_loop[count]
-            src_sliced_templates = templates_array[:, num_shifts : num_samples - num_shifts]
-            tgt_sliced_templates = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
-            for i in numba.prange(num_templates):
-                src_template = src_sliced_templates[i]
+        overlapping_j_list = numba.typed.List()
+        active_channels_list = numba.typed.List()
 
-                ## Ideally we would like to use this but numba does not support well function with numpy and boolean arrays
-                ## So we inline the function here
-                # local_mask = get_overlapping_mask_for_one_template(i, sparsity, other_sparsity, support=support)
+        for src_unit in range(num_templates):
+            overlapping_ids = numba.typed.List()
+            overlapping_chs = numba.typed.List()
+
+            start = src_unit if same_array else 0
+            for tgt_unit in range(start, other_num_templates):
 
                 if support == "intersection":
-                    local_mask = np.logical_and(
-                        sparsity_mask[i, :], other_sparsity_mask
-                    )  # shape (other_num_templates, num_channels)
+                    ch = np.where(sparsity_mask[src_unit] & other_sparsity_mask[tgt_unit])[0].astype(np.uint16)
+
                 elif support == "union":
-                    connected_mask = np.logical_and(sparsity_mask[i, :], other_sparsity_mask)
-                    not_connected_mask = np.sum(connected_mask, axis=1) == 0
-                    local_mask = np.logical_or(
-                        sparsity_mask[i, :], other_sparsity_mask
-                    )  # shape (other_num_templates, num_channels)
-                    for local_i in np.flatnonzero(not_connected_mask):
-                        local_mask[local_i] = False
+                    connected = False
+                    for c in range(num_channels):
+                        if sparsity_mask[src_unit, c] and other_sparsity_mask[tgt_unit, c]:
+                            connected = True
+                            break
+                    if not connected:
+                        ch = np.empty(0, dtype=np.uint16)
+                    else:
+                        ch_list = []
+                        for c in range(num_channels):
+                            if sparsity_mask[src_unit, c] or other_sparsity_mask[tgt_unit, c]:
+                                ch_list.append(c)
+                        ch = np.array(ch_list, dtype=np.uint16)
 
                 elif support == "dense":
-                    local_mask = np.ones((other_num_templates, num_channels), dtype=np.bool_)
+                    ch = np.arange(num_channels, dtype=np.uint16)
 
-                overlapping_templates = np.flatnonzero(np.sum(local_mask, 1))
-                tgt_templates = tgt_sliced_templates[overlapping_templates]
-                for gcount in range(len(overlapping_templates)):
+                if len(ch) > 0:
+                    overlapping_ids.append(np.uint16(tgt_unit))
+                    overlapping_chs.append(ch)
 
-                    j = overlapping_templates[gcount]
-                    # symmetric values are handled later
-                    if same_array and j < i:
-                        # no need exhaustive looping when same template
-                        continue
-                    src = src_template[:, local_mask[j]].flatten()
-                    tgt = (tgt_templates[gcount][:, local_mask[j]]).flatten()
+            overlapping_j_list.append(overlapping_ids)
+            active_channels_list.append(overlapping_chs)
 
-                    norm_i = 0
-                    norm_j = 0
-                    distances[count, i, j] = 0
+        for count in range(len(shift_loop)):
+            shift = shift_loop[count]
 
-                    for k in range(len(src)):
-                        if metric == 0:
-                            norm_i += abs(src[k])
-                            norm_j += abs(tgt[k])
-                            distances[count, i, j] += abs(src[k] - tgt[k])
-                        elif metric == 1:
-                            norm_i += src[k] ** 2
-                            norm_j += tgt[k] ** 2
-                            distances[count, i, j] += (src[k] - tgt[k]) ** 2
-                        elif metric == 2:
-                            distances[count, i, j] += src[k] * tgt[k]
-                            norm_i += src[k] ** 2
-                            norm_j += tgt[k] ** 2
+            src_sliced = templates_array[:, num_shifts : num_samples - num_shifts]
+            tgt_sliced = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
+
+            for i in numba.prange(num_templates):
+                src_template = src_sliced[i]
+                overlapping_ids = overlapping_j_list[i]
+                overlapping_chs = active_channels_list[i]
+
+                for pair_idx in range(len(overlapping_ids)):
+                    j = np.uint16(overlapping_ids[pair_idx])
+                    ch = overlapping_chs[pair_idx]
+
+                    src_ch = src_template[:, ch]
+                    tgt_ch = tgt_sliced[j][:, ch]
 
                     if metric == 0:
-                        distances[count, i, j] /= norm_i + norm_j
+                        # l1
+                        norm_i = np.sum(np.abs(src_ch))
+                        norm_j = np.sum(np.abs(tgt_ch))
+                        dist = np.sum(np.abs(src_ch - tgt_ch))
+                        distances[count, i, j] = dist / (norm_i + norm_j)
+
                     elif metric == 1:
-                        norm_i = sqrt(norm_i)
-                        norm_j = sqrt(norm_j)
-                        distances[count, i, j] = sqrt(distances[count, i, j])
-                        distances[count, i, j] /= norm_i + norm_j
+                        # l2
+                        norm_i = sqrt(np.sum(src_ch**2))
+                        norm_j = sqrt(np.sum(tgt_ch**2))
+                        dist = sqrt(np.sum((src_ch - tgt_ch) ** 2))
+                        distances[count, i, j] = dist / (norm_i + norm_j)
+
                     elif metric == 2:
-                        norm_i = sqrt(norm_i)
-                        norm_j = sqrt(norm_j)
-                        distances[count, i, j] /= norm_i * norm_j
-                        distances[count, i, j] = 1 - distances[count, i, j]
+                        # cosine
+                        dot = np.sum(src_ch * tgt_ch)
+                        norm_i = sqrt(np.sum(src_ch**2))
+                        norm_j = sqrt(np.sum(tgt_ch**2))
+                        denom = norm_i * norm_j
+                        if denom > 0.0:
+                            distances[count, i, j] = 1.0 - dot / denom
 
                     if same_array:
                         distances[count, j, i] = distances[count, i, j]
 
-            if same_array and num_shifts != 0:
+            if same_array and shift != 0:
                 distances[num_shifts_both_sides - count - 1] = distances[count].T
 
         return distances

@@ -6,7 +6,6 @@ from spikeinterface import generate_ground_truth_recording
 from spikeinterface.core.core_tools import is_editable_mode
 import spikeinterface.sorters as ss
 
-
 os.environ["SINGULARITY_DISABLE_CACHE"] = "true"
 
 ON_GITHUB = os.getenv("GITHUB_ACTIONS")

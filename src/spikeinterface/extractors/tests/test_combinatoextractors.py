@@ -1,6 +1,5 @@
 import pytest
 
-
 # from spikeinterface.extractors import read_combinato
 
 

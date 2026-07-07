@@ -1,6 +1,6 @@
-from __future__ import annotations
 import numpy as np
 
+from .baseevent import BaseEvent
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
 
@@ -64,7 +64,7 @@ class AppendSegmentRecording(BaseRecording):
         rec0.copy_metadata(self)
 
         for rec in recording_list:
-            for parent_segment in rec._recording_segments:
+            for parent_segment in rec.segments:
                 rec_seg = ProxyAppendRecordingSegment(parent_segment)
                 self.add_recording_segment(rec_seg)
 
@@ -120,7 +120,7 @@ class ConcatenateSegmentRecording(BaseRecording):
 
         parent_segments = []
         for rec in recording_list:
-            for parent_segment in rec._recording_segments:
+            for parent_segment in rec.segments:
                 time_kwargs = parent_segment.get_times_kwargs()
                 if not ignore_times:
                     assert time_kwargs["time_vector"] is None, (
@@ -241,7 +241,7 @@ class SelectSegmentRecording(BaseRecording):
         ), f"'segment_index' must be between 0 and {num_segments - 1}"
 
         for segment_index in segment_indices:
-            rec_seg = recording._recording_segments[segment_index]
+            rec_seg = recording.segments[segment_index]
             self.add_recording_segment(rec_seg)
         self._parent = recording
 
@@ -303,7 +303,7 @@ class AppendSegmentSorting(BaseSorting):
         sorting0.copy_metadata(self)
 
         for sorting in sorting_list:
-            for parent_segment in sorting._sorting_segments:
+            for parent_segment in sorting.segments:
                 sorting_seg = ProxyAppendSortingSegment(parent_segment)
                 self.add_sorting_segment(sorting_seg)
 
@@ -385,7 +385,7 @@ class ConcatenateSegmentSorting(BaseSorting):
         parent_segments = []
         parent_num_samples = []
         for sorting_i, sorting in enumerate(sorting_list):
-            for segment_i, parent_segment in enumerate(sorting._sorting_segments):
+            for segment_i, parent_segment in enumerate(sorting.segments):
                 # Check t_start is not assigned
                 segment_t_start = parent_segment._t_start
                 if not ignore_times:
@@ -439,7 +439,7 @@ class ConcatenateSegmentSorting(BaseSorting):
     def get_num_samples(self, segment_index=None):
         """Overrides the BaseSorting method, which requires a recording."""
         segment_index = self._check_segment_index(segment_index)
-        n_samples = self._sorting_segments[segment_index].get_num_samples()
+        n_samples = self.segments[segment_index].get_num_samples()
         if self.has_recording():  # Sanity check
             assert n_samples == self._recording.get_num_samples(segment_index)
         return n_samples
@@ -555,7 +555,7 @@ class SplitSegmentSorting(BaseSorting):
 
         num_samples = [0]
         for recording in recording_list:
-            for recording_segment in recording._recording_segments:
+            for recording_segment in recording.segments:
                 num_samples.append(recording_segment.get_num_samples())
 
         cumsum_num_samples = np.cumsum(num_samples)
@@ -563,7 +563,7 @@ class SplitSegmentSorting(BaseSorting):
             sliced_parent_sorting = parent_sorting.frame_slice(
                 start_frame=cumsum_num_samples[idx], end_frame=cumsum_num_samples[idx + 1]
             )
-            sliced_segment = sliced_parent_sorting._sorting_segments[0]
+            sliced_segment = sliced_parent_sorting.segments[0]
             self.add_sorting_segment(sliced_segment)
         self._parent = parent_sorting
 
@@ -598,10 +598,30 @@ class SelectSegmentSorting(BaseSorting):
         ), f"'segment_index' must be between 0 and {num_segments - 1}"
 
         for segment_index in segment_indices:
-            sort_seg = sorting._sorting_segments[segment_index]
+            sort_seg = sorting.segments[segment_index]
             self.add_sorting_segment(sort_seg)
 
         self._kwargs = {"sorting": sorting, "segment_indices": [int(s) for s in segment_indices]}
 
 
 select_segment_sorting = define_function_from_class(source_class=SelectSegmentSorting, name="select_segment_sorting")
+
+
+class SelectSegmentEvent(BaseEvent):
+    def __init__(self, event: BaseEvent, segment_indices: int | list[int]):
+        BaseEvent.__init__(self, event.channel_ids, event.structured_dtype)
+
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
+
+        num_segments = event.get_num_segments()
+
+        if not all(0 <= s < num_segments for s in segment_indices):
+            raise ValueError(f"'segment_index' must be between 0 and {num_segments - 1}")
+
+        for seg_idx in segment_indices:
+            seg = event._event_segments[seg_idx]
+            self.add_event_segment(seg)
+
+        self._parent = event
+        self._kwargs = {"event": event, "segment_indices": segment_indices}

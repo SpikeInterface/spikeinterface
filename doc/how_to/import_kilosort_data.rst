@@ -49,7 +49,7 @@ If you'd like to store the information you've computed, you can save the analyze
     )
 
 You now have a fully functional ``SortingAnalyzer`` - congrats! You can now use `spikeinterface-gui <https://github.com/SpikeInterface/spikeinterface-gui/>`__. to view the results
-interactively, or start manually labelling your units to `create an automated curation model <https://spikeinterface.readthedocs.io/en/stable/tutorials_custom_index.html#automated-curation-tutorials>`__.
+interactively, or start manually labeling your units to `create an automated curation model <https://spikeinterface.readthedocs.io/en/stable/tutorials_custom_index.html#automated-curation-tutorials>`__.
 
 Note that if you have access to the raw recording, you can attach it to the analyzer, and re-compute extensions from the raw data. E.g.
 

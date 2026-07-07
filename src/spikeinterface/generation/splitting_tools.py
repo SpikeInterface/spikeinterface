@@ -64,8 +64,11 @@ def split_sorting_by_times(
         new_index = int(unit_id) * np.ones(len(mask), dtype=bool)
         new_index[mask] = max_index + 1
         new_spikes["unit_index"][ind_mask] = new_index
-        new_unit_ids += [max_index + 1]
-        splitted_pairs += [(unit_id, new_unit_ids[-1])]
+        new_unit_id = max_index + 1
+        if sorting_analyzer.unit_ids.dtype.kind in "US":
+            new_unit_id = str(new_unit_id)
+        new_unit_ids += [new_unit_id]
+        splitted_pairs += [(unit_id, new_unit_id)]
         max_index += 1
 
     new_sorting = NumpySorting(new_spikes, sampling_frequency=fs, unit_ids=new_unit_ids)
@@ -104,10 +107,10 @@ def split_sorting_by_amplitudes(
 
     rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
-    from spikeinterface.core.template_tools import get_template_extremum_channel
 
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-    spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds, concatenated=False)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
+
+    spikes = sorting_analyzer.sorting.to_spike_vector(main_channel_indices=main_channel_indices, concatenated=False)
     new_spikes = spikes[0].copy()
     amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     nb_splits = int(splitting_probability * len(sorting_analyzer.sorting.unit_ids))

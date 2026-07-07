@@ -2,8 +2,6 @@
 Utils functions to launch several sorter on several recording in parallel or not.
 """
 
-from __future__ import annotations
-
 import os
 import stat
 import subprocess

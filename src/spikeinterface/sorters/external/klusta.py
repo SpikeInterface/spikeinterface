@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import sys
 import shutil
@@ -142,16 +140,12 @@ class KlustaSorter(BaseSorter):
         if "win" in sys.platform and sys.platform != "darwin":
             shell_cmd = """
                         klusta --overwrite {klusta_config}
-                    """.format(
-                klusta_config=sorter_output_folder / "config.prm"
-            )
+                    """.format(klusta_config=sorter_output_folder / "config.prm")
         else:
             shell_cmd = """
                         #!/bin/bash
                         klusta {klusta_config} --overwrite
-                    """.format(
-                klusta_config=sorter_output_folder / "config.prm"
-            )
+                    """.format(klusta_config=sorter_output_folder / "config.prm")
 
         shell_script = ShellScript(
             shell_cmd,

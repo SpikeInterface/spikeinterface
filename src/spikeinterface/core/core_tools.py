@@ -1,6 +1,5 @@
-from __future__ import annotations
 from pathlib import Path, WindowsPath
-from typing import Union, Generator
+from collections.abc import Generator
 import os
 import sys
 import datetime
@@ -11,6 +10,7 @@ from math import prod
 from collections import namedtuple
 import inspect
 
+from probeinterface import ProbeGroup
 import numpy as np
 
 
@@ -86,7 +86,7 @@ def read_python(path):
         contents = f.read()
     contents = re.sub(r"range\(([\d,]*)\)", r"list(range(\1))", contents)
     metadata = {}
-    exec_(contents, {}, metadata)
+    exec(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
     return metadata
 
@@ -149,6 +149,9 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, Motion):
             return obj.to_dict()
 
+        if isinstance(obj, ProbeGroup):
+            return obj.to_dict()
+
         # The base-class handles the assertion
         return super().default(obj)
 
@@ -170,7 +173,7 @@ class SIJsonEncoder(json.JSONEncoder):
         else:
             return object.item() if isinstance(object, np.generic) else object
 
-    def remove_numpy_scalars_in_list(self, list_: Union[list, tuple, set]) -> list:
+    def remove_numpy_scalars_in_list(self, list_: list | tuple | set) -> list:
         return [self.remove_numpy_scalars(obj) for obj in list_]
 
     def remove_numpy_scalars_in_dict(self, dictionary: dict) -> dict:
@@ -758,3 +761,8 @@ def is_path_remote(path: str | Path) -> bool:
         Whether the path is a remote path.
     """
     return "s3://" in str(path) or "gcs://" in str(path)
+
+
+def ms_to_samples(ms: float, sampling_frequency: float) -> int:
+    """Convert a duration in milliseconds to the nearest number of samples."""
+    return round(ms * sampling_frequency / 1000.0)

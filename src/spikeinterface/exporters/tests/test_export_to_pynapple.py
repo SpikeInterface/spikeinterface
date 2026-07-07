@@ -41,7 +41,8 @@ def test_export_analyzer_to_pynapple():
 
     subset_analyzer.compute({"template_metrics": {"metric_names": ["half_width"]}})
     a_sub_TsGroup_with_tm = to_pynapple_tsgroup(subset_analyzer)
-    assert a_sub_TsGroup_with_tm["half_width"] is not None
+    assert a_sub_TsGroup_with_tm["trough_half_width"] is not None
+    assert a_sub_TsGroup_with_tm["peak_half_width"] is not None
 
 
 def test_non_int_unit_ids():

@@ -21,6 +21,7 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     load_matlab_data
     load_your_data_into_sorting
     benchmark_with_hybrid_recordings
+    auto_label_units
     auto_curation_training
     auto_curation_prediction
     import_kilosort_data

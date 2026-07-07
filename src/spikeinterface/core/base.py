@@ -1,7 +1,7 @@
-from __future__ import annotations
 from pathlib import Path
 import shutil
-from typing import Any, Iterable, List, Optional, Sequence, Union
+from typing import Any
+from collections.abc import Iterable, Sequence
 import importlib
 import warnings
 import weakref
@@ -25,6 +25,30 @@ from .core_tools import (
     retrieve_importing_provenance,
 )
 from .job_tools import _shared_job_kwargs_doc
+
+# base dtypes used throughout spikeinterface
+base_peak_dtype = [
+    ("sample_index", "int64"),
+    ("channel_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+]
+
+spike_peak_dtype = base_peak_dtype + [
+    ("unit_index", "int64"),
+]
+
+minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+
+base_period_dtype = [
+    ("segment_index", "int64"),
+    ("start_sample_index", "int64"),
+    ("end_sample_index", "int64"),
+]
+
+unit_period_dtype = base_period_dtype + [
+    ("unit_index", "int64"),
+]
 
 
 class BaseExtractor:
@@ -60,6 +84,8 @@ class BaseExtractor:
             assert (
                 self._main_ids.dtype.kind in "uiSU"
             ), f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
+
+        self._segments: "list[BaseSegment]" = []
 
         # dict at object level
         self._annotations = {}
@@ -116,15 +142,22 @@ class BaseExtractor:
             # we remove the annotation if it exists
             _ = self._annotations.pop("name", None)
 
-    def get_num_segments(self) -> int:
-        # This is implemented in BaseRecording or BaseSorting
-        raise NotImplementedError
+    @property
+    def segments(self) -> "list[BaseSegment]":
+        return self._segments
 
-    def get_parent(self) -> Optional[BaseExtractor]:
+    def add_segment(self, segment: "BaseSegment") -> None:
+        self._segments.append(segment)
+        segment.set_parent_extractor(self)
+
+    def get_num_segments(self) -> int:
+        return len(self._segments)
+
+    def get_parent(self) -> "BaseExtractor | None":
         """Returns parent object if it exists, otherwise None"""
         return getattr(self, "_parent", None)
 
-    def _check_segment_index(self, segment_index: Optional[int] = None) -> int:
+    def _check_segment_index(self, segment_index: int | None = None) -> int:
         if segment_index is None:
             if self.get_num_segments() == 1:
                 return 0
@@ -187,6 +220,14 @@ class BaseExtractor:
         return ind
 
     def annotate(self, **new_annotations) -> None:
+        """Adds annotations.
+
+        Parameters
+        ----------
+        **new_annotations : dict
+            Key-value pairs of annotations to add. If an annotation key already exists,
+            it will be overwritten.
+        """
         self._annotations.update(new_annotations)
 
     def set_annotation(self, annotation_key: str, value: Any, overwrite=False) -> None:
@@ -210,6 +251,24 @@ class BaseExtractor:
             else:
                 raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
 
+    def delete_annotation(self, annotation_key: str) -> None:
+        """Deletes existing annotation.
+
+        Parameters
+        ----------
+        annotation_key : str
+            The annotation key to delete
+
+        Raises
+        ------
+        ValueError
+            If the annotation key does not exist
+        """
+        if annotation_key in self._annotations.keys():
+            del self._annotations[annotation_key]
+        else:
+            raise ValueError(f"{annotation_key} is not an annotation key")
+
     def get_preferred_mp_context(self):
         """
         Get the preferred context for multiprocessing.
@@ -227,7 +286,7 @@ class BaseExtractor:
             v = deepcopy(v)
         return v
 
-    def get_annotation_keys(self) -> List:
+    def get_annotation_keys(self) -> list:
         return list(self._annotations.keys())
 
     def set_property(
@@ -337,14 +396,14 @@ class BaseExtractor:
                 self._properties[key] = np.zeros_like(values, dtype=values.dtype)
                 self._properties[key][indices] = values
 
-    def get_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
+    def get_property(self, key: str, ids: Iterable | None = None) -> np.ndarray:
         values = self._properties.get(key, None)
         if ids is not None and values is not None:
             inds = self.ids_to_indices(ids)
             values = values[inds]
         return values
 
-    def get_property_keys(self) -> List:
+    def get_property_keys(self) -> list:
         return list(self._properties.keys())
 
     def delete_property(self, key) -> None:
@@ -357,8 +416,8 @@ class BaseExtractor:
         self,
         other: "BaseExtractor",
         only_main: bool = False,
-        ids: Union[Iterable, slice, None] = None,
-        skip_properties: Optional[Iterable[str]] = None,
+        ids: Iterable | slice | None = None,
+        skip_properties: Iterable[str] | None = None,
     ) -> None:
         """
         Copy metadata (annotations/properties) to another extractor (`other`).
@@ -408,11 +467,20 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
+        if not only_main:
+            self._extra_metadata_copy(other)
+
+    def _extra_metadata_copy(self, other: "BaseExtractor") -> None:
+        """
+        This is a hook to copy extra metadata that is not in the annotations/properties dict.
+        """
+        pass
+
     def to_dict(
         self,
         include_annotations: bool = False,
         include_properties: bool = False,
-        relative_to: Union[str, Path, None] = None,
+        relative_to: str | Path | None = None,
         folder_metadata=None,
         recursive: bool = False,
     ) -> dict:
@@ -437,11 +505,11 @@ class BaseExtractor:
             Whether to include all annotations in the dictionary
         include_properties : bool, default: False
             Whether to include all properties in the dictionary, by default False.
-        relative_to : Union[str, Path, None], default: None
+        relative_to : str | Path | None, default: None
             If provided, file and folder paths will be made relative to this path,
             enabling portability in folder formats such as the waveform extractor,
             by default None.
-        folder_metadata : Union[str, Path, None], default: None
+        folder_metadata : str | Path | None, default: None
             Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
             in numpy `npy` format, by default None.
         recursive : bool, default: False
@@ -541,10 +609,12 @@ class BaseExtractor:
                 folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
+        self._extra_metadata_to_dict(dump_dict)
+
         return dump_dict
 
     @staticmethod
-    def from_dict(dictionary: dict, base_folder: Optional[Union[Path, str]] = None) -> "BaseExtractor":
+    def from_dict(dictionary: dict, base_folder: Path | str | None = None) -> "BaseExtractor":
         """
         Instantiate extractor from dictionary
 
@@ -577,8 +647,6 @@ class BaseExtractor:
         # hack to load probe for recording
         folder_metadata = Path(folder_metadata)
 
-        self._extra_metadata_from_folder(folder_metadata)
-
         # load properties
         prop_folder = folder_metadata / "properties"
         if prop_folder.is_dir():
@@ -587,6 +655,8 @@ class BaseExtractor:
                     values = np.load(prop_file, allow_pickle=True)
                     key = prop_file.stem
                     self.set_property(key, values)
+
+        self._extra_metadata_from_folder(folder_metadata)
 
     def save_metadata_to_folder(self, folder_metadata):
         self._extra_metadata_to_folder(folder_metadata)
@@ -653,7 +723,7 @@ class BaseExtractor:
         return self.check_serializability("pickle")
 
     @staticmethod
-    def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
+    def _get_file_path(file_path: str | Path, extensions: Sequence) -> Path:
         """
         Helper function to be used by various dump_to_file utilities.
 
@@ -684,7 +754,7 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path: Union[str, Path], relative_to=None, folder_metadata=None) -> None:
+    def dump(self, file_path: str | Path, relative_to=None, folder_metadata=None) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -705,9 +775,9 @@ class BaseExtractor:
 
     def dump_to_json(
         self,
-        file_path: Union[str, Path, None] = None,
-        relative_to: Union[str, Path, bool, None] = None,
-        folder_metadata: Union[str, Path, None] = None,
+        file_path: str | Path | None = None,
+        relative_to: str | Path | bool | None = None,
+        folder_metadata: str | Path | None = None,
     ) -> None:
         """
         Dump recording extractor to json file.
@@ -746,10 +816,10 @@ class BaseExtractor:
 
     def dump_to_pickle(
         self,
-        file_path: Union[str, Path, None] = None,
-        relative_to: Union[str, Path, bool, None] = None,
+        file_path: str | Path | None = None,
+        relative_to: str | Path | bool | None = None,
         include_properties: bool = True,
-        folder_metadata: Union[str, Path, None] = None,
+        folder_metadata: str | Path | None = None,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -790,9 +860,7 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(
-        file_or_folder_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None
-    ) -> "BaseExtractor":
+    def load(file_or_folder_path: str | Path, base_folder: Path | str | bool | None = None) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
@@ -828,6 +896,14 @@ class BaseExtractor:
         pass
 
     def _extra_metadata_to_folder(self, folder):
+        # This implemented in BaseRecording for probe
+        pass
+
+    def _extra_metadata_from_dict(self, dump_dict):
+        # This implemented in BaseRecording for probe
+        pass
+
+    def _extra_metadata_to_dict(self, dump_dict):
         # This implemented in BaseRecording for probe
         pass
 
@@ -966,10 +1042,10 @@ class BaseExtractor:
         else:
             warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
-        self.save_metadata_to_folder(folder)
-
         # save data (done the subclass)
+        self.save_metadata_to_folder(folder)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
+        cached.load_metadata_from_folder(folder)
 
         # copy properties/
         self.copy_metadata(cached)
@@ -1068,7 +1144,7 @@ class BaseExtractor:
         return cached
 
 
-def _load_extractor_from_dict(dic) -> BaseExtractor:
+def _load_extractor_from_dict(dic) -> "BaseExtractor":
     """
     Convert a dictionary into an instance of BaseExtractor or its subclass.
 
@@ -1113,11 +1189,9 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    if not _check_same_version(class_name, dic["version"]):
-        warnings.warn(
-            f"Versions are not the same. This might lead to compatibility errors. "
-            f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
-        )
+    is_old_version = not _check_same_version(class_name, dic["version"])
+    if is_old_version and hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
+        new_kwargs = extractor_class._handle_kwargs_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
     extractor = extractor_class(**new_kwargs)
@@ -1125,6 +1199,10 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
         extractor.set_property(k, v)
+
+    extractor._extra_metadata_from_dict(dic)
+    if hasattr(extractor, "_handle_extractor_backward_compatibility"):
+        extractor._handle_extractor_backward_compatibility()
 
     return extractor
 
@@ -1160,7 +1238,7 @@ class BaseSegment:
         self._parent_extractor = None
 
     @property
-    def parent_extractor(self) -> Union[BaseExtractor, None]:
+    def parent_extractor(self) -> BaseExtractor | None:
         return self._parent_extractor()
 
     def set_parent_extractor(self, parent_extractor: BaseExtractor) -> None:

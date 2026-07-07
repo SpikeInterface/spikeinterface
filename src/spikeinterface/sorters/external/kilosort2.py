@@ -1,17 +1,12 @@
-from __future__ import annotations
-
 from pathlib import Path
 import os
-from typing import Union
 
 from spikeinterface.sorters.basesorter import BaseSorter
 from .kilosortbase import KilosortBase
 from spikeinterface.sorters.utils import get_git_commit
 
-PathType = Union[str, Path]
 
-
-def check_if_installed(kilosort2_path: Union[str, None]):
+def check_if_installed(kilosort2_path: str | None):
     if kilosort2_path is None:
         return False
     assert isinstance(kilosort2_path, str)
@@ -30,7 +25,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
 
     sorter_name: str = "kilosort2"
     compiled_name: str = "ks2_compiled"
-    kilosort2_path: Union[str, None] = os.getenv("KILOSORT2_PATH", None)
+    kilosort2_path: str | None = os.getenv("KILOSORT2_PATH", None)
     requires_locations = False
 
     _default_params = {
@@ -119,7 +114,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
             return "git-" + commit
 
     @classmethod
-    def set_kilosort2_path(cls, kilosort2_path: PathType):
+    def set_kilosort2_path(cls, kilosort2_path: str | Path):
         kilosort2_path = str(Path(kilosort2_path).absolute())
         Kilosort2Sorter.kilosort2_path = kilosort2_path
         try:

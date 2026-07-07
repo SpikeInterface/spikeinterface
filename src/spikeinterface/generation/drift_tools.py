@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import math
-from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -36,7 +33,7 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
     new_templates_array : np.array
         shape = (num_templates, num_samples, num_channels) or = (num_motions, num_templates, num_samples, num_channel)
     """
-    import scipy.interpolate
+    from scipy.interpolate import griddata
 
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
@@ -56,7 +53,7 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
     for template_index in range(templates_array.shape[0]):
         for sample_index in range(templates_array.shape[1]):
             template = templates_array[template_index, sample_index, :]
-            interp_template = scipy.interpolate.griddata(
+            interp_template = griddata(
                 source_locations, template, dest_locations, method=interpolation_method, fill_value=0
             )
             if dest_locations.ndim == 2:
@@ -340,15 +337,15 @@ class InjectDriftingTemplatesRecording(BaseRecording):
         drifting_templates: DriftingTemplates,
         displacement_vectors: list[np.ndarray],
         displacement_sampling_frequency: float,
-        displacement_unit_factor: Optional[np.ndarray] = None,
-        parent_recording: Optional[BaseRecording] = None,
-        num_samples: Optional[list[int]] = None,
+        displacement_unit_factor: np.ndarray | None = None,
+        parent_recording: BaseRecording | None = None,
+        num_samples: list[int] | None = None,
         amplitude_factor: list[np.ndarray] | np.ndarray | float | None = None,
         mode="precompute",
         # TODO handle upsample vector
-        # upsample_vector: Union[list[int], None] = None,
+        # upsample_vector: list[int] | None = None,
     ):
-        import scipy.spatial
+        from scipy.spatial import distance
 
         assert isinstance(
             drifting_templates, DriftingTemplates
@@ -451,7 +448,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
 
                 # we go to indices by the nearest precomputed displacements
                 # this is (num_spike, ) relate to indices
-                inds = np.argmin(scipy.spatial.distance.cdist(displacements, summed_displacement), axis=0)
+                inds = np.argmin(distance.cdist(displacements, summed_displacement), axis=0)
                 # just by paranoia
                 inds = np.clip(inds, 0, displacements.shape[0] - 1)
                 # this also cast to int64
@@ -466,9 +463,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
             # upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
-            parent_recording_segment = (
-                None if parent_recording is None else parent_recording._recording_segments[segment_index]
-            )
+            parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectDriftingTemplatesRecordingSegment(
                 self.dtype,
                 self.spike_vector[start:end],
@@ -482,7 +477,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             )
             self.add_recording_segment(recording_segment)
 
-        self.set_probe(drifting_templates.probe, in_place=True)
+        self.set_probe(drifting_templates.probe)
 
         # templates are too large, we don't serialize them to JSON
         self._serializability["json"] = False
@@ -508,12 +503,12 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         dtype,
         spike_vector: np.ndarray,
         drifting_templates: DriftingTemplates,
-        amplitude_vector: Optional[np.ndarray] = None,
-        parent_recording_segment: Optional[BaseRecordingSegment] = None,
-        num_samples: Optional[int] = None,
-        displacement_indices: Optional[np.ndarray] = None,
-        templates_array_moved: Optional[np.ndarray] = None,
-        # upsample_vector: Union[list[float], None],
+        amplitude_vector: np.ndarray | None = None,
+        parent_recording_segment: BaseRecordingSegment | None = None,
+        num_samples: int | None = None,
+        displacement_indices: np.ndarray | None = None,
+        templates_array_moved: np.ndarray | None = None,
+        # upsample_vector: list |float | None,
     ) -> None:
         BaseRecordingSegment.__init__(
             self,
@@ -539,9 +534,9 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Optional[int] = None,
-        end_frame: Optional[int] = None,
-        channel_indices: Optional[list] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         start_frame = 0 if start_frame is None else start_frame
         end_frame = self.num_samples if end_frame is None else end_frame

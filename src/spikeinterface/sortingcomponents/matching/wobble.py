@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
@@ -494,7 +492,7 @@ class WobbleMatch(BaseTemplateMatching):
             self.template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         self.is_pushed = True
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

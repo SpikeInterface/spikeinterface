@@ -8,10 +8,41 @@ spikeinterface.core
     .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
+    .. automethod:: BaseRecording.save
+    .. automethod:: BaseRecording.save_to_memory
+    .. automethod:: BaseRecording.save_to_folder
+    .. automethod:: BaseRecording.save_to_zarr
+    .. automethod:: BaseRecording.dump
+    .. automethod:: BaseRecording.dump_to_json
+    .. automethod:: BaseRecording.dump_to_pickle
+    .. automethod:: BaseRecording.remove_channels
+    .. automethod:: BaseRecording.set_probe
+    .. automethod:: BaseRecording.set_probegroup
+    .. automethod:: BaseRecording.remove_probe
+    .. automethod:: BaseRecording.select_channels_with_probe
+    .. automethod:: BaseRecording.select_channels_with_probegroup
+    .. automethod:: BaseRecording.split_by
     .. autoclass:: BaseSorting
         :members:
+    .. automethod:: BaseSorting.save
+    .. automethod:: BaseSorting.save_to_memory
+    .. automethod:: BaseSorting.save_to_folder
+    .. automethod:: BaseSorting.save_to_zarr
+    .. automethod:: BaseSorting.dump
+    .. automethod:: BaseSorting.dump_to_json
+    .. automethod:: BaseSorting.dump_to_pickle
+    .. automethod:: BaseSorting.split_by
+    .. automethod:: BaseSorting.register_recording
     .. autoclass:: BaseSnippets
         :members:
+    .. automethod:: BaseSnippets.save
+    .. automethod:: BaseSnippets.save_to_memory
+    .. automethod:: BaseSnippets.save_to_folder
+    .. automethod:: BaseSnippets.save_to_zarr
+    .. automethod:: BaseSnippets.dump
+    .. automethod:: BaseSnippets.dump_to_json
+    .. automethod:: BaseSnippets.dump_to_pickle
+    .. automethod:: BaseSnippets.remove_channels
     .. autoclass:: BaseEvent
         :members:
     .. autoclass:: SortingAnalyzer
@@ -50,9 +81,8 @@ spikeinterface.core
     .. autofunction:: get_chunk_with_margin
     .. autofunction:: order_channels_by_depth
     .. autofunction:: get_template_amplitudes
-    .. autofunction:: get_template_extremum_channel
-    .. autofunction:: get_template_extremum_channel_peak_shift
-    .. autofunction:: get_template_extremum_amplitude
+    .. autofunction:: get_template_peak_shift_on_main_channel
+    .. autofunction:: get_template_amplitude_on_main_channel
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording
@@ -73,7 +103,7 @@ Low-level
 .. automodule:: spikeinterface.core
     :noindex:
 
-    .. autoclass:: ChunkRecordingExecutor
+    .. autoclass:: TimeSeriesChunkExecutor
 
 
 Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)
@@ -190,6 +220,9 @@ spikeinterface.preprocessing
     .. autofunction:: detect_bad_channels
     .. autofunction:: detect_and_interpolate_bad_channels
     .. autofunction:: detect_and_remove_bad_channels
+    .. autofunction:: detect_artifact_periods
+    .. autofunction:: detect_artifact_periods_by_envelope
+    .. autofunction:: detect_saturation_periods
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter
@@ -204,6 +237,7 @@ spikeinterface.preprocessing
     .. autofunction:: remove_artifacts
     .. autofunction:: resample
     .. autofunction:: scale
+    .. autofunction:: scale_to_uV
     .. autofunction:: silence_periods
     .. autofunction:: unsigned_to_signed
     .. autofunction:: whiten
@@ -226,6 +260,7 @@ spikeinterface.postprocessing
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_acgs_3d
     .. autofunction:: compute_isi_histograms
+    .. autofunction:: compute_valid_unit_periods
     .. autofunction:: align_sorting
 
 
@@ -286,8 +321,6 @@ spikeinterface.comparison
     .. autofunction:: compare_sorter_to_ground_truth
     .. autofunction:: compare_templates
     .. autofunction:: compare_multiple_templates
-    .. autofunction:: create_hybrid_units_recording
-    .. autofunction:: create_hybrid_spikes_recording
 
     .. autoclass:: GroundTruthComparison
         :members:
@@ -373,9 +406,13 @@ spikeinterface.curation
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
     .. autofunction:: remove_excess_spikes
-    .. autofunction:: auto_label_units
+    .. autofunction:: threshold_metrics_label_units
+    .. autofunction:: bombcell_label_units
+    .. autofunction:: bombcell_get_default_thresholds
+    .. autofunction:: model_based_label_units
     .. autofunction:: load_model
     .. autofunction:: train_model
+    .. autofunction:: unitrefine_label_units
 
 Curation Model
 ~~~~~~~~~~~~~~
@@ -385,7 +422,7 @@ such as merging and splitting units, as well as defining labels for units.
 
 .. automodule:: spikeinterface.curation.curation_model
 
-    .. autopydantic_model:: CurationModel
+    .. autopydantic_model:: Curation
     .. autopydantic_model:: Merge
     .. autopydantic_model:: Split
     .. autopydantic_model:: ManualLabel

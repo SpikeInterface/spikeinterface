@@ -6,7 +6,6 @@ import json
 from .base import BaseExtractor
 from .core_tools import is_path_remote
 
-
 _error_msg = (
     "{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
     "folder that is the result of extractor.save(...) or sortinganalyzer.save_as(...)"
@@ -126,15 +125,6 @@ def load(
         object_type = _guess_object_from_zarr(url)
         loaded_object = _load_object_from_zarr(url, object_type, **kwargs)
         return loaded_object
-
-
-def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
-    warnings.warn(
-        "load_extractor() is deprecated and will be removed in version 0.104.0. Please use load() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return load(file_or_folder_or_dict, base_folder=base_folder)
 
 
 def _guess_object_from_dict(d):

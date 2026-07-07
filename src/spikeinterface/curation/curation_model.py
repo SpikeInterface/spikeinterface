@@ -1,29 +1,32 @@
-from pydantic import BaseModel, Field, model_validator, field_validator
-from typing import List, Dict, Union, Optional, Literal, Tuple
+import warnings
+from typing import Literal, List
 from itertools import chain, combinations
+from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
+
 import numpy as np
 
 from spikeinterface import BaseSorting
+from spikeinterface.core.sorting_tools import _get_ids_after_merging, _get_ids_after_splitting
 
 
 class LabelDefinition(BaseModel):
     name: str = Field(description="Name of the label")
-    label_options: List[str] = Field(description="List of possible label options", min_length=2)
+    label_options: list[str] = Field(description="List of possible label options", min_length=2)
     exclusive: bool = Field(description="Whether the label is exclusive")
 
 
 class ManualLabel(BaseModel):
-    unit_id: Union[int, str] = Field(description="ID of the unit")
-    labels: Dict[str, List[str]] = Field(description="Dictionary of labels for the unit")
+    unit_id: int | str = Field(description="ID of the unit")
+    labels: dict[str, list[str]] = Field(description="Dictionary of labels for the unit")
 
 
 class Merge(BaseModel):
-    unit_ids: List[Union[int, str]] = Field(description="List of unit ids to be merged")
-    new_unit_id: Optional[Union[int, str]] = Field(default=None, description="New unit IDs for the merge group")
+    unit_ids: list[int | str] = Field(description="List of unit ids to be merged")
+    new_unit_id: int | str | None = Field(default=None, description="New unit IDs for the merge group")
 
 
 class Split(BaseModel):
-    unit_id: Union[int, str] = Field(description="ID of the unit")
+    unit_id: int | str = Field(description="ID of the unit")
     mode: Literal["indices", "labels"] = Field(
         default="indices",
         description=(
@@ -33,17 +36,15 @@ class Split(BaseModel):
             "If labels, the split is defined by a list of labels for each spike (`labels`). "
         ),
     )
-    indices: Optional[List[List[int]]] = Field(
+    indices: list[list[int]] | None = Field(
         default=None,
         description=(
             "List of indices for the split. The unit is split in multiple groups (one for each list of indices), "
             "plus an optional extra if the spike train has more spikes than the sum of the indices in the lists."
         ),
     )
-    labels: Optional[List[int]] = Field(default=None, description="List of labels for the split")
-    new_unit_ids: Optional[List[Union[int, str]]] = Field(
-        default=None, description="List of new unit IDs for each split"
-    )
+    labels: list[int] | None = Field(default=None, description="List of labels for the split")
+    new_unit_ids: list[int | str] | None = Field(default=None, description="List of new unit IDs for each split")
 
     def get_full_spike_indices(self, sorting: BaseSorting):
         """
@@ -75,19 +76,19 @@ class Split(BaseModel):
         return full_spike_indices
 
 
-class CurationModel(BaseModel):
-    supported_versions: Tuple[Literal["1"], Literal["2"]] = Field(
-        default=["1", "2"], description="Supported versions of the curation format"
+class Curation(BaseModel):
+    supported_versions: tuple[Literal["1"], Literal["2"]] = Field(
+        default=("1", "2"), description="Supported versions of the curation format"
     )
     format_version: str = Field(description="Version of the curation format")
-    unit_ids: List[Union[int, str]] = Field(description="List of unit IDs")
-    label_definitions: Optional[Dict[str, LabelDefinition]] = Field(
+    unit_ids: list[int | str] = Field(description="List of unit IDs")
+    label_definitions: dict[str, LabelDefinition] | None = Field(
         default=None, description="Dictionary of label definitions"
     )
-    manual_labels: Optional[List[ManualLabel]] = Field(default=None, description="List of manual labels")
-    removed: Optional[List[Union[int, str]]] = Field(default=None, description="List of removed unit IDs")
-    merges: Optional[List[Merge]] = Field(default=None, description="List of merges")
-    splits: Optional[List[Split]] = Field(default=None, description="List of splits")
+    manual_labels: list[ManualLabel] | None = Field(default=None, description="List of manual labels")
+    removed: list[int | str] | None = Field(default=None, description="List of removed unit IDs")
+    merges: list[Merge] | None = Field(default=None, description="List of merges")
+    splits: list[Split] | None = Field(default=None, description="List of splits")
 
     @field_validator("label_definitions", mode="before")
     def add_label_definition_name(cls, label_definitions):
@@ -190,7 +191,7 @@ class CurationModel(BaseModel):
 
             # Check new unit id not already used
             if merge.new_unit_id is not None:
-                if merge.new_unit_id in unit_ids:
+                if merge.new_unit_id in unit_ids and merge.new_unit_id not in merge.unit_ids:
                     raise ValueError(f"New unit ID {merge.new_unit_id} is already in the unit list")
 
         values["merges"] = merges
@@ -238,11 +239,11 @@ class CurationModel(BaseModel):
         for i, split in enumerate(splits):
             if isinstance(split, dict):
                 split = dict(split)
-                if "indices" in split:
+                if "indices" in split and split["indices"] is not None:
                     split["indices"] = [list(indices) for indices in split["indices"]]
-                if "labels" in split:
+                if "labels" in split and split["labels"] is not None:
                     split["labels"] = list(split["labels"])
-                if "new_unit_ids" in split:
+                if "new_unit_ids" in split and split["new_unit_ids"] is not None:
                     split["new_unit_ids"] = list(split["new_unit_ids"])
                 splits[i] = Split(**split)
 
@@ -366,6 +367,52 @@ class CurationModel(BaseModel):
                 values["removed"] = list(removed_units)
         return values
 
+    def get_final_ids_from_new_unit_ids(self) -> list:
+        """
+        Returns the final unit ids of the `curation_model`, when new unit ids are
+        given for each curation choice. Raises an error if new unit ids are missing
+        for any curation choice.
+
+        Returns
+        -------
+        final_ids : list
+            The ids of the sorting/analyzer after curation takes place
+        """
+        final_ids = list(self.unit_ids)
+        # 1. Remove units
+        for unit_id in self.removed:
+            if unit_id not in final_ids:
+                raise ValueError(f"Removed unit_id {unit_id} is not in the unit list")
+            final_ids.remove(unit_id)
+
+        # 2. Merge units
+        merge_unit_groups = []
+        new_merge_unit_ids = []
+        for merge in self.merges:
+            if merge.new_unit_id is None:
+                raise ValueError(
+                    f"The `new_unit_id` for the merge of units {merge.unit_ids} is `None`. This must be given."
+                )
+            merge_unit_groups.append(merge.unit_ids)
+            new_merge_unit_ids.append(merge.new_unit_id)
+        final_ids = _get_ids_after_merging(
+            final_ids, merge_unit_groups=merge_unit_groups, new_unit_ids=new_merge_unit_ids
+        )
+
+        # 3. Split units
+        split_units = {}
+        split_new_unit_ids = []
+        for split in self.splits:
+            if split.new_unit_ids is None:
+                raise ValueError(
+                    f"The `new_unit_ids` for the split of unit {split.unit_id} is `None`. These must be given."
+                )
+            # we only need the correct key and elements for the split, to mimic the output of the split function
+            split_units[split.unit_id] = [[]] * len(split.new_unit_ids)
+            split_new_unit_ids.append(split.new_unit_ids)
+        final_ids = _get_ids_after_splitting(final_ids, split_units=split_units, new_unit_ids=split_new_unit_ids)
+        return list(final_ids)
+
     @model_validator(mode="before")
     def validate_fields(cls, values):
         values = dict(values)
@@ -384,9 +431,9 @@ class CurationModel(BaseModel):
                 f"Format version {self.format_version} not supported. Only {self.supported_versions} are valid"
             )
 
-        labeled_unit_set = set([lbl.unit_id for lbl in self.manual_labels]) if self.manual_labels else set()
+        labeled_unit_set = {lbl.unit_id for lbl in self.manual_labels} if self.manual_labels else set()
         merged_units_set = set(chain.from_iterable(merge.unit_ids for merge in self.merges)) if self.merges else set()
-        split_units_set = set(split.unit_id for split in self.splits) if self.splits else set()
+        split_units_set = {split.unit_id for split in self.splits} if self.splits else set()
         removed_set = set(self.removed) if self.removed else set()
         unit_ids = self.unit_ids
 
@@ -428,5 +475,54 @@ class CurationModel(BaseModel):
                         raise ValueError(
                             f"Curation format: manual_labels {unit_id} {label_key} are exclusive labels. {label_value} is invalid"
                         )
+
+        return self
+
+
+def CurationModel(*args, **kwargs):
+    warnings.warn(
+        "`CurationModel` is deprecated and will be removed in 0.105.0. Use `Curation` instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Curation(*args, **kwargs)
+
+
+class SequentialCuration(BaseModel):
+    """
+    A Pydantic model which defines a sequence of curation steps. If using sequential curations,
+    we demand that each individual curation (except the final one) has manually defined new unit ids,
+    and that these match the unit ids of the following curation.
+    """
+
+    curation_steps: List[Curation] = Field(description="List of curation steps applied sequentially")
+
+    @model_validator(mode="after")
+    def validate_sequential_curation(self):
+
+        for curation in self.curation_steps[:-1]:
+            for merge in curation.merges:
+                if merge.new_unit_id is None:
+                    raise ValueError(
+                        "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
+                    )
+            for split in curation.splits:
+                if split.new_unit_ids is None:
+                    raise ValueError(
+                        "In a sequential curation, all curation decisions must have explicit `new_unit_id`s defined."
+                    )
+
+        for curation_index in range(len(self.curation_steps))[:-1]:
+
+            curation_1 = self.curation_steps[curation_index]
+            curation_2 = self.curation_steps[curation_index + 1]
+
+            previous_model_final_ids = curation_1.get_final_ids_from_new_unit_ids()
+            next_model_initial_ids = curation_2.unit_ids
+
+            if not (set(previous_model_final_ids) == set(next_model_initial_ids)):
+                raise ValueError(
+                    f"The initial unit_ids of curation {curation_index+1} do not match the final unit_ids of curation {curation_index}."
+                )
 
         return self

@@ -8,3 +8,4 @@ from .template_metrics import (
     get_default_template_metrics_params,
     get_default_tm_params,
 )
+from .metrics import get_trough_and_peak_idx

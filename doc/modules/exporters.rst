@@ -12,9 +12,11 @@ and behavioral data. It can be used to decode behavior, make tuning curves, comp
 The :py:func:`~spikeinterface.exporters.to_pynapple_tsgroup` function allows you to convert a
 SortingAnalyzer to Pynapple's ``TsGroup`` object on the fly.
 
-**Note** : When creating the ``TsGroup``, we will use the underlying time support of the SortingAnalyzer.
-How this works depends on your acquisition system. You can use the ``get_times`` method on a recording
-(``my_recording.get_times()``) to find the time support of your recording.
+.. note::
+
+    When creating the ``TsGroup``, we will use the underlying time support of the SortingAnalyzer.
+    How this works depends on your acquisition system. You can use the ``get_times`` method on a recording
+    (``my_recording.get_times()``) to find the time support of your recording.
 
 When constructed, if ``attach_unit_metadata`` is set to ``True``, any relevant unit information
 is propagated to the ``TsGroup``. The ``to_pynapple_tsgroup`` checks if unit locations, quality
@@ -54,13 +56,15 @@ The :py:func:`~spikeinterface.exporters.export_to_phy` function allows you to us
 `Phy template GUI <https://github.com/cortex-lab/phy>`_ for visual inspection and manual curation of spike sorting
 results.
 
-**Note** : :py:func:`~spikeinterface.exporters.export_to_phy` speed and the size of the folder will highly depend
-on the sparsity of the :code:`SortingAnalyzer` itself or the external specified sparsity.
-The Phy viewer enables one to explore PCA projections, spike amplitudes, waveforms and quality of spike sorting results.
-So if these pieces of information have already been computed as extensions (see :ref:`modules/postprocessing:Extensions as AnalyzerExtensions`),
-then exporting to Phy should be fast (and the user has better control of the parameters for the extensions).
-If not pre-computed, then the required extensions (e.g., :code:`spike_amplitudes`, :code:`principal_components`)
-can be computed directly at export time.
+.. note::
+
+    :py:func:`~spikeinterface.exporters.export_to_phy` speed and the size of the folder will highly depend
+    on the sparsity of the :code:`SortingAnalyzer` itself or the external specified sparsity.
+    The Phy viewer enables one to explore PCA projections, spike amplitudes, waveforms and quality of spike sorting results.
+    So if these pieces of information have already been computed as extensions (see :ref:`modules/postprocessing:Extensions as AnalyzerExtensions`),
+    then exporting to Phy should be fast (and the user has better control of the parameters for the extensions).
+    If not pre-computed, then the required extensions (e.g., :code:`spike_amplitudes`, :code:`principal_components`)
+    can be computed directly at export time.
 
 The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`SortingAnalyzer` object.
 
@@ -131,12 +135,14 @@ The report includes summary figures of the spike sorting output (e.g. amplitude 
 depth VS amplitude) as well as unit-specific reports, that include waveforms, templates, template maps,
 ISI distributions, and more.
 
-**Note** : similarly to :py:func:`~spikeinterface.exporters.export_to_phy` the
-:py:func:`~spikeinterface.exporters.export_report` depends on the sparsity of the :code:`SortingAnalyzer` itself and
-on which extensions have been computed. For example, :code:`spike_amplitudes` and :code:`correlograms` related plots
-will be automatically included in the report if the associated extensions are computed in advance.
-The function can perform these computations as well, but it is a better practice to compute everything that's needed
-beforehand.
+.. note::
+
+    Similarly to :py:func:`~spikeinterface.exporters.export_to_phy` the
+    :py:func:`~spikeinterface.exporters.export_report` depends on the sparsity of the :code:`SortingAnalyzer` itself and
+    on which extensions have been computed. For example, :code:`spike_amplitudes` and :code:`correlograms` related plots
+    will be automatically included in the report if the associated extensions are computed in advance.
+    The function can perform these computations as well, but it is a better practice to compute everything that's needed
+    beforehand.
 
 Note that every unit will generate a summary unit figure, so the export process can be slow for spike sorting outputs
 with many units!

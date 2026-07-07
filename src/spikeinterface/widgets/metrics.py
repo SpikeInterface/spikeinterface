@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 import warnings
 import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
+
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.curation.curation_tools import is_threshold_disabled
 
 
 class MetricsBaseWidget(BaseWidget):
@@ -28,7 +28,7 @@ class MetricsBaseWidget(BaseWidget):
         Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
         by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     hide_unit_selector : bool, default: False
-        For sortingview backend, if True the unit selector is not displayed
+        For figpack backend, if True the unit selector is not displayed
     include_metrics_data : bool, default: True
         If True, metrics data are included in unit table
     """
@@ -258,8 +258,18 @@ class MetricsBaseWidget(BaseWidget):
         self.figure.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
@@ -275,7 +285,7 @@ class MetricsBaseWidget(BaseWidget):
         metrics_sv = []
         for col in metric_names:
             dtype = np.array(metrics.iloc[0][col]).dtype
-            metric = vv.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
+            metric = vv_views.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
             metrics_sv.append(metric)
 
         units_m = []
@@ -290,8 +300,8 @@ class MetricsBaseWidget(BaseWidget):
                     continue
                 values_skip_nans[k] = v
 
-            units_m.append(vv.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans))
-        v_metrics = vv.UnitMetricsGraph(units=units_m, metrics=metrics_sv)
+            units_m.append(vv_views.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans))
+        v_metrics = vv_views.UnitMetricsGraph(units=units_m, metrics=metrics_sv)
 
         if not dp.hide_unit_selector:
             if dp.include_metrics_data:
@@ -301,14 +311,148 @@ class MetricsBaseWidget(BaseWidget):
                     if col not in sorting_copy.get_property_keys():
                         sorting_copy.set_property(col, metrics[col].values)
                 # generate table with properties
-                v_units_table = generate_unit_table_view(sorting_copy, unit_properties=metric_names)
+                v_units_table = generate_unit_table_view(
+                    sorting_copy, unit_properties=metric_names, use_sortingview=use_sortingview
+                )
             else:
-                v_units_table = generate_unit_table_view(dp.sorting)
+                v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Splitter(
-                direction="horizontal", item1=vv.LayoutItem(v_units_table), item2=vv.LayoutItem(v_metrics)
+            self.view = vv_base.Splitter(
+                direction="horizontal", item1=vv_base.LayoutItem(v_units_table), item2=vv_base.LayoutItem(v_metrics)
             )
         else:
             self.view = v_metrics
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
+
+
+class MetricsHistogramsWidget(BaseWidget):
+    """Plot histograms of metrics with threshold lines.
+
+    Parameters
+    ----------
+    sorting_analyzer : SortingAnalyzer
+        A SortingAnalyzer object with quality_metrics and/or template_metrics extensions computed.
+    thresholds : dict, optional
+        Dictionary of metric thresholds. Can be a flat dict with metric names as keys and dicts with 'greater' and/or 'less'
+        as values, or a nested dict where top-level keys are different categories. Optionally, an "abs": True entry
+        can be included in each metric's dict to indicate that the metric should be treated as an absolute value when
+        applying thresholds. If None, default thresholds from `bombcell_get_default_thresholds` will be used.
+    metrics_to_plot : list, default: None
+        List of metric names to plot. If None, all metrics with thresholds will be plotted.
+    """
+
+    def __init__(
+        self,
+        sorting_analyzer,
+        thresholds: dict | None = None,
+        metrics_to_plot: list | None = None,
+        backend=None,
+        **backend_kwargs,
+    ):
+        from spikeinterface.curation import bombcell_get_default_thresholds
+
+        sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
+        combined_metrics = sorting_analyzer.get_metrics_extension_data()
+        if combined_metrics.empty:
+            raise ValueError(
+                "SortingAnalyzer has no metrics extensions computed. "
+                "Compute quality_metrics and/or template_metrics first."
+            )
+
+        if thresholds is None:
+            thresholds = bombcell_get_default_thresholds()
+
+        assert isinstance(thresholds, dict), (
+            "Thresholds should be provided as a dictionary (optionally nested) with metric names as keys and dicts "
+            "with 'greater' and/or 'less' as values."
+        )
+        # Flatten thresholds for easier access (if subdicts are present).
+        # We check if all entries have a "greater" or "less" key to determine if it's a nested dict of metrics or a flat dict.
+        if all(isinstance(value, dict) and ("greater" in value or "less" in value) for value in thresholds.values()):
+            flat_thresholds = thresholds
+        else:
+            flat_thresholds = {}
+            for category, subdict in thresholds.items():
+                assert isinstance(subdict, dict), "Each category in thresholds should be a dict of metric thresholds."
+                for metric_name, thresh in subdict.items():
+                    assert isinstance(thresh, dict) and (
+                        "greater" in thresh or "less" in thresh
+                    ), "Each threshold entry should be a dict with 'greater' and/or 'less' keys."
+                    flat_thresholds[metric_name] = thresh
+
+        if metrics_to_plot is None:
+            metrics_to_plot = [m for m in flat_thresholds.keys() if m in combined_metrics.columns]
+
+        plot_data = dict(
+            metrics=combined_metrics,
+            thresholds=flat_thresholds,
+            metrics_to_plot=metrics_to_plot,
+        )
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        from .utils_matplotlib import make_mpl_figure
+        import matplotlib.pyplot as plt
+
+        dp = to_attr(data_plot)
+        metrics = dp.metrics
+        thresholds = dp.thresholds
+        metrics_to_plot = dp.metrics_to_plot
+
+        n_metrics = len(metrics_to_plot)
+        if n_metrics == 0:
+            print("No metrics to plot")
+            return
+
+        n_cols = min(4, n_metrics)
+        n_rows = int(np.ceil(n_metrics / n_cols))
+        backend_kwargs["ncols"] = n_cols
+        backend_kwargs["num_axes"] = n_cols * n_rows
+        if "figsize" not in backend_kwargs:
+            backend_kwargs["figsize"] = (4 * n_cols, 3 * n_rows)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        colors = plt.cm.tab10(np.linspace(0, 1, 10))
+
+        axes = self.axes
+        for idx, metric_name in enumerate(metrics_to_plot):
+            row, col = idx // n_cols, idx % n_cols
+            ax = axes[row, col]
+
+            values = metrics[metric_name].values
+            abs_value = thresholds.get(metric_name, {}).get("abs", False)
+            if abs_value:
+                values = np.abs(values)
+            values = values[~np.isnan(values) & ~np.isinf(values)]
+
+            if len(values) == 0:
+                ax.set_title(f"{metric_name}\n(no valid data)")
+                continue
+
+            ax.hist(values, bins=30, color=colors[idx % 10], alpha=0.7, edgecolor="black", density=True)
+
+            thresh = thresholds.get(metric_name, {})
+            has_thresh = False
+            if not is_threshold_disabled(thresh.get("greater", None)):
+                value = float(thresh["greater"])
+                label = f">={int(value)}" if value.is_integer() else f">={value:.2f}"
+                ax.axvline(value, color="red", ls="--", lw=2, label=label)
+                has_thresh = True
+            if not is_threshold_disabled(thresh.get("less", None)):
+                value = float(thresh["less"])
+                label = f"<={int(value)}" if value.is_integer() else f"<={value:.2f}"
+                ax.axvline(value, color="blue", ls="--", lw=2, label=label)
+                has_thresh = True
+
+            ax.set_xlabel(metric_name)
+            ax.set_ylabel("Density")
+            if has_thresh:
+                ax.legend(fontsize=8, loc="upper right")
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
+        for idx in range(len(metrics_to_plot), n_rows * n_cols):
+            axes[idx // n_cols, idx % n_cols].set_visible(False)
+
+        self.figure.subplots_adjust(hspace=0.4, wspace=0.3)

@@ -17,8 +17,11 @@ from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     _sort_extensions_by_dependency,
 )
+from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
-import numpy as np
+# to test basespikevectorextension with node pipeline
+from spikeinterface.core.node_pipeline import SpikeRetriever
+from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
 
 
 def get_dataset():
@@ -32,13 +35,6 @@ def get_dataset():
         seed=2205,
     )
 
-    # TODO: the tests or the sorting analyzer make assumptions about the ids being integers
-    # So keeping this the way it was
-    integer_channel_ids = [int(id) for id in recording.get_channel_ids()]
-    integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
-
-    recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
-    sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
 
@@ -49,6 +45,16 @@ def dataset():
 
 def test_SortingAnalyzer_memory(tmp_path, dataset):
     recording, sorting = dataset
+
+    # The sorting contain already main_channel_ids
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    main_channel_ids = sorting.get_property("main_channel_id")
+    main_channel_indices = recording.ids_to_indices(main_channel_ids)
+
+    assert np.array_equal(sorting_analyzer.get_main_channels(), main_channel_indices)
+
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -72,6 +78,15 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     assert "quality" in sorting_analyzer.sorting.get_property_keys()
     assert "number" in sorting_analyzer.sorting.get_property_keys()
 
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # Create when main_channel_indices is not given : this is estimated
+    sorting2 = sorting.clone()
+    sorting2._properties.pop("main_channel_id")
+    sorting_analyzer = create_sorting_analyzer(sorting2, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
+
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
@@ -90,7 +105,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
     assert len(select_units_sorting_analyer.unit_ids) == 1
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
@@ -144,9 +159,9 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
     assert len(select_units_sorting_analyer.unit_ids) == 1
-    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=[1])
+    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=["1"])
     assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
     assert 1 not in remove_units_sorting_analyer.unit_ids
 
@@ -207,9 +222,12 @@ def test_create_by_dict():
     Interally, this aggregates the dicts of recordings and sortings. This test checks that the
     unit structure is maintained from the dicts to the analyzer. Then checks that the function
     fails if the dict keys are different for the recordings and the sortings.
+
+    Note, in this tests sparse is False because units are randomlly assign to differents of the
+    recording and they can have no channels
     """
 
-    rec, sort = generate_ground_truth_recording(num_channels=6)
+    rec, sort = generate_ground_truth_recording(num_channels=6, seed=2205)
 
     rec.set_property(key="group", values=[1, 2, 1, 1, 2, 2])
     sort.set_property(key="group", values=[2, 2, 2, 1, 2, 2, 2, 1, 2, 1])
@@ -217,7 +235,7 @@ def test_create_by_dict():
     unit_ids = sort.unit_ids
     split_sort = sort.split_by("group")
     split_rec = rec.split_by("group")
-    analyzer = create_sorting_analyzer(split_sort, split_rec)
+    analyzer = create_sorting_analyzer(split_sort, split_rec, sparse=False)
     analyzer_unit_ids = analyzer.unit_ids
 
     assert set(analyzer.unit_ids) == set(sort.unit_ids)
@@ -233,7 +251,7 @@ def test_create_by_dict():
     }
 
     with pytest.raises(ValueError):
-        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"))
+        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"), sparse=False)
 
     # make a dict of sortings, in a different order than the recording. This should
     # still work
@@ -241,7 +259,7 @@ def test_create_by_dict():
         2: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 2]),
         1: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 1]),
     }
-    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"))
+    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"), sparse=False)
     assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
 
@@ -315,7 +333,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     probegroup.add_probe(probe2)
     probegroup.set_global_device_channel_indices(np.random.permutation(num_channels))
 
-    recording = recording.set_probegroup(probegroup)
+    recording.set_probegroup(probegroup)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     # check that locations are correct
@@ -346,7 +364,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert ext is None
 
     assert sorting_analyzer.has_recording()
-
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -433,10 +450,10 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], format=format, folder=folder, return_new_unit_ids=True
+            merge_unit_groups=[["0", "1"]], format=format, folder=folder, return_new_unit_ids=True
         )
-        assert 0 not in sorting_analyzer4.unit_ids
-        assert 1 not in sorting_analyzer4.unit_ids
+        assert "0" not in sorting_analyzer4.unit_ids
+        assert "1" not in sorting_analyzer4.unit_ids
         assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
         is_merged_values = sorting_analyzer4.sorting.get_property("is_merged")
         assert is_merged_values[sorting_analyzer4.sorting.ids_to_indices(new_unit_ids)][0]
@@ -451,19 +468,19 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer5, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]],
-            new_unit_ids=[50],
+            merge_unit_groups=[["0", "1"]],
+            new_unit_ids=["50"],
             format=format,
             folder=folder,
             merging_mode="hard",
             return_new_unit_ids=True,
         )
-        assert 0 not in sorting_analyzer5.unit_ids
-        assert 1 not in sorting_analyzer5.unit_ids
+        assert "0" not in sorting_analyzer5.unit_ids
+        assert "1" not in sorting_analyzer5.unit_ids
         assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
-        assert 50 in sorting_analyzer5.unit_ids
+        assert "50" in sorting_analyzer5.unit_ids
         is_merged_values = sorting_analyzer5.sorting.get_property("is_merged")
-        assert is_merged_values[sorting_analyzer5.sorting.id_to_index(50)]
+        assert is_merged_values[sorting_analyzer5.sorting.id_to_index("50")]
 
         # test splitting
         if format != "memory":
@@ -571,7 +588,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_data["result_three"][unit_ind] = arr[keep_unit_index]
             else:
-                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                id = list(new_unit_ids).index(unit_id)
                 keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_groups[id])
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
@@ -590,6 +607,41 @@ class DummyAnalyzerExtension(AnalyzerExtension):
 
 
 compute_dummy = DummyAnalyzerExtension.function_factory()
+
+
+class DummyPipelineAnalyzerExtension(BaseSpikeVectorExtension):
+    extension_name = "dummy_pipeline"
+    depend_on = ["templates"]
+    need_recording = True
+    use_nodepipeline = True
+    nodepipeline_variables = ["amp"]
+
+    @classmethod
+    def get_required_dependencies(cls, **params):
+        param0 = params.get("param0", 5.5)
+        if param0 > 10:
+            return ["dummy"]
+        else:
+            return []
+
+    def _set_params(self, param0=5.5):
+        params = dict(param0=param0)
+        return params
+
+    def _get_pipeline_nodes(self):
+
+        recording = self.sorting_analyzer.recording
+        sorting = self.sorting_analyzer.sorting
+
+        spike_retriever_node = SpikeRetriever(sorting, recording, channel_from_template=True)
+        spike_amplitudes_node = AmplitudeExtractionNode(
+            recording,
+            parents=[spike_retriever_node],
+            return_output=True,
+            param0=self.params["param0"],
+        )
+        nodes = [spike_retriever_node, spike_amplitudes_node]
+        return nodes
 
 
 class DummyAnalyzerExtension2(AnalyzerExtension):
@@ -640,6 +692,38 @@ def test_extensions_sorting():
     assert list(sorted_extensions_4.keys()) == list(extensions_qm_correct.keys())
 
 
+def test_runtime_dependencies(dataset):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+
+    # param0 <=10 : no dependency
+    deps = DummyPipelineAnalyzerExtension.get_required_dependencies(param0=5)
+    assert deps == []
+
+    # param0 >10 : depend on dummy
+    deps = DummyPipelineAnalyzerExtension.get_required_dependencies(param0=15)
+    assert deps == ["dummy"]
+
+    register_result_extension(DummyPipelineAnalyzerExtension)
+    register_result_extension(DummyAnalyzerExtension)
+
+    sorting_analyzer.compute(["random_spikes", "templates"])
+    # no dependency
+    sorting_analyzer.compute("dummy_pipeline", param0=5)
+
+    # raise if dependency not computed
+    with pytest.raises(AssertionError):
+        sorting_analyzer.compute("dummy_pipeline", param0=15)
+
+    # run fine if dependency computed
+    sorting_analyzer.compute(["dummy", "dummy_pipeline"], extension_params=dict(dummy_pipeline=dict(param0=11)))
+
+    # check deletion dependency: since now dummy_pipeline depends on dummy,
+    # recomputing dummy also deletes dummy_pipeline
+    sorting_analyzer.compute("dummy")
+    assert not sorting_analyzer.has_extension("dummy_pipeline")
+
+
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()
@@ -648,5 +732,5 @@ if __name__ == "__main__":
     test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
-    test_SortingAnalyzer_merge_all_extensions()
     test_extension_params()
+    test_runtime_dependencies(dataset)

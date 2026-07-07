@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Iterable, Union
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -49,7 +47,7 @@ class GaussianFilterRecording(BasePreprocessor):
         if freq_min is None and freq_max is None:
             raise ValueError("At least one of `freq_min`,`freq_max` should be specified.")
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             # Sampling frequency is taken from recording since segments may not have it set (in case of time_vector)
             self.add_recording_segment(
                 GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max, margin_sd, self.sampling_frequency)
@@ -85,9 +83,9 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[Iterable, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: Iterable | None = None,
     ):
         traces, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,

@@ -4,9 +4,15 @@ but check only for BaseRecording general methods.
 """
 
 from typing import Sequence
+
 import numpy as np
+
+from spikeinterface.core import (
+    concatenate_recordings,
+    generate_ground_truth_recording,
+    generate_recording,
+)
 from spikeinterface.core.base import BaseExtractor
-from spikeinterface.core import generate_recording, generate_ground_truth_recording, concatenate_recordings
 
 
 class DummyDictExtractor(BaseExtractor):
@@ -23,7 +29,8 @@ def make_nested_extractors(extractor):
         [extractor_with_parent_list, extractor_with_parent_list]
     )
     extractor_with_parent_dict = DummyDictExtractor(
-        main_ids=extractor._main_ids, base_dicts=dict(a=extractor, b=extractor, c=extractor)
+        main_ids=extractor._main_ids,
+        base_dicts=dict(a=extractor, b=extractor, c=extractor),
     )
     return (
         extractor_wih_parent,
@@ -143,4 +150,4 @@ def test_setting_properties_with_custom_missing_value():
 
 if __name__ == "__main__":
     test_check_if_memory_serializable()
-    test_check_if_serializable()
+    # test_check_if_serializable()

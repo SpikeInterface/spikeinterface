@@ -10,7 +10,6 @@ from spikeinterface.sortingcomponents.matching.method_list import matching_metho
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-
 # job_kwargs = dict(n_jobs=-1, chunk_duration="500ms", progress_bar=True)
 job_kwargs = dict(n_jobs=1, chunk_duration="500ms", progress_bar=True)
 

@@ -1,25 +1,68 @@
-from __future__ import annotations
-from typing import Optional
+from typing import Literal
+import importlib.util
+
 import numpy as np
-from spikeinterface import SortingAnalyzer
 
-
-try:
+if importlib.util.find_spec("numba") is not None:
     import numba
 
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 _methods = ("keep_first", "random", "keep_last", "keep_first_iterative", "keep_last_iterative")
 _methods_numpy = ("keep_first", "random", "keep_last")
 
 
+def is_threshold_disabled(value):
+    """Check if a threshold value is disabled (None or np.nan)."""
+    if value is None:
+        return True
+    if isinstance(value, float) and np.isnan(value):
+        return True
+    return False
+
+
+def get_labeling_summary(unit_labels: np.ndarray, possible_labels=None) -> dict:
+    """Get counts and percentages for each unit label.
+
+    Parameters
+    ----------
+    unit_labels : np.ndarray
+        Array of unit labels (strings).
+    possible_labels : list of str, optional
+        List of possible labels to include in the summary. If None, all unique labels in unit_labels are used.
+
+    Returns
+    -------
+    summary : dict
+        Dictionary with total_units, counts, and percentages for each label.
+    """
+    n_total = len(unit_labels)
+    unique_labels, counts = np.unique(unit_labels, return_counts=True)
+    if possible_labels is None:
+        possible_labels = unique_labels
+    else:
+        # check all unique labels are in possible_labels
+        for label in unique_labels:
+            if label not in possible_labels:
+                raise ValueError(f"Label {label} not in possible_labels")
+
+    empty_label_dict = {label: 0 for label in possible_labels}
+
+    summary = {"total_units": n_total, "counts": empty_label_dict.copy(), "percentages": empty_label_dict.copy()}
+    for label, count in zip(unique_labels, counts):
+        summary["counts"][label] = int(count)
+        summary["percentages"][label] = round(100 * count / n_total, 1)
+
+    return summary
+
+
 def _find_duplicated_spikes_numpy(
     spike_train: np.ndarray,
     censored_period: int,
-    seed: Optional[int] = None,
-    method: "keep_first" | "random" | "keep_last" = "keep_first",
+    seed: int | None = None,
+    method: Literal["keep_first", "random", "keep_last"] = "keep_first",
 ) -> np.ndarray:
     (indices_of_duplicates,) = np.where(np.diff(spike_train) <= censored_period)
 
@@ -62,42 +105,42 @@ if HAVE_NUMBA:
 
     @numba.jit(nopython=True, nogil=True, cache=False)
     def _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period):
-        indices_of_duplicates = numba.typed.List()
         N = len(spike_train)
+        is_duplicate = np.zeros(N, dtype=np.bool_)
 
         for i in range(N - 1):
-            if i in indices_of_duplicates:
+            if is_duplicate[i]:
                 continue
 
             for j in range(i + 1, N):
                 if spike_train[j] - spike_train[i] > censored_period:
                     break
-                indices_of_duplicates.append(j)
+                is_duplicate[j] = True
 
-        return np.asarray(indices_of_duplicates)
+        return np.nonzero(is_duplicate)[0]
 
-    @numba.jit(nopython=True, nogil=True, cache=True)
+    @numba.jit(nopython=True, nogil=True, cache=False)
     def _find_duplicated_spikes_keep_last_iterative(spike_train, censored_period):
-        indices_of_duplicates = numba.typed.List()
         N = len(spike_train)
+        is_duplicate = np.zeros(N, dtype=np.bool_)
 
         for i in range(N - 1, 0, -1):
-            if i in indices_of_duplicates:
+            if is_duplicate[i]:
                 continue
 
             for j in range(i - 1, -1, -1):
                 if spike_train[i] - spike_train[j] > censored_period:
                     break
-                indices_of_duplicates.append(j)
+                is_duplicate[j] = True
 
-        return np.asarray(indices_of_duplicates)
+        return np.nonzero(is_duplicate)[0]
 
 
 def find_duplicated_spikes(
     spike_train,
     censored_period: int,
-    method: "keep_first" | "keep_last" | "keep_first_iterative" | "keep_last_iterative" | "random" = "random",
-    seed: Optional[int] = None,
+    method: Literal["keep_first", "keep_last", "keep_first_iterative", "keep_last_iterative", "random"] = "random",
+    seed: int | None = None,
 ) -> np.ndarray:
     """
     Finds the indices where spikes should be considered duplicates.

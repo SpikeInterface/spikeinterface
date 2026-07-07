@@ -1,15 +1,11 @@
 from .si_based import ComponentsBasedSorter
 
-from spikeinterface.core import load_extractor, BaseRecording, get_noise_levels, extract_waveforms, NumpySorting
+from spikeinterface.core import BaseRecording, get_noise_levels, extract_waveforms, NumpySorting
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.tools import cache_preprocessing
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 import numpy as np
-
-
-import pickle
-import json
 
 
 class SimpleSorter(ComponentsBasedSorter):
@@ -106,7 +102,7 @@ class SimpleSorter(ComponentsBasedSorter):
         )
 
         if verbose:
-            print("Simple sorter found %d peaks in total" % len(peaks))
+            print(f"Simple sorter found {len(peaks)} peaks in total")
 
         # features with SVD
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(

@@ -1,11 +1,10 @@
-from __future__ import annotations
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
+import shutil
+import warnings
 
 import numpy as np
 import numpy.typing as npt
-import shutil
-import warnings
 
 from spikeinterface.core import (
     write_binary_recording,
@@ -132,7 +131,7 @@ def export_to_phy(
     if dtype is None:
         dtype = sorting_analyzer.get_dtype()
 
-    if sorting_analyzer.has_recording():
+    if sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
             write_binary_recording(sorting_analyzer.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)

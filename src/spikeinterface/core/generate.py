@@ -1,19 +1,18 @@
-from __future__ import annotations
 import math
 import warnings
 import numpy as np
 from typing import Literal, Optional
 from math import ceil
 
+from .base import minimum_spike_dtype
 from .basesorting import SpikeVectorSortingSegment
 from .numpyextractors import NumpySorting
-from .basesorting import minimum_spike_dtype
 
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from .snippets_tools import snippets_from_sorting
-from .core_tools import define_function_from_class
+from .core_tools import define_function_from_class, ms_to_samples
 
 
 def _ensure_seed(seed):
@@ -32,6 +31,7 @@ def generate_recording(
     durations: list[float] = [5.0, 2.5],
     set_probe: bool | None = True,
     ndim: int | None = 2,
+    t_starts: list[float] | None = None,
     seed: int | None = None,
 ) -> BaseRecording:
     """
@@ -51,6 +51,9 @@ def generate_recording(
         If true, attaches probe to the returned `Recording`
     ndim : int, default: 2
         The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probe.
+    t_starts : list[float] | None, default: None
+        The start time of each segment in seconds. If provided, must have the same
+        length as `durations`.
     seed : int | None, default: None
         A seed for the np.ramdom.default_rng function
 
@@ -61,16 +64,20 @@ def generate_recording(
     """
     seed = _ensure_seed(seed)
 
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
         dtype="float32",
         seed=seed,
-        strategy="tile_pregenerated",
         # block size is fixed to one second
         noise_block_size=int(sampling_frequency),
     )
+
+    if t_starts is not None:
+        assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
+        for segment_index, t_start in enumerate(t_starts):
+            recording.segments[segment_index].t_start = t_start
 
     recording.annotate(is_filtered=True)
 
@@ -79,7 +86,7 @@ def generate_recording(
         if ndim == 3:
             probe = probe.to_3d()
         probe.set_device_channel_indices(np.arange(num_channels))
-        recording.set_probe(probe, in_place=True)
+        recording.set_probe(probe)
 
     recording.name = "SyntheticRecording"
 
@@ -96,6 +103,7 @@ def generate_sorting(
     add_spikes_on_borders=False,
     num_spikes_per_border=3,
     border_size_samples=20,
+    t_starts=None,
     seed=None,
 ):
     """
@@ -123,6 +131,9 @@ def generate_sorting(
         The number of spikes to add close to the borders of the segments.
     border_size_samples : int, default: 20
         The size of the border in samples to add border spikes.
+    t_starts : list[float] | None, default: None
+        The start time of each segment in seconds. If provided, must have the same
+        length as `durations`.
     seed : int, default: None
         The random seed.
 
@@ -157,7 +168,6 @@ def generate_sorting(
         spikes_in_seg["sample_index"] = samples
         spikes_in_seg["unit_index"] = labels
         spikes_in_seg["segment_index"] = segment_index
-        spikes.append(spikes_in_seg)
 
         if add_spikes_on_borders:
             spikes_on_borders = np.zeros(2 * num_spikes_per_border, dtype=minimum_spike_dtype)
@@ -171,12 +181,24 @@ def generate_sorting(
             spikes_on_borders["sample_index"][num_spikes_per_border:] = rng.integers(
                 num_samples - border_size_samples, num_samples, num_spikes_per_border
             )
-            spikes.append(spikes_on_borders)
+            spikes_in_seg = np.concatenate([spikes_in_seg, spikes_on_borders])
+            order = np.argsort(spikes_in_seg["sample_index"], stable=True)
+            spikes_in_seg = spikes_in_seg[order]
+
+        spikes.append(spikes_in_seg)
 
     spikes = np.concatenate(spikes)
-    spikes = spikes[np.lexsort((spikes["sample_index"], spikes["segment_index"]))]
+    # the spikes do not need a full lexsort because synthesize_poisson_spike_vector() guarantees spikes will be sorted already
+    # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+    if t_starts is not None:
+        assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
+        for segment_index, t_start in enumerate(t_starts):
+            segment = sorting.segments[segment_index]
+            segment._t_start = float(t_start)
+            segment._native_t_start = float(t_start)
 
     return sorting
 
@@ -334,8 +356,8 @@ class TransformSorting(BaseSorting):
     def __init__(
         self,
         sorting: BaseSorting,
-        added_spikes_existing_units: np.array | None = None,
-        added_spikes_new_units: np.array | None = None,
+        added_spikes_existing_units: np.ndarray | None = None,
+        added_spikes_new_units: np.ndarray | None = None,
         new_unit_ids: list[str | int] | None = None,
         refractory_period_ms: float | None = None,
     ):
@@ -522,9 +544,9 @@ class TransformSorting(BaseSorting):
         ----------
         sorting1 : BaseSorting
             The first sorting
-        times_list : list[np.array] | np.array
+        times_list : list[np.array] | np.ndarray
             An array of spike times (in frames).
-        labels_list : list[np.array] | np.array
+        labels_list : list[np.array] | np.ndarray
             An array of spike labels corresponding to the given times.
         sampling_frequency : float, default: 30000.0
             The sampling frequency of the recording in Hz.
@@ -657,7 +679,7 @@ def generate_snippets(
 
     if set_probe:
         probe = recording.get_probe()
-        snippets = snippets.set_probe(probe)
+        snippets.set_probe(probe)
 
     return snippets, sorting
 
@@ -781,7 +803,9 @@ def synthesize_poisson_spike_vector(
 
     # Sort globaly
     spike_frames = spike_frames[:num_correct_frames]
-    sort_indices = np.argsort(spike_frames, kind="stable")  # I profiled the different kinds, this is the fastest.
+    # the `stable` is important because this guarantees result is equivalent to
+    # np.lexsort((unit_indices, spike_frames, ))
+    sort_indices = np.argsort(spike_frames, stable=True)
 
     unit_indices = unit_indices[sort_indices]
     spike_frames = spike_frames[sort_indices]
@@ -870,7 +894,7 @@ def synthesize_random_firings(
     times = np.concatenate(times)
     labels = np.concatenate(labels)
 
-    sort_inds = np.argsort(times)
+    sort_inds = np.argsort(times, stable=True)
     times = times[sort_inds]
     labels = labels[sort_inds]
 
@@ -927,7 +951,9 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     """
     rng = np.random.default_rng(seed)
 
-    other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
+    other_ids = np.arange(
+        np.max(sorting.unit_ids.astype(int)) + 1, np.max(sorting.unit_ids.astype(int)) + num + 1
+    ).astype(sorting.unit_ids.dtype)
     shifts = rng.integers(low=-max_shift, high=max_shift, size=num)
 
     shifts[shifts == 0] += max_shift
@@ -989,12 +1015,20 @@ def inject_some_split_units(sorting, split_ids: list, num_split=2, output_ids=Fa
         The dictionary with the split unit_ids. Returned only if output_ids is True.
     """
     unit_ids = sorting.unit_ids
-    assert unit_ids.dtype.kind == "i"
 
-    m = np.max(unit_ids) + 1
+    unit_ids_integer = unit_ids.dtype.kind == "i"
+    if not unit_ids_integer:
+        assert np.char.isdigit(unit_ids.astype(str)).all(), "Not all Unit IDs are parsable as integers"
+
+    integer_unit_ids = unit_ids.astype(int)
+
+    m = np.max(integer_unit_ids) + 1
     other_ids = {}
     for unit_id in split_ids:
-        other_ids[unit_id] = np.arange(m, m + num_split, dtype=unit_ids.dtype)
+        new_ids = np.arange(m, m + num_split).astype(int)
+        if not unit_ids_integer:
+            new_ids = [str(new_id) for new_id in new_ids]
+        other_ids[unit_id] = new_ids
         m += num_split
 
     rng = np.random.default_rng(seed)
@@ -1054,6 +1088,22 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     return spike_train
 
 
+def synthesize_amplitude_factor(
+    num_spikes: int,
+    amplitude_factor: np.ndarray | None = None,
+    amplitude_std: float | None = None,
+    seed: np.random.Generator | int | None = None,
+):
+    if amplitude_factor is not None:
+        assert amplitude_factor.shape == (num_spikes,)
+        return amplitude_factor
+    elif amplitude_std:
+        rng = np.random.default_rng(seed)
+        return rng.normal(loc=1, scale=amplitude_std, size=num_spikes)
+    else:
+        return None
+
+
 from spikeinterface.core.basesorting import BaseSortingSegment, BaseSorting
 
 
@@ -1062,7 +1112,7 @@ class SortingGenerator(BaseSorting):
         self,
         num_units: int = 20,
         sampling_frequency: float = 30_000.0,  # in Hz
-        durations: List[float] = [10.325, 3.5],  #  in s for 2 segments
+        durations: list[float] = [10.325, 3.5],  #  in s for 2 segments
         firing_rates: float | np.ndarray = 3.0,
         refractory_period_ms: float | np.ndarray = 4.0,  # in ms
         seed: int = 0,
@@ -1228,16 +1278,20 @@ class SortingGeneratorSegment(BaseSortingSegment):
 
 
 ## Noise generator zone ##
-class NoiseGeneratorRecording(BaseRecording):
+class MockRecording(BaseRecording):
     """
-    A lazy recording that generates white noise samples if and only if `get_traces` is called.
+    A lazy recording that generates unit-variance white noise samples if and only if `get_traces` is called.
 
-    This done by tiling small noise chunk.
+    This is a lightweight testing utility for infrastructure tests, memory profiling, and benchmarks.
+    For noise with spatial correlations or per-channel noise levels, use
+    ``spikeinterface.generation.NoiseGeneratorRecording``.
+
+    Noise is generated by pre-allocating a single noise block and tiling it across the requested
+    frame range. This is reproducible across different start/end frame calls with the same seed.
 
     2 strategies to be reproducible across different start/end frame calls:
       * "tile_pregenerated": pregenerate a small noise block and tile it depending the start_frame/end_frame
       * "on_the_fly": generate on the fly small noise chunk and tile then. seed depend also on the noise block.
-
 
     Parameters
     ----------
@@ -1247,26 +1301,19 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : list[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    noise_levels : float | np.array, default: 1.0
-        Std of the white noise (if an array, defined by per channels)
-    cov_matrix : np.array | None, default: None
-        The covariance matrix of the noise
     dtype : np.dtype | str | None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
         The seed for np.random.default_rng.
     strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
-        The strategy of generating noise chunk:
-          * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
-                                 very fast and cusume only one noise block.
-          * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
-                          no memory preallocation but a bit more computaion (random)
+        The strategy of generating noise chunk.
+        # TODO: Remove on_the_fly strategy after discussion, see #4522.
     noise_block_size : int, default: 30000
-        Size in sample of noise block.
+        Size in samples of the pre-generated noise block.
 
     Notes
     -----
-    If modifying this function, ensure that only one call to malloc is made per call get_traces to
+    If modifying this class, ensure that only one call to malloc is made per call to get_traces to
     maintain the optimized memory profile.
     """
 
@@ -1275,37 +1322,21 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: list[float],
-        noise_levels: float | np.array = 1.0,
-        cov_matrix: np.array | None = None,
         dtype: np.dtype | str | None = "float32",
         seed: int | None = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
 
-        channel_ids = [str(idx) for idx in np.arange(num_channels)]
+        channel_ids = [str(index) for index in np.arange(num_channels)]
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
         assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
-        if np.isscalar(noise_levels):
-            noise_levels = np.ones((1, num_channels)) * noise_levels
-        else:
-            noise_levels = np.asarray(noise_levels)
-            if len(noise_levels.shape) < 2:
-                noise_levels = noise_levels[np.newaxis, :]
-
-        assert len(noise_levels[0]) == num_channels, "Noise levels should have a size of num_channels"
-
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
         num_segments = len(durations)
-
-        if cov_matrix is not None:
-            assert (
-                cov_matrix.shape[0] == cov_matrix.shape[1] == num_channels
-            ), "cov_matrix should have a size (num_channels, num_channels)"
 
         # very important here when multiprocessing and dump/load
         seed = _ensure_seed(seed)
@@ -1316,13 +1347,11 @@ class NoiseGeneratorRecording(BaseRecording):
 
         for i in range(num_segments):
             num_samples = int(durations[i] * sampling_frequency)
-            rec_segment = NoiseGeneratorRecordingSegment(
+            rec_segment = MockRecordingSegment(
                 num_samples,
                 num_channels,
                 sampling_frequency,
                 noise_block_size,
-                noise_levels,
-                cov_matrix,
                 dtype,
                 segments_seeds[i],
                 strategy,
@@ -1333,8 +1362,6 @@ class NoiseGeneratorRecording(BaseRecording):
             "num_channels": num_channels,
             "durations": durations,
             "sampling_frequency": sampling_frequency,
-            "noise_levels": noise_levels,
-            "cov_matrix": cov_matrix,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
@@ -1342,15 +1369,13 @@ class NoiseGeneratorRecording(BaseRecording):
         }
 
 
-class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
+class MockRecordingSegment(BaseRecordingSegment):
     def __init__(
         self,
         num_samples,
         num_channels,
         sampling_frequency,
         noise_block_size,
-        noise_levels,
-        cov_matrix,
         dtype,
         seed,
         strategy,
@@ -1362,25 +1387,13 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = num_samples
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
-        self.noise_levels = noise_levels
-        self.cov_matrix = cov_matrix
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
 
         if self.strategy == "tile_pregenerated":
             rng = np.random.default_rng(seed=self.seed)
-
-            if self.cov_matrix is None:
-                self.noise_block = (
-                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                    * noise_levels
-                )
-            else:
-                self.noise_block = rng.multivariate_normal(
-                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                )
-
+            self.noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
         elif self.strategy == "on_the_fly":
             pass
 
@@ -1414,14 +1427,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
                 noise_block = self.noise_block
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
-                if self.cov_matrix is None:
-                    noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                else:
-                    noise_block = rng.multivariate_normal(
-                        np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                    )
-
-                noise_block *= self.noise_levels
+                noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
@@ -1444,16 +1450,11 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-noise_generator_recording = define_function_from_class(
-    source_class=NoiseGeneratorRecording, name="noise_generator_recording"
-)
-
-
 def generate_recording_by_size(
     full_traces_size_GiB: float,
     seed: int | None = None,
     strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
-) -> NoiseGeneratorRecording:
+) -> MockRecording:
     """
     Generate a large lazy recording.
     This is a convenience wrapper around the NoiseGeneratorRecording class where only
@@ -1491,7 +1492,7 @@ def generate_recording_by_size(
     num_samples = int(full_traces_size_bytes / (num_channels * dtype.itemsize))
     durations = [num_samples / sampling_frequency]
 
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
@@ -1599,8 +1600,8 @@ def generate_single_fake_waveform(
     assert ms_after > depolarization_ms + repolarization_ms
     assert ms_before > depolarization_ms
 
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
-    nafter = int(sampling_frequency * ms_after / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
     width = nbefore + nafter
     wf = np.zeros(width, dtype=dtype)
 
@@ -1777,8 +1778,8 @@ def generate_templates(
 
     num_units = units_locations.shape[0]
     num_channels = channel_locations.shape[0]
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
-    nafter = int(sampling_frequency * ms_after / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
     width = nbefore + nafter
 
     if upsample_factor is not None:
@@ -1898,7 +1899,7 @@ class InjectTemplatesRecording(BaseRecording):
     num_samples : list[int] | int | None, default: None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
-    upsample_vector : np.array | None, default: None.
+    upsample_vector : np.ndarray | None, default: None.
         When templates is 4d we can simulate a jitter.
         Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.shape[3].
     check_borders : bool, default: False
@@ -1918,7 +1919,7 @@ class InjectTemplatesRecording(BaseRecording):
         amplitude_factor: list[float] | float | None = None,
         parent_recording: BaseRecording | None = None,
         num_samples: list[int] | int | None = None,
-        upsample_vector: np.array | None = None,
+        upsample_vector: np.ndarray | None = None,
         check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
@@ -1994,9 +1995,7 @@ class InjectTemplatesRecording(BaseRecording):
             amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
             upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
-            parent_recording_segment = (
-                None if parent_recording is None else parent_recording._recording_segments[segment_index]
-            )
+            parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectTemplatesRecordingSegment(
                 self.sampling_frequency,
                 self.dtype,
@@ -2344,7 +2343,7 @@ def generate_ground_truth_recording(
         An external Probe object. If not provided a probe is generated using generate_probe_kwargs.
     generate_probe_kwargs : dict
         A dict to constuct the Probe using :py:func:`probeinterface.generate_multi_columns_probe()`.
-    templates : np.array | None
+    templates : np.ndarray | None
         The templates of units.
         If None they are generated.
         Shape can be:
@@ -2357,7 +2356,7 @@ def generate_ground_truth_recording(
         Cut out in ms after spike peak.
     upsample_factor : None | int, default: None
         A upsampling factor used only when templates are not provided.
-    upsample_vector : np.array | None
+    upsample_vector : np.ndarray | None
         Optional the upsample_vector can given. This has the same shape as spike_vector
     generate_sorting_kwargs : dict
         When sorting is not provide, this dict is used to generated a Sorting.
@@ -2427,6 +2426,9 @@ def generate_ground_truth_recording(
     else:
         num_channels = probe.get_contact_count()
 
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    nafter = ms_to_samples(ms_after, sampling_frequency)
+
     if templates is None:
         channel_locations = probe.contact_positions
         unit_locations = generate_unit_locations(
@@ -2444,8 +2446,18 @@ def generate_ground_truth_recording(
             **generate_templates_kwargs,
         )
         sorting.set_property("gt_unit_locations", unit_locations)
+        distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :2], axis=2)
+        main_channel_indices = np.argmin(distances, axis=1)
+
     else:
         assert templates.shape[0] == num_units
+        from .template_tools import _get_main_channel_from_template_array
+
+        main_channel_indices = _get_main_channel_from_template_array(
+            templates, peak_mode="extremum", peak_sign="both", nbefore=nbefore
+        )
+
+    assert (nbefore + nafter) == templates.shape[1]
 
     if templates.ndim == 3:
         upsample_vector = None
@@ -2454,11 +2466,9 @@ def generate_ground_truth_recording(
             upsample_factor = templates.shape[3]
             upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
 
-    nbefore = int(ms_before * sampling_frequency / 1000.0)
-    nafter = int(ms_after * sampling_frequency / 1000.0)
-    assert (nbefore + nafter) == templates.shape[1]
-
     # construct recording
+    from spikeinterface.generation.noise_tools import NoiseGeneratorRecording
+
     noise_rec = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -2477,11 +2487,36 @@ def generate_ground_truth_recording(
         upsample_vector=upsample_vector,
     )
     recording.annotate(is_filtered=True)
-    recording.set_probe(probe, in_place=True)
+    recording.set_probe(probe)
     recording.set_channel_gains(1.0)
     recording.set_channel_offsets(0.0)
+
+    main_channel_ids = recording.channel_ids[main_channel_indices]
+    sorting.set_property("main_channel_id", main_channel_ids)
 
     recording.name = "GroundTruthRecording"
     sorting.name = "GroundTruthSorting"
 
     return recording, sorting
+
+
+def __getattr__(name):
+    if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
+        import warnings
+
+        warnings.warn(
+            f"Importing {name} from spikeinterface.core.generate is deprecated. "
+            f"Import from spikeinterface.generation instead: "
+            f"`from spikeinterface.generation import {name}`. "
+            f"This will be removed in version 0.106.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from spikeinterface.generation.noise_tools import NoiseGeneratorRecording, noise_generator_recording
+
+        _map = {
+            "NoiseGeneratorRecording": NoiseGeneratorRecording,
+            "noise_generator_recording": noise_generator_recording,
+        }
+        return _map[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

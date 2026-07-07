@@ -3,8 +3,9 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
-from spikeinterface.core.job_tools import divide_recording_into_chunks
+from spikeinterface import create_sorting_analyzer, generate_ground_truth_recording
+from spikeinterface.core.base import spike_peak_dtype
+from spikeinterface.core.job_tools import divide_time_series_into_chunks
 
 # from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core.node_pipeline import (
@@ -14,7 +15,6 @@ from spikeinterface.core.node_pipeline import (
     PipelineNode,
     ExtractDenseWaveforms,
     sorting_to_peaks,
-    spike_peak_dtype,
 )
 
 
@@ -32,7 +32,7 @@ class AmplitudeExtractionNode(PipelineNode):
         amps["abs_amplitude"] = np.abs(peaks["amplitude"])
         return amps
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return 5
 
 
@@ -80,9 +80,9 @@ def test_run_node_pipeline(cache_folder_creation):
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    peaks = sorting_to_peaks(sorting, main_channel_indices, spike_peak_dtype)
     # print(peaks.size)
 
     peak_retriever = PeakRetriever(recording, peaks)
@@ -90,15 +90,12 @@ def test_run_node_pipeline(cache_folder_creation):
     peak_retriever_few = PeakRetriever(recording, peaks[: peaks.size // 2])
 
     # channel index is from template
-    spike_retriever_T = SpikeRetriever(
-        sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
-    )
+    spike_retriever_T = SpikeRetriever(sorting, recording, channel_from_template=True)
     # channel index is per spike
     spike_retriever_S = SpikeRetriever(
         sorting,
         recording,
         channel_from_template=False,
-        extremum_channel_inds=extremum_channel_inds,
         radius_um=50,
         peak_sign="neg",
     )
@@ -202,9 +199,9 @@ def test_skip_after_n_peaks_and_recording_slices():
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    peaks = sorting_to_peaks(sorting, main_channel_indices, spike_peak_dtype)
     # print(peaks.size)
 
     node0 = PeakRetriever(recording, peaks)
@@ -220,11 +217,9 @@ def test_skip_after_n_peaks_and_recording_slices():
     assert some_amplitudes.size < spikes.size
 
     # slices : 1 every 4
-    recording_slices = divide_recording_into_chunks(recording, 10_000)
+    recording_slices = divide_time_series_into_chunks(recording, 10_000)
     recording_slices = recording_slices[::4]
-    some_amplitudes = run_node_pipeline(
-        recording, nodes, job_kwargs, gather_mode="memory", recording_slices=recording_slices
-    )
+    some_amplitudes = run_node_pipeline(recording, nodes, job_kwargs, gather_mode="memory", slices=recording_slices)
     tolerance = 1.2
     assert some_amplitudes.size < (spikes.size // 4) * tolerance
 
