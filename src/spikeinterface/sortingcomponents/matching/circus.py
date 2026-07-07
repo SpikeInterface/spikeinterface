@@ -467,7 +467,7 @@ class CircusOMPPeeler(BaseTemplateMatching):
                         if len(is_in_vicinity) > 0:
                             L = M[is_in_vicinity, :][:, is_in_vicinity]
 
-                            M[num_selection, is_in_vicinity] = scipy.linalg.solve_triangular(
+                            M[num_selection, is_in_vicinity] = solve_triangular(
                                 L,
                                 M[num_selection, is_in_vicinity],
                                 trans=0,
