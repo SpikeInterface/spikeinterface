@@ -1209,6 +1209,22 @@ class NwbSortingExtractor(BaseSorting):
         # The ElectricalSeries still supplies t_start (Units.resolution carries no time origin), and the
         # sampling_frequency as a last resort when Units.resolution was absent.
         if sampling_frequency is None or self.t_start is None:
+            # Without an explicit electrical_series_path this auto-selects the file's single
+            # ElectricalSeries, which may not be the one the sorting was computed from. That implicit
+            # behavior is deprecated: from version 0.107.0 the ElectricalSeries must be requested
+            # explicitly, or the time base must be provided via sampling_frequency and t_start.
+            if electrical_series_path is None:
+                warnings.warn(
+                    "Determining the sorting's sampling_frequency / t_start by auto-selecting an "
+                    "ElectricalSeries is deprecated and will raise an error in version 0.107.0. "
+                    "Set the time base explicitly, in one of two ways: "
+                    "(1) pass 'electrical_series_path' to name the ElectricalSeries to read it from, or "
+                    "(2) pass 't_start' together with 'sampling_frequency' (you may omit "
+                    "'sampling_frequency' if the Units table has a 'resolution' attribute, which is read "
+                    "as 1 / resolution).",
+                    FutureWarning,
+                    stacklevel=2,
+                )
             series_sampling_frequency, series_t_start = self._reader.rate_and_t_start_from_electrical_series(
                 samples_for_rate_estimation
             )
