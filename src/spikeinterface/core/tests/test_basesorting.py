@@ -96,8 +96,6 @@ def test_BaseSorting(create_cache_folder):
     spikes = sorting.to_spike_vector()
     # print(spikes)
     assert sorting._cached_spike_vector is not None
-    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
-    # print(spikes)
 
     spikes = sorting.to_spike_vector()
     ordered_spikes, order, slices = sorting.to_reordered_spike_vector(

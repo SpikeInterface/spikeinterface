@@ -166,9 +166,12 @@ from .sortinganalyzer import (
 # template tools
 from .template_tools import (
     get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
+    get_template_peak_shift_on_main_channel,
+    get_template_amplitude_on_main_channel,
+    # this is not needed anymore
+    get_template_extremum_channel,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_channel_peak_shift,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_amplitude,  # keep for backward compatibility can be removed in 0.106
 )
 
 

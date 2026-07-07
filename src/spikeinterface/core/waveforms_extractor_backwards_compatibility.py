@@ -5,9 +5,7 @@ This backwards compatibility module aims to:
 """
 
 import warnings
-
 from pathlib import Path
-
 import json
 
 import numpy as np
@@ -493,7 +491,13 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             sorting = load(folder / "sorting.pickle", base_folder=folder)
 
     sorting_analyzer = SortingAnalyzer.create_memory(
-        sorting, recording, sparsity=sparsity, return_in_uV=return_in_uV, rec_attributes=rec_attributes
+        sorting,
+        recording,
+        sparsity=sparsity,
+        peak_mode="extremum",
+        peak_sign="neg",
+        return_in_uV=return_in_uV,
+        rec_attributes=rec_attributes,
     )
 
     # waveforms
