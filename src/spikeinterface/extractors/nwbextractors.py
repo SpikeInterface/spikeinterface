@@ -1884,10 +1884,6 @@ def read_nwb_as_analyzer(
     compute_extra_params: dict | None = None,
     verbose: bool = False,
 ) -> SortingAnalyzer:
-    import pandas as pd
-    from spikeinterface.metrics.template import ComputeTemplateMetrics
-    from spikeinterface.metrics.quality import ComputeQualityMetrics
-
     # try to read recording object to get the analyzer
     try:
         recording = NwbRecordingExtractor(
@@ -2001,162 +1997,225 @@ def read_nwb_as_analyzer(
         if label_column in units.columns and len(units[label_column]) == sorting.get_num_units():
             sorting.set_property(label_column, units[label_column].values)
 
-    # handle recording if available
+    # Obtain a recording for the analyzer. With a real recording we use it directly. Without one (the
+    # streaming curation case) we build a lightweight placeholder recording that carries only the probe
+    # geometry, hand it to the standard constructor, and drop it afterwards. This mirrors
+    # `read_kilosort_as_analyzer` and avoids hand-assembling `rec_attributes` and channel ids.
     if recording is not None:
-        # check groups
         group_names = np.unique(recording.get_channel_groups())
         if group_name is not None and len(group_names) > 1:
             recording = recording.split_by("group")[group_name]
-        rec_attributes = None
+        analyzer_recording = recording
+        analyzer_channel_ids = list(recording.get_channel_ids())
     else:
-        recording = None
-        rec_attributes = {}
-
-        # get sliced electrodes table from electrode_indices union
-        electrode_indices_all = []
-        for ei in electrodes_indices:
-            electrode_indices_all.extend(ei)
-        electrode_indices_all = np.sort(np.unique(electrode_indices_all))
-        if verbose:
-            print(f"Found {len(electrode_indices_all)} electrodes")
-        electrodes_table_sliced = electrodes_table.iloc[electrode_indices_all]
-        if "channel_name" in electrodes_table_sliced:
-            channel_ids = electrodes_table_sliced["channel_name"][:]
-        else:
-            channel_ids = electrodes_table_sliced["id"][:]
-        # num_samples only needs to bound the recording length. Estimate it from the last stored spike
-        # time (one element read) rather than sorting.to_spike_vector(), which would materialize every
-        # spike just to read the maximum sample index.
-        last_spike_time = float(np.asarray(sorting._sorting_segments[0].spike_times_data[-1]))
-        num_samples = [int(last_spike_time * sorting.sampling_frequency) + 1]
-        rec_attributes = dict(
-            channel_ids=channel_ids,
-            sampling_frequency=sorting.sampling_frequency,
-            num_channels=len(channel_ids),
-            num_samples=num_samples,
-        )
-        # make a probegroup
-        electrode_colnames = electrodes_table_sliced.columns
-        assert (
-            "rel_x" in electrode_colnames and "rel_y" in electrode_colnames
-        ), "'rel_x' and 'rel_y' should be columns in the electrode name"
-        locations = np.array([electrodes_table_sliced["rel_x"][:], electrodes_table_sliced["rel_y"][:]]).T
-        probegroup = _create_dummy_probegroup_from_locations(locations)
-        rec_attributes["probegroup"] = probegroup
-
-    # Per-unit sparsity and channel map from the Units `electrodes` region. Each unit's
-    # `waveform_mean` is stored only on a subset of channels (near its peak); the region gives
-    # which channels those are. We use it both for the analyzer sparsity and to scatter the
-    # waveforms onto their true channel positions instead of stacking the sparse block densely.
-    sparsity = None
-    unit_local_channels = None
-    if electrodes_indices is not None:
-        from spikeinterface.core.sparsity import ChannelSparsity
-
-        if recording is not None:
-            analyzer_channel_ids = list(recording.get_channel_ids())
-        else:
-            analyzer_channel_ids = list(channel_ids)
-        num_channels = len(analyzer_channel_ids)
-
-        if "channel_name" in electrodes_table.columns:
-            electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
-        else:
-            electrode_row_to_channel_id = electrodes_table.index.to_numpy()
-        position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
-
-        unit_local_channels = []
-        sparsity_mask = np.zeros((sorting.get_num_units(), num_channels), dtype=bool)
-        for unit_index, region in enumerate(electrodes_indices):
-            positions = [
-                position_of_channel_id[electrode_row_to_channel_id[int(electrode_row)]]
-                for electrode_row in region
-                if electrode_row_to_channel_id[int(electrode_row)] in position_of_channel_id
-            ]
-            unit_local_channels.append(positions)
-            sparsity_mask[unit_index, positions] = True
-        sparsity = ChannelSparsity(
-            mask=sparsity_mask,
-            unit_ids=np.asarray(sorting.unit_ids),
-            channel_ids=np.asarray(analyzer_channel_ids),
+        analyzer_recording, analyzer_channel_ids = _make_placeholder_recording_from_electrodes(
+            sorting, electrodes_table, electrodes_indices, verbose=verbose
         )
 
-    # instantiate analyzer
+    # Per-unit sparsity and channel map from the Units `electrodes` region. Each unit's `waveform_mean`
+    # is stored only on a subset of channels (near its peak); the region gives which channels those are.
+    # We use it both for the analyzer sparsity and to scatter the waveforms onto their true channel
+    # positions instead of stacking the sparse block densely.
+    sparsity, unit_local_channels = _make_sparsity_from_electrodes(
+        sorting, electrodes_table, electrodes_indices, analyzer_channel_ids
+    )
+
+    # Instantiate the analyzer through the standard constructor. For the recordingless case keep the
+    # lazy sorting (copy_sorting=False) so spike_times is read on demand rather than materialized here,
+    # and drop the placeholder recording once its geometry has been captured into rec_attributes.
     analyzer = SortingAnalyzer.create_memory(
         sorting=sorting,
-        recording=recording,
+        recording=analyzer_recording,
         sparsity=sparsity,
         return_in_uV=True,
         peak_sign="neg",
         peak_mode="extremum",
-        rec_attributes=rec_attributes,
-        # recordingless: keep the lazy sorting so spike_times is read on demand, not materialized here
+        rec_attributes=None,
         copy_sorting=recording is not None,
     )
+    if recording is None:
+        analyzer._recording = None
 
-    # templates
+    num_channels = len(analyzer_channel_ids)
+
+    # templates, and the required random_spikes extension that must exist alongside them
     if "waveform_mean" in units and unit_local_channels is not None:
-        from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+        _make_random_spikes(analyzer, sorting, has_recording=recording is not None)
+        _make_templates(analyzer, units, unit_local_channels, num_channels)
 
-        # random_spikes is the analyzer's required extension. With a recording it drives waveform
-        # extraction, so compute it for real. Without a recording it is never used to extract anything
-        # (there are no traces); computing it would call sorting.to_spike_vector(), which materializes
-        # the whole spike_times array (e.g. ~165 MB for a full IBL session) and dominates the cost.
-        # Instead build it from the per-unit spike counts (the spike_times index), so spike_times is
-        # not read here; the lazy sorting still reads a unit's spikes on demand when a view needs them.
-        if recording is not None:
-            analyzer.compute("random_spikes", method="all")
-        else:
-            from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
+    # per-unit numeric columns -> template_metrics / quality_metrics
+    _make_metrics(analyzer, units, metric_colnames, verbose=verbose)
 
-            spike_times_index = sorting._sorting_segments[0].spike_times_index_data
-            total_num_spikes = int(np.asarray(spike_times_index[-1]))
-            max_spikes_per_unit = 500
-            num_random = min(max_spikes_per_unit * sorting.get_num_units(), total_num_spikes)
-            random_spikes_indices = np.sort(
-                np.random.default_rng(0).choice(total_num_spikes, size=num_random, replace=False)
-            )
-            random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
-            random_spikes_ext.set_params(method="uniform", max_spikes_per_unit=max_spikes_per_unit, seed=0)
-            random_spikes_ext.data["random_spikes_indices"] = random_spikes_indices
-            random_spikes_ext.run_info["run_completed"] = True
-            analyzer.extensions["random_spikes"] = random_spikes_ext
+    # compute extra required
+    if compute_extra is not None:
+        if verbose:
+            print(f"Computing extra extensions: {compute_extra}")
+        compute_extra_params = {} if compute_extra_params is None else compute_extra_params
+        analyzer.compute(compute_extra, **compute_extra_params)
 
-        waveform_mean = np.array([np.asarray(t, dtype="float") for t in units["waveform_mean"].values])
-        num_samples_template = waveform_mean.shape[1]
+    return analyzer
 
-        # scatter each unit's real waveform columns onto their channels; the NaN-padded columns of
-        # units with fewer channels are simply never touched
-        dense_templates = np.zeros((sorting.get_num_units(), num_samples_template, num_channels), dtype="float32")
-        for unit_index, positions in enumerate(unit_local_channels):
-            k = len(positions)
-            dense_templates[unit_index][:, positions] = waveform_mean[unit_index][:, :k]
 
-        # scalar alignment (nbefore): the sample where the average peak-channel amplitude is largest
-        peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
-        nbefore = int(np.argmax(peak_amplitude_per_sample))
+def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, electrodes_indices, verbose=False):
+    """Build a lightweight placeholder recording that carries only the probe geometry of the electrodes
+    a unit's waveforms live on, for the recordingless (streaming) case.
 
-        templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
-        templates_ext.set_params(
-            ms_before=nbefore / analyzer.sampling_frequency * 1000,
-            ms_after=(num_samples_template - nbefore) / analyzer.sampling_frequency * 1000,
-            operators=["average", "std"],
-        )
-        templates_ext.data["average"] = dense_templates
-        templates_ext.data["std"] = np.zeros_like(dense_templates)
-        templates_ext.run_info["run_completed"] = True
+    Mirrors `read_kilosort_as_analyzer`: `generate_ground_truth_recording` produces a fully lazy
+    recording (noise generated on the fly, no traces materialized) whose only purpose is to feed probe
+    geometry, channel ids, and a bounding length into the standard analyzer constructor. The caller
+    drops the recording (`analyzer._recording = None`) right after construction. Returns the recording
+    and the ordered channel ids.
+    """
+    from probeinterface import Probe
+    from spikeinterface.core import generate_ground_truth_recording
 
-        analyzer.extensions["templates"] = templates_ext
+    # union of electrode rows referenced by any unit, in sorted order
+    electrode_indices_all = []
+    for region in electrodes_indices:
+        electrode_indices_all.extend(region)
+    electrode_indices_all = np.sort(np.unique(electrode_indices_all))
+    if verbose:
+        print(f"Found {len(electrode_indices_all)} electrodes")
+    electrodes_table_sliced = electrodes_table.iloc[electrode_indices_all]
+
+    if "channel_name" in electrodes_table_sliced:
+        channel_ids = np.asarray(electrodes_table_sliced["channel_name"][:])
+    else:
+        channel_ids = electrodes_table_sliced.index.to_numpy()
+
+    electrode_colnames = electrodes_table_sliced.columns
+    assert (
+        "rel_x" in electrode_colnames and "rel_y" in electrode_colnames
+    ), "'rel_x' and 'rel_y' should be columns in the electrodes table"
+    locations = np.array([electrodes_table_sliced["rel_x"][:], electrodes_table_sliced["rel_y"][:]]).T
+
+    # The recording length only needs to bound the spikes. Estimate it from the last stored spike time
+    # (one element read) rather than sorting.to_spike_vector(), which would materialize every spike.
+    # spike_times is stored in seconds, so this is already a duration in seconds (no sampling-rate
+    # division, unlike the Kilosort path where spike times are in samples).
+    last_spike_time = float(np.asarray(sorting._sorting_segments[0].spike_times_data[-1]))
+    duration = last_spike_time + 1.0
+
+    probe = Probe(si_units="um")
+    probe.set_contacts(locations, shapes="circle", shape_params={"radius": 1})
+    probe.set_device_channel_indices(np.arange(len(channel_ids)))
+
+    recording, _ = generate_ground_truth_recording(
+        durations=[duration],
+        sampling_frequency=sorting.sampling_frequency,
+        probe=probe,
+        num_units=1,
+        seed=0,
+    )
+    recording = recording.rename_channels(channel_ids)
+    return recording, list(channel_ids)
+
+
+def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices, analyzer_channel_ids):
+    """Build the analyzer `ChannelSparsity` and the per-unit local channel lists from the Units
+    `electrodes` region, mapping each unit's electrode rows onto positions in `analyzer_channel_ids`.
+    Returns (sparsity, unit_local_channels), or (None, None) if there is no electrodes region."""
+    if electrodes_indices is None:
+        return None, None
+
+    from spikeinterface.core.sparsity import ChannelSparsity
+
+    num_channels = len(analyzer_channel_ids)
+    if "channel_name" in electrodes_table.columns:
+        electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
+    else:
+        electrode_row_to_channel_id = electrodes_table.index.to_numpy()
+    position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
+
+    unit_local_channels = []
+    sparsity_mask = np.zeros((sorting.get_num_units(), num_channels), dtype=bool)
+    for unit_index, region in enumerate(electrodes_indices):
+        positions = [
+            position_of_channel_id[electrode_row_to_channel_id[int(electrode_row)]]
+            for electrode_row in region
+            if electrode_row_to_channel_id[int(electrode_row)] in position_of_channel_id
+        ]
+        unit_local_channels.append(positions)
+        sparsity_mask[unit_index, positions] = True
+    sparsity = ChannelSparsity(
+        mask=sparsity_mask,
+        unit_ids=np.asarray(sorting.unit_ids),
+        channel_ids=np.asarray(analyzer_channel_ids),
+    )
+    return sparsity, unit_local_channels
+
+
+def _make_random_spikes(analyzer, sorting, has_recording):
+    """Attach the required `random_spikes` extension.
+
+    With a recording it drives waveform extraction, so compute it for real. Without a recording it is
+    never used to extract anything (there are no traces); computing it would call
+    `sorting.to_spike_vector()`, which materializes the whole spike_times array (e.g. ~165 MB for a
+    full IBL session) and dominates the cost. Instead build it from the per-unit spike counts (the
+    spike_times index), so spike_times is not read here; the lazy sorting still reads a unit's spikes on
+    demand when a view needs them.
+    """
+    if has_recording:
+        analyzer.compute("random_spikes", method="all")
+        return
+
+    from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
+
+    spike_times_index = sorting._sorting_segments[0].spike_times_index_data
+    total_num_spikes = int(np.asarray(spike_times_index[-1]))
+    max_spikes_per_unit = 500
+    num_random = min(max_spikes_per_unit * sorting.get_num_units(), total_num_spikes)
+    random_spikes_indices = np.sort(np.random.default_rng(0).choice(total_num_spikes, size=num_random, replace=False))
+    random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
+    random_spikes_ext.set_params(method="uniform", max_spikes_per_unit=max_spikes_per_unit, seed=0)
+    random_spikes_ext.data["random_spikes_indices"] = random_spikes_indices
+    random_spikes_ext.run_info["run_completed"] = True
+    analyzer.extensions["random_spikes"] = random_spikes_ext
+
+
+def _make_templates(analyzer, units, unit_local_channels, num_channels):
+    """Attach the `templates` extension from the Units `waveform_mean` column, scattering each unit's
+    sparse waveform block onto its true channel positions."""
+    from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+
+    waveform_mean = np.array([np.asarray(t, dtype="float") for t in units["waveform_mean"].values])
+    num_samples_template = waveform_mean.shape[1]
+
+    # scatter each unit's real waveform columns onto their channels; the NaN-padded columns of units
+    # with fewer channels are simply never touched
+    dense_templates = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
+    for unit_index, positions in enumerate(unit_local_channels):
+        k = len(positions)
+        dense_templates[unit_index][:, positions] = waveform_mean[unit_index][:, :k]
+
+    # scalar alignment (nbefore): the sample where the average peak-channel amplitude is largest
+    peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
+    nbefore = int(np.argmax(peak_amplitude_per_sample))
+
+    templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
+    templates_ext.set_params(
+        ms_before=nbefore / analyzer.sampling_frequency * 1000,
+        ms_after=(num_samples_template - nbefore) / analyzer.sampling_frequency * 1000,
+        operators=["average", "std"],
+    )
+    templates_ext.data["average"] = dense_templates
+    templates_ext.data["std"] = np.zeros_like(dense_templates)
+    templates_ext.run_info["run_completed"] = True
+    analyzer.extensions["templates"] = templates_ext
+
+
+def _make_metrics(analyzer, units, metric_colnames, verbose=False):
+    """Route every per-unit numeric column to its metrics extension. Canonical template-metric names go
+    to `template_metrics`; everything else goes to `quality_metrics`, including pipeline-specific metrics
+    that are not canonical SpikeInterface names (e.g. IBL's noise_cutoff), so they are preserved and
+    shown in the metrics view rather than dropped."""
+    import pandas as pd
+    from spikeinterface.metrics.template import ComputeTemplateMetrics
+    from spikeinterface.metrics.quality import ComputeQualityMetrics
 
     template_metric_columns = ComputeTemplateMetrics.get_metric_columns()
-
-    template_metrics_df = pd.DataFrame(index=sorting.unit_ids)
-    quality_metric_df = pd.DataFrame(index=sorting.unit_ids)
-
-    # Route every per-unit numeric column to its metrics extension. Canonical template-metric names go
-    # to template_metrics; everything else goes to quality_metrics, including pipeline-specific metrics
-    # that are not canonical SpikeInterface names (e.g. IBL's ibl_quality_score, noise_cutoff), so they
-    # are preserved and shown in the metrics view rather than dropped.
+    template_metrics_df = pd.DataFrame(index=analyzer.unit_ids)
+    quality_metric_df = pd.DataFrame(index=analyzer.unit_ids)
     for col in metric_colnames:
         if col not in units.columns:
             continue
@@ -2169,7 +2228,6 @@ def read_nwb_as_analyzer(
         if verbose:
             print("Adding template metrics")
         template_metrics_ext = ComputeTemplateMetrics(analyzer)
-        # cast to correct dtypes
         template_metrics_ext.data["metrics"] = template_metrics_ext._cast_metrics(template_metrics_df)
         template_metrics_ext.run_info["run_completed"] = True
         analyzer.extensions["template_metrics"] = template_metrics_ext
@@ -2180,15 +2238,6 @@ def read_nwb_as_analyzer(
         quality_metrics_ext.data["metrics"] = quality_metrics_ext._cast_metrics(quality_metric_df)
         quality_metrics_ext.run_info["run_completed"] = True
         analyzer.extensions["quality_metrics"] = quality_metrics_ext
-
-    # compute extra required
-    if compute_extra is not None:
-        if verbose:
-            print(f"Computing extra extensions: {compute_extra}")
-        compute_extra_params = {} if compute_extra_params is None else compute_extra_params
-        analyzer.compute(compute_extra, **compute_extra_params)
-
-    return analyzer
 
 
 def _create_dummy_probegroup_from_locations(locations, shape="circle", shape_params={"radius": 1}):
