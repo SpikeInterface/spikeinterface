@@ -1,5 +1,6 @@
 from pathlib import Path, WindowsPath
-from collections.abc import Generator
+from collections import namedtuple
+from collections.abc import Generator, Callable
 import os
 import sys
 import datetime
@@ -7,8 +8,8 @@ import json
 from copy import deepcopy
 import importlib
 from math import prod
-from collections import namedtuple
 import inspect
+from typing import TypeVar, ParamSpec
 
 from probeinterface import ProbeGroup
 import numpy as np
@@ -57,7 +58,13 @@ def define_function_handling_dict_from_class(source_class, name):
     return source_class_or_dict_of_sources_classes
 
 
-def define_function_from_class(source_class, name):
+# Generic typing needed to help propagate typing
+# across multiple language servers
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+def define_function_from_class(source_class: Callable[P, T], name: str) -> Callable[P, T]:
     "Wrapper to change the name of a class"
 
     return source_class
