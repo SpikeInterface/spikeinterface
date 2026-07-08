@@ -3020,17 +3020,36 @@ class AnalyzerExtension:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
 
     def copy(self, new_sorting_analyzer, unit_ids=None, channel_ids=None):
-        # alessio : please note that this also replace the old select_units!!!
+        """
+        Copy the extension to a new sorting analyzer, optionally selecting a subset of units and channels.
+        Only unit_ids or channel_ids can be specified, not both.
+
+        Parameters
+        ----------
+        new_sorting_analyzer : SortingAnalyzer
+            The new sorting analyzer to copy the extension to.
+        unit_ids : list, optional
+            List of unit IDs to sub-select data for. If None, all units are copied.
+        channel_ids : list, optional
+            List of channel IDs to sub-select data for. If None, all channels are copied.
+
+        Returns
+        -------
+        new_extension : Extension
+            The copied extension.
+        """
+        if unit_ids is not None and channel_ids is not None:
+            raise ValueError("Cannot select both unit_ids and channel_ids when copying an extension.")
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
         if unit_ids is None:
             new_extension.data = self.data
         else:
             new_extension.data = self._select_units_extension_data(unit_ids)
-        if channel_ids is not None:
-            new_extension.data = new_extension._select_channels_extension_data(channel_ids)
+        if channel_ids is None:
+            new_extension.data = self.data
         else:
-            new_extension.data = new_extension.data
+            new_extension.data = self._select_channels_extension_data(channel_ids)
         new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension
