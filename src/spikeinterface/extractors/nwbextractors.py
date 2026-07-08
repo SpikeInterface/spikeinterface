@@ -2072,7 +2072,12 @@ def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, elect
     electrodes_table_sliced = electrodes_table.iloc[electrode_indices_all]
 
     if "channel_name" in electrodes_table_sliced:
-        channel_ids = np.asarray(electrodes_table_sliced["channel_name"][:])
+        # IBL stores channel_name as variable-length HDF5 byte strings (e.g. b"AP0"); decode to str so
+        # SpikeInterface accepts them as channel ids (object-dtype arrays are rejected). This must match
+        # the decode in _make_sparsity_from_electrodes so channel ids and sparsity keys stay consistent.
+        channel_ids = np.array(
+            [c.decode("utf-8") if isinstance(c, bytes) else c for c in electrodes_table_sliced["channel_name"][:]]
+        )
     else:
         channel_ids = electrodes_table_sliced.index.to_numpy()
 
@@ -2117,7 +2122,10 @@ def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices
 
     num_channels = len(analyzer_channel_ids)
     if "channel_name" in electrodes_table.columns:
-        electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
+        # decode HDF5 byte-string channel names to str, matching _make_placeholder_recording_from_electrodes
+        electrode_row_to_channel_id = np.array(
+            [c.decode("utf-8") if isinstance(c, bytes) else c for c in electrodes_table["channel_name"].to_numpy()]
+        )
     else:
         electrode_row_to_channel_id = electrodes_table.index.to_numpy()
     position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
@@ -2176,8 +2184,11 @@ def _make_templates(analyzer, units, unit_local_channels, num_channels):
     waveform_mean = np.array([np.asarray(t, dtype="float") for t in units["waveform_mean"].values])
     num_samples_template = waveform_mean.shape[1]
 
-    # scatter each unit's real waveform columns onto their channels; the NaN-padded columns of units
-    # with fewer channels are simply never touched
+    # Scatter each unit's waveform onto its channels. This relies on the alignment contract that
+    # waveform_mean[:, i] corresponds to the unit's electrodes-region entry i. The IBL writer guarantees
+    # it by ordering each unit's real channels first (padding last) and building the electrodes region
+    # from exactly those real channels in the same order, so the first k = len(region) columns are the
+    # real channels in region order and any trailing padding columns are correctly dropped by [:, :k].
     dense_templates = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
     for unit_index, positions in enumerate(unit_local_channels):
         k = len(positions)
