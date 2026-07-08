@@ -1,6 +1,3 @@
-import pytest
-import numpy as np
-
 from spikeinterface.extractors import toy_example
 
 

@@ -262,6 +262,21 @@ def test_create_by_dict():
     combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"), sparse=False)
     assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
 
+    # test with sparsity
+    analyzer_with_sparsity = create_sorting_analyzer(split_sort, split_rec, sparse=True)
+    assert analyzer_with_sparsity.sparsity is not None
+    # check that the main channel indices are correct
+    main_channel_indices = analyzer_with_sparsity.get_main_channels(outputs="index")
+    sparsity_mask = analyzer_with_sparsity.sparsity.mask
+    # check that sparsity mask is false on channels from other groups
+    unit_groups = analyzer_with_sparsity.get_sorting_property("aggregation_key")
+    recording_groups = analyzer_with_sparsity.recording.get_property("aggregation_key")
+    for i, main_channel_index in enumerate(main_channel_indices):
+        group = unit_groups[i]
+        other_group_channel_indices = np.flatnonzero(recording_groups != group)
+        assert not np.any(sparsity_mask[i][other_group_channel_indices])
+        assert sparsity_mask[i, main_channel_index]
+
 
 def test_load_without_runtime_info(tmp_path, dataset):
     import zarr
@@ -555,7 +570,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         self.data["result_two"] = spikes["unit_index"].copy()
         self.data["result_three"] = np.zeros((len(self.sorting_analyzer.unit_ids), 2))
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -722,6 +737,31 @@ def test_runtime_dependencies(dataset):
     # recomputing dummy also deletes dummy_pipeline
     sorting_analyzer.compute("dummy")
     assert not sorting_analyzer.has_extension("dummy_pipeline")
+
+
+def test_select_channels(dataset):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.compute(["random_spikes", "templates", "noise_levels"])
+    # select channels
+    keep_channel_ids = recording.channel_ids[::2]
+    sorting_analyzer2 = sorting_analyzer.select_channels(channel_ids=keep_channel_ids)
+
+    assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
+    assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
+    assert sorting_analyzer2.get_extension("templates").data["average"].shape[2] == len(keep_channel_ids)
+    assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
+    for p in sorting_analyzer2.rec_attributes["properties"].values():
+        assert len(p) == len(keep_channel_ids)
+
+    # Now test in recordingless mode
+    sorting_analyzer2._recording = None
+    assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
+    assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
+    assert sorting_analyzer2.get_extension("templates").data["average"].shape[2] == len(keep_channel_ids)
+    assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
+    for p in sorting_analyzer2.rec_attributes["properties"].values():
+        assert len(p) == len(keep_channel_ids)
 
 
 if __name__ == "__main__":

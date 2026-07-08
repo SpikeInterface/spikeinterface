@@ -2,7 +2,6 @@ import shutil
 
 import numpy as np
 
-
 from spikeinterface.exporters import export_to_phy
 
 from spikeinterface.exporters.tests.common import (

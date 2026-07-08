@@ -3,6 +3,8 @@ import pytest
 import numpy as np
 import json
 
+import probeinterface as pi
+
 from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_sparsity, get_noise_levels
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core import generate_ground_truth_recording
@@ -328,6 +330,30 @@ def test_compute_sparsity():
     sparsity = compute_sparsity(
         templates, method="closest_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
     )
+
+
+def test_estimate_sparsity_with_probegroup_overlapping():
+    """
+    Simple test to check that estimate_sparsity does not fail when channel
+    locations are not unique across probegroup
+    """
+    recording, sorting = get_dataset()
+    num_half_channels = recording.get_num_channels() // 2
+    probegroup = pi.ProbeGroup()
+    probegroup.add_probe(pi.generate_linear_probe(num_half_channels, 20.0))
+    probegroup.add_probe(pi.generate_linear_probe(num_half_channels, 20.0))
+    probegroup.set_global_device_channel_indices(np.arange(recording.get_num_channels()))
+
+    recording.set_probegroup(probegroup, check_overlap=False)
+
+    locations = recording.get_channel_locations()
+    assert len(locations) != len(set(map(tuple, locations)))
+    # This tests that the estimate sparsity is not failing even if channel locations are not unique
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+    )
+    assert isinstance(sparsity, ChannelSparsity)
 
 
 if __name__ == "__main__":

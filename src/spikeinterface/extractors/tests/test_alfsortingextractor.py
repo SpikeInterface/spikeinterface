@@ -2,6 +2,7 @@ from pathlib import Path
 import tempfile
 
 import numpy as np
+
 from spikeinterface.extractors import read_alf_sorting
 
 

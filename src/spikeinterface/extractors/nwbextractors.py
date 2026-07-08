@@ -668,15 +668,16 @@ class _NWBReader:
 
         return properties
 
-    def rate_and_t_start_from_electrical_series(self, samples_for_rate_estimation):
-        # Locate the ElectricalSeries the sorting came from and read its rate / t_start.
+    def fetch_time_info_from_electrical_series(self, samples_for_rate_estimation):
+        # Locate the ElectricalSeries the sorting came from and read its rate, t_start, and timestamps
+        # (timestamps is None for a rate-based series, else the per-sample time vector).
         if self.reading_method == "use_pynwb":
             self.series = _retrieve_electrical_series_pynwb(self.nwbfile, self.electrical_series_path)
         else:
             backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
             self.series = self._locate_electrical_series(backend)
-        sampling_frequency, t_start, _ = self.time_info(samples_for_rate_estimation)
-        return sampling_frequency, t_start
+        sampling_frequency, t_start, timestamps = self.time_info(samples_for_rate_estimation)
+        return sampling_frequency, t_start, timestamps
 
     # --- generic TimeSeries (time-series recording) --------------------------------------------
     def load_timeseries(
@@ -1337,6 +1338,8 @@ class NwbSortingExtractor(BaseSorting):
         sampling_frequency_is_provided = self.provided_sampling_frequency is not None
         t_start_is_provided = self.t_start is not None
         sampling_frequency = self.provided_sampling_frequency
+        # Per-sample timestamps of an irregular clock; used to map spikes to samples via searchsorted.
+        time_vector = None
 
         if electrical_series_path_is_provided:
             # The named ElectricalSeries is the sole source of the time base; it is not combined with an
@@ -1346,7 +1349,10 @@ class NwbSortingExtractor(BaseSorting):
                     "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and "
                     "'t_start'), not both."
                 )
-            sampling_frequency, self.t_start = self._reader.rate_and_t_start_from_electrical_series(
+            # A timestamps-based ElectricalSeries has an irregular clock: keep its timestamps (as a lazy
+            # handle) so spikes map to samples exactly (searchsorted) rather than via the estimated rate.
+            # A rate-based series returns timestamps None and stays on the linear path.
+            sampling_frequency, self.t_start, time_vector = self._reader.fetch_time_info_from_electrical_series(
                 samples_for_rate_estimation
             )
         else:
@@ -1384,6 +1390,7 @@ class NwbSortingExtractor(BaseSorting):
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=self.sampling_frequency,
             t_start=self.t_start,
+            time_vector=time_vector,
         )
         self.add_sorting_segment(sorting_segment)
 
@@ -1453,13 +1460,20 @@ class NwbSortingExtractor(BaseSorting):
 
 
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
+    def __init__(
+        self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float, time_vector=None
+    ):
         BaseSortingSegment.__init__(self, t_start=t_start)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
-        self.spike_times_data = spike_times_data
-        self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
+        # Per-sample timestamps for an irregular clock, else None (uniform clock -> linear mapping).
+        self._time_vector = time_vector
+
+    def _frame_to_time(self, frame):
+        if self._time_vector is not None:
+            return self._time_vector[frame]
+        return frame / self._sampling_frequency + self._t_start
 
     def get_unit_spike_train(
         self,
@@ -1467,21 +1481,22 @@ class NwbSortingSegment(BaseSortingSegment):
         start_frame: Optional[int] = None,
         end_frame: Optional[int] = None,
     ) -> np.ndarray:
-        # Convert frame boundaries to time boundaries
-        start_time = None
-        end_time = None
-
-        if start_frame is not None:
-            start_time = start_frame / self._sampling_frequency + self._t_start
-
-        if end_frame is not None:
-            end_time = end_frame / self._sampling_frequency + self._t_start
+        # Convert frame boundaries to time boundaries (via the time vector when the clock is irregular)
+        start_time = None if start_frame is None else self._frame_to_time(start_frame)
+        end_time = None if end_frame is None else self._frame_to_time(end_frame)
 
         # Get spike times in seconds
         spike_times = self.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
 
-        # Convert to frames
-        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
+        # Map seconds to samples. An irregular clock (per-sample timestamps) maps exactly with a
+        # searchsorted into the time vector; a uniform clock uses frame = (t - t_start) * sampling_frequency.
+        if self._time_vector is not None:
+            # searchsorted needs the timestamps in memory: materialize them once, on first use, and cache.
+            if not isinstance(self._time_vector, np.ndarray):
+                self._time_vector = np.asarray(self._time_vector)
+            frames = np.searchsorted(self._time_vector, spike_times, side="right") - 1
+        else:
+            frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
         return frames.astype("int64", copy=False)
 
     def get_unit_spike_train_in_seconds(
