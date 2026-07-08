@@ -175,8 +175,56 @@ def create_sorting_analyzer(
         aggregated_recording = aggregate_channels(recording)
         aggregated_sorting = aggregate_units(sorting)
 
-        if set_sparsity_by_dict_key:
-            sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
+        if sparsity is None:
+            if sparsity_kwargs.get("method", "") != "by_property" and not set_sparsity_by_dict_key:
+                # In this case, we estimate the sparsity on different splitted groups and then we
+                # aggregate the sparsity_masks and main_channel_indices
+                from .template_tools import estimate_main_channel_from_recording
+
+                # In this case we estimate and construct sparsity by property
+                sparsity_mask = np.zeros(
+                    (aggregated_sorting.get_num_units(), aggregated_recording.get_num_channels()), dtype=bool
+                )
+                main_channel_indices = np.zeros(aggregated_sorting.get_num_units(), dtype=int)
+                i_unit = 0
+                i_channel = 0
+                for key in sorting.keys():
+                    recording_single = recording[key]
+                    sorting_single = sorting[key]
+                    num_units = sorting_single.get_num_units()
+                    num_channels = recording_single.get_num_channels()
+
+                    main_channel_indices_single = estimate_main_channel_from_recording(
+                        recording_single,
+                        sorting_single,
+                        peak_sign=peak_sign,
+                        peak_mode=peak_mode,
+                        num_spikes_for_main_channel=num_spikes_for_main_channel,
+                        seed=seed,
+                        **job_kwargs,
+                    )
+                    sparsity_partial = estimate_sparsity(
+                        sorting_single,
+                        recording_single,
+                        main_channel_indices=main_channel_indices_single,
+                        peak_sign=peak_sign,
+                        amplitude_mode=peak_mode,
+                        **sparsity_kwargs,
+                    )
+                    sparsity_mask[i_unit : i_unit + num_units, i_channel : i_channel + num_channels] = (
+                        sparsity_partial.mask
+                    )
+                    main_channel_indices[i_unit : i_unit + num_units] = main_channel_indices_single + i_channel
+                    i_unit += num_units
+                    i_channel += num_channels
+                sparsity = ChannelSparsity(
+                    unit_ids=aggregated_sorting.unit_ids,
+                    channel_ids=aggregated_recording.channel_ids,
+                    mask=sparsity_mask,
+                )
+                sparsity_kwargs = {}
+            elif set_sparsity_by_dict_key:
+                sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
 
         return create_sorting_analyzer(
             sorting=aggregated_sorting,
@@ -185,6 +233,7 @@ def create_sorting_analyzer(
             folder=folder,
             sparse=sparse,
             sparsity=sparsity,
+            main_channel_indices=main_channel_indices,
             return_scaled=return_scaled,
             return_in_uV=return_in_uV,
             overwrite=overwrite,
@@ -205,7 +254,7 @@ def create_sorting_analyzer(
         if len(main_channel_indices) != sorting.get_num_units():
             raise ValueError("len(main_channel_indices) must equal the number of units in the `sorting`")
 
-    if main_channel_indices is not None and sparsity_kwargs.get("method") != "radius":
+    if main_channel_indices is not None and sparsity is None and sparsity_kwargs.get("method") != "radius":
         raise ValueError(
             'You can either pass `main_channel_indices` or a sparsity method not equal to "radius", but not both.'
         )
