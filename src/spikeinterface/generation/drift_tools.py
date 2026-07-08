@@ -176,7 +176,7 @@ def move_templates_by_position(
     num_displacement = displacements.shape[0]
     num_templates = templates_array.shape[0]
     num_samples = templates_array.shape[1]
-    num_channels = templates_array.shape[2]
+    num_channels = dest_probe.get_contact_count()
 
     new_templates_array = np.zeros(
         (num_displacement, num_templates, num_samples, num_channels), dtype=templates_array.dtype
@@ -188,12 +188,14 @@ def move_templates_by_position(
         dest_channel_locations = dest_probe.contact_positions + shift
         moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
 
-        new_templates_array[i, :, :, :] = interpolate_templates(
+        new_templates_array[:, i : i + 1, :, :] = interpolate_templates(
             templates_array[i : i + 1, :, :],
             src_channel_locations,
             moved_locations,
             interpolation_method=interpolation_method,
         )
+
+    return new_templates_array
 
 
 class DriftingTemplates(Templates):
