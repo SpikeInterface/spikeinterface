@@ -529,7 +529,9 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, return_in_uV, peak_sign, peak_mode, rec_attributes):
+    def create_memory(
+        cls, sorting, recording, sparsity, return_in_uV, peak_sign, peak_mode, rec_attributes, copy_sorting=True
+    ):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -540,11 +542,17 @@ class SortingAnalyzer:
             # a copy is done to avoid shared dict between instances (which can block garbage collector)
             rec_attributes = rec_attributes.copy()
 
-        # a copy of sorting is copied in memory for fast access
-        sorting_copy = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+        if copy_sorting:
+            # a copy of sorting is materialized in memory for fast access
+            analyzer_sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+        else:
+            # keep the given (possibly lazy) sorting as-is: its spike times are read on demand rather
+            # than materialized up front. Useful for large streamed sortings where a view may need only
+            # a few units' trains (e.g. curation from stored templates + metrics).
+            analyzer_sorting = sorting
 
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting_copy,
+            sorting=analyzer_sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="memory",

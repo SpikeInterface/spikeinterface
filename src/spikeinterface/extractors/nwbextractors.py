@@ -1859,38 +1859,57 @@ def read_nwb_as_analyzer(
         use_pynwb=use_pynwb,
         t_start=t_start_tmp,
         sampling_frequency=sampling_frequency,
+        load_unit_properties=False,  # columns are read deliberately below, into their extensions
     )
 
+    sorting = sorting_tmp
     if recording is None and t_start is None:
-        # re-estimate t_start from spike times
-        if verbose:
-            print("Re-estimating t_start from spike_times")
-        t_start_new = np.min(sorting_tmp._sorting_segments[0].spike_times_data) - 0.001
+        # Estimate t_start from the first stored spike time and set it on the existing sorting in place.
+        # spike_times is stored per unit in ascending order, so the very first element is a good proxy
+        # for the earliest spike. Reading only that one element (instead of np.min over the whole lazy
+        # dataset, or constructing the sorting a second time) avoids streaming the entire spike_times
+        # array just to fix one scalar.
+        t_start_new = float(np.asarray(sorting._sorting_segments[0].spike_times_data[0])) - 0.001
         if verbose:
             print(f"Found new t_start: {t_start_new} s")
-        sorting = NwbSortingExtractor(
-            file_path=file_path,
-            electrical_series_path=electrical_series_path,
-            unit_table_path=unit_table_path,
-            stream_mode=stream_mode,
-            stream_cache_path=stream_cache_path,
-            cache=cache,
-            storage_options=storage_options,
-            use_pynwb=use_pynwb,
-            t_start=t_start_new,
-            sampling_frequency=sampling_frequency,
-        )
-    else:
-        sorting = sorting_tmp
+        for segment in sorting._sorting_segments:
+            segment._t_start = t_start_new
 
+    # Read the Units table deliberately. Classify each column and only materialize the ones that
+    # become part of the analyzer: `waveform_mean` (templates), the `electrodes` region (sparsity), the
+    # per-unit numeric metric columns (quality/template metrics), and the per-unit label columns
+    # (identity properties). The large per-spike columns (spike amplitudes, spike depths, each as long
+    # as the whole spike vector) are never read here, which is what makes streaming this table viable.
     if use_pynwb:
-        units = sorting.units_table
-        colnames = units.colnames
-        units = units.to_dataframe(index=True)
+        units_table = sorting.units_table
+        colnames = list(units_table.colnames)
+        units = units_table.to_dataframe(index=True)
+        structural = {"waveform_mean", "electrodes"}
+        metric_colnames = [c for c in units.columns if c not in structural and units[c].dtype.kind in "fiu"]
+        label_colnames = [
+            c
+            for c in units.columns
+            if c not in structural
+            and units[c].dtype.kind == "O"
+            and not isinstance(units[c].iloc[0], (list, np.ndarray))
+        ]
     else:
-        units_dset = sorting.units_table
-        units = _create_df_from_nwb_table(units_dset)
-        colnames = units.columns
+        units_group = sorting.units_table
+        colnames = list(units_group.keys())
+        structural = ("id", "spike_times", "waveform_mean", "electrodes")
+        metric_colnames, label_colnames = [], []
+        for column_name in colnames:
+            if column_name.endswith("_index") or column_name in structural or f"{column_name}_index" in colnames:
+                continue  # index columns, structural columns, and ragged/per-spike columns
+            dataset = units_group[column_name]
+            if dataset.attrs.get("neurodata_type") == "DynamicTableRegion":
+                continue  # e.g. max_electrode: a per-unit reference into electrodes, not a metric
+            if dataset.ndim == 1 and dataset.dtype.kind in "fiu":
+                metric_colnames.append(column_name)
+            elif dataset.ndim == 1 and dataset.dtype.kind in "OSU":
+                label_colnames.append(column_name)
+        needed = [c for c in ("waveform_mean", "electrodes") if c in colnames] + metric_colnames + label_colnames
+        units = _create_df_from_nwb_table(units_group, columns=needed)
 
     electrodes_indices = None
     if use_pynwb:
@@ -1919,7 +1938,10 @@ def read_nwb_as_analyzer(
                     units = units.loc[units.index[unit_mask]]
                     electrodes_indices = units["electrodes"]
 
-    # TODO: figure out sparsity
+    # per-unit label / identity columns (e.g. kilosort2_label, cluster_uuid) -> sorting properties
+    for label_column in label_colnames:
+        if label_column in units.columns and len(units[label_column]) == sorting.get_num_units():
+            sorting.set_property(label_column, units[label_column].values)
 
     # handle recording if available
     if recording is not None:
@@ -1944,7 +1966,11 @@ def read_nwb_as_analyzer(
             channel_ids = electrodes_table_sliced["channel_name"][:]
         else:
             channel_ids = electrodes_table_sliced["id"][:]
-        num_samples = [sorting.to_spike_vector()[-1]["sample_index"]]
+        # num_samples only needs to bound the recording length. Estimate it from the last stored spike
+        # time (one element read) rather than sorting.to_spike_vector(), which would materialize every
+        # spike just to read the maximum sample index.
+        last_spike_time = float(np.asarray(sorting._sorting_segments[0].spike_times_data[-1]))
+        num_samples = [int(last_spike_time * sorting.sampling_frequency) + 1]
         rec_attributes = dict(
             channel_ids=channel_ids,
             sampling_frequency=sorting.sampling_frequency,
@@ -2006,15 +2032,37 @@ def read_nwb_as_analyzer(
         peak_sign="neg",
         peak_mode="extremum",
         rec_attributes=rec_attributes,
+        # recordingless: keep the lazy sorting so spike_times is read on demand, not materialized here
+        copy_sorting=recording is not None,
     )
 
     # templates
     if "waveform_mean" in units and unit_local_channels is not None:
         from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-        # random spikes is a dependency for templates; the raw spike samples are not stored so we
-        # select all of them
-        analyzer.compute("random_spikes", method="all")
+        # random_spikes is the analyzer's required extension. With a recording it drives waveform
+        # extraction, so compute it for real. Without a recording it is never used to extract anything
+        # (there are no traces); computing it would call sorting.to_spike_vector(), which materializes
+        # the whole spike_times array (e.g. ~165 MB for a full IBL session) and dominates the cost.
+        # Instead build it from the per-unit spike counts (the spike_times index), so spike_times is
+        # not read here; the lazy sorting still reads a unit's spikes on demand when a view needs them.
+        if recording is not None:
+            analyzer.compute("random_spikes", method="all")
+        else:
+            from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
+
+            spike_times_index = sorting._sorting_segments[0].spike_times_index_data
+            total_num_spikes = int(np.asarray(spike_times_index[-1]))
+            max_spikes_per_unit = 500
+            num_random = min(max_spikes_per_unit * sorting.get_num_units(), total_num_spikes)
+            random_spikes_indices = np.sort(
+                np.random.default_rng(0).choice(total_num_spikes, size=num_random, replace=False)
+            )
+            random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
+            random_spikes_ext.set_params(method="uniform", max_spikes_per_unit=max_spikes_per_unit, seed=0)
+            random_spikes_ext.data["random_spikes_indices"] = random_spikes_indices
+            random_spikes_ext.run_info["run_completed"] = True
+            analyzer.extensions["random_spikes"] = random_spikes_ext
 
         waveform_mean = np.array([np.asarray(t, dtype="float") for t in units["waveform_mean"].values])
         num_samples_template = waveform_mean.shape[1]
@@ -2043,15 +2091,20 @@ def read_nwb_as_analyzer(
         analyzer.extensions["templates"] = templates_ext
 
     template_metric_columns = ComputeTemplateMetrics.get_metric_columns()
-    quality_metric_columns = ComputeQualityMetrics.get_metric_columns()
 
     template_metrics_df = pd.DataFrame(index=sorting.unit_ids)
     quality_metric_df = pd.DataFrame(index=sorting.unit_ids)
 
-    for col in units.columns:
+    # Route every per-unit numeric column to its metrics extension. Canonical template-metric names go
+    # to template_metrics; everything else goes to quality_metrics, including pipeline-specific metrics
+    # that are not canonical SpikeInterface names (e.g. IBL's ibl_quality_score, noise_cutoff), so they
+    # are preserved and shown in the metrics view rather than dropped.
+    for col in metric_colnames:
+        if col not in units.columns:
+            continue
         if col in template_metric_columns:
             template_metrics_df.loc[:, col] = units[col].values
-        if col in quality_metric_columns:
+        else:
             quality_metric_df.loc[:, col] = units[col].values
 
     if len(template_metrics_df.columns) > 0:
@@ -2112,17 +2165,26 @@ def _create_dummy_probegroup_from_locations(locations, shape="circle", shape_par
     return probegroup
 
 
-def _create_df_from_nwb_table(group):
-    """Makes pandas DataFrame from hdf5/zarr NWB group"""
+def _create_df_from_nwb_table(group, columns=None):
+    """Makes pandas DataFrame from hdf5/zarr NWB group.
+
+    If `columns` is given, only those columns (plus the `id` index) are read; the data of every other
+    column is never touched. This lets callers avoid materializing large columns, e.g. the per-spike
+    arrays of a Units table (spike amplitudes, spike depths), when only a few columns are needed.
+    """
     import pandas as pd
 
-    colnames = list(group.keys())
+    all_colnames = list(group.keys())
+    if columns is None:
+        colnames = all_colnames
+    else:
+        colnames = [c for c in ["id", *columns] if c in all_colnames]
     data = {}
     for col in colnames:
         if "_index" in col:
             continue
         item = group[col][:]
-        if f"{col}_index" in colnames:
+        if f"{col}_index" in all_colnames:
             item = np.split(item, group[f"{col}_index"][:])[:-1]
             data[col] = item
         elif item.ndim > 1:
