@@ -14,9 +14,7 @@ scipy_spec = importlib.util.find_spec("scipy")
 sklearn_spec = importlib.util.find_spec("sklearn")
 
 if numba_spec is not None and networkx_spec is not None and scipy_spec is not None and sklearn_spec is not None:
-    import numba
-    import networkx
-    import scipy.spatial
+    from scipy.spatial import distance
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from .isosplit_isocut import isocut
 else:
@@ -136,7 +134,7 @@ def find_merge_pairs_from_features(
 
     channel_locs = recording.get_channel_locations()
     template_locs = channel_locs[max_chans, :]
-    template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
+    template_dist = distance.cdist(template_locs, template_locs, metric="euclidean")
 
     # print("template_locs", template_locs.shape, template_locs)
     # print("template_locs", np.unique(template_locs[:, 1]).shape)

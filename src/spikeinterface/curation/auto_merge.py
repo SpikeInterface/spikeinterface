@@ -6,7 +6,7 @@ import importlib.util
 import numpy as np
 
 if importlib.util.find_spec("numba") is not None:
-    import numba
+    from numba import jit
 
     HAVE_NUMBA = True
 else:
@@ -995,11 +995,11 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
-    from scipy.signal import fftconvolve
+    from scipy.signal import fftconvolve, butter, filtfilt
 
     # OLD implementation : smooth correlogram by low pass filter
-    # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
-    # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
+    # b, a = butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
+    # correlograms_smoothed = filtfilt(b, a, correlograms, axis=2)
 
     # new implementation smooth by convolution with a Gaussian kernel
     if len(correlograms) == 0:  # fftconvolve will not return the correct shape.
@@ -1330,7 +1330,7 @@ def binom_sf(x: int, n: float, p: float) -> float:
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def _get_border_probabilities(max_time) -> tuple[int, int, float, float]:
         """
         Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
@@ -1362,7 +1362,7 @@ if HAVE_NUMBA:
 
         return border_low, border_high, p_low, p_high
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def compute_nb_violations(spike_train, max_time) -> float:
         """
         Computes the number of refractory period violations in a spike train.
@@ -1403,7 +1403,7 @@ if HAVE_NUMBA:
 
         return n_violations + p_high * n_violations_high + p_low * n_violations_low
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
         """
         Computes the number of coincident spikes between two spike trains.
