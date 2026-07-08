@@ -882,10 +882,6 @@ class BaseExtractor:
         intialization_args = (self.to_dict(),)
         return (instance_constructor, intialization_args)
 
-    @staticmethod
-    def load_from_folder(folder) -> "BaseExtractor":
-        return BaseExtractor.load(folder)
-
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
