@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
+import shutil
+import warnings
 
 import numpy as np
 import numpy.typing as npt
-import shutil
-import warnings
 
 from spikeinterface.core import (
     write_binary_recording,

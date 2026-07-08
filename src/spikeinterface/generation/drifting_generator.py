@@ -120,7 +120,7 @@ def make_one_displacement_vector(
     displacement_vector: np.array
         The discplacement vector in micrometers
     """
-    import scipy.signal
+    from scipy.signal import sawtooth
 
     t_start_drift = 0.0 if t_start_drift is None else t_start_drift
     t_end_drift = duration if t_end_drift is None else t_end_drift
@@ -137,7 +137,7 @@ def make_one_displacement_vector(
         times = np.arange(end_drift_index - start_drift_index) / displacement_sampling_frequency
 
         freq = 1.0 / period_s
-        triangle = np.abs(scipy.signal.sawtooth(2 * np.pi * freq * times + np.pi / 2))
+        triangle = np.abs(sawtooth(2 * np.pi * freq * times + np.pi / 2))
         # triangle *= amplitude_um
         # triangle -= amplitude_um / 2.0
         triangle -= 0.5

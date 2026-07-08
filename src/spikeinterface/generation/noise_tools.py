@@ -1,5 +1,6 @@
-import numpy as np
 from typing import Literal
+
+import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.generate import _ensure_seed
@@ -133,7 +134,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         seed,
         strategy,
     ):
-        assert seed is not None
+        assert seed is not None, "Please include a seed value"
 
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
 

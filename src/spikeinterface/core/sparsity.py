@@ -705,6 +705,13 @@ def compute_sparsity(
         assert isinstance(
             templates_or_sorting_analyzer, (Templates, SortingAnalyzer)
         ), f"compute_sparsity(method='{method}') need Templates or SortingAnalyzer"
+        if isinstance(templates_or_sorting_analyzer, Templates):
+            assert (
+                peak_sign is not None
+            ), "When using `compute_sparsity` with a Templates object, `peak_sign` must be specified."
+            assert (
+                amplitude_mode is not None
+            ), "When using `compute_sparsity` with a Templates object, `amplitude_mode` must be specified."
     else:
         assert isinstance(
             templates_or_sorting_analyzer, SortingAnalyzer

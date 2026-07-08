@@ -198,9 +198,9 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 
 
 if HAVE_NUMBA:
-    import numba
+    from numba import jit, prange
 
-    @numba.jit(
+    @jit(
         nopython=True,
         nogil=True,
         cache=False,
@@ -208,7 +208,7 @@ if HAVE_NUMBA:
     def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, bins):
         n_units = ISIs.shape[0]
 
-        units_loop = numba.prange(n_units) if n_units > 300 else range(n_units)
+        units_loop = prange(n_units) if n_units > 300 else range(n_units)
         for i in units_loop:
             spike_train = spike_trains[spike_clusters == i]
             ISIs[i] += np.histogram(np.diff(spike_train), bins=bins)[0]

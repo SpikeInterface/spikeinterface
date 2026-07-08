@@ -1,6 +1,9 @@
-from spikeinterface.core import SortingAnalyzer, BaseSorting
-import numpy as np
 from warnings import warn
+import importlib.util
+
+import numpy as np
+
+from spikeinterface.core import SortingAnalyzer, BaseSorting
 
 
 def to_pynapple_tsgroup(
@@ -30,6 +33,11 @@ def to_pynapple_tsgroup(
     spike_train_TsGroup : pynapple.TsGroup
         A TsGroup object from the pynapple package.
     """
+    if importlib.util.find_spec("pynapple") is None:
+        raise ImportError(
+            "`to_pynapple_tsgroup` requires the pynapple package to be installed. Please install with pip install pynapple"
+        )
+
     from pynapple import TsGroup, Ts
     import pandas as pd
 

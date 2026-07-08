@@ -1,8 +1,8 @@
 from pathlib import Path
 import warnings
 
-
 import numpy as np
+import numpy.typing
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (

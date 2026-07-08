@@ -1,5 +1,5 @@
-import warnings
 import numpy as np
+
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
