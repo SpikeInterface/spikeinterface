@@ -367,6 +367,8 @@ def make_linear_displacement(start, stop, num_step=10):
     """
     if num_step < 1:
         raise ValueError("make_linear_displacement needs num_step > 0")
+    start = np.array(start, dtype="float32")
+    stop = np.array(stop, dtype="float32")
     if num_step == 1:
         displacements = ((start + stop) / 2)[np.newaxis, :]
     else:
