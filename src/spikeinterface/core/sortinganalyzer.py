@@ -3042,14 +3042,12 @@ class AnalyzerExtension:
             raise ValueError("Cannot select both unit_ids and channel_ids when copying an extension.")
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
-        if unit_ids is None:
-            new_extension.data = self.data
-        else:
+        if unit_ids is not None:
             new_extension.data = self._select_units_extension_data(unit_ids)
-        if channel_ids is None:
-            new_extension.data = self.data
-        else:
+        elif channel_ids is not None:
             new_extension.data = self._select_channels_extension_data(channel_ids)
+        else:
+            new_extension.data = self.data
         new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension
