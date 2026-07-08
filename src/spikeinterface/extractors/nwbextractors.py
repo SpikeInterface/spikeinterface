@@ -1880,7 +1880,7 @@ def read_nwb_as_analyzer(
     storage_options: dict | None = None,
     use_pynwb: bool = False,
     group_name: str | None = None,
-    compute_extra: List[str] | None = ["unit_locations", "correlograms"],
+    compute_extra: List[str] | None = ["unit_locations"],
     compute_extra_params: dict | None = None,
     verbose: bool = False,
 ) -> SortingAnalyzer:
@@ -1917,17 +1917,10 @@ def read_nwb_as_analyzer(
     )
 
     sorting = sorting_tmp
-    if recording is None and t_start is None:
-        # Estimate t_start from the first stored spike time and set it on the existing sorting in place.
-        # spike_times is stored per unit in ascending order, so the very first element is a good proxy
-        # for the earliest spike. Reading only that one element (instead of np.min over the whole lazy
-        # dataset, or constructing the sorting a second time) avoids streaming the entire spike_times
-        # array just to fix one scalar.
-        t_start_new = float(np.asarray(sorting._sorting_segments[0].spike_times_data[0])) - 0.001
-        if verbose:
-            print(f"Found new t_start: {t_start_new} s")
-        for segment in sorting._sorting_segments:
-            segment._t_start = t_start_new
+    # Recordingless case: leave t_start at 0 (set when the sorting was constructed). NWB spike times are
+    # in seconds from session start, so they are always >= 0 and map to non-negative frames with
+    # t_start = 0. Anchoring t_start to the first spike would only remove empty space before it on the
+    # timeline (cosmetic) and would cost a streamed read, so we skip it to keep the build cheap.
 
     # Read the Units table deliberately. Classify each column and only materialize the ones that
     # become part of the analyzer: `waveform_mean` (templates), the `electrodes` region (sparsity), the
@@ -2062,9 +2055,9 @@ def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, elect
 
     Mirrors `read_kilosort_as_analyzer`: `generate_ground_truth_recording` produces a fully lazy
     recording (noise generated on the fly, no traces materialized) whose only purpose is to feed probe
-    geometry, channel ids, and a bounding length into the standard analyzer constructor. The caller
-    drops the recording (`analyzer._recording = None`) right after construction. Returns the recording
-    and the ordered channel ids.
+    geometry, channel ids, and a bounding length into the standard analyzer constructor. The caller drops
+    the recording (`analyzer._recording = None`) right after construction. Returns the recording and the
+    ordered channel ids.
     """
     from probeinterface import Probe
     from spikeinterface.core import generate_ground_truth_recording
@@ -2089,10 +2082,12 @@ def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, elect
     ), "'rel_x' and 'rel_y' should be columns in the electrodes table"
     locations = np.array([electrodes_table_sliced["rel_x"][:], electrodes_table_sliced["rel_y"][:]]).T
 
-    # The recording length only needs to bound the spikes. Estimate it from the last stored spike time
-    # (one element read) rather than sorting.to_spike_vector(), which would materialize every spike.
-    # spike_times is stored in seconds, so this is already a duration in seconds (no sampling-rate
-    # division, unlike the Kilosort path where spike times are in samples).
+    # The recording length only needs to loosely bound the timeline for the recordingless GUI; nothing
+    # about curation depends on it being exact. Estimate it cheaply from the last stored spike time (one
+    # element, i.e. only the last spike_times chunk) rather than scanning the whole array for the true
+    # global maximum. spike_times is in seconds, so this is already a duration in seconds. It is only an
+    # approximation: because spike_times is concatenated per unit and not globally sorted, this is the
+    # last unit's last spike, not necessarily the latest spike overall.
     last_spike_time = float(np.asarray(sorting._sorting_segments[0].spike_times_data[-1]))
     duration = last_spike_time + 1.0
 
@@ -2238,38 +2233,6 @@ def _make_metrics(analyzer, units, metric_colnames, verbose=False):
         quality_metrics_ext.data["metrics"] = quality_metrics_ext._cast_metrics(quality_metric_df)
         quality_metrics_ext.run_info["run_completed"] = True
         analyzer.extensions["quality_metrics"] = quality_metrics_ext
-
-
-def _create_dummy_probegroup_from_locations(locations, shape="circle", shape_params={"radius": 1}):
-    """
-    Creates a "dummy" probe based on locations.
-
-    Parameters
-    ----------
-    locations : np.array
-        Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
-    shape : str, default: "circle"
-        Electrode shapes
-    shape_params : dict, default: {"radius": 1}
-        Shape parameters
-
-    Returns
-    -------
-    probe : Probe
-        The created probe
-    """
-    from probeinterface import Probe, ProbeGroup
-
-    ndim = locations.shape[1]
-    assert ndim == 2
-    probe = Probe(ndim=2)
-    probe.set_contacts(locations, shapes=shape, shape_params=shape_params)
-    probe.set_device_channel_indices(np.arange(len(probe.contact_positions)))
-    probe.create_auto_shape()
-    probegroup = ProbeGroup()
-    probegroup.add_probe(probe)
-
-    return probegroup
 
 
 def _create_df_from_nwb_table(group, columns=None):
