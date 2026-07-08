@@ -86,7 +86,9 @@ def interpolate_templates(
     return new_templates_array
 
 
-def move_all_dense_templates_by_displacement(templates_array, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
+def move_all_dense_templates_by_displacement(
+    templates_array, displacements, source_probe, dest_probe=None, interpolation_method="cubic"
+):
     """
     Move all templates_array at onces given some displacements using spatial interpolation (cubic or linear).
     Optionally, the displaced templates can be remapped to another probe with a different geometry.
@@ -133,10 +135,15 @@ def move_all_dense_templates_by_displacement(templates_array, displacements, sou
     return templates_array_moved
 
 
-def move_templates_by_position(templates_array, source_templates_locations, source_probe, 
-                               dest_templates_locations, dest_probe,
-                               displacements,
-                               interpolation_method="cubic"):
+def move_templates_by_position(
+    templates_array,
+    source_templates_locations,
+    source_probe,
+    dest_templates_locations,
+    dest_probe,
+    displacements,
+    interpolation_method="cubic",
+):
     """
 
 
@@ -171,16 +178,18 @@ def move_templates_by_position(templates_array, source_templates_locations, sour
     num_samples = templates_array.shape[1]
     num_channels = templates_array.shape[2]
 
-    new_templates_array = np.zeros((num_displacement, num_templates, num_samples, num_channels), dtype=templates_array.dtype)
+    new_templates_array = np.zeros(
+        (num_displacement, num_templates, num_samples, num_channels), dtype=templates_array.dtype
+    )
     for i in range(num_templates):
-        
-        shift = source_templates_locations[i:i+1, :] - dest_templates_locations[i:i+1, :]
+
+        shift = source_templates_locations[i : i + 1, :] - dest_templates_locations[i : i + 1, :]
         src_channel_locations = source_probe.contact_positions
         dest_channel_locations = dest_probe.contact_positions + shift
         moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
 
         new_templates_array[i, :, :, :] = interpolate_templates(
-            templates_array[i:i+1, :, :],
+            templates_array[i : i + 1, :, :],
             src_channel_locations,
             moved_locations,
             interpolation_method=interpolation_method,

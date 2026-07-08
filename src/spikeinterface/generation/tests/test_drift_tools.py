@@ -92,7 +92,9 @@ def test_move_all_dense_templates_by_displacement():
     displacements = np.zeros((num_move, 2))
     displacements[:, 1] = np.linspace(-amplitude_motion_um, amplitude_motion_um, num_move)
 
-    templates_moved = move_all_dense_templates_by_displacement(templates.templates_array, displacements, templates.probe)
+    templates_moved = move_all_dense_templates_by_displacement(
+        templates.templates_array, displacements, templates.probe
+    )
     assert templates_moved.shape == (num_move,) + templates.templates_array.shape
 
 
