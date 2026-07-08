@@ -828,12 +828,11 @@ def estimate_sparsity(
         # standard case
         probe = recording.get_probe()
     else:
-        # if many probe or no probe then we use channel location and create a dummy probe with all channels
-        # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
         all_locations = recording.get_channel_locations()
-        # check if unique
         if len(all_locations) != len(set(map(tuple, all_locations))):
-            # in this case we offset each probe by a 300um x/y shift to avoid overlapping channels
+            # If contact locations are not unique across probes in the probe group, we create a dummy probe with
+            # shifted locations to avoid overlapping channels, by adding a 300um x/y shift for each probe.
+            # This is necessary for the sparsity computation to work correctly.
             shift = 300
             all_locations_shifted = np.zeros_like(all_locations)
             for i, probe in enumerate(recording.get_probes()):
