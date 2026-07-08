@@ -298,7 +298,7 @@ class DriftingTemplates(Templates):
         displacements : np.array
             The displacement vector.
             shape = (1, 2)
-        **interpolation_kwargs : keyword arguments for `move_dense_templates` function
+        **interpolation_kwargs : keyword arguments for `move_all_dense_templates_by_displacement` function
 
         Returns
         -------
@@ -328,7 +328,7 @@ class DriftingTemplates(Templates):
         displacements : np.array
             The displacement vector.
             shape = (num_displacements, 2)
-        **interpolation_kwargs : keyword arguments for `move_dense_templates` function
+        **interpolation_kwargs : keyword arguments for `move_all_dense_templates_by_displacement` function
         """
         dense_static_templates = self.get_dense_templates()
 
