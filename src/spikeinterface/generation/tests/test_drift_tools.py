@@ -3,7 +3,7 @@ import shutil
 
 from spikeinterface.generation import (
     interpolate_templates,
-    move_dense_templates,
+    move_all_dense_templates_by_displacement,
     make_linear_displacement,
     DriftingTemplates,
     InjectDriftingTemplatesRecording,
