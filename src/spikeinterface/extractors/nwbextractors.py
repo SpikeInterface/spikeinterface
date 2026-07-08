@@ -1428,9 +1428,14 @@ class NwbSortingExtractor(BaseSorting):
         }
 
     def _compute_and_cache_spike_vector(self) -> None:
-        # An NWB Units table is always single-segment. Spikes are stored as one flat times dataset
-        # grouped by unit, so the whole spike vector is built from a single bulk read instead of one
-        # streamed slice per unit (the generic BaseSorting implementation). This matters when streaming.
+        # Performance: this deliberately overrides the generic BaseSorting builder, and the override is
+        # the point. The generic builder reads one spike train per unit (one streamed read per unit),
+        # whereas an NWB Units table stores every unit's spikes in a single flat times dataset grouped by
+        # unit. Reading that dataset once (see NwbSortingSegment._get_all_spike_frames_and_unit_indices)
+        # turns num_units streamed reads into one, which is a large difference for remote/streamed files.
+        # Do not drop this override in favor of the generic path without a reason: doing so silently
+        # reintroduces the per-unit read pattern. An NWB Units table is always single-segment, so the
+        # single segment is built directly.
         segment = self.segments[0]
         sample_indices, unit_indices = segment._get_all_spike_frames_and_unit_indices()
 
