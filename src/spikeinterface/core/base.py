@@ -809,7 +809,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
+        assert self.check_serializability("pickle"), "The extractor is not serializable to file with pickle"
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
