@@ -295,7 +295,7 @@ def relocate_templates(
                     displacement = -displacement
         displacement_vector = np.zeros(2)
         displacement_vector[depth_dimension] = displacement
-        templates_array_moved[i] = move_dense_templates(
+        templates_array_moved[i] = move_all_dense_templates_by_displacement(
             templates.templates_array[i][None],
             displacements=displacement_vector[None],
             source_probe=templates.probe,

@@ -84,7 +84,7 @@ def test_interpolate_templates():
         )
 
 
-def test_move_dense_templates():
+def test_move_all_dense_templates_by_displacement():
     templates = make_some_templates()
 
     num_move = 5
@@ -92,7 +92,7 @@ def test_move_dense_templates():
     displacements = np.zeros((num_move, 2))
     displacements[:, 1] = np.linspace(-amplitude_motion_um, amplitude_motion_um, num_move)
 
-    templates_moved = move_dense_templates(templates.templates_array, displacements, templates.probe)
+    templates_moved = move_all_dense_templates_by_displacement(templates.templates_array, displacements, templates.probe)
     assert templates_moved.shape == (num_move,) + templates.templates_array.shape
 
 
@@ -215,6 +215,6 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
 
 if __name__ == "__main__":
     test_interpolate_templates()
-    test_move_dense_templates()
+    test_move_all_dense_templates_by_displacement()
     test_DriftingTemplates()
     test_InjectDriftingTemplatesRecording()

@@ -86,15 +86,17 @@ def interpolate_templates(
     return new_templates_array
 
 
-def move_dense_templates(templates_array, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
+def move_all_dense_templates_by_displacement(templates_array, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
     """
-    Move all templates_array given some displacements using spatial interpolation (cubic or linear).
+    Move all templates_array at onces given some displacements using spatial interpolation (cubic or linear).
     Optionally, the displaced templates can be remapped to another probe with a different geometry.
 
     This function operates on dense templates only.
 
     Note: in this function no checks are done to see if templates_array can be interpolatable after displacements.
     To check if the given displacements are interpolatable use the higher-level function move_templates().
+
+    See also move_templates_by_position(), more flexible.
 
     Parameters
     ----------
@@ -129,6 +131,60 @@ def move_dense_templates(templates_array, displacements, source_probe, dest_prob
         templates_array, src_channel_locations, moved_locations, interpolation_method=interpolation_method
     )
     return templates_array_moved
+
+
+def move_templates_by_position(templates_array, source_templates_locations, source_probe, 
+                               dest_templates_locations, dest_probe,
+                               displacements,
+                               interpolation_method="cubic"):
+    """
+
+
+    Parameters
+    ----------
+    templates_array : np.array
+        A numpy array with dense templates_array.
+        shape = (num_templates, num_samples, num_channels)
+    source_templates_locations : np.array
+        Positions of templates in the source probe coordinates.
+        shape : (num_templates, 2)
+    source_probe : Probe
+        The Probe object on which templates_array are defined
+    dest_templates_locations : np.array
+        Positions of templates in the dest probe coordinates.
+        shape : (num_templates, 2)
+    dest_probe : Probe
+        Destination Probe. Can be different geometry than the original.
+    displacements : np.array
+        Displacement vector
+        shape : (num_displacement, 2)
+    interpolation_method : "cubic" | "linear", default: "cubic"
+        The interpolation method.
+
+    Returns
+    -------
+    new_templates_array : np.array
+        shape = (num_displacement, num_templates, num_samples, num_channels)
+    """
+    num_displacement = displacements.shape[0]
+    num_templates = templates_array.shape[0]
+    num_samples = templates_array.shape[1]
+    num_channels = templates_array.shape[2]
+
+    new_templates_array = np.zeros((num_displacement, num_templates, num_samples, num_channels), dtype=templates_array.dtype)
+    for i in range(num_templates):
+        
+        shift = source_templates_locations[i:i+1, :] - dest_templates_locations[i:i+1, :]
+        src_channel_locations = source_probe.contact_positions
+        dest_channel_locations = dest_probe.contact_positions + shift
+        moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
+
+        new_templates_array[i, :, :, :] = interpolate_templates(
+            templates_array[i:i+1, :, :],
+            src_channel_locations,
+            moved_locations,
+            interpolation_method=interpolation_method,
+        )
 
 
 class DriftingTemplates(Templates):
@@ -255,7 +311,7 @@ class DriftingTemplates(Templates):
         one_template_array = self.get_one_template_dense(unit_index)
         one_template_array = one_template_array[np.newaxis, :, :]
 
-        template_array_moved = move_dense_templates(
+        template_array_moved = move_all_dense_templates_by_displacement(
             one_template_array, displacement, self.probe, **interpolation_kwargs
         )
         # one motion one template keep only (num_samples, num_channels)
@@ -276,7 +332,7 @@ class DriftingTemplates(Templates):
         """
         dense_static_templates = self.get_dense_templates()
 
-        self.templates_array_moved = move_dense_templates(
+        self.templates_array_moved = move_all_dense_templates_by_displacement(
             dense_static_templates, displacements, self.probe, **interpolation_kwargs
         )
         self.displacements = displacements
