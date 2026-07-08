@@ -830,8 +830,20 @@ def estimate_sparsity(
     else:
         # if many probe or no probe then we use channel location and create a dummy probe with all channels
         # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
-        chan_locs = recording.get_channel_locations()
-        probe = recording.create_dummy_probe_from_locations(chan_locs)
+        all_locations = recording.get_channel_locations()
+        # check if unique
+        if len(all_locations) != len(set(map(tuple, all_locations))):
+            # in this case we offset each probe by a 300um x/y shift to avoid overlapping channels
+            shift = 300
+            all_locations_shifted = np.zeros_like(all_locations)
+            for i, probe in enumerate(recording.get_probes()):
+                n_contacts = probe.get_contact_count()
+                probe_locations_shifted = probe.contact_positions.copy()
+                probe_locations_shifted[:, 0] += shift * i
+                probe_locations_shifted[:, 1] += shift * i
+                all_locations_shifted[i * n_contacts : (i + 1) * n_contacts] = probe_locations_shifted
+                all_locations = all_locations_shifted
+        probe = recording.create_dummy_probe_from_locations(all_locations)
 
     if method == "radius" and main_channel_indices is not None:
         assert len(main_channel_indices) == len(sorting.unit_ids)
