@@ -87,7 +87,12 @@ def interpolate_templates(
 
             else:
                 interp_template = griddata(
-                    source_locations, template, dest_locations, method=interpolation_method, fill_value=0
+                    source_locations,
+                    template,
+                    dest_locations,
+                    method=interpolation_method,
+                    fill_value=0,
+                    **interpolation_kwargs,
                 )
 
             if dest_locations_dims == 2:
