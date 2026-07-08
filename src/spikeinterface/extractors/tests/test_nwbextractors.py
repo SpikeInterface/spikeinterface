@@ -739,6 +739,43 @@ def test_sorting_electrical_series_path_provides_time_base(tmp_path, use_pynwb):
     np.testing.assert_allclose(extracted_frames, expected_frames)
 
 
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_sorting_irregular_timestamps_map_exactly_to_samples(tmp_path, use_pynwb):
+    """A timestamps-based ElectricalSeries has an irregular clock: spikes map to the exact sample
+    (searchsorted into the timestamps), not via an estimated rate."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.ecephys import ElectricalSeries
+    from pynwb.testing.mock.ecephys import mock_electrodes
+
+    timestamps = np.array([0.0, 0.1, 0.2, 5.0, 5.1])  # a gap between 0.2 and 5.0 breaks a single rate
+    spike_times = np.array([0.0, 0.2, 5.0, 5.1])
+    expected_samples = np.array([0, 2, 3, 4])
+
+    nwbfile = mock_NWBFile()
+    electrodes = mock_electrodes(n_electrodes=4, nwbfile=nwbfile)
+    electrical_series = ElectricalSeries(
+        name="ElectricalSeries",
+        data=np.zeros((timestamps.size, 4)),
+        timestamps=timestamps,
+        electrodes=electrodes,
+    )
+    nwbfile.add_acquisition(electrical_series)
+    nwbfile.add_unit(spike_times=spike_times)
+
+    file_path = tmp_path / "test.nwb"
+    with NWBHDF5IO(path=file_path, mode="w") as io:
+        io.write(nwbfile)
+
+    sorting = NwbSortingExtractor(
+        file_path=file_path,
+        electrical_series_path="acquisition/ElectricalSeries",
+        use_pynwb=use_pynwb,
+    )
+    frames = sorting.get_unit_spike_train(unit_id=0, return_times=False)
+    np.testing.assert_array_equal(frames, expected_samples)
+
+
 @pytest.mark.parametrize("provided", ["sampling_frequency", "t_start"])
 @pytest.mark.parametrize("use_pynwb", [True, False])
 def test_sorting_electrical_series_path_and_time_base_are_mutually_exclusive(tmp_path, use_pynwb, provided):
