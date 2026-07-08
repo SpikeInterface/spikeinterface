@@ -843,8 +843,9 @@ def estimate_sparsity(
             # standard case
             probe = recording.get_probe()
         else:
-            # if many probe or no probe then we use channel location and create a dummy probe with all channels
-            # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
+            # if the recording has multiple probes, we use channel locations and create a dummy probe with all channels
+            # to make it compatible with the Templates object. This is a workaround for the fact that the Templates
+            # object expects a probe, but we don't have a single probe in this case.
             chan_locs = recording.get_channel_locations()
             probe = recording.create_dummy_probe_from_locations(chan_locs)
 

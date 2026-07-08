@@ -1589,6 +1589,10 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected channels
         """
+        # Check that all channel_ids are in the current channel_ids
+        if not np.all(np.isin(channel_ids, self.channel_ids)):
+            wrong_channel_ids = [ch for ch in channel_ids if ch not in self.channel_ids]
+            raise ValueError(f"Some channel_ids are not in the current channel_ids: {wrong_channel_ids}")
         if self.has_recording() or self.has_temporary_recording():
             new_recording = self.recording.select_channels(channel_ids)
             new_rec_attributes = None
@@ -1600,12 +1604,13 @@ class SortingAnalyzer:
             if "properties" in new_rec_attributes:
                 new_properties = {}
                 for key, values in new_rec_attributes["properties"].items():
-                    if len(values) == len(self.channel_ids):
+                    values_arr = np.array(values)
+                    if len(values_arr) == len(self.channel_ids):
                         # only slice properties that have the same length as channel_ids
                         channel_indices = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
-                        new_properties[key] = values[channel_indices]
+                        new_properties[key] = values_arr[channel_indices]
                     else:
-                        new_properties[key] = values
+                        new_properties[key] = values_arr
                 new_rec_attributes["properties"] = new_properties
             if new_rec_attributes.get("probegroup") is not None:
                 slice_indices = self.channel_ids_to_indices(channel_ids)
