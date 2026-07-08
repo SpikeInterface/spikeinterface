@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.signal
 import importlib.util
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -7,9 +6,6 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core import get_chunk_with_margin
 
 if importlib.util.find_spec("pyopencl") is not None:
-    import pyopencl
-
-    mf = pyopencl.mem_flags
     HAVE_PYOPENCL = True
 else:
     HAVE_PYOPENCL = False
@@ -49,6 +45,8 @@ class FilterOpenCLRecording(BasePreprocessor):
         margin_ms=5.0,
     ):
         assert HAVE_PYOPENCL, "You need to install pyopencl (and GPU driver!!)"
+        from scipy.signal import iirfilter
+
         btype_modes = ("bandpass", "lowpass", "highpass", "bandstop")
         assert btype in btype_modes, f"'btype' must be in {btype_modes}"
         assert filter_mode in ("sos",), "'filter_mode' must be 'sos'"
@@ -62,7 +60,7 @@ class FilterOpenCLRecording(BasePreprocessor):
             Wn = float(band) / sf * 2
         N = filter_order
 
-        coefficients = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
+        coefficients = iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
 
         BasePreprocessor.__init__(self, recording)
 
@@ -138,6 +136,8 @@ class OpenCLFilterExecutor:
         self.num_channels = num_channels
         self.dtype = np.dtype(dtype)
         self.margin = margin
+        assert HAVE_PYOPENCL, "requires pyopencl"
+        import pyopencl
 
         #  plat = pyopencl.get_platforms()
         #  dev = plat[0].get_devices()
@@ -152,6 +152,8 @@ class OpenCLFilterExecutor:
         self.full_size = None
 
     def process(self, traces):
+        import pyopencl
+
         assert traces.dtype == self.dtype
 
         if traces.shape[0] != self.full_size:
@@ -176,6 +178,9 @@ class OpenCLFilterExecutor:
         return self.output
 
     def create_buffers_and_compile(self, chunk_size):
+        import pyopencl
+
+        mf = pyopencl.mem_flags
         self.chunk_size = chunk_size
         self.full_size = chunk_size + self.margin * 2
         n_section = self.coefficients.shape[0]

@@ -1,13 +1,13 @@
-import numpy as np
+import importlib.util
 
+import numpy as np
 import pytest
 
-try:
-    import numba
+if importlib.util.find_spec("numba") is not None:
     from spikeinterface.sortingcomponents.clustering.isosplit_isocut import isocut, isosplit
 
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 
