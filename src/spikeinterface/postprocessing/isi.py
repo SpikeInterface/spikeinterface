@@ -43,7 +43,7 @@ class ComputeISIHistograms(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_isi_hists = self.data["isi_histograms"][unit_indices, :]
