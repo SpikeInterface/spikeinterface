@@ -570,7 +570,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         self.data["result_two"] = spikes["unit_index"].copy()
         self.data["result_three"] = np.zeros((len(self.sorting_analyzer.unit_ids), 2))
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -737,6 +737,31 @@ def test_runtime_dependencies(dataset):
     # recomputing dummy also deletes dummy_pipeline
     sorting_analyzer.compute("dummy")
     assert not sorting_analyzer.has_extension("dummy_pipeline")
+
+
+def test_select_channels(dataset):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.compute(["random_spikes", "templates", "noise_levels"])
+    # select channels
+    keep_channel_ids = recording.channel_ids[::2]
+    sorting_analyzer2 = sorting_analyzer.select_channels(channel_ids=keep_channel_ids)
+
+    assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
+    assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
+    assert sorting_analyzer2.get_extension("templates").data["average"].shape[2] == len(keep_channel_ids)
+    assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
+    for p in sorting_analyzer2.rec_attributes["properties"].values():
+        assert len(p) == len(keep_channel_ids)
+
+    # Now test in recordingless mode
+    sorting_analyzer2._recording = None
+    assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
+    assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
+    assert sorting_analyzer2.get_extension("templates").data["average"].shape[2] == len(keep_channel_ids)
+    assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
+    for p in sorting_analyzer2.rec_attributes["properties"].values():
+        assert len(p) == len(keep_channel_ids)
 
 
 if __name__ == "__main__":
