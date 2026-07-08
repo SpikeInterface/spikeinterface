@@ -423,10 +423,6 @@ class ChannelSparsity:
         from .template import Templates
 
         if isinstance(templates_or_sorting_analyzer, Templates):
-            assert peak_sign is not None and peak_mode is not None, (
-                "When using `compute_sparsity` with a Templates object, "
-                "and `peak_sign` and `amplitude_mode` must be specified."
-            )
             main_channel_indices = templates_or_sorting_analyzer.get_main_channels(
                 outputs="index", peak_sign=peak_sign, peak_mode=peak_mode
             )
