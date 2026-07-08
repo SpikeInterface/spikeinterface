@@ -60,6 +60,7 @@ def define_function_handling_dict_from_class(source_class, name):
 
 # Generic typing needed to help propagate typing
 # across multiple language servers
+# see https://github.com/SpikeInterface/spikeinterface/issues/4319
 P = ParamSpec("P")
 T = TypeVar("T")
 
