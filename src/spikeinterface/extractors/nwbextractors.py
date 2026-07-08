@@ -1438,7 +1438,9 @@ class NwbSortingExtractor(BaseSorting):
 
 
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float, time_vector=None):
+    def __init__(
+        self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float, time_vector=None
+    ):
         BaseSortingSegment.__init__(self, t_start=t_start)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
