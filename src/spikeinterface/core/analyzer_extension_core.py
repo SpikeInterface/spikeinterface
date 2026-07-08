@@ -564,7 +564,7 @@ class ComputeTemplates(AnalyzerExtension):
     def _select_channels_extension_data(self, channel_ids):
         keep_channel_indices = np.flatnonzero(np.isin(self.sorting_analyzer.channel_ids, channel_ids))
 
-        new_data = dict()
+        new_data = {}
         for key, arr in self.data.items():
             new_data[key] = arr[:, :, keep_channel_indices]
 
