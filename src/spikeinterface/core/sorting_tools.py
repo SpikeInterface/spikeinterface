@@ -1,6 +1,5 @@
 import warnings
 import importlib.util
-
 from typing import Literal
 
 import numpy as np
@@ -117,9 +116,9 @@ def get_numba_vector_to_list_of_spiketrain():
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):
         return get_numba_vector_to_list_of_spiketrain._cached_numba_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def vector_to_list_of_spiketrain_numba(sample_indices, unit_indices, num_units):
         """
         Fast implementation of vector_to_dict using numba loop.

@@ -8,10 +8,6 @@ from spikeinterface.preprocessing import bandpass_filter, common_reference, zsco
 import numpy as np
 
 
-import pickle
-import json
-
-
 class SimpleSorter(ComponentsBasedSorter):
     """
     Implementation of a very simple sorter usefull for teaching.
@@ -106,7 +102,7 @@ class SimpleSorter(ComponentsBasedSorter):
         )
 
         if verbose:
-            print("Simple sorter found %d peaks in total" % len(peaks))
+            print(f"Simple sorter found {len(peaks)} peaks in total")
 
         # features with SVD
         peaks_svd, sparse_mask, svd_model = extract_peaks_svd(

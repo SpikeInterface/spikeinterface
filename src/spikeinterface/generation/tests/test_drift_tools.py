@@ -78,7 +78,10 @@ def test_interpolate_templates():
     source_locations = templates.probe.contact_positions
     # small move on both x and y
     dest_locations = source_locations + np.array([2.0, 3])
-    interpolate_templates(templates.templates_array, source_locations, dest_locations, interpolation_method="cubic")
+    for interpolation_method in ["cubic", "thin_plate"]:
+        interpolate_templates(
+            templates.templates_array, source_locations, dest_locations, interpolation_method=interpolation_method
+        )
 
 
 def test_move_dense_templates():

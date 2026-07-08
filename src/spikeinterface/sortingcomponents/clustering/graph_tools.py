@@ -47,7 +47,7 @@ def create_graph_from_peak_features(
     Note : the binarization works for linear probe only. This need to be extended to 2d grid binarization for planar mea.
     """
 
-    import scipy.sparse
+    from scipy.sparse import csr_matrix, vstack
     from scipy.spatial.distance import cdist
 
     if sparse_mode == "knn":
@@ -162,7 +162,7 @@ def create_graph_from_peak_features(
             data = local_dists.flatten().astype("float32")
             indptr = np.arange(0, local_dists.size + 1, local_dists.shape[1])
             indices = np.concatenate([neighbors_indices] * target_indices.size)
-            local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
+            local_graph = csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
             local_graphs.append(local_graph)
 
         elif sparse_mode == "knn":
@@ -186,7 +186,7 @@ def create_graph_from_peak_features(
                     norm = np.linalg.norm(src) + np.linalg.norm(tgt, axis=1)
                     data[a:b] /= norm
             indices = neighbors_indices[local_sparse_dist.indices]
-            local_graph = scipy.sparse.csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
+            local_graph = csr_matrix((data, indices, indptr), shape=(target_indices.size, peaks.size))
 
             # t1 = time.perf_counter()
             # print("make local sparse csr", t1-t0)
@@ -198,7 +198,7 @@ def create_graph_from_peak_features(
 
     # stack all local distances in a big sparse one
     if len(local_graphs) > 0:
-        distances = scipy.sparse.vstack(local_graphs)
+        distances = vstack(local_graphs)
         row_indices = np.concatenate(row_indices)
         # print(np.unique(np.diff(row_indices)))
         row_order = np.argsort(row_indices)
@@ -211,7 +211,7 @@ def create_graph_from_peak_features(
 
         if sparse_mode == "knn":
             # t0 = time.perf_counter()
-            distances = scipy.sparse.csr_matrix(distances)
+            distances = csr_matrix(distances)
             # t1 = time.perf_counter()
             # print("final csr", t1 - t0)
 
@@ -220,7 +220,7 @@ def create_graph_from_peak_features(
             distances.data[ind0 == ind1] = 0.0
 
     else:
-        distances = scipy.sparse.csr_matrix(shape=(peaks.size, peaks.size), dtype="float32")
+        distances = csr_matrix(shape=(peaks.size, peaks.size), dtype="float32")
 
     if ensure_symetric:
         # because of the way the graph is done the distance matrix could be not symetric

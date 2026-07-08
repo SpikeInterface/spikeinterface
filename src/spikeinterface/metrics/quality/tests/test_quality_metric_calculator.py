@@ -7,10 +7,7 @@ from spikeinterface.core import (
     NumpySorting,
     aggregate_units,
 )
-
 from spikeinterface.metrics.quality.misc_metrics import compute_snrs, compute_drift_metrics
-
-
 from spikeinterface.metrics import (
     compute_quality_metrics,
 )

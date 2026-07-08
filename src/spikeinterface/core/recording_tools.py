@@ -4,7 +4,6 @@ import warnings
 from pathlib import Path
 import os
 import tqdm
-import numpy.typing as npt
 
 import numpy as np
 

@@ -1,11 +1,12 @@
 from typing import Literal
 
-import numpy as np
 import json
 from dataclasses import dataclass, field, astuple, replace
-from probeinterface import Probe
 from pathlib import Path
 
+import numpy as np
+
+from probeinterface import Probe
 from .sparsity import ChannelSparsity
 
 

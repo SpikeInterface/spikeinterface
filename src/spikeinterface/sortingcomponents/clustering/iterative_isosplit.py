@@ -1,5 +1,3 @@
-from pathlib import Path
-import importlib
 import numpy as np
 
 from spikeinterface.core import get_channel_distances, Templates, ChannelSparsity

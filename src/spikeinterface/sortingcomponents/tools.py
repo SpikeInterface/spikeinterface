@@ -1,12 +1,14 @@
 import numpy as np
 import shutil
+import importlib.util
 
-try:
+if importlib.util.find_spec("psutil") is not None:
     import psutil
 
     HAVE_PSUTIL = True
-except:
+else:
     HAVE_PSUTIL = False
+
 
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import fix_job_kwargs

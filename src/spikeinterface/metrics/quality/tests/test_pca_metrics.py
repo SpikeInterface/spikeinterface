@@ -6,7 +6,6 @@ from spikeinterface.metrics import compute_quality_metrics, get_quality_pca_metr
 
 
 def test_compute_pc_metrics_multi_processing(small_sorting_analyzer, tmp_path):
-    import pandas as pd
 
     sorting_analyzer = small_sorting_analyzer
     metric_names = get_quality_pca_metric_list()

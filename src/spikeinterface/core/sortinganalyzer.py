@@ -1,5 +1,4 @@
 from typing import Literal, Optional, Any, Iterable
-
 from pathlib import Path
 from itertools import chain
 import os
@@ -17,9 +16,7 @@ from time import perf_counter
 import numpy as np
 
 import probeinterface
-
 import spikeinterface
-
 from spikeinterface.core import BaseRecording, BaseSorting, aggregate_channels, aggregate_units
 from spikeinterface.core.waveform_tools import has_exceeding_spikes
 
@@ -180,7 +177,8 @@ def create_sorting_analyzer(
 
         if sparsity is None:
             if sparsity_kwargs.get("method", "") != "by_property" and not set_sparsity_by_dict_key:
-                # this is weird but due to the cyclic import
+                # In this case, we estimate the sparsity on different splitted groups and then we
+                # aggregate the sparsity_masks and main_channel_indices
                 from .template_tools import estimate_main_channel_from_recording
 
                 # In this case we estimate and construct sparsity by property
@@ -1276,7 +1274,7 @@ class SortingAnalyzer:
             and "aggregation_key" in self.get_recording_property_keys()
         )
 
-    def split(self):
+    def split_aggregated(self):
         """
         Returns a dictionary of SortingAnalyzer objects, split by the aggregation_key.
         The keys of the dictionary are the unique values of the aggregation_key, and the values
@@ -1668,10 +1666,13 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected channels
         """
+        # Check that all channel_ids are in the current channel_ids
+        if not np.all(np.isin(channel_ids, self.channel_ids)):
+            wrong_channel_ids = [ch for ch in channel_ids if ch not in self.channel_ids]
+            raise ValueError(f"Some channel_ids are not in the current channel_ids: {wrong_channel_ids}")
         if self.has_recording() or self.has_temporary_recording():
-            recording = self.recording
-            new_recording = recording.select_channels(channel_ids)
-            new_rec_attributes = get_rec_attributes(new_recording)
+            new_recording = self.recording.select_channels(channel_ids)
+            new_rec_attributes = None
         else:
             new_recording = None
             new_rec_attributes = self.rec_attributes.copy()
@@ -1680,13 +1681,18 @@ class SortingAnalyzer:
             if "properties" in new_rec_attributes:
                 new_properties = {}
                 for key, values in new_rec_attributes["properties"].items():
-                    if len(values) == len(self.channel_ids):
+                    values_arr = np.array(values)
+                    if len(values_arr) == len(self.channel_ids):
                         # only slice properties that have the same length as channel_ids
                         channel_indices = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
-                        new_properties[key] = values[channel_indices]
+                        new_properties[key] = values_arr[channel_indices]
                     else:
-                        new_properties[key] = values
+                        new_properties[key] = values_arr
                 new_rec_attributes["properties"] = new_properties
+            if new_rec_attributes.get("probegroup") is not None:
+                slice_indices = self.channel_ids_to_indices(channel_ids)
+                new_probegroup = new_rec_attributes["probegroup"].get_slice(slice_indices)
+                new_rec_attributes["probegroup"] = new_probegroup
         if self.sparsity is not None:
             sparsity_mask = self.sparsity.mask[:, np.isin(self.channel_ids, channel_ids)]
             new_sparsity = ChannelSparsity(sparsity_mask, self.unit_ids, np.array(channel_ids))
@@ -2763,6 +2769,7 @@ class AnalyzerExtension:
       * _set_params()
       * _run()
       * _select_units_extension_data()
+      * _select_channels_extension_data()
       * _merge_extension_data()
       * _split_extension_data()
       * _get_data()
@@ -3090,17 +3097,34 @@ class AnalyzerExtension:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
 
     def copy(self, new_sorting_analyzer, unit_ids=None, channel_ids=None):
-        # alessio : please note that this also replace the old select_units!!!
+        """
+        Copy the extension to a new sorting analyzer, optionally selecting a subset of units and channels.
+        Only unit_ids or channel_ids can be specified, not both.
+
+        Parameters
+        ----------
+        new_sorting_analyzer : SortingAnalyzer
+            The new sorting analyzer to copy the extension to.
+        unit_ids : list, optional
+            List of unit IDs to sub-select data for. If None, all units are copied.
+        channel_ids : list, optional
+            List of channel IDs to sub-select data for. If None, all channels are copied.
+
+        Returns
+        -------
+        new_extension : Extension
+            The copied extension.
+        """
+        if unit_ids is not None and channel_ids is not None:
+            raise ValueError("Cannot select both unit_ids and channel_ids when copying an extension.")
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
-        if unit_ids is None:
-            new_extension.data = self.data
-        else:
+        if unit_ids is not None:
             new_extension.data = self._select_units_extension_data(unit_ids)
-        if channel_ids is not None:
-            new_extension.data = new_extension._select_channels_extension_data(channel_ids)
+        elif channel_ids is not None:
+            new_extension.data = self._select_channels_extension_data(channel_ids)
         else:
-            new_extension.data = new_extension.data
+            new_extension.data = self.data
         new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension

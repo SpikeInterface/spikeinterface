@@ -564,7 +564,7 @@ class ComputeTemplates(AnalyzerExtension):
     def _select_channels_extension_data(self, channel_ids):
         keep_channel_indices = np.flatnonzero(np.isin(self.sorting_analyzer.channel_ids, channel_ids))
 
-        new_data = dict()
+        new_data = {}
         for key, arr in self.data.items():
             new_data[key] = arr[:, :, keep_channel_indices]
 
@@ -809,7 +809,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
     def _select_channels_extension_data(self, channel_ids):
         # this does not depend on channels
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
-        return self.data["noise_levels"][channel_indices]
+        return dict(noise_levels=self.data["noise_levels"][channel_indices])
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs

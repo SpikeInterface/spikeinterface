@@ -5,9 +5,7 @@ This backwards compatibility module aims to:
 """
 
 import warnings
-
 from pathlib import Path
-
 import json
 
 import numpy as np
