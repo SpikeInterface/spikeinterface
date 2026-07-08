@@ -166,9 +166,9 @@ class GraphClustering:
 
         elif clustering_method == "hdbscan":
             from hdbscan import HDBSCAN
-            import scipy.sparse
+            from scipy.sparse import csgraph
 
-            n_graph, connected_labels = scipy.sparse.csgraph.connected_components(distances, directed=False)
+            n_graph, connected_labels = csgraph.connected_components(distances, directed=False)
             peak_labels = np.zeros(peaks.size, dtype="int64")
             peak_labels[:] = -1
 

@@ -260,9 +260,9 @@ def _compute_similarity_matrix_numpy(
 if HAVE_NUMBA:
 
     from math import sqrt
-    import numba
+    from numba import jit, typed, prange
 
-    @numba.jit(nopython=True, parallel=True, fastmath=True, nogil=True)
+    @jit(nopython=True, parallel=True, fastmath=True, nogil=True)
     def _compute_similarity_matrix_numba(
         templates_array,
         other_templates_array,
@@ -296,12 +296,12 @@ if HAVE_NUMBA:
         elif method == "cosine":
             metric = 2
 
-        overlapping_j_list = numba.typed.List()
-        active_channels_list = numba.typed.List()
+        overlapping_j_list = typed.List()
+        active_channels_list = typed.List()
 
         for src_unit in range(num_templates):
-            overlapping_ids = numba.typed.List()
-            overlapping_chs = numba.typed.List()
+            overlapping_ids = typed.List()
+            overlapping_chs = typed.List()
 
             start = src_unit if same_array else 0
             for tgt_unit in range(start, other_num_templates):
@@ -340,7 +340,7 @@ if HAVE_NUMBA:
             src_sliced = templates_array[:, num_shifts : num_samples - num_shifts]
             tgt_sliced = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
 
-            for i in numba.prange(num_templates):
+            for i in prange(num_templates):
                 src_template = src_sliced[i]
                 overlapping_ids = overlapping_j_list[i]
                 overlapping_chs = active_channels_list[i]

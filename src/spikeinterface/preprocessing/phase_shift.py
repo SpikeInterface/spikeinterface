@@ -142,13 +142,13 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     This method leverages the properties of the Fourier transform, where a phase shift in the frequency domain
     corresponds to a time shift in the time domain.
     """
-    import scipy.fft
+    from scipy.fft import rfft, irfft
 
     signal_length = signal.shape[axis]
     num_channels = shift_samples.size
     fourier_signal_size = signal_length // 2 + 1
 
-    frequency_domain_signal = scipy.fft.rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
+    frequency_domain_signal = rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
     fourier_signal_size = frequency_domain_signal.shape[0]
 
     if axis == 0:
@@ -164,7 +164,7 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
 
     # Inverse FFT to get the translated signal
-    shifted_signal = scipy.fft.irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
+    shifted_signal = irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
     return shifted_signal
 
 

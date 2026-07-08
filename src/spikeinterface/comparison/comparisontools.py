@@ -120,9 +120,9 @@ def get_optimized_compute_matching_matrix():
     if hasattr(get_optimized_compute_matching_matrix, "_cached_function"):
         return get_optimized_compute_matching_matrix._cached_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True)
+    @jit(nopython=True, nogil=True)
     def compute_matching_matrix(
         spike_frames_train1,
         spike_frames_train2,
@@ -1002,9 +1002,9 @@ def get_compute_dot_product_function():
     if hasattr(get_compute_dot_product_function, "_cached_function"):
         return get_compute_dot_product_function._cached_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True)
+    @jit(nopython=True, nogil=True)
     def compute_dot_product(
         spike_frames1,
         spike_frames2,
@@ -1096,9 +1096,9 @@ def get_compute_square_norm_function():
     if hasattr(get_compute_square_norm_function, "_cached_function"):
         return get_compute_square_norm_function._cached_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True)
+    @jit(nopython=True, nogil=True)
     def compute_square_norm(sample_frames, unit_indices, num_units, delta_frames):
         """
         Computes the squared norm of spike train from a given sorting.

@@ -1,7 +1,4 @@
-from probeinterface import ProbeGroup
-
-from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
+from .base import BaseWidget
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 from .unit_templates import UnitTemplatesWidget

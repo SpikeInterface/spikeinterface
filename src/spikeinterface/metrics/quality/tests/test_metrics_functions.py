@@ -1,7 +1,9 @@
-import pytest
-import numpy as np
 from copy import deepcopy
 import csv
+
+import pytest
+import numpy as np
+
 from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
@@ -10,9 +12,7 @@ from spikeinterface.core import (
     create_sorting_analyzer,
     synthesize_random_firings,
 )
-
 from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, create_regular_periods
-
 from spikeinterface.metrics.quality import get_quality_metric_list, compute_quality_metrics, ComputeQualityMetrics
 from spikeinterface.metrics.quality.misc_metrics import (
     misc_metrics_list,
@@ -32,7 +32,6 @@ from spikeinterface.metrics.quality.misc_metrics import (
     _get_synchrony_counts,
     amplitude_cutoff,
 )
-
 from spikeinterface.metrics.quality.pca_metrics import (
     mahalanobis_metrics,
     d_prime_metric,
@@ -40,8 +39,6 @@ from spikeinterface.metrics.quality.pca_metrics import (
     silhouette_score,
     simplified_silhouette_score,
 )
-
-
 from spikeinterface.core.base import minimum_spike_dtype, unit_period_dtype
 
 

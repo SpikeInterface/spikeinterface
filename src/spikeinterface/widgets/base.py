@@ -1,5 +1,3 @@
-import inspect
-
 global default_backend_
 default_backend_ = "matplotlib"
 

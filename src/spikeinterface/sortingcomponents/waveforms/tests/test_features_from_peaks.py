@@ -1,12 +1,8 @@
 import pytest
-import numpy as np
 
 from spikeinterface.sortingcomponents.waveforms.features_from_peaks import compute_features_from_peaks
-
 from spikeinterface.core import get_noise_levels
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
