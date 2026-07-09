@@ -672,7 +672,7 @@ def get_potential_auto_merge(
     # deprecation moved to 0.105.0 for @zm711
     warnings.warn(
         "get_potential_auto_merge() is deprecated and will be removed in version 0.105.0. Use compute_merge_unit_groups() instead",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
 
