@@ -1649,7 +1649,7 @@ def amplitude_cutoff(
 
         # Find number of missed spikes
         cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
-        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
+        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurrence where pdf was greater than cutoff
         num_missed_spikes = np.sum(pdf[G + 1 :])  # theoretically missing spikes on the left side
 
         # Compute fraction of missed spikes

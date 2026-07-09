@@ -85,7 +85,7 @@ def folder_with_binary_files(tmpdir_factory):
 
 
 def test_sequential_reading_of_small_traces(folder_with_binary_files):
-    # Test that memmap is readed correctly when pointing to specific frames
+    # Test that memmap is read correctly when pointing to specific frames
     folder = folder_with_binary_files
     num_channels = 32
     sampling_frequency = 30_000.0

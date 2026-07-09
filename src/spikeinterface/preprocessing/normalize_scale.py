@@ -235,7 +235,7 @@ class ZScoreRecording(BasePreprocessor):
     mode : "median+mad" | "mean+std", default: "median+mad"
         The mode to compute the zscore
     dtype : None or dtype
-        If None the the parent dtype is kept.
+        If None the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     gain : None or np.array
         Pre-computed gain.

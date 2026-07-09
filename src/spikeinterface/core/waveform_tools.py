@@ -43,9 +43,9 @@ def extract_waveforms_to_buffers(
     Same as calling allocate_waveforms_buffers() and then distribute_waveforms_to_buffers().
 
     Important note: for the "shared_memory" mode arrays_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
     And this variable is also returned.
-    To avoid this a copy to non shared memmory can be perform at the end.
+    To avoid this a copy to non shared memory can be perform at the end.
 
     Parameters
     ----------
@@ -150,7 +150,7 @@ def allocate_waveforms_buffers(
     Allocate memmap or shared memory buffers before snippet extraction.
 
     Important note: for the shared memory mode arrays_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
 
     Parameters
     ----------
@@ -242,7 +242,7 @@ def distribute_waveforms_to_buffers(
     Buffers must be pre-allocated with the `allocate_waveforms_buffers()` function.
 
     Important note, for "shared_memory" mode arrays_info contain reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
 
     Parameters
     ----------
@@ -446,9 +446,9 @@ def extract_waveforms_to_single_buffer(
     This ensures that spikes.shape[0] == all_waveforms.shape[0].
 
     Important note: for the "shared_memory" mode wf_array_info contains reference to
-    the shared memmory buffer, this variable must be referenced as long as arrays is used.
+    the shared memory buffer, this variable must be referenced as long as arrays is used.
     This variable must also unlink() when the array is de-referenced.
-    To avoid this complicated behavior, default: (copy=True) the shared memmory buffer is copied into a standard
+    To avoid this complicated behavior, default: (copy=True) the shared memory buffer is copied into a standard
     numpy array.
 
 
