@@ -82,7 +82,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     Parameters
     ----------
     measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
+        Measure memory allocation in the current process only, if false then measures at the system
         level.
     """
 

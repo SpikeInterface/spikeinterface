@@ -952,8 +952,8 @@ class BaseSorting(BaseExtractor):
         extremum_channel_inds : None or dict, default: None
             This is deprecated. Used main_channel_indices instead.
         main_channel_indices: None or array
-            Give optionaly the main_channel_indices vector to add an extra field "channel_index".
-            This can be convinient for computing spikes postion after sorter.
+            Give optionally the main_channel_indices vector to add an extra field "channel_index".
+            This can be convenient for computing spikes position after sorter.
             This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=False)
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
@@ -1184,7 +1184,7 @@ class BaseSorting(BaseExtractor):
     def to_shared_memory_sorting(self):
         """
         Turn any sorting in a SharedMemorySorting.
-        Usefull to have it in memory with a unique vector representation and sharable across processes.
+        Useful to have it in memory with a unique vector representation and sharable across processes.
         """
         from .numpyextractors import SharedMemorySorting
 

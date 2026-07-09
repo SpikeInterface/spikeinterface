@@ -153,7 +153,7 @@ class IterativePeakDetector(PeakDetector):
         waveforms: np.ndarray,
     ):
         """
-        Substract inplace the cleaned waveforms from the traces_chunk.
+        Subtract inplace the cleaned waveforms from the traces_chunk.
 
         Parameters
         ----------

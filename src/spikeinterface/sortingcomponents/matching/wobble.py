@@ -125,7 +125,7 @@ class TemplateMetadata:
     jitter2template_shift : ndarray
         Maps the optimal jitter from the jitter_window to the optimal template shift.
     jitter2spike_time_shift : ndarray
-        Maps the optimal jitter from teh jitter_window to the optimal shift in spike time index.
+        Maps the optimal jitter from the jitter_window to the optimal shift in spike time index.
 
     Notes
     -----

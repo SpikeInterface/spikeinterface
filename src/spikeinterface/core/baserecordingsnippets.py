@@ -346,7 +346,7 @@ class BaseRecordingSnippets(BaseExtractor):
             write_probeinterface(folder / "probegroup.json", probegroup)
 
     def _extra_metadata_from_dict(self, dump_dict):
-        # load probe and hanlde backward-compatibility with legacy "contact_vector"/"location" property
+        # load probe and handle backward-compatibility with legacy "contact_vector"/"location" property
         if "probegroup" in dump_dict:
             # this is for SI>=0.105.0
             probegroup = dump_dict["probegroup"]
