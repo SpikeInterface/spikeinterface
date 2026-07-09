@@ -24,7 +24,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object with computed metrics extensions.
     unit_labels : np.ndarray
-        Array of unit labels as strings, includeing bombcell labels like "noise", "mua",
+        Array of unit labels as strings, including bombcell labels like "noise", "mua",
         "non_soma", "non_soma_good", "non_soma_mua".
     thresholds : dict, optional
         Threshold dictionary with structure "noise", "mua", "non-somatic" as sections. Each section contains
