@@ -1274,7 +1274,7 @@ class SortingAnalyzer:
             and "aggregation_key" in self.get_recording_property_keys()
         )
 
-    def split_aggregated(self):
+    def split_by(self):
         """
         Returns a dictionary of SortingAnalyzer objects, split by the aggregation_key.
         The keys of the dictionary are the unique values of the aggregation_key, and the values

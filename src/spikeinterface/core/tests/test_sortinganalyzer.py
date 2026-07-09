@@ -278,7 +278,7 @@ def test_create_by_dict():
         assert sparsity_mask[i, main_channel_index]
 
     # test split aggregated
-    analyzers_split = analyzer_with_sparsity.split_aggregated()
+    analyzers_split = analyzer_with_sparsity.split_by()
     for group, analyzer in analyzers_split.items():
         assert np.all(analyzer.get_sorting_property("aggregation_key") == group)
         assert np.all(analyzer.recording.get_property("aggregation_key") == group)
