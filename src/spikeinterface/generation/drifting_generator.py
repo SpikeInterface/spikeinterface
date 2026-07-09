@@ -22,7 +22,12 @@ from spikeinterface.core.generate import (
     _ensure_unit_params,
     _ensure_seed,
 )
-from .drift_tools import DriftingTemplates, generate_synthetic_drifting_templates, make_linear_displacement, InjectDriftingTemplatesRecording
+from .drift_tools import (
+    DriftingTemplates,
+    generate_synthetic_drifting_templates,
+    make_linear_displacement,
+    InjectDriftingTemplatesRecording,
+)
 from .noise_tools import generate_noise
 
 
@@ -548,14 +553,14 @@ def generate_drifting_recording(
     # drifting_templates.templates_array_moved = templates_array_moved
     # drifting_templates.displacements = displacements_steps
 
-    drifting_templates = generate_synthetic_drifting_templates(probe, unit_locations, displacements_steps, sampling_frequency, generate_templates_kwargs, seed)
-
+    drifting_templates = generate_synthetic_drifting_templates(
+        probe, unit_locations, displacements_steps, sampling_frequency, generate_templates_kwargs, seed
+    )
 
     distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :], axis=2)
-    max_channel_index = np.argmin(distances, axis=1)    
+    max_channel_index = np.argmin(distances, axis=1)
     sorting.set_property("gt_unit_locations", unit_locations)
     sorting.set_property("max_channel_index", max_channel_index)
-
 
     if noise is None:
         noise = generate_noise(

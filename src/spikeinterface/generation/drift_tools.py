@@ -351,7 +351,10 @@ class DriftingTemplates(Templates):
         )
         self.displacements = displacements
 
-def generate_synthetic_drifting_templates(probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed):
+
+def generate_synthetic_drifting_templates(
+    probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed
+):
     """
     Generate synthetic drifting template by moving the location of the units.
     This avoid interpolation and then can have units on border moving outside with correct shape.
@@ -393,7 +396,6 @@ def generate_synthetic_drifting_templates(probe, unit_locations, displacements, 
     return drifting_templates
 
 
-
 def make_linear_displacement(start, stop, num_step=10):
     """
     Generates 2D linear displacements between `start` and `stop` positions (included in returned displacements).
@@ -423,7 +425,6 @@ def make_linear_displacement(start, stop, num_step=10):
             :, np.newaxis
         ] + start[np.newaxis, :]
     return displacements
-
 
 
 class InjectDriftingTemplatesRecording(BaseRecording):
