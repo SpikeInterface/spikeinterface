@@ -459,7 +459,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 "set_channel_locations() is deprecated and will be removed in version 0.106.0. "
                 "If you want to set probe information, use `set_dummy_probe_from_locations()`."
             ),
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         self.set_dummy_probe_from_locations(locations, axes="xy")
@@ -486,7 +486,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 "clear_channel_locations() is deprecated and will be removed in version 0.106.0. "
                 "If you want to remove probe information, use `remove_probe()`."
             ),
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         self.remove_probe()
