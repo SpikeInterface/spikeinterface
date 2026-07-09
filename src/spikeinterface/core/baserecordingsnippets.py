@@ -377,7 +377,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if "contact_vector" in self.get_property_keys():
                 # this is for SI<0.105.0 and from pickle
                 contact_vector = self.get_property("contact_vector")
-                probegroup = ProbeGroup.from_numpy(contact_vector=contact_vector)
+                probegroup = ProbeGroup.from_numpy(contact_vector)
                 self._probegroup = probegroup
                 check_for_probes_info = True
             elif "location" in self.get_property_keys():
