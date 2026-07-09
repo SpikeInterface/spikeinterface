@@ -1931,7 +1931,7 @@ def read_nwb_as_analyzer(
         units_table = sorting.units_table
         colnames = list(units_table.colnames)
         units = units_table.to_dataframe(index=True)
-        structural = {"waveform_mean", "electrodes"}
+        structural = {"waveform_mean", "waveform_sd", "electrodes"}
         metric_colnames = [c for c in units.columns if c not in structural and units[c].dtype.kind in "fiu"]
         label_colnames = [
             c
@@ -1943,7 +1943,7 @@ def read_nwb_as_analyzer(
     else:
         units_group = sorting.units_table
         colnames = list(units_group.keys())
-        structural = ("id", "spike_times", "waveform_mean", "electrodes")
+        structural = ("id", "spike_times", "waveform_mean", "waveform_sd", "electrodes")
         metric_colnames, label_colnames = [], []
         for column_name in colnames:
             if column_name.endswith("_index") or column_name in structural or f"{column_name}_index" in colnames:
@@ -1955,7 +1955,9 @@ def read_nwb_as_analyzer(
                 metric_colnames.append(column_name)
             elif dataset.ndim == 1 and dataset.dtype.kind in "OSU":
                 label_colnames.append(column_name)
-        needed = [c for c in ("waveform_mean", "electrodes") if c in colnames] + metric_colnames + label_colnames
+        needed = [
+            c for c in ("waveform_mean", "waveform_sd", "electrodes") if c in colnames
+        ] + metric_colnames + label_colnames
         units = _create_df_from_nwb_table(units_group, columns=needed)
 
     electrodes_indices = None
@@ -2199,13 +2201,26 @@ def _make_templates(analyzer, units, unit_local_channels, num_channels):
     nbefore = int(np.argmax(peak_amplitude_per_sample))
 
     templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
+    templates_ext.data["average"] = dense_templates
+    operators = ["average"]
+
+    # Only expose the "std" operator when the file actually stores waveform_sd. Fabricating a zero std
+    # would falsely imply the unit's spikes have no waveform variability, so when it is absent we declare
+    # only "average" rather than inventing data.
+    if "waveform_sd" in units.columns:
+        waveform_sd = np.array([np.asarray(t, dtype="float") for t in units["waveform_sd"].values])
+        dense_std = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
+        for unit_index, positions in enumerate(unit_local_channels):
+            k = len(positions)
+            dense_std[unit_index][:, positions] = waveform_sd[unit_index][:, :k]
+        templates_ext.data["std"] = dense_std
+        operators.append("std")
+
     templates_ext.set_params(
         ms_before=nbefore / analyzer.sampling_frequency * 1000,
         ms_after=(num_samples_template - nbefore) / analyzer.sampling_frequency * 1000,
-        operators=["average", "std"],
+        operators=operators,
     )
-    templates_ext.data["average"] = dense_templates
-    templates_ext.data["std"] = np.zeros_like(dense_templates)
     templates_ext.run_info["run_completed"] = True
     analyzer.extensions["templates"] = templates_ext
 
