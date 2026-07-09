@@ -790,8 +790,9 @@ class SortingAnalyzer:
             from .template_tools import _get_main_channel_from_template_array
 
             main_channel_indices = _get_main_channel_from_template_array(
-                templates_array, peak_mode, peak_sign, templates.nbefore
+                templates_array, peak_mode=peak_mode, peak_sign=peak_sign, nbefore=templates.nbefore
             )
+            return main_channel_indices
 
         # Case 3
         if self.is_sparse():
