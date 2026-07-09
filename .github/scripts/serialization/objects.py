@@ -18,6 +18,8 @@ Two axes are covered, chosen per entry via "formats":
     Targets the on-disk encoding axis: property and annotation preservation, and the
     probe representation. "binary" is recording-only, hence "numpy_folder" for sortings.
 """
+from packaging.version import parse
+from spikeinterface import __version__ as si_version
 
 
 # Filename suffix per format, relative to the fixtures dir (folder formats use a suffix
@@ -95,7 +97,11 @@ def _build_recording_with_probe():
     rec = generate_recording(num_channels=8, durations=[1.0], sampling_frequency=30000.0, seed=0)
     probe = generate_linear_probe(num_elec=8)
     probe.set_device_channel_indices(np.arange(8))
-    return rec.set_probe(probe)  # old API returns a new recording; portable across versions
+    if parse(si_version) <= parse("0.105.0"):
+        rec_with_probe = rec.set_probe(probe, in_place=False)  # old API returns a new recording; portable across versions
+    else:
+        rec_with_probe = rec.set_probe(probe)  # new API returns a new recording; portable across versions
+    return rec_with_probe
 
 
 def _check_recording_with_probe(rec):
@@ -122,9 +128,13 @@ def _build_recording_with_interleaved_probes():
     probegroup = ProbeGroup()
     probegroup.add_probe(probe0)
     probegroup.add_probe(probe1)
-    # Interleave the two probes' channels: channel i alternates between probe0 and probe1.
     probegroup.set_global_device_channel_indices([0, 2, 4, 6, 1, 3, 5, 7])
-    return rec.set_probegroup(probegroup)
+    # Interleave the two probes' channels: channel i alternates between probe0 and probe1.
+    if parse(si_version) <= parse("0.105.0"):
+        rec_with_probe = rec.set_probegroup(probegroup, in_place=False)  # old API returns a new recording; portable across versions
+    else:
+        rec_with_probe = rec.set_probegroup(probegroup)  # new API returns a new recording; portable across versions
+    return rec_with_probe
 
 
 def _check_recording_with_interleaved_probes(rec):
@@ -181,6 +191,22 @@ def _check_sorting(sorting):
     assert spike_train.ndim == 1
 
 
+def _build_sorting_with_properties():
+    import numpy as np
+    from spikeinterface.core import generate_sorting
+
+    sorting = generate_sorting(num_units=4, sampling_frequency=30000.0, durations=[1.0])
+    sorting.set_property("quality", np.array(["good", "good", "bad", "good"]))
+    sorting.annotate(experimenter="test")
+    return sorting
+
+
+def _check_sorting_with_properties(sorting):
+    assert sorting.get_num_units() == 4
+    assert list(sorting.get_property("quality")) == ["good", "good", "bad", "good"]
+    assert sorting.get_annotation("experimenter") == "test"
+
+
 OBJECTS = [
     {
         "id": "noise_generator_recording",
@@ -222,6 +248,12 @@ OBJECTS = [
         "id": "sorting",
         "build": _build_sorting,
         "check": _check_sorting,
-        "formats": ["numpy_folder"],
+        "formats": ["numpy_folder", "zarr"],
+    },
+    {
+        "id": "sorting_with_properties",
+        "build": _build_sorting_with_properties,
+        "check": _check_sorting_with_properties,
+        "formats": ["numpy_folder", "zarr"],
     },
 ]
