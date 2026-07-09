@@ -188,7 +188,7 @@ class LocalFeatureClustering:
        * "herding_split()" in DART/spikepsvae by Charlie Windolf
 
     The idea simple :
-     * agregate features (svd or even waveforms) with sparse channel.
+     * aggregate features (svd or even waveforms) with sparse channel.
      * run a local feature reduction (pca or svd)
      * try a new split (hdscan or isosplit)
     """

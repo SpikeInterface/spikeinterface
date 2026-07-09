@@ -84,7 +84,7 @@ def estimate_motion(
         The motion object.
     extra: dict
         Optional output if `extra_outputs=True`
-        This dict contain histogram, pairwise_displacement usefull for ploting.
+        This dict contain histogram, pairwise_displacement useful for plotting.
     """
 
     if margin_um is not None:

@@ -87,7 +87,7 @@ def export_to_phy(
     if (num_chans > 64) and (sparsity is None and not sorting_analyzer.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
-            "informative visualization. You can use use a sparse SortingAnalyzer or you can use the 'sparsity' "
+            "informative visualization. You can use a sparse SortingAnalyzer or you can use the 'sparsity' "
             "argument to enforce sparsity (see compute_sparsity())"
         )
 
@@ -101,7 +101,7 @@ def export_to_phy(
     else:
         used_sparsity = ChannelSparsity.create_dense(sorting_analyzer)
         save_sparse = False
-    # convenient sparsity dict for the 3 cases to retrieve channl_inds
+    # convenient sparsity dict for the 3 cases to retrieve channel_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
 
     empty_flag = False

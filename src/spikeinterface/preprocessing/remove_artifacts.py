@@ -40,10 +40,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
         - "zeros": Artifacts are replaced by zeros.
 
         - "median": The median over all artifacts is computed and subtracted for
-            each occurence of an artifact
+            each occurrence of an artifact
 
         - "average": The mean over all artifacts is computed and subtracted for each
-            occurence of an artifact
+            occurrence of an artifact
 
         - "linear": Replacement are obtained through Linear interpolation between
            the trace before and after the artifact.
@@ -76,7 +76,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         the channels where the artifacts should be considered (for subtraction/scaling)
     scale_amplitude : False, default: False
         If true, then for mode "median" or "average" the amplitude of the template
-        will be scaled in amplitude at each time occurence to minimize residuals
+        will be scaled in amplitude at each time occurrence to minimize residuals
     time_jitter : float, default: 0
         If non 0, then for mode "median" or "average", a time jitter in ms
         can be allowed to minimize the residuals
