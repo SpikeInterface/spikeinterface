@@ -181,7 +181,7 @@ def move_templates_by_position(
     num_samples = templates_array.shape[1]
     num_channels = dest_probe.get_contact_count()
 
-    new_templates_array = np.zeros(
+    moved_templates_array = np.zeros(
         (num_displacement, num_templates, num_samples, num_channels), dtype=templates_array.dtype
     )
     for i in range(num_templates):
@@ -191,14 +191,14 @@ def move_templates_by_position(
         dest_channel_locations = dest_probe.contact_positions + shift
         moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
 
-        new_templates_array[:, i : i + 1, :, :] = interpolate_templates(
+        moved_templates_array[:, i : i + 1, :, :] = interpolate_templates(
             templates_array[i : i + 1, :, :],
             src_channel_locations,
             moved_locations,
             interpolation_method=interpolation_method,
         )
 
-    return new_templates_array
+    return moved_templates_array
 
 
 class DriftingTemplates(Templates):
@@ -352,7 +352,7 @@ class DriftingTemplates(Templates):
         self.displacements = displacements
 
 
-def generate_synthetic_drifting_templates(
+def generate_drifting_templates_synthetic(
     probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed
 ):
     """
@@ -394,6 +394,33 @@ def generate_synthetic_drifting_templates(
     drifting_templates.displacements = displacements
 
     return drifting_templates
+
+
+def generate_drifting_templates_by_interpolation(templates, probe, unit_locations, displacements, interpolation_method="cubic")
+    
+    main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
+    source_templates_locations = templates.probe.contact_positions[main_channel_indices]
+
+    templates_array_moved = move_templates_by_position(
+        templates.templates_array,
+        source_templates_locations,
+        templates.probe,
+        unit_locations,
+        probe,
+        displacements,
+        interpolation_method=interpolation_method,
+    )
+
+    drifting_templates = DriftingTemplates.from_precomputed_templates(
+        templates_array_moved,
+        displacements,
+        templates.sampling_frequency,
+        templates.nbefore,
+        probe,
+        )
+    
+    return drifting_templates
+
 
 
 def make_linear_displacement(start, stop, num_step=10):

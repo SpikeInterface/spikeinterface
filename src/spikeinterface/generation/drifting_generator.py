@@ -24,7 +24,7 @@ from spikeinterface.core.generate import (
 )
 from .drift_tools import (
     DriftingTemplates,
-    generate_synthetic_drifting_templates,
+    generate_drifting_templates_synthetic,
     make_linear_displacement,
     InjectDriftingTemplatesRecording,
 )
@@ -553,7 +553,7 @@ def generate_drifting_recording(
     # drifting_templates.templates_array_moved = templates_array_moved
     # drifting_templates.displacements = displacements_steps
 
-    drifting_templates = generate_synthetic_drifting_templates(
+    drifting_templates = generate_drifting_templates_synthetic(
         probe, unit_locations, displacements_steps, sampling_frequency, generate_templates_kwargs, seed
     )
 
