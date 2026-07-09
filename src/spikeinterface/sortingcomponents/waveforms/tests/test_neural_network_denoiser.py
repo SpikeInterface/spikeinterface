@@ -8,7 +8,6 @@ def test_single_channel_toy_denoiser_in_peak_pipeline(generated_recording, detec
 
     ms_before = 2.0
     ms_after = 2.0
-    waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
 
     # Build nodes for computation
     peak_retriever = PeakRetriever(recording, peaks)
@@ -18,7 +17,7 @@ def test_single_channel_toy_denoiser_in_peak_pipeline(generated_recording, detec
     toy_denoiser = SingleChannelDenoiser(
         recording,
         parents=[peak_retriever, waveform_extraction],
-        repo_id="SpikeInterface/test_repo",
+        repo_id="SpikeInterface/waveform_denoiser",
         model_name="mearec_toy_denoiser",
         spike_size=128,
     )
@@ -35,7 +34,6 @@ def test_single_channel_yass_denoiser(generated_recording_30khz, detected_peaks,
 
     nbefore = 42
     nafter = 79
-    waveform_extraction = ExtractDenseWaveforms(recording, nbefore=nbefore, nafter=nafter, return_output=True)
 
     # Build nodes for computation
     peak_retriever = PeakRetriever(recording, peaks)
