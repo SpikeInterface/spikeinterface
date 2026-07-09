@@ -29,7 +29,7 @@ def interpolate_templates(
         The channel source location corresponding to templates_array.
         shape = (num_channels, 2)
     dest_locations : np.array
-        The new channel position, if ndim == 3, then the interpolation is broadcated with last dim.
+        The new channel position, if ndim == 3, then the interpolation is broadcasted with last dim.
         shape = (num_channels, 2) or (num_motions, num_channels, 2)
     interpolation_method : str, default "cubic"
         The interpolation method.
@@ -138,7 +138,7 @@ class DriftingTemplates(Templates):
 
     This class supports 2 different strategies:
       * move every templates on-the-fly, this lead to one interpolation per spike
-      * precompute some displacements for all templates and use a discreate interpolation, for instance by step of 1um
+      * precompute some displacements for all templates and use a discrete interpolation, for instance by step of 1um
         This is the same strategy used by MEArec.
 
     Parameters
@@ -323,7 +323,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     drifting_templates : DriftingTemplates
         The drifting template object
     displacement_vectors : list of numpy array
-        The lenght of the list is the number of segment.
+        The length of the list is the number of segment.
         Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
     displacement_sampling_frequency : float
@@ -446,7 +446,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             ), "drifting_templates must have precomputed displacements"
             displacements = drifting_templates.displacements
 
-            # compute the displacement indicies
+            # compute the displacement indices
             segment_slices = []
             displacement_indices = np.zeros(self.spike_vector.size, dtype="int64")
             for segment_index in range(sorting.get_num_segments()):
