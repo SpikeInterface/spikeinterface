@@ -522,7 +522,7 @@ def fit_collision(
         full_template = np.zeros_like(local_waveform)
 
         # For the collision spike, take its unit template and insert
-        # it into `full_template` at the time the collision spike occured.
+        # it into `full_template` at the time the collision spike occurred.
         sample_centered = spike["sample_index"] - local_waveform_start
         template = all_templates[spike["unit_index"]][:, sparse_indices]
         template_cut = template[nbefore - cut_out_before : nbefore + cut_out_after]
