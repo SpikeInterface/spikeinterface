@@ -121,6 +121,15 @@ class NoiseGeneratorRecording(BaseRecording):
             "noise_block_size": noise_block_size,
         }
 
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "strategy" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("strategy", None)
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
+
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
     def __init__(
