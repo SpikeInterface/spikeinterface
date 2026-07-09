@@ -241,38 +241,3 @@ if HAVE_TORCH:
             checkpoint = torch.load(self.pretrained_path, map_location=device)
             self.load_state_dict(checkpoint)
             return self
-
-        def assert_model_and_waveform_temporal_match(self, waveform_node: WaveformsNode):
-            """
-            Asserts that the model and the waveform extractor have the same temporal parameters
-            """
-            # Extract temporal parameters from the waveform extractor
-            waveforms_ms_before = waveform_node.ms_before
-            waveforms_ms_after = waveform_node.ms_after
-            waveforms_sampling_frequency = waveform_node.recording.get_sampling_frequency()
-
-            # Load the model temporal parameters
-            repo_id = "SpikeInterface/test_repo"
-            subfolder = "mearec_toy_model"
-            filename = "params.json"
-
-            json_file_path = hf_hub_download(repo_id=repo_id, subfolder=subfolder, filename=filename)
-            # Load the json file in the json_file_path_variable
-            with open(json_file_path, "r") as json_file:
-                peak_interval_dict = json.load(json_file)
-
-            model_ms_before = peak_interval_dict["ms_before"]
-            model_ms_after = peak_interval_dict["ms_after"]
-            model_sampling_frequency = peak_interval_dict["sampling_frequency"]
-
-            ms_before_mismatch = waveforms_ms_before != model_ms_before
-            ms_after_missmatch = waveforms_ms_after != model_ms_after
-            sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
-            if ms_before_mismatch or ms_after_missmatch or sampling_frequency_mismatch:
-                exception_string = (
-                    "Model and waveforms mismatch \n"
-                    f"{model_ms_before=} and {waveforms_ms_after=} \n"
-                    f"{model_ms_after=} and {waveforms_ms_after=} \n"
-                    f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
-                )
-                raise ValueError(exception_string)
