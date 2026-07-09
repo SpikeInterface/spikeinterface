@@ -972,7 +972,6 @@ class BaseExtractor:
         else:
             warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
-
     # TODO rename to saveto_binary_folder
     def save_to_folder(
         self,
@@ -1033,13 +1032,14 @@ class BaseExtractor:
             If the folder already exists and `overwrite` is False.
         """
 
-        warnings.warn("save_to_folder() should be recording.save(format='binray') "
-                        "or sorting.save(format='numpy_folder') "
-                        "This ambiguous method should not be used anymore!!",
-                        FutureWarning)
+        warnings.warn(
+            "save_to_folder() should be recording.save(format='binray') "
+            "or sorting.save(format='numpy_folder') "
+            "This ambiguous method should not be used anymore!!",
+            FutureWarning,
+        )
         # we keep the default format for recording and sorting like in old version
         return self.save(folder=folder, verbose=verbose, **save_kwargs)
-
 
         if folder is None:
             cache_folder = get_global_tmp_folder()

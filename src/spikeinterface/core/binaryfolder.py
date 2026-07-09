@@ -87,7 +87,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         if probegroup is not None:
             self._probegroup = probegroup
-        
+
         # self._load_metadata_from_folder(folder_path)
 
         # Load time vectors if any
@@ -116,9 +116,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         return d
 
     @staticmethod
-    def write_recording(
-        recording: BaseRecording, folder: str | Path, dtype=None, verbose=False, **job_kwargs
-    ):
+    def write_recording(recording: BaseRecording, folder: str | Path, dtype=None, verbose=False, **job_kwargs):
         from .time_series_tools import write_binary
         from .binaryrecordingextractor import BinaryRecordingExtractor
         from .binaryfolder import BinaryFolderRecording
@@ -139,9 +137,8 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             probegroup = recording.get_probegroup()
             write_probeinterface(folder / "probegroup.json", probegroup)
 
-
         # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
-        # See the __init__ 
+        # See the __init__
 
         binary_rec = BinaryRecordingExtractor(
             file_paths=file_paths,
@@ -157,7 +154,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             offset_to_uV=recording.get_channel_offsets(),
         )
         binary_rec.dump(folder / "binary.json", relative_to=folder)
-                    
+
         for segment_index, rs in enumerate(recording.segments):
             d = rs.get_times_kwargs()
             time_vector = d["time_vector"]
@@ -169,13 +166,12 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         si_folder_path = folder / f"si_folder.json"
         cached.dump_to_json(file_path=si_folder_path, relative_to=folder, include_extra_metadata=False)
 
-
         # # timestamps are not saved in binary, so we have to set them explicitly
         # for segment_index in range(recording.get_num_segments()):
         #     if recording.has_time_vector(segment_index):
         #         # the use of get_times is preferred since timestamps are converted to array
         #         time_vector = recording.get_times(segment_index=segment_index)
-        #         cached.set_times(time_vector, segment_index=segment_index)        
+        #         cached.set_times(time_vector, segment_index=segment_index)
 
 
 read_binary_folder = define_function_from_class(source_class=BinaryFolderRecording, name="read_binary_folder")

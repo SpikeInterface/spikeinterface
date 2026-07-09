@@ -75,7 +75,6 @@ class NumpyFolderSorting(BaseSorting):
         cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
 
 
-
 class NpzFolderSorting(NpzSortingExtractor):
     """
     NpzFolderSorting is the old internal format used in spikeinterface (<=0.98.0)

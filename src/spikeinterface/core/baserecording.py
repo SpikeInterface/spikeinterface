@@ -359,22 +359,25 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             #         time_vector = self.get_times(segment_index=segment_index)
             #         cached.set_times(time_vector, segment_index=segment_index)
 
-
             from .binaryfolder import BinaryFolderRecording
-            BinaryFolderRecording.write_recording(self, folder=kwargs["folder"],
-                                                  dtype=kwargs.get("dtype", None), **job_kwargs)
+
+            BinaryFolderRecording.write_recording(
+                self, folder=kwargs["folder"], dtype=kwargs.get("dtype", None), **job_kwargs
+            )
             cached = BinaryFolderRecording(folder_path=kwargs["folder"])
 
         elif format == "memory":
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording
 
-                cached = SharedMemoryRecording.from_recording(self, with_metadata=True, with_time_vector=True, **job_kwargs)
+                cached = SharedMemoryRecording.from_recording(
+                    self, with_metadata=True, with_time_vector=True, **job_kwargs
+                )
             else:
                 from spikeinterface.core import NumpyRecording
 
                 cached = NumpyRecording.from_recording(self, with_metadata=True, with_time_vector=True, **job_kwargs)
-            
+
             # self.copy_metadata(cached)
 
             # # timestamps are not saved in memory, so we have to set them explicitly

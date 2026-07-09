@@ -100,14 +100,13 @@ class NumpyRecording(BaseRecording):
 
         if with_metadata:
             source_recording.copy_metadata(recording)
-        
+
         if with_time_vector:
             for segment_index in range(source_recording.get_num_segments()):
                 if source_recording.has_time_vector(segment_index):
                     # the use of get_times is preferred since timestamps are converted to array
                     time_vector = source_recording.get_times(segment_index=segment_index)
                     recording.set_times(time_vector, segment_index=segment_index)
-
 
         return recording
 
