@@ -1868,7 +1868,7 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     return outputs
 
 
-def read_nwb_as_analyzer(
+def read_nwb_sorting_analyzer(
     file_path: str | Path,
     t_start: float | None = None,
     sampling_frequency: float | None = None,
