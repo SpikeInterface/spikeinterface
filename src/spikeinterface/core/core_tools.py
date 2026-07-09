@@ -773,3 +773,8 @@ def is_path_remote(path: str | Path) -> bool:
 def ms_to_samples(ms: float, sampling_frequency: float) -> int:
     """Convert a duration in milliseconds to the nearest number of samples."""
     return round(ms * sampling_frequency / 1000.0)
+
+
+def samples_to_ms(samples: int, sampling_frequency: float) -> float:
+    """Convert a duration in samples to milliseconds."""
+    return samples / sampling_frequency * 1000.0
