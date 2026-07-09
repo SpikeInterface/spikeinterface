@@ -1868,6 +1868,78 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     return outputs
 
 
+# Where each SortingAnalyzer extension's data lives in an NWB file. Each extension maps to an ordered
+# list of read-sources tried until one resolves: the typed ndx-spikesorting container first, then the
+# generic-NWB convention. A user/dataset override merges over this (see `extension_map` in
+# `read_nwb_sorting_analyzer`); `None` disables an extension. This is only for real analyzer extensions;
+# sparsity, sorting properties, and recording metadata are handled separately by the reader.
+#
+# The "typed_container" source is a hook: the typed reader currently lives in ndx-spikesorting, so for
+# now it never resolves here and the convention source is used. When that logic moves into
+# spikeinterface, this source will resolve against the ndx-spikesorting types.
+DEFAULT_EXTENSION_MAP = {
+    "templates": [
+        {"source": "typed_container", "type": "Templates"},
+        {"source": "column", "column": "waveform_mean", "std_column": "waveform_sd"},
+    ],
+    "quality_metrics": [
+        {"source": "typed_container", "type": "UnitsMetrics"},
+        {"source": "columns", "columns": "canonical_quality"},
+    ],
+    "template_metrics": [
+        {"source": "typed_container", "type": "UnitsMetrics"},
+    ],
+    "unit_locations": [
+        {"source": "typed_container", "type": "UnitLocations"},
+    ],
+}
+
+
+def _resolve_extension_columns(extension_map, scalar_colnames, all_colnames):
+    """Resolve the convention (column-based) sources of an extension map against a Units table's columns.
+
+    Returns a dict with the resolved template column (and optional std column) and the per-extension
+    column lists for the column-backed extensions. The "typed_container" source is skipped here (the
+    typed reader lives in ndx-spikesorting for now), so resolution falls through to the "column"/
+    "columns" sources. `scalar_colnames` are the 1-D per-unit columns eligible to be metrics/properties;
+    `all_colnames` is every column name (used to check a source's target exists).
+    """
+    from spikeinterface.metrics.quality import ComputeQualityMetrics
+
+    resolved = {"templates_column": None, "templates_std_column": None, "quality_metric_colnames": []}
+
+    for extension, sources in extension_map.items():
+        if sources is None:  # explicitly disabled
+            continue
+        for source in sources:
+            kind = source.get("source")
+            if kind == "typed_container":
+                continue  # hook: not resolvable here yet
+            if kind == "column":
+                column = source.get("column")
+                if column in all_colnames:
+                    if extension == "templates":
+                        resolved["templates_column"] = column
+                        std_column = source.get("std_column")
+                        resolved["templates_std_column"] = std_column if std_column in all_colnames else None
+                    break
+            if kind == "columns":
+                spec = source.get("columns")
+                if spec == "canonical_quality":
+                    canonical = set(ComputeQualityMetrics.get_metric_columns())
+                    cols = [c for c in scalar_colnames if c in canonical]
+                else:  # an explicit list of column names
+                    cols = [c for c in spec if c in scalar_colnames]
+                if extension == "quality_metrics":
+                    resolved["quality_metric_colnames"] = cols
+                break
+
+    # every scalar column not claimed as a quality metric becomes a sorting property
+    claimed = set(resolved["quality_metric_colnames"])
+    resolved["property_colnames"] = [c for c in scalar_colnames if c not in claimed]
+    return resolved
+
+
 def read_nwb_sorting_analyzer(
     file_path: str | Path,
     t_start: float | None = None,
@@ -1882,8 +1954,13 @@ def read_nwb_sorting_analyzer(
     group_name: str | None = None,
     compute_extra: List[str] | None = ["unit_locations"],
     compute_extra_params: dict | None = None,
+    extension_map: dict | None = None,
     verbose: bool = False,
 ) -> SortingAnalyzer:
+    # extension_map overrides (per extension) merge over DEFAULT_EXTENSION_MAP; see its docstring.
+    resolved_extension_map = dict(DEFAULT_EXTENSION_MAP)
+    if extension_map is not None:
+        resolved_extension_map.update(extension_map)
     # try to read recording object to get the analyzer
     try:
         recording = NwbRecordingExtractor(
@@ -1955,11 +2032,21 @@ def read_nwb_sorting_analyzer(
                 metric_colnames.append(column_name)
             elif dataset.ndim == 1 and dataset.dtype.kind in "OSU":
                 label_colnames.append(column_name)
-        needed = (
-            [c for c in ("waveform_mean", "waveform_sd", "electrodes") if c in colnames]
-            + metric_colnames
-            + label_colnames
-        )
+
+    # Resolve the extension map against the Units columns: which column holds the templates, and which
+    # scalar columns are quality metrics (canonical names by default) vs plain sorting properties.
+    scalar_colnames = metric_colnames + label_colnames
+    resolved = _resolve_extension_columns(resolved_extension_map, scalar_colnames, colnames)
+    templates_column = resolved["templates_column"]
+    templates_std_column = resolved["templates_std_column"]
+    quality_metric_colnames = resolved["quality_metric_colnames"]
+    property_colnames = resolved["property_colnames"]
+
+    if not use_pynwb:
+        # deliberate read: only the resolved template column(s), the electrodes region, and the scalar
+        # columns that become metrics or properties are materialized; ragged/per-spike columns are not.
+        needed = [c for c in (templates_column, templates_std_column, "electrodes") if c and c in colnames]
+        needed += scalar_colnames
         units = _create_df_from_nwb_table(units_group, columns=needed)
 
     electrodes_indices = None
@@ -1989,10 +2076,12 @@ def read_nwb_sorting_analyzer(
                     units = units.loc[units.index[unit_mask]]
                     electrodes_indices = units["electrodes"]
 
-    # per-unit label / identity columns (e.g. kilosort2_label, cluster_uuid) -> sorting properties
-    for label_column in label_colnames:
-        if label_column in units.columns and len(units[label_column]) == sorting.get_num_units():
-            sorting.set_property(label_column, units[label_column].values)
+    # Every scalar column not claimed as a quality metric becomes a sorting property (labels like
+    # cluster_uuid, and any non-canonical numeric column). Properties show up in the GUI's unit table
+    # alongside metrics, so nothing is lost, without asserting an unknown column is a "quality metric".
+    for property_column in property_colnames:
+        if property_column in units.columns and len(units[property_column]) == sorting.get_num_units():
+            sorting.set_property(property_column, units[property_column].values)
 
     # Obtain a recording for the analyzer. With a real recording we use it directly. Without one (the
     # streaming curation case) we build a lightweight placeholder recording that carries only the probe
@@ -2035,13 +2124,13 @@ def read_nwb_sorting_analyzer(
 
     num_channels = len(analyzer_channel_ids)
 
-    # templates, and the required random_spikes extension that must exist alongside them
-    if "waveform_mean" in units and unit_local_channels is not None:
+    # templates (from the resolved templates column), and the required random_spikes extension
+    if templates_column is not None and templates_column in units and unit_local_channels is not None:
         _make_random_spikes(analyzer, sorting, has_recording=recording is not None)
-        _make_templates(analyzer, units, unit_local_channels, num_channels)
+        _make_templates(analyzer, units, templates_column, templates_std_column, unit_local_channels, num_channels)
 
-    # per-unit numeric columns -> template_metrics / quality_metrics
-    _make_metrics(analyzer, units, metric_colnames, verbose=verbose)
+    # the resolved quality-metric columns -> quality_metrics extension
+    _make_metrics(analyzer, units, quality_metric_colnames, verbose=verbose)
 
     # compute extra required
     if compute_extra is not None:
@@ -2180,12 +2269,12 @@ def _make_random_spikes(analyzer, sorting, has_recording):
     analyzer.extensions["random_spikes"] = random_spikes_ext
 
 
-def _make_templates(analyzer, units, unit_local_channels, num_channels):
-    """Attach the `templates` extension from the Units `waveform_mean` column, scattering each unit's
+def _make_templates(analyzer, units, templates_column, templates_std_column, unit_local_channels, num_channels):
+    """Attach the `templates` extension from the resolved templates column, scattering each unit's
     sparse waveform block onto its true channel positions."""
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-    waveform_mean = np.array([np.asarray(t, dtype="float") for t in units["waveform_mean"].values])
+    waveform_mean = np.array([np.asarray(t, dtype="float") for t in units[templates_column].values])
     num_samples_template = waveform_mean.shape[1]
 
     # Scatter each unit's waveform onto its channels. This relies on the alignment contract that
@@ -2206,11 +2295,11 @@ def _make_templates(analyzer, units, unit_local_channels, num_channels):
     templates_ext.data["average"] = dense_templates
     operators = ["average"]
 
-    # Only expose the "std" operator when the file actually stores waveform_sd. Fabricating a zero std
-    # would falsely imply the unit's spikes have no waveform variability, so when it is absent we declare
-    # only "average" rather than inventing data.
-    if "waveform_sd" in units.columns:
-        waveform_sd = np.array([np.asarray(t, dtype="float") for t in units["waveform_sd"].values])
+    # Only expose the "std" operator when the file actually stores a std column (resolved). Fabricating a
+    # zero std would falsely imply the unit's spikes have no waveform variability, so when it is absent we
+    # declare only "average" rather than inventing data.
+    if templates_std_column is not None and templates_std_column in units.columns:
+        waveform_sd = np.array([np.asarray(t, dtype="float") for t in units[templates_std_column].values])
         dense_std = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
         for unit_index, positions in enumerate(unit_local_channels):
             k = len(positions)
@@ -2227,33 +2316,18 @@ def _make_templates(analyzer, units, unit_local_channels, num_channels):
     analyzer.extensions["templates"] = templates_ext
 
 
-def _make_metrics(analyzer, units, metric_colnames, verbose=False):
-    """Route every per-unit numeric column to its metrics extension. Canonical template-metric names go
-    to `template_metrics`; everything else goes to `quality_metrics`, including pipeline-specific metrics
-    that are not canonical SpikeInterface names (e.g. IBL's noise_cutoff), so they are preserved and
-    shown in the metrics view rather than dropped."""
+def _make_metrics(analyzer, units, quality_metric_colnames, verbose=False):
+    """Attach the `quality_metrics` extension from the resolved quality-metric columns. Other per-unit
+    scalar columns are loaded as sorting properties instead (see the caller), and `template_metrics` is
+    never synthesized from value columns because it carries structured data a values-only table lacks."""
     import pandas as pd
-    from spikeinterface.metrics.template import ComputeTemplateMetrics
     from spikeinterface.metrics.quality import ComputeQualityMetrics
 
-    template_metric_columns = ComputeTemplateMetrics.get_metric_columns()
-    template_metrics_df = pd.DataFrame(index=analyzer.unit_ids)
     quality_metric_df = pd.DataFrame(index=analyzer.unit_ids)
-    for col in metric_colnames:
-        if col not in units.columns:
-            continue
-        if col in template_metric_columns:
-            template_metrics_df.loc[:, col] = units[col].values
-        else:
+    for col in quality_metric_colnames:
+        if col in units.columns:
             quality_metric_df.loc[:, col] = units[col].values
 
-    if len(template_metrics_df.columns) > 0:
-        if verbose:
-            print("Adding template metrics")
-        template_metrics_ext = ComputeTemplateMetrics(analyzer)
-        template_metrics_ext.data["metrics"] = template_metrics_ext._cast_metrics(template_metrics_df)
-        template_metrics_ext.run_info["run_completed"] = True
-        analyzer.extensions["template_metrics"] = template_metrics_ext
     if len(quality_metric_df.columns) > 0:
         if verbose:
             print("Adding quality metrics")
