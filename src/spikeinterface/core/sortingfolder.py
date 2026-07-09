@@ -45,7 +45,7 @@ class NumpyFolderSorting(BaseSorting):
         self._cached_spike_vector = self.spikes
 
         folder_metadata = folder_path
-        self.load_metadata_from_folder(folder_metadata)
+        self._load_metadata_from_folder(folder_metadata)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
 
@@ -65,6 +65,15 @@ class NumpyFolderSorting(BaseSorting):
         }
         info_file.write_text(json.dumps(d), encoding="utf8")
         np.save(save_path / "spikes.npy", sorting.to_spike_vector())
+
+        sorting._save_metadata_to_folder(save_path)
+        sorting._save_provenance_to_folder(save_path)
+
+        # make the si_folder file to make the load() easier
+        cached = NumpyFolderSorting(folder_path=save_path)
+        si_folder_path = save_path / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
+
 
 
 class NpzFolderSorting(NpzSortingExtractor):
@@ -108,7 +117,7 @@ class NpzFolderSorting(NpzSortingExtractor):
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 
         folder_metadata = folder_path
-        self.load_metadata_from_folder(folder_metadata)
+        self._load_metadata_from_folder(folder_metadata)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
         self._npz_kwargs = d["kwargs"]
@@ -122,8 +131,14 @@ class NpzFolderSorting(NpzSortingExtractor):
         if npz_file.exists():
             raise ValueError("NpzFolderSorting.write_sorting the folder already contains sorting_cached.npz")
         NpzSortingExtractor.write_sorting(sorting, npz_file)
+        sorting._save_metadata_to_folder(save_path)
         cached = NpzSortingExtractor(npz_file)
         cached.dump(save_path / "npz.json", relative_to=save_path)
+
+        # make the si_folder file to make the load() easier
+        cached = NpzFolderSorting(folder_path=save_path)
+        si_folder_path = save_path / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
 
 
 read_numpy_sorting_folder = define_function_from_class(

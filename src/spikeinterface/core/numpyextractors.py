@@ -77,7 +77,7 @@ class NumpyRecording(BaseRecording):
         }
 
     @staticmethod
-    def from_recording(source_recording, **job_kwargs):
+    def from_recording(source_recording, with_metadata=True, with_time_vector=False, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
 
         t_starts = source_recording._get_t_starts()
@@ -97,6 +97,18 @@ class NumpyRecording(BaseRecording):
             t_starts=t_starts,
             channel_ids=source_recording.channel_ids,
         )
+
+        if with_metadata:
+            source_recording.copy_metadata(recording)
+        
+        if with_time_vector:
+            for segment_index in range(source_recording.get_num_segments()):
+                if source_recording.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = source_recording.get_times(segment_index=segment_index)
+                    recording.set_times(time_vector, segment_index=segment_index)
+
+
         return recording
 
 

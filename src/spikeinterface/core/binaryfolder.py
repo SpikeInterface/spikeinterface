@@ -3,8 +3,9 @@ import json
 
 import numpy as np
 
-from probeinterface import read_probeinterface
+from probeinterface import read_probeinterface, write_probeinterface
 
+from spikeinterface.core import BaseRecording
 from .binaryrecordingextractor import BinaryRecordingExtractor
 from .core_tools import define_function_from_class, make_paths_absolute
 
@@ -86,6 +87,8 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         if probegroup is not None:
             self._probegroup = probegroup
+        
+        # self._load_metadata_from_folder(folder_path)
 
         # Load time vectors if any
         for segment_index, rs in enumerate(self.segments):
@@ -111,6 +114,68 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             file_offset=self._bin_kwargs["file_offset"],
         )
         return d
+
+    @staticmethod
+    def write_recording(
+        recording: BaseRecording, folder: str | Path, dtype=None, verbose=False, **job_kwargs
+    ):
+        from .time_series_tools import write_binary
+        from .binaryrecordingextractor import BinaryRecordingExtractor
+        from .binaryfolder import BinaryFolderRecording
+
+        folder = Path(folder)
+
+        file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(recording.get_num_segments())]
+        if dtype is None:
+            dtype = recording.get_dtype()
+        t_starts = recording._get_t_starts()
+
+        write_binary(recording, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
+
+        recording._save_metadata_to_folder(folder)
+        recording._save_provenance_to_folder(folder)
+
+        if recording.has_probe():
+            probegroup = recording.get_probegroup()
+            write_probeinterface(folder / "probegroup.json", probegroup)
+
+
+        # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
+        # See the __init__ 
+
+        binary_rec = BinaryRecordingExtractor(
+            file_paths=file_paths,
+            sampling_frequency=recording.get_sampling_frequency(),
+            num_channels=recording.get_num_channels(),
+            dtype=dtype,
+            t_starts=t_starts,
+            channel_ids=recording.get_channel_ids(),
+            time_axis=0,
+            file_offset=0,
+            is_filtered=recording.is_filtered(),
+            gain_to_uV=recording.get_channel_gains(),
+            offset_to_uV=recording.get_channel_offsets(),
+        )
+        binary_rec.dump(folder / "binary.json", relative_to=folder)
+                    
+        for segment_index, rs in enumerate(recording.segments):
+            d = rs.get_times_kwargs()
+            time_vector = d["time_vector"]
+            if time_vector is not None:
+                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+
+        # make the si_folder file to make the load() easier
+        cached = BinaryFolderRecording(folder_path=folder)
+        si_folder_path = folder / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=folder, include_extra_metadata=False)
+
+
+        # # timestamps are not saved in binary, so we have to set them explicitly
+        # for segment_index in range(recording.get_num_segments()):
+        #     if recording.has_time_vector(segment_index):
+        #         # the use of get_times is preferred since timestamps are converted to array
+        #         time_vector = recording.get_times(segment_index=segment_index)
+        #         cached.set_times(time_vector, segment_index=segment_index)        
 
 
 read_binary_folder = define_function_from_class(source_class=BinaryFolderRecording, name="read_binary_folder")

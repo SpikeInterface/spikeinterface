@@ -500,7 +500,7 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-    def _save(self, format="numpy_folder", **save_kwargs):
+    def save(self, format="numpy_folder", **save_kwargs):
         """
         This function replaces the old CachesortingExtractor, but enables more engines
         for caching a results.
