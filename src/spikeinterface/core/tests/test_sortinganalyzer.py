@@ -765,16 +765,9 @@ def test_select_channels(dataset):
 
 
 def test_main_channel_from_templates_dense_recordingless(tmp_path):
-    """A dense analyzer loaded without its recording must still recover `main_channel_indices` from
-    its `templates` extension instead of raising.
-
-    `main_channel_indices` are only persisted as the `main_channel_id` sorting property, and the fast
-    path that reads them back requires an attached recording to map ids to indices. So a recordingless
-    load drops into `_compute_main_channel_backwards_compatibility`, whose Case 1 computes the peak
-    channel from the templates but never returns it: a dense analyzer then falls through the sparse
-    (Case 3) and recording (Case 4) branches to the final `raise`. This test saves a dense analyzer,
-    reloads it with the recording made unavailable, crafts template peaks on known channels, and checks
-    those peak channels are recovered instead of the recovery raising.
+    """When a dense analyzer has a `templates` extension but no attached recording, `get_main_channels`
+    recovers each unit's main channel from the templates (its peak channel) and reports it consistently
+    both as a positional index and as a channel id.
     """
     recording, sorting = generate_ground_truth_recording(
         num_channels=8,
@@ -783,10 +776,21 @@ def test_main_channel_from_templates_dense_recordingless(tmp_path):
         sampling_frequency=30000.0,
         seed=0,
     )
-    # Each unit's true main channel is the template peak we place below.
-    unit0_main_channel = 0
-    unit1_main_channel = 7
-    expected_main_channel_indices = [unit0_main_channel, unit1_main_channel]
+    # `generate_ground_truth_recording` names channels "0".."7" (numeric strings that equal their own
+    # index). Rename them to letters so a channel id is unmistakably distinct from its positional index:
+    # the recovery converts the stored `main_channel_id` (an id) into a `main_channel_index`, and letters
+    # make that conversion observable instead of silently coinciding.
+    channel_ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    recording = recording.rename_channels(channel_ids)
+    # the pre-set `main_channel_id` still references the old ids; drop it so it is re-estimated on the renamed recording
+    sorting = sorting.clone()
+    sorting._properties.pop("main_channel_id")
+
+    # place each unit's template peak on a known (index, id) pair
+    unit0_main_channel_index, unit0_main_channel_id = 0, "a"
+    unit1_main_channel_index, unit1_main_channel_id = 7, "h"
+    expected_main_channel_indices = [unit0_main_channel_index, unit1_main_channel_index]
+    expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
 
     folder = tmp_path / "analyzer_recordingless"
     analyzer = create_sorting_analyzer(sorting, recording, format="binary_folder", folder=folder, sparse=False)
@@ -806,25 +810,21 @@ def test_main_channel_from_templates_dense_recordingless(tmp_path):
     templates = reloaded_analyzer.get_extension("templates")
     average = templates.data["average"]
     average[:] = 0.0
-    average[0, templates.nbefore, unit0_main_channel] = -100.0
-    average[1, templates.nbefore, unit1_main_channel] = -100.0
+    average[0, templates.nbefore, unit0_main_channel_index] = -100.0
+    average[1, templates.nbefore, unit1_main_channel_index] = -100.0
     templates.data["average"] = average
 
-    main_channel_indices = np.asarray(reloaded_analyzer.get_main_channels(outputs="index"))
-    # must be the template peak channels, and recovery must not raise because the recording is missing
-    assert np.array_equal(main_channel_indices, expected_main_channel_indices)
+    # recovery must not raise, and must map correctly between positional indices and channel ids
+    recovered_main_channel_indices = np.asarray(reloaded_analyzer.get_main_channels(outputs="index"))
+    recovered_main_channel_ids = np.asarray(reloaded_analyzer.get_main_channels(outputs="id"))
+    assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
+    assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
 
 
 def test_main_channel_from_templates_sparse_recordingless():
-    """A sparse, recordingless analyzer with templates must derive `main_channel_indices` from the
-    templates (the peak channel), not from the geometric centroid of each unit's sparse channels.
-
-    `_compute_main_channel_backwards_compatibility` computes the peak channel from the templates
-    (Case 1), but the `if self.is_sparse()` block (Case 3, documented as the fallback for when there
-    are no templates) then unconditionally overwrites it with the channel closest to the average
-    location of the unit's sparse set and returns that. So without a fix the "largest template" channel
-    does not match the derived main channel: this test crafts template peaks that differ from the
-    sparse centroids and checks that the peaks win.
+    """When a sparse analyzer has a `templates` extension but no attached recording, `get_main_channels`
+    reports each unit's main channel as its template peak channel, not the geometric centroid of the
+    unit's sparse channel set.
     """
     from spikeinterface.core.sparsity import ChannelSparsity
 
@@ -840,18 +840,29 @@ def test_main_channel_from_templates_sparse_recordingless():
         seed=0,
         generate_probe_kwargs=dict(num_columns=1, ypitch=20),
     )
-    # Each unit's true main channel is the template peak we place below, put on an endpoint of the
-    # unit's sparse set so it is off the set's geometric centroid, which is what makes the correct
-    # (peak) answer and the wrong (centroid) fallback distinguishable.
-    unit0_main_channel = 0  # endpoint of unit 0's sparse set {0..4}; its geometric centroid is channel 2
-    unit1_main_channel = 7  # endpoint of unit 1's sparse set {3..7}; its geometric centroid is channel 5
-    expected_main_channel_indices = [unit0_main_channel, unit1_main_channel]
+    # Rename channels "0".."7" to letters so a channel id is unmistakably distinct from its positional
+    # index, keeping the id-vs-index conversion in the recovery observable.
+    channel_ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    recording = recording.rename_channels(channel_ids)
+
+    # Each unit's true main channel is the template peak we place below, put on an endpoint of the unit's
+    # sparse set so it is off the set's geometric centroid, which is what makes the correct (peak) answer
+    # and the wrong (centroid) fallback distinguishable.
+    unit0_main_channel_index, unit0_main_channel_id = 0, "a"  # unit 0's sparse set {a..e}; centroid is "c" (index 2)
+    unit1_main_channel_index, unit1_main_channel_id = 7, "h"  # unit 1's sparse set {d..h}; centroid is "f" (index 5)
+    expected_main_channel_indices = [unit0_main_channel_index, unit1_main_channel_index]
+    expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
 
     # explicit sparsity matching the sets referenced above
     mask = np.zeros((2, 8), dtype=bool)
     mask[0, 0:5] = True
     mask[1, 3:8] = True
     sparsity = ChannelSparsity(mask=mask, unit_ids=sorting.unit_ids, channel_ids=recording.channel_ids)
+
+    # point `main_channel_id` at the (in-mask) centroid channels so create's sparsity-consistency check
+    # passes; the recovery ignores this value because there is no recording, so it does not bias the test.
+    sorting = sorting.clone()
+    sorting.set_property("main_channel_id", ["c", "f"])
 
     analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=sparsity)
     analyzer.compute(["random_spikes", "templates"])
@@ -860,17 +871,19 @@ def test_main_channel_from_templates_sparse_recordingless():
     templates = analyzer.get_extension("templates")
     average = templates.data["average"]
     average[:] = 0.0
-    average[0, templates.nbefore, unit0_main_channel] = -100.0
-    average[1, templates.nbefore, unit1_main_channel] = -100.0
+    average[0, templates.nbefore, unit0_main_channel_index] = -100.0
+    average[1, templates.nbefore, unit1_main_channel_index] = -100.0
     templates.data["average"] = average
 
     # recordingless, and force the backwards-compatibility recompute
     analyzer._recording = None
     analyzer._main_channel_indices = None
 
-    main_channel_indices = np.asarray(analyzer.get_main_channels(outputs="index"))
-    # must be the template peak channels, not the geometric centroids [2, 5]
-    assert np.array_equal(main_channel_indices, expected_main_channel_indices)
+    # must be the template peak channels, not the geometric centroids ("c", "f" / indices [2, 5])
+    recovered_main_channel_indices = np.asarray(analyzer.get_main_channels(outputs="index"))
+    recovered_main_channel_ids = np.asarray(analyzer.get_main_channels(outputs="id"))
+    assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
+    assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
 
 
 if __name__ == "__main__":
