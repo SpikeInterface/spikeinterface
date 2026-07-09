@@ -1,7 +1,9 @@
-import pytest
-import numpy as np
 from copy import deepcopy
 import csv
+
+import pytest
+import numpy as np
+
 from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
@@ -10,9 +12,7 @@ from spikeinterface.core import (
     create_sorting_analyzer,
     synthesize_random_firings,
 )
-
 from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, create_regular_periods
-
 from spikeinterface.metrics.quality import get_quality_metric_list, compute_quality_metrics, ComputeQualityMetrics
 from spikeinterface.metrics.quality.misc_metrics import (
     misc_metrics_list,
@@ -32,7 +32,6 @@ from spikeinterface.metrics.quality.misc_metrics import (
     _get_synchrony_counts,
     amplitude_cutoff,
 )
-
 from spikeinterface.metrics.quality.pca_metrics import (
     mahalanobis_metrics,
     d_prime_metric,
@@ -40,8 +39,6 @@ from spikeinterface.metrics.quality.pca_metrics import (
     silhouette_score,
     simplified_silhouette_score,
 )
-
-
 from spikeinterface.core.base import minimum_spike_dtype, unit_period_dtype
 
 
@@ -60,7 +57,7 @@ def _sorting_violation():
     spike_times = np.concatenate(trains)
     spike_labels = np.concatenate(labels)
 
-    order = np.argsort(spike_times)
+    order = np.argsort(spike_times, stable=True)
     max_num_samples = np.floor(max_time * sampling_frequency) - 1
     indexes = np.arange(0, max_time + 1, 1 / sampling_frequency)
     spike_times = np.searchsorted(indexes, spike_times[order], side="left")
@@ -525,13 +522,13 @@ def test_synchrony_metrics(sorting_analyzer_simple, periods_simple):
 
 def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
 
-    unit_ids_subset = [3, 7]
+    unit_ids_subset = ["3", "7"]
 
     synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, unit_ids=unit_ids_subset)
 
-    assert list(synchrony_metrics.sync_spike_2.keys()) == [3, 7]
-    assert list(synchrony_metrics.sync_spike_4.keys()) == [3, 7]
-    assert list(synchrony_metrics.sync_spike_8.keys()) == [3, 7]
+    assert list(synchrony_metrics.sync_spike_2.keys()) == ["3", "7"]
+    assert list(synchrony_metrics.sync_spike_4.keys()) == ["3", "7"]
+    assert list(synchrony_metrics.sync_spike_8.keys()) == ["3", "7"]
 
 
 def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
@@ -639,15 +636,20 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     )
 
     # check that, when parameters are changed, the data and metadata are updated
-    old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
+    old_presence_ratio_data = deepcopy(quality_metric_extension.get_data()["presence_ratio"].values)
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+        {
+            "quality_metrics": {
+                "metric_names": ["presence_ratio"],
+                "metric_params": {"presence_ratio": {"bin_duration_s": "10"}},
+            }
+        }
     )
     new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
-    new_snr_data = new_quality_metric_extension.get_data()["snr"].values
+    new_presence_ratio_data = new_quality_metric_extension.get_data()["presence_ratio"].values
 
-    assert np.all(old_snr_data != new_snr_data)
-    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
+    assert np.all(old_presence_ratio_data != new_presence_ratio_data)
+    assert new_quality_metric_extension.params["metric_params"]["presence_ratio"]["bin_duration_s"] == "10"
 
 
 def test_metric_names_in_same_order(small_sorting_analyzer):

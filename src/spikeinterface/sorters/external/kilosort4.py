@@ -147,6 +147,7 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         from kilosort import __version__ as ks_version
+        from numpy import __version__ as np_version
         from kilosort.run_kilosort import (
             set_files,
             initialize_ops,
@@ -160,6 +161,13 @@ class Kilosort4Sorter(BaseSorter):
         )
         from kilosort.io import load_probe, RecordingExtractorAsArray, BinaryFiltered, save_preprocessing
         from kilosort.parameters import DEFAULT_SETTINGS
+
+        if (version.parse("4.1.1") <= version.parse(ks_version) <= version.parse("4.1.6")) and version.parse(
+            np_version
+        ) >= version.parse("2.4.0"):
+            raise RuntimeError(
+                "Kilosort versions between 4.1.1 and 4.1.6 are not compatible with numpy versions above 2.4. Either upgrade Kilosort to 4.1.7 or above, or downgrade numpy to 2.3 or below."
+            )
 
         if version.parse(ks_version) >= version.parse("4.0.33"):
             HAS_DIAGNOSTIC_PLOTS = True

@@ -86,6 +86,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     In addition, it also uses a full Orthogonal Matching Pursuit engine to reconstruct the traces, leading to more spikes
     being discovered. The code is much faster and memory efficient, inheriting from all the preprocessing possibilities of spikeinterface"""
 
+    installation_mesg = "\tpip install 'spikeinterface[spykingcircus2]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[spykingcircus2]'"
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        spykingcircus2_deps = ["scipy", "numba", "hdbscan"]
+
+        for package_name in spykingcircus2_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
+
     @classmethod
     def get_sorter_version(cls):
         return "2025.12"
@@ -99,7 +113,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             HAVE_TORCH = False
             print("spykingcircus2 could benefit from using torch. Consider installing it")
 
-        # this is importanted only on demand because numba import are too heavy
+        # this is imported only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
@@ -356,12 +370,15 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
                     job_kwargs=job_kwargs,
                 )
 
-                sparsity = compute_sparsity(dense_templates, method="radius", radius_um=radius_um)
+                sparsity = compute_sparsity(
+                    dense_templates, method="radius", radius_um=radius_um, peak_sign="neg", amplitude_mode="extremum"
+                )
                 threshold = params["cleaning"].get("sparsify_threshold", None)
                 if threshold is not None:
                     sparsity_snr = compute_sparsity(
                         dense_templates,
                         method="snr",
+                        peak_sign="neg",
                         amplitude_mode="peak_to_peak",
                         noise_levels=noise_levels,
                         threshold=threshold,

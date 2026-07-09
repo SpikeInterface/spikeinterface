@@ -11,9 +11,9 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
 import shutil
-from pathlib import Path
+import datetime
+import importlib.util
 # sys.path.insert(0, os.path.abspath('.'))
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
@@ -50,7 +50,7 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022-2025, SpikeInterface Team'
+copyright = f'2022-{datetime.date.today().year}, SpikeInterface Team'
 author = 'SpikeInterface Team'
 
 
@@ -99,13 +99,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-try:
-    import sphinx_rtd_theme
 
+if importlib.util.find_spec("sphinx_rtd_theme") is not None:
     html_theme = "sphinx_rtd_theme"
-except ImportError:
-    print("RTD theme not installed, using default")
-    html_theme = 'alabaster'
+else:
+    html_theme = "alabaster"
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

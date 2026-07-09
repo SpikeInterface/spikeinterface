@@ -1,6 +1,4 @@
 from pathlib import Path
-import pickle
-import json
 
 import numpy as np
 
@@ -38,7 +36,7 @@ def extract_peaks_svd(
 
     This is done in 2 steps:
       * fit a TruncatedSVD model on a few peaks on max channel
-      * tranform each peaks in parralel on a sparse channel set with this model
+      * transform each peaks in parallel on a sparse channel set with this model
 
     The recording have a drift, hen, optionally, the motion object can be given.
     In that case all the svd features are moved back using cubi interpolation.

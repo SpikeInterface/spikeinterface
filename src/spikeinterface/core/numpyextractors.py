@@ -1,5 +1,5 @@
-import warnings
 import numpy as np
+
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
@@ -119,7 +119,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
 class SharedMemoryRecording(BaseRecording):
     """
-    In memory recording with shared memmory buffer.
+    In memory recording with shared memory buffer.
 
     Parameters
     ----------
@@ -329,7 +329,7 @@ class NumpySorting(BaseSorting):
             spikes_in_seg["sample_index"] = times
             spikes_in_seg["unit_index"] = unit_index
             spikes_in_seg["segment_index"] = i
-            order = np.argsort(times)
+            order = np.argsort(times, stable=True)
             spikes_in_seg = spikes_in_seg[order]
             spikes.append(spikes_in_seg)
         spikes = np.concatenate(spikes)
@@ -395,7 +395,7 @@ class NumpySorting(BaseSorting):
                 sample_indices = np.concatenate(sample_indices)
                 unit_indices = np.concatenate(unit_indices)
 
-                order = np.argsort(sample_indices)
+                order = np.argsort(sample_indices, stable=True)
                 sample_indices = sample_indices[order]
                 unit_indices = unit_indices[order]
 

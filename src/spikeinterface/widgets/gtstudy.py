@@ -1,8 +1,8 @@
 """
 This module will be deprecated and will be removed in 0.102.0
 
-All ploting for the previous GTStudy is now centralized in spikeinterface.benchmark.benchmark_plot_tools
-Please not that GTStudy is replaced by SorterStudy wich is based more generic BenchmarkStudy.
+All plotting for the previous GTStudy is now centralized in spikeinterface.benchmark.benchmark_plot_tools
+Please note that GTStudy is replaced by SorterStudy which is based more generic BenchmarkStudy.
 """
 
 from .base import BaseWidget

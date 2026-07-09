@@ -1,0 +1,113 @@
+name: Cross-version serialization
+
+# Loads objects serialized by an old spikeinterface release with the current code, to
+# catch changes that silently break loading of old saved files (moved classes, changed
+# constructor signatures, changed on-disk encodings).
+#
+# Delivery model: Live generation. Fixtures are regenerated from a real old install each
+# run in an isolated uv environment (nothing committed). The version list is computed
+# from PyPI (latest patch of each minor at or above MIN_VERSION_TO_TEST): on a pull
+# request only the latest released minor is tested; the full matrix runs weekly and on
+# manual dispatch.
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+    # Only trigger when a change could affect whether old files still load: the code
+    # under test (core), the serialization harness, or this workflow itself. Note this
+    # watches core only; a break introduced in generation/ or preprocessing/ would not
+    # trigger it.
+    paths:
+      - 'src/spikeinterface/core/**'
+      - '.github/scripts/serialization/**'
+      - '.github/workflows/cross_version_serialization.yml'
+  schedule:
+    - cron: '0 4 * * 0'  # weekly, Sunday 04:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Compute which released versions the matrix below tests loading from, exposed as the
+  # job output `list`. Latest patch of each minor at or above the floor on schedule /
+  # dispatch; only the latest minor on a pull request (keeps per-PR runs cheap).
+  versions:
+    name: Select versions
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.set.outputs.list }}
+    steps:
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - id: set
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          # Support floor: oldest minor to test. Below this, installs fail on the CI
+          # Python (numcodecs dependency rot in 0.100/0.101). Raise when 0.102 rots.
+          MIN_VERSION_TO_TEST: "0.102"  # We will change this when making breaking changes (hopefully not too often)
+        run: |
+          python -m pip install -q packaging
+          available_versions=$(python -m pip index versions spikeinterface | sed -n 's/.*Available versions: //p')
+
+          versions_to_test=$(AVAILABLE_VERSIONS="$available_versions" python -c "
+          import json, os
+          from itertools import groupby
+          from packaging.version import Version
+
+          floor = Version(os.environ['MIN_VERSION_TO_TEST'])
+          available = sorted(Version(v.strip()) for v in os.environ['AVAILABLE_VERSIONS'].split(','))
+
+          # exclude prereleases and versions below the floor, then take the latest
+          # patch of each minor
+          candidates = [v for v in available if not v.is_prerelease and (v.major, v.minor) >= (floor.major, floor.minor)]
+          minor_releases = [max(group) for _, group in groupby(candidates, key=lambda v: (v.major, v.minor))]
+
+          # on a pull request, test only the latest minor
+          if os.environ.get('GITHUB_EVENT_NAME') == 'pull_request':
+              minor_releases = minor_releases[-1:]
+
+          print(json.dumps([str(v) for v in minor_releases]))
+          ")
+
+          echo "list=$versions_to_test" >> "$GITHUB_OUTPUT"
+
+  cross-version:
+    needs: versions
+    name: Load fixtures from ${{ matrix.si-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        si-version: ${{ fromJSON(needs.versions.outputs.list) }}
+    env:
+      SI_SERIALIZATION_FIXTURES_DIR: ${{ github.workspace }}/serialization_fixtures
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.11'
+          enable-cache: false
+
+      - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
+        run: |
+          uv run --isolated --no-project --python 3.11 \
+            --with "spikeinterface[core]==${{ matrix.si-version }}" \
+            python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
+
+      - name: Load fixtures with the branch
+        run: |
+          uv pip install --system -e . --group test-core
+          pytest .github/scripts/serialization/test_cross_version_compatibility.py -v

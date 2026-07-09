@@ -82,7 +82,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     Parameters
     ----------
     measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
+        Measure memory allocation in the current process only, if false then measures at the system
         level.
     """
 
@@ -462,6 +462,26 @@ def test_generate_templates():
         dtype="float32",
         unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
+
+    # power case
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=None,
+        seed=42,
+        dtype="float32",
+        spatial_profile="power",
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
+    )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
 
     # upsampling case
     templates = generate_templates(
@@ -653,8 +673,8 @@ if __name__ == "__main__":
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_transformsorting()
-    test_generate_unit_locations()
+    # test_generate_unit_locations()
     # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
-    # test_generate_sorting_with_spikes_on_borders()
+    test_generate_sorting_with_spikes_on_borders()

@@ -134,7 +134,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         dtype,
         seed,
     ):
-        assert seed is not None
+        assert seed is not None, "Please include a seed value"
 
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
 

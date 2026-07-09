@@ -48,6 +48,7 @@ from .directional_derivative import DirectionalDerivativeRecording, directional_
 from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
+from .detect_artifacts import DetectAndRemoveArtifactsRecording, detect_and_remove_artifacts
 
 # from .silence_artifacts import SilencedArtifactsRecording, silence_artifacts
 
@@ -72,6 +73,8 @@ _all_preprocesser_dict = {
     # bad channel detection/interpolation
     DetectAndRemoveBadChannelsRecording: detect_and_remove_bad_channels,
     DetectAndInterpolateBadChannelsRecording: detect_and_interpolate_bad_channels,
+    # artifact/saturation handling
+    DetectAndRemoveArtifactsRecording: detect_and_remove_artifacts,
     # misc
     RectifyRecording: rectify,
     ClipRecording: clip,

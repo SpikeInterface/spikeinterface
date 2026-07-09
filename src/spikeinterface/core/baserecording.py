@@ -20,7 +20,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
     _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
     _main_properties = [
         "group",
-        "location",
         "gain_to_uV",
         "offset_to_uV",
         "gain_to_physical_unit",
@@ -187,9 +186,15 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         """
         super().add_segment(recording_segment)
 
-    def get_sample_size_in_bytes(self):
+    def get_sample_size_in_bytes(self, dtype=None):
         """
         Returns the size of a single sample across all channels in bytes.
+
+        Parameters
+        ----------
+        dtype : data-type, optional
+            The data type to use for calculating the sample size. If None,
+            the recording's dtype is used.
 
         Returns
         -------
@@ -197,7 +202,8 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             The size of a single sample in bytes
         """
         num_channels = self.get_num_channels()
-        dtype_size_bytes = self.get_dtype().itemsize
+        dtype = self.get_dtype() if dtype is None else np.dtype(dtype)
+        dtype_size_bytes = dtype.itemsize
         sample_size = num_channels * dtype_size_bytes
         return sample_size
 
@@ -279,7 +285,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -287,7 +293,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
-                    # here we do not truely have scale but we assume this is scaled
+                    # here we do not truly have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass
                 else:
@@ -317,6 +323,8 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
         if format == "binary":
             from .time_series_tools import write_binary
+            from .binaryrecordingextractor import BinaryRecordingExtractor
+            from .binaryfolder import BinaryFolderRecording
 
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
@@ -324,8 +332,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             t_starts = self._get_t_starts()
 
             write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
-
-            from .binaryrecordingextractor import BinaryRecordingExtractor
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
@@ -344,9 +350,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 offset_to_uV=self.get_channel_offsets(),
             )
             binary_rec.dump(folder / "binary.json", relative_to=folder)
-
-            from .binaryfolder import BinaryFolderRecording
-
             cached = BinaryFolderRecording(folder_path=folder)
 
             # timestamps are not saved in binary, so we have to set them explicitly
@@ -382,7 +385,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
             )
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
-
             # timestamps are saved and restored in zarr, so no need to set them explicitly
 
         elif format == "nwb":
@@ -392,31 +394,21 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
-
         return cached
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
-        folder = Path(folder)
-        if (folder / "probe.json").is_file():
-            probegroup = read_probeinterface(folder / "probe.json")
-            self.set_probegroup(probegroup, in_place=True)
+        super()._extra_metadata_from_folder(folder)
 
         # load time vector if any
         for segment_index, rs in enumerate(self.segments):
             time_file = folder / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
-                time_vector = np.load(time_file)
+                time_vector = np.load(time_file, mmap_mode="r")
                 rs.time_vector = time_vector
 
     def _extra_metadata_to_folder(self, folder):
-        # save probe
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            write_probeinterface(folder / "probe.json", probegroup)
+        super()._extra_metadata_to_folder(folder)
 
         # save time vector if any
         for segment_index, rs in enumerate(self.segments):
