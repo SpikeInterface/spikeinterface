@@ -55,7 +55,6 @@ class SingleChannelDenoiser(WaveformsNode):
         model_folder: Optional[str] = None,
         repo_id: Optional[str] = None,
         model_name: Optional[str] = None,
-        spike_size=121,
     ):
         assert HAVE_TORCH, "To use the SingleChannelDenoiser you need to install torch"
         waveform_node = find_parent_of_type(parents, WaveformsNode)
@@ -73,6 +72,7 @@ class SingleChannelDenoiser(WaveformsNode):
             raise ValueError("You need to specify either model_folder or repo_id")
         if model_folder is not None and repo_id is not None:
             raise ValueError("You cannot specify both model_folder and repo_id")
+        spike_size = waveform_node.nbefore + waveform_node.nafter
         # Load model
         self.denoiser, model_relative_path = self.load_model(
             model_folder=model_folder, repo_id=repo_id, model_name=model_name, spike_size=spike_size

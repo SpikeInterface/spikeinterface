@@ -18,8 +18,7 @@ def test_single_channel_toy_denoiser_in_peak_pipeline(generated_recording, detec
         recording,
         parents=[peak_retriever, waveform_extraction],
         repo_id="SpikeInterface/waveform_denoiser",
-        model_name="mearec_toy_denoiser",
-        spike_size=128,
+        model_name="toy_model_mearec",
     )
 
     nodes = [peak_retriever, waveform_extraction, toy_denoiser]
