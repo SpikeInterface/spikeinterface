@@ -69,11 +69,6 @@ class BinaryRecordingExtractor(BaseRecording):
         else:
             assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
 
-        # DO NOT DELETE! This is for backward compatibility
-        if num_chan is not None:
-            assert num_channels is None, "When both num_channels and num_chan are provided, num_channels is used"
-            num_channels = num_chan
-
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
         if isinstance(file_paths, list):
