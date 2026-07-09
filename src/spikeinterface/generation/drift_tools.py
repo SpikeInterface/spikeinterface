@@ -7,6 +7,9 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 
 from probeinterface import Probe
 
+from spikeinterface.core import ms_to_samples
+from spikeinterface.core.generate import generate_templates
+
 
 def interpolate_templates(
     templates_array: np.ndarray,
@@ -346,6 +349,48 @@ class DriftingTemplates(Templates):
         )
         self.displacements = displacements
 
+def generate_synthetic_drifting_templates(probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed):
+    """
+    Generate synthetic drifting template by moving the location of the units.
+    This avoid interpolation and then can have units on border moving outside with correct shape.
+    """
+    channel_locations = probe.contact_positions
+
+    templates_array = generate_templates(
+        channel_locations, unit_locations, sampling_frequency=sampling_frequency, seed=seed, **generate_templates_kwargs
+    )
+
+    num_displacement = displacements.shape[0]
+    templates_array_moved = np.zeros(shape=(num_displacement,) + templates_array.shape, dtype=templates_array.dtype)
+    for i in range(num_displacement):
+        unit_locations_moved = unit_locations.copy()
+        unit_locations_moved[:, :2] += displacements[i, :][np.newaxis, :]
+        templates_array_moved[i, :, :, :] = generate_templates(
+            channel_locations,
+            unit_locations_moved,
+            sampling_frequency=sampling_frequency,
+            seed=seed,
+            **generate_templates_kwargs,
+        )
+
+    ms_before = generate_templates_kwargs["ms_before"]
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=sampling_frequency,
+        nbefore=nbefore,
+        probe=probe,
+        is_in_uV=True,
+    )
+
+    drifting_templates = DriftingTemplates.from_static_templates(templates)
+
+    drifting_templates.templates_array_moved = templates_array_moved
+    drifting_templates.displacements = displacements
+
+    return drifting_templates
+
+
 
 def make_linear_displacement(start, stop, num_step=10):
     """
@@ -374,6 +419,7 @@ def make_linear_displacement(start, stop, num_step=10):
             :, np.newaxis
         ] + start[np.newaxis, :]
     return displacements
+
 
 
 class InjectDriftingTemplatesRecording(BaseRecording):
