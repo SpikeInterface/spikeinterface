@@ -764,6 +764,38 @@ def test_select_channels(dataset):
         assert len(p) == len(keep_channel_ids)
 
 
+def test_main_channel_indices_recovered_from_templates_recordingless(tmp_path, dataset):
+    # A dense analyzer that is loaded without its recording (the recording was moved or is
+    # otherwise unresolvable) should still recover `main_channel_indices` from its `templates`
+    # extension. `main_channel_indices` are only stored as the `main_channel_id` sorting
+    # property, and the fast path to read them back requires an attached recording, so a
+    # recordingless load falls into the templates-based backwards-compatibility path.
+    from spikeinterface.core.template_tools import _get_main_channel_from_template_array
+
+    recording, sorting = dataset
+    folder = tmp_path / "analyzer_recordingless"
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="binary_folder", folder=folder, sparse=False)
+    sorting_analyzer.compute(["random_spikes", "templates"])
+
+    # what the templates extension implies for the main channel of each unit (priority-1 path)
+    templates = sorting_analyzer.get_extension("templates")
+    expected_main_channel_indices = _get_main_channel_from_template_array(
+        templates.data["average"], peak_mode="extremum", peak_sign="both", nbefore=templates.nbefore
+    )
+
+    # simulate the recording being unavailable at load time
+    for file_ext in ("json", "pickle"):
+        recording_file = folder / f"recording.{file_ext}"
+        if recording_file.exists():
+            recording_file.unlink()
+
+    reloaded_analyzer = load_sorting_analyzer(folder)
+    assert not reloaded_analyzer.has_recording()
+    assert reloaded_analyzer.has_extension("templates")
+
+    assert np.array_equal(reloaded_analyzer.main_channel_indices, expected_main_channel_indices)
+
+
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()
