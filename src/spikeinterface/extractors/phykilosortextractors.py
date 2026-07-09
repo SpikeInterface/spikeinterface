@@ -156,7 +156,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         # update spike clusters and times values
         bad_clusters = [clust for clust in unique_unit_ids if clust not in cluster_info["cluster_id"].values]
         if len(bad_clusters) > 0:
-            # if no bad cluster we avoid this data reduction wich cost a lot for long dataset
+            # if no bad cluster we avoid this data reduction which cost a lot for long dataset
             spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
             spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
             spike_times_clean = spike_times[spike_clusters_clean_idxs]
