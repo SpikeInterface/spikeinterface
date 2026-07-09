@@ -47,7 +47,7 @@ def create_sinusoidal_traces(sampling_frequency=3e4, duration=30, freqs_n=10, ma
         pahse_shifts : Phase shifts of the frequencies, this one is an overkill.
 
     """
-    # Will return a signal with many frequencies some of wich, must be lost
+    # Will return a signal with many frequencies some of which, must be lost
     # on the resampling without breaking the lower bands
     x = np.arange(0, duration, step=1 / sampling_frequency)
     # Sample log spaced freqs from 10-10k
@@ -121,7 +121,7 @@ def test_resample_freq_domain():
             for resamp_fs, resamp_rec in zip(resamp_fss, resamp_recs)
         ]
     ), msg3
-    # Test that traces and times are the same lenght
+    # Test that traces and times are the same length
     msg4 = "The time and traces vectors must be of equal length. Non integer resampling rates can lead to this."
     assert np.all([rec.get_traces().shape[0] == rec.get_times().shape[0] for rec in resamp_recs]), msg4
     # One can see that they are quite alike, the signals but also their freq domains

@@ -46,13 +46,13 @@ def test_check_if_memory_serializable():
     # make a list of memory serializable objects
     extractors_mem_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_mem_serializable:
-        assert extractor.check_if_memory_serializable()
+        assert extractor.check_serializability("memory")
 
     # make not not memory serilizable
     test_extractor._serializability["memory"] = False
     extractors_not_mem_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_not_mem_serializable:
-        assert not extractor.check_if_memory_serializable()
+        assert not extractor.check_serializability("memory")
 
 
 def test_check_if_serializable():

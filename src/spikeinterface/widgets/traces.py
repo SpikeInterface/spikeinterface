@@ -97,7 +97,7 @@ class TracesWidget(BaseWidget):
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -250,7 +250,7 @@ class TracesWidget(BaseWidget):
         else:
             evensts_w_dtype = None
 
-        # keep aglobal ref of colorbar
+        # keep a global ref of colorbar
         self.cb = None
 
         plot_data = dict(

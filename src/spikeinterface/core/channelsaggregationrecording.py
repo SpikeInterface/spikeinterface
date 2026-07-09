@@ -19,7 +19,7 @@ class ChannelsAggregationRecording(BaseRecording):
         if recording_list is not None:
             warnings.warn(
                 "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             recording_list_or_dict = recording_list

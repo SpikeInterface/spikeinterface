@@ -94,7 +94,7 @@ def test_detect_bad_channels_std_mad():
     # Check that the size of the segments os maintained after preprocessor
     assert np.array_equal(
         *([r.get_num_frames(x) for x in range(rec.get_num_segments())] for r in [rec, rec2])
-    ), "wrong lenght of resulting segments."
+    ), "wrong length of resulting segments."
     # Check that locations are mantained
     assert np.array_equal(
         rec.get_channel_locations()[[0, 2, 3]], rec2.get_channel_locations()
@@ -250,7 +250,7 @@ def add_noisy_and_dead_channels(recording, is_dead, is_noisy, not_noisy):
     psd_cutoff = reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     recording = add_dead_channels(recording, is_dead)
     # Note this will reduce the PSD for these channels but
-    # as noisy have higher freq > 80% nyqist this does not matter
+    # as noisy have higher freq > 80% nyquist this does not matter
 
     return psd_cutoff
 
