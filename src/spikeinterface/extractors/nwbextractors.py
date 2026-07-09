@@ -1955,9 +1955,11 @@ def read_nwb_sorting_analyzer(
                 metric_colnames.append(column_name)
             elif dataset.ndim == 1 and dataset.dtype.kind in "OSU":
                 label_colnames.append(column_name)
-        needed = [
-            c for c in ("waveform_mean", "waveform_sd", "electrodes") if c in colnames
-        ] + metric_colnames + label_colnames
+        needed = (
+            [c for c in ("waveform_mean", "waveform_sd", "electrodes") if c in colnames]
+            + metric_colnames
+            + label_colnames
+        )
         units = _create_df_from_nwb_table(units_group, columns=needed)
 
     electrodes_indices = None
