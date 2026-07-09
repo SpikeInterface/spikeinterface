@@ -61,7 +61,16 @@ def test_pipeline_equiv_to_step():
 
             pp_dict = {pp_name: {}}
 
-            if pp_name in ["normalize_by_quantile", "center", "zscore", "whiten"]:
+            if pp_name in [
+                "normalize_by_quantile",
+                "center",
+                "zscore",
+                "whiten",
+                "detect_and_remove_bad_channels",
+                "detect_and_interpolate_bad_channels",
+                "detect_and_remove_artifacts",
+            ]: # These steps aren't deterministic (because they sample random chunks),
+                # so make sure that both pipeline and class get the same seed.
                 pp_dict[pp_name] = {"seed": 1205}
                 pp_rec_from_class = pp_class(rec, seed=1205)
             elif pp_name == "blank_saturation":
