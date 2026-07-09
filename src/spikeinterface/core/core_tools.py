@@ -10,6 +10,7 @@ from math import prod
 from collections import namedtuple
 import inspect
 
+from probeinterface import ProbeGroup
 import numpy as np
 
 
@@ -76,7 +77,6 @@ def read_python(path):
         dictionary containing parsed file
 
     """
-    from six import exec_
     import re
 
     path = Path(path).absolute()
@@ -146,6 +146,9 @@ class SIJsonEncoder(json.JSONEncoder):
             return str(obj)
 
         if isinstance(obj, Motion):
+            return obj.to_dict()
+
+        if isinstance(obj, ProbeGroup):
             return obj.to_dict()
 
         # The base-class handles the assertion
@@ -651,11 +654,19 @@ def convert_string_to_bytes(memory_string: str) -> int:
 def is_editable_mode() -> bool:
     """
     Check if spikeinterface is installed in editable mode
-    pip install -e .
+    pip install -e or UV editable install.
+    Idea modified from here:
+    https://stackoverflow.com/questions/43348746/how-to-detect-if-module-is-installed-in-editable-mode
     """
-    import spikeinterface
+    import json
 
-    return (Path(spikeinterface.__file__).parents[2] / "README.md").exists()
+    spikeinterface_dist = importlib.metadata.Distribution.from_name("spikeinterface").read_text("direct_url.json")
+    # if this is None it is not a local build
+    if spikeinterface_dist is None:
+        return False
+    # if there is not an editable field then it is not editable
+    package_is_editable = json.loads(spikeinterface_dist).get("dir_info").get("editable", False)
+    return package_is_editable
 
 
 def normal_pdf(x, mu: float = 0.0, sigma: float = 1.0):

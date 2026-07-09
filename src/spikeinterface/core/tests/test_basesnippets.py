@@ -142,8 +142,7 @@ def test_BaseSnippets(create_cache_folder):
     probe.set_device_channel_indices([2, -1, 0])
     probe.create_auto_shape()
 
-    snippets_p = snippets.set_probe(probe, group_mode="auto")
-    snippets_p = snippets.set_probe(probe, group_mode="by_probe")
+    snippets_p = snippets.select_channels_with_probe(probe, group_mode="auto")
     positions2 = snippets_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 

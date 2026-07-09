@@ -1,0 +1,58 @@
+name: Probe backward compatibility
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+    paths:
+      - 'src/spikeinterface/core/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe-backward-compat:
+    name: Probe compat (SI ${{ matrix.si-version }} → current)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        si-version:
+          - '0.102.*'
+          - '0.103.*'
+          - '0.104.*'
+    env:
+      SI_PROBE_COMPAT_FIXTURES_DIR: ${{ github.workspace }}/probe_compat_fixtures
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.11'
+          enable-cache: false
+
+      # Step 1: install the OLD release and create fixtures.
+      # The fixture script uses the old in_place=False default (returns a new recording),
+      # saves to binary folder + JSON, and writes a known probe name/manufacturer/contact_ids.
+      - name: Install spikeinterface ${{ matrix.si-version }} to create fixtures
+        run: uv pip install --system "spikeinterface[core]==${{ matrix.si-version }}"
+
+      - name: Create compatibility fixtures with old version
+        run: python .github/scripts/create_probe_compat_fixtures.py "$SI_PROBE_COMPAT_FIXTURES_DIR"
+
+      # Step 2: install the NEW version from this PR source and run the load tests.
+      - name: Install new spikeinterface from source
+        run: uv pip install --system -e . --group test-core
+
+      - name: Run backward compatibility tests
+        run: pytest src/spikeinterface/core/tests/test_probe_backward_compat.py -v

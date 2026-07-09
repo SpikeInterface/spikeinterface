@@ -1,9 +1,9 @@
 """Classes and functions for computing multiple quality metrics."""
 
 import warnings
+
 import numpy as np
 
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
 from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype
@@ -60,6 +60,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if (qm_params := self.params.get("qm_params")) is not None:
             self.params["metric_params"] = qm_params
             del self.params["qm_params"]
+
         # handle metric names change: isolation_distance/l_ratio merged into mahalanobis
         if "isolation_distance" in self.params["metric_names"]:
             self.params["metric_names"].remove("isolation_distance")
@@ -70,6 +71,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if "mahalanobis" not in self.params["metric_names"]:
                 self.params["metric_names"].append("mahalanobis")
 
+        # handle removal of peak_sign from metrics module
         if "amplitude_cutoff" in self.params["metric_names"]:
             if "peak_sign" in self.params["metric_params"]["amplitude_cutoff"]:
                 del self.params["metric_params"]["amplitude_cutoff"]["peak_sign"]
@@ -78,19 +80,21 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if "peak_sign" in self.params["metric_params"]["amplitude_median"]:
                 del self.params["metric_params"]["amplitude_median"]["peak_sign"]
 
-        # TODO: update this once `main_channel_index` PR is merged
-        # global peak_sign used to find appropriate channels for pca metric computation
-        # If not found, use a "peak_sign" set by any metric
-        global_peak_sign_from_params = self.params.get("peak_sign")
-        if global_peak_sign_from_params is None:
-            for metric_params in self.params["metric_params"].values():
-                if "peak_sign" in metric_params:
-                    global_peak_sign_from_params = metric_params["peak_sign"]
-                    break
-            # If still not found, use <0.104.0 default, "neg"
-            if global_peak_sign_from_params is None:
-                global_peak_sign_from_params = "neg"
-            self.params["peak_sign"] = global_peak_sign_from_params
+        if "snr" in self.params["metric_names"]:
+            if "peak_mode" in self.params["metric_params"]["snr"]:
+                self.params["metric_params"]["snr"]["method"] = self.params["metric_params"]["snr"]["peak_mode"]
+                del self.params["metric_params"]["snr"]["peak_mode"]
+            if "peak_sign" in self.params["metric_params"]["snr"]:
+                del self.params["metric_params"]["snr"]["peak_sign"]
+
+        metrics_which_used_to_have_peak_sign = ["sd_ratio", "nn_isolation", "nn_noise_overlap", "nn_advanced"]
+        for metric_name in metrics_which_used_to_have_peak_sign:
+            if metric_name in self.params["metric_params"]:
+                if "peak_sign" in self.params["metric_params"][metric_name]:
+                    del self.params["metric_params"][metric_name]["peak_sign"]
+
+        if "peak_sign" in self.params:
+            del self.params["peak_sign"]
 
     def _set_params(
         self,
@@ -101,7 +105,6 @@ class ComputeQualityMetrics(BaseMetricExtension):
         use_valid_periods=False,
         periods=None,
         # common extension kwargs
-        peak_sign="neg",
         seed=None,
         skip_pc_metrics=False,
     ):
@@ -130,7 +133,6 @@ class ComputeQualityMetrics(BaseMetricExtension):
             metrics_to_compute=metrics_to_compute,
             use_valid_periods=use_valid_periods,
             periods=periods,
-            peak_sign=peak_sign,
             seed=seed,
             skip_pc_metrics=skip_pc_metrics,
         )
@@ -162,7 +164,8 @@ class ComputeQualityMetrics(BaseMetricExtension):
         all_labels = sorting_analyzer.sorting.unit_ids[spike_unit_indices]
 
         # Get extremum channels for neighbor selection in sparse mode
-        extremum_channels = get_template_extremum_channel(sorting_analyzer, peak_sign=self.params["peak_sign"])
+
+        main_channels = sorting_analyzer.get_main_channels(outputs="id", with_dict=True)
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric
@@ -177,7 +180,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if sorting_analyzer.is_sparse():
                 neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
                 neighbor_unit_ids = [
-                    other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
+                    other_unit for other_unit in unit_ids if main_channels[other_unit] in neighbor_channel_ids
                 ]
                 neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
             else:

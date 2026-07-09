@@ -80,7 +80,7 @@ def test_detect_bad_channels_std_mad():
 
     probe = generate_linear_probe(num_elec=num_channels)
     probe.set_device_channel_indices(np.arange(num_channels))
-    rec.set_probe(probe, in_place=True)
+    rec.set_probe(probe)
 
     bad_channels_std, bad_labels_std = detect_bad_channels(rec, method="std")
     bad_channels_mad, bad_labels_mad = detect_bad_channels(rec, method="std")
@@ -125,7 +125,7 @@ def test_detect_bad_channels_extremes(outside_channels_location):
 
     probe = generate_linear_probe(num_elec=num_channels)
     probe.set_device_channel_indices(np.arange(num_channels))
-    rec.set_probe(probe, in_place=True)
+    rec.set_probe(probe)
 
     bad_channel_ids, bad_labels = detect_bad_channels(
         rec, method="coherence+psd", outside_channels_location=outside_channels_location

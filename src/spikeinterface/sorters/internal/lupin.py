@@ -7,7 +7,6 @@ from spikeinterface.core import (
     NumpySorting,
     estimate_templates_with_accumulator,
     Templates,
-    compute_sparsity,
     ms_to_samples,
 )
 

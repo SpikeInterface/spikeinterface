@@ -118,7 +118,7 @@ def test_highpass_spatial_filter_with_dead_channels():
     rec_with_dead = NumpyRecording(
         traces_list=[traces], sampling_frequency=rec.sampling_frequency, channel_ids=rec.channel_ids
     )
-    rec_with_dead.set_probe(rec.get_probe(), in_place=True)
+    rec_with_dead.set_probe(rec.get_probe())
     filtered = spre.highpass_spatial_filter(rec_with_dead, n_channel_pad=2)
     result = filtered.get_traces()
     assert result.shape == traces.shape

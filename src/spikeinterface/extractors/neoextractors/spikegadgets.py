@@ -79,7 +79,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
                 if saturation_threshold_uV_probe is not None:
                     saturation_thresholds_uV.append(saturation_threshold_uV_probe)
 
-            self.set_probegroup(probegroup, in_place=True)
+            self.set_probegroup(probegroup)
 
             if np.all(sample_shifts != -1):
                 self.set_property("inter_sample_shift", sample_shifts)

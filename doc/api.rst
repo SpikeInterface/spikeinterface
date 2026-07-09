@@ -16,6 +16,12 @@ spikeinterface.core
     .. automethod:: BaseRecording.dump_to_json
     .. automethod:: BaseRecording.dump_to_pickle
     .. automethod:: BaseRecording.remove_channels
+    .. automethod:: BaseRecording.set_probe
+    .. automethod:: BaseRecording.set_probegroup
+    .. automethod:: BaseRecording.remove_probe
+    .. automethod:: BaseRecording.select_channels_with_probe
+    .. automethod:: BaseRecording.select_channels_with_probegroup
+    .. automethod:: BaseRecording.split_by
     .. autoclass:: BaseSorting
         :members:
     .. automethod:: BaseSorting.save
@@ -25,6 +31,8 @@ spikeinterface.core
     .. automethod:: BaseSorting.dump
     .. automethod:: BaseSorting.dump_to_json
     .. automethod:: BaseSorting.dump_to_pickle
+    .. automethod:: BaseSorting.split_by
+    .. automethod:: BaseSorting.register_recording
     .. autoclass:: BaseSnippets
         :members:
     .. automethod:: BaseSnippets.save
@@ -73,9 +81,8 @@ spikeinterface.core
     .. autofunction:: get_chunk_with_margin
     .. autofunction:: order_channels_by_depth
     .. autofunction:: get_template_amplitudes
-    .. autofunction:: get_template_extremum_channel
-    .. autofunction:: get_template_extremum_channel_peak_shift
-    .. autofunction:: get_template_extremum_amplitude
+    .. autofunction:: get_template_peak_shift_on_main_channel
+    .. autofunction:: get_template_amplitude_on_main_channel
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording
@@ -96,7 +103,7 @@ Low-level
 .. automodule:: spikeinterface.core
     :noindex:
 
-    .. autoclass:: ChunkRecordingExecutor
+    .. autoclass:: TimeSeriesChunkExecutor
 
 
 Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)

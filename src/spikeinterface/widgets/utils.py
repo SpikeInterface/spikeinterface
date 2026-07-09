@@ -1,4 +1,5 @@
 from warnings import warn
+
 import numpy as np
 
 from spikeinterface.core import BaseSorting
