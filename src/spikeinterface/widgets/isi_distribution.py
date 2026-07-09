@@ -84,7 +84,7 @@ class ISIDistributionWidget(BaseWidget):
                     bin_counts = bin_counts_
                 else:
                     bin_counts += bin_counts_
-                    # TODO handle sensity when several segments
+                    # TODO handle density when several segments
 
             ax.bar(x=bin_edges[:-1], height=bin_counts, width=dp.bin_ms, color="gray", align="edge")
 

@@ -18,7 +18,7 @@ class WhitenRecording(BasePreprocessor):
     dtype : None or dtype, default: None
         Datatype of the output recording (covariance matrix estimation
         and whitening are performed in float32).
-        If None the the parent dtype is kept.
+        If None the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     mode : "global" | "local", default: "global"
         "global" use the entire covariance matrix to compute the W matrix
@@ -26,7 +26,7 @@ class WhitenRecording(BasePreprocessor):
     radius_um : None or float, default: None
         Used for mode = "local" to get the neighborhood
     apply_mean : bool, default: False
-        Substract or not the mean matrix M before the dot product with W.
+        Subtract or not the mean matrix M before the dot product with W.
     int_scale : None or float, default: None
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled.

@@ -293,7 +293,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
-                    # here we do not truely have scale but we assume this is scaled
+                    # here we do not truly have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass
                 else:

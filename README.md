@@ -65,9 +65,9 @@ With SpikeInterface, users can:
 - pre-process extracellular recordings.
 - run many popular, semi-automatic spike sorters (kilosort1-4, mountainsort4-5, spykingcircus,
   tridesclous, ironclust, herdingspikes, yass, waveclus)
-- run sorters developed in house (lupin, spkykingcicus2, tridesclous2, simple) that compete with kilosort4
-- run theses polar sorters without installation using containers (Docker/Singularity).
-- post-process sorted datasets using th SortingAnalyzer
+- run sorters developed in house (lupin, spykingcircus2, tridesclous2, simple) that compete with kilosort4
+- run these popular sorters without installation using containers (Docker/Singularity).
+- post-process sorted datasets using the SortingAnalyzer
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)

@@ -412,7 +412,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
 
@@ -464,7 +464,7 @@ def make_paths_relative(input_dict: dict, relative_folder: str | Path) -> dict:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
 
@@ -499,7 +499,7 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     base_folder: str or Path
         The folder to be relative to.
 
@@ -738,7 +738,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     Parameters
     ----------
     measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
+        Measure memory allocation in the current process only, if false then measures at the system
         level.
     """
     import psutil

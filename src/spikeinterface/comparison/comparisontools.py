@@ -459,7 +459,7 @@ def make_possible_match(agreement_scores, min_score):
 
 
 def _empty_match_series(unit1_ids, unit2_ids):
-    # construct empty series of match with the correct dtype for best match and hugarian match
+    # construct empty series of match with the correct dtype for best match and hungarian match
     import pandas as pd
 
     match_12 = pd.Series(data=np.zeros(unit1_ids.size, dtype=unit2_ids.dtype), index=unit1_ids)
@@ -470,7 +470,7 @@ def _empty_match_series(unit1_ids, unit2_ids):
     elif unit2_ids.dtype.kind == "O":
         match_12[:] = ""
     else:
-        raise ValueError("make_best_match or make_hungarian_match has unit_ids dtype wich are not  'i' or 'U'")
+        raise ValueError("make_best_match or make_hungarian_match has unit_ids dtype which are not  'i' or 'U'")
     return match_12
 
 

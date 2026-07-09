@@ -26,7 +26,7 @@ from .core_tools import ms_to_samples
 
 class ComputeRandomSpikes(AnalyzerExtension):
     """
-    AnalyzerExtension that select somes random spikes.
+    AnalyzerExtension that select some random spikes.
     This allows for a subsampling of spikes for further calculations and is important
     for managing that amount of memory and speed of computation in the analyzer.
 

@@ -250,7 +250,7 @@ class TracesWidget(BaseWidget):
         else:
             evensts_w_dtype = None
 
-        # keep aglobal ref of colorbar
+        # keep a global ref of colorbar
         self.cb = None
 
         plot_data = dict(

@@ -10,7 +10,7 @@ import numpy as np
 
 class SimpleSorter(ComponentsBasedSorter):
     """
-    Implementation of a very simple sorter usefull for teaching.
+    Implementation of a very simple sorter useful for teaching.
     The idea is quite old school:
       * detect peaks
       * project waveforms with SVD or PCA
@@ -18,7 +18,7 @@ class SimpleSorter(ComponentsBasedSorter):
 
       No template matching. No auto cleaning.
 
-      Mainly usefull for few channels (1 to 8), teaching and testing.
+      Mainly useful for few channels (1 to 8), teaching and testing.
     """
 
     sorter_name = "simple"
@@ -159,7 +159,7 @@ class SimpleSorter(ComponentsBasedSorter):
             peak_labels = GaussianMixture(**clusterer_kwargs).fit_predict(features_flat)
 
         else:
-            raise ValueError(f"simple_sorter : unkown clustering method {clusterer}")
+            raise ValueError(f"simple_sorter : unknown clustering method {clusterer}")
 
         # keep positive labels
         keep = peak_labels >= 0
