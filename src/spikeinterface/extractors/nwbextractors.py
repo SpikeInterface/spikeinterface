@@ -1439,8 +1439,12 @@ class NwbSortingExtractor(BaseSorting):
         segment = self.segments[0]
         sample_indices, unit_indices = segment._get_all_spike_samples_and_unit_indices()
 
-        # Stable sort by sample_index keeps unit_index ordering on ties, matching the way the generic
-        # BaseSorting builder constructs the vector (unit order within a sample).
+        # NWB stores spike_times grouped by unit, not globally ordered by time: pynwb itself notes that
+        # "the earliest spike may be in any unit" (Units.get_earliest_spike_time), and within-unit ordering
+        # is only a best-practice (checked by nwbinspector), not a schema guarantee. So a global sort is
+        # required to build the time-ordered spike vector. It is stable so unit_index order is preserved on
+        # equal sample_index ties, matching the generic BaseSorting builder; on already-ordered input the
+        # sort is a no-op (argsort returns the identity permutation).
         order = np.argsort(sample_indices, stable=True)
         num_spikes = sample_indices.size
 
@@ -1528,7 +1532,14 @@ class NwbSortingSegment(BaseSortingSegment):
         of one streamed slice per unit.
         """
         spike_times = np.asarray(self.spike_times_data[:], dtype="float64")
-        # boundaries[u]:boundaries[u + 1] is the slice of spike_times belonging to unit u.
+        # NWB stores a ragged column as one flat data array (spike_times, all units concatenated) plus an
+        # index array of cumulative end offsets (spike_times_index): spike_times_index[u] is where unit u's
+        # spikes end and unit u+1's begin, so unit u is spike_times[spike_times_index[u-1] : spike_times_index[u]].
+        # Prepending a 0 gives every unit an explicit start, so boundaries[u]:boundaries[u+1] is unit u's
+        # slice; the gap between consecutive boundaries (np.diff) is that unit's spike count, and repeating
+        # each unit index by its count labels every spike with its unit.
+        # Example: 3 units with 2, 0, 3 spikes -> spike_times_index = [2, 2, 5],
+        #   boundaries = [0, 2, 2, 5], counts = [2, 0, 3], unit_indices = [0, 0, 2, 2, 2].
         boundaries = np.concatenate(([0], np.asarray(self.spike_times_index_data[:], dtype="int64")))
         counts = np.diff(boundaries)
         unit_indices = np.repeat(np.arange(counts.size, dtype="int64"), counts)
