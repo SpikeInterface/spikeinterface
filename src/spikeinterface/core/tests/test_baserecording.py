@@ -155,7 +155,7 @@ def test_BaseRecording(create_cache_folder):
     # cache to binary
     folder = cache_folder / "simple_recording"
     rec.save(format="binary", folder=folder)
-    rec2 = BaseExtractor.load_from_folder(folder)
+    rec2 = BaseExtractor.load(folder)
     assert "quality" in rec2.get_property_keys()
     values = rec2.get_property("quality")
     assert values[0] == 1.0
