@@ -24,6 +24,7 @@ jobs:
         with:
           python-version: '3.11'
           enable-cache: true
+          prune-cache: ${{ runner.os != 'macOS' }} # the pruning fails on macOS all the time test skipping for macOS
       - name: Create the directory to store the data
         run: |
           mkdir -p  ~/spikeinterface_datasets/ephy_testing_data/
