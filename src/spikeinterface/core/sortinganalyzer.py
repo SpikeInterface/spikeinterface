@@ -900,19 +900,15 @@ class SortingAnalyzer:
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
-        # Check that rec_attributes_file exists, otherwise this is not a valid SortingAnalyzer folder
-        if not rec_attributes_file.is_file():
-            raise ValueError("This folder is not a SortingAnalyzer with format='binary_folder'")
+        # Check all required files are present
+        if not (settings_file.is_file() and sorting_folder.is_dir() and
+                rec_attributes_file.is_file()):
+            raise ValueError(f"Folder {folder} is not a valid SortingAnalyzer binary folder."
+                             " Please ensure that you are loading a valid SortingAnalyzer folder.")
 
         # Load settings file
-        if settings_file.exists():
-            with open(settings_file, "r") as f:
-                settings = json.load(f)
-        else:
-            raise ValueError(
-                "This folder is not a valid SortingAnalyzer folder. The settings.json file is missing. "
-                "Please ensure that you are loading a valid SortingAnalyzer folder."
-            )
+        with open(settings_file, "r") as f:
+            settings = json.load(f)
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
         # Load sorting (in memory)
@@ -1099,6 +1095,14 @@ class SortingAnalyzer:
                     "This may lead to unexpected behavior in loading extensions. "
                     "Consider re-generating the SortingAnalyzer object."
                 )
+        
+        # Check all required inputs exist
+        if (zarr_root.attrs.get("settings") is None or zarr_root.get("sorting") is None 
+            or zarr_root.get("recording_info") is None
+            or zarr_root["recording_info"].attrs.get("recording_attributes") is None
+        ):
+            raise ValueError(f"Folder {folder} is not a valid SortingAnalyzer Zarr folder."
+                             " Please ensure that you are loading a valid SortingAnalyzer folder.")
 
         # Load settings
         settings = zarr_root.attrs["settings"]
