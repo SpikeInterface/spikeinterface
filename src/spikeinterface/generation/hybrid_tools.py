@@ -5,10 +5,8 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
 from spikeinterface.core.generate import (
-    generate_templates,
     generate_unit_locations,
     generate_sorting,
-    InjectTemplatesRecording,
     _ensure_seed,
     synthesize_amplitude_factor,
 )
@@ -16,11 +14,9 @@ from spikeinterface.core.generate import (
 from spikeinterface.core.motion import Motion
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
-    DriftingTemplates,
     generate_drifting_templates_by_interpolation,
     generate_drifting_templates_synthetic,
     make_linear_displacement,
-    interpolate_templates,
     move_all_dense_templates_by_displacement,
 )
 
@@ -319,7 +315,6 @@ def generate_hybrid_recording(
     sorting: BaseSorting | None = None,
     templates: Templates | None = None,
     motion: Motion | None = None,
-    are_templates_scaled: bool = True,
     unit_locations: np.ndarray | None = None,
     drift_step_um: float = 1.0,
     amplitude_std: float = 0.05,
@@ -352,12 +347,9 @@ def generate_hybrid_recording(
         If None they are generated.
     motion : Motion | None, default: None
         The motion object to use for the drifting templates.
-    are_templates_scaled : bool, default: True
-        If True, the templates are assumed to be in uV, otherwise in the same unit as the recording.
-        In case the recording has scaling, the templates are "unscaled" before injection.
     unit_locations : np.array, default: None
         The locations at which the templates should be injected. If not provided, generated (see
-        generate_unit_location_kwargs).    
+        generate_unit_location_kwargs).
     drift_step_um : float, default: 1.0
         The step in um to use for the drifting templates.
     amplitude_std : float, default: 0.05
@@ -416,16 +408,14 @@ def generate_hybrid_recording(
         num_units = generate_sorting_kwargs["num_units"]
     else:
         generate_sorting_kwargs["num_units"] = num_units
-    
 
     # handle units location
     if unit_locations is not None:
-        assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"    
+        assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
     elif unit_locations is None:
         unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
     # elif:
     #  TODO get location from the template thenself
-    
 
     # handle motion and displacement
     if motion is None:
@@ -466,9 +456,6 @@ def generate_hybrid_recording(
         # since displacement is estimated by interpolation for each unit, the unit factor is an eye
         displacement_unit_factor = np.eye(num_units)
 
-
-
-
     # generate synthetic drifting templates or interpolate from the input templates
     if templates is None:
         drifting_templates = generate_drifting_templates_synthetic(
@@ -476,17 +463,17 @@ def generate_hybrid_recording(
         )
 
     else:
-        if recording.has_scaleable_traces() and are_templates_scaled:
+        if recording.has_scaleable_traces() and templates.is_in_uV:
             templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
             # make a copy of the templates and reset templates_array (might have scaled templates)
             templates_ = templates.select_units(templates.unit_ids)
             templates_.templates_array = templates_array
-
+        else:
+            templates_ = templates
 
         drifting_templates = generate_drifting_templates_by_interpolation(
-            templates, probe, unit_locations, displacements, interpolation_method="cubic"            
+            templates_, probe, unit_locations, displacements, interpolation_method="cubic"
         )
-
 
     if sorting is None:
         generate_sorting_kwargs = generate_sorting_kwargs.copy()
@@ -503,8 +490,6 @@ def generate_hybrid_recording(
     main_channel_ids = recording.channel_ids[main_channel_indices]
     sorting.set_property("gt_unit_locations", unit_locations)
     sorting.set_property("main_channel_id", main_channel_ids)
-
-
 
     amplitude_factor = synthesize_amplitude_factor(
         num_spikes,

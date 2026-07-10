@@ -553,7 +553,7 @@ def generate_drifting_recording(
     # drifting_templates.templates_array_moved = templates_array_moved
     # drifting_templates.displacements = displacements_steps
 
-    drifting_templates = generate_drifting_templates_synthetic(
+    drifting_templates, static_templates = generate_drifting_templates_synthetic(
         probe, unit_locations, displacements_steps, sampling_frequency, generate_templates_kwargs, seed
     )
 
@@ -611,7 +611,8 @@ def generate_drifting_recording(
             unit_locations=unit_locations,
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
-            templates=templates,
+            templates=static_templates,
+            drifting_templates=drifting_templates,
             generate_templates_kwargs=generate_templates_kwargs,
         )
         return static_recording, drifting_recording, sorting, extra_infos

@@ -358,6 +358,26 @@ def generate_drifting_templates_synthetic(
     """
     Generate synthetic drifting template by moving the location of the units.
     This avoid interpolation and then can have units on border moving outside with correct shape.
+
+    Parameters
+    ----------
+    probe : Probe
+        The target probe on which the drifting templates will be defined.
+    unit_locations : np.array
+        The locations of the units in the probe coordinates.
+    displacements : np.array
+        The displacement vector (num_displacement, 2)
+    sampling_frequency : float
+        The sampling frequency of the templates.
+    generate_templates_kwargs : dict
+        Keyword arguments for `generate_templates` function.
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    drifting_templates : DriftingTemplates
+        The drifting templates object.
     """
     channel_locations = probe.contact_positions
 
@@ -380,7 +400,7 @@ def generate_drifting_templates_synthetic(
 
     ms_before = generate_templates_kwargs["ms_before"]
     nbefore = ms_to_samples(ms_before, sampling_frequency)
-    templates = Templates(
+    static_templates = Templates(
         templates_array=templates_array,
         sampling_frequency=sampling_frequency,
         nbefore=nbefore,
@@ -388,16 +408,39 @@ def generate_drifting_templates_synthetic(
         is_in_uV=True,
     )
 
-    drifting_templates = DriftingTemplates.from_static_templates(templates)
+    drifting_templates = DriftingTemplates.from_static_templates(static_templates)
 
     drifting_templates.templates_array_moved = templates_array_moved
     drifting_templates.displacements = displacements
 
-    return drifting_templates
+    return drifting_templates, static_templates
 
 
-def generate_drifting_templates_by_interpolation(templates, probe, unit_locations, displacements, interpolation_method="cubic")
-    
+def generate_drifting_templates_by_interpolation(
+    templates, probe, unit_locations, displacements, interpolation_method="cubic"
+):
+    """
+    Generate drifting templates by interpolation of the static templates.
+    This is useful to generate drifting templates from real data.
+
+    Parameters
+    ----------
+    templates : Templates
+        The static templates, potentially higher density than the probe.
+    probe : Probe
+        The target probe on which the drifting templates will be defined.
+    unit_locations : np.array
+        The locations of the units in the probe coordinates.
+    displacements : np.array
+        The displacement vector (num_displacement, 2)
+    interpolation_method : str, default: "cubic"
+        The interpolation method.
+
+    Returns
+    -------
+    drifting_templates : DriftingTemplates
+        The drifting templates object.
+    """
     main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
     source_templates_locations = templates.probe.contact_positions[main_channel_indices]
 
@@ -405,7 +448,7 @@ def generate_drifting_templates_by_interpolation(templates, probe, unit_location
         templates.templates_array,
         source_templates_locations,
         templates.probe,
-        unit_locations,
+        unit_locations[:, :2],
         probe,
         displacements,
         interpolation_method=interpolation_method,
@@ -417,10 +460,9 @@ def generate_drifting_templates_by_interpolation(templates, probe, unit_location
         templates.sampling_frequency,
         templates.nbefore,
         probe,
-        )
-    
-    return drifting_templates
+    )
 
+    return drifting_templates
 
 
 def make_linear_displacement(start, stop, num_step=10):
