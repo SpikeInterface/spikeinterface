@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import List, Optional
 import numpy as np
 
-from huggingface_hub import list_repo_files
-
 if importlib.util.find_spec("torch") is not None:
     import torch
     from torch import nn
