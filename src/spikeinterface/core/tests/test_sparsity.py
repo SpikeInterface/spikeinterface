@@ -299,6 +299,8 @@ def test_compute_sparsity():
     # Check that we can still pass sparsity kwargs using the old signature
     with pytest.warns(FutureWarning):
         sorting_analyzer_old_kwargs = create_sorting_analyzer(sorting=sorting, recording=recording, radius_um=50)
+    with pytest.warns(FutureWarning):
+        sorting_analyzer_old_kwargs = create_sorting_analyzer(sorting=sorting, recording=recording, n_jobs=2)
 
     sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute(

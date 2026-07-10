@@ -34,7 +34,7 @@ from .sorting_tools import (
     _get_ids_after_merging,
     _get_ids_after_splitting,
 )
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, fix_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
@@ -60,9 +60,10 @@ def create_sorting_analyzer(
     return_in_uV=True,
     overwrite=False,
     backend_options=None,
-    sparsity_kwargs=None,
     seed=None,
-    **job_kwargs,
+    sparsity_kwargs=None,
+    job_kwargs=None,
+    **extra_kwargs,
 ) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -163,28 +164,20 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
 
-    if sparsity_kwargs is None:
-        sparsity_kwargs = dict()
-
-    # We deprecated **sparsity_kwargs in favour of sparsity_kwargs=None and added **job_kwargs.
-    # Now, in legacy code, sparsity kwargs will be been read in as job_kwargs.
-    # This code can be removed in v0.106.0
-    cleaned_job_kwargs = {}
-    display_warning = False
-    for key, value in job_kwargs.items():
-        if key not in get_global_job_kwargs():
-            sparsity_kwargs[key] = value
-            display_warning = True
-        else:
-            cleaned_job_kwargs[key] = value
-
-    if display_warning:
+    # We used to allow users to pass sparsity kwargs directly to create_sorting_analyzer.
+    # This is for backwards compatibility
+    if len(extra_kwargs) >= 1:
+        sparsity_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
         warnings.warn(
-            "Passing sparsity arguments via keyword arguments is deprecated. "
-            "Please pass them into the `sparsity_kwargs` dictionary instead.",
+            "Passing sparsity and job arguments via keyword arguments will be deprecated in 0.106.0. "
+            "Please pass them as a `sparsity_kwargs` or `job_kwargs` dictionary instead.",
             FutureWarning,
             stacklevel=2,
         )
+    else:
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        if sparsity_kwargs is None:
+            sparsity_kwargs = {}
 
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
@@ -222,7 +215,7 @@ def create_sorting_analyzer(
                         peak_mode=peak_mode,
                         num_spikes_for_main_channel=num_spikes_for_main_channel,
                         seed=seed,
-                        **cleaned_job_kwargs,
+                        **job_kwargs,
                     )
                     sparsity_partial = estimate_sparsity(
                         sorting_single,
@@ -260,7 +253,7 @@ def create_sorting_analyzer(
             overwrite=overwrite,
             backend_options=backend_options,
             sparsity_kwargs=sparsity_kwargs,
-            **cleaned_job_kwargs,
+            **job_kwargs,
         )
 
     if format != "memory" and not is_path_remote(folder):
