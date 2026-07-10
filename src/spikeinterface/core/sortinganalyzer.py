@@ -414,8 +414,8 @@ class SortingAnalyzer:
         self,
         sorting: BaseSorting,
         recording: BaseRecording | None = None,
+        format: Literal["memory", "binary_folder", "zarr"] = "memory",
         rec_attributes: dict | None = None,
-        format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
         peak_sign: PeakSignType = "both",
@@ -697,7 +697,7 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        sorting.save(folder=sorting_folder)
+        sorting = sorting.save(folder=sorting_folder)
 
         # Dump sorting provenance
         if sorting.check_serializability("json"):
@@ -740,7 +740,21 @@ class SortingAnalyzer:
         if probegroup is not None:
             probeinterface.write_probeinterface(probegroup_file, probegroup)
 
-        return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
+        # Create SortingAnalyzer
+        sorting_analyzer = SortingAnalyzer(
+            sorting=sorting,
+            recording=recording,
+            rec_attributes={**rec_attributes_to_save, 'probegroup': probegroup},
+            format="binary_folder",
+            sparsity=sparsity,
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            backend_options=backend_options,
+        )
+        sorting_analyzer.folder = folder
+
+        return sorting_analyzer
 
     @classmethod
     def _handle_backward_compatibility_settings_pre_init(cls, settings: dict[str, Any]):
@@ -1063,7 +1077,21 @@ class SortingAnalyzer:
         # Consolidate metadata (for faster reads)
         zarr.consolidate_metadata(zarr_root.store)
 
-        return cls.load_from_zarr(folder, recording=recording, backend_options=backend_options)
+        # Create SortingAnalyzer
+        sorting_analyzer = SortingAnalyzer(
+            sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
+            recording=recording,
+            rec_attributes={**rec_attributes_to_save, 'probegroup': probegroup},
+            format="zarr",
+            sparsity=sparsity,
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            backend_options=backend_options,
+        )
+        sorting_analyzer.folder = folder
+
+        return sorting_analyzer
 
     @classmethod
     def load_from_zarr(
@@ -1095,9 +1123,9 @@ class SortingAnalyzer:
                     "This may lead to unexpected behavior in loading extensions. "
                     "Consider re-generating the SortingAnalyzer object."
                 )
-        
+
         # Check all required inputs exist
-        if (zarr_root.attrs.get("settings") is None or zarr_root.get("sorting") is None 
+        if (zarr_root.attrs.get("settings") is None or zarr_root.get("sorting") is None
             or zarr_root.get("recording_info") is None
             or zarr_root["recording_info"].attrs.get("recording_attributes") is None
         ):
