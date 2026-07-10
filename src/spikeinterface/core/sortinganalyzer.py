@@ -666,8 +666,8 @@ class SortingAnalyzer:
         folder = Path(folder)
         if is_path_remote(folder):
             raise ValueError(f"Folder {folder} is a remote path. Use format='zarr' for remote paths.")
-        if folder.is_dir():
-            raise ValueError(f"Folder already exists {folder}")
+        if folder.exists():
+            raise ValueError(f"Folder {folder} already exists")
 
         # Create main analyzer folder (and recording info folder)
         folder.mkdir(parents=True)
@@ -899,7 +899,7 @@ class SortingAnalyzer:
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
         # Check that rec_attributes_file exists, otherwise this is not a valid SortingAnalyzer folder
-        if not rec_attributes_file.exists():
+        if not rec_attributes_file.is_file():
             raise ValueError("This folder is not a SortingAnalyzer with format='binary_folder'")
 
         # Load settings file
@@ -936,7 +936,7 @@ class SortingAnalyzer:
         if recording is None:
             for file_ext in (".json", ".pickle"):
                 filename = recording_provenance_file.with_suffix(file_ext)
-                if filename.exists():
+                if filename.is_file():
                     try:
                         recording = load(filename, base_folder=folder)
                         break
@@ -949,11 +949,11 @@ class SortingAnalyzer:
 
         # Load probe group
         rec_attributes["probegroup"] = (
-            probeinterface.read_probeinterface(probegroup_file) if probegroup_file.exists() else None
+            probeinterface.read_probeinterface(probegroup_file) if probegroup_file.is_file() else None
         )
 
         # Load sparsity
-        if sparsity_file.exists():
+        if sparsity_file.is_file():
             sparsity_mask = np.load(sparsity_file)
             sparsity = ChannelSparsity(sparsity_mask, sorting.unit_ids, rec_attributes["channel_ids"])
         else:
@@ -1002,7 +1002,7 @@ class SortingAnalyzer:
         if not is_remote:
             folder = clean_zarr_folder_name(folder)
             if folder.exists():
-                raise ValueError(f"Folder already exists {folder}")
+                raise ValueError(f"Folder {folder} already exists")
 
         # Read backend options
         backend_options = {} if backend_options is None else backend_options
@@ -1060,7 +1060,7 @@ class SortingAnalyzer:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
-            warnings.warn("Recording not provided, instntiating SortingAnalyzer in recordingless mode.")
+            warnings.warn("Recording not provided, instantiating SortingAnalyzer in recordingless mode.")
 
         # Save recording attributes
         has_rec_attributes = rec_attributes is not None
@@ -2073,7 +2073,7 @@ class SortingAnalyzer:
             for type in ("json", "pickle"):
                 filename = self.folder / f"sorting_provenance.{type}"
                 sorting_provenance = None
-                if filename.exists():
+                if filename.is_file():
                     # try-except here is because it's not required to be able
                     # to load the sorting provenance, as the user might have deleted
                     # the original sorting folder
@@ -3292,7 +3292,7 @@ class AnalyzerExtension:
                         json.dump(ext_data_, f)
                 elif isinstance(ext_data, np.ndarray):
                     data_file = extension_folder / f"{ext_data_name}.npy"
-                    if isinstance(ext_data, np.memmap) and data_file.exists():
+                    if isinstance(ext_data, np.memmap) and data_file.is_file():
                         # important some SortingAnalyzer like ComputeWaveforms already run the computation with memmap
                         # so no need to save theses array
                         pass
@@ -3367,7 +3367,7 @@ class AnalyzerExtension:
         """
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
-            if extension_folder.is_dir():
+            if extension_folder.exists():
                 shutil.rmtree(extension_folder)
 
         elif self.format == "zarr":
