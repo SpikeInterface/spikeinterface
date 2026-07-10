@@ -40,6 +40,7 @@ from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
+from .globals import get_global_job_kwargs
 
 
 # high level function
@@ -165,6 +166,26 @@ def create_sorting_analyzer(
     if sparsity_kwargs is None:
         sparsity_kwargs = dict()
 
+    # We deprecated **sparsity_kwargs in favour of sparsity_kwargs=None and added **job_kwargs.
+    # Now, in legacy code, sparsity kwargs will be been read in as job_kwargs.
+    # This code can be removed in v0.106.0
+    cleaned_job_kwargs = {}
+    display_warning = False
+    for key, value in job_kwargs.items():
+        if key not in get_global_job_kwargs():
+            sparsity_kwargs[key] = value
+            display_warning = True
+        else:
+            cleaned_job_kwargs[key] = value
+
+    if display_warning:
+        warnings.warn(
+            "Passing sparsity arguments via keyword arguments is deprecated. "
+            "Please pass them into the `sparsity_kwargs` dictionary instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
         if sorting.keys() != recording.keys():
@@ -201,7 +222,7 @@ def create_sorting_analyzer(
                         peak_mode=peak_mode,
                         num_spikes_for_main_channel=num_spikes_for_main_channel,
                         seed=seed,
-                        **job_kwargs,
+                        **cleaned_job_kwargs,
                     )
                     sparsity_partial = estimate_sparsity(
                         sorting_single,
@@ -239,7 +260,7 @@ def create_sorting_analyzer(
             overwrite=overwrite,
             backend_options=backend_options,
             sparsity_kwargs=sparsity_kwargs,
-            **job_kwargs,
+            **cleaned_job_kwargs,
         )
 
     if format != "memory" and not is_path_remote(folder):
@@ -276,7 +297,7 @@ def create_sorting_analyzer(
             peak_mode=peak_mode,
             num_spikes_for_main_channel=num_spikes_for_main_channel,
             seed=seed,
-            **job_kwargs,
+            **cleaned_job_kwargs,
         )
 
     # handle sparsity
