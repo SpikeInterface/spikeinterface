@@ -73,6 +73,9 @@ def interpolate_templates(
             if interpolation_method == "thin_plate":
 
                 if "neighbors" not in interpolation_kwargs:
+                    # If neighbors it not passed, `RBFInterpolator` uses all channels.
+                    # This works poorly for standard ephys template interpolation.
+                    # Depending on the probe, you might want to decrease this value.
                     interpolation_kwargs["neighbors"] = 12
 
                 tps_interpolator = RBFInterpolator(
