@@ -290,7 +290,7 @@ def create_sorting_analyzer(
             peak_mode=peak_mode,
             num_spikes_for_main_channel=num_spikes_for_main_channel,
             seed=seed,
-            **cleaned_job_kwargs,
+            **job_kwargs,
         )
 
     # handle sparsity
