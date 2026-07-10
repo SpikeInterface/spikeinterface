@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 import os
-import json
+import importlib.util
 import numpy as np
 
 import spikeinterface as si
@@ -19,6 +19,15 @@ from spikeinterface.curation import apply_sortingview_curation
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_API_KEY"))
+
+kachery_spec = importlib.util.find_spec("kachery")
+if kachery_spec is not None:
+    HAVE_KACHERY = True
+else:
+    HAVE_KACHERY = False
+
+
+SKIP_KACHERY_REMOTE = not HAVE_KACHERY or (ON_GITHUB and not KACHERY_CLOUD_SET)
 
 
 # this needs to be run only once: if we want to regenerate we need to start with sorting result
@@ -43,7 +52,7 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_API_KEY"))
 #     # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
 
 
-@pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
+@pytest.mark.skipif(SKIP_KACHERY_REMOTE, reason="Kachery cloud secrets not available")
 def test_gh_curation():
     """
     Test curation using GitHub URI.
@@ -73,7 +82,7 @@ def test_gh_curation():
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
 
 
-@pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
+@pytest.mark.skipif(SKIP_KACHERY_REMOTE, reason="Kachery cloud secrets not available")
 def test_sha1_curation():
     """
     Test curation using SHA1 URI.

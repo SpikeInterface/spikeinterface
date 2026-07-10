@@ -26,7 +26,7 @@ from .core_tools import ms_to_samples
 
 class ComputeRandomSpikes(AnalyzerExtension):
     """
-    AnalyzerExtension that select somes random spikes.
+    AnalyzerExtension that select some random spikes.
     This allows for a subsampling of spikes for further calculations and is important
     for managing that amount of memory and speed of computation in the analyzer.
 
@@ -75,7 +75,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         random_spikes_indices = self.data["random_spikes_indices"]
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -243,7 +243,7 @@ class ComputeWaveforms(AnalyzerExtension):
         )
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
@@ -381,7 +381,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     extension_name = "templates"
     depend_on = ["random_spikes|waveforms"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
@@ -437,6 +437,9 @@ class ComputeTemplates(AnalyzerExtension):
             self._compute_and_append_from_waveforms(self.params["operators"])
 
         else:
+            if not self.sorting_analyzer.has_recording():
+                raise ValueError("Extension Templates requires the recording if Waveforms are not computed.")
+
             bad_operator_list = [
                 operator for operator in self.params["operators"] if operator not in ("average", "std")
             ]
@@ -549,12 +552,21 @@ class ComputeTemplates(AnalyzerExtension):
         nafter = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
         return nafter
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         new_data = dict()
         for key, arr in self.data.items():
             new_data[key] = arr[keep_unit_indices, :, :]
+
+        return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+        keep_channel_indices = np.flatnonzero(np.isin(self.sorting_analyzer.channel_ids, channel_ids))
+
+        new_data = {}
+        for key, arr in self.data.items():
+            new_data[key] = arr[:, :, keep_channel_indices]
 
         return new_data
 
@@ -790,9 +802,14 @@ class ComputeNoiseLevels(AnalyzerExtension):
         params = noise_level_params.copy()
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # this does not depend on units
         return self.data
+
+    def _select_channels_extension_data(self, channel_ids):
+        # this does not depend on channels
+        channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
+        return dict(noise_levels=self.data["noise_levels"][channel_indices])
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -1347,7 +1364,7 @@ class BaseMetricExtension(AnalyzerExtension):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def _select_extension_data(self, unit_ids: list[int | str]):
+    def _select_units_extension_data(self, unit_ids: list[int | str]):
         """
         Select data for a subset of unit ids.
 
@@ -1361,8 +1378,22 @@ class BaseMetricExtension(AnalyzerExtension):
         dict
             Dictionary containing the selected metrics DataFrame.
         """
+        import pandas as pd
+
+        new_data = dict()
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
-        return dict(metrics=new_metrics)
+        new_data["metrics"] = new_metrics
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                old_data = self.data[k]
+                if isinstance(old_data, pd.DataFrame):
+                    new_df = old_data.loc[np.array(unit_ids)]
+                    new_data[k] = new_df
+                elif isinstance(old_data, np.ndarray):
+                    old_arr = self.data[k]
+                    new_arr = old_arr[self.sorting_analyzer.sorting.ids_to_indices(unit_ids), ...]
+                    new_data[k] = new_arr
+        return new_data
 
     def _merge_extension_data(
         self,
@@ -1619,7 +1650,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()

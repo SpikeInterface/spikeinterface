@@ -2,10 +2,9 @@ from pathlib import Path
 import platform
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, generate_recording
+from spikeinterface.core import NumpyRecording, generate_recording, MockRecording
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 from spikeinterface.core.recording_tools import (
@@ -30,7 +29,7 @@ def test_write_binary_recording(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -57,7 +56,7 @@ def test_write_binary_recording_offset(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -91,7 +90,7 @@ def test_write_binary_recording_parallel(tmp_path):
     num_channels = 2
     dtype = "float32"
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -122,7 +121,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     dtype = "float32"
 
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -147,7 +146,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
     recording = recording.save()
@@ -317,7 +316,7 @@ def test_order_channels_by_depth():
 
 
 def test_do_recording_attributes_match():
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
     rec_attributes = get_rec_attributes(recording)

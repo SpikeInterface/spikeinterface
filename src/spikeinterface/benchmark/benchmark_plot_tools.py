@@ -69,7 +69,7 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
     case_keys : list | None, default: None
         A list of case keys to use. If None, then all cases are used.
     levels_to_group_by : list | None, default: None
-        A list of levels to keep. If None, the original dataframe, keys, labels and colros are returned.
+        A list of levels to keep. If None, the original dataframe, keys, labels and colors are returned.
     map_name : str | None, default: None
         The name of the map to use for colors.
 
@@ -244,7 +244,7 @@ def plot_unit_counts(
     colors : dict | None, default: None
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
     columns : None | list
-        Optionaly select which columns to display
+        Optionally select which columns to display
     with_rectangle : bool
         Add or not a grouping colored rectangle for each case.
     rectangle_range: tuple | None
@@ -356,7 +356,7 @@ def plot_unit_counts(
 
 def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     """
-    Plot agreement matri ces for cases in a study.
+    Plot agreement matrices for cases in a study.
 
     Parameters
     ----------

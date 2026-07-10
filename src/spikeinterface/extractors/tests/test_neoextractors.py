@@ -70,7 +70,7 @@ def has_plexon2_dependencies():
         return True
 
     elif os_type == "Linux" or os_type == "Darwin":
-        # Check for 'wine' using which. "which" works for both mac and linux
+        # Check for 'wine' using "which" that works for both mac and linux
         # if package exists it returns a 0. Anything else is an error code.
 
         result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
@@ -91,7 +91,7 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ["mearec"]
     entities = ["mearec/mearec_test_10s.h5"]
-    neo_funcs = dict()
+    neo_funcs = {}
 
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
