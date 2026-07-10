@@ -228,6 +228,8 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     re_referenced_traces = (
                         traces[:, channel_indices] - traces.dot(self.local_kernel.T)[:, channel_indices]
                     )
+            if np.issubdtype(self.dtype, np.integer):
+                np.round(re_referenced_traces, out=re_referenced_traces)
             return re_referenced_traces.astype(self.dtype, copy=False)
 
         # Then the old implementation for backwards compatibility that supports grouping

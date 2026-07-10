@@ -244,6 +244,30 @@ class TestWhiten:
         if apply_mean:
             self.assert_recording_is_white(whitened_recording)
 
+    def test_whiten_int_dtype_rounds_not_truncates(self):
+        """Integer-dtype whitening must round, not truncate toward zero."""
+        num_chan = 2
+        num_samples = 10
+
+        recording = NumpyRecording(
+            [np.zeros((num_samples, num_chan), dtype=np.float32)],
+            sampling_frequency=30000,
+        )
+
+        # Identity W with a scale factor produces a known float value.
+        test_W = np.eye(num_chan)
+        whitened_recording = whiten(recording, W=test_W, M=None, dtype="int16", int_scale=1)
+
+        segment = whitened_recording.segments[0]
+        # Directly craft traces that whiten to 100.7 -> should round to 101, not truncate to 100.
+        segment.parent_recording_segment = NumpyRecording(
+            [np.full((num_samples, num_chan), 100.7, dtype=np.float32)],
+            sampling_frequency=30000,
+        ).segments[0]
+
+        traces = whitened_recording.segments[0].get_traces(0, num_samples, slice(None))
+        assert np.all(traces == 101)
+
     @pytest.mark.skipif(not HAS_SKLEARN, reason="sklearn must be installed.")
     def test_compute_sklearn_covariance_matrix(self):
         """
