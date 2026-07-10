@@ -661,7 +661,7 @@ class SortingAnalyzer:
         peak_mode: PeakModeType,
         rec_attributes: dict | None,
         backend_options: dict | None,
-    ):
+    ) -> "SortingAnalyzer":
         # used by create and save_as
         folder = Path(folder)
         if is_path_remote(folder):
@@ -883,7 +883,7 @@ class SortingAnalyzer:
         folder: str | Path,
         recording: BaseRecording | None = None,
         backend_options: dict | None = None,
-    ):
+    ) -> "SortingAnalyzer":
         from .loading import load
 
         folder = Path(folder)
@@ -993,7 +993,7 @@ class SortingAnalyzer:
         peak_mode: PeakModeType,
         rec_attributes: dict | None,
         backend_options: dict | None,
-    ):
+    ) -> "SortingAnalyzer":
         # used by create and save_as
         import zarr
         from .zarrextractors import add_sorting_to_zarr_group
@@ -1087,7 +1087,7 @@ class SortingAnalyzer:
         folder: str | Path,
         recording: BaseRecording | None = None,
         backend_options: dict | None = None,
-    ):
+    ) -> "SortingAnalyzer":
         import zarr
         from .loading import load
 
