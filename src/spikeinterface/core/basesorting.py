@@ -501,7 +501,7 @@ class BaseSorting(BaseExtractor):
             return None
 
     def _save(self, format: str = "numpy_folder", **save_kwargs):
-        """ Save a sorting object to disk in a specified format.
+        """Save a sorting object to disk in a specified format.
 
         Note
         ----
@@ -547,8 +547,10 @@ class BaseSorting(BaseExtractor):
 
         # Re-register the recording if saving to disk (not memory)
         if self.has_recording() and format != "memory":
-            warnings.warn("The recording registered to this sorting object will not be saved to disk" 
-                          "Reloading the sorting later will not include the recording")
+            warnings.warn(
+                "The recording registered to this sorting object will not be saved to disk"
+                "Reloading the sorting later will not include the recording"
+            )
             cached.register_recording(self._recording)
 
         return cached

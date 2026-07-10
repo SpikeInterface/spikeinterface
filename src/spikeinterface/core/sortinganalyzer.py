@@ -46,6 +46,7 @@ from .globals import get_global_job_kwargs
 PeakSignType = Literal["both", "neg", "pos"]
 PeakModeType = Literal["extremum", "at_index", "peak_to_peak"]
 
+
 # high level function
 def create_sorting_analyzer(
     sorting: BaseSorting | dict[Any, BaseSorting],
@@ -279,11 +280,14 @@ def create_sorting_analyzer(
                 **job_kwargs,
             )
     else:  # main_channel_indices provided as argument
-        assert len(main_channel_indices) == sorting.get_num_units(
+        assert (
+            len(main_channel_indices) == sorting.get_num_units()
         ), "len(main_channel_indices) must equal the number of units in the `sorting`"
         if sparsity is None and sparse:  # sparsity needs to be calculated
             sparsity_method = sparsity_kwargs.get("method", "radius")  # default method is radius
-            assert sparsity_method == "radius", 'If you pass `main_channel_indices`, you need to use sparsity method "radius"'
+            assert (
+                sparsity_method == "radius"
+            ), 'If you pass `main_channel_indices`, you need to use sparsity method "radius"'
 
     # Handle sparsity
     if sparsity is not None:
@@ -321,9 +325,7 @@ def create_sorting_analyzer(
 
     # Handle return_in_uV parameter for recordings without scaling
     if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
-        warnings.warn(
-            "create_sorting_analyzer: recording does not have scaling to uV, forcing return_in_uV=False"
-        )
+        warnings.warn("create_sorting_analyzer: recording does not have scaling to uV, forcing return_in_uV=False")
         return_in_uV = False
 
     # Remove folder if overwrite is True
@@ -486,7 +488,9 @@ class SortingAnalyzer:
         backend_options: dict[str, Any] | None = None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
-        assert main_channel_indices is not None, "To create a SortingAnalyzer you need to specify the main_channel_indices"
+        assert (
+            main_channel_indices is not None
+        ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
@@ -681,14 +685,12 @@ class SortingAnalyzer:
         probegroup_file = recording_info_folder / "probegroup.json"
 
         # Save general info
-        info = {
-            "version": spikeinterface.__version__, "dev_mode": spikeinterface.DEV_MODE,
-            "object": "SortingAnalyzer"}
+        info = {"version": spikeinterface.__version__, "dev_mode": spikeinterface.DEV_MODE, "object": "SortingAnalyzer"}
         with open(info_file, mode="w") as f:
             json.dump(check_json(info), f, indent=4)
 
         # Save settings
-        settings = {'return_in_uV': return_in_uV, 'peak_sign': peak_sign, 'peak_mode': peak_mode}
+        settings = {"return_in_uV": return_in_uV, "peak_sign": peak_sign, "peak_mode": peak_mode}
         with open(settings_file, mode="w") as f:
             json.dump(check_json(settings), f, indent=4)
 
@@ -739,7 +741,7 @@ class SortingAnalyzer:
         return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
 
     @classmethod
-    def _handle_backward_compatibility_settings_pre_init(cls, settings : dict[str, Any]):
+    def _handle_backward_compatibility_settings_pre_init(cls, settings: dict[str, Any]):
         """
         backward compatibility before the __init__ to handle the settings:
           * return_scaled > return_in_uV
@@ -919,13 +921,16 @@ class SortingAnalyzer:
             # See https://github.com/SpikeInterface/spikeinterface/issues/2788
             warnings.warn(
                 "settings.json not found in this analyzer folder. Creating one with default settings.",
-                category=DeprecationWarning(), stacklevel=2)
+                category=DeprecationWarning(),
+                stacklevel=2,
+            )
             with open(settings_file, "w") as f:
                 json.dump(check_json(settings), f, indent=4)
 
         # Load sorting (in memory)
-        sorting = NumpySorting.from_sorting(NumpyFolderSorting(sorting_folder), with_metadata=True,
-                                            copy_spike_vector=True)
+        sorting = NumpySorting.from_sorting(
+            NumpyFolderSorting(sorting_folder), with_metadata=True, copy_spike_vector=True
+        )
 
         # Load recording (if available)
         if recording is None:
@@ -943,8 +948,9 @@ class SortingAnalyzer:
             rec_attributes = json.load(f)
 
         # Load probe group
-        rec_attributes["probegroup"] = (probeinterface.read_probeinterface(probegroup_file)
-                                        if probegroup_file.exists() else None)
+        rec_attributes["probegroup"] = (
+            probeinterface.read_probeinterface(probegroup_file) if probegroup_file.exists() else None
+        )
 
         # Load sparsity
         if sparsity_file.exists():
@@ -978,14 +984,14 @@ class SortingAnalyzer:
     @classmethod
     def create_zarr(
         cls,
-        folder : str | Path,
-        sorting : BaseSorting,
-        recording : BaseRecording,
-        sparsity : ChannelSparsity | None,
-        return_in_uV : bool,
-        peak_sign : PeakSignType,
-        peak_mode : PeakModeType,
-        rec_attributes : dict | None,
+        folder: str | Path,
+        sorting: BaseSorting,
+        recording: BaseRecording,
+        sparsity: ChannelSparsity | None,
+        return_in_uV: bool,
+        peak_sign: PeakSignType,
+        peak_mode: PeakModeType,
+        rec_attributes: dict | None,
         backend_options: dict | None,
     ):
         # used by create and save_as
@@ -1010,9 +1016,7 @@ class SortingAnalyzer:
         zarr_root.create_group("extensions")  # used later
 
         # Save general info
-        info = {
-            "version": spikeinterface.__version__, "dev_mode": spikeinterface.DEV_MODE,
-            "object": "SortingAnalyzer"}
+        info = {"version": spikeinterface.__version__, "dev_mode": spikeinterface.DEV_MODE, "object": "SortingAnalyzer"}
         zarr_root.attrs["spikeinterface_info"] = check_json(info)
 
         # Save settings
@@ -1031,11 +1035,15 @@ class SortingAnalyzer:
             try:
                 _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
             except:
-                warnings.warn("Failed to serialize sorting provenance with Pickle Codec! "
-                              "The sorting provenance link will be lost for future load")
+                warnings.warn(
+                    "Failed to serialize sorting provenance with Pickle Codec! "
+                    "The sorting provenance link will be lost for future load"
+                )
         else:
-            warnings.warn("The sorting provenance is not serializable! "
-                          "The sorting provenance link will be lost for future load")
+            warnings.warn(
+                "The sorting provenance is not serializable! "
+                "The sorting provenance link will be lost for future load"
+            )
 
         # Save sparsity
         if sparsity is not None:
@@ -1098,9 +1106,11 @@ class SortingAnalyzer:
                 zarr_root_a = zarr.open(str(folder), mode="a", storage_options=storage_options)
                 zarr.consolidate_metadata(zarr_root_a.store)
             except:
-                warnings.warn("The zarr store was not consolidated prior to v0.101.1. "
-                              "This may lead to unexpected behavior in loading extensions. "
-                              "Consider re-generating the SortingAnalyzer object.")
+                warnings.warn(
+                    "The zarr store was not consolidated prior to v0.101.1. "
+                    "This may lead to unexpected behavior in loading extensions. "
+                    "Consider re-generating the SortingAnalyzer object."
+                )
 
         # Load settings
         settings = zarr_root.attrs["settings"]
@@ -1109,7 +1119,9 @@ class SortingAnalyzer:
         # Load sorting (in memory)
         sorting = NumpySorting.from_sorting(
             ZarrSortingExtractor(folder, zarr_group="sorting", storage_options=storage_options),
-            with_metadata=True, copy_spike_vector=True)
+            with_metadata=True,
+            copy_spike_vector=True,
+        )
 
         # Load recording (if available)
         if recording is None:
@@ -1126,8 +1138,9 @@ class SortingAnalyzer:
 
         # Load probegroup
         probegroup_dict = zarr_root["recording_info"].attrs.get("probegroup")
-        rec_attributes["probegroup"] = (probeinterface.ProbeGroup.from_dict(probegroup_dict)
-                                        if probegroup_dict is not None else None)
+        rec_attributes["probegroup"] = (
+            probeinterface.ProbeGroup.from_dict(probegroup_dict) if probegroup_dict is not None else None
+        )
 
         # Load sparsity
         if "sparsity_mask" in zarr_root:
