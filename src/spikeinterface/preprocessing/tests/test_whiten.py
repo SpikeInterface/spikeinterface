@@ -348,7 +348,7 @@ class TestWhiten:
     def test_passed_W_and_M(self):
         """
         Check that passing W (whitening matrix) and M (means) is
-        sucessfully propagated to the relevant segments and stored
+        successfully propagated to the relevant segments and stored
         on the kwargs. It is assumed if this is true, they will
         be used for the actual whitening computation.
         """
