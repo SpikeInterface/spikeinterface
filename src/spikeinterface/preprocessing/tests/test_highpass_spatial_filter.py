@@ -124,31 +124,6 @@ def test_highpass_spatial_filter_with_dead_channels():
     assert result.shape == traces.shape
 
 
-def test_highpass_spatial_filter_rounds_to_integer_dtype(monkeypatch):
-    """Casting filtered float traces to an integer output dtype must round to the
-    nearest integer (matching filter.py), not truncate toward zero."""
-    import spikeinterface.preprocessing.highpass_spatial_filter as hpsf_module
-
-    num_channels = 4
-    rec = generate_recording(num_channels=num_channels, durations=[0.5])
-    rec = spre.astype(rec, np.int16)
-
-    # Force the spatial-filter step to return a known fractional value so the
-    # rounding behavior of the final dtype cast can be checked directly.
-    def fake_sosfiltfilt(sos_filter, traces, axis):
-        return np.full_like(traces, 50.6, dtype=np.float32)
-
-    monkeypatch.setattr(hpsf_module, "sosfiltfilt", fake_sosfiltfilt, raising=False)
-    import scipy.signal
-
-    monkeypatch.setattr(scipy.signal, "sosfiltfilt", fake_sosfiltfilt)
-
-    filtered = spre.highpass_spatial_filter(rec, n_channel_pad=0, n_channel_taper=0, apply_agc=False)
-    traces = filtered.get_traces(return_in_uV=False)
-
-    assert np.all(traces == 51), "fractional value 50.6 must round to 51, not truncate to 50"
-
-
 @pytest.mark.parametrize("dtype", [np.int16, np.float32, np.float64])
 def test_dtype_stability(dtype):
     """

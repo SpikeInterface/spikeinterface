@@ -267,7 +267,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         else:
             traces = traces[left_margin:, channel_indices]
         if np.issubdtype(self.dtype, np.integer):
-            traces = traces.round()
+            np.round(traces, out=traces)
         return traces.astype(self.dtype, copy=False)
 
 

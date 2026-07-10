@@ -245,11 +245,7 @@ class TestWhiten:
             self.assert_recording_is_white(whitened_recording)
 
     def test_whiten_int_dtype_rounds_not_truncates(self):
-        """
-        Whitened traces cast to an integer dtype must be rounded to the
-        nearest integer, not truncated toward zero (which biases the
-        output distribution downward for positive values).
-        """
+        """Integer-dtype whitening must round, not truncate toward zero."""
         num_chan = 2
         num_samples = 10
 
