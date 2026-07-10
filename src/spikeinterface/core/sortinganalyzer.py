@@ -905,28 +905,15 @@ class SortingAnalyzer:
             raise ValueError("This folder is not a SortingAnalyzer with format='binary_folder'")
 
         # Load settings file
-        analyzer_has_settings_file = settings_file.exists()
-        if analyzer_has_settings_file:
+        if settings_file.exists():
             with open(settings_file, "r") as f:
                 settings = json.load(f)
         else:
-            # TODO: Remove support for analyzers that have no settings.json (throw an error instead)
-            settings = dict()
-        settings = cls._handle_backward_compatibility_settings_pre_init(settings)
-
-        # Create settings file (if not originally in the analyzer)
-        if not analyzer_has_settings_file:
-            # PATCH: Because SortingAnalyzer added settings.json during the development of 0.101.0 we need to save
-            # this as a bridge for early adopters. The else branch can be removed in version 0.102.0/0.103.0
-            # so that this can be simplified in the future
-            # See https://github.com/SpikeInterface/spikeinterface/issues/2788
-            warnings.warn(
-                "settings.json not found in this analyzer folder. Creating one with default settings.",
-                category=FutureWarning,
-                stacklevel=2,
+            raise ValueError(
+                "This folder is not a valid SortingAnalyzer folder. The settings.json file is missing. "
+                "Please ensure that you are loading a valid SortingAnalyzer folder."
             )
-            with open(settings_file, "w") as f:
-                json.dump(check_json(settings), f, indent=4)
+        settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
         # Load sorting (in memory)
         sorting = NumpySorting.from_sorting(
