@@ -1,5 +1,5 @@
 """
-This module implements generation of more realistics signal than `spikeinterface.core.generate`
+This module implements generation of more realistic signal than `spikeinterface.core.generate`
 
   * drift
   * correlated noise
@@ -72,7 +72,7 @@ def _make_probe_by_name(probe_name: str):
         manufacturer, probe_name_ = probe_name.split("#")
         probe = get_probe(manufacturer, probe_name_)
     else:
-        raise ValueError("wring probe_name")
+        raise ValueError("wrong probe_name")
 
     return probe
 
@@ -90,8 +90,8 @@ def make_one_displacement_vector(
     seed=None,
 ):
     """
-    Generates a toy displacement vector with ziagzag or bumps patterns.
-    This displacement vector has no amplitde, this generate only the shape
+    Generates a toy displacement vector with zigzag or bumps patterns.
+    This displacement vector has no amplitude, this generate only the shape
     in the range [-0.5, 0.5]
 
     Parameters
@@ -118,9 +118,9 @@ def make_one_displacement_vector(
     Returns
     -------
     displacement_vector: np.array
-        The discplacement vector in micrometers
+        The displacement vector in micrometers
     """
-    import scipy.signal
+    from scipy.signal import sawtooth
 
     t_start_drift = 0.0 if t_start_drift is None else t_start_drift
     t_end_drift = duration if t_end_drift is None else t_end_drift
@@ -137,7 +137,7 @@ def make_one_displacement_vector(
         times = np.arange(end_drift_index - start_drift_index) / displacement_sampling_frequency
 
         freq = 1.0 / period_s
-        triangle = np.abs(scipy.signal.sawtooth(2 * np.pi * freq * times + np.pi / 2))
+        triangle = np.abs(sawtooth(2 * np.pi * freq * times + np.pi / 2))
         # triangle *= amplitude_um
         # triangle -= amplitude_um / 2.0
         triangle -= 0.5
@@ -292,7 +292,7 @@ def generate_displacement_vector(
 
     displacement_vectors = np.concatenate(displacement_vectors, axis=2)
 
-    # unit_displacements is the sum of all discplacements (times, units, direction_x_y)
+    # unit_displacements is the sum of all displacements (times, units, direction_x_y)
     unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
     for direction in (0, 1):
         # x and y
@@ -382,7 +382,7 @@ def generate_drifting_recording(
         Number of units.
     duration : float, default: 600.
         The duration in seconds.
-    sampling_frequency : float, dfault: 30000.
+    sampling_frequency : float, default: 30000.
         The sampling frequency.
     probe: Probe object, default None
         If provided, the Probe geometry to consider
@@ -414,8 +414,8 @@ def generate_drifting_recording(
     amplitude_factor: np.ndarray, optional
         Optional fixed per-spike amplitude modulation
     extra_outputs : bool, default False
-        Return optionaly a dict with more variables.
-    seed : None ot int
+        Return optionally a dict with more variables.
+    seed : None or int
         A unique seed for all steps.
 
     Returns
@@ -425,7 +425,7 @@ def generate_drifting_recording(
     drifting_recording : Recording
         A generated recording with motion.
     sorting : Sorting
-        The ground trith soring object.
+        The ground truth sorting object.
         Same for both recordings.
     extra_infos:
         If extra_outputs=True, then return also a dict that contain various information like:
@@ -436,7 +436,7 @@ def generate_drifting_recording(
             * displacement_unit_factor
             * unit_displacements
 
-        This can be helpfull for motion benchmark.
+        This can be helpful for motion benchmark.
     """
 
     seed = _ensure_seed(seed)
@@ -548,7 +548,7 @@ def generate_drifting_recording(
     sorting.set_property("max_channel_index", max_channel_index)
 
     ## Important precompute displacement do not work on border and so do not work for tetrode
-    # here we bypass the interpolation and regenrate templates at severals positions.
+    # here we bypass the interpolation and regenerate templates at several positions.
     ## drifting_templates.precompute_displacements(displacements_steps)
     # shape (num_displacement, num_templates, num_samples, num_channels)
     drifting_templates.templates_array_moved = templates_array_moved

@@ -4,11 +4,11 @@ import warnings
 from pathlib import Path
 import os
 import tqdm
-import numpy.typing as npt
 
 import numpy as np
 
-from .core_tools import add_suffix, make_shared_array
+from probeinterface import ProbeGroup
+
 from .job_tools import (
     ensure_chunk_size,
     divide_segment_into_chunks,
@@ -344,7 +344,7 @@ def write_to_h5_dataset_format(
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
             )
             return_in_uV = return_scaled
 
@@ -430,7 +430,7 @@ def get_random_data_chunks(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -572,7 +572,7 @@ def get_noise_levels(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
         )
         return_in_uV = return_scaled
 
@@ -723,6 +723,62 @@ def check_probe_do_not_overlap(probes):
                 raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
 
 
+def _set_group_property_based_on_probegroup(
+    recording, probegroup: ProbeGroup, group_mode: Literal["auto", "by_probe", "by_shank", "by_side"]
+):
+    """
+    Set the group property for a recording based on a ProbeGroup.
+    Use "auto" (default) to automatically determine the grouping based on the available
+    information in the ProbeGroup (default: probe + shank + side if available).
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    probegroup : ProbeGroup
+        The ProbeGroup object
+    group_mode : {"auto", "by_probe", "by_shank", "by_side"}
+        The mode for grouping channels
+    """
+    if not isinstance(probegroup, ProbeGroup):
+        raise ValueError("`probegroup` must be a ProbeGroup instance.")
+    assert group_mode in (
+        "auto",
+        "by_probe",
+        "by_shank",
+        "by_side",
+    ), "'group_mode' can be 'auto' 'by_probe' 'by_shank' or 'by_side'"
+
+    probe_array = probegroup.to_numpy(complete=True)
+    has_shank_id = "shank_ids" in probe_array.dtype.fields
+    has_contact_side = "contact_sides" in probe_array.dtype.fields
+    if group_mode == "auto":
+        group_keys = ["probe_index"]
+        if has_shank_id:
+            group_keys += ["shank_ids"]
+        if has_contact_side:
+            group_keys += ["contact_sides"]
+    elif group_mode == "by_probe":
+        group_keys = ["probe_index"]
+    elif group_mode == "by_shank":
+        assert has_shank_id, "shank_ids is None in probe, you cannot group by shank"
+        group_keys = ["probe_index", "shank_ids"]
+    elif group_mode == "by_side":
+        assert has_contact_side, "contact_sides is None in probe, you cannot group by side"
+        if has_shank_id:
+            group_keys = ["probe_index", "shank_ids", "contact_sides"]
+        else:
+            group_keys = ["probe_index", "contact_sides"]
+    groups = np.zeros(probe_array.size, dtype="int64")
+    unique_keys = np.unique(probe_array[group_keys])
+    for group, a in enumerate(unique_keys):
+        mask = np.ones(probe_array.size, dtype=bool)
+        for k in group_keys:
+            mask &= probe_array[k] == a[k]
+        groups[mask] = group
+    recording.set_property("group", groups, ids=None)
+
+
 def get_rec_attributes(recording):
     """
     Construct rec_attributes from recording object
@@ -738,8 +794,6 @@ def get_rec_attributes(recording):
         The rec_attributes dictionary
     """
     properties_to_attrs = deepcopy(recording._properties)
-    if "contact_vector" in properties_to_attrs:
-        del properties_to_attrs["contact_vector"]
     rec_attributes = dict(
         channel_ids=recording.channel_ids,
         sampling_frequency=recording.get_sampling_frequency(),

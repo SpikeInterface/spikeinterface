@@ -3,7 +3,7 @@
 SpikeInterface 0.104.3 release notes
 ------------------------------------
 
-April 22th 2025
+April 22th 2026
 
 Minor release with bug fixes
 
