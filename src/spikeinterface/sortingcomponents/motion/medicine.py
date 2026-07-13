@@ -14,7 +14,37 @@ class MedicineRegistration:
     name = "medicine"
     need_peak_location = True
     params_doc = """
-
+    output_dir : str | Path | None, default: None
+        Directory to save MEDiCINe outputs (parameters, figures, motion arrays). If None, nothing is saved to disk.
+    plot_figures : bool, default: False
+        Whether MEDiCINe should plot and save figures summarizing the model results.
+    num_depth_bins : int | None, default: None
+        Number of depth bins for motion estimation, passed to MEDiCINe. If None, this defaults to MEDiCINe's own
+        recommended default: 1 if `rigid` else 2. Note this is intentionally independent of the generic
+        `win_scale_um` / `win_step_um` / `win_margin_um` windowing parameters used by other motion estimation
+        methods, since MEDiCINe is not tuned for the number of depth bins those would otherwise imply.
+    motion_bound : float, default: 800
+        Bound on the maximum absolute motion allowed, in the same units as the spike depths (typically microns).
+    time_kernel_width : float, default: 30
+        Width of the temporal smoothing kernel, in the same units as the spike times (typically seconds).
+    activity_network_hidden_features : tuple, default: (256, 256)
+        Hidden layer sizes for MEDiCINe's activity network.
+    amplitude_threshold_quantile : float, default: 0.0
+        Cutoff quantile in [-1, 1] for peak amplitudes. See MEDiCINe's documentation for details.
+    batch_size : int, default: 4096
+        Batch size used for training.
+    training_steps : int, default: 10000
+        Number of optimization steps to take.
+    initial_motion_noise : float, default: 0.1
+        Initial magnitude of noise added to the motion function output, annealed to 0 over `motion_noise_steps`.
+    motion_noise_steps : int, default: 2000
+        Number of training steps over which `initial_motion_noise` is annealed to 0.
+    optimizer : torch.optim.Optimizer | None, default: None
+        Optimizer class used for training. If None, `torch.optim.Adam` is used.
+    learning_rate : float, default: 0.0005
+        Learning rate used for training.
+    epsilon : float, default: 1e-3
+        Small value to prevent divide-by-zero instabilities.
     """
 
     @classmethod
@@ -37,6 +67,7 @@ class MedicineRegistration:
         ## medicine specific kwargs propagated to the lib
         output_dir=None,
         plot_figures=False,
+        num_depth_bins=None,
         motion_bound=800,
         time_kernel_width=30,
         activity_network_hidden_features=(256, 256),
@@ -52,22 +83,12 @@ class MedicineRegistration:
 
         from medicine import run_medicine
 
-        # folder = Path(tempfile.gettempdir())
-
-        if rigid:
-            # force one bin
-            num_depth_bins = 1
-        else:
-
-            # we use the spatial window mechanism only to estimate the number one spatial bins
-            dim = ["x", "y", "z"].index(direction)
-            contact_depths = recording.get_channel_locations()[:, dim]
-
-            deph_range = max(contact_depths) - min(contact_depths)
-            if win_margin_um is not None:
-                deph_range = deph_range - 2 * win_margin_um
-            num_depth_bins = max(int(np.round(deph_range / win_scale_um)), 1)
-            print("num_depth_bins", num_depth_bins)
+        if num_depth_bins is None:
+            # MEDiCINe's own recommended default (see medicine.run.run_medicine) is 2 non-rigid depth bins.
+            # We intentionally do not derive this from win_scale_um/win_margin_um (the generic windowing
+            # parameters used by other motion estimation methods), since those are tuned for different
+            # algorithms and would otherwise silently produce far more depth bins than MEDiCINe expects.
+            num_depth_bins = 1 if rigid else 2
 
         if optimizer is None:
             import torch
