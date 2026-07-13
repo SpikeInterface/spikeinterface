@@ -31,7 +31,12 @@ from .rectify import RectifyRecording, rectify
 from .clip import BlankSaturationRecording, blank_saturation, ClipRecording, clip
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
-from .silence_periods import SilencedPeriodsRecording, silence_periods
+from .silence_periods import (
+    SilencedPeriodsRecording,
+    silence_periods,
+    DetectAndSilenceArtifactsRecording,
+    detect_and_silence_artifacts,
+)
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate, train_deepinterpolation
@@ -49,8 +54,6 @@ from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
 from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 from .detect_artifacts import DetectAndRemoveArtifactsRecording, detect_and_remove_artifacts
-
-# from .silence_artifacts import SilencedArtifactsRecording, silence_artifacts
 
 _all_preprocesser_dict = {
     # filter stuff
@@ -75,6 +78,7 @@ _all_preprocesser_dict = {
     DetectAndInterpolateBadChannelsRecording: detect_and_interpolate_bad_channels,
     # artifact/saturation handling
     DetectAndRemoveArtifactsRecording: detect_and_remove_artifacts,
+    DetectAndSilenceArtifactsRecording: detect_and_silence_artifacts,
     # misc
     RectifyRecording: rectify,
     ClipRecording: clip,
@@ -92,7 +96,6 @@ _all_preprocesser_dict = {
     DirectionalDerivativeRecording: directional_derivative,
     AstypeRecording: astype,
     UnsignedToSignedRecording: unsigned_to_signed,
-    # SilencedArtifactsRecording: silence_artifacts,
 }
 # we control import in the preprocessing init by setting an __all__
 

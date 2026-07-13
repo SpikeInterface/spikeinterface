@@ -69,6 +69,7 @@ def test_pipeline_equiv_to_step():
                 "detect_and_remove_bad_channels",
                 "detect_and_interpolate_bad_channels",
                 "detect_and_remove_artifacts",
+                "detect_and_silence_artifacts",
             ]:  # These steps aren't deterministic (because they sample random chunks),
                 # so make sure that both pipeline and class get the same seed.
                 pp_dict[pp_name] = {"seed": 1205}

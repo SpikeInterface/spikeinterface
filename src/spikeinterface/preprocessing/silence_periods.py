@@ -5,7 +5,6 @@ from spikeinterface.core.base import base_period_dtype
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.core.recording_tools import get_noise_levels, get_chunk_with_margin
 from spikeinterface.core.generate import MockRecording
-from spikeinterface.core.job_tools import split_job_kwargs
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from .normalize_scale import ScaleRecording
@@ -253,11 +252,11 @@ silence_periods = define_function_handling_dict_from_class(
 )
 
 
-class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
+class DetectAndSilenceArtifactsRecording(SilencedPeriodsRecording):
     """
-    Class doing artifact detection and lient at the same time.
-
-    See SilencedPeriodsRecording and detect_artifact_periods for details.
+    Detect and silence artifacts in a single step. See
+    :func:`~spikeinterface.preprocessing.detect_artifact_periods` and
+    :class:`SilencedPeriodsRecording` for details.
     """
 
     _precomputable_kwarg_names = ["periods"]
@@ -290,10 +289,10 @@ class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
         SilencedPeriodsRecording.__init__(
             self, recording, periods=periods, mode=mode, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
         )
-        # note self._kwargs["periods"] is done by SilencedPeriodsRecording and so the computaion is done once
+        # self._kwargs["periods"] is done by SilencedPeriodsRecording, so the computation is done once
 
 
 # function for API
-detect_artifacts_and_silent_periods = define_function_handling_dict_from_class(
-    source_class=DetectArtifactAndSilentPeriodsRecording, name="silence_artifacts"
+detect_and_silence_artifacts = define_function_handling_dict_from_class(
+    source_class=DetectAndSilenceArtifactsRecording, name="detect_and_silence_artifacts"
 )
