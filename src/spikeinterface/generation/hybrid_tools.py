@@ -414,8 +414,6 @@ def generate_hybrid_recording(
         assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
     elif unit_locations is None:
         unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
-    # elif:
-    #  TODO get location from the template thenself
 
     # handle motion and displacement
     if motion is None:
@@ -425,12 +423,13 @@ def generate_hybrid_recording(
         assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"
         dim = motion.dim
         motion_array_concat = np.concatenate(motion.displacement)
+        max_motion = np.max(np.abs(motion_array_concat))
         if dim == 0:
-            start = np.array([np.min(motion_array_concat), 0])
-            stop = np.array([np.max(motion_array_concat), 0])
+            start = np.array([-max_motion, 0])
+            stop = np.array([max_motion, 0])
         elif dim == 1:
-            start = np.array([0, np.min(motion_array_concat)])
-            stop = np.array([0, np.max(motion_array_concat)])
+            start = np.array([0, -max_motion])
+            stop = np.array([0, max_motion])
         elif dim == 2:
             raise NotImplementedError("3D motion not implemented yet")
         num_step = int((stop - start)[dim] / drift_step_um)
@@ -461,7 +460,6 @@ def generate_hybrid_recording(
         drifting_templates = generate_drifting_templates_synthetic(
             probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed
         )
-
     else:
         if recording.has_scaleable_traces() and templates.is_in_uV:
             templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
