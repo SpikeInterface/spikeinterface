@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -69,16 +69,15 @@ extractors = [
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
     "pyedflib>=0.1.30",
-    "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
+    "ibllib>=3.4.1", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
+    "ibllib>=3.4.1", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -105,19 +104,19 @@ postprocessing = [
 metrics = [
     "scikit-learn<1.8",
     "scipy",
-    "pandas<3",
+    "pandas>=3",
     "numba>=0.59",
 ]
 
 comparison = [
     "scipy",
-    "pandas<3",
+    "pandas>=3",
     "networkx",
 ]
 
 generation = [
     "scipy",
-    "pandas<3",
+    "pandas>=3",
 ]
 
 sorters = [
@@ -147,7 +146,7 @@ curation = [
     "spikeinterface[metrics]",
     "spikeinterface[postprocessing]",
     "spikeinterface[comparison]",
-    "pandas<3",
+    "pandas>=3",
     "scikit-learn<1.8",
     "skops",
     "huggingface_hub",
@@ -158,7 +157,7 @@ curation = [
 exporters = [
     "spikeinterface[postprocessing]",
     "spikeinterface[widgets]",
-    "pandas<3",
+    "pandas>=3",
     "pynapple",
 ]
 
@@ -219,7 +218,7 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
-    "pandas<3", # in the modules gallery comparison tutorial
+    "pandas>=3", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba", # For many postprocessing functions
     "networkx",
@@ -246,7 +245,7 @@ test-common = [
 
 test-core = [
     {include-group = "test-common"},
-    "pandas<3",
+    "pandas>=3",
 ]
 
 test-extractors = [
@@ -268,7 +267,7 @@ test-streaming-extractors = [
 
 test-preprocessing = [
     {include-group = "test-common"},
-    "ibllib>=3.4.1;python_version>='3.10'",
+    "ibllib>=3.4.1",
     "pooch",
     "datalad",
     "torch",  # preprocessing tests exercise sortingcomponents.motion.dredge
@@ -276,7 +275,7 @@ test-preprocessing = [
 
 test-postprocessing = [
     {include-group = "test-common"},
-    "pandas<3",
+    "pandas>=3",
     ]
 test-metrics = [{include-group = "test-common"}]
 
