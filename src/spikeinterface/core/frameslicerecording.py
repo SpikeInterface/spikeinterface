@@ -1,5 +1,3 @@
-import numpy as np
-
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
@@ -69,10 +67,7 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         d = parent_recording_segment.get_times_kwargs()
         d = d.copy()
         if d["time_vector"] is None:
-            self.parent_time_vector = None
             d["t_start"] = parent_recording_segment.sample_index_to_time(start_frame)
-        else:
-            self.parent_time_vector = d["time_vector"]
         BaseRecordingSegment.__init__(self, **d)
         self._parent_recording_segment = parent_recording_segment
         self.start_frame = start_frame
@@ -89,31 +84,36 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         )
         return traces
 
-    # Override times methods to avoid materializing the full time vector
-    def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
-        if self.parent_time_vector is not None:
-            # Cache full times as numpy if start_frame and end_frame are None. If the user passes start_frame and
-            # end_frame, we slice the time vector and return the sliced version as numpy array.
-            # This is useful for very long recordings, where the full time vector might be too large to fit in memory.
-            if start_frame is None and end_frame is None:
-                self.time_vector = np.asarray(self.parent_time_vector[self.start_frame : self.end_frame])
-                return self.time_vector
-            else:
-                start_frame = int(start_frame) if start_frame is not None else 0
-                end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
-                return np.asarray(self.time_vector[self.parent_time_vector][start_frame:end_frame])
-        else:
-            time_vector = super().get_times(start_frame=start_frame, end_frame=end_frame)
-            return time_vector
+    # Times methods below mirror get_traces(): defer to the parent segment with an offset
+    # instead of slicing self.time_vector directly. Slicing here would force reading the
+    # whole window right away (e.g. a zarr.Array fetch+decompress), and since this segment
+    # is rebuilt from scratch once per worker process in a multiprocessing job, that cost
+    # would be paid again in every worker instead of being read lazily per chunk.
+    def get_times(self, start_frame=None, end_frame=None):
+        if self.time_vector is None:
+            return super().get_times(start_frame=start_frame, end_frame=end_frame)
+        start_frame = int(start_frame) if start_frame is not None else 0
+        end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+        return self._parent_recording_segment.get_times(
+            start_frame=self.start_frame + start_frame, end_frame=self.start_frame + end_frame
+        )
 
     def get_start_time(self) -> float:
-        if self.parent_time_vector is not None:
-            return self.parent_time_vector[self.start_frame]
-        else:
+        if self.time_vector is None:
             return super().get_start_time()
+        return self._parent_recording_segment.sample_index_to_time(self.start_frame)
 
     def get_end_time(self) -> float:
-        if self.parent_time_vector is not None:
-            return self.parent_time_vector[self.end_frame - 1]
-        else:
+        if self.time_vector is None:
             return super().get_end_time()
+        return self._parent_recording_segment.sample_index_to_time(self.end_frame - 1)
+
+    def sample_index_to_time(self, sample_ind):
+        if self.time_vector is None:
+            return super().sample_index_to_time(sample_ind)
+        return self._parent_recording_segment.sample_index_to_time(self.start_frame + sample_ind)
+
+    def time_to_sample_index(self, time_s):
+        if self.time_vector is None:
+            return super().time_to_sample_index(time_s)
+        return self._parent_recording_segment.time_to_sample_index(time_s) - self.start_frame

@@ -128,6 +128,8 @@ def _init_binary_worker(time_series, file_path_dict, dtype, byte_offset, file_ti
 
 # used by write_binary + TimeSeriesChunkExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    import gc
+
     # recover variables of the worker
     time_series = worker_ctx["time_series"]
     dtype = worker_ctx["dtype"]
@@ -146,6 +148,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     file.write(data.data)
     # flush is important!!
     file.flush()
+    del data
 
     if file_timestamps_dict is not None:
         file_timestamps = file_timestamps_dict[segment_index]
@@ -155,6 +158,12 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
         file_timestamps.seek(timestamp_byte_offset)
         file_timestamps.write(timestamps.data)
         file_timestamps.flush()
+        del timestamps
+
+    # fix memory leak by forcing garbage collection (same issue as _write_zarr_chunk,
+    # e.g. reading compressed zarr chunks leaves reference cycles that the generational
+    # GC doesn't clear promptly in a tight chunk loop)
+    gc.collect()
 
 
 write_binary.__doc__ = write_binary.__doc__.format(_shared_job_kwargs_doc)
