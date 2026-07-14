@@ -125,7 +125,6 @@ class ZarrRecordingExtractor(BaseRecording):
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
         self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
-        print("Load times:", load_times)
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
         assert "channel_ids" in self._root.keys(), "'channel_ids' dataset not found!"
@@ -156,7 +155,6 @@ class ZarrRecordingExtractor(BaseRecording):
             time_kwargs = {}
             time_vector = self._root.get(f"times_seg{segment_index}", None)
             if time_vector is not None and load_times:
-                print(f"Loading time vector for segment {segment_index} from zarr file")
                 time_kwargs["time_vector"] = time_vector
             else:
                 if t_starts is None:
