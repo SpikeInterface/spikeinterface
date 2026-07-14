@@ -296,23 +296,17 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
     elif object_type == "Recording":
         from .zarrextractors import read_zarr_recording
 
-        storage_options = kwargs.get("storage_options", None)
-        load_compression_ratio = kwargs.get("load_compression_ratio", False)
-        recording = read_zarr_recording(
-            folder_or_url, storage_options=storage_options, load_compression_ratio=load_compression_ratio
-        )
+        recording = read_zarr_recording(folder_or_url, **kwargs)
         return recording
     elif object_type == "Sorting":
         from .zarrextractors import read_zarr_sorting
 
-        storage_options = kwargs.get("storage_options", None)
-        sorting = read_zarr_sorting(folder_or_url, storage_options=storage_options)
+        sorting = read_zarr_sorting(folder_or_url, **kwargs)
         return sorting
     elif object_type == "Recording|Sorting":
         # This case shoudl deprecated soon because the read_zarr is ultra ambiguous
         # just testing if the zarr contains unit_ids or channel_ids but many object also contains it (see template)!!!!
         from .zarrextractors import read_zarr
 
-        storage_options = kwargs.get("storage_options", None)
-        rec_or_sorting = read_zarr(folder_or_url, storage_options=storage_options)
+        rec_or_sorting = read_zarr(folder_or_url, **kwargs)
         return rec_or_sorting
