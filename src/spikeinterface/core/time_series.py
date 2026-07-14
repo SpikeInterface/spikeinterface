@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from bisect import bisect_right
 from typing import Optional, TYPE_CHECKING, TypeAlias
 import warnings
 
@@ -381,6 +382,21 @@ class TimeSeries(ABC):
         return time_vectors
 
 
+def _searchsorted_right_lazy(time_vector: TimeVector, time_s: float | np.ndarray) -> np.int64 | np.ndarray:
+    """``np.searchsorted(time_vector, time_s, side="right")`` without materializing
+    the whole ``time_vector``.
+
+    ``np.searchsorted`` is fine for mem-maps, but for out-of-core arrays (zarr) it reads
+    the whole time vector (even if a ``zarr.Array``) into memory. Bisecting instead reads
+    O(log N) elements, which saves an order of magnitude of RAM for long recordings.
+
+    ``time_s`` may be a scalar or a 1-D array; the return shape matches it.
+    """
+    if np.ndim(time_s) == 0:
+        return np.int64(bisect_right(time_vector, time_s))
+    return np.array([bisect_right(time_vector, t) for t in time_s], dtype=np.int64)
+
+
 class TimeSeriesSegment(BaseSegment):
     """Per-segment time-series class. Provides time handling methods (sample/time conversion,
     start/end time, time vectors) on top of ``BaseSegment``."""
@@ -496,8 +512,12 @@ class TimeSeriesSegment(BaseSegment):
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
             sample_index = np.round(sample_index).astype(np.int64)
-        else:
+        elif isinstance(self.time_vector, np.ndarray):
+            # in-memory or memmap: np.searchsorted reads elements lazily for a memmap
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
+        else:
+            # out-of-core (zarr): bisect so the whole vector isn't loaded into RAM
+            sample_index = _searchsorted_right_lazy(self.time_vector, time_s) - 1
 
         return sample_index
 

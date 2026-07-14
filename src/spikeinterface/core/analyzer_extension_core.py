@@ -9,7 +9,7 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
-from copy import copy
+from copy import copy, deepcopy
 import warnings
 import numpy as np
 from collections import namedtuple
@@ -958,7 +958,7 @@ class BaseMetricExtension(AnalyzerExtension):
         default_metric_params : dict
             Dictionary of default metric parameters for each metric.
         """
-        default_metric_params = {m.metric_name: m.metric_params for m in cls.metric_list}
+        default_metric_params = {m.metric_name: deepcopy(m.metric_params) for m in cls.metric_list}
         return default_metric_params
 
     @classmethod
