@@ -597,11 +597,6 @@ class BaseExtractor:
                 # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
                 dump_dict["relative_paths"] = False
 
-        if folder_metadata is not None:
-            if relative_to is not None:
-                folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
-            dump_dict["folder_metadata"] = str(folder_metadata)
-
         self._extra_metadata_to_dict(dump_dict)
 
         return dump_dict
@@ -688,7 +683,7 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path: str | Path, relative_to=None, folder_metadata=None) -> None:
+    def dump(self, file_path: str | Path, relative_to=None) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -701,9 +696,9 @@ class BaseExtractor:
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         if str(file_path).endswith(".json"):
-            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_json(file_path, relative_to=relative_to)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_pickle(file_path, relative_to=relative_to)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -711,7 +706,6 @@ class BaseExtractor:
         self,
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
-        folder_metadata: str | Path | None = None,
     ) -> None:
         """
         Dump recording extractor to json file.
@@ -724,8 +718,6 @@ class BaseExtractor:
         relative_to: str, Path, True or None
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
-        folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties
         """
         assert self.check_serializability("json"), "The extractor is not json serializable"
 
@@ -738,7 +730,6 @@ class BaseExtractor:
             include_annotations=True,
             include_properties=False,
             relative_to=relative_to,
-            folder_metadata=folder_metadata,
             recursive=True,
         )
         file_path = self._get_file_path(file_path, [".json"])
@@ -753,7 +744,6 @@ class BaseExtractor:
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
         include_properties: bool = True,
-        folder_metadata: str | Path | None = None,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -768,8 +758,6 @@ class BaseExtractor:
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         include_properties: bool
             If True, all properties are dumped
-        folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
         assert self.check_serializability("pickle"), "The extractor is not serializable to file with pickle"
 
@@ -785,7 +773,6 @@ class BaseExtractor:
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
-            folder_metadata=folder_metadata,
             relative_to=relative_to,
             recursive=recursive,
         )
