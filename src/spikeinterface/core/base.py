@@ -635,38 +635,7 @@ class BaseExtractor:
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
             dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
-        folder_metadata = dictionary.get("folder_metadata", None)
-        if folder_metadata is not None:
-            folder_metadata = Path(folder_metadata)
-            if dictionary.get("relative_paths", False):
-                folder_metadata = base_folder / folder_metadata
-            extractor.load_metadata_from_folder(folder_metadata)
         return extractor
-
-    def load_metadata_from_folder(self, folder_metadata):
-        # hack to load probe for recording
-        folder_metadata = Path(folder_metadata)
-
-        # load properties
-        prop_folder = folder_metadata / "properties"
-        if prop_folder.is_dir():
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == ".npy":
-                    values = np.load(prop_file, allow_pickle=True)
-                    key = prop_file.stem
-                    self.set_property(key, values)
-
-        self._extra_metadata_from_folder(folder_metadata)
-
-    def save_metadata_to_folder(self, folder_metadata):
-        self._extra_metadata_to_folder(folder_metadata)
-
-        # save properties
-        prop_folder = folder_metadata / "properties"
-        prop_folder.mkdir(parents=True, exist_ok=False)
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            np.save(prop_folder / (key + ".npy"), values)
 
     def clone(self) -> "BaseExtractor":
         """
@@ -859,14 +828,6 @@ class BaseExtractor:
         # this is internally call by cache(...) main function
         raise NotImplementedError
 
-    def _extra_metadata_from_folder(self, folder):
-        # This implemented in BaseRecording for probe
-        pass
-
-    def _extra_metadata_to_folder(self, folder):
-        # This implemented in BaseRecording for probe
-        pass
-
     def _extra_metadata_from_dict(self, dump_dict):
         # This implemented in BaseRecording for probe
         pass
@@ -1011,9 +972,7 @@ class BaseExtractor:
             warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
         # save data (done the subclass)
-        self.save_metadata_to_folder(folder)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
-        cached.load_metadata_from_folder(folder)
 
         # copy properties/
         self.copy_metadata(cached)

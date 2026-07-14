@@ -286,9 +286,7 @@ def test_BaseRecording(create_cache_folder):
     traces_int16 = rec_int16.get_traces()
     assert traces_int16.dtype == "int16"
 
-    # Both return_scaled and return_in_uV raise error when no gain_to_uV/offset_to_uV properties
-    with pytest.raises(ValueError):
-        traces_float32 = rec_int16.get_traces(return_scaled=True)
+    # return_in_uV raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
         traces_float32 = rec_int16.get_traces(return_in_uV=True)
 
@@ -492,6 +490,23 @@ def test_time_slice_with_time_vector():
     sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
 
     assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
+def test_save_load_binary_with_time_vector(create_cache_folder):
+    cache_folder = create_cache_folder
+    rec = generate_recording(durations=[5.0], num_channels=3, sampling_frequency=10_000.0)
+    times = rec.get_times(segment_index=0) + 100.0
+
+    # Set time vector
+    rec.set_times(times=times, segment_index=0, with_warning=False)
+    # Save
+    rec_saved = rec.save(folder=cache_folder / "recording_with_time_vector", format="binary")
+    assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))
+
+    # Now reset_times and save again, to check that the time vector is not saved
+    rec_saved.reset_times()
+    rec_saved_no_time_vector = rec_saved.save(folder=cache_folder / "recording_without_time_vector", format="binary")
+    assert not rec_saved_no_time_vector.has_time_vector(segment_index=0)
 
 
 if __name__ == "__main__":

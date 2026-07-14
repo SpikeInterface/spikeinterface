@@ -320,24 +320,24 @@ class BaseRecordingSnippets(BaseExtractor):
         if self._probegroup is not None:
             other._probegroup = self._probegroup.copy()
 
-    def _extra_metadata_from_folder(self, folder):
-        # load probe from folder
-        # Note: we don't need any fix for legacy probegroups, since the
-        # set_probegroup() method will handle the device_channel_indices
-        # sorting and global contact order
-        folder = Path(folder)
-        probe_file = folder / "probegroup.json"
-        legacy_probe_file = folder / "probe.json"
-        if probe_file.is_file():
-            probegroup = read_probeinterface(probe_file)
-            self.set_probegroup(probegroup)
-        elif legacy_probe_file.is_file():
-            probegroup = read_probeinterface(legacy_probe_file)
-            self.set_probegroup(probegroup)
+    # def _extra_metadata_from_folder(self, folder):
+    #     # load probe from folder
+    #     # Note: we don't need any fix for legacy probegroups, since the
+    #     # set_probegroup() method will handle the device_channel_indices
+    #     # sorting and global contact order
+    #     folder = Path(folder)
+    #     probe_file = folder / "probegroup.json"
+    #     legacy_probe_file = folder / "probe.json"
+    #     if probe_file.is_file():
+    #         probegroup = read_probeinterface(probe_file)
+    #         self.set_probegroup(probegroup)
+    #     elif legacy_probe_file.is_file():
+    #         probegroup = read_probeinterface(legacy_probe_file)
+    #         self.set_probegroup(probegroup)
 
-        # remove "contact_vector" property if present as it is not needed anymore
-        if "contact_vector" in self.get_property_keys():
-            self.delete_property("contact_vector")
+    #     # remove "contact_vector" property if present as it is not needed anymore
+    #     if "contact_vector" in self.get_property_keys():
+    #         self.delete_property("contact_vector")
 
     def _extra_metadata_to_folder(self, folder):
         # save probe

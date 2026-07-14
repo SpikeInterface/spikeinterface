@@ -781,3 +781,44 @@ def is_path_remote(path: str | Path) -> bool:
 def ms_to_samples(ms: float, sampling_frequency: float) -> int:
     """Convert a duration in milliseconds to the nearest number of samples."""
     return round(ms * sampling_frequency / 1000.0)
+
+
+def load_properties_from_binary_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
+    """
+    Load properties from a folder properties as .npy files and return sets them
+    as properties to the extractor.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder containing the properties as .npy files.
+    extractor : BaseExtractor
+        The extractor to which the properties will be set.
+    """
+    folder = Path(folder)
+    if folder.is_dir():
+        for prop_file in folder.iterdir():
+            if prop_file.suffix == ".npy":
+                values = np.load(prop_file, allow_pickle=True)
+                key = prop_file.stem
+                if key == "contact_vector":
+                    continue
+                extractor.set_property(key, values)
+
+
+def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save properties from an extractor to a folder as .npy files.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the properties will be saved as .npy files.
+    extractor : BaseExtractor
+        The extractor from which the properties will be saved.
+    """
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    for key in extractor.get_property_keys():
+        values = extractor.get_property(key)
+        np.save(folder / f"{key}.npy", values, allow_pickle=True)

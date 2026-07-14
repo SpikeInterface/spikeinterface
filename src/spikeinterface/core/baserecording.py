@@ -7,7 +7,12 @@ from probeinterface import read_probeinterface, write_probeinterface
 
 from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import convert_bytes_to_str, convert_seconds_to_str
+from .core_tools import (
+    convert_bytes_to_str,
+    convert_seconds_to_str,
+    save_properties_to_binary_folder,
+    load_properties_from_binary_folder,
+)
 from .job_tools import split_job_kwargs
 
 
@@ -330,8 +335,21 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
             t_starts = self._get_t_starts()
+            time_vectors = self._get_time_vectors()
+            if time_vectors is not None:
+                file_timestamps_paths = [folder / f"times_cached_seg{i}.raw" for i in range(self.get_num_segments())]
+                kwargs["file_timestamps_paths"] = file_timestamps_paths
+            else:
+                file_timestamps_paths = None
 
-            write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
+            write_binary(
+                self,
+                file_paths=file_paths,
+                dtype=dtype,
+                verbose=verbose,
+                file_timestamps_paths=file_timestamps_paths,
+                **job_kwargs,
+            )
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
@@ -348,16 +366,14 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 is_filtered=self.is_filtered(),
                 gain_to_uV=self.get_channel_gains(),
                 offset_to_uV=self.get_channel_offsets(),
+                file_timestamps_paths=file_timestamps_paths,
             )
             binary_rec.dump(folder / "binary.json", relative_to=folder)
-            cached = BinaryFolderRecording(folder_path=folder)
 
-            # timestamps are not saved in binary, so we have to set them explicitly
-            for segment_index in range(self.get_num_segments()):
-                if self.has_time_vector(segment_index):
-                    # the use of get_times is preferred since timestamps are converted to array
-                    time_vector = self.get_times(segment_index=segment_index)
-                    cached.set_times(time_vector, segment_index=segment_index)
+            # save properties
+            save_properties_to_binary_folder(folder / "properties", self)
+
+            cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
             if kwargs.get("sharedmem", True):
@@ -395,27 +411,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             raise ValueError(f"format {format} not supported")
 
         return cached
-
-    def _extra_metadata_from_folder(self, folder):
-        # load probe
-        super()._extra_metadata_from_folder(folder)
-
-        # load time vector if any
-        for segment_index, rs in enumerate(self.segments):
-            time_file = folder / f"times_cached_seg{segment_index}.npy"
-            if time_file.is_file():
-                time_vector = np.load(time_file, mmap_mode="r")
-                rs.time_vector = time_vector
-
-    def _extra_metadata_to_folder(self, folder):
-        super()._extra_metadata_to_folder(folder)
-
-        # save time vector if any
-        for segment_index, rs in enumerate(self.segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
-            if time_vector is not None:
-                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """

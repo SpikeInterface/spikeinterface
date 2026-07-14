@@ -3,6 +3,8 @@ from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
 
+from .core_tools import save_properties_to_binary_folder
+
 # snippets segments?
 
 
@@ -225,6 +227,7 @@ class BaseSnippets(BaseRecordingSnippets):
             from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 
             NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
+            save_properties_to_binary_folder(folder / "properties", self)
             cached = NpySnippetsExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),

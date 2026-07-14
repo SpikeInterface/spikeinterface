@@ -6,7 +6,12 @@ import numpy as np
 from probeinterface import read_probeinterface
 
 from .binaryrecordingextractor import BinaryRecordingExtractor
-from .core_tools import define_function_from_class, make_paths_absolute
+from .core_tools import (
+    define_function_from_class,
+    make_paths_absolute,
+    load_properties_from_binary_folder,
+    save_properties_to_binary_folder,
+)
 
 
 class BinaryFolderRecording(BinaryRecordingExtractor):
@@ -28,6 +33,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
     def __init__(self, folder_path):
         folder_path = Path(folder_path)
+        self.folder_path = folder_path
 
         with open(folder_path / "binary.json", "r") as f:
             d = json.load(f)
@@ -42,15 +48,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         BinaryRecordingExtractor.__init__(self, **d["kwargs"])
 
         # Load properties
-        prop_folder = folder_path / "properties"
-        if prop_folder.is_dir():
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == ".npy":
-                    values = np.load(prop_file, allow_pickle=True)
-                    key = prop_file.stem
-                    if key == "contact_vector":
-                        continue
-                    self.set_property(key, values)
+        load_properties_from_binary_folder(folder_path / "properties", self)
 
         # Load the probegroup
         probe_file = folder_path / "probegroup.json"
@@ -87,17 +85,8 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         if probegroup is not None:
             self._probegroup = probegroup
 
-        # Load time vectors if any
-        for segment_index, rs in enumerate(self.segments):
-            time_file = folder_path / f"times_cached_seg{segment_index}.npy"
-            if time_file.is_file():
-                rs.time_vector = np.load(time_file, mmap_mode="r")
-
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
-        if "num_channels" not in self._bin_kwargs:
-            assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"
-            self._bin_kwargs["num_channels"] = self._bin_kwargs["num_chan"]
 
     def is_binary_compatible(self) -> bool:
         return True
@@ -111,6 +100,22 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             file_offset=self._bin_kwargs["file_offset"],
         )
         return d
+
+    def _handle_extractor_backward_compatibility(self):
+        """
+        Handle backward compatibility for BinaryFolderRecording for loading timestamps.
+        In previous versions of spikeinterface (<0.105.0), the timestamps were saved in a
+        file called "times_cached_seg{i}.npy" for each segment by the _extra_metadata_to_folder method.
+        In the current version, the timestamps are saved in a file called "times_cached_seg{i}.raw" for each segment
+        by the _save method. This method checks for the existence of the old timestamp files and loads them if they
+        exist, ensuring that recordings saved with older versions of spikeinterface can still be loaded correctly.
+        """
+        super()._handle_extractor_backward_compatibility()
+        # Load time vectors if any
+        for segment_index, rs in enumerate(self.segments):
+            time_file = self.folder_path / f"times_cached_seg{segment_index}.npy"
+            if time_file.is_file():
+                rs.time_vector = np.load(time_file, mmap_mode="r")
 
 
 read_binary_folder = define_function_from_class(source_class=BinaryFolderRecording, name="read_binary_folder")

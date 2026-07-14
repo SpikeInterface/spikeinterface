@@ -6,6 +6,7 @@ import numpy as np
 
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
+from .core_tools import save_properties_to_binary_folder
 
 
 class BaseSorting(BaseExtractor):
@@ -514,6 +515,7 @@ class BaseSorting(BaseExtractor):
 
             folder = save_kwargs.pop("folder")
             NumpyFolderSorting.write_sorting(self, folder)
+            save_properties_to_binary_folder(folder / "properties", self)
             cached = NumpyFolderSorting(folder)
 
             if self.has_recording():

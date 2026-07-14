@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 
 from .npysnippetsextractor import NpySnippetsExtractor
-from .core_tools import define_function_from_class, make_paths_absolute
+from .core_tools import define_function_from_class, make_paths_absolute, load_properties_from_binary_folder
 
 
 class NpyFolderSnippets(NpySnippetsExtractor):
@@ -42,7 +42,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         NpySnippetsExtractor.__init__(self, **d["kwargs"])
 
         folder_metadata = folder_path
-        self.load_metadata_from_folder(folder_metadata)
+        load_properties_from_binary_folder(folder_metadata / "properties", self)
 
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]

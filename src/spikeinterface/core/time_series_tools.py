@@ -114,7 +114,14 @@ def _init_binary_worker(time_series, file_path_dict, dtype, byte_offset, file_ti
 
     file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
     worker_ctx["file_dict"] = file_dict
-    worker_ctx["file_timestamps_dict"] = file_timestamps_path_dict
+    if file_timestamps_path_dict is not None:
+        file_timestamps_dict = {
+            segment_index: open(file_timestamps_path, "rb+")
+            for segment_index, file_timestamps_path in file_timestamps_path_dict.items()
+        }
+        worker_ctx["file_timestamps_dict"] = file_timestamps_dict
+    else:
+        worker_ctx["file_timestamps_dict"] = None
 
     return worker_ctx
 
@@ -141,13 +148,17 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     file.flush()
 
     if file_timestamps_dict is not None:
+        print(
+            f"Writing timestamps for segment {segment_index} from frame {start_frame} to {end_frame} to file.",
+            flush=True,
+        )
         file_timestamps = file_timestamps_dict[segment_index]
         timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
         timestamps = timestamps.astype("float64", order="c", copy=False)
         timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
-        file.seek(timestamp_byte_offset)
-        file.write(timestamps.data)
-        file.flush()
+        file_timestamps.seek(timestamp_byte_offset)
+        file_timestamps.write(timestamps.data)
+        file_timestamps.flush()
 
 
 write_binary.__doc__ = write_binary.__doc__.format(_shared_job_kwargs_doc)
