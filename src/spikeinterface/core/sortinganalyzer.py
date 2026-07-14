@@ -34,12 +34,13 @@ from .sorting_tools import (
     _get_ids_after_merging,
     _get_ids_after_splitting,
 )
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, fix_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
+from .globals import get_global_job_kwargs
 
 
 # high level function
@@ -59,9 +60,10 @@ def create_sorting_analyzer(
     return_in_uV=True,
     overwrite=False,
     backend_options=None,
-    sparsity_kwargs=None,
     seed=None,
-    **job_kwargs,
+    sparsity_kwargs=None,
+    job_kwargs=None,
+    **extra_kwargs,
 ) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -162,8 +164,20 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
 
-    if sparsity_kwargs is None:
-        sparsity_kwargs = dict()
+    # We used to allow users to pass sparsity kwargs directly to create_sorting_analyzer.
+    # This is for backwards compatibility
+    if len(extra_kwargs) >= 1:
+        sparsity_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+        warnings.warn(
+            "Passing sparsity and job arguments via keyword arguments will be deprecated in 0.106.0. "
+            "Please pass them as a `sparsity_kwargs` or `job_kwargs` dictionary instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    else:
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        if sparsity_kwargs is None:
+            sparsity_kwargs = {}
 
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
