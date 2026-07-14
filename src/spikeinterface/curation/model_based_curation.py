@@ -1,15 +1,16 @@
-import numpy as np
 from pathlib import Path
 import json
 import warnings
 import re
 from packaging.version import parse
+from copy import deepcopy
+
+import numpy as np
 
 from spikeinterface.core import SortingAnalyzer
 from spikeinterface.curation.train_manual_curation import (
     _format_metric_dataframe,
 )
-from copy import deepcopy
 
 
 class ModelBasedClassification:
@@ -323,7 +324,7 @@ def auto_label_units(*args, **kwargs):
     warnings.warn(
         "`auto_label_units` is deprecated and will be removed in v0.105.0. "
         "Please use `model_based_label_units` instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return model_based_label_units(*args, **kwargs)
@@ -335,7 +336,7 @@ def load_model(model_folder=None, repo_id=None, model_name=None, trust_model=Fal
 
     Parameters
     ----------
-    model_folder : str or Path, defualt: None
+    model_folder : str or Path, default: None
         The path to the folder containing the model
     repo_id : str, default: None
         Hugging face repo id which contains the model e.g. 'username/model'

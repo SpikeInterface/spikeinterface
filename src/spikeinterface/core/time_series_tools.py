@@ -1,8 +1,8 @@
 from pathlib import Path
 import warnings
 
-
 import numpy as np
+import numpy.typing
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (
@@ -61,6 +61,10 @@ def write_binary(
     file_path_list = [Path(file_path) for file_path in file_path_list]
     if add_file_extension:
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
+
+    # Resolve dtype to a concrete type. This is important because the (possibly None) dtype is
+    # passed to the workers, and `np.dtype(None)` resolves to float64, which would corrupt the output.
+    dtype = dtype if dtype is not None else time_series.get_dtype()
 
     sample_size_bytes = time_series.get_sample_size_in_bytes(dtype=dtype)
 

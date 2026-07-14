@@ -186,7 +186,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         new_extension_data = {}
         new_valid_periods, _ = remap_unit_indices_in_vector(
             self.data["valid_unit_periods"], self.sorting_analyzer.unit_ids, unit_ids

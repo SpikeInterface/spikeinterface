@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from bisect import bisect_right
 from typing import Optional, TYPE_CHECKING, TypeAlias
@@ -407,7 +405,7 @@ class TimeSeriesSegment(BaseSegment):
         self,
         sampling_frequency: float | None = None,
         t_start: float | None = None,
-        time_vector: TimeVector | None = None,
+        time_vector: "TimeVector | None" = None,
     ) -> None:
         """
         Parameters
@@ -430,7 +428,7 @@ class TimeSeriesSegment(BaseSegment):
 
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start
-        self.time_vector: TimeVector | None = time_vector
+        self.time_vector: "TimeVector | None" = time_vector
 
         BaseSegment.__init__(self)
 

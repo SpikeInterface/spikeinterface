@@ -23,14 +23,21 @@ def make_sorting_analyzer(sparse=True, with_group=False):
     )
 
     if with_group:
-        recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
-        sorting.set_property("group", [0, 0, 1, 1])
 
+        # this is a bit painful. We need to figure out which units belong to which group
+        initial_sorting_analyzer = create_sorting_analyzer(
+            sorting=sorting, recording=recording, format="memory", sparse=True
+        )
+        main_channels = initial_sorting_analyzer.main_channel_indices
+        sorting_groups = [0 if main_channel < 4 else 1 for main_channel in main_channels]
+        recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
+        sorting.set_property("group", sorting_groups)
+
+        # Now we know that, we can make an analyzer with a working sparsity_group
         sorting_analyzer_unused = create_sorting_analyzer(
             sorting=sorting, recording=recording, format="memory", sparse=False, sparsity=None
         )
         sparsity_group = compute_sparsity(sorting_analyzer_unused, method="by_property", by_property="group")
-
         sorting_analyzer = create_sorting_analyzer(
             sorting=sorting, recording=recording, format="memory", sparse=False, sparsity=sparsity_group
         )

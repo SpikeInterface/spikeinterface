@@ -13,6 +13,10 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
+    _main_properties = [
+        "main_channel_id",
+    ]
+
     def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = float(sampling_frequency)
@@ -166,6 +170,8 @@ class BaseSorting(BaseExtractor):
             per unit and per segment compact in memory.
             Using the cache makes the first call quite slow but then future calls are very fast.
 
+        Note: if use_cache=False, but the lexsorted cache is already computed then it will be used anyway.
+
         Returns
         -------
         spike_train : np.ndarray
@@ -188,9 +194,14 @@ class BaseSorting(BaseExtractor):
             )
 
         segment_index = self._check_segment_index(segment_index)
+
+        lexsort_key = ("sample_index", "segment_index", "unit_index")
+        if lexsort_key in self._cached_lexsorted_spike_vector.keys():
+            use_cache = True
+
         if use_cache:
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
-                lexsort=("sample_index", "segment_index", "unit_index"),
+                lexsort=lexsort_key,
                 return_order=False,
                 return_slices=True,
             )
@@ -893,6 +904,12 @@ class BaseSorting(BaseExtractor):
             if len(sample_indices) > 0:
                 sample_indices = np.concatenate(sample_indices, dtype="int64")
                 unit_indices = np.concatenate(unit_indices, dtype="int64")
+                # here, a sort by indices with stable=True is equivalent to
+                # np.lexsort((unit_indices, sample_indices))
+                # because we construct by looping on unit_ids
+                order = np.argsort(sample_indices, stable=True)
+                sample_indices = sample_indices[order]
+                unit_indices = unit_indices[order]
                 n = sample_indices.size
                 segment_slices[segment_index, 0] = seg_pos
                 segment_slices[segment_index, 1] = seg_pos + n
@@ -908,7 +925,8 @@ class BaseSorting(BaseExtractor):
             spikes.append(spikes_in_seg)
 
         spikes = np.concatenate(spikes)
-        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        # the spikes are not lexsorted here because the previous loop ensure that the spike vector is constructucted alway the same way.
+        # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
@@ -917,6 +935,7 @@ class BaseSorting(BaseExtractor):
         self,
         concatenated=True,
         extremum_channel_inds=None,
+        main_channel_indices=None,
         use_cache=True,
         return_slices=False,
     ) -> np.ndarray | list[np.ndarray]:
@@ -931,40 +950,43 @@ class BaseSorting(BaseExtractor):
             With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
         extremum_channel_inds : None or dict, default: None
-            If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
-            This can be convinient for computing spikes postion after sorter.
-            This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
+            This is deprecated. Used main_channel_indices instead.
+        main_channel_indices: None or array
+            Give optionally the main_channel_indices vector to add an extra field "channel_index".
+            This can be convenient for computing spikes position after sorter.
+            This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=False)
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
-            This caching only occurs when extremum_channel_inds=None.
+            This caching only occurs when main_channel_indices=None.
 
         Returns
         -------
         spikes : np.array
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
-            Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
+            Or ("sample_index", "unit_index", "segment_index", "channel_index") if main_channel_indices
             is given
 
         """
 
-        spike_dtype = minimum_spike_dtype
-        if extremum_channel_inds is not None:
-            spike_dtype = spike_dtype + [("channel_index", "int64")]
-            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
-
         if self._cached_spike_vector is None:
             self._compute_and_cache_spike_vector()
 
-        # the cache already exists
-        if extremum_channel_inds is None:
+        if extremum_channel_inds is not None:
+            warnings.warn(
+                "Sorting.to_spike_vector() with extremum_channel_inds is deprecated. "
+                "Use main_channel_indices instead"
+                "This will be removed in 0.016.0"
+            )
+            main_channel_indices = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+
+        if main_channel_indices is None:
             spikes = self._cached_spike_vector
         else:
+            spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
-            spikes["sample_index"] = self._cached_spike_vector["sample_index"]
-            spikes["unit_index"] = self._cached_spike_vector["unit_index"]
-            spikes["segment_index"] = self._cached_spike_vector["segment_index"]
-            if extremum_channel_inds is not None:
-                spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
+            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
+
+            spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
 
         if not concatenated:
             segment_slices = self._get_spike_vector_segment_slices()
@@ -1162,7 +1184,7 @@ class BaseSorting(BaseExtractor):
     def to_shared_memory_sorting(self):
         """
         Turn any sorting in a SharedMemorySorting.
-        Usefull to have it in memory with a unique vector representation and sharable across processes.
+        Useful to have it in memory with a unique vector representation and sharable across processes.
         """
         from .numpyextractors import SharedMemorySorting
 

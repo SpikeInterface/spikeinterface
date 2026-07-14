@@ -1,9 +1,9 @@
 import warnings
 from typing import Literal
+
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
-
 from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
@@ -12,10 +12,8 @@ from spikeinterface.core.generate import (
     _ensure_seed,
     synthesize_amplitude_factor,
 )
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 from spikeinterface.core.motion import Motion
-
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
     DriftingTemplates,
@@ -42,7 +40,7 @@ def estimate_templates_from_recording(
     Parameters
     ----------
     recording : BaseRecording
-        The recording to get temaples from.
+        The recording to get templates from.
     ms_before : float
         The time before peaks of templates.
     ms_after : float
@@ -52,7 +50,7 @@ def estimate_templates_from_recording(
     run_sorter_kwargs : dict
         The parameters to provide to the run_sorter function of spikeinterface.
     job_kwargs : dict
-        The jobe keyword arguments to be used in the estimation of the templates.
+        The job keyword arguments to be used in the estimation of the templates.
 
     Returns
     -------
@@ -127,8 +125,7 @@ def select_templates(
         min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None
     ), "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
     # get template amplitudes and depth
-    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
-    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
     mask = np.ones(templates.num_units, dtype=bool)
     if min_amplitude is not None or max_amplitude is not None:
@@ -142,7 +139,7 @@ def select_templates(
         amplitudes = np.zeros(templates.num_units)
         templates_array = templates.templates_array
         for i in range(templates.num_units):
-            amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
+            amplitudes[i] = amp_fun(templates_array[i, :, main_channel_indices[i]])
         if min_amplitude is not None:
             mask &= amplitudes >= min_amplitude
         if max_amplitude is not None:
@@ -151,7 +148,7 @@ def select_templates(
         assert templates.probe is not None, "Templates should have a probe to filter based on depth"
         depth_dimension = ["x", "y"].index(depth_direction)
         channel_depths = templates.get_channel_locations()[:, depth_dimension]
-        unit_depths = channel_depths[extremum_channel_indices]
+        unit_depths = channel_depths[main_channel_indices]
         if min_depth is not None:
             mask &= unit_depths >= min_depth
         if max_depth is not None:
@@ -190,8 +187,7 @@ def scale_template_to_range(
     Templates
         The scaled templates.
     """
-    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
-    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
     # get amplitudes
     if amplitude_function == "ptp":
@@ -203,7 +199,7 @@ def scale_template_to_range(
     amplitudes = np.zeros(templates.num_units)
     templates_array = templates.templates_array
     for i in range(templates.num_units):
-        amplitudes[i] = amp_fun(templates_array[i, :, extremum_channel_indices[i]])
+        amplitudes[i] = amp_fun(templates_array[i, :, main_channel_indices[i]])
 
     # scale templates to meet min_amplitude and max_amplitude range
     min_scale = np.min(amplitudes) / min_amplitude
@@ -249,7 +245,7 @@ def relocate_templates(
         If greater than 0, the templates are allowed to go beyond the borders of the probe.
     favor_borders : bool, default: True
         If True, the templates are always moved to the borders of the probe if this is
-        possoble based on the min_displacement and max_displacement constraints.
+        possible based on the min_displacement and max_displacement constraints.
         This avoids a bias in moving templates towards the center of the probe.
     depth_direction : "x" | "y", default: "y"
         The direction in which to move the templates. Can be "x" or "y"
@@ -264,11 +260,10 @@ def relocate_templates(
     """
     seed = _ensure_seed(seed)
 
-    extremum_channel_indices = list(get_template_extremum_channel(templates, outputs="index").values())
-    extremum_channel_indices = np.array(extremum_channel_indices, dtype=int)
+    main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
     depth_dimension = ["x", "y"].index(depth_direction)
     channel_depths = templates.get_channel_locations()[:, depth_dimension]
-    unit_depths = channel_depths[extremum_channel_indices]
+    unit_depths = channel_depths[main_channel_indices]
 
     assert margin >= 0, "margin should be positive"
     top_margin = np.max(channel_depths) + margin
@@ -380,8 +375,8 @@ def generate_hybrid_recording(
         Dict used to generated template when template not provided.
     seed : int or None
         Seed for random initialization.
-        If None a diffrent Recording is generated at every call.
-        Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
+        If None a different Recording is generated at every call.
+        Note: even with None a generated recording keep internally a seed to regenerate the same signal after dump/load.
 
     Returns
     -------
@@ -454,7 +449,7 @@ def generate_hybrid_recording(
         ), "templates and recording should have the same number of channels"
         nbefore = templates.nbefore
         nafter = templates.nafter
-        unit_locations = compute_monopolar_triangulation(templates)
+        unit_locations = compute_monopolar_triangulation(templates, peak_sign="both", peak_mode="extremum")
 
         channel_locations_rel = channel_locations - channel_locations[0]
         templates_locations = templates.get_channel_locations()

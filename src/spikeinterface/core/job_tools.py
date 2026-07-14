@@ -232,7 +232,7 @@ def ensure_n_jobs(extractor, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not extractor.check_if_memory_serializable():
+    if not extractor.check_serializability("memory"):
         if n_jobs != 1:
             raise RuntimeError(
                 "Extractor is not serializable to memory and can't be processed in parallel. "

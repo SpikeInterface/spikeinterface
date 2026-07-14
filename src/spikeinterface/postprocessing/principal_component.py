@@ -85,7 +85,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         )
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
 
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
@@ -468,7 +468,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         p = self.params
         unit_ids = self.sorting_analyzer.unit_ids
 
-        # there is one unique PCA accross channels
+        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
@@ -497,7 +497,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         assert self.sorting_analyzer.sparsity is None, "For mode 'concatenated' waveforms need to be dense"
 
-        # there is one unique PCA accross channels
+        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
@@ -619,7 +619,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
-        # usefull only when max_spikes_per_unit is not None
+        # useful only when max_spikes_per_unit is not None
         # waveform will not be extracted and a zeros will be left in the memmap file
         while (spike_times[i0] - nbefore) < 0 and (i0 != i1):
             i0 = i0 + 1

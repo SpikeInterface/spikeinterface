@@ -24,6 +24,7 @@ jobs:
         with:
           python-version: '3.11'
           enable-cache: true
+          ignore-nothing-to-cache: true # some runs do not require building a cache (ie macOS) this says this is okay
       - name: Create the directory to store the data
         run: |
           mkdir -p  ~/spikeinterface_datasets/ephy_testing_data/
