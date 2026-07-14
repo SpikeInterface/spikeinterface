@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.104.1"
+version = "0.105.0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -220,7 +220,7 @@ docs = [
     "MEArec", # Use as an example
     "pandas>=3", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
-    "numba", # For many postprocessing functions
+    "numba>=0.59", # For many postprocessing functions
     "networkx",
     "seaborn",
     "skops", # For automated curation
