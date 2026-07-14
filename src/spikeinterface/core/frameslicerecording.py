@@ -1,3 +1,5 @@
+import numpy as np
+
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
@@ -67,9 +69,10 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         d = parent_recording_segment.get_times_kwargs()
         d = d.copy()
         if d["time_vector"] is None:
+            self.parent_time_vector = None
             d["t_start"] = parent_recording_segment.sample_index_to_time(start_frame)
         else:
-            d["time_vector"] = d["time_vector"][start_frame:end_frame]
+            self.parent_time_vector = d["time_vector"]
         BaseRecordingSegment.__init__(self, **d)
         self._parent_recording_segment = parent_recording_segment
         self.start_frame = start_frame
@@ -85,3 +88,32 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
             start_frame=parent_start, end_frame=parent_end, channel_indices=channel_indices
         )
         return traces
+
+    # Override times methods to avoid materializing the full time vector
+    def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
+        if self.parent_time_vector is not None:
+            # Cache full times as numpy if start_frame and end_frame are None. If the user passes start_frame and
+            # end_frame, we slice the time vector and return the sliced version as numpy array.
+            # This is useful for very long recordings, where the full time vector might be too large to fit in memory.
+            if start_frame is None and end_frame is None:
+                self.time_vector = np.asarray(self.parent_time_vector[self.start_frame : self.end_frame])
+                return self.time_vector
+            else:
+                start_frame = int(start_frame) if start_frame is not None else 0
+                end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+                return np.asarray(self.time_vector[self.parent_time_vector][start_frame:end_frame])
+        else:
+            time_vector = super().get_times(start_frame=start_frame, end_frame=end_frame)
+            return time_vector
+
+    def get_start_time(self) -> float:
+        if self.parent_time_vector is not None:
+            return self.parent_time_vector[self.start_frame]
+        else:
+            return super().get_start_time()
+
+    def get_end_time(self) -> float:
+        if self.parent_time_vector is not None:
+            return self.parent_time_vector[self.end_frame - 1]
+        else:
+            return super().get_end_time()
