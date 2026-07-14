@@ -296,7 +296,7 @@ def test_compute_sparsity():
 
     sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False, return_in_uV=True)
 
-    # Check that we can still pass sparsity kwargs using the old signature
+    # Check that we can still pass sparsity kwargs using the old signature (e.g. passing radius_um)
     with pytest.warns(FutureWarning):
         # radius_um is a sparsity kwarg
         sorting_analyzer_old_kwargs = create_sorting_analyzer(sorting=sorting, recording=recording, radius_um=50)
