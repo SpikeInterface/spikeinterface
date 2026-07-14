@@ -34,8 +34,6 @@ from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .silence_periods import (
     SilencedPeriodsRecording,
     silence_periods,
-    DetectAndSilenceArtifactsRecording,
-    detect_and_silence_artifacts,
 )
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
@@ -78,7 +76,6 @@ _all_preprocesser_dict = {
     DetectAndInterpolateBadChannelsRecording: detect_and_interpolate_bad_channels,
     # artifact/saturation handling
     DetectAndRemoveArtifactsRecording: detect_and_remove_artifacts,
-    DetectAndSilenceArtifactsRecording: detect_and_silence_artifacts,
     # misc
     RectifyRecording: rectify,
     ClipRecording: clip,
