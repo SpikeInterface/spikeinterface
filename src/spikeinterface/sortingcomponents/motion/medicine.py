@@ -67,7 +67,6 @@ class MedicineRegistration:
         ## medicine specific kwargs propagated to the lib
         output_dir=None,
         plot_figures=False,
-        num_depth_bins=None,
         motion_bound=800,
         time_kernel_width=30,
         activity_network_hidden_features=(256, 256),
@@ -79,6 +78,7 @@ class MedicineRegistration:
         optimizer=None,
         learning_rate=0.0005,
         epsilon=1e-3,
+        num_depth_bins=None,
     ):
 
         from medicine import run_medicine
