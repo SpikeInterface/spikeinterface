@@ -148,10 +148,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     file.flush()
 
     if file_timestamps_dict is not None:
-        print(
-            f"Writing timestamps for segment {segment_index} from frame {start_frame} to {end_frame} to file.",
-            flush=True,
-        )
         file_timestamps = file_timestamps_dict[segment_index]
         timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
         timestamps = timestamps.astype("float64", order="c", copy=False)
