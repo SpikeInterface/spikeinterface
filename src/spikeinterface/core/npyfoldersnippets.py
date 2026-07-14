@@ -41,8 +41,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
 
         NpySnippetsExtractor.__init__(self, **d["kwargs"])
 
-        folder_metadata = folder_path
-        load_properties_from_binary_folder(folder_metadata / "properties", self)
+        load_properties_from_binary_folder(folder_path / "properties", self)
 
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]

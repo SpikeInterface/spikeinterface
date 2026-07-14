@@ -481,7 +481,6 @@ class BaseExtractor:
         include_annotations: bool = False,
         include_properties: bool = False,
         relative_to: str | Path | None = None,
-        folder_metadata=None,
         recursive: bool = False,
     ) -> dict:
         """
@@ -509,9 +508,6 @@ class BaseExtractor:
             If provided, file and folder paths will be made relative to this path,
             enabling portability in folder formats such as the waveform extractor,
             by default None.
-        folder_metadata : str | Path | None, default: None
-            Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
-            in numpy `npy` format, by default None.
         recursive : bool, default: False
             If True, recursively apply `to_dict` to dictionaries within the kwargs, by default False.
 
@@ -532,13 +528,11 @@ class BaseExtractor:
                 "relative_paths": <whether paths are relative>,
                 "annotations": <annotations dictionary, if `include_annotations` is True>,
                 "properties": <properties dictionary, if `include_properties` is True>,
-                "folder_metadata": <relative path to folder_metadata, if specified>
             }
 
         Notes
         -----
         - The `relative_to` argument only has an effect if `recursive` is set to True.
-        - The `folder_metadata` argument will be made relative to `relative_to` if both are specified.
         - The `version` field in the resulting dictionary reflects the version of the module
           from which the extractor class originates.
         - The full class attribute above is the full import of the class, e.g.
@@ -557,7 +551,6 @@ class BaseExtractor:
                 include_properties=include_properties,
                 # make_paths_relative() will make the recusrivity later:
                 relative_to=None,
-                folder_metadata=folder_metadata,
                 recursive=recursive,
             )
 
