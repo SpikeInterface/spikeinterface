@@ -104,6 +104,20 @@ def _build_recording_with_probe():
     return rec_with_probe
 
 
+def _build_recording_with_timestamps():
+    rec = _build_mock_recording()
+    times = rec.get_times(segment_index=0) + 100
+    rec.set_times(times, segment_index=0)
+    return rec
+
+
+def _check_recording_with_timestamps(rec):
+    import numpy as np
+    expected_times = np.arange(30000) / 30000.0 + 100
+    times = rec.get_times(segment_index=0)
+    assert np.allclose(times, expected_times)
+
+
 def _check_recording_with_probe(rec):
     import numpy as np
 
@@ -224,6 +238,12 @@ OBJECTS = [
         "id": "recording_with_properties",
         "build": _build_recording_with_properties,
         "check": _check_recording_with_properties,
+        "formats": ["binary", "zarr"],
+    },
+    {
+        "id": "recording_with_timestamps",
+        "build": _build_recording_with_timestamps,
+        "check": _check_recording_with_timestamps,
         "formats": ["binary", "zarr"],
     },
     {
