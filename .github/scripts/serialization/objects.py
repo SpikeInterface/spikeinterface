@@ -29,8 +29,10 @@ FIXTURE_SUFFIX = {
     "json": ".json",
     "pickle": ".pkl",
     "binary": "_binary",
+    "binary_parallel": "_binary_parallel",
     "numpy_folder": "_numpy_folder",
     "zarr": ".zarr",
+    "zarr_parallel": "_parallel.zarr",
 }
 
 
