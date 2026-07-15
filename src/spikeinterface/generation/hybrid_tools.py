@@ -371,7 +371,7 @@ def generate_hybrid_recording(
 
     Returns
     -------
-    recording: BaseRecording
+    recording: InjectDriftingTemplatesRecording
         The generated hybrid recording extractor.
     sorting: Sorting
         The generated sorting extractor for the injected units.
@@ -416,6 +416,9 @@ def generate_hybrid_recording(
     if unit_locations is not None:
         assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
     elif relocate_templates:
+        # propagate the seed so that the hybrid recording is reproducible (unless a seed is
+        # explicitly provided in generate_unit_locations_kwargs)
+        generate_unit_locations_kwargs = {"seed": seed, **generate_unit_locations_kwargs}
         unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
     else:
         # We use the channel locations of the main channels of the templates as source locations for interpolation
