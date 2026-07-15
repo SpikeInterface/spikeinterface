@@ -302,6 +302,7 @@ test-widgets = [
     "scikit-learn",
     "pyvips",
     "networkx",
+    "upsetplot-bombcell",  # pandas>=3 compatible fork used by BombcellUpsetPlotWidget
 ]
 
 test-exporters = [{include-group = "test-common"}]
