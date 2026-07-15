@@ -132,7 +132,7 @@ class CommonReferenceRecording(BasePreprocessor):
                     neighbors_i = closest_inds[i, annulus_mask]
                 else:
                     # Not enough channels in the annulus — take the closest ones beyond the inner radius
-                    not_enough_channels.append(recording.channel_ids[i])
+                    not_enough_channels.append(str(recording.channel_ids[i]))
                     beyond_inner = dist[i, :] > local_radius[0]
                     neighbors_i = closest_inds[i, beyond_inner][:min_local_neighbors]
                 local_kernel[i, neighbors_i] = 1 / len(neighbors_i)
