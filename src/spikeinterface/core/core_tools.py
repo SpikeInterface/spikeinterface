@@ -1,5 +1,6 @@
 from pathlib import Path, WindowsPath
-from collections.abc import Generator
+from collections import namedtuple
+from collections.abc import Generator, Callable
 import os
 import sys
 import datetime
@@ -7,8 +8,8 @@ import json
 from copy import deepcopy
 import importlib
 from math import prod
-from collections import namedtuple
 import inspect
+from typing import TypeVar, ParamSpec
 
 from probeinterface import ProbeGroup
 import numpy as np
@@ -57,7 +58,14 @@ def define_function_handling_dict_from_class(source_class, name):
     return source_class_or_dict_of_sources_classes
 
 
-def define_function_from_class(source_class, name):
+# Generic typing needed to help propagate typing
+# across multiple language servers
+# see https://github.com/SpikeInterface/spikeinterface/issues/4319
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+def define_function_from_class(source_class: Callable[P, T], name: str) -> Callable[P, T]:
     "Wrapper to change the name of a class"
 
     return source_class
@@ -412,7 +420,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
 
@@ -464,7 +472,7 @@ def make_paths_relative(input_dict: dict, relative_folder: str | Path) -> dict:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
 
@@ -499,7 +507,7 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     base_folder: str or Path
         The folder to be relative to.
 
@@ -738,7 +746,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     Parameters
     ----------
     measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
+        Measure memory allocation in the current process only, if false then measures at the system
         level.
     """
     import psutil

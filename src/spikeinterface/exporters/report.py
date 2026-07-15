@@ -36,7 +36,7 @@ def export_report(
     show_figures : bool, default: False
         If True, figures are shown. If False, figures are closed after saving
     force_computation :  bool, default: False
-        Force or not some heavy computaion before exporting
+        Force or not some heavy computation before exporting
     {}
     """
     import pandas as pd
@@ -78,7 +78,7 @@ def export_report(
     else:
         correlograms = None
         warnings.warn(
-            "export_report(): correlograms will not be exported. Use sorting_anlyzer.compute('correlograms') if you want to include them."
+            "export_report(): correlograms will not be exported. Use sorting_analyzer.compute('correlograms') if you want to include them."
         )
 
     # pre-compute unit locations if not done
@@ -96,7 +96,7 @@ def export_report(
     # unit list
     units = pd.DataFrame(index=unit_ids)  #  , columns=['max_on_channel_id', 'amplitude'])
     units.index.name = "unit_id"
-    # max_on_channel_id is kept (oold name)
+    # max_on_channel_id is kept (old name)
     units["max_on_channel_id"] = sorting_analyzer.get_main_channels(outputs="id", with_dict=False)
     units["main_channel_id"] = sorting_analyzer.get_main_channels(outputs="id", with_dict=False)
 

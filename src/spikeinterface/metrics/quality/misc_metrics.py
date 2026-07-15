@@ -657,7 +657,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, periods=None, syn
 
     if synchrony_sizes is not None:
         warning_message = "Custom `synchrony_sizes` is deprecated; the `synchrony_metrics` will be computed using `synchrony_sizes = [2,4,8]`"
-        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
+        warnings.warn(warning_message, FutureWarning, stacklevel=2)
 
     synchrony_sizes = np.array([2, 4, 8])
 
@@ -1649,7 +1649,7 @@ def amplitude_cutoff(
 
         # Find number of missed spikes
         cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
-        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
+        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurrence where pdf was greater than cutoff
         num_missed_spikes = np.sum(pdf[G + 1 :])  # theoretically missing spikes on the left side
 
         # Compute fraction of missed spikes

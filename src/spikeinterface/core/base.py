@@ -694,34 +694,6 @@ class BaseExtractor:
                         return False
         return self._serializability[type]
 
-    def check_if_memory_serializable(self) -> bool:
-        """
-        Check if the object is serializable to memory with pickle, including nested objects.
-
-        Returns
-        -------
-        bool
-            True if the object is memory serializable, False otherwise.
-        """
-        return self.check_serializability("memory")
-
-    def check_if_json_serializable(self) -> bool:
-        """
-        Check if the object is json serializable, including nested objects.
-
-        Returns
-        -------
-        bool
-            True if the object is json serializable, False otherwise.
-        """
-        # we keep this for backward compatilibity or not ????
-        # is this needed ??? I think no.
-        return self.check_serializability("json")
-
-    def check_if_pickle_serializable(self) -> bool:
-        # is this needed ??? I think no.
-        return self.check_serializability("pickle")
-
     @staticmethod
     def _get_file_path(file_path: str | Path, extensions: Sequence) -> Path:
         """
@@ -837,7 +809,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
+        assert self.check_serializability("pickle"), "The extractor is not serializable to file with pickle"
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
@@ -881,10 +853,6 @@ class BaseExtractor:
         instance_constructor = self.from_dict
         intialization_args = (self.to_dict(),)
         return (instance_constructor, intialization_args)
-
-    @staticmethod
-    def load_from_folder(folder) -> "BaseExtractor":
-        return BaseExtractor.load(folder)
 
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting

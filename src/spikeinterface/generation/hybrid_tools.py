@@ -38,7 +38,7 @@ def estimate_templates_from_recording(
     Parameters
     ----------
     recording : BaseRecording
-        The recording to get temaples from.
+        The recording to get templates from.
     ms_before : float
         The time before peaks of templates.
     ms_after : float
@@ -48,7 +48,7 @@ def estimate_templates_from_recording(
     run_sorter_kwargs : dict
         The parameters to provide to the run_sorter function of spikeinterface.
     job_kwargs : dict
-        The jobe keyword arguments to be used in the estimation of the templates.
+        The job keyword arguments to be used in the estimation of the templates.
 
     Returns
     -------
@@ -243,7 +243,7 @@ def relocate_templates(
         If greater than 0, the templates are allowed to go beyond the borders of the probe.
     favor_borders : bool, default: True
         If True, the templates are always moved to the borders of the probe if this is
-        possoble based on the min_displacement and max_displacement constraints.
+        possible based on the min_displacement and max_displacement constraints.
         This avoids a bias in moving templates towards the center of the probe.
     depth_direction : "x" | "y", default: "y"
         The direction in which to move the templates. Can be "x" or "y"
@@ -314,6 +314,7 @@ def generate_hybrid_recording(
     recording: BaseRecording,
     sorting: BaseSorting | None = None,
     templates: Templates | None = None,
+    relocate_templates: bool = True,
     motion: Motion | None = None,
     unit_locations: np.ndarray | None = None,
     drift_step_um: float = 1.0,
@@ -348,8 +349,10 @@ def generate_hybrid_recording(
     motion : Motion | None, default: None
         The motion object to use for the drifting templates.
     unit_locations : np.array, default: None
-        The locations at which the templates should be injected. If not provided, generated (see
-        generate_unit_location_kwargs).
+        The locations at which the templates should be injected. If not provided, they are randomly generated,
+        unless relocate_templates is False. (see `generate_unit_locations_kwargs`).
+    relocate_templates : bool, default: True
+        If True, the templates are relocated across the target probe of the recording.
     drift_step_um : float, default: 1.0
         The step in um to use for the drifting templates.
     amplitude_std : float, default: 0.05
@@ -363,8 +366,8 @@ def generate_hybrid_recording(
         Dict used to generated template when template not provided.
     seed : int or None
         Seed for random initialization.
-        If None a diffrent Recording is generated at every call.
-        Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
+        If None a different Recording is generated at every call.
+        Note: even with None a generated recording keep internally a seed to regenerate the same signal after dump/load.
 
     Returns
     -------
@@ -412,15 +415,23 @@ def generate_hybrid_recording(
     # handle units location
     if unit_locations is not None:
         assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
-    elif unit_locations is None:
+    elif relocate_templates:
         unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
-    # elif:
-    #  TODO get location from the template thenself
+    else:
+        # We use the channel locations of the main channels of the templates as source locations for interpolation
+        main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
+        unit_locations = templates.probe.contact_positions[main_channel_indices]
 
     # handle motion and displacement
     if motion is None:
-        raise NotImplementedError()
-        # TODO make a one bin displacements
+        # make a one bin motion with no displacement
+        displacements = np.zeros((1, 2))
+        motion = Motion(
+            displacement=[np.zeros((2, 1)) for _ in range(num_segments)],
+            temporal_bins_s=[np.array([0, durations[0]]) for _ in range(num_segments)],
+            spatial_bins_um=np.array([0]),
+            direction="y",
+        )
     else:
         assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"
         dim = motion.dim
@@ -437,33 +448,34 @@ def generate_hybrid_recording(
         num_step = max(1, num_step)
         displacements = make_linear_displacement(start, stop, num_step=num_step)
 
-        # calculate displacement vectors for each segment and unit
-        # for each unit, we interpolate the motion at its location
-        displacement_sampling_frequency = 1.0 / np.diff(motion.temporal_bins_s[0])[0]
-        displacement_vectors = []
-        for segment_index in range(motion.num_segments):
-            temporal_bins_segment = motion.temporal_bins_s[segment_index]
-            displacement_vector = np.zeros((len(temporal_bins_segment), 2, num_units))
-            for unit_index in range(num_units):
-                motion_for_unit = motion.get_displacement_at_time_and_depth(
-                    times_s=temporal_bins_segment,
-                    locations_um=unit_locations[unit_index],
-                    segment_index=segment_index,
-                    grid=True,
-                )
-                displacement_vector[:, motion.dim, unit_index] = motion_for_unit[motion.dim, :]
-            displacement_vectors.append(displacement_vector)
-        # since displacement is estimated by interpolation for each unit, the unit factor is an eye
-        displacement_unit_factor = np.eye(num_units)
+    # calculate displacement vectors for each segment and unit
+    # for each unit, we interpolate the motion at its location
+    displacement_sampling_frequency = 1.0 / np.diff(motion.temporal_bins_s[0])[0]
+    displacement_vectors = []
+    for segment_index in range(motion.num_segments):
+        temporal_bins_segment = motion.temporal_bins_s[segment_index]
+        displacement_vector = np.zeros((len(temporal_bins_segment), 2, num_units))
+        for unit_index in range(num_units):
+            motion_for_unit = motion.get_displacement_at_time_and_depth(
+                times_s=temporal_bins_segment,
+                locations_um=unit_locations[unit_index],
+                segment_index=segment_index,
+                grid=True,
+            )
+            displacement_vector[:, motion.dim, unit_index] = motion_for_unit[motion.dim, :]
+        displacement_vectors.append(displacement_vector)
+    # since displacement is estimated by interpolation for each unit, the unit factor is an eye
+    displacement_unit_factor = np.eye(num_units)
 
     # generate synthetic drifting templates or interpolate from the input templates
     if templates is None:
-        drifting_templates = generate_drifting_templates_synthetic(
+        drifting_templates, _ = generate_drifting_templates_synthetic(
             probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed
         )
-
     else:
         if recording.has_scaleable_traces() and templates.is_in_uV:
+            # In this case we "unscale" the templates, so we don't need to scale the recording to uV during injection.
+            templates_array = templates.templates_array
             templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
             # make a copy of the templates and reset templates_array (might have scaled templates)
             templates_ = templates.select_units(templates.unit_ids)

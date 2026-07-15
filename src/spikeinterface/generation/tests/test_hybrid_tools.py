@@ -33,7 +33,7 @@ def test_generate_hybrid_with_sorting():
     assert rec.get_num_frames() == hybrid.get_num_frames()
     assert rec.get_num_segments() == hybrid.get_num_segments()
     assert np.array_equal(rec.get_channel_locations(), hybrid.get_channel_locations())
-    assert sorting_hybrid.get_num_units() == len(hybrid.templates)
+    assert sorting_hybrid.get_num_units() == hybrid.drifting_templates.num_units
 
 
 def test_generate_hybrid_motion():
@@ -65,8 +65,8 @@ def test_generate_hybrid_from_templates():
     )
     nbefore = ms_to_samples(ms_before, rec.sampling_frequency)
     templates = Templates(templates_array, rec.sampling_frequency, nbefore, True, None, None, None, rec.get_probe())
-    hybrid, sorting_hybrid = generate_hybrid_recording(rec, templates=templates, seed=0)
-    assert np.array_equal(hybrid.templates, templates.templates_array)
+    hybrid, sorting_hybrid = generate_hybrid_recording(rec, templates=templates, relocate_templates=False, seed=0)
+    assert np.array_equal(hybrid.drifting_templates.templates_array, templates.templates_array)
     assert rec.get_num_channels() == hybrid.get_num_channels()
     assert rec.get_num_frames() == hybrid.get_num_frames()
     assert rec.get_num_segments() == hybrid.get_num_segments()
