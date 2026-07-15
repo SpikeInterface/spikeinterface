@@ -12,7 +12,13 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe, ProbeGroup, generate_linear_probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load, get_default_zarr_compressor
+from spikeinterface.core import (
+    BinaryRecordingExtractor,
+    NumpyRecording,
+    load,
+    get_default_zarr_compressor,
+    aggregate_channels,
+)
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
@@ -83,6 +89,8 @@ def test_BaseRecording(create_cache_folder):
     assert values.dtype.kind == "i"
 
     times0 = rec.get_times(segment_index=0)
+    times0_slice = rec.get_times(segment_index=0, start_frame=10, end_frame=20)
+    assert np.allclose(times0_slice, times0[10:20])
 
     # dump/load dict
     d = rec.to_dict(include_annotations=True, include_properties=True)
@@ -147,7 +155,7 @@ def test_BaseRecording(create_cache_folder):
     # cache to binary
     folder = cache_folder / "simple_recording"
     rec.save(format="binary", folder=folder)
-    rec2 = BaseExtractor.load_from_folder(folder)
+    rec2 = BaseExtractor.load(folder)
     assert "quality" in rec2.get_property_keys()
     values = rec2.get_property("quality")
     assert values[0] == 1.0
@@ -195,16 +203,21 @@ def test_BaseRecording(create_cache_folder):
     )
     probe.create_auto_shape()
 
-    rec_p = rec.set_probe(probe, group_mode="auto")
-    rec_p = rec.set_probe(probe, group_mode="by_shank")
-    rec_p = rec.set_probe(probe, group_mode="by_probe")
+    rec_p = rec.select_channels_with_probe(probe, group_mode="auto")
+    positions2 = rec_p.get_channel_locations()
+    assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
+
+    rec_p = rec.select_channels_with_probe(probe, group_mode="by_shank")
+    positions2 = rec_p.get_channel_locations()
+    assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
+
+    rec_p = rec.select_channels_with_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
     assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
     probe2 = rec_p.get_probe()
     positions3 = probe2.contact_positions
     assert np.array_equal(positions2, positions3)
-
     assert np.array_equal(probe2.device_channel_indices, [0, 1])
 
     # test save with probe
@@ -241,13 +254,13 @@ def test_BaseRecording(create_cache_folder):
     probe.create_auto_shape()
     traces = np.zeros((1000, 12), dtype="int16")
     rec = NumpyRecording([traces], 30000.0)
-    rec1 = rec.set_probe(probe, group_mode="auto")
+    rec1 = rec.select_channels_with_probe(probe, group_mode="auto")
     assert np.unique(rec1.get_property("group")).size == 4
-    rec2 = rec.set_probe(probe, group_mode="by_probe")
+    rec2 = rec.select_channels_with_probe(probe, group_mode="by_probe")
     assert np.unique(rec2.get_property("group")).size == 1
-    rec3 = rec.set_probe(probe, group_mode="by_shank")
+    rec3 = rec.select_channels_with_probe(probe, group_mode="by_shank")
     assert np.unique(rec3.get_property("group")).size == 2
-    rec4 = rec.set_probe(probe, group_mode="by_side")
+    rec4 = rec.select_channels_with_probe(probe, group_mode="by_side")
     assert np.unique(rec4.get_property("group")).size == 4
 
     # set unconnected probe
@@ -257,7 +270,7 @@ def test_BaseRecording(create_cache_folder):
     probe.set_device_channel_indices([-1, -1, -1])
     probe.create_auto_shape()
 
-    rec_empty_probe = rec.set_probe(probe, group_mode="by_shank")
+    rec_empty_probe = rec.select_channels_with_probe(probe, group_mode="by_shank")
     assert rec_empty_probe.channel_ids.size == 0
 
     # test scaling parameters
@@ -284,8 +297,9 @@ def test_BaseRecording(create_cache_folder):
     rec_int16.set_property("offset_to_uV", [0.0] * 5)
 
     # Test deprecated return_scaled parameter
-    traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
-    assert traces_float32_old.dtype == "float32"
+    with pytest.warns(FutureWarning, match="`return_scaled` is deprecated"):
+        traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
+        assert traces_float32_old.dtype == "float32"
 
     # Test new return_in_uV parameter
     traces_float32_new = rec_int16.get_traces(return_in_uV=True)
@@ -342,7 +356,7 @@ def test_BaseRecording(create_cache_folder):
 
     # test 3d probe
     rec_3d = generate_recording(ndim=3, num_channels=30)
-    locations_3d = rec_3d.get_property("location")
+    locations_3d = rec_3d.get_probe().contact_positions
 
     locations_xy = rec_3d.get_channel_locations(axes="xy")
     assert np.allclose(locations_xy, locations_3d[:, [0, 1]])
@@ -411,40 +425,12 @@ def test_json_pickle_equivalence(create_cache_folder):
 
     for key, value in data_json.items():
         # skip probe info, since pickle keeps some additional information
-        if key not in ["properties"]:
-            if isinstance(value, dict):
+        if key not in ["properties", "probegroup"]:
+            if isinstance(value, dict) and isinstance(data_pickle[key], dict):
                 for sub_key, sub_value in value.items():
                     assert np.all(sub_value == data_pickle[key][sub_key])
             else:
                 assert np.all(value == data_pickle[key])
-
-
-def test_interleaved_probegroups():
-    recording = generate_recording(durations=[1.0], num_channels=16)
-
-    probe1 = generate_linear_probe(num_elec=8, ypitch=20.0)
-    probe2_overlap = probe1.copy()
-
-    probegroup_overlap = ProbeGroup()
-    probegroup_overlap.add_probe(probe1)
-    probegroup_overlap.add_probe(probe2_overlap)
-    probegroup_overlap.set_global_device_channel_indices(np.arange(16))
-
-    # setting overlapping probes should raise an error
-    with pytest.raises(Exception):
-        recording.set_probegroup(probegroup_overlap)
-
-    probe2 = probe1.copy()
-    probe2.move([100.0, 100.0])
-    probegroup = ProbeGroup()
-    probegroup.add_probe(probe1)
-    probegroup.add_probe(probe2)
-    probegroup.set_global_device_channel_indices(np.random.permutation(16))
-
-    recording.set_probegroup(probegroup)
-    probegroup_set = recording.get_probegroup()
-    # check that the probe group is correctly set, by sorting the device channel indices
-    assert np.array_equal(probegroup_set.get_global_device_channel_indices()["device_channel_indices"], np.arange(16))
 
 
 def test_rename_channels():

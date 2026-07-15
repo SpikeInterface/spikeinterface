@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
-from .chunkable import ChunkableSegment, ChunkableMixin
+from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
 
 
-class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
+class BaseRecording(BaseRecordingSnippets, TimeSeries):
     """
     Abstract class representing several a multichannel timeseries (or block of raw ephys traces).
     Internally handle list of RecordingSegment
@@ -20,7 +20,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
     _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
     _main_properties = [
         "group",
-        "location",
         "gain_to_uV",
         "offset_to_uV",
         "gain_to_physical_unit",
@@ -172,6 +171,11 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         """List of recording segments."""
         return self._segments
 
+    @property
+    def _recording_segments(self) -> list["BaseRecordingSegment"]:
+        """For backward compatibility, we keep _recording_segments."""
+        return self._segments
+
     def add_recording_segment(self, recording_segment: "BaseRecordingSegment") -> None:
         """Adds a recording segment.
 
@@ -182,9 +186,15 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         """
         super().add_segment(recording_segment)
 
-    def get_sample_size_in_bytes(self):
+    def get_sample_size_in_bytes(self, dtype=None):
         """
         Returns the size of a single sample across all channels in bytes.
+
+        Parameters
+        ----------
+        dtype : data-type, optional
+            The data type to use for calculating the sample size. If None,
+            the recording's dtype is used.
 
         Returns
         -------
@@ -192,7 +202,8 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             The size of a single sample in bytes
         """
         num_channels = self.get_num_channels()
-        dtype_size_bytes = self.get_dtype().itemsize
+        dtype = self.get_dtype() if dtype is None else np.dtype(dtype)
+        dtype_size_bytes = dtype.itemsize
         sample_size = num_channels * dtype_size_bytes
         return sample_size
 
@@ -274,7 +285,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -282,7 +293,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
-                    # here we do not truely have scale but we assume this is scaled
+                    # here we do not truly have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass
                 else:
@@ -300,7 +311,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
 
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         """
-        General retrieval function for chunkable objects
+        General retrieval function for time_series objects
         """
         return self.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame, **kwargs)
 
@@ -311,7 +322,9 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
-            from .chunkable_tools import write_binary
+            from .time_series_tools import write_binary
+            from .binaryrecordingextractor import BinaryRecordingExtractor
+            from .binaryfolder import BinaryFolderRecording
 
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
@@ -319,8 +332,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
             t_starts = self._get_t_starts()
 
             write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
-
-            from .binaryrecordingextractor import BinaryRecordingExtractor
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
@@ -339,9 +350,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
                 offset_to_uV=self.get_channel_offsets(),
             )
             binary_rec.dump(folder / "binary.json", relative_to=folder)
-
-            from .binaryfolder import BinaryFolderRecording
-
             cached = BinaryFolderRecording(folder_path=folder)
 
             # timestamps are not saved in binary, so we have to set them explicitly
@@ -377,7 +385,6 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
                 self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
             )
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
-
             # timestamps are saved and restored in zarr, so no need to set them explicitly
 
         elif format == "nwb":
@@ -387,31 +394,21 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
-
         return cached
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
-        folder = Path(folder)
-        if (folder / "probe.json").is_file():
-            probegroup = read_probeinterface(folder / "probe.json")
-            self.set_probegroup(probegroup, in_place=True)
+        super()._extra_metadata_from_folder(folder)
 
         # load time vector if any
         for segment_index, rs in enumerate(self.segments):
             time_file = folder / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
-                time_vector = np.load(time_file)
+                time_vector = np.load(time_file, mmap_mode="r")
                 rs.time_vector = time_vector
 
     def _extra_metadata_to_folder(self, folder):
-        # save probe
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            write_probeinterface(folder / "probe.json", probegroup)
+        super()._extra_metadata_to_folder(folder)
 
         # save time vector if any
         for segment_index, rs in enumerate(self.segments):
@@ -637,7 +634,7 @@ class BaseRecording(BaseRecordingSnippets, ChunkableMixin):
         return astype(self, dtype=dtype, round=round)
 
 
-class BaseRecordingSegment(ChunkableSegment):
+class BaseRecordingSegment(TimeSeriesSegment):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
@@ -672,6 +669,6 @@ class BaseRecordingSegment(ChunkableSegment):
         self, start_frame: int, end_frame: int, indices: list | np.ndarray | tuple | None = None
     ) -> np.ndarray:
         """
-        General retrieval function for chunkable objects
+        General retrieval function for time_series objects
         """
         return self.get_traces(start_frame=start_frame, end_frame=end_frame, channel_indices=indices)

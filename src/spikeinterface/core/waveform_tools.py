@@ -17,7 +17,7 @@ import numpy as np
 from spikeinterface.core.baserecording import BaseRecording
 
 from .baserecording import BaseRecording
-from .job_tools import ChunkExecutor, _shared_job_kwargs_doc
+from .job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
 from .job_tools import fix_job_kwargs
 
@@ -43,9 +43,9 @@ def extract_waveforms_to_buffers(
     Same as calling allocate_waveforms_buffers() and then distribute_waveforms_to_buffers().
 
     Important note: for the "shared_memory" mode arrays_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
     And this variable is also returned.
-    To avoid this a copy to non shared memmory can be perform at the end.
+    To avoid this a copy to non shared memory can be perform at the end.
 
     Parameters
     ----------
@@ -93,7 +93,7 @@ def extract_waveforms_to_buffers(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -150,7 +150,7 @@ def allocate_waveforms_buffers(
     Allocate memmap or shared memory buffers before snippet extraction.
 
     Important note: for the shared memory mode arrays_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
 
     Parameters
     ----------
@@ -242,7 +242,7 @@ def distribute_waveforms_to_buffers(
     Buffers must be pre-allocated with the `allocate_waveforms_buffers()` function.
 
     Important note, for "shared_memory" mode arrays_info contain reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
 
     Parameters
     ----------
@@ -294,14 +294,16 @@ def distribute_waveforms_to_buffers(
     )
     if job_name is None:
         job_name = f"extract waveforms {mode} multi buffer"
-    processor = ChunkExecutor(recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs)
+    processor = TimeSeriesChunkExecutor(
+        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+    )
     processor.run()
 
 
 distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 
-# used by ChunkExecutor
+# used by TimeSeriesChunkExecutor
 def _init_worker_distribute_buffers(
     recording, unit_ids, spikes, arrays_info, nbefore, nafter, return_in_uV, inds_by_unit, mode, sparsity_mask
 ):
@@ -348,7 +350,7 @@ def _init_worker_distribute_buffers(
     return worker_dict
 
 
-# used by ChunkExecutor
+# used by TimeSeriesChunkExecutor
 def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -444,9 +446,9 @@ def extract_waveforms_to_single_buffer(
     This ensures that spikes.shape[0] == all_waveforms.shape[0].
 
     Important note: for the "shared_memory" mode wf_array_info contains reference to
-    the shared memmory buffer, this variable must be referenced as long as arrays is used.
+    the shared memory buffer, this variable must be referenced as long as arrays is used.
     This variable must also unlink() when the array is de-referenced.
-    To avoid this complicated behavior, default: (copy=True) the shared memmory buffer is copied into a standard
+    To avoid this complicated behavior, default: (copy=True) the shared memory buffer is copied into a standard
     numpy array.
 
 
@@ -500,7 +502,7 @@ def extract_waveforms_to_single_buffer(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -561,7 +563,7 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkExecutor(
+        processor = TimeSeriesChunkExecutor(
             recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
         )
         processor.run()
@@ -618,7 +620,7 @@ def _init_worker_distribute_single_buffer(
     return worker_dict
 
 
-# used by ChunkExecutor
+# used by TimeSeriesChunkExecutor
 def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]
@@ -794,7 +796,7 @@ def estimate_templates(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -900,7 +902,7 @@ def estimate_templates_with_accumulator(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -946,7 +948,7 @@ def estimate_templates_with_accumulator(
 
     if job_name is None:
         job_name = "estimate_templates_with_accumulator"
-    processor = ChunkExecutor(
+    processor = TimeSeriesChunkExecutor(
         recording, func, init_func, init_args, job_name=job_name, verbose=verbose, need_worker_index=True, **job_kwargs
     )
     processor.run()
@@ -1033,7 +1035,7 @@ def _init_worker_estimate_templates(
     return worker_dict
 
 
-# used by ChunkExecutor
+# used by TimeSeriesChunkExecutor
 def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dict):
     # recover variables of the worker
     recording = worker_dict["recording"]

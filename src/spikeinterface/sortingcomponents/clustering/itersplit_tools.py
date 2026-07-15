@@ -1,9 +1,8 @@
 import warnings
-
+import importlib.util
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
-
 
 import numpy as np
 
@@ -11,11 +10,11 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
 
-try:
+if importlib.util.find_spec("numba") is not None:
     import numba
-
-except:
-    pass  # isocut requires numba
+else:
+    pass
+# isocut requires numba
 
 # important all DEBUG and matplotlib are left in the code intentionally
 
@@ -189,7 +188,7 @@ class LocalFeatureClustering:
        * "herding_split()" in DART/spikepsvae by Charlie Windolf
 
     The idea simple :
-     * agregate features (svd or even waveforms) with sparse channel.
+     * aggregate features (svd or even waveforms) with sparse channel.
      * run a local feature reduction (pca or svd)
      * try a new split (hdscan or isosplit)
     """

@@ -1,21 +1,35 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from bisect import bisect_right
+from typing import Optional, TYPE_CHECKING, TypeAlias
 import warnings
 
 import numpy as np
 
 from spikeinterface.core.base import BaseExtractor, BaseSegment
 
+if TYPE_CHECKING:
+    import zarr
 
-class ChunkableMixin(ABC):
+# A recording segment's time vector: a 1-D array of per-sample times (in seconds).
+# The backing store depends on how the recording was created/loaded:
+#   - np.ndarray : set_times() (writeable, in-memory)
+#   - np.memmap  : BinaryFolderRecording load via np.load(..., mmap_mode="r")
+#                  -- *read-only* ; see BaseRecording._extra_metadata_from_folder
+#   - zarr.Array : ZarrRecordingExtractor load
+#                  -- *read-only* ; see ZarrRecordingExtractor.__init__
+# Code reading `.time_vector` must not assume it is writeable (see `shift_times`).
+TimeVector: TypeAlias = "np.ndarray | zarr.Array"  # np.memmap is an np.ndarray subclass
+
+
+class TimeSeries(ABC):
     """
-    Abstract mixin class for chunkable objects. Note that the mixin can only be used
-    for classes that inherit from BaseExtractor.
-    Provides methods to handle chunked data access, that can be used for parallelization.
-    In addition, since chunkable objects are continuous data, time handling methods are provided.
+    Abstract base class for time series extractors: continuous data sampled along a time axis
+    that supports chunked access for parallelization. The class can only be used by extractors
+    that inherit from BaseExtractor.
 
-    The Mixin is abstract since all methods need to be implemented in the child class in order
-    for it to function properly.
+    Provides the chunking contract (``get_data``, ``get_shape``, ``get_sample_size_in_bytes``,
+    memory-size helpers, multiprocessing hints) and time-handling methods built on top of it.
+    All abstract methods must be implemented in the child class.
     """
 
     _preferred_mp_context = None
@@ -23,7 +37,7 @@ class ChunkableMixin(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not issubclass(cls, BaseExtractor):
-            raise TypeError(f"{cls.__name__} must inherit from BaseExtractor to use Chunkable mixin.")
+            raise TypeError(f"{cls.__name__} must inherit from BaseExtractor to use TimeSeries.")
 
     @abstractmethod
     def get_sampling_frequency(self) -> float:
@@ -34,7 +48,7 @@ class ChunkableMixin(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_sample_size_in_bytes(self) -> int:
+    def get_sample_size_in_bytes(self, dtype=None) -> int:
         raise NotImplementedError
 
     @abstractmethod
@@ -45,13 +59,13 @@ class ChunkableMixin(ABC):
     def get_data(self, start_frame: int, end_frame: int, segment_index: int | None = None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
-    def _extra_copy_metadata(self, other: "ChunkableMixin", **kwargs) -> None:
+    def _extra_copy_metadata(self, other: "TimeSeries", **kwargs) -> None:
         """
-        Copy metadata from another Chunkable object.
+        Copy metadata from another TimeSeries object.
 
         Parameters
         ----------
-        other : ChunkableMixin
+        other : TimeSeries
             The object from which to copy metadata.
         """
         # inherit preferred mp context if any
@@ -146,8 +160,8 @@ class ChunkableMixin(ABC):
 
         Returns
         -------
-        np.array
-            The 1d times array
+        np.ndarray
+            The 1d times array. If the times were mem-mapped, loads them into memory.
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
@@ -211,8 +225,9 @@ class ChunkableMixin(ABC):
 
         Parameters
         ----------
-        times : 1d np.array
-            The time vector
+        times : 1d array-like
+            The time vector. Lazy/read-only input (e.g. memmap or zarr.Array) is loaded
+            into memory and cast to float64 before being stored on the segment.
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
         with_warning : bool, default: True
@@ -273,7 +288,12 @@ class ChunkableMixin(ABC):
             rs = self.segments[segment_index]
 
             if self.has_time_vector(segment_index=segment_index):
-                rs.time_vector += shift
+                if isinstance(rs.time_vector, np.ndarray) and rs.time_vector.flags.writeable:
+                    # If this is an in-memory numpy array
+                    rs.time_vector += shift  # in-place, no copy
+                else:
+                    # If this is a read-only memmap or zarr.Array
+                    rs.time_vector = np.asarray(rs.time_vector) + shift
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
                 rs.t_start = new_start_time
@@ -362,10 +382,42 @@ class ChunkableMixin(ABC):
         return time_vectors
 
 
-class ChunkableSegment(BaseSegment):
-    """Class for chunkable segments, which provide methods to handle time kwargs."""
+def _searchsorted_right_lazy(time_vector: TimeVector, time_s: float | np.ndarray) -> np.int64 | np.ndarray:
+    """``np.searchsorted(time_vector, time_s, side="right")`` without materializing
+    the whole ``time_vector``.
 
-    def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
+    ``np.searchsorted`` is fine for mem-maps, but for out-of-core arrays (zarr) it reads
+    the whole time vector (even if a ``zarr.Array``) into memory. Bisecting instead reads
+    O(log N) elements, which saves an order of magnitude of RAM for long recordings.
+
+    ``time_s`` may be a scalar or a 1-D array; the return shape matches it.
+    """
+    if np.ndim(time_s) == 0:
+        return np.int64(bisect_right(time_vector, time_s))
+    return np.array([bisect_right(time_vector, t) for t in time_s], dtype=np.int64)
+
+
+class TimeSeriesSegment(BaseSegment):
+    """Per-segment time-series class. Provides time handling methods (sample/time conversion,
+    start/end time, time vectors) on top of ``BaseSegment``."""
+
+    def __init__(
+        self,
+        sampling_frequency: float | None = None,
+        t_start: float | None = None,
+        time_vector: "TimeVector | None" = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        sampling_frequency : float | None, default: None
+            Sampling frequency in Hz. Mutually exclusive with `time_vector`.
+        t_start : float | None, default: None
+            Start time (s) used when times are regular (no `time_vector`).
+        time_vector : TimeVector | None, default: None
+            Explicit per-sample times. May be a writeable np.ndarray, a read-only
+            np.memmap, or a lazy zarr.Array.
+        """
         # sampling_frequency and time_vector are exclusive
         if sampling_frequency is None:
             assert time_vector is not None, "Pass either 'sampling_frequency' or 'time_vector'"
@@ -376,19 +428,25 @@ class ChunkableSegment(BaseSegment):
 
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start
-        self.time_vector = time_vector
+        self.time_vector: "TimeVector | None" = time_vector
 
         BaseSegment.__init__(self)
 
     def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
-        if start_frame is None:
-            start_frame = 0
-        if end_frame is None:
-            end_frame = self.get_num_samples()
         if self.time_vector is not None:
-            self.time_vector = np.asarray(self.time_vector)
-            return self.time_vector[start_frame:end_frame]
+            # Cache full times as numpy if start_frame and end_frame are None. If the user passes start_frame and
+            # end_frame, we slice the time vector and return the sliced version as numpy array.
+            # This is useful for very long recordings, where the full time vector might be too large to fit in memory.
+            if start_frame is None and end_frame is None:
+                self.time_vector = np.asarray(self.time_vector)
+                return self.time_vector
+            else:
+                start_frame = int(start_frame) if start_frame is not None else 0
+                end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+                return np.asarray(self.time_vector[start_frame:end_frame])
         else:
+            start_frame = int(start_frame) if start_frame is not None else 0
+            end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
             time_vector = np.arange(start_frame, end_frame, dtype="float64")
             time_vector /= self.sampling_frequency
             if self.t_start is not None:
@@ -454,8 +512,12 @@ class ChunkableSegment(BaseSegment):
             else:
                 sample_index = (time_s - self.t_start) * self.sampling_frequency
             sample_index = np.round(sample_index).astype(np.int64)
-        else:
+        elif isinstance(self.time_vector, np.ndarray):
+            # in-memory or memmap: np.searchsorted reads elements lazily for a memmap
             sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
+        else:
+            # out-of-core (zarr): bisect so the whole vector isn't loaded into RAM
+            sample_index = _searchsorted_right_lazy(self.time_vector, time_s) - 1
 
         return sample_index
 

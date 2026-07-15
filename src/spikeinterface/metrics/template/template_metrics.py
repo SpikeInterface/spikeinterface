@@ -3,7 +3,7 @@ import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array
+from spikeinterface.core.template_tools import get_dense_templates_array
 
 from .metrics import (
     get_trough_and_peak_idx,
@@ -33,7 +33,7 @@ def get_template_metric_names():
     warnings.warn(
         "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
         "Please use get_template_metric_list instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_template_metric_list()
@@ -68,8 +68,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
     metric_params : dict of dicts or None, default: None
         Dictionary with parameters for template metrics calculation.
         Default parameters can be obtained with: `si.metrics.template_metrics.get_default_template_metrics_params()`
-    peak_sign : {"neg", "pos", "both"}, default: "both"
-        Whether to use the positive ("pos"), negative ("neg"), or both ("both") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
     include_multi_channel_metrics : bool, default: False
@@ -169,6 +167,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             if "waveform_ratios" not in self.params["metric_names"]:
                 self.params["metric_names"].append("waveform_ratios")
 
+        # removal of peak_sign from metrics - was only ever a "global" param
+        if "peak_sign" in self.params:
+            del self.params["peak_sign"]
+
         # If original analyzer doesn't have "peaks_data" or "main_channel_templates",
         # then we can't save this tmp data (important for merges/splits)
         if "peaks_data" not in self.data:
@@ -182,7 +184,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         metrics_to_compute: list[str] | None = None,
         periods=None,
         # common extension kwargs
-        peak_sign="both",
         template_operator="average",
         upsampling_factor=10,
         include_multi_channel_metrics=False,
@@ -201,9 +202,10 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         if include_multi_channel_metrics or (
             metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
         ):
-            assert (
-                self.sorting_analyzer.get_channel_locations().shape[1] == 2
-            ), "If multi-channel metrics are computed, channel locations must be 2D."
+            if self.sorting_analyzer.get_channel_locations().shape[1] == 3:
+                warnings.warn(
+                    "Multi-channel metrics assume 2D channel locations. We will assume the first two dimensions are the physically relevant ones"
+                )
 
         if metric_names is None:
             metric_names = get_single_channel_template_metric_names()
@@ -216,7 +218,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
             periods=periods,  # template metrics do not use periods
-            peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
             template_operator=template_operator,
             include_multi_channel_metrics=include_multi_channel_metrics,
@@ -237,7 +238,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
-        peak_sign = self.params["peak_sign"]
         upsampling_factor = self.params["upsampling_factor"]
         min_thresh_detect_peaks_troughs = self.params.get("min_thresh_detect_peaks_troughs", 0.3)
         edge_exclusion_ms = self.params.get("edge_exclusion_ms", 0.09)
@@ -254,13 +254,14 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             m in get_multi_channel_template_metric_names() for m in self.params["metrics_to_compute"]
         )
 
-        operator = self.params.get("template_operator", "average")
-        extremum_channel_indices = get_template_extremum_channel(
-            sorting_analyzer, peak_sign=peak_sign, outputs="index", operator=operator
-        )
+        extremum_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+
+        operator = self.params["template_operator"]
         all_templates = get_dense_templates_array(sorting_analyzer, return_in_uV=True, operator=operator)
 
-        channel_locations = sorting_analyzer.get_channel_locations()
+        analyzer_channel_locations = sorting_analyzer.get_channel_locations()
+        # the template metrics only work for 2D probes. We warn users with 3D locations above.
+        channel_locations = analyzer_channel_locations[:, :2]
 
         main_channel_templates = []
         peaks_info = []
@@ -368,7 +369,7 @@ def get_default_tm_params(metric_names=None):
     warnings.warn(
         "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
         "Please use get_default_template_metrics_params instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_default_template_metrics_params(metric_names)

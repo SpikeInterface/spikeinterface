@@ -13,6 +13,10 @@ class BaseSorting(BaseExtractor):
     Abstract class representing several segment several units and relative spiketrains.
     """
 
+    _main_properties = [
+        "main_channel_id",
+    ]
+
     def __init__(self, sampling_frequency: float, unit_ids: list):
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = float(sampling_frequency)
@@ -63,6 +67,11 @@ class BaseSorting(BaseExtractor):
     @property
     def segments(self) -> list["BaseSortingSegment"]:
         """List of sorting segments."""
+        return self._segments
+
+    @property
+    def _sorting_segments(self) -> list["BaseSortingSegment"]:
+        """For backward compatibility, we keep _sorting_segments."""
         return self._segments
 
     @property
@@ -161,6 +170,8 @@ class BaseSorting(BaseExtractor):
             per unit and per segment compact in memory.
             Using the cache makes the first call quite slow but then future calls are very fast.
 
+        Note: if use_cache=False, but the lexsorted cache is already computed then it will be used anyway.
+
         Returns
         -------
         spike_train : np.ndarray
@@ -183,9 +194,14 @@ class BaseSorting(BaseExtractor):
             )
 
         segment_index = self._check_segment_index(segment_index)
+
+        lexsort_key = ("sample_index", "segment_index", "unit_index")
+        if lexsort_key in self._cached_lexsorted_spike_vector.keys():
+            use_cache = True
+
         if use_cache:
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
-                lexsort=("sample_index", "segment_index", "unit_index"),
+                lexsort=lexsort_key,
                 return_order=False,
                 return_slices=True,
             )
@@ -273,9 +289,18 @@ class BaseSorting(BaseExtractor):
 
         # Use the native spiking times if available
         # Some instances might implement a method themselves to access spike times directly without having to convert
-        # (e.g. NWB extractors)
+        # (e.g. NWB extractors). The native times already include the extractor's `_native_t_start`,
+        # so we apply only the shift (`_t_start - _native_t_start`) on top.
         if hasattr(segment, "get_unit_spike_train_in_seconds"):
-            return segment.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
+            spike_times = segment.get_unit_spike_train_in_seconds(
+                unit_id=unit_id, start_time=start_time, end_time=end_time
+            )
+            t_start = segment._t_start if segment._t_start is not None else 0
+            native_t_start = segment._native_t_start if segment._native_t_start is not None else 0
+            shift = t_start - native_t_start
+            if shift != 0:
+                spike_times = spike_times + shift
+            return spike_times
 
         # If no recording attached and all back to frame-based conversion
         # Get spike train in frames and convert to times using traditional method
@@ -322,6 +347,15 @@ class BaseSorting(BaseExtractor):
                     "Might be necessary for further postprocessing."
                 )
         self._recording = recording
+        # Copy the recording's start times into the sorting segments. This way,
+        # the sorting preserves the start time even if the recording is later
+        # detached (e.g. analyzer saved and reloaded without the recording).
+        # Also update `_native_t_start` so any subsequent `shift_times` call measures
+        # its delta from the recording's start time (not the extractor's original value).
+        for segment_index, segment in enumerate(self.segments):
+            start_time = recording.get_start_time(segment_index=segment_index)
+            segment._t_start = start_time
+            segment._native_t_start = start_time
 
     @property
     def sorting_info(self):
@@ -347,7 +381,102 @@ class BaseSorting(BaseExtractor):
         else:
             return False
 
-    def get_times(self, segment_index=None):
+    def get_start_time(self, segment_index: int | None = None) -> float:
+        """Get the start time of the sorting segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The start time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        return segment._t_start if segment._t_start is not None else 0.0
+
+    def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
+        """
+        Shift all times by a scalar value.
+
+        This modifies the sorting's own time offset without touching the registered
+        recording. When a recording is registered, the shift is applied on top of
+        the recording's time basis when resolving timestamps.
+
+        Parameters
+        ----------
+        shift : int | float
+            The shift to apply. If positive, times will be increased by `shift`.
+            If negative, times will be decreased.
+        segment_index : int | None
+            The segment on which to shift the times.
+            If `None`, all segments will be shifted.
+        """
+        if segment_index is None:
+            segments_to_shift = range(self.get_num_segments())
+        else:
+            segments_to_shift = (segment_index,)
+
+        for segment_index in segments_to_shift:
+            segment = self.segments[segment_index]
+            segment._t_start = (segment._t_start if segment._t_start is not None else 0) + shift
+
+    def get_end_time(self, segment_index: int | None = None) -> float:
+        """Get the end time of the sorting segment.
+
+        If a recording is registered, returns the recording's end time (plus any
+        shift applied via `shift_times`). Otherwise returns the time of the last
+        spike in the segment.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The end time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        if self.has_recording():
+            segment = self.segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            return self._recording.get_end_time(segment_index=segment_index) + shift
+        else:
+            last_spike_frame = self.get_last_spike_frame(segment_index=segment_index)
+            return self.sample_index_to_time(last_spike_frame, segment_index=segment_index)
+
+    def get_last_spike_frame(self, segment_index: int | None = None) -> int:
+        """Get the frame index of the last spike in a segment across all units.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        int
+            The frame index of the last spike, or 0 if no spikes exist.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        spike_vector = self.to_spike_vector(concatenated=False)
+        spikes_in_segment = spike_vector[segment_index]
+        if len(spikes_in_segment) == 0:
+            return 0
+        return int(np.max(spikes_in_segment["sample_index"]))
+
+    def get_times(
+        self,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+    ):
         """
         Get time vector for a registered recording segment.
 
@@ -355,11 +484,19 @@ class BaseSorting(BaseExtractor):
             * if the segment has a time_vector, then it is returned
             * if not, a time_vector is constructed on the fly with sampling frequency
 
+        Any shift applied via `shift_times` is added to the returned times.
+
         If there is no registered recording it returns None
         """
         segment_index = self._check_segment_index(segment_index)
         if self.has_recording():
-            return self._recording.get_times(segment_index=segment_index)
+            times = self._recording.get_times(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
+            segment = self.segments[segment_index]
+            t_start = segment._t_start if segment._t_start is not None else 0
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            if shift != 0:
+                times = times + shift
+            return times
         else:
             return None
 
@@ -701,11 +838,13 @@ class BaseSorting(BaseExtractor):
         """
         Transform time in seconds into sample index
         """
+        segment = self.segments[segment_index]
+        t_start = segment._t_start if segment._t_start is not None else 0
         if self.has_recording():
-            sample_index = self._recording.time_to_sample_index(time, segment_index=segment_index)
+            # Subtract the sorting's shift (relative to the recording's start) before delegating
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            sample_index = self._recording.time_to_sample_index(time - shift, segment_index=segment_index)
         else:
-            segment = self.segments[segment_index]
-            t_start = segment._t_start if segment._t_start is not None else 0
             sample_index = round((time - t_start) * self.get_sampling_frequency())
 
         return sample_index
@@ -717,11 +856,13 @@ class BaseSorting(BaseExtractor):
         Transform sample index into time in seconds
         """
         segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        t_start = segment._t_start if segment._t_start is not None else 0
         if self.has_recording():
-            return self._recording.sample_index_to_time(sample_index, segment_index=segment_index)
+            # Add the sorting's shift (relative to the recording's start) after delegating
+            shift = t_start - self._recording.get_start_time(segment_index=segment_index)
+            return self._recording.sample_index_to_time(sample_index, segment_index=segment_index) + shift
         else:
-            segment = self.segments[segment_index]
-            t_start = segment._t_start if segment._t_start is not None else 0
             return (sample_index / self.get_sampling_frequency()) + t_start
 
     def precompute_spike_trains(self):
@@ -763,6 +904,12 @@ class BaseSorting(BaseExtractor):
             if len(sample_indices) > 0:
                 sample_indices = np.concatenate(sample_indices, dtype="int64")
                 unit_indices = np.concatenate(unit_indices, dtype="int64")
+                # here, a sort by indices with stable=True is equivalent to
+                # np.lexsort((unit_indices, sample_indices))
+                # because we construct by looping on unit_ids
+                order = np.argsort(sample_indices, stable=True)
+                sample_indices = sample_indices[order]
+                unit_indices = unit_indices[order]
                 n = sample_indices.size
                 segment_slices[segment_index, 0] = seg_pos
                 segment_slices[segment_index, 1] = seg_pos + n
@@ -778,7 +925,8 @@ class BaseSorting(BaseExtractor):
             spikes.append(spikes_in_seg)
 
         spikes = np.concatenate(spikes)
-        spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+        # the spikes are not lexsorted here because the previous loop ensure that the spike vector is constructucted alway the same way.
+        # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = segment_slices
@@ -787,6 +935,7 @@ class BaseSorting(BaseExtractor):
         self,
         concatenated=True,
         extremum_channel_inds=None,
+        main_channel_indices=None,
         use_cache=True,
         return_slices=False,
     ) -> np.ndarray | list[np.ndarray]:
@@ -801,40 +950,43 @@ class BaseSorting(BaseExtractor):
             With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
         extremum_channel_inds : None or dict, default: None
-            If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
-            This can be convinient for computing spikes postion after sorter.
-            This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
+            This is deprecated. Used main_channel_indices instead.
+        main_channel_indices: None or array
+            Give optionally the main_channel_indices vector to add an extra field "channel_index".
+            This can be convenient for computing spikes position after sorter.
+            This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=False)
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
-            This caching only occurs when extremum_channel_inds=None.
+            This caching only occurs when main_channel_indices=None.
 
         Returns
         -------
         spikes : np.array
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
-            Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
+            Or ("sample_index", "unit_index", "segment_index", "channel_index") if main_channel_indices
             is given
 
         """
 
-        spike_dtype = minimum_spike_dtype
-        if extremum_channel_inds is not None:
-            spike_dtype = spike_dtype + [("channel_index", "int64")]
-            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
-
         if self._cached_spike_vector is None:
             self._compute_and_cache_spike_vector()
 
-        # the cache already exists
-        if extremum_channel_inds is None:
+        if extremum_channel_inds is not None:
+            warnings.warn(
+                "Sorting.to_spike_vector() with extremum_channel_inds is deprecated. "
+                "Use main_channel_indices instead"
+                "This will be removed in 0.016.0"
+            )
+            main_channel_indices = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+
+        if main_channel_indices is None:
             spikes = self._cached_spike_vector
         else:
+            spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
-            spikes["sample_index"] = self._cached_spike_vector["sample_index"]
-            spikes["unit_index"] = self._cached_spike_vector["unit_index"]
-            spikes["segment_index"] = self._cached_spike_vector["segment_index"]
-            if extremum_channel_inds is not None:
-                spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
+            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
+
+            spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
 
         if not concatenated:
             segment_slices = self._get_spike_vector_segment_slices()
@@ -1032,7 +1184,7 @@ class BaseSorting(BaseExtractor):
     def to_shared_memory_sorting(self):
         """
         Turn any sorting in a SharedMemorySorting.
-        Usefull to have it in memory with a unique vector representation and sharable across processes.
+        Useful to have it in memory with a unique vector representation and sharable across processes.
         """
         from .numpyextractors import SharedMemorySorting
 
@@ -1079,6 +1231,11 @@ class BaseSortingSegment(BaseSegment):
 
     def __init__(self, t_start=None):
         self._t_start = t_start
+        # Immutable reference to the start time as set by the extractor at init.
+        # Used to compute the user-applied shift as `_t_start - _native_t_start`,
+        # so `shift_times` can correctly propagate through extractors that return
+        # native absolute times (e.g. NWB) without double-counting the extractor's offset.
+        self._native_t_start = t_start
         BaseSegment.__init__(self)
 
     def get_unit_spike_train(

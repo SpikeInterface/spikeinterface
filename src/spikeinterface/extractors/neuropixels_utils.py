@@ -53,6 +53,43 @@ def get_neuropixels_sample_shifts_from_probe(probe: Probe) -> np.ndarray:
     return sample_shifts
 
 
+def compute_saturation_threshold_from_probe(probe: Probe, stream_name: str) -> float:
+    """
+    Compute the saturation threshold in microvolts for a Neuropixels probe based on the probe information.
+
+    Parameters
+    ----------
+    probe : Probe
+        The probe object containing channel and ADC information.
+    stream_name : str
+        The name of the stream. If it contains "lf" (or "LF"), the function will look for the
+        lf gain and saturation in the probe annotations.
+
+    Returns
+    -------
+    saturation_threshold_uV : float
+        The saturation threshold in microvolts, or None if it cannot be computed.
+    """
+    adc_range_vpp = probe.annotations.get("adc_range_vpp", None)
+    gain = None
+    if "lf" in stream_name.lower():
+        gain = probe.annotations.get("lf_gain", None)
+    else:
+        gain = probe.annotations.get("ap_gain", None)
+
+    if adc_range_vpp is not None and gain is not None:
+        saturation_threshold_uV = (adc_range_vpp / 2) / gain * 1e6
+        return saturation_threshold_uV
+
+    warnings.warn(
+        "Unable to compute saturation threshold from the Neuropixels probe metadata. "
+        "The saturation threshold will not be loaded. ",
+        UserWarning,
+        stacklevel=2,
+    )
+    return None
+
+
 def synchronize_neuropixel_streams(recording_ref, recording_other):
     """
     Use the last "sync" channel from spikeglx or openephys neuropixels to synchronize

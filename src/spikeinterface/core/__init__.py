@@ -44,8 +44,7 @@ from .generate import (
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
     generate_templates,
-    NoiseGeneratorRecording,
-    noise_generator_recording,
+    MockRecording,
     generate_recording_by_size,
     InjectTemplatesRecording,
     inject_templates,
@@ -83,6 +82,7 @@ from .globals import (
     get_global_job_kwargs,
     set_global_job_kwargs,
     reset_global_job_kwargs,
+    is_set_global_job_kwargs_set,
 )
 
 # tools
@@ -96,12 +96,14 @@ from .job_tools import (
     get_best_job_kwargs,
     ensure_n_jobs,
     ensure_chunk_size,
-    ChunkExecutor,
+    TimeSeriesChunkExecutor,
     split_job_kwargs,
     fix_job_kwargs,
 )
 from .recording_tools import (
     write_binary_recording,
+    write_memory_recording,
+    write_recording_to_zarr,
     write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,
@@ -164,9 +166,12 @@ from .sortinganalyzer import (
 # template tools
 from .template_tools import (
     get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
+    get_template_peak_shift_on_main_channel,
+    get_template_amplitude_on_main_channel,
+    # this is not needed anymore
+    get_template_extremum_channel,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_channel_peak_shift,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_amplitude,  # keep for backward compatibility can be removed in 0.106
 )
 
 
@@ -190,3 +195,25 @@ from .waveforms_extractor_backwards_compatibility import (
     load_waveforms,
     load_sorting_analyzer_or_waveforms,
 )
+
+
+def __getattr__(name):
+    if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
+        import warnings
+
+        warnings.warn(
+            f"Importing {name} from spikeinterface.core is deprecated. "
+            f"Import from spikeinterface.generation instead: "
+            f"`from spikeinterface.generation import {name}`. "
+            f"This will be removed in version 0.106.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from spikeinterface.generation.noise_tools import NoiseGeneratorRecording, noise_generator_recording
+
+        _map = {
+            "NoiseGeneratorRecording": NoiseGeneratorRecording,
+            "noise_generator_recording": noise_generator_recording,
+        }
+        return _map[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

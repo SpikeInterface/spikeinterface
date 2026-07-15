@@ -3,6 +3,8 @@ import numpy as np
 from pathlib import Path
 from packaging.version import parse
 from warnings import warn
+import importlib.util
+import importlib.metadata
 
 import probeinterface
 from spikeinterface import generate_recording, append_recordings
@@ -11,16 +13,19 @@ from spikeinterface.preprocessing import depth_order, zscore
 from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
 from spikeinterface.preprocessing.deepinterpolation.train import train_deepinterpolation_process
 
-try:
-    import tensorflow
-    import deepinterpolation
+tensorflow_spec = importlib.util.find_spec("tensorflow")
+deepinter_spec = importlib.util.find_spec("deepinterpolation")
 
-    if parse(deepinterpolation.__version__) >= parse("0.2.0"):
-        HAVE_DEEPINTERPOLATION = True
+if tensorflow_spec is not None:
+    if deepinter_spec is not None:
+        if parse(importlib.metadata.version("deepinterpolation")) >= parse("0.2.0"):
+            HAVE_DEEPINTERPOLATION = True
+        else:
+            warn("DeepInterpolation version >=0.2.0 is required for the tests. Skipping...")
+            HAVE_DEEPINTERPOLATION = False
     else:
-        warn("DeepInterpolation version >=0.2.0 is required for the tests. Skipping...")
         HAVE_DEEPINTERPOLATION = False
-except ImportError:
+else:
     HAVE_DEEPINTERPOLATION = False
 
 
@@ -30,7 +35,7 @@ def recording_and_shape():
     probe = probeinterface.generate_multi_columns_probe(num_columns=num_cols, num_contact_per_column=num_rows)
     probe.set_device_channel_indices(np.arange(num_cols * num_rows))
     recording = generate_recording(num_channels=num_cols * num_rows, durations=[10.0], sampling_frequency=30000)
-    recording.set_probe(probe, in_place=True)
+    recording.set_probe(probe)
     recording = depth_order(recording)
     recording = zscore(recording)
     desired_shape = (num_rows, num_cols)
