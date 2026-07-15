@@ -21,7 +21,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
     _main_annotations = BaseRecordingSnippets._main_annotations + ["is_filtered"]
     _main_properties = [
         "group",
-        "location",
         "gain_to_uV",
         "offset_to_uV",
         "gain_to_physical_unit",
@@ -322,7 +321,7 @@ filters_by_dataset: dict | None, default: None
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -330,7 +329,7 @@ filters_by_dataset: dict | None, default: None
         if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
-                    # here we do not truely have scale but we assume this is scaled
+                    # here we do not truly have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass
                 else:
@@ -360,6 +359,8 @@ filters_by_dataset: dict | None, default: None
 
         if format == "binary":
             from .time_series_tools import write_binary
+            from .binaryrecordingextractor import BinaryRecordingExtractor
+            from .binaryfolder import BinaryFolderRecording
 
             folder = kwargs["folder"]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
@@ -367,8 +368,6 @@ filters_by_dataset: dict | None, default: None
             t_starts = self._get_t_starts()
 
             write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
-
-            from .binaryrecordingextractor import BinaryRecordingExtractor
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
@@ -387,9 +386,6 @@ filters_by_dataset: dict | None, default: None
                 offset_to_uV=self.get_channel_offsets(),
             )
             binary_rec.dump(folder / "binary.json", relative_to=folder)
-
-            from .binaryfolder import BinaryFolderRecording
-
             cached = BinaryFolderRecording(folder_path=folder)
 
             # timestamps are not saved in binary, so we have to set them explicitly
@@ -425,7 +421,6 @@ filters_by_dataset: dict | None, default: None
                 self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
             )
             cached = ZarrRecordingExtractor(zarr_path, storage_options)
-
             # timestamps are saved and restored in zarr, so no need to set them explicitly
 
         elif format == "nwb":
@@ -435,18 +430,11 @@ filters_by_dataset: dict | None, default: None
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
-
         return cached
 
     def _extra_metadata_from_folder(self, folder):
         # load probe
-        folder = Path(folder)
-        if (folder / "probe.json").is_file():
-            probegroup = read_probeinterface(folder / "probe.json")
-            self.set_probegroup(probegroup, in_place=True)
+        super()._extra_metadata_from_folder(folder)
 
         # load time vector if any
         for segment_index, rs in enumerate(self.segments):
@@ -456,10 +444,7 @@ filters_by_dataset: dict | None, default: None
                 rs.time_vector = time_vector
 
     def _extra_metadata_to_folder(self, folder):
-        # save probe
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            write_probeinterface(folder / "probe.json", probegroup)
+        super()._extra_metadata_to_folder(folder)
 
         # save time vector if any
         for segment_index, rs in enumerate(self.segments):

@@ -228,3 +228,7 @@ def test_remote_analyzer():
         "quality_metrics",
     ]:
         assert ext in analyzer.get_saved_extension_names()
+
+
+if __name__ == "__main__":
+    test_remote_analyzer()

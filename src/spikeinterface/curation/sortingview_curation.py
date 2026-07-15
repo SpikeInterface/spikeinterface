@@ -1,9 +1,9 @@
 import warnings
-
 import json
-import warnings
-import numpy as np
 from pathlib import Path
+import importlib.util
+
+import numpy as np
 
 from .curation_format import (
     apply_curation,
@@ -13,21 +13,20 @@ from .curation_model import Curation, Merge
 
 
 def get_kachery():
-    try:
+    if importlib.util.find_spec("kachery") is not None:
         import kachery as ka
 
         return ka
-    except ImportError:
-        try:
-            import kachery_cloud as kcl
+    elif importlib.util.find_spec("kachery_cloud") is not None:
+        import kachery_cloud as kcl
 
-            warnings.warn("kachery-cloud is deprecated, use kachery instead", DeprecationWarning, stacklevel=2)
-            return kcl
-        except ImportError:
-            raise ImportError(
-                "To apply a SortingView manual curation, you need to have kachery installed:\n"
-                ">>> pip install kachery\n(kachery-cloud is also supported, but deprecated)"
-            )
+        warnings.warn("kachery-cloud is deprecated, use kachery instead", FutureWarning, stacklevel=2)
+        return kcl
+    else:
+        raise ImportError(
+            "To apply a SortingView manual curation, you need to have kachery installed:\n"
+            ">>> pip install kachery\n(kachery-cloud is also supported, but deprecated)"
+        )
 
 
 def apply_sortingview_curation(
@@ -64,7 +63,7 @@ def apply_sortingview_curation(
     """
 
     if verbose is not None:
-        warnings.warn("versobe in apply_sortingview_curation() is deprecated")
+        warnings.warn("verbose in apply_sortingview_curation() is deprecated")
 
     # download
     if Path(uri_or_json).suffix == ".json" and not str(uri_or_json).startswith("gh://"):
