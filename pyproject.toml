@@ -27,7 +27,9 @@ dependencies = [
     "zarr>=3,<4",
     # for release we need pypi, so this needs to be commented
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # for testing we need probeinterface Zarr v3 branch, so this needs to be commented
+    #"probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "probeinterface @ git+https://github.com/alejoe91/probeinterface.git@zarrv3",
     # "neo>=0.14.4",
     # "probeinterface>=0.3.2",
     "packaging",
@@ -227,7 +229,7 @@ docs = [
     "MEArec", # Use as an example
     "pandas<3", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
-    "numba", # For many postprocessing functions
+    "numba>=0.59", # For many postprocessing functions
     "networkx",
     "seaborn",
     "skops", # For automated curation
