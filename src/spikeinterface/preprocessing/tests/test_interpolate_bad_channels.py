@@ -156,7 +156,7 @@ def test_output_values():
     """
     Quick sanity check that the outputs are as expected. Settings all
     channels equally apart, the interpolated channel should be a linear
-    combination of the non-bad channels, using arbitary sigma_um and p.
+    combination of the non-bad channels, using arbitrary sigma_um and p.
 
     Then, set the final channel to twice as far away as the rest of the
     other channels. Calculate the expected weights and check they

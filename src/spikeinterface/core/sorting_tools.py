@@ -57,7 +57,7 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
     Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
     spike indices by segment and units.
 
-    This is usefull to split back other unique vector like "spike_amplitudes", "spike_locations" into dict of dict
+    This is useful to split back other unique vector like "spike_amplitudes", "spike_locations" into dict of dict
     Internally calls numba if numba is installed.
 
     Parameters
@@ -116,9 +116,9 @@ def get_numba_vector_to_list_of_spiketrain():
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):
         return get_numba_vector_to_list_of_spiketrain._cached_numba_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def vector_to_list_of_spiketrain_numba(sample_indices, unit_indices, num_units):
         """
         Fast implementation of vector_to_dict using numba loop.
@@ -188,7 +188,7 @@ def random_spikes_selection(
     Returns
     -------
     random_spikes_indices: np.array
-        Selected spike indices coresponding to the sorting spike vector.
+        Selected spike indices corresponding to the sorting spike vector.
     """
     rng_methods = ("uniform", "percentage", "maximum_rate")
 

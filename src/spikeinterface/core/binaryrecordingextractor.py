@@ -62,18 +62,12 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
-        num_chan=None,
     ):
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
         else:
             assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
-
-        # DO NOT DELETE! This is for backward compatibility
-        if num_chan is not None:
-            assert num_channels is None, "When both num_channels and num_chan are provided, num_channels is used"
-            num_channels = num_chan
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -122,6 +116,15 @@ class BinaryRecordingExtractor(BaseRecording):
             "offset_to_uV": offset_to_uV,
             "is_filtered": is_filtered,
         }
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "num_chan" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["num_channels"] = new_kwargs.pop("num_chan")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
     @staticmethod
     def write_recording(recording, file_paths, dtype=None, **job_kwargs):

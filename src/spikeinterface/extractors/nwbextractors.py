@@ -422,12 +422,56 @@ class _NWBReader:
     def _read_column(self, table, name, indices=None):
         # Materialize a table column to numpy (h5py only fancy-indexes increasing, GH-4619), optionally
         # reorder to `indices`, and decode HDF5 byte-strings once on behalf of every caller.
-        values = np.asarray(table[name][:])
+        column = table[name]
+        # A DynamicTableRegion column (e.g. IBL's `max_electrode`) holds a per-row index into another
+        # table. On the pynwb path `column[:]` resolves the region into a DataFrame of the referenced
+        # rows, so read the raw per-row indices (`column.data`) instead. The raw hdf5/zarr dataset is
+        # already those indices, so nothing is unwrapped there. This keeps every backend returning the
+        # same plain array. The pynwb-only import is safe here: this branch runs only when
+        # reading_method is "use_pynwb", where pynwb (and hdmf) are present.
+        if self.reading_method == "use_pynwb":
+            from hdmf.common import DynamicTableRegion
+
+            if isinstance(column, DynamicTableRegion):
+                column = column.data
+        values = np.asarray(column[:])
         if indices is not None:
             values = values[indices]
         if values.dtype.kind in ("S", "O"):
             values = np.array([v.decode("utf-8") if isinstance(v, bytes) else v for v in values])
         return values
+
+    def _read_table_property(self, table, name, columns, indices=None):
+        # Load one DynamicTable column as a per-row property, or return None if it cannot be one.
+        # Scalar columns are read directly (and optionally reordered to `indices`). Ragged columns
+        # (those with a `<name>_index`) are decided from their index alone.
+        #
+        # Performance, read the (tiny) index before the (potentially huge) data. Whether a ragged
+        # column can be a per-row property is fully determined by its index: unequal per-row lengths
+        # cannot stack into a per-row array, and a ragged column cannot be reordered to a channel
+        # subset. So we inspect the index first and, when the column is unusable, return None WITHOUT
+        # ever reading its data. This matters because ragged columns are frequently per-spike, e.g. a
+        # Units table's spike amplitudes or spike depths, which are as long as the whole spike vector
+        # (tens of millions of values, hundreds of MB), while the index is only `num_rows` values. The
+        # old code read the full data and then discarded it after finding the shapes unequal. On local
+        # disk that waste is nearly invisible; over a network file (remfile / streaming from DANDI) it
+        # is severe, because each of those columns becomes many range requests for bytes we throw away.
+        # For a typical IBL session this avoided reading ~330 MB (two ~20M-long per-spike columns) that
+        # were only ever skipped. Do not reorder this to read `data` before checking the index.
+        index_name = f"{name}_index"
+        if index_name not in columns:
+            return self._read_column(table, name, indices)
+
+        index = table[index_name]
+        index = index.data[:] if hasattr(index, "data") else index[:]
+        if indices is not None or np.unique(np.diff(index, prepend=0)).size != 1:
+            return None
+        data = table[name]
+        if hasattr(data, "data"):  # pynwb resolves the ragged structure when sliced
+            return data[:]
+        data = np.asarray(data[:])
+        starts = np.concatenate([[0], index[:-1]])
+        return [data[start:end] for start, end in zip(starts, index)]
 
     def close(self):
         # Release the open handle (raw hdf5 / zarr store, or the pynwb read IO).
@@ -559,15 +603,74 @@ class _NWBReader:
             return {column.name: column for column in self.units_table.columns}["spike_times_index"].data
         return self.units_table["spike_times_index"]
 
-    def rate_and_t_start_from_electrical_series(self, samples_for_rate_estimation):
-        # Locate the ElectricalSeries the sorting came from and read its rate / t_start.
+    def _sampling_frequency_from_units_metadata(self):
+        # The Units.resolution attribute documents the precision of the spike times, typically
+        # 1 / sampling_rate (in seconds). When present it lets a units-only file (one with no
+        # ElectricalSeries) report a sampling frequency. It is spike-native, so it is preferred over
+        # the ElectricalSeries rate, which may belong to a series the sorting was not computed from.
+        # pynwb exposes it as Units.resolution; the raw hdf5 / zarr layout stores it as an attribute
+        # of the spike_times dataset.
+        if self.reading_method == "use_pynwb":
+            resolution = getattr(self.units_table, "resolution", None)
+        else:
+            resolution = self.units_table["spike_times"].attrs.get("resolution", None)
+        if resolution is None:
+            return None
+        resolution = float(resolution)
+        if not np.isfinite(resolution) or resolution <= 0:
+            return None
+        return 1.0 / resolution
+
+    def _has_electrical_series(self):
+        # Whether the file contains any ElectricalSeries at all. Used to decide, for a sorting, whether
+        # there is a recording to align to: if there is none, t_start has no origin and defaults to 0.
+        if self.reading_method == "use_pynwb":
+            from pynwb.ecephys import ElectricalSeries
+
+            electrical_series = [item for item in self.nwbfile.all_children() if isinstance(item, ElectricalSeries)]
+        else:
+            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
+            electrical_series = _find_neurodata_type_from_backend(
+                self.file, neurodata_type="ElectricalSeries", backend=backend
+            )
+        file_has_electrical_series = len(electrical_series) > 0
+        return file_has_electrical_series
+
+    def _fetch_unit_properties(self):
+        # Return the unit-table columns as a name -> per-unit values mapping in a backend-independent
+        # format. Skips id / spike-time columns, index columns, nested ragged arrays, and ragged
+        # columns whose per-unit shapes are unequal. The last are detected from the (small) index
+        # alone, so their (potentially large, e.g. per-spike) data is never read.
+        columns = self.units_column_names
+
+        properties_to_skip = ["spike_times", "spike_times_index", "unit_name", "id"]
+        index_columns = [name for name in columns if name.endswith("_index")]
+        nested_ragged_array_properties = [name for name in columns if f"{name}_index_index" in columns]
+        skip_properties = properties_to_skip + index_columns + nested_ragged_array_properties
+        properties_to_add = [name for name in columns if name not in skip_properties]
+
+        properties = dict()
+        for property_name in properties_to_add:
+            values = self._read_table_property(self.units_table, property_name, columns)
+            # A None result is a ragged column with a variable length per unit (typically per-spike
+            # data such as spike amplitudes): not a per-unit property, so it is skipped and its data is
+            # never read. No warning is emitted, this is expected for normal files and there is nothing
+            # for the user to act on.
+            if values is not None:
+                properties[property_name] = values
+
+        return properties
+
+    def fetch_time_info_from_electrical_series(self, samples_for_rate_estimation):
+        # Locate the ElectricalSeries the sorting came from and read its rate, t_start, and timestamps
+        # (timestamps is None for a rate-based series, else the per-sample time vector).
         if self.reading_method == "use_pynwb":
             self.series = _retrieve_electrical_series_pynwb(self.nwbfile, self.electrical_series_path)
         else:
             backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
             self.series = self._locate_electrical_series(backend)
-        sampling_frequency, t_start, _ = self.time_info(samples_for_rate_estimation)
-        return sampling_frequency, t_start
+        sampling_frequency, t_start, timestamps = self.time_info(samples_for_rate_estimation)
+        return sampling_frequency, t_start, timestamps
 
     # --- generic TimeSeries (time-series recording) --------------------------------------------
     def load_timeseries(
@@ -659,7 +762,9 @@ class _NWBReader:
 
     def read_electrode_property(self, name):
         # An electrode property is one electrodes-table column, reordered to this series' channels.
-        return self._read_column(self.electrodes_table, name, self.electrodes_indices)
+        # Ragged electrode columns cannot be per-channel scalars, so they are skipped (None returned)
+        # without their data being read.
+        return self._read_table_property(self.electrodes_table, name, self.column_names, self.electrodes_indices)
 
     def _read_ids(self):
         if self.reading_method == "use_pynwb":
@@ -956,8 +1061,11 @@ class NwbRecordingExtractor(BaseRecording):
             for column in self._reader.column_names:
                 if column in columns_mapped_to_core_fields:
                     continue
+                values = self._reader.read_electrode_property(column)
+                if values is None:  # ragged electrode column, not a per-channel property
+                    continue
                 property_name = "brain_area" if column == "location" else column
-                self.set_property(property_name, self._reader.read_electrode_property(column))
+                self.set_property(property_name, values)
 
         if stream_mode is None and file_path is not None:
             file_path = str(Path(file_path).resolve())
@@ -1087,9 +1195,14 @@ class NwbSortingExtractor(BaseSorting):
     file_path : str or Path
         Path to NWB file.
     electrical_series_path : str or None, default: None
-        The name of the ElectricalSeries (if multiple ElectricalSeries are present).
+        Path of the ElectricalSeries to read the time base (`sampling_frequency` and `t_start`) from.
+        When given, it is the sole source of the time base and cannot be combined with an explicit
+        `sampling_frequency` or `t_start` (passing both raises). When omitted, the time base must be
+        provided directly (see `t_start` / `sampling_frequency`); no ElectricalSeries is auto-selected.
+        See Notes.
     sampling_frequency : float or None, default: None
-        The sampling frequency in Hz (required if no ElectricalSeries is available).
+        The sampling frequency in Hz. If None, it is read from the named ElectricalSeries, or (when no
+        ElectricalSeries is named) from the Units table ``resolution`` attribute. See Notes.
     unit_table_path : str or None, default: "units"
         The path of the unit table in the NWB file.
     samples_for_rate_estimation : int, default: 100000
@@ -1102,18 +1215,12 @@ class NwbSortingExtractor(BaseSorting):
     load_unit_properties : bool, default: True
         If True, all the unit properties are loaded from the NWB file and stored as properties.
     t_start : float or None, default: None
-        This is the time at which the corresponding ElectricalSeries start. NWB stores its spikes as times
-        and the `t_start` is used to convert the times to seconds. Concrently, the returned frames are computed as:
-
-        ``frames = (times - t_start) * sampling_frequency``
-
-        As SpikeInterface always considers the first frame to be at the beginning of the recording independently
-        of the `t_start`.
-
-        When a `t_start` is not provided it will be inferred from the corresponding ElectricalSeries with name equal
-        to `electrical_series_path`. The `t_start` then will be either the `ElectricalSeries.starting_time` or the
-        first timestamp in the `ElectricalSeries.timestamps`.
-
+        Time (in seconds, on the NWB session clock) of the recording's first sample. NWB stores spikes
+        as times; frames are computed as ``frames = (times - t_start) * sampling_frequency``. The first
+        frame is always the start of the recording, independent of `t_start`. If None: it is read from
+        the named ElectricalSeries; else, when the file contains an ElectricalSeries that was not named,
+        it must be provided (an error is raised otherwise); else, when the file has no ElectricalSeries,
+        it defaults to 0. See Notes.
     cache : bool, default: False
         If True, the file is cached in the file passed to stream_cache_path
         if False, the file is not cached.
@@ -1128,6 +1235,38 @@ class NwbSortingExtractor(BaseSorting):
     -------
     sorting : NwbSortingExtractor
         The sorting extractor for the NWB file.
+
+    Notes
+    -----
+    A `Units` table stores spikes as times in seconds, so the sorting needs a time base
+    (`sampling_frequency` and `t_start`) to convert them to samples. There are two mutually exclusive
+    ways to supply it: name an ElectricalSeries with `electrical_series_path` (which yields both values
+    and cannot be combined with an explicit `sampling_frequency` or `t_start`), or provide the time base
+    directly. No ElectricalSeries is consulted unless it is named. The time base is resolved as follows::
+
+        You provide                                   sampling_frequency            t_start
+        --------------------------------------------  ----------------------------  --------------------------
+        electrical_series_path (only)                 from that ElectricalSeries    from that ElectricalSeries
+        electrical_series_path AND sampling_frequency raises (mutually exclusive)   raises (mutually exclusive)
+          or t_start
+        t_start (no electrical_series_path)           argument or Units.resolution  argument
+                                                      (raises if neither)
+        no t_start, file HAS an ElectricalSeries      n/a                           raises (name it or pass
+          (and no electrical_series_path)                                             t_start)
+        no t_start, file has NO ElectricalSeries      argument or Units.resolution  defaults to 0
+                                                      (raises if neither)
+
+    Justification:
+
+    - No ElectricalSeries is auto-selected: the one present in a file is not necessarily the one the
+      sorting was computed from (for example an LFP series next to a full-band sorting), so it is used
+      only when named.
+    - `t_start` only anchors the frame grid; the spike times in seconds are preserved regardless. When
+      the file has no recording to align to, it defaults to 0. When a recording is present but not
+      named, defaulting would silently mis-anchor spikes against a real recording, so it must be given.
+    - `sampling_frequency` may be omitted when the Units table has a `resolution` attribute (read as
+      1 / resolution, which is spike-native). It has no other safe default (a wrong rate is a scale
+      error that corrupts every frame), so it is required otherwise.
 
     """
 
@@ -1155,7 +1294,7 @@ class NwbSortingExtractor(BaseSorting):
         self.electrical_series_path = electrical_series_path
         self.file_path = file_path
         self.t_start = t_start
-        self.provided_or_electrical_series_sampling_frequency = sampling_frequency
+        self.provided_sampling_frequency = sampling_frequency
         self.storage_options = storage_options
 
         if use_pynwb and not HAVE_PYNWB:
@@ -1180,45 +1319,78 @@ class NwbSortingExtractor(BaseSorting):
         )
         self.units_table = self._reader.units_table
 
-        # A sorting needs a sampling_frequency and t_start; when not provided, take them from the
-        # ElectricalSeries the sorting was computed from.
-        if self.provided_or_electrical_series_sampling_frequency is None or self.t_start is None:
-            series_sampling_frequency, series_t_start = self._reader.rate_and_t_start_from_electrical_series(
+        # Resolve the time base (sampling_frequency, t_start). See the class docstring for the full
+        # contract. There are two ways to supply it: name an ElectricalSeries via electrical_series_path
+        # (which yields both values), or provide it directly. No ElectricalSeries is ever consulted
+        # unless it is named, because the ElectricalSeries in a file is not necessarily the one the
+        # sorting was computed from.
+
+        # First, look for any ElectricalSeries in the file.
+        file_has_electrical_series = self._reader._has_electrical_series()
+        electrical_series_path_is_provided = electrical_series_path is not None
+        sampling_frequency_is_provided = self.provided_sampling_frequency is not None
+        t_start_is_provided = self.t_start is not None
+        sampling_frequency = self.provided_sampling_frequency
+        # Per-sample timestamps of an irregular clock; used to map spikes to samples via searchsorted.
+        time_vector = None
+
+        if electrical_series_path_is_provided:
+            # The named ElectricalSeries is the sole source of the time base; it is not combined with an
+            # explicit sampling_frequency or t_start.
+            if sampling_frequency_is_provided or t_start_is_provided:
+                raise ValueError(
+                    "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and "
+                    "'t_start'), not both."
+                )
+            # A timestamps-based ElectricalSeries has an irregular clock: keep its timestamps (as a lazy
+            # handle) so spikes map to samples exactly (searchsorted) rather than via the estimated rate.
+            # A rate-based series returns timestamps None and stays on the linear path.
+            sampling_frequency, self.t_start, time_vector = self._reader.fetch_time_info_from_electrical_series(
                 samples_for_rate_estimation
             )
-            if self.provided_or_electrical_series_sampling_frequency is None:
-                self.provided_or_electrical_series_sampling_frequency = series_sampling_frequency
-            if self.t_start is None:
-                self.t_start = series_t_start
-        assert (
-            self.provided_or_electrical_series_sampling_frequency is not None
-        ), "Couldn't load sampling frequency. Please provide it with the 'sampling_frequency' argument"
-        assert (
-            self.t_start is not None
-        ), "Couldn't load a starting time for the sorting. Please provide it with the 't_start' argument"
+        else:
+            # No ElectricalSeries named. An unnamed recording is ambiguous (it may not be the one the
+            # sorting was computed from), so t_start must be given explicitly. With no recording in the
+            # file, anchor the frame grid at 0 (the spike times in seconds are preserved regardless).
+            unnamed_recording_needs_t_start = file_has_electrical_series and not t_start_is_provided
+            if unnamed_recording_needs_t_start:
+                raise ValueError(
+                    "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
+                    "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
+                )
+
+            no_recording_to_align_to = not file_has_electrical_series and not t_start_is_provided
+            if no_recording_to_align_to:
+                self.t_start = 0.0
+
+            # sampling_frequency: the argument, or the Units.resolution attribute.
+            if sampling_frequency is None:
+                sampling_frequency = self._reader._sampling_frequency_from_units_metadata()
+            if sampling_frequency is None:
+                raise ValueError(
+                    "Couldn't determine the sampling frequency. Provide it with the 'sampling_frequency' "
+                    "argument, set the Units table 'resolution' attribute, or pass 'electrical_series_path'."
+                )
 
         unit_ids = self._reader.unit_ids()
         spike_times_data = self._reader.spike_times()
         spike_times_index_data = self._reader.spike_times_index()
 
-        BaseSorting.__init__(
-            self, sampling_frequency=self.provided_or_electrical_series_sampling_frequency, unit_ids=unit_ids
-        )
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
         sorting_segment = NwbSortingSegment(
             spike_times_data=spike_times_data,
             spike_times_index_data=spike_times_index_data,
             sampling_frequency=self.sampling_frequency,
             t_start=self.t_start,
+            time_vector=time_vector,
         )
         self.add_sorting_segment(sorting_segment)
 
         # fetch and add sorting properties
         if load_unit_properties:
-            properties = self._fetch_properties(self._reader.units_column_names)
-            for property_name, property_values in properties.items():
-                values = [x.decode("utf-8") if isinstance(x, bytes) else x for x in property_values]
-                self.set_property(property_name, values)
+            for property_name, property_values in self._reader._fetch_unit_properties().items():
+                self.set_property(property_name, property_values)
 
         if reading_method == "use_pynwb":
             self.extra_requirements.append("pynwb")
@@ -1254,51 +1426,6 @@ class NwbSortingExtractor(BaseSorting):
             "t_start": self.t_start,
         }
 
-    def _fetch_properties(self, columns):
-        units_table = self.units_table
-
-        properties_to_skip = ["spike_times", "spike_times_index", "unit_name", "id"]
-        index_columns = [name for name in columns if name.endswith("_index")]
-        nested_ragged_array_properties = [name for name in columns if f"{name}_index_index" in columns]
-
-        # Filter those properties that are nested ragged arrays
-        skip_properties = properties_to_skip + index_columns + nested_ragged_array_properties
-        properties_to_add = [name for name in columns if name not in skip_properties]
-
-        properties = dict()
-        for property_name in properties_to_add:
-            data = units_table[property_name][:]
-            corresponding_index_name = f"{property_name}_index"
-            not_ragged_array = corresponding_index_name not in columns
-            if not_ragged_array:
-                values = data[:]
-            else:  # TODO if we want we could make this recursive to handle nested ragged arrays
-                data_index = units_table[corresponding_index_name]
-                if hasattr(data_index, "data"):
-                    # for pynwb we need to get the data from the data attribute
-                    data_index = data_index.data[:]
-                else:
-                    data_index = data_index[:]
-                index_spacing = np.diff(data_index, prepend=0)
-                all_index_spacing_are_the_same = np.unique(index_spacing).size == 1
-                if all_index_spacing_are_the_same:
-                    if hasattr(units_table[corresponding_index_name], "data"):
-                        # ragged array indexing is handled by pynwb
-                        values = data
-                    else:
-                        # ravel array based on data_index
-                        start_indices = [0] + list(data_index[:-1])
-                        end_indices = list(data_index)
-                        values = [
-                            data[start_index:end_index] for start_index, end_index in zip(start_indices, end_indices)
-                        ]
-                else:
-                    warnings.warn(f"Skipping {property_name} because of unequal shapes across units")
-                    continue
-            properties[property_name] = values
-
-        return properties
-
     @staticmethod
     def fetch_available_units_tables(
         file_path: str | Path,
@@ -1326,13 +1453,20 @@ class NwbSortingExtractor(BaseSorting):
 
 
 class NwbSortingSegment(BaseSortingSegment):
-    def __init__(self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float):
+    def __init__(
+        self, spike_times_data, spike_times_index_data, sampling_frequency: float, t_start: float, time_vector=None
+    ):
         BaseSortingSegment.__init__(self, t_start=t_start)
         self.spike_times_data = spike_times_data
         self.spike_times_index_data = spike_times_index_data
-        self.spike_times_data = spike_times_data
-        self.spike_times_index_data = spike_times_index_data
         self._sampling_frequency = sampling_frequency
+        # Per-sample timestamps for an irregular clock, else None (uniform clock -> linear mapping).
+        self._time_vector = time_vector
+
+    def _frame_to_time(self, frame):
+        if self._time_vector is not None:
+            return self._time_vector[frame]
+        return frame / self._sampling_frequency + self._t_start
 
     def get_unit_spike_train(
         self,
@@ -1340,21 +1474,22 @@ class NwbSortingSegment(BaseSortingSegment):
         start_frame: Optional[int] = None,
         end_frame: Optional[int] = None,
     ) -> np.ndarray:
-        # Convert frame boundaries to time boundaries
-        start_time = None
-        end_time = None
-
-        if start_frame is not None:
-            start_time = start_frame / self._sampling_frequency + self._t_start
-
-        if end_frame is not None:
-            end_time = end_frame / self._sampling_frequency + self._t_start
+        # Convert frame boundaries to time boundaries (via the time vector when the clock is irregular)
+        start_time = None if start_frame is None else self._frame_to_time(start_frame)
+        end_time = None if end_frame is None else self._frame_to_time(end_frame)
 
         # Get spike times in seconds
         spike_times = self.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
 
-        # Convert to frames
-        frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
+        # Map seconds to samples. An irregular clock (per-sample timestamps) maps exactly with a
+        # searchsorted into the time vector; a uniform clock uses frame = (t - t_start) * sampling_frequency.
+        if self._time_vector is not None:
+            # searchsorted needs the timestamps in memory: materialize them once, on first use, and cache.
+            if not isinstance(self._time_vector, np.ndarray):
+                self._time_vector = np.asarray(self._time_vector)
+            frames = np.searchsorted(self._time_vector, spike_times, side="right") - 1
+        else:
+            frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
         return frames.astype("int64", copy=False)
 
     def get_unit_spike_train_in_seconds(

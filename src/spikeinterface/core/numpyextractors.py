@@ -119,7 +119,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
 class SharedMemoryRecording(BaseRecording):
     """
-    In memory recording with shared memmory buffer.
+    In memory recording with shared memory buffer.
 
     Parameters
     ----------

@@ -41,6 +41,21 @@ def test_scale():
     rec2.get_traces(segment_index=0)
 
 
+def test_scale_offset_precision_with_integer_dtype():
+    # ScaleRecording must apply a fractional offset at float precision even when
+    # the output dtype is integer, instead of truncating the offset itself first.
+    from spikeinterface.core import NumpyRecording
+
+    traces = np.array([[2.0], [1.0], [1.5]], dtype="float32")
+    rec = NumpyRecording([traces], sampling_frequency=1.0)
+
+    rec2 = scale(rec, gain=1.0, offset=-0.75, dtype="int16")
+    result = rec2.get_traces(segment_index=0)
+
+    expected = np.round(traces - 0.75).astype("int16")
+    np.testing.assert_array_equal(result, expected)
+
+
 def test_center():
     rec = generate_recording()
 

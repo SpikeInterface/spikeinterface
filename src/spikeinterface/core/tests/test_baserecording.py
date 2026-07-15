@@ -155,7 +155,7 @@ def test_BaseRecording(create_cache_folder):
     # cache to binary
     folder = cache_folder / "simple_recording"
     rec.save(format="binary", folder=folder)
-    rec2 = BaseExtractor.load_from_folder(folder)
+    rec2 = BaseExtractor.load(folder)
     assert "quality" in rec2.get_property_keys()
     values = rec2.get_property("quality")
     assert values[0] == 1.0
@@ -297,7 +297,7 @@ def test_BaseRecording(create_cache_folder):
     rec_int16.set_property("offset_to_uV", [0.0] * 5)
 
     # Test deprecated return_scaled parameter
-    with pytest.warns(DeprecationWarning, match="`return_scaled` is deprecated"):
+    with pytest.warns(FutureWarning, match="`return_scaled` is deprecated"):
         traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
         assert traces_float32_old.dtype == "float32"
 

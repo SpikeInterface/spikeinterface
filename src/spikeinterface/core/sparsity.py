@@ -205,7 +205,7 @@ class ChannelSparsity:
         if not self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id):
             error_message = (
                 "Waveforms do not seem to be in the sparsity shape for this unit_id. The number of active channels is "
-                f"{num_active_channels}, but the waveform has non-zero values outsies of those active channels: \n"
+                f"{num_active_channels}, but the waveform has non-zero values outside of those active channels: \n"
                 f"{waveforms[..., num_active_channels:]}"
             )
             raise ValueError(error_message)
@@ -291,7 +291,7 @@ class ChannelSparsity:
 
         return cls.from_unit_id_to_channel_ids(**dictionary)
 
-    ## Some convinient function to compute sparsity from several strategy
+    ## Some convenient function to compute sparsity from several strategy
     @classmethod
     def from_best_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign=None, amplitude_mode="extremum"):
         """
@@ -328,7 +328,7 @@ class ChannelSparsity:
             mask[unit_ind, chan_inds] = True
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
 
-    ## Some convinient function to compute sparsity from several strategy
+    ## Some convenient function to compute sparsity from several strategy
     @classmethod
     def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign=None, peak_mode=None):
         """
@@ -701,6 +701,13 @@ def compute_sparsity(
         assert isinstance(
             templates_or_sorting_analyzer, (Templates, SortingAnalyzer)
         ), f"compute_sparsity(method='{method}') need Templates or SortingAnalyzer"
+        if isinstance(templates_or_sorting_analyzer, Templates):
+            assert (
+                peak_sign is not None
+            ), "When using `compute_sparsity` with a Templates object, `peak_sign` must be specified."
+            assert (
+                amplitude_mode is not None
+            ), "When using `compute_sparsity` with a Templates object, `amplitude_mode` must be specified."
     else:
         assert isinstance(
             templates_or_sorting_analyzer, SortingAnalyzer
@@ -807,7 +814,7 @@ def estimate_sparsity(
         Noise levels required for the "snr" and "energy" methods. You can use the
         `get_noise_levels()` function to compute them.
     main_channel_indices : np.array | None, default: None
-        Main channel indicies for the case of method="radius"
+        Main channel indices for the case of method="radius"
     {}
 
     Returns
@@ -824,15 +831,6 @@ def estimate_sparsity(
         "Available methods are 'radius', 'best_channels', 'snr', 'amplitude', 'by_property'"
     )
 
-    if recording.get_probes() == 1:
-        # standard case
-        probe = recording.get_probe()
-    else:
-        # if many probe or no probe then we use channel location and create a dummy probe with all channels
-        # note that get_channel_locations() is checking that channel are not spatialy overlapping so the radius method is OK.
-        chan_locs = recording.get_channel_locations()
-        probe = recording.create_dummy_probe_from_locations(chan_locs)
-
     if method == "radius" and main_channel_indices is not None:
         assert len(main_channel_indices) == len(sorting.unit_ids)
         chan_locs = recording.get_channel_locations()
@@ -841,6 +839,25 @@ def estimate_sparsity(
         )
 
     elif method != "by_property":
+        if recording.get_probes() == 1:
+            # standard case
+            probe = recording.get_probe()
+        else:
+            all_locations = recording.get_channel_locations()
+            if len(all_locations) != len(set(map(tuple, all_locations))):
+                # If contact locations are not unique across probes in the probe group, we create a dummy probe with
+                # shifted locations to avoid overlapping channels, by adding a 300um x/y shift for each probe.
+                # This is necessary for the sparsity computation to work correctly.
+                shift = 300
+                all_locations_shifted = np.zeros_like(all_locations)
+                for i, probe in enumerate(recording.get_probes()):
+                    n_contacts = probe.get_contact_count()
+                    probe_locations_shifted = probe.contact_positions.copy()
+                    probe_locations_shifted[:, 0] += shift * i
+                    probe_locations_shifted[:, 1] += shift * i
+                    all_locations_shifted[i * n_contacts : (i + 1) * n_contacts] = probe_locations_shifted
+                    all_locations = all_locations_shifted
+            probe = recording.create_dummy_probe_from_locations(all_locations)
 
         templates_array = _get_templates_array_from_recording_and_sorting(
             recording, sorting, ms_before, ms_after, num_spikes_for_sparsity, 2205, **job_kwargs

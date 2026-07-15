@@ -34,12 +34,13 @@ from .sorting_tools import (
     _get_ids_after_merging,
     _get_ids_after_splitting,
 )
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, fix_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
+from .globals import get_global_job_kwargs
 
 
 # high level function
@@ -59,9 +60,10 @@ def create_sorting_analyzer(
     return_in_uV=True,
     overwrite=False,
     backend_options=None,
-    sparsity_kwargs=None,
     seed=None,
-    **job_kwargs,
+    sparsity_kwargs=None,
+    job_kwargs=None,
+    **extra_kwargs,
 ) -> "SortingAnalyzer":
     """
     Create a SortingAnalyzer by pairing a Sorting and the corresponding Recording.
@@ -162,8 +164,20 @@ def create_sorting_analyzer(
     sparsity off (or give external sparsity) like this.
     """
 
-    if sparsity_kwargs is None:
-        sparsity_kwargs = dict()
+    # We used to allow users to pass sparsity kwargs directly to create_sorting_analyzer.
+    # This is for backwards compatibility
+    if len(extra_kwargs) >= 1:
+        sparsity_kwargs, job_kwargs = split_job_kwargs(extra_kwargs)
+        warnings.warn(
+            "Passing sparsity and job arguments via keyword arguments will be deprecated in 0.106.0. "
+            "Please pass them as a `sparsity_kwargs` or `job_kwargs` dictionary instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    else:
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        if sparsity_kwargs is None:
+            sparsity_kwargs = {}
 
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
@@ -175,8 +189,56 @@ def create_sorting_analyzer(
         aggregated_recording = aggregate_channels(recording)
         aggregated_sorting = aggregate_units(sorting)
 
-        if set_sparsity_by_dict_key:
-            sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
+        if sparsity is None:
+            if sparsity_kwargs.get("method", "") != "by_property" and not set_sparsity_by_dict_key:
+                # In this case, we estimate the sparsity on different splitted groups and then we
+                # aggregate the sparsity_masks and main_channel_indices
+                from .template_tools import estimate_main_channel_from_recording
+
+                # In this case we estimate and construct sparsity by property
+                sparsity_mask = np.zeros(
+                    (aggregated_sorting.get_num_units(), aggregated_recording.get_num_channels()), dtype=bool
+                )
+                main_channel_indices = np.zeros(aggregated_sorting.get_num_units(), dtype=int)
+                i_unit = 0
+                i_channel = 0
+                for key in sorting.keys():
+                    recording_single = recording[key]
+                    sorting_single = sorting[key]
+                    num_units = sorting_single.get_num_units()
+                    num_channels = recording_single.get_num_channels()
+
+                    main_channel_indices_single = estimate_main_channel_from_recording(
+                        recording_single,
+                        sorting_single,
+                        peak_sign=peak_sign,
+                        peak_mode=peak_mode,
+                        num_spikes_for_main_channel=num_spikes_for_main_channel,
+                        seed=seed,
+                        **job_kwargs,
+                    )
+                    sparsity_partial = estimate_sparsity(
+                        sorting_single,
+                        recording_single,
+                        main_channel_indices=main_channel_indices_single,
+                        peak_sign=peak_sign,
+                        amplitude_mode=peak_mode,
+                        **sparsity_kwargs,
+                    )
+                    sparsity_mask[i_unit : i_unit + num_units, i_channel : i_channel + num_channels] = (
+                        sparsity_partial.mask
+                    )
+                    main_channel_indices[i_unit : i_unit + num_units] = main_channel_indices_single + i_channel
+                    i_unit += num_units
+                    i_channel += num_channels
+                sparsity = ChannelSparsity(
+                    unit_ids=aggregated_sorting.unit_ids,
+                    channel_ids=aggregated_recording.channel_ids,
+                    mask=sparsity_mask,
+                )
+                sparsity_kwargs = {}
+            elif set_sparsity_by_dict_key:
+                sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
 
         return create_sorting_analyzer(
             sorting=aggregated_sorting,
@@ -185,6 +247,7 @@ def create_sorting_analyzer(
             folder=folder,
             sparse=sparse,
             sparsity=sparsity,
+            main_channel_indices=main_channel_indices,
             return_scaled=return_scaled,
             return_in_uV=return_in_uV,
             overwrite=overwrite,
@@ -205,7 +268,7 @@ def create_sorting_analyzer(
         if len(main_channel_indices) != sorting.get_num_units():
             raise ValueError("len(main_channel_indices) must equal the number of units in the `sorting`")
 
-    if main_channel_indices is not None and sparsity_kwargs.get("method") != "radius":
+    if main_channel_indices is not None and sparsity is None and sparsity_kwargs.get("method") != "radius":
         raise ValueError(
             'You can either pass `main_channel_indices` or a sparsity method not equal to "radius", but not both.'
         )
@@ -259,7 +322,7 @@ def create_sorting_analyzer(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -649,7 +712,7 @@ class SortingAnalyzer:
 
         Note :
          * see also _handle_backward_compatibility_settings_post_init
-         * there is also something at extension level to handle changes in paramaters with deferents mechanism
+         * there is also something at extension level to handle changes in parameters with deferents mechanism
         """
 
         new_settings = dict()
@@ -741,8 +804,9 @@ class SortingAnalyzer:
             from .template_tools import _get_main_channel_from_template_array
 
             main_channel_indices = _get_main_channel_from_template_array(
-                templates_array, peak_mode, peak_sign, templates.nbefore
+                templates_array, peak_mode=peak_mode, peak_sign=peak_sign, nbefore=templates.nbefore
             )
+            return main_channel_indices
 
         # Case 3
         if self.is_sparse():
@@ -1140,6 +1204,57 @@ class SortingAnalyzer:
         """
         return self.sorting.get_property(key, ids=ids)
 
+    def get_sorting_property_keys(self) -> list[str]:
+        """
+        Get the list of property keys for the sorting object.
+
+        Returns
+        -------
+        keys : list[str]
+            List of property keys
+        """
+        return self.sorting.get_property_keys()
+
+    def get_recording_property(self, key: str, ids: Optional[Iterable] = None) -> np.ndarray:
+        """
+        Get property vector for channel ids.
+
+        Parameters
+        ----------
+        key : str
+            The property name
+        ids : list/np.array, default: None
+            List of subset of ids to get the values.
+            if None all the ids are returned
+        """
+        if self.has_recording() or self.has_temporary_recording():
+            return self.recording.get_property(key, ids=ids)
+        else:
+            properties = self.rec_attributes.get("properties", {})
+            if key not in properties:
+                raise ValueError(f"Property {key} not found in recording attributes")
+            values = properties[key]
+            if ids is not None:
+                channel_ids = self.channel_ids
+                indices = [np.where(channel_ids == id)[0][0] for id in ids]
+                values = values[indices]
+            return values
+
+    def get_recording_property_keys(self) -> list[str]:
+        """
+        Get the list of property keys for the recording object.
+
+        Returns
+        -------
+        keys : list[str]
+            List of property keys
+        """
+        if self.has_recording() or self.has_temporary_recording():
+            return self.recording.get_property_keys()
+        else:
+            properties = self.rec_attributes.get("properties", {})
+            return list(properties.keys())
+
     def get_main_channels(self, outputs: Literal["index", "id"] = "index", with_dict: bool = False):
         """
         Returns the main_channels of the analyzer.
@@ -1264,7 +1379,7 @@ class SortingAnalyzer:
             A dictionary with the keys being the unit ids to split and the values being the split indices.
         splitting_mode : "soft" | "hard", default: "soft"
             How splits are performed. In the "soft" mode, splits will be approximated, with no smart splitting.
-            If `splitting_mode` is "hard", the extensons for split units willbe recomputed.
+            If `splitting_mode` is "hard", the extensions for split units will be recomputed.
         split_new_unit_ids : list or None, default: None
             The new unit ids for split units. Required if `split_units` is not None.
         verbose : bool, default: False
@@ -1343,7 +1458,7 @@ class SortingAnalyzer:
         else:
             sparsity = None
 
-        # Note that the sorting is a copy we need to go back to the orginal sorting (if available)
+        # Note that the sorting is a copy we need to go back to the original sorting (if available)
         sorting_provenance = self.get_sorting_provenance()
         if sorting_provenance is None:
             # if the original sorting object is not available anymore (kilosort folder deleted, ....), take the copy
@@ -1504,7 +1619,7 @@ class SortingAnalyzer:
             The unit ids to keep in the new SortingAnalyzer object
         format : "memory" | "binary_folder" | "zarr" , default: "memory"
             The format of the returned SortingAnalyzer.
-        folder : Path | None, deafult: None
+        folder : Path | None, default: None
             The new folder where the analyzer with selected units is copied if `format` is
             "binary_folder" or "zarr"
 
@@ -1517,6 +1632,70 @@ class SortingAnalyzer:
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
+
+    def select_channels(self, channel_ids) -> "SortingAnalyzer":
+        """
+        This method is equivalent to `save_as()` but with a subset of channels.
+        Filters channels by creating a new sorting analyzer object in a new folder.
+
+        Extensions are also updated to filter the selected channel ids.
+
+        Parameters
+        ----------
+        channel_ids : list or array
+            The channel ids to keep in the new SortingAnalyzer object
+
+        Returns
+        -------
+        analyzer :  SortingAnalyzer
+            The newly create sorting_analyzer with the selected channels
+        """
+        # Check that all channel_ids are in the current channel_ids
+        if not np.all(np.isin(channel_ids, self.channel_ids)):
+            wrong_channel_ids = [ch for ch in channel_ids if ch not in self.channel_ids]
+            raise ValueError(f"Some channel_ids are not in the current channel_ids: {wrong_channel_ids}")
+        if self.has_recording() or self.has_temporary_recording():
+            new_recording = self.recording.select_channels(channel_ids)
+            new_rec_attributes = None
+        else:
+            new_recording = None
+            new_rec_attributes = self.rec_attributes.copy()
+            new_rec_attributes["channel_ids"] = np.array(channel_ids)
+            # slice properties according to channel_ids
+            if "properties" in new_rec_attributes:
+                new_properties = {}
+                for key, values in new_rec_attributes["properties"].items():
+                    values_arr = np.array(values)
+                    if len(values_arr) == len(self.channel_ids):
+                        # only slice properties that have the same length as channel_ids
+                        channel_indices = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
+                        new_properties[key] = values_arr[channel_indices]
+                    else:
+                        new_properties[key] = values_arr
+                new_rec_attributes["properties"] = new_properties
+            if new_rec_attributes.get("probegroup") is not None:
+                slice_indices = self.channel_ids_to_indices(channel_ids)
+                new_probegroup = new_rec_attributes["probegroup"].get_slice(slice_indices)
+                new_rec_attributes["probegroup"] = new_probegroup
+        if self.sparsity is not None:
+            sparsity_mask = self.sparsity.mask[:, np.isin(self.channel_ids, channel_ids)]
+            new_sparsity = ChannelSparsity(sparsity_mask, self.unit_ids, np.array(channel_ids))
+        else:
+            new_sparsity = None
+        new_sorting_analyzer = SortingAnalyzer.create_memory(
+            sorting=self.sorting,
+            recording=new_recording,
+            sparsity=new_sparsity,
+            return_in_uV=self.return_in_uV,
+            peak_sign=self.peak_sign,
+            peak_mode=self.peak_mode,
+            rec_attributes=new_rec_attributes,
+        )
+        for extension_name, extension in self.extensions.items():
+            new_sorting_analyzer.extensions[extension_name] = extension.copy(
+                new_sorting_analyzer, channel_ids=channel_ids
+            )
+        return new_sorting_analyzer
 
     def remove_units(self, remove_unit_ids, format="memory", folder=None) -> "SortingAnalyzer":
         """
@@ -1799,7 +1978,7 @@ class SortingAnalyzer:
         from .loading import load
 
         if self.format == "memory":
-            # the orginal sorting provenance is not keps in that case
+            # the original sorting provenance is not kept in that case
             sorting_provenance = None
 
         elif self.format == "binary_folder":
@@ -2573,7 +2752,8 @@ class AnalyzerExtension:
       * need_job_kwargs
       * _set_params()
       * _run()
-      * _select_extension_data()
+      * _select_units_extension_data()
+      * _select_channels_extension_data()
       * _merge_extension_data()
       * _split_extension_data()
       * _get_data()
@@ -2619,7 +2799,7 @@ class AnalyzerExtension:
         # must return a cleaned version of params dict
         raise NotImplementedError
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # must be implemented in subclass
         raise NotImplementedError
 
@@ -2632,6 +2812,9 @@ class AnalyzerExtension:
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # must be implemented in subclass
         raise NotImplementedError
+
+    def _select_channels_extension_data(self, channel_ids):
+        return self.data
 
     def _get_pipeline_nodes(self):
         # must be implemented in subclass only if use_nodepipeline=True
@@ -2890,21 +3073,42 @@ class AnalyzerExtension:
                 elif "object" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 else:
-                    # this load in memmory
+                    # this load in memory
                     ext_data = np.array(ext_data_)
                 self.set_data(ext_data_name, ext_data)
 
         if len(self.data) == 0:
             warnings.warn(f"Found no data for {self.extension_name}, extension should be re-computed.")
 
-    def copy(self, new_sorting_analyzer, unit_ids=None):
-        # alessio : please note that this also replace the old select_units!!!
+    def copy(self, new_sorting_analyzer, unit_ids=None, channel_ids=None):
+        """
+        Copy the extension to a new sorting analyzer, optionally selecting a subset of units and channels.
+        Only unit_ids or channel_ids can be specified, not both.
+
+        Parameters
+        ----------
+        new_sorting_analyzer : SortingAnalyzer
+            The new sorting analyzer to copy the extension to.
+        unit_ids : list, optional
+            List of unit IDs to sub-select data for. If None, all units are copied.
+        channel_ids : list, optional
+            List of channel IDs to sub-select data for. If None, all channels are copied.
+
+        Returns
+        -------
+        new_extension : Extension
+            The copied extension.
+        """
+        if unit_ids is not None and channel_ids is not None:
+            raise ValueError("Cannot select both unit_ids and channel_ids when copying an extension.")
         new_extension = self.__class__(new_sorting_analyzer)
         new_extension.params = self.params.copy()
-        if unit_ids is None:
-            new_extension.data = self.data
+        if unit_ids is not None:
+            new_extension.data = self._select_units_extension_data(unit_ids)
+        elif channel_ids is not None:
+            new_extension.data = self._select_channels_extension_data(channel_ids)
         else:
-            new_extension.data = self._select_extension_data(unit_ids)
+            new_extension.data = self.data
         new_extension.run_info = copy(self.run_info)
         new_extension.save()
         return new_extension

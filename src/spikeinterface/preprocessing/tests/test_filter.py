@@ -105,7 +105,7 @@ class TestCausalFilter:
     def test_causal_kwarg_error_raised(self, recording_and_data):
         """
         Test that passing the "forward-backward" direction results in
-        an error. It is is critical this error is raised,
+        an error. It is critical this error is raised,
         otherwise the filter will no longer be causal.
         """
         recording, raw_data = recording_and_data

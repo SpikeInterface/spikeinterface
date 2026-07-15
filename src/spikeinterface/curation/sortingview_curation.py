@@ -1,6 +1,7 @@
 import warnings
 import json
 from pathlib import Path
+import importlib.util
 
 import numpy as np
 
@@ -12,22 +13,20 @@ from .curation_model import Curation, Merge
 
 
 def get_kachery():
-
-    try:
+    if importlib.util.find_spec("kachery") is not None:
         import kachery as ka
 
         return ka
-    except ImportError:
-        try:
-            import kachery_cloud as kcl
+    elif importlib.util.find_spec("kachery_cloud") is not None:
+        import kachery_cloud as kcl
 
-            warnings.warn("kachery-cloud is deprecated, use kachery instead", DeprecationWarning, stacklevel=2)
-            return kcl
-        except ImportError:
-            raise ImportError(
-                "To apply a SortingView manual curation, you need to have kachery installed:\n"
-                ">>> pip install kachery\n(kachery-cloud is also supported, but deprecated)"
-            )
+        warnings.warn("kachery-cloud is deprecated, use kachery instead", FutureWarning, stacklevel=2)
+        return kcl
+    else:
+        raise ImportError(
+            "To apply a SortingView manual curation, you need to have kachery installed:\n"
+            ">>> pip install kachery\n(kachery-cloud is also supported, but deprecated)"
+        )
 
 
 def apply_sortingview_curation(

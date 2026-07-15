@@ -1,4 +1,5 @@
 import math
+from typing import Literal
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -7,7 +8,12 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from probeinterface import Probe
 
 
-def interpolate_templates(templates_array, source_locations, dest_locations, interpolation_method="cubic"):
+def interpolate_templates(
+    templates_array: np.ndarray,
+    source_locations: np.ndarray,
+    dest_locations: np.ndarray,
+    interpolation_method: Literal["cubic", "linear", "nearest", "thin_plate"] = "cubic",
+):
     """
     Interpolate templates_array to new positions.
     Useful to create motion or to remap templates_array form probeA to probeB.
@@ -23,7 +29,7 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
         The channel source location corresponding to templates_array.
         shape = (num_channels, 2)
     dest_locations : np.array
-        The new channel position, if ndim == 3, then the interpolation is broadcated with last dim.
+        The new channel position, if ndim == 3, then the interpolation is broadcasted with last dim.
         shape = (num_channels, 2) or (num_motions, num_channels, 2)
     interpolation_method : str, default "cubic"
         The interpolation method.
@@ -33,18 +39,21 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
     new_templates_array : np.array
         shape = (num_templates, num_samples, num_channels) or = (num_motions, num_templates, num_samples, num_channel)
     """
-    from scipy.interpolate import griddata
+    from scipy.interpolate import griddata, RBFInterpolator
 
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
-    if dest_locations.ndim == 2:
-        new_shape = (*templates_array.shape[:2], len(dest_locations))
-    elif dest_locations.ndim == 3:
-        new_shape = (
-            dest_locations.shape[0],
-            *templates_array.shape[:2],
-            dest_locations.shape[1],
-        )
+
+    dest_locations_dims = dest_locations.ndim
+
+    num_channels = dest_locations.shape[-2]
+    num_templates, num_samples = templates_array.shape[:2]
+
+    if dest_locations_dims == 2:
+        new_shape = (num_templates, num_samples, num_channels)
+    elif dest_locations_dims == 3:
+        num_motions = dest_locations.shape[0]
+        new_shape = (num_motions, num_templates, num_samples, num_channels)
     else:
         raise ValueError(f"Incorrect dimensions for dest_locations: {dest_locations.ndim}. Dimensions can be 2 or 3. ")
 
@@ -53,12 +62,25 @@ def interpolate_templates(templates_array, source_locations, dest_locations, int
     for template_index in range(templates_array.shape[0]):
         for sample_index in range(templates_array.shape[1]):
             template = templates_array[template_index, sample_index, :]
-            interp_template = griddata(
-                source_locations, template, dest_locations, method=interpolation_method, fill_value=0
-            )
-            if dest_locations.ndim == 2:
+
+            if interpolation_method == "thin_plate":
+
+                tps_interpolator = RBFInterpolator(source_locations, template, kernel="thin_plate_spline", neighbors=12)
+                if dest_locations_dims == 2:
+                    interp_template = tps_interpolator(dest_locations)
+                elif dest_locations_dims == 3:
+                    interp_template = np.zeros((num_motions, num_channels))
+                    for a in range(num_motions):
+                        interp_template[a, :] = tps_interpolator(dest_locations[a])
+
+            else:
+                interp_template = griddata(
+                    source_locations, template, dest_locations, method=interpolation_method, fill_value=0
+                )
+
+            if dest_locations_dims == 2:
                 new_templates_array[template_index, sample_index, :] = interp_template
-            elif dest_locations.ndim == 3:
+            elif dest_locations_dims == 3:
                 new_templates_array[:, template_index, sample_index, :] = interp_template
 
     return new_templates_array
@@ -116,7 +138,7 @@ class DriftingTemplates(Templates):
 
     This class supports 2 different strategies:
       * move every templates on-the-fly, this lead to one interpolation per spike
-      * precompute some displacements for all templates and use a discreate interpolation, for instance by step of 1um
+      * precompute some displacements for all templates and use a discrete interpolation, for instance by step of 1um
         This is the same strategy used by MEArec.
 
     Parameters
@@ -301,7 +323,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     drifting_templates : DriftingTemplates
         The drifting template object
     displacement_vectors : list of numpy array
-        The lenght of the list is the number of segment.
+        The length of the list is the number of segment.
         Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
     displacement_sampling_frequency : float
@@ -424,7 +446,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             ), "drifting_templates must have precomputed displacements"
             displacements = drifting_templates.displacements
 
-            # compute the displacement indicies
+            # compute the displacement indices
             segment_slices = []
             displacement_indices = np.zeros(self.spike_vector.size, dtype="int64")
             for segment_index in range(sorting.get_num_segments()):
