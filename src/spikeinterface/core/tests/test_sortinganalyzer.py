@@ -138,6 +138,9 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
 
+    # make recording JSON serializable
+    recording = recording.save(folder=tmp_path / "recording_for_zarr", overwrite=True)
+
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
 
     default_compressor = get_default_zarr_compressor()
@@ -177,7 +180,6 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         overwrite=True,
         backend_options={"saving_options": {"compressors": None}},
     )
-    print(sorting_analyzer_no_compression._backend_options)
     sorting_analyzer_no_compression.compute(["random_spikes", "templates"])
     assert (
         len(
