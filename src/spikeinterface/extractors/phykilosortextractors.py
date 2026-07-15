@@ -165,7 +165,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             spike_times_clean = spike_times
 
         if "si_unit_id" in cluster_info.columns:
-            unit_ids = cluster_info["si_unit_id"].values
+            unit_ids = cluster_info["si_unit_id"].to_numpy(copy=True)
 
             if np.all(np.isnan(unit_ids)):
                 max_si_unit_id = -1
