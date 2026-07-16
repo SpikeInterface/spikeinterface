@@ -84,7 +84,9 @@ def test_generate_hybrid_from_templates():
     nbefore = ms_to_samples(ms_before, rec.sampling_frequency)
     templates = Templates(templates_array, rec.sampling_frequency, nbefore, True, None, None, None, rec.get_probe())
     hybrid, sorting_hybrid = generate_hybrid_recording(rec, templates=templates, relocate_templates=False, seed=0)
-    assert np.array_equal(hybrid.drifting_templates.templates_array, templates.templates_array)
+    # use allclose (not array_equal): interpolation onto the target probe introduces platform-dependent
+    # float noise (e.g. macOS Accelerate BLAS), even though the templates are injected at their own locations
+    assert np.allclose(hybrid.drifting_templates.templates_array, templates.templates_array)
     assert rec.get_num_channels() == hybrid.get_num_channels()
     assert rec.get_num_frames() == hybrid.get_num_frames()
     assert rec.get_num_segments() == hybrid.get_num_segments()
