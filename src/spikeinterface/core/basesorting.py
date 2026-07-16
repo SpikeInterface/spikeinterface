@@ -1130,7 +1130,7 @@ class BaseSorting(BaseExtractor):
                         s1 = seg_slices[segment_index + 1]
                         slices[unit_index, segment_index, :] = [u0 + s0, u0 + s1]
 
-            elif ("sample_index", "unit_index", "segment_index"):
+            elif lexsort == ("sample_index", "unit_index", "segment_index"):
                 slices = np.zeros((num_segments, num_units, 2), dtype=np.int64)
                 seg_slices = np.searchsorted(ordered_spikes["segment_index"], np.arange(num_segments + 1), side="left")
                 for segment_index in range(self.get_num_segments()):
