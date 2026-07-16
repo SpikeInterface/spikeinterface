@@ -17,8 +17,7 @@ import numpy as np
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import SortingAnalyzer, NumpySorting
 from spikeinterface.core.template_tools import (
-    get_template_extremum_channel,
-    get_template_extremum_amplitude,
+    get_template_amplitude_on_main_channel,
     get_dense_templates_array,
 )
 from spikeinterface.metrics.spiketrain.metrics import NumSpikes, FiringRate
@@ -140,13 +139,7 @@ class PresenceRatio(BaseMetric):
     supports_periods = True
 
 
-def compute_snrs(
-    sorting_analyzer,
-    unit_ids=None,
-    peak_sign: str = "both",
-    peak_mode: str = "extremum",
-    operator: str = "median",
-):
+def compute_snrs(sorting_analyzer, unit_ids=None, method="extremum"):
     """
     Compute signal to noise ratio.
 
@@ -156,12 +149,11 @@ def compute_snrs(
         A SortingAnalyzer object.
     unit_ids : list or None
         The list of unit ids to compute the SNR. If None, all units are used.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The sign of the template to compute best channels.
-    peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
-        How to compute the amplitude.
-        Extremum takes the maxima/minima
-        At_index takes the value at t=sorting_analyzer.nbefore.
+    method : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+        How to compute the amplitude:
+          - "extremum" takes the abs of the extremal value
+          - "at_index" takes the value at t=sorting_analyzer.nbefore
+          - "peak_to_peak" takes the difference between the maximum and minimum
     operator : "median" | "average", default: "median"
         The operator to apply to retrieve templates and amplitudes.
 
@@ -177,35 +169,15 @@ def compute_snrs(
 
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
 
-    assert peak_sign in ("neg", "pos", "both")
-    assert peak_mode in ("extremum", "at_index", "peak_to_peak")
-
-    channel_ids = sorting_analyzer.channel_ids
-
-    if operator not in ("median", "average"):
-        raise ValueError(f"Invalid operator: {operator}. Expected 'median' or 'average'.")
-    if operator == "median" and not sorting_analyzer.has_extension("waveforms"):
-        warnings.warn(
-            "Operator 'median' requires 'waveforms' extension. Falling back to 'average'. "
-            "To use 'median', please compute the 'waveforms' extension first with: analyzer.compute('waveforms')"
-        )
-        operator = "average"
-
-    extremum_channels_ids = get_template_extremum_channel(
-        sorting_analyzer, peak_sign=peak_sign, mode=peak_mode, operator=operator
-    )
-    unit_amplitudes = get_template_extremum_amplitude(
-        sorting_analyzer, peak_sign=peak_sign, mode=peak_mode, operator=operator
-    )
-
-    # make a dict to access by chan_id
-    noise_levels = dict(zip(channel_ids, noise_levels))
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
+    unit_amplitudes = get_template_amplitude_on_main_channel(sorting_analyzer, with_dict=False, peak_mode=method)
 
     snrs = {}
     for unit_id in unit_ids:
-        chan_id = extremum_channels_ids[unit_id]
-        noise = noise_levels[chan_id]
-        amplitude = unit_amplitudes[unit_id]
+        unit_index = sorting_analyzer.sorting.id_to_index(unit_id)
+        chan_ind = main_channel_indices[unit_index]
+        noise = noise_levels[chan_ind]
+        amplitude = unit_amplitudes[unit_index]
         snrs[unit_id] = np.abs(amplitude) / noise
 
     return snrs
@@ -214,7 +186,7 @@ def compute_snrs(
 class SNR(BaseMetric):
     metric_name = "snr"
     metric_function = compute_snrs
-    metric_params = {"peak_sign": "both", "peak_mode": "extremum"}
+    metric_params = {"method": "extremum"}
     metric_columns = {"snr": float}
     metric_descriptions = {"snr": "Signal to noise ratio for each unit."}
     depend_on = ["noise_levels", "templates"]
@@ -282,7 +254,7 @@ class SNR(BaseMetric):
 #     baseline_samples = min(baseline_samples, nbefore)  # Can't exceed nbefore
 
 #     # Get peak channel for each unit from templates
-#     extremum_channels_ids = get_template_extremum_channel(sorting_analyzer, peak_sign=peak_sign)
+#     extremum_channels_ids = sorting_analyzer.get_main_channels()
 
 #     snrs = {}
 #     for unit_id in unit_ids:
@@ -685,7 +657,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, periods=None, syn
 
     if synchrony_sizes is not None:
         warning_message = "Custom `synchrony_sizes` is deprecated; the `synchrony_metrics` will be computed using `synchrony_sizes = [2,4,8]`"
-        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
+        warnings.warn(warning_message, FutureWarning, stacklevel=2)
 
     synchrony_sizes = np.array([2, 4, 8])
 
@@ -1358,7 +1330,6 @@ def compute_sd_ratio(
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
     correct_for_template_itself: bool = True,
-    peak_sign: str = "neg",
     **job_kwargs,
 ):
     """
@@ -1384,8 +1355,6 @@ def compute_sd_ratio(
     correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The peak sign used to select the template extremum channel.
     **job_kwargs : dict, default: {}
         Keyword arguments sent to get_noise_levels.
 
@@ -1430,7 +1399,10 @@ def compute_sd_ratio(
     noise_levels = get_noise_levels(
         sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
     )
-    best_channels = get_template_extremum_channel(sorting_analyzer, outputs="index", peak_sign=peak_sign)
+
+    main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+
+    n_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
 
     if correct_for_template_itself:
         n_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
@@ -1466,7 +1438,7 @@ def compute_sd_ratio(
             else:
                 unit_std = np.std(spk_amp)
 
-            best_channel = best_channels[unit_id]
+            best_channel = main_channels[unit_id]
             std_noise = noise_levels[best_channel]
 
             if correct_for_template_itself:
@@ -1493,7 +1465,6 @@ class SDRatio(BaseMetric):
         "censored_period_ms": 4.0,
         "correct_for_drift": True,
         "correct_for_template_itself": True,
-        "peak_sign": "neg",
     }
     metric_columns = {"sd_ratio": float}
     metric_descriptions = {
@@ -1678,7 +1649,7 @@ def amplitude_cutoff(
 
         # Find number of missed spikes
         cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
-        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
+        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurrence where pdf was greater than cutoff
         num_missed_spikes = np.sum(pdf[G + 1 :])  # theoretically missing spikes on the left side
 
         # Compute fraction of missed spikes

@@ -522,12 +522,18 @@ The probe has 4 shanks, which can be loaded as separate groups (and spike sorted
     # add wiring
     probe.wiring_to_device('ASSY-156>RHD2164')
 
-    # set probe
-    recording_w_probe = recording.set_probe(probe)
-    # set probe with group info and return a new recording object
-    recording_w_probe = recording.set_probe(probe, group_mode="by_shank")
-    # set probe in place, ie, modify the current recording
-    recording.set_probe(probe, group_mode="by_shank", in_place=True)
+    # set probe (modifies the recording in place)
+    recording.set_probe(probe)
+    # set probe with group info derived from shank ids (in place)
+    recording.set_probe(probe, group_mode="by_shank")
+
+    # to get a *new* recording without modifying the original, use select_channels_with_probe
+    recording_w_probe = recording.select_channels_with_probe(probe)
+    recording_w_probe = recording.select_channels_with_probe(probe, group_mode="by_shank")
+
+    # multi-probe recordings use set_probegroup / select_channels_with_probegroup
+    recording.set_probegroup(probegroup)
+    recording_w_probegroup = recording.select_channels_with_probegroup(probegroup)
 
     # retrieve probe
     probe_from_recording = recording.get_probe()
