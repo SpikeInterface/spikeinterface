@@ -1,7 +1,7 @@
 import operator
 import pytest
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, NumpyRecording
 
 from spikeinterface.preprocessing import common_reference
 
@@ -210,6 +210,32 @@ def test_out_of_group_common_reference(recording):
     # "out_of_group" requires groups
     with pytest.raises(ValueError):
         common_reference(recording, reference="global", ref_channel_ids="out_of_group")
+
+
+def test_common_reference_int_dtype_rounds():
+    # Casting the re-referenced float traces down to an integer dtype must round
+    # to the nearest integer, not truncate toward zero (b3).
+    traces = np.array([[0.0, 10.4], [0.0, -10.4]], dtype="float32")
+    recording = NumpyRecording([traces], sampling_frequency=1.0)
+    recording = recording.rename_channels(np.array(["a", "b"]))
+
+    rec_sin = common_reference(recording, reference="single", ref_channel_ids=["a"], dtype="int16")
+    result = rec_sin.get_traces(channel_ids=["b"])
+
+    # 10.4 rounds to 10, -10.4 rounds to -10: truncation toward zero would give the
+    # same values here, so also check a case where rounding and truncation differ.
+    assert result[0, 0] == 10
+    assert result[1, 0] == -10
+
+    traces2 = np.array([[0.0, 10.6], [0.0, -10.6]], dtype="float32")
+    recording2 = NumpyRecording([traces2], sampling_frequency=1.0)
+    recording2 = recording2.rename_channels(np.array(["a", "b"]))
+    rec_sin2 = common_reference(recording2, reference="single", ref_channel_ids=["a"], dtype="int16")
+    result2 = rec_sin2.get_traces(channel_ids=["b"])
+
+    # Truncation toward zero would give 10 / -10; correct rounding gives 11 / -11.
+    assert result2[0, 0] == 11
+    assert result2[1, 0] == -11
 
 
 def test_min_local_radius():

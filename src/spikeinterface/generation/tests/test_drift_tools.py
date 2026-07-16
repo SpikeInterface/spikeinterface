@@ -83,6 +83,14 @@ def test_interpolate_templates():
             templates.templates_array, source_locations, dest_locations, interpolation_method=interpolation_method
         )
 
+    interpolate_templates(
+        templates.templates_array,
+        source_locations,
+        dest_locations,
+        interpolation_method="thin_plate",
+        interpolation_kwargs={"neighbors": 12},
+    )
+
 
 def test_move_dense_templates():
     templates = make_some_templates()

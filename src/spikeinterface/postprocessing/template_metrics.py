@@ -10,7 +10,7 @@ class ComputeTemplateMetrics(ComputeTemplateMetricsNew):
         warnings.warn(
             "The module 'spikeinterface.postprocessing.template_metrics' is deprecated and will be removed in 0.105.0."
             "Please use 'spikeinterface.metrics.template' instead.",
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         super().__init__(*args, **kwargs)
@@ -20,7 +20,7 @@ def compute_template_metrics(*args, **kwargs):
     warnings.warn(
         "The module 'spikeinterface.postprocessing.template_metrics' is deprecated and will be removed in 0.105.0."
         "Please use 'spikeinterface.metrics.template' instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return compute_template_metrics_new(*args, **kwargs)

@@ -145,6 +145,9 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
         if self.int_scale is not None:
             whiten_traces *= self.int_scale
 
+        if np.issubdtype(self.dtype, np.integer):
+            np.round(whiten_traces, out=whiten_traces)
+
         return whiten_traces.astype(self.dtype)
 
 

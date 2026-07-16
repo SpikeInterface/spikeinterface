@@ -5,7 +5,6 @@ from spikeinterface.core.base import base_period_dtype
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.core.recording_tools import get_noise_levels, get_chunk_with_margin
 from spikeinterface.core.generate import MockRecording
-from spikeinterface.core.job_tools import split_job_kwargs
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from .normalize_scale import ScaleRecording
@@ -41,8 +40,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
     noise_levels : array
         Noise levels if already computed
     seed : int | None, default: None
-        Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
-        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
+        Random seed for the noise fill (only used when ``mode="noise"``): both the
+        per-channel noise-level estimation (`spikeinterface.core.get_noise_levels`) and
+        the generated noise. Takes precedence over ``noise_levels_kwargs["random_slices_kwargs"]["seed"]``
+        if present.
     **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     Returns
@@ -248,47 +249,4 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 # function for API
 silence_periods = define_function_handling_dict_from_class(
     source_class=SilencedPeriodsRecording, name="silence_periods"
-)
-
-
-class DetectArtifactAndSilentPeriodsRecording(SilencedPeriodsRecording):
-    """
-    Class doing artifact detection and lient at the same time.
-
-    See SilencedPeriodsRecording and detect_artifact_periods for details.
-    """
-
-    _precomputable_kwarg_names = ["artifacts"]
-
-    def __init__(
-        self,
-        recording,
-        detect_artifact_method="envelope",
-        detect_artifact_kwargs=dict(),
-        periods=None,
-        mode="zeros",
-        noise_levels=None,
-        seed=None,
-        **noise_levels_kwargs,
-    ):
-
-        if artifacts is None:
-            from spikeinterface.preprocessing import detect_artifact_periods
-
-            artifacts = detect_artifact_periods(
-                recording,
-                method=detect_artifact_method,
-                method_kwargs=detect_artifact_kwargs,
-                job_kwargs=None,
-            )
-
-        SilencedPeriodsRecording.__init__(
-            self, recording, periods=artifacts, mode=mode, noise_levels=noise_levels, seed=seed, **noise_levels_kwargs
-        )
-        # note self._kwargs["periods"] is done by SilencedPeriodsRecording and so the computaion is done once
-
-
-# function for API
-detect_artifacts_and_silent_periods = define_function_handling_dict_from_class(
-    source_class=DetectArtifactAndSilentPeriodsRecording, name="silence_artifacts"
 )

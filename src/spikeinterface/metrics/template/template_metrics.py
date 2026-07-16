@@ -33,7 +33,7 @@ def get_template_metric_names():
     warnings.warn(
         "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
         "Please use get_template_metric_list instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_template_metric_list()
@@ -369,7 +369,7 @@ def get_default_tm_params(metric_names=None):
     warnings.warn(
         "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
         "Please use get_default_template_metrics_params instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_default_template_metrics_params(metric_names)
