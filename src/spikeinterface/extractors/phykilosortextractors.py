@@ -415,8 +415,11 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     )
 
     sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
+    main_channel_indices = _make_main_channel_indices_from_templates(sorting, recording, phy_path)
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True, sparsity=sparsity)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, sparse=True, sparsity=sparsity, main_channel_indices=main_channel_indices
+    )
 
     # first compute random spikes. These do nothing, but are needed for si-gui to run
     sorting_analyzer.compute("random_spikes")
@@ -485,6 +488,17 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     # but are zero on many channels, which implicitly defines the sparsity
     mask = np.sum(np.abs(templates), axis=1) != 0
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
+
+
+def _make_main_channel_indices_from_templates(sorting, recording, kilosort_output_path):
+    """Constructs the `ChannelSparsity` of from kilosort output, by seeing if the
+    templates output is zero or not on all channels."""
+
+    templates = np.load(kilosort_output_path / "templates.npy")
+    # main channel indices are the argmax of the ptp of the templates, which is the channel with
+    # the largest peak-to-peak amplitude
+    main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+    return main_channel_indices
 
 
 def _make_templates(
