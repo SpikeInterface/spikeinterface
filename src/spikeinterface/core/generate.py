@@ -2087,9 +2087,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         channel_indices: list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
-            n_channels = self.templates.shape[2]
+            n_channels = self.get_num_channels()
         elif isinstance(channel_indices, slice):
-            stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
+            stop = channel_indices.stop if channel_indices.stop is not None else self.get_num_channels()
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)
