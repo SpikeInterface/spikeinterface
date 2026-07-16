@@ -2156,7 +2156,7 @@ def read_nwb_sorting_analyzer(
 
     # templates (from the resolved templates column), and the required random_spikes extension
     if templates_column is not None and templates_column in units and unit_local_channels is not None:
-        _make_random_spikes(analyzer, sorting, has_recording=recording is not None)
+        _make_random_spikes(analyzer, sorting)
         _make_templates(analyzer, units, templates_column, templates_std_column, unit_local_channels, num_channels)
 
     # the resolved quality-metric columns -> quality_metrics extension
@@ -2271,30 +2271,25 @@ def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices
     return sparsity, unit_local_channels
 
 
-def _make_random_spikes(analyzer, sorting, has_recording):
-    """Attach the required `random_spikes` extension.
+def _make_random_spikes(analyzer, sorting):
+    """Attach the required `random_spikes` extension, always using the "all" method.
 
-    With a recording it drives waveform extraction, so compute it for real. Without a recording it is
-    never used to extract anything (there are no traces); computing it would call
-    `sorting.to_spike_vector()`, which materializes the whole spike_times array (e.g. ~165 MB for a
-    full IBL session) and dominates the cost. Instead build it from the per-unit spike counts (the
-    spike_times index), so spike_times is not read here; the lazy sorting still reads a unit's spikes on
-    demand when a view needs them.
+    If the segment is an NwbSortingSegment sorting segment, it uses the spike_times_index_data to determine the
+    total number of spikes. Otherwise, it counts the total number of spikes from the sorting object.
     """
-    if has_recording:
-        analyzer.compute("random_spikes", method="all")
-        return
-
     from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
 
-    spike_times_index = sorting._sorting_segments[0].spike_times_index_data
-    total_num_spikes = int(np.asarray(spike_times_index[-1]))
-    max_spikes_per_unit = 500
-    num_random = min(max_spikes_per_unit * sorting.get_num_units(), total_num_spikes)
-    random_spikes_indices = np.sort(np.random.default_rng(0).choice(total_num_spikes, size=num_random, replace=False))
+    segment = sorting._sorting_segments[0]
+    if isinstance(segment, NwbSortingSegment):
+        # the lazy segment has a spike_times_index_data array that is the same as the NWB spike_times_index
+        # dataset, so we can use it to get the total number of spikes without materializing spike_times.
+        spike_times_index = segment.spike_times_index_data
+        total_num_spikes = int(np.asarray(spike_times_index[-1]))
+    else:
+        total_num_spikes = sorting.count_total_num_spikes()
     random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
-    random_spikes_ext.set_params(method="uniform", max_spikes_per_unit=max_spikes_per_unit, seed=0)
-    random_spikes_ext.data["random_spikes_indices"] = random_spikes_indices
+    random_spikes_ext.set_params(method="all")
+    random_spikes_ext.data["random_spikes_indices"] = np.arange(total_num_spikes, dtype="int64")
     random_spikes_ext.run_info["run_completed"] = True
     analyzer.extensions["random_spikes"] = random_spikes_ext
 
