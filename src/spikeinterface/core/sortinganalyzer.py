@@ -1280,6 +1280,37 @@ class SortingAnalyzer:
         else:
             return main_chans
 
+    def is_aggregated(self):
+        """
+        Returns True if the SortingAnalyzer is aggregated, False otherwise.
+        """
+        return (
+            "aggregation_key" in self.get_sorting_property_keys()
+            and "aggregation_key" in self.get_recording_property_keys()
+        )
+
+    def split_by(self):
+        """
+        Returns a dictionary of SortingAnalyzer objects, split by the aggregation_key.
+        The keys of the dictionary are the unique values of the aggregation_key, and the values
+        are the SortingAnalyzer objects corresponding to each unique value.
+        """
+        if not self.is_aggregated():
+            raise ValueError("SortingAnalyzer is not aggregated")
+
+        units_aggregation_key = self.get_sorting_property("aggregation_key")
+        channel_aggregation_key = self.get_recording_property("aggregation_key")
+        unique_keys = np.unique(units_aggregation_key)
+        split_analyzers = {}
+        for key in unique_keys:
+            unit_ids = self.unit_ids[units_aggregation_key == key]
+            channel_ids = self.channel_ids[channel_aggregation_key == key]
+            analyzer_units = self.select_units(unit_ids)
+            analyzer_split = analyzer_units.select_channels(channel_ids)
+            split_analyzers[key] = analyzer_split
+
+        return split_analyzers
+
     def are_units_mergeable(
         self,
         merge_unit_groups: list[str | int],
