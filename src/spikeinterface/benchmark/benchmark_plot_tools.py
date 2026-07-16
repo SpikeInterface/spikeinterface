@@ -223,6 +223,7 @@ def plot_unit_counts(
     colors=None,
     columns=None,
     with_rectangle=True,
+    rectangle_range=None,
     revert_bad=True,
     xticks_rotation=45.0,
     show_legend=True,
@@ -246,6 +247,8 @@ def plot_unit_counts(
         Optionally select which columns to display
     with_rectangle : bool
         Add or not a grouping colored rectangle for each case.
+    rectangle_range: tuple | None
+        Optionaly teh limit for teh rectangle.
     revert_bad : bool
         Revert or not bad columns ('num_false_positive', 'num_redundant', 'num_overmerged' ...)
     figsize : tuple | None, default: None
@@ -325,6 +328,8 @@ def plot_unit_counts(
         if revert_bad:
             ymin = 0
         spacing = width * 0.3
+        if rectangle_range is not None:
+            ymin, ymax = rectangle_range
         for i, key in enumerate(keys_mapping):
             rect = plt.Rectangle(
                 (i + 1 - width / 2 - spacing, ymin),

@@ -564,6 +564,7 @@ def generate_hybrid_recording(
             nbefore=nbefore,
             parent_recording=recording,
             upsample_vector=upsample_vector,
+            amplitude_factor=amplitude_factor,
         )
 
     return hybrid_recording, sorting
