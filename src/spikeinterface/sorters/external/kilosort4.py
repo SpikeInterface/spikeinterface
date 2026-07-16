@@ -125,12 +125,11 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def check_sorter_version(cls):
         kilosort_version = version.parse(cls.get_sorter_version())
-        if kilosort_version < version.parse("4.1.0"):
-            raise Exception(
-                f"""SpikeInterface only supports kilosort versions 4.1.0 and above. You are running version {kilosort_version}. To install the latest version, run:
-                        >>> pip install kilosort --upgrade
-                """
-            )
+        if kilosort_version < version.parse("4.1.1"):
+            raise Exception(f"""SpikeInterface only supports kilosort versions 4.1.1 and above (which support numpy>=2).
+                You are running version {kilosort_version}. To install the latest version, run:
+                    >>> pip install kilosort --upgrade
+                """)
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
