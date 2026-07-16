@@ -80,7 +80,7 @@ class Kilosort4Sorter(BaseSorter):
 
     @classmethod
     def get_sorter_version(cls):
-        """kilosort.__version__ <4.0.10 is always '4'"""
+        """kilosort.__version__ < 4.0.10 is always '4'"""
         return importlib_version("kilosort")
 
     @classmethod
@@ -125,9 +125,9 @@ class Kilosort4Sorter(BaseSorter):
     @classmethod
     def check_sorter_version(cls):
         kilosort_version = version.parse(cls.get_sorter_version())
-        if kilosort_version < version.parse("4.0.16"):
+        if kilosort_version < version.parse("4.1.0"):
             raise Exception(
-                f"""SpikeInterface only supports kilosort versions 4.0.16 and above. You are running version {kilosort_version}. To install the latest version, run:
+                f"""SpikeInterface only supports kilosort versions 4.1.0 and above. You are running version {kilosort_version}. To install the latest version, run:
                         >>> pip install kilosort --upgrade
                 """
             )

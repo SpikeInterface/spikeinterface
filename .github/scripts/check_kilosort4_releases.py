@@ -17,8 +17,8 @@ def get_pypi_versions(package_name):
     versions = list(sorted(data["releases"].keys()))
     # Filter out versions that are less than 4.0.16 and different from 4.0.26 and 4.0.27
     # (buggy - https://github.com/MouseLand/Kilosort/releases/tag/v4.0.26)
-    versions = [ver for ver in versions if parse(ver) >= parse("4.0.16") and
-                parse(ver) not in [parse("4.0.26"), parse("4.0.27")]]
+    # Filter out versions that are less than 4.1.*, since they don't support numpy 2.0
+    versions = [ver for ver in versions if parse(ver) >= parse("4.1.0")]
     return versions
 
 
