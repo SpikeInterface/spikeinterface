@@ -1046,31 +1046,24 @@ class BaseSorting(BaseExtractor):
 
         Please note that the lexsort syntax is the **reverse** of natural reading.
 
-        By default the spike_vector is lexsort-ed like this:
-          - ("unit_index", "sample_index", "segment_index") (segment then sample then unit)
-
-        But particular orderings can be better for some computations:
-          - ("sample_index", "unit_index", "segment_index") (segment then unit_index then sample)
-          - ("sample_index", "segment_index", "unit_index") (unit_index then segment then sample)
-
-        Note that the last representation makes the spiketrain per segment compact in memory.
+        Two reorderings are supported:
+          - ("sample_index", "segment_index", "unit_index"): makes each unit's
+            spiketrain compact in memory. This is the default, and is what
+            unit-by-unit computations (e.g. isi violations) want.
+          - ("sample_index", "unit_index", "segment_index"): makes each segment compact,
+            with each unit's spiketrain compact within a segment. Rarely (if ever) used,
+            but might be useful when iterating segment by segment.
 
         This operation is internally cached.
 
-        The order vector is also computed and can be applied to other external vectors like
-        spike_amplitudes, spike_locations, ...
-
-        An array of internal slices is also precomputed to have a fast access to a compact
-        portion of the reordered spikes.
-        Theses slices are stored as a 3d array to handle start->stop and depend of the lexsort itself.
-        Theses slices are pre computed using nested searchsorted.
-
         Parameters
         ----------
-        lexsort : tuple, default: ("sample_index", "unit_index", "segment_index")
-            Tuple for lexsort. Please note that this is the reverse natural reading order!
+        lexsort : tuple, default: ("sample_index", "segment_index", "unit_index")
+            The requested sort order, as keys would be passed to np.lexsort.
+            Please note that this is the reverse natural reading order!
+            Must be one of the two orderings listed above.
         return_order: bool, default: True
-            Return the order, or not. See Returns.
+            Return the numpy array needed to sort the spike vector (given the requested sort).
         return_slices: bool, default: True
             Return the slices, or not. See Returns.
 
@@ -1080,25 +1073,34 @@ class BaseSorting(BaseExtractor):
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes in the desired
             lexsort order
         order : np.array
-            Numpy array needed to sort the spike vector given the lexsort
-        slices :  np.array
-            Numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2) given the lexsort,
-            where one can obtain the indices amin, amax of all the (segment,unit_index) values.
+            Numpy array needed to sort the spike vector given the lexsort. Can be used
+            to sort other external vectors like spike_amplitudes, spike_locations, ...
+        slices : np.array
+            A 3D array of internal slices for fast access to a compact portion of the reordered spikes.
+            Depending on the lexsort, a numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2).
+            The last dimension contains the start and end indices of each segment-unit pair.
+
+        Raises
+        ------
+        ValueError
+            If `lexsort` is not one of the two supported orderings.
         """
         lexsort = tuple(lexsort)
 
         if lexsort == ("unit_index", "sample_index", "segment_index"):
-            assert (
-                not return_order and not return_slices
-            ), 'If lexsort = ("unit_index", "sample_index", "segment_index"), both `return_order` and `return_slices` must be set to `False`.'
+            raise ValueError(
+                '`lexsort` = ("unit_index", "sample_index", "segment_index") is not supported: '
+                "Use `to_spike_vector()` to get the default order."
+            )
 
-            spikes = self.to_spike_vector(concatenated=True)
-            return spikes
-
-        assert lexsort in [
-            ("sample_index", "unit_index", "segment_index"),
+        if lexsort not in [
             ("sample_index", "segment_index", "unit_index"),
-        ], '`lexsort` must be equal to ("unit_index", "sample_index", "segment_index"),  ("sample_index", "unit_index", "segment_index") or ("sample_index", "segment_index", "unit_index")'
+            ("sample_index", "unit_index", "segment_index"),
+        ]:
+            raise ValueError(
+                '`lexsort` must be ("sample_index", "segment_index", "unit_index") or '
+                f'("sample_index", "unit_index", "segment_index"); got {lexsort}.'
+            )
 
         key = str(lexsort)
 
