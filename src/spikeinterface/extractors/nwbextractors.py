@@ -329,7 +329,9 @@ def _zarr_group_child_names(group):
             return [key async for key in group.store.list_dir(group.path)]
 
         # Filter out this group's own metadata files (".zgroup", ".zattrs", "zarr.json", ...).
-        return [name for name in sync(_collect()) if not name.startswith(".") and name != "zarr.json"]
+        # list_dir does not guarantee an order, so sort for deterministic traversal (matches h5py).
+        names = [name for name in sync(_collect()) if not name.startswith(".") and name != "zarr.json"]
+        return sorted(names)
     else:  # zarr v2
         return list(group.keys())
 
