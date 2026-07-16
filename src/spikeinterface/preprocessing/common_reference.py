@@ -55,7 +55,17 @@ class CommonReferenceRecording(BasePreprocessor):
     ref_channel_ids : list | str | int | None, default: None
         If "global" reference, a list of channels to be used as reference.
         If "single" reference, a list of one channel or a single channel id is expected.
-        If "groups" is provided, then a list of channels to be applied to each group is expected.
+        If "groups" is provided with "single" reference, a list with one reference channel id
+        per group is expected.
+        If "groups" is provided with "global" reference, a list with one *list* of reference
+        channel ids per group is expected: the reference subtracted from each group is the
+        operator (median/average) over that group's reference set. The reference set may contain
+        channels outside the group, enabling cross-group referencing (e.g. referencing each
+        tetrode to the median of all channels on the other tetrodes). If None, each group is
+        referenced to its own channels.
+        As a shortcut for that cross-group case, pass the string "out_of_group" (with "global"
+        reference and "groups"): each group is then referenced to all channels NOT in it,
+        i.e. ref_channel_ids is auto-built as each group's complement (its out-of-group channels).
     local_radius : tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
 
@@ -98,9 +108,27 @@ class CommonReferenceRecording(BasePreprocessor):
             raise ValueError("'operator' must be either 'median', 'average'")
 
         if reference == "global":
+            if ref_channel_ids == "out_of_group":
+                # Convenience: reference each group to all channels NOT in it (its out-of-group channels).
+                if groups is None:
+                    raise ValueError("ref_channel_ids='out_of_group' requires 'groups' to be set")
+                all_ids = list(recording.channel_ids)
+                ref_channel_ids = [[c for c in all_ids if c not in set(group)] for group in groups]
             if ref_channel_ids is not None:
                 if not isinstance(ref_channel_ids, list):
                     raise ValueError("With 'global' reference, provide 'ref_channel_ids' as a list")
+                if groups is not None:
+                    # Per-group reference sets: one list of channel ids per group. The reference
+                    # subtracted from each group is the operator over that group's reference set
+                    # (which may be channels outside the group, e.g. for cross-group referencing).
+                    assert len(ref_channel_ids) == len(groups), (
+                        "With 'global' reference and 'groups', 'ref_channel_ids' must be a list "
+                        "with one channel-id list per group"
+                    )
+                    assert all(isinstance(r, (list, np.ndarray)) for r in ref_channel_ids), (
+                        "With 'global' reference and 'groups', each element of 'ref_channel_ids' "
+                        "must itself be a list of channel ids (the reference set for that group)"
+                    )
         elif reference == "single":
             assert ref_channel_ids is not None, "With 'single' reference, provide 'ref_channel_ids'"
             if groups is not None:
@@ -150,7 +178,11 @@ class CommonReferenceRecording(BasePreprocessor):
         else:
             group_indices = None
         if ref_channel_ids is not None:
-            ref_channel_indices = self.ids_to_indices(ref_channel_ids)
+            if reference == "global" and groups is not None:
+                # one reference-channel index array per group
+                ref_channel_indices = [self.ids_to_indices(r) for r in ref_channel_ids]
+            else:
+                ref_channel_indices = self.ids_to_indices(ref_channel_ids)
         else:
             ref_channel_indices = None
 
@@ -247,7 +279,11 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 in_group_traces = traces[:, selected_indices_in_group]
 
                 if self.reference == "global":
-                    shift = self.operator_func(traces[:, all_group_indices], axis=1, keepdims=True)
+                    if self.ref_channel_indices is None:
+                        ref_indices = all_group_indices  # reference each group to its own channels
+                    else:
+                        ref_indices = self.ref_channel_indices[group_index]  # per-group reference set
+                    shift = self.operator_func(traces[:, ref_indices], axis=1, keepdims=True)
                     re_referenced_traces[:, out_indices] = in_group_traces - shift
                 else:
                     # single (as local is not allowed for groups)
