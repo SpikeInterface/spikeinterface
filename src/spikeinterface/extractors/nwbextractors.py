@@ -1985,6 +1985,7 @@ def read_nwb_sorting_analyzer(
     compute_extra: List[str] | None = ["unit_locations"],
     compute_extra_params: dict | None = None,
     extension_map: dict | None = None,
+    rescale_templates_to_uV: bool = True,
     verbose: bool = False,
 ) -> SortingAnalyzer:
     # extension_map overrides (per extension) merge over DEFAULT_EXTENSION_MAP; see its docstring.
@@ -2047,9 +2048,6 @@ def read_nwb_sorting_analyzer(
             and units[c].dtype.kind == "O"
             and not isinstance(units[c].iloc[0], (list, np.ndarray))
         ]
-        waveform_unit = units_table.waveform_unit
-        if waveform_unit is None:
-            waveform_unit = "volts"  # default to volts if not present
     else:
         units_group = sorting.units_table
         colnames = list(units_group.keys())
@@ -2065,12 +2063,6 @@ def read_nwb_sorting_analyzer(
                 metric_colnames.append(column_name)
             elif dataset.ndim == 1 and dataset.dtype.kind in "OSU":
                 label_colnames.append(column_name)
-        # In NWB the waveform unit is stored as the "unit" attribute of the waveform_mean dataset,
-        # not as a group-level attribute (this mirrors pynwb's Units.waveform_unit).
-        if "waveform_mean" in units_group:
-            waveform_unit = units_group["waveform_mean"].attrs.get("unit", "volts")
-        else:
-            waveform_unit = "volts"  # default to volts if not present
 
     # Resolve the extension map against the Units columns: which column holds the templates, and which
     # scalar columns are quality metrics (canonical names by default) vs plain sorting properties.
@@ -2167,7 +2159,13 @@ def read_nwb_sorting_analyzer(
     if templates_column is not None and templates_column in units and unit_local_channels is not None:
         _make_random_spikes(analyzer, sorting)
         _make_templates(
-            analyzer, units, templates_column, templates_std_column, unit_local_channels, num_channels, waveform_unit
+            analyzer,
+            units,
+            templates_column,
+            templates_std_column,
+            unit_local_channels,
+            num_channels,
+            rescale_to_uV=rescale_templates_to_uV,
         )
 
     # the resolved quality-metric columns -> quality_metrics extension
@@ -2300,8 +2298,34 @@ def _make_random_spikes(analyzer, sorting):
     analyzer.extensions["random_spikes"] = random_spikes_ext
 
 
+def _infer_template_scale_to_uV(dense_templates):
+    """Infer the factor that brings templates into microvolts, SpikeInterface's convention.
+
+    The NWB waveform unit attribute is schema-fixed to "volts" and never reflects the true scale
+    (pynwb issue #2162), so it cannot drive the conversion. The template magnitude can: an extracellular
+    spike peaks at roughly tens to hundreds of microvolts, so pick the factor in {1, 1e3, 1e6} that lands
+    the median per-unit peak in that physiological window. This reads no extra data (it operates on the
+    already-built templates). Returns 1.0 if the magnitude is unusable (all zero).
+    """
+    per_unit_peak = np.abs(dense_templates).max(axis=(1, 2))
+    per_unit_peak = per_unit_peak[per_unit_peak > 0]
+    if per_unit_peak.size == 0:
+        return 1.0
+    median_peak = float(np.median(per_unit_peak))
+    for factor in (1.0, 1e3, 1e6):
+        if 5.0 <= median_peak * factor <= 2000.0:
+            return factor
+    return 1.0
+
+
 def _make_templates(
-    analyzer, units, templates_column, templates_std_column, unit_local_channels, num_channels, waveform_unit
+    analyzer,
+    units,
+    templates_column,
+    templates_std_column,
+    unit_local_channels,
+    num_channels,
+    rescale_to_uV=False,
 ):
     """Attach the `templates` extension from the resolved templates column, scattering each unit's
     sparse waveform block onto its true channel positions."""
@@ -2320,13 +2344,15 @@ def _make_templates(
         k = len(positions)
         dense_templates[unit_index][:, positions] = waveform_mean[unit_index][:, :k]
 
-    # TODO: this would be nice, but there is a bug in NWB. Even when explicitly settting "microvolts" as the waveform
-    # unit, pynwb writes "volts" into the waveform_mean dataset's unit attribute. So we can't rely on it to be correct.
-    # For now, we just assume the waveform is in volts and convert to microvolts.
-    # if waveform_unit == "volts":
-    #     dense_templates *= 1e6  # convert to microvolts
-    # elif waveform_unit == "millivolts":
-    #     dense_templates *= 1e3  # convert to microvolts
+    # The stored waveform unit attribute is schema-fixed to "volts" and never reflects the real scale
+    # (pynwb #2162), so it cannot drive a conversion. When rescaling is requested, infer the factor from
+    # the template magnitude instead and apply the same factor to the std templates below so both stay in
+    # the same unit. On by default (read_nwb_sorting_analyzer) so templates read in microvolts; it can be
+    # turned off to keep the file's native unit, since the scale does not affect peak channel, shape,
+    # location, or sparsity.
+    template_scale = _infer_template_scale_to_uV(dense_templates) if rescale_to_uV else 1.0
+    if template_scale != 1.0:
+        dense_templates *= template_scale
 
     # scalar alignment (nbefore): the sample where the average peak-channel amplitude is largest
     peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
@@ -2345,6 +2371,8 @@ def _make_templates(
         for unit_index, positions in enumerate(unit_local_channels):
             k = len(positions)
             dense_std[unit_index][:, positions] = waveform_sd[unit_index][:, :k]
+        if template_scale != 1.0:
+            dense_std *= template_scale
         templates_ext.data["std"] = dense_std
         operators.append("std")
 
