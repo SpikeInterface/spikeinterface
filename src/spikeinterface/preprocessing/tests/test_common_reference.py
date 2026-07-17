@@ -1,7 +1,7 @@
 import operator
 import pytest
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, NumpyRecording
 
 from spikeinterface.preprocessing import common_reference
 
@@ -168,6 +168,74 @@ def test_common_reference_groups(recording):
     assert np.allclose(traces[:, 0], original_traces[:, 3] - original_traces[:, 1], atol=0.01)
     # b - all zeros
     assert np.allclose(traces[:, 1], 0)
+
+
+def test_common_reference_groups_cross(recording):
+    # "global" reference with groups AND a per-group ref_channel_ids: each group is
+    # referenced to a (possibly external) set of channels -> enables cross-group referencing.
+    original_traces = recording.get_traces()
+    groups = [["a", "c"], ["b", "d"]]
+    ref_channel_ids = [["b", "d"], ["a", "c"]]  # reference each group to the OTHER group's channels
+
+    rec_cross = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids=ref_channel_ids
+    )
+    traces = rec_cross.get_traces(channel_ids=["a", "b", "c", "d"])
+    # a, c (group 0) referenced to median of b, d
+    ref0 = np.median(original_traces[:, [1, 3]], axis=1)
+    assert np.allclose(traces[:, 0], original_traces[:, 0] - ref0, atol=0.01)
+    assert np.allclose(traces[:, 2], original_traces[:, 2] - ref0, atol=0.01)
+    # b, d (group 1) referenced to median of a, c
+    ref1 = np.median(original_traces[:, [0, 2]], axis=1)
+    assert np.allclose(traces[:, 1], original_traces[:, 1] - ref1, atol=0.01)
+    assert np.allclose(traces[:, 3], original_traces[:, 3] - ref1, atol=0.01)
+
+    # mismatched lengths raise
+    with pytest.raises(AssertionError):
+        common_reference(recording, reference="global", groups=groups, ref_channel_ids=[["b", "d"]])
+
+
+def test_out_of_group_common_reference(recording):
+    # ref_channel_ids="out_of_group" shortcut: reference each group to all channels NOT in it.
+    groups = [["a", "c"], ["b", "d"]]
+    # out-of-group channels for these groups within {a,b,c,d} are exactly [["b","d"], ["a","c"]]
+    explicit = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids=[["b", "d"], ["a", "c"]]
+    )
+    sugar = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids="out_of_group"
+    )
+    assert np.allclose(sugar.get_traces(), explicit.get_traces(), atol=1e-6)
+
+    # "out_of_group" requires groups
+    with pytest.raises(ValueError):
+        common_reference(recording, reference="global", ref_channel_ids="out_of_group")
+
+
+def test_common_reference_int_dtype_rounds():
+    # Casting the re-referenced float traces down to an integer dtype must round
+    # to the nearest integer, not truncate toward zero (b3).
+    traces = np.array([[0.0, 10.4], [0.0, -10.4]], dtype="float32")
+    recording = NumpyRecording([traces], sampling_frequency=1.0)
+    recording = recording.rename_channels(np.array(["a", "b"]))
+
+    rec_sin = common_reference(recording, reference="single", ref_channel_ids=["a"], dtype="int16")
+    result = rec_sin.get_traces(channel_ids=["b"])
+
+    # 10.4 rounds to 10, -10.4 rounds to -10: truncation toward zero would give the
+    # same values here, so also check a case where rounding and truncation differ.
+    assert result[0, 0] == 10
+    assert result[1, 0] == -10
+
+    traces2 = np.array([[0.0, 10.6], [0.0, -10.6]], dtype="float32")
+    recording2 = NumpyRecording([traces2], sampling_frequency=1.0)
+    recording2 = recording2.rename_channels(np.array(["a", "b"]))
+    rec_sin2 = common_reference(recording2, reference="single", ref_channel_ids=["a"], dtype="int16")
+    result2 = rec_sin2.get_traces(channel_ids=["b"])
+
+    # Truncation toward zero would give 10 / -10; correct rounding gives 11 / -11.
+    assert result2[0, 0] == 11
+    assert result2[1, 0] == -11
 
 
 def test_min_local_radius():

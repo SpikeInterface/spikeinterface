@@ -7,10 +7,7 @@ from spikeinterface.core import (
     NumpySorting,
     aggregate_units,
 )
-
 from spikeinterface.metrics.quality.misc_metrics import compute_snrs, compute_drift_metrics
-
-
 from spikeinterface.metrics import (
     compute_quality_metrics,
 )
@@ -71,7 +68,6 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
         skip_pc_metrics=False,
         seed=2205,
     )
-    print(metrics.columns)
     assert "isolation_distance" in metrics.columns
 
 
@@ -88,7 +84,7 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     )
 
     # sorting_analyzer_simple has ten units
-    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
+    new_sorting_analyzer = sorting_analyzer.merge_units([["0", "1"]])
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # we should copy over the metrics after merge
@@ -114,6 +110,9 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
     # make a copy and make it recordingless
     sorting_analyzer_norec = sorting_analyzer.save_as(format="memory")
+
+    # keep the same `main_channel_indices` as before
+    sorting_analyzer_norec._main_channel_indices = sorting_analyzer._main_channel_indices
     sorting_analyzer_norec.delete_extension("quality_metrics")
     sorting_analyzer_norec._recording = None
     assert not sorting_analyzer_norec.has_recording()
@@ -143,6 +142,7 @@ def test_empty_units(sorting_analyzer_simple):
         {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
         sampling_frequency=sorting_analyzer.sampling_frequency,
     )
+    empty_sorting.set_property("main_channel_id", ["1", "1", "1"])
     sorting_empty = aggregate_units([sorting_analyzer.sorting, empty_sorting])
     assert len(sorting_empty.get_empty_unit_ids()) == 3
 

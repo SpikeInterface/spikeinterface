@@ -3,7 +3,6 @@ import importlib.util
 import numpy as np
 from spikeinterface.core import (
     get_channel_distances,
-    get_template_extremum_channel,
 )
 from spikeinterface.core.core_tools import ms_to_samples
 
@@ -222,12 +221,11 @@ class TridesclousPeeler(BaseTemplateMatching):
             self.sparse_templates_array_static = templates.templates_array
             self.dtype = self.sparse_templates_array_static.dtype
 
-        extremum_chan = get_template_extremum_channel(templates, peak_sign=peak_sign, outputs="index")
         # as numpy vector
-        self.extremum_channel = np.array([extremum_chan[unit_id] for unit_id in unit_ids], dtype="int64")
+        self.main_channels = templates.get_main_channels(peak_sign=peak_sign, outputs="index", with_dict=False)
 
         channel_locations = templates.probe.contact_positions
-        unit_locations = channel_locations[self.extremum_channel]
+        unit_locations = channel_locations[self.main_channels]
         self.channel_locations = channel_locations
 
         # distance between units
@@ -972,7 +970,7 @@ if HAVE_NUMBA:
         traces, sparse_template, sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity
     ):
         """
-        numba implementation to compute several sample shift before template substraction
+        numba implementation to compute several sample shift before template subtraction
         """
         width = sparse_template.shape[0]
         total_chans = traces.shape[1]

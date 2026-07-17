@@ -3,6 +3,8 @@ import pytest
 import numpy as np
 import json
 
+import probeinterface as pi
+
 from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_sparsity, get_noise_levels
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core import generate_ground_truth_recording
@@ -287,13 +289,21 @@ def test_estimate_sparsity():
         progress_bar=True,
         n_jobs=1,
     )
-    print(noise_levels)
 
 
 def test_compute_sparsity():
     recording, sorting = get_dataset()
 
     sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, sparse=False, return_in_uV=True)
+
+    # Check that we can still pass sparsity kwargs using the old signature (e.g. passing radius_um)
+    with pytest.warns(FutureWarning):
+        # radius_um is a sparsity kwarg
+        sorting_analyzer_old_kwargs = create_sorting_analyzer(sorting=sorting, recording=recording, radius_um=50)
+    with pytest.warns(FutureWarning):
+        # n_jobs is a job kwarg
+        sorting_analyzer_old_kwargs = create_sorting_analyzer(sorting=sorting, recording=recording, n_jobs=2)
+
     sorting_analyzer.compute("random_spikes")
     sorting_analyzer.compute(
         "waveforms",
@@ -303,25 +313,56 @@ def test_compute_sparsity():
     # this is needed for method="energy"
 
     # using object SortingAnalyzer
-    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2, peak_sign="neg")
-    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0, peak_sign="neg")
+    sparsity = compute_sparsity(sorting_analyzer, method="best_channels", num_channels=2)
+    sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=50.0)
     sparsity = compute_sparsity(sorting_analyzer, method="closest_channels", num_channels=2)
-    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5, peak_sign="neg")
-    sparsity = compute_sparsity(
-        sorting_analyzer, method="snr", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
-    )
-    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
+    sparsity = compute_sparsity(sorting_analyzer, method="snr", threshold=5)
+    sparsity = compute_sparsity(sorting_analyzer, method="amplitude", threshold=5)
     sparsity = compute_sparsity(sorting_analyzer, method="energy", threshold=5)
     sparsity = compute_sparsity(sorting_analyzer, method="by_property", by_property="group")
 
     # using object Templates
     templates = sorting_analyzer.get_extension("templates").get_data(outputs="Templates")
     noise_levels = sorting_analyzer.get_extension("noise_levels").get_data()
-    sparsity = compute_sparsity(templates, method="best_channels", num_channels=2, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="radius", radius_um=50.0, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg")
-    sparsity = compute_sparsity(templates, method="amplitude", threshold=5, amplitude_mode="peak_to_peak")
-    sparsity = compute_sparsity(templates, method="closest_channels", num_channels=2)
+    sparsity = compute_sparsity(
+        templates, method="best_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
+    )
+    sparsity = compute_sparsity(
+        templates, method="radius", radius_um=50.0, peak_sign="both", amplitude_mode="peak_to_peak"
+    )
+    sparsity = compute_sparsity(
+        templates, method="snr", noise_levels=noise_levels, threshold=5, peak_sign="neg", amplitude_mode="extremum"
+    )
+    sparsity = compute_sparsity(
+        templates, method="amplitude", threshold=5, peak_sign="neg", amplitude_mode="peak_to_peak"
+    )
+    sparsity = compute_sparsity(
+        templates, method="closest_channels", num_channels=2, peak_sign="neg", amplitude_mode="extremum"
+    )
+
+
+def test_estimate_sparsity_with_probegroup_overlapping():
+    """
+    Simple test to check that estimate_sparsity does not fail when channel
+    locations are not unique across probegroup
+    """
+    recording, sorting = get_dataset()
+    num_half_channels = recording.get_num_channels() // 2
+    probegroup = pi.ProbeGroup()
+    probegroup.add_probe(pi.generate_linear_probe(num_half_channels, 20.0))
+    probegroup.add_probe(pi.generate_linear_probe(num_half_channels, 20.0))
+    probegroup.set_global_device_channel_indices(np.arange(recording.get_num_channels()))
+
+    recording.set_probegroup(probegroup, check_overlap=False)
+
+    locations = recording.get_channel_locations()
+    assert len(locations) != len(set(map(tuple, locations)))
+    # This tests that the estimate sparsity is not failing even if channel locations are not unique
+    sparsity = estimate_sparsity(
+        sorting,
+        recording,
+    )
+    assert isinstance(sparsity, ChannelSparsity)
 
 
 if __name__ == "__main__":

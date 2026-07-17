@@ -72,14 +72,14 @@ def test_BaseSorting(create_cache_folder):
     folder = cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="npz_folder")
-    sorting2 = BaseExtractor.load_from_folder(folder)
+    sorting2 = BaseExtractor.load(folder)
     assert isinstance(sorting2, NpzFolderSorting)
 
     # cache new format : numpy_folder
     folder = cache_folder / "simple_sorting_numpy_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="numpy_folder")
-    sorting2 = BaseExtractor.load_from_folder(folder)
+    sorting2 = BaseExtractor.load(folder)
     assert isinstance(sorting2, NumpyFolderSorting)
 
     # but also possible
@@ -96,8 +96,6 @@ def test_BaseSorting(create_cache_folder):
     spikes = sorting.to_spike_vector()
     # print(spikes)
     assert sorting._cached_spike_vector is not None
-    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
-    # print(spikes)
 
     spikes = sorting.to_spike_vector()
     ordered_spikes, order, slices = sorting.to_reordered_spike_vector(

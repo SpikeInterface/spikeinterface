@@ -31,11 +31,13 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 cache_dir=None,
             )
         except:
+            print("Skipping test due to server being down.")
             pytest.skip("Skipping test due to server being down.")
         try:
             cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 503:
+                print("Skipping test due to server being down (HTTP 503).")
                 pytest.skip("Skipping test due to server being down (HTTP 503).")
             else:
                 raise
@@ -84,8 +86,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
         expected_property_keys = [
             "gain_to_uV",
             "offset_to_uV",
-            "contact_vector",
-            "location",
             "group",
             "shank",
             "shank_row",
@@ -96,6 +96,9 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
             "index_on_probe",
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
+
+    def test_has_probe(self):
+        assert self.recording.has_probe() is True
 
     def test_trace_shape(self):
         expected_shape = (21, 384)
