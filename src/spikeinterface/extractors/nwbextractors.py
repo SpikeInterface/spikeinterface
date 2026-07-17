@@ -8,6 +8,7 @@ import numpy as np
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.core_tools import define_function_from_class
 
 if importlib.util.find_spec("pynwb") is not None:
@@ -1426,6 +1427,34 @@ class NwbSortingExtractor(BaseSorting):
             "t_start": self.t_start,
         }
 
+    def _compute_and_cache_spike_vector(self) -> None:
+        # Performance: this deliberately overrides the generic BaseSorting builder, and the override is
+        # the point. The generic builder reads one spike train per unit (one streamed read per unit),
+        # whereas an NWB Units table stores every unit's spikes in a single flat times dataset grouped by
+        # unit. Reading that dataset once (see NwbSortingSegment._get_all_spike_samples_and_unit_indices)
+        # turns num_units streamed reads into one, which is a large difference for remote/streamed files.
+        # Do not drop this override in favor of the generic path without a reason: doing so silently
+        # reintroduces the per-unit read pattern. An NWB Units table is always single-segment, so the
+        # single segment is built directly.
+        segment = self.segments[0]
+        sample_indices, unit_indices = segment._get_all_spike_samples_and_unit_indices()
+
+        # NWB stores spike_times grouped by unit, not globally ordered by time: pynwb itself notes that
+        # "the earliest spike may be in any unit" (Units.get_earliest_spike_time), and within-unit ordering
+        # is only a best-practice (checked by nwbinspector), not a schema guarantee. So a global sort is
+        # required to build the time-ordered spike vector. It is stable so unit_index order is preserved on
+        # equal sample_index ties, matching the generic BaseSorting builder; on already-ordered input the
+        # sort is a no-op (argsort returns the identity permutation).
+        order = np.argsort(sample_indices, stable=True)
+        num_spikes = sample_indices.size
+
+        spikes = np.zeros(num_spikes, dtype=minimum_spike_dtype)
+        spikes["sample_index"] = sample_indices[order]
+        spikes["unit_index"] = unit_indices[order]
+        # segment_index stays 0 for the single segment.
+        self._cached_spike_vector = spikes
+        self._cached_spike_vector_segment_slices = np.array([[0, num_spikes]], dtype="int64")
+
     @staticmethod
     def fetch_available_units_tables(
         file_path: str | Path,
@@ -1468,6 +1497,18 @@ class NwbSortingSegment(BaseSortingSegment):
             return self._time_vector[frame]
         return frame / self._sampling_frequency + self._t_start
 
+    def _times_to_samples(self, spike_times) -> np.ndarray:
+        # Map seconds to samples. An irregular clock (per-sample timestamps) maps exactly with a
+        # searchsorted into the time vector; a uniform clock uses sample = (t - t_start) * sampling_frequency.
+        if self._time_vector is not None:
+            # searchsorted needs the timestamps in memory: materialize them once, on first use, and cache.
+            if not isinstance(self._time_vector, np.ndarray):
+                self._time_vector = np.asarray(self._time_vector)
+            samples = np.searchsorted(self._time_vector, spike_times, side="right") - 1
+        else:
+            samples = np.round((spike_times - self._t_start) * self._sampling_frequency)
+        return samples.astype("int64", copy=False)
+
     def get_unit_spike_train(
         self,
         unit_id,
@@ -1481,16 +1522,29 @@ class NwbSortingSegment(BaseSortingSegment):
         # Get spike times in seconds
         spike_times = self.get_unit_spike_train_in_seconds(unit_id=unit_id, start_time=start_time, end_time=end_time)
 
-        # Map seconds to samples. An irregular clock (per-sample timestamps) maps exactly with a
-        # searchsorted into the time vector; a uniform clock uses frame = (t - t_start) * sampling_frequency.
-        if self._time_vector is not None:
-            # searchsorted needs the timestamps in memory: materialize them once, on first use, and cache.
-            if not isinstance(self._time_vector, np.ndarray):
-                self._time_vector = np.asarray(self._time_vector)
-            frames = np.searchsorted(self._time_vector, spike_times, side="right") - 1
-        else:
-            frames = np.round((spike_times - self._t_start) * self._sampling_frequency)
-        return frames.astype("int64", copy=False)
+        return self._times_to_samples(spike_times)
+
+    def _get_all_spike_samples_and_unit_indices(self):
+        """Read all units' spike trains (as samples) in one bulk read, plus each spike's unit index.
+
+        NWB stores all spike times in a single flat dataset grouped by unit (with per-unit
+        boundaries in ``spike_times_index_data``), so the whole segment is read at once instead
+        of one streamed slice per unit.
+        """
+        spike_times = np.asarray(self.spike_times_data[:], dtype="float64")
+        # NWB stores a ragged column as one flat data array (spike_times, all units concatenated) plus an
+        # index array of cumulative end offsets (spike_times_index): spike_times_index[u] is where unit u's
+        # spikes end and unit u+1's begin, so unit u is spike_times[spike_times_index[u-1] : spike_times_index[u]].
+        # Prepending a 0 gives every unit an explicit start, so boundaries[u]:boundaries[u+1] is unit u's
+        # slice; the gap between consecutive boundaries (np.diff) is that unit's spike count, and repeating
+        # each unit index by its count labels every spike with its unit.
+        # Example: 3 units with 2, 0, 3 spikes -> spike_times_index = [2, 2, 5],
+        #   boundaries = [0, 2, 2, 5], counts = [2, 0, 3], unit_indices = [0, 0, 2, 2, 2].
+        boundaries = np.concatenate(([0], np.asarray(self.spike_times_index_data[:], dtype="int64")))
+        counts = np.diff(boundaries)
+        unit_indices = np.repeat(np.arange(counts.size, dtype="int64"), counts)
+        sample_indices = self._times_to_samples(spike_times)
+        return sample_indices, unit_indices
 
     def get_unit_spike_train_in_seconds(
         self,
@@ -1501,7 +1555,7 @@ class NwbSortingSegment(BaseSortingSegment):
         """Get the spike train times for a unit in seconds.
 
         This method returns spike times directly in seconds without conversion
-        to frames, avoiding double conversion for NWB files that already store
+        to samples, avoiding double conversion for NWB files that already store
         spike times as timestamps.
 
         Parameters
