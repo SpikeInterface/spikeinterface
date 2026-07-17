@@ -1105,59 +1105,37 @@ class BaseSorting(BaseExtractor):
         key = str(lexsort)
 
         if key not in self._cached_lexsorted_spike_vector.keys():
-            spikes = self.to_spike_vector()
-            order = np.lexsort((spikes[lexsort[0]], spikes[lexsort[1]], spikes[lexsort[2]]))
-            ordered_spikes = spikes[order]
-            self._cached_lexsorted_spike_vector[key] = {}
-            self._cached_lexsorted_spike_vector[key]["ordered_spikes"] = ordered_spikes
-            self._cached_lexsorted_spike_vector[key]["order"] = order
+            from .sorting_tools import reorder_spike_vector_by_unit_and_segment
 
+            spikes = self.to_spike_vector()
             num_units = len(self.unit_ids)
             num_segments = self.get_num_segments()
 
-            # precompute the slices with nested search sorted
-            if lexsort == ("sample_index", "segment_index", "unit_index"):
-                # this case make spiketrain per unit compact in memory
+            unit_major = lexsort == ("sample_index", "segment_index", "unit_index")
+            slices_shape = (num_units, num_segments) if unit_major else (num_segments, num_units)
 
-                slices = np.zeros((num_units, num_segments, 2), dtype=np.int64)
-                unit_slices = np.searchsorted(ordered_spikes["unit_index"], np.arange(num_units + 1), side="left")
-                for unit_index, unit_id in enumerate(self.unit_ids):
-                    u0 = unit_slices[unit_index]
-                    u1 = unit_slices[unit_index + 1]
-                    seg_slices = np.searchsorted(
-                        ordered_spikes[u0:u1]["segment_index"], np.arange(num_segments + 1), side="left"
-                    )
-                    for segment_index in range(num_segments):
-                        s0 = seg_slices[segment_index]
-                        s1 = seg_slices[segment_index + 1]
-                        slices[unit_index, segment_index, :] = [u0 + s0, u0 + s1]
+            ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(
+                spikes, num_units, num_segments, unit_major=unit_major
+            )
 
-            elif lexsort == ("sample_index", "unit_index", "segment_index"):
-                slices = np.zeros((num_segments, num_units, 2), dtype=np.int64)
-                seg_slices = np.searchsorted(ordered_spikes["segment_index"], np.arange(num_segments + 1), side="left")
-                for segment_index in range(self.get_num_segments()):
-                    s0 = seg_slices[segment_index]
-                    s1 = seg_slices[segment_index + 1]
-                    unit_slices = np.searchsorted(
-                        ordered_spikes[s0:s1]["unit_index"], np.arange(num_units + 1), side="left"
-                    )
-                    for unit_index, unit_id in enumerate(self.unit_ids):
-                        u0 = unit_slices[unit_index]
-                        u1 = unit_slices[unit_index + 1]
-                        slices[segment_index, unit_index, :] = [s0 + u0, s0 + u1]
+            counts = counts.reshape(slices_shape)
+            stops = np.cumsum(counts.ravel()).reshape(slices_shape)
+            starts = stops - counts
+            slices = np.stack([starts, stops], axis=-1).astype(np.int64, copy=False)
 
-            self._cached_lexsorted_spike_vector[key]["slices"] = slices
+            self._cached_lexsorted_spike_vector[key] = {
+                "ordered_spikes": ordered_spikes,
+                "order": order,
+                "slices": slices,
+            }
 
-        ordered_spikes = self._cached_lexsorted_spike_vector[key]["ordered_spikes"]
-        out = (ordered_spikes,)
+        cached = self._cached_lexsorted_spike_vector[key]
+        out = [cached["ordered_spikes"]]
         if return_order:
-            out += (self._cached_lexsorted_spike_vector[key]["order"],)
+            out.append(cached["order"])
         if return_slices:
-            out += (self._cached_lexsorted_spike_vector[key]["slices"],)
-        if len(out) == 1:
-            return out[0]
-        else:
-            return out
+            out.append(cached["slices"])
+        return tuple(out) if len(out) > 1 else out[0]
 
     def to_numpy_sorting(self, propagate_cache=True):
         """
