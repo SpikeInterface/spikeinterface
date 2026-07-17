@@ -2206,12 +2206,10 @@ def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, elect
     electrodes_table_sliced = electrodes_table.iloc[electrode_indices_all]
 
     if "channel_name" in electrodes_table_sliced:
-        # IBL stores channel_name as variable-length HDF5 byte strings (e.g. b"AP0"); decode to str so
-        # SpikeInterface accepts them as channel ids (object-dtype arrays are rejected). This must match
-        # the decode in _make_sparsity_from_electrodes so channel ids and sparsity keys stay consistent.
-        channel_ids = np.array(
-            [c.decode("utf-8") if isinstance(c, bytes) else c for c in electrodes_table_sliced["channel_name"][:]]
-        )
+        # channel_name is already decoded to str at the source (_create_df_from_nwb_table), but pandas
+        # holds string columns as object dtype; cast to a numpy unicode array so SpikeInterface accepts
+        # the channel ids (object-dtype ids are rejected).
+        channel_ids = np.asarray(electrodes_table_sliced["channel_name"][:], dtype=str)
     else:
         channel_ids = electrodes_table_sliced.index.to_numpy()
 
@@ -2256,10 +2254,7 @@ def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices
 
     num_channels = len(analyzer_channel_ids)
     if "channel_name" in electrodes_table.columns:
-        # decode HDF5 byte-string channel names to str, matching _make_placeholder_recording_from_electrodes
-        electrode_row_to_channel_id = np.array(
-            [c.decode("utf-8") if isinstance(c, bytes) else c for c in electrodes_table["channel_name"].to_numpy()]
-        )
+        electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
     else:
         electrode_row_to_channel_id = electrodes_table.index.to_numpy()
     position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
@@ -2408,6 +2403,12 @@ def _create_df_from_nwb_table(group, columns=None):
         elif item.ndim > 1:
             data[col] = [item_flat for item_flat in item]
         else:
+            if item.dtype.kind in ("O", "S"):
+                # HDF5 stores string columns as variable-length or fixed-length bytes (e.g. b"AP0",
+                # b"Probe00"). Decode to str at the source so every caller gets plain strings: channel and
+                # group ids must be str (SpikeInterface rejects object-dtype byte-string ids), and group
+                # selection compares the column against a str argument.
+                item = np.array([v.decode("utf-8") if isinstance(v, bytes) else v for v in item])
             data[col] = item
     df = pd.DataFrame(data=data)
     df.set_index("id", inplace=True)
