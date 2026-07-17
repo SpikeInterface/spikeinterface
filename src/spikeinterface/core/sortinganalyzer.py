@@ -196,6 +196,7 @@ def create_sorting_analyzer(
         if sparsity_kwargs is None:
             sparsity_kwargs = {}
 
+    # Aggregate split recordings and sortings if they are provided as dicts
     if isinstance(sorting, dict) and isinstance(recording, dict):
 
         if sorting.keys() != recording.keys():
@@ -207,55 +208,54 @@ def create_sorting_analyzer(
         aggregated_sorting = aggregate_units(sorting)
 
         if sparsity is None:
-            if sparsity_kwargs.get("method", "") != "by_property" and not set_sparsity_by_dict_key:
+            if set_sparsity_by_dict_key:
+                # In this case we estimate and construct sparsity by property
+                sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
+            elif sparsity_kwargs.get("method") != "by_property":
                 # In this case, we estimate the sparsity on different splitted groups and then we
                 # aggregate the sparsity_masks and main_channel_indices
                 from .template_tools import estimate_main_channel_from_recording
 
-                # In this case we estimate and construct sparsity by property
-                sparsity_mask = np.zeros(
-                    (aggregated_sorting.get_num_units(), aggregated_recording.get_num_channels()), dtype=bool
-                )
-                main_channel_indices = np.zeros(aggregated_sorting.get_num_units(), dtype=int)
-                i_unit = 0
-                i_channel = 0
-                for key in sorting.keys():
-                    recording_single = recording[key]
-                    sorting_single = sorting[key]
-                    num_units = sorting_single.get_num_units()
-                    num_channels = recording_single.get_num_channels()
+                num_total_units = aggregated_sorting.get_num_units()
+                num_total_channels = aggregated_recording.get_num_channels()
+                sparsity_mask = np.zeros((num_total_units, num_total_channels), dtype=bool)
+                main_channel_indices = np.full(num_total_units, -1, dtype=int)
+                unit_offset = 0
+                channel_offset = 0
+                for key, one_sorting in sorting.items():
+                    one_recording = recording[key]
+                    num_units = one_sorting.get_num_units()
+                    num_channels = one_recording.get_num_channels()
+                    unit_slice = slice(unit_offset, unit_offset + num_units)
+                    channel_slice = slice(channel_offset, channel_offset + num_channels)
 
-                    main_channel_indices_single = estimate_main_channel_from_recording(
-                        recording_single,
-                        sorting_single,
+                    one_main_channel_indices = estimate_main_channel_from_recording(
+                        one_recording,
+                        one_sorting,
                         peak_sign=peak_sign,
                         peak_mode=peak_mode,
                         num_spikes_for_main_channel=num_spikes_for_main_channel,
                         seed=seed,
                         **job_kwargs,
                     )
-                    sparsity_partial = estimate_sparsity(
-                        sorting_single,
-                        recording_single,
-                        main_channel_indices=main_channel_indices_single,
+                    main_channel_indices[unit_slice] = one_main_channel_indices + channel_offset
+                    one_sparsity = estimate_sparsity(
+                        one_sorting,
+                        one_recording,
+                        main_channel_indices=one_main_channel_indices,
                         peak_sign=peak_sign,
                         amplitude_mode=peak_mode,
                         **sparsity_kwargs,
                     )
-                    sparsity_mask[i_unit : i_unit + num_units, i_channel : i_channel + num_channels] = (
-                        sparsity_partial.mask
-                    )
-                    main_channel_indices[i_unit : i_unit + num_units] = main_channel_indices_single + i_channel
-                    i_unit += num_units
-                    i_channel += num_channels
-                sparsity = ChannelSparsity(
-                    unit_ids=aggregated_sorting.unit_ids,
-                    channel_ids=aggregated_recording.channel_ids,
-                    mask=sparsity_mask,
-                )
+                    sparsity_mask[unit_slice, channel_slice] = one_sparsity.mask
+
+                    unit_offset += num_units
+                    channel_offset += num_channels
+
+                sparsity = ChannelSparsity(unit_ids=aggregated_sorting.unit_ids,
+                                           channel_ids=aggregated_recording.channel_ids,
+                                           mask=sparsity_mask)
                 sparsity_kwargs = {}
-            elif set_sparsity_by_dict_key:
-                sparsity_kwargs = {"method": "by_property", "by_property": "aggregation_key"}
 
         return create_sorting_analyzer(
             sorting=aggregated_sorting,
