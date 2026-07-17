@@ -89,7 +89,7 @@ def create_sorting_analyzer(
         The sorting object, or a dict of them
     recording : Recording | dict
         The recording object, or a dict of them
-    folder : str or Path
+    folder : str or Path or None, default: None
         The folder where analyzer is cached
     format : "memory | "binary_folder" | "zarr", default: "memory"
         The mode to store analyzer. If "folder", the analyzer is stored on disk in the specified folder.
@@ -169,6 +169,17 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
+    # Remove folder if overwrite is True
+    if format != "memory":
+        assert folder is not None, "For format='binary_folder'|'zarr', folder name must be provided"
+        if not is_path_remote(folder):
+            folder = clean_zarr_folder_name(folder) if format == "zarr" else Path(folder)
+            if folder.exists():
+                if overwrite:
+                    shutil.rmtree(folder)
+                else:
+                    raise ValueError(
+                        f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
     # We used to allow users to pass sparsity kwargs directly to create_sorting_analyzer.
     # This is for backwards compatibility
@@ -327,17 +338,6 @@ def create_sorting_analyzer(
     if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
         warnings.warn("create_sorting_analyzer: recording does not have scaling to uV, forcing return_in_uV=False")
         return_in_uV = False
-
-    # Remove folder if overwrite is True
-    if format != "memory":
-        assert folder is not None, "For format='binary_folder'|'zarr', folder name must be provided"
-        if not is_path_remote(folder):
-            folder = clean_zarr_folder_name(folder) if format == "zarr" else Path(folder)
-            if folder.exists():
-                if overwrite:
-                    shutil.rmtree(folder)
-                else:
-                    raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
     sorting_analyzer = SortingAnalyzer.create(
         sorting,
@@ -750,7 +750,7 @@ class SortingAnalyzer:
 
         Note :
          * see also _handle_backward_compatibility_settings_post_init
-         * there is also something at extension level to handle changes in paramaters with different mechanisms
+         * there is also something at extension level to handle changes in parameters with different mechanisms
         """
 
         new_settings = settings.copy()
@@ -761,7 +761,7 @@ class SortingAnalyzer:
             new_settings.pop("return_scaled", None)
 
         if "peak_sign" not in new_settings:
-            # before 0.104.1 peak_sign was not in settings.
+            # before 0.105.0 peak_sign was not in settings.
             # TODO make something more fancy that explore the previous params of extension
             # We decided to not do something fancy, as the `peak_sign`s in different
             # extensions may not match the `peak_sign` that was used to create the analyzer.
