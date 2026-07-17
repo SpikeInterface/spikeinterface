@@ -7,7 +7,6 @@ import numpy as np
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
 
-
 #: Makes each unit's spiketrain compact in memory (unit, then segment, then sample).
 LEXSORT_UNIT_COMPACT = ("sample_index", "segment_index", "unit_index")
 #: Makes each segment compact, units compact within a segment (segment, then unit, then sample).
