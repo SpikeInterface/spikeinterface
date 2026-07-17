@@ -23,6 +23,7 @@ from spikeinterface.core import (
     load,
 )
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
+from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 
 
