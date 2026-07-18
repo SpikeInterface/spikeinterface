@@ -563,14 +563,23 @@ class _NWBReader:
         # Resolve unit_table_path (auto-discovering it when the file has exactly one Units table)
         # and return the table handle, raising a helpful error that lists the options on failure.
         if self.unit_table_path is None:
-            available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
-            if len(available) != 1:
-                raise ValueError(
-                    "Multiple Units tables found in the file. "
-                    "Please specify the 'unit_table_path' argument:"
-                    f"Available options are: {available}."
-                )
-            self.unit_table_path = available[0]
+            # Fast path: the primary NWB Units table lives at the canonical top-level "units". Check it
+            # directly instead of walking the whole HDF5/zarr tree, which over a stream costs one network
+            # round-trip per object (hundreds on a rich file, dominating the extractor init). Only fall
+            # back to a full search when "units" is absent (a file that stores units in a non-standard
+            # location). When "units" is present it is used as-is, so a file with several Units tables is no
+            # longer flagged here; pass `unit_table_path` explicitly to select a non-canonical one.
+            if "units" in self.file and self.file["units"].attrs.get("neurodata_type") == "Units":
+                self.unit_table_path = "units"
+            else:
+                available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
+                if len(available) != 1:
+                    raise ValueError(
+                        "Multiple Units tables found in the file. "
+                        "Please specify the 'unit_table_path' argument:"
+                        f"Available options are: {available}."
+                    )
+                self.unit_table_path = available[0]
         try:
             return self.file[self.unit_table_path]
         except KeyError:
@@ -1333,8 +1342,6 @@ class NwbSortingExtractor(BaseSorting):
         # unless it is named, because the ElectricalSeries in a file is not necessarily the one the
         # sorting was computed from.
 
-        # First, look for any ElectricalSeries in the file.
-        file_has_electrical_series = self._reader._has_electrical_series()
         electrical_series_path_is_provided = electrical_series_path is not None
         sampling_frequency_is_provided = self.provided_sampling_frequency is not None
         t_start_is_provided = self.t_start is not None
@@ -1357,18 +1364,13 @@ class NwbSortingExtractor(BaseSorting):
                 samples_for_rate_estimation
             )
         else:
-            # No ElectricalSeries named. An unnamed recording is ambiguous (it may not be the one the
-            # sorting was computed from), so t_start must be given explicitly. With no recording in the
-            # file, anchor the frame grid at 0 (the spike times in seconds are preserved regardless).
-            unnamed_recording_needs_t_start = file_has_electrical_series and not t_start_is_provided
-            if unnamed_recording_needs_t_start:
-                raise ValueError(
-                    "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
-                    "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
-                )
-
-            no_recording_to_align_to = not file_has_electrical_series and not t_start_is_provided
-            if no_recording_to_align_to:
+            # No ElectricalSeries named. Spike times are stored as seconds from session start, so anchor
+            # the frame grid at t_start = 0 by default (frames = times * sampling_frequency). Alignment to a
+            # particular recording is an explicit opt-in via `electrical_series_path`; we do not search the
+            # file for an unnamed ElectricalSeries to align to, since that walks the whole HDF5 tree (one
+            # network round-trip per object, dominating the streamed init) and the detected series would not
+            # be used for alignment anyway.
+            if not t_start_is_provided:
                 self.t_start = 0.0
 
             # sampling_frequency: the argument, or the Units.resolution attribute.
@@ -2125,8 +2127,19 @@ def read_nwb_sorting_analyzer(
         analyzer_recording = recording
         analyzer_channel_ids = list(recording.get_channel_ids())
     else:
+        # The placeholder recording only needs to loosely bound the timeline: it is dropped right after the
+        # build and its length feeds the GUI time axis, not any curation quantity. Reading the full
+        # spike_times array for the exact last spike would cost ~130 MB over a stream, so instead read only
+        # the last stored spike (one chunk, ~4 MB) and double it. spike_times is stored per-unit-
+        # concatenated (not globally time-sorted), so the last stored value is a lower bound on the true
+        # last spike; doubling generously covers the gap while over-estimating only adds a harmless empty
+        # tail. Read from sorting_tmp because a group selection wraps `sorting` in a UnitsSelectionSorting
+        # whose segment has no spike_times_data.
+        spike_times_data = sorting_tmp._sorting_segments[0].spike_times_data
+        last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
+        placeholder_duration = max(last_stored_spike_time * 2.0, 1.0)
         analyzer_recording, analyzer_channel_ids = _make_placeholder_recording_from_electrodes(
-            sorting, electrodes_table, electrodes_indices, verbose=verbose
+            sorting, electrodes_table, electrodes_indices, duration=placeholder_duration, verbose=verbose
         )
 
     # Per-unit sparsity and channel map from the Units `electrodes` region. Each unit's `waveform_mean`
@@ -2157,7 +2170,15 @@ def read_nwb_sorting_analyzer(
 
     # templates (from the resolved templates column), and the required random_spikes extension
     if templates_column is not None and templates_column in units and unit_local_channels is not None:
-        _make_random_spikes(analyzer, sorting)
+        # random_spikes only needs the total spike count of the (possibly group-selected) sorting. Read it
+        # from the NWB spike_times_index (per-unit cumulative counts, ~KB) on the unwrapped sorting_tmp,
+        # restricted to the selected units, rather than counting through the sorting object: a group
+        # selection wraps `sorting` in a UnitsSelectionSorting whose count materializes the parent's whole
+        # spike vector (~130-480 MB). np.isin keeps the units still present after any group selection.
+        per_unit_spike_counts = np.diff(sorting_tmp._sorting_segments[0].spike_times_index_data[:], prepend=0)
+        selected_units_mask = np.isin(sorting_tmp.unit_ids, sorting.unit_ids)
+        total_num_spikes = int(per_unit_spike_counts[selected_units_mask].sum())
+        _make_random_spikes(analyzer, total_num_spikes)
         _make_templates(
             analyzer,
             units,
@@ -2181,7 +2202,7 @@ def read_nwb_sorting_analyzer(
     return analyzer
 
 
-def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, electrodes_indices, verbose=False):
+def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, electrodes_indices, duration, verbose=False):
     """Build a lightweight placeholder recording that carries only the probe geometry of the electrodes
     a unit's waveforms live on, for the recordingless (streaming) case.
 
@@ -2216,15 +2237,6 @@ def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, elect
         "rel_x" in electrode_colnames and "rel_y" in electrode_colnames
     ), "'rel_x' and 'rel_y' should be columns in the electrodes table"
     locations = np.array([electrodes_table_sliced["rel_x"][:], electrodes_table_sliced["rel_y"][:]]).T
-
-    # The recording length only needs to loosely bound the timeline for the recordingless GUI; nothing
-    # about curation depends on it being exact. Estimate it cheaply from the last stored spike time (one
-    # element, i.e. only the last spike_times chunk) rather than scanning the whole array for the true
-    # global maximum. spike_times is in seconds, so this is already a duration in seconds. It is only an
-    # approximation: because spike_times is concatenated per unit and not globally sorted, this is the
-    # last unit's last spike, not necessarily the latest spike overall.
-    last_spike_time = float(np.asarray(sorting.get_last_spike_time(segment_index=0)))
-    duration = last_spike_time + 1.0
 
     probe = Probe(si_units="um")
     probe.set_contacts(locations, shapes="circle", shape_params={"radius": 1})
@@ -2275,22 +2287,16 @@ def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices
     return sparsity, unit_local_channels
 
 
-def _make_random_spikes(analyzer, sorting):
+def _make_random_spikes(analyzer, total_num_spikes):
     """Attach the required `random_spikes` extension, always using the "all" method.
 
-    If the segment is an NwbSortingSegment sorting segment, it uses the spike_times_index_data to determine the
-    total number of spikes. Otherwise, it counts the total number of spikes from the sorting object.
+    With no recording this extension is never used to extract waveforms (there are no traces), but it is a
+    required dependency of templates, so it must exist and be consistent with the sorting's spike count.
+    `method="all"` means the indices are just `arange(total_num_spikes)`; the caller supplies the count
+    (read cheaply from `spike_times_index`) so this never materializes the spike vector.
     """
     from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
 
-    segment = sorting._sorting_segments[0]
-    if isinstance(segment, NwbSortingSegment):
-        # the lazy segment has a spike_times_index_data array that is the same as the NWB spike_times_index
-        # dataset, so we can use it to get the total number of spikes without materializing spike_times.
-        spike_times_index = segment.spike_times_index_data
-        total_num_spikes = int(np.asarray(spike_times_index[-1]))
-    else:
-        total_num_spikes = sorting.count_total_num_spikes()
     random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
     random_spikes_ext.set_params(method="all")
     random_spikes_ext.data["random_spikes_indices"] = np.arange(total_num_spikes, dtype="int64")
