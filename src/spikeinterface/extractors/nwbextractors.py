@@ -350,6 +350,25 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
     return result
 
 
+def _find_electrical_series_paths(file_handle, backend="hdf5"):
+    """Paths of every ElectricalSeries, searching only where they can live instead of the whole file.
+
+    In NWB, ElectricalSeries live under ``/acquisition`` (raw) or ``/processing/ecephys`` (LFP/filtered,
+    possibly nested in an LFP or FilteredEphys container). Restricting the recursive search to those two
+    subtrees avoids walking hundreds of unrelated objects (trials, behavior, stimulus, ...) over a stream,
+    where each object visited is a network round-trip. A file that stores an ElectricalSeries in a
+    non-standard location must be read by passing ``electrical_series_path`` explicitly.
+    """
+    result = []
+    for root in ("acquisition", "processing/ecephys"):
+        try:
+            group = file_handle[root]
+        except (KeyError, TypeError):
+            continue
+        _find_neurodata_type_from_backend(group, root, result, "ElectricalSeries", backend)
+    return result
+
+
 def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, electrical_series, backend="hdf5"):
     """
     Retrieves the indices of the electrodes from the electrical series.
@@ -751,7 +770,7 @@ class _NWBReader:
         # Resolve electrical_series_path (auto-discovering it when the file has exactly one series)
         # and return the series handle, raising a helpful error that lists the options on failure.
         if self.electrical_series_path is None:
-            available = _find_neurodata_type_from_backend(self.file, neurodata_type="ElectricalSeries", backend=backend)
+            available = _find_electrical_series_paths(self.file, backend=backend)
             if len(available) != 1:
                 raise ValueError(
                     "Multiple ElectricalSeries found in the file. "
