@@ -657,21 +657,6 @@ class _NWBReader:
             return None
         return 1.0 / resolution
 
-    def _has_electrical_series(self):
-        # Whether the file contains any ElectricalSeries at all. Used to decide, for a sorting, whether
-        # there is a recording to align to: if there is none, t_start has no origin and defaults to 0.
-        if self.reading_method == "use_pynwb":
-            from pynwb.ecephys import ElectricalSeries
-
-            electrical_series = [item for item in self.nwbfile.all_children() if isinstance(item, ElectricalSeries)]
-        else:
-            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
-            electrical_series = _find_neurodata_type_from_backend(
-                self.file, neurodata_type="ElectricalSeries", backend=backend
-            )
-        file_has_electrical_series = len(electrical_series) > 0
-        return file_has_electrical_series
-
     def _fetch_unit_properties(self):
         # Return the unit-table columns as a name -> per-unit values mapping in a backend-independent
         # format. Skips id / spike-time columns, index columns, nested ragged arrays, and ragged
