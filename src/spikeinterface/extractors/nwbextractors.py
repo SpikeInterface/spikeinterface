@@ -657,6 +657,18 @@ class _NWBReader:
             return None
         return 1.0 / resolution
 
+    def _has_electrical_series(self):
+        # Whether the file contains any ElectricalSeries at all. Used to decide, for a sorting, whether
+        # there is a recording to align to: if there is none, t_start has no origin and defaults to 0.
+        if self.reading_method == "use_pynwb":
+            from pynwb.ecephys import ElectricalSeries
+
+            electrical_series = [item for item in self.nwbfile.all_children() if isinstance(item, ElectricalSeries)]
+        else:
+            backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
+            electrical_series = _find_electrical_series_paths(self.file, backend=backend)
+        return len(electrical_series) > 0
+
     def _fetch_unit_properties(self):
         # Return the unit-table columns as a name -> per-unit values mapping in a backend-independent
         # format. Skips id / spike-time columns, index columns, nested ragged arrays, and ragged
@@ -1368,13 +1380,18 @@ class NwbSortingExtractor(BaseSorting):
                 samples_for_rate_estimation
             )
         else:
-            # No ElectricalSeries named. Spike times are stored as seconds from session start, so anchor
-            # the frame grid at t_start = 0 by default (frames = times * sampling_frequency). Alignment to a
-            # particular recording is an explicit opt-in via `electrical_series_path`; we do not search the
-            # file for an unnamed ElectricalSeries to align to, since that walks the whole HDF5 tree (one
-            # network round-trip per object, dominating the streamed init) and the detected series would not
-            # be used for alignment anyway.
+            # No ElectricalSeries named. An unnamed recording is ambiguous (it may not be the one the
+            # sorting was computed from), so t_start must be given explicitly. With no recording in the
+            # file, anchor the frame grid at 0 (the spike times in seconds are preserved regardless).
+            # Whether the file has an ElectricalSeries only affects t_start's origin, so when t_start is
+            # already provided we skip that search entirely: it walks the whole HDF5 tree (one network
+            # round-trip per object) and otherwise dominates the extractor init on a rich streamed file.
             if not t_start_is_provided:
+                if self._reader._has_electrical_series():
+                    raise ValueError(
+                        "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
+                        "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
+                    )
                 self.t_start = 0.0
 
             # sampling_frequency: the argument, or the Units.resolution attribute.
