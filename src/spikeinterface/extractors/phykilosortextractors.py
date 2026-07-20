@@ -491,8 +491,8 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
 
 
 def _make_main_channel_indices_from_templates(sorting, recording, kilosort_output_path):
-    """Constructs the `ChannelSparsity` of from kilosort output, by seeing if the
-    templates output is zero or not on all channels."""
+    """Constructs the `main_channel_indices` from kilosort output, by finding the
+    channel containing the largest peak-to-peak value."""
 
     templates = np.load(kilosort_output_path / "templates.npy")
     # main channel indices are the argmax of the ptp of the templates, which is the channel with
