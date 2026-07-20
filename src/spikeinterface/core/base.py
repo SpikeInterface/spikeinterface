@@ -480,6 +480,7 @@ class BaseExtractor:
         self,
         include_annotations: bool = False,
         include_properties: bool = False,
+        include_extra_metadata: bool = True,
         relative_to: str | Path | None = None,
         folder_metadata=None,
         recursive: bool = False,
@@ -609,7 +610,8 @@ class BaseExtractor:
                 folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
-        self._extra_metadata_to_dict(dump_dict)
+        if include_extra_metadata:
+            self._extra_metadata_to_dict(dump_dict)
 
         return dump_dict
 
@@ -640,15 +642,17 @@ class BaseExtractor:
             folder_metadata = Path(folder_metadata)
             if dictionary.get("relative_paths", False):
                 folder_metadata = base_folder / folder_metadata
-            extractor.load_metadata_from_folder(folder_metadata)
+            extractor._load_metadata_from_folder(folder_metadata)
         return extractor
 
-    def load_metadata_from_folder(self, folder_metadata):
-        # hack to load probe for recording
-        folder_metadata = Path(folder_metadata)
+    def _load_metadata_from_folder(self, folder):
+        """
+        Load properties from a 'properties' subfolder previously saved as npy.
+        """
+        folder = Path(folder)
 
         # load properties
-        prop_folder = folder_metadata / "properties"
+        prop_folder = folder / "properties"
         if prop_folder.is_dir():
             for prop_file in prop_folder.iterdir():
                 if prop_file.suffix == ".npy":
@@ -656,10 +660,13 @@ class BaseExtractor:
                     key = prop_file.stem
                     self.set_property(key, values)
 
-        self._extra_metadata_from_folder(folder_metadata)
+        self._extra_metadata_from_folder(folder)
 
-    def save_metadata_to_folder(self, folder_metadata):
-        self._extra_metadata_to_folder(folder_metadata)
+    def _save_metadata_to_folder(self, folder_metadata):
+        """
+        Save properties into a 'properties' subfolder using npy format.
+        """
+        # self._extra_metadata_to_folder(folder_metadata)
 
         # save properties
         prop_folder = folder_metadata / "properties"
@@ -750,6 +757,7 @@ class BaseExtractor:
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
         folder_metadata: str | Path | None = None,
+        include_extra_metadata: bool = True,
     ) -> None:
         """
         Dump recording extractor to json file.
@@ -775,6 +783,7 @@ class BaseExtractor:
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=False,
+            include_extra_metadata=include_extra_metadata,
             relative_to=relative_to,
             folder_metadata=folder_metadata,
             recursive=True,
@@ -859,13 +868,13 @@ class BaseExtractor:
         # this is internally call by cache(...) main function
         raise NotImplementedError
 
-    def _extra_metadata_from_folder(self, folder):
-        # This implemented in BaseRecording for probe
-        pass
+    # def _extra_metadata_from_folder(self, folder):
+    #     # This implemented in BaseRecording for probe
+    #     pass
 
-    def _extra_metadata_to_folder(self, folder):
-        # This implemented in BaseRecording for probe
-        pass
+    # def _extra_metadata_to_folder(self, folder):
+    #     # This implemented in BaseRecording for probe
+    #     pass
 
     def _extra_metadata_from_dict(self, dump_dict):
         # This implemented in BaseRecording for probe
@@ -875,48 +884,61 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
-    def save(self, **kwargs) -> "BaseExtractor":
-        """
-        Save a SpikeInterface object.
+    # def save(self, **kwargs) -> "BaseExtractor":
+    #     """
+    #     Save a SpikeInterface object.
 
-        Parameters
-        ----------
-        kwargs: Keyword arguments for saving.
-            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "numpy_folder" or "npz_folder" for sorting.
-                In case format is not memory, the recording is saved to a folder. See format specific functions for
-                more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
-            * folder: if provided, the folder path where the object is saved
-            * name: if provided and folder is not given, the name of the folder in the global temporary
-                    folder (use set_global_tmp_folder() to change this folder) where the object is saved.
-              If folder and name are not given, the object is saved in the global temporary folder with
-              a random string
-            * dump_ext: "json" or "pkl", default "json" (if format is "folder")
-            * verbose: if True output is verbose
-            * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
-            {}
+    #     Parameters
+    #     ----------
+    #     kwargs: Keyword arguments for saving.
+    #         * format: "memory", "zarr", or "binary" (for recording) / "memory" or "numpy_folder" or "npz_folder" for sorting.
+    #             In case format is not memory, the recording is saved to a folder. See format specific functions for
+    #             more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
+    #         * folder: if provided, the folder path where the object is saved
+    #         * name: if provided and folder is not given, the name of the folder in the global temporary
+    #                 folder (use set_global_tmp_folder() to change this folder) where the object is saved.
+    #           If folder and name are not given, the object is saved in the global temporary folder with
+    #           a random string
+    #         * dump_ext: "json" or "pkl", default "json" (if format is "folder")
+    #         * verbose: if True output is verbose
+    #         * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
+    #         {}
 
-        Returns
-        -------
-        loaded_extractor: BaseRecording or BaseSorting
-            The reference to the saved object after it is loaded back
-        """
-        format = kwargs.get("format", None)
-        if format == "memory":
-            loaded_extractor = self.save_to_memory(**kwargs)
-        elif format == "zarr":
-            loaded_extractor = self.save_to_zarr(**kwargs)
-        else:
-            loaded_extractor = self.save_to_folder(**kwargs)
-        return loaded_extractor
+    #     Returns
+    #     -------
+    #     loaded_extractor: BaseRecording or BaseSorting
+    #         The reference to the saved object after it is loaded back
+    #     """
+    #     format = kwargs.get("format", None)
+    #     if format == "memory":
+    #         loaded_extractor = self.save_to_memory(**kwargs)
+    #     elif format == "zarr":
+    #         loaded_extractor = self.save_to_zarr(**kwargs)
+    #     else:
+    #         loaded_extractor = self.save_to_folder(**kwargs)
+    #     return loaded_extractor
 
-    save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
+    # save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
-        save_kwargs.pop("format", None)
+        warnings.warn("save_to_memory() should be save(format='memory')", FutureWarning)
+        return self.save(format="memory", sharedmem=sharedmem, **save_kwargs)
 
-        cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
-        self.copy_metadata(cached)
-        return cached
+        # save_kwargs.pop("format", None)
+
+        # cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
+        # self.copy_metadata(cached)
+        # return cached
+
+    def _save_provenance_to_folder(self, folder):
+        provenance_file_path = folder / f"provenance.json"
+        if self.check_serializability("json"):
+            self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
+        elif self.check_serializability("pickle"):
+            provenance_file = folder / f"provenance.pkl"
+            self.dump_to_pickle(provenance_file, relative_to=folder)
+        else:
+            warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
     # TODO rename to saveto_binary_folder
     def save_to_folder(
@@ -977,6 +999,15 @@ class BaseExtractor:
         AssertionError
             If the folder already exists and `overwrite` is False.
         """
+
+        warnings.warn(
+            "save_to_folder() should be recording.save(format='binray') "
+            "or sorting.save(format='numpy_folder') "
+            "This ambiguous method should not be used anymore!!",
+            FutureWarning,
+        )
+        # we keep the default format for recording and sorting like in old version
+        return self.save(folder=folder, verbose=verbose, **save_kwargs)
 
         if folder is None:
             cache_folder = get_global_tmp_folder()

@@ -339,11 +339,11 @@ class BaseRecordingSnippets(BaseExtractor):
         if "contact_vector" in self.get_property_keys():
             self.delete_property("contact_vector")
 
-    def _extra_metadata_to_folder(self, folder):
-        # save probe
-        if self.has_probe():
-            probegroup = self.get_probegroup()
-            write_probeinterface(folder / "probegroup.json", probegroup)
+    # def _extra_metadata_to_folder(self, folder):
+    #     # save probe
+    #     if self.has_probe():
+    #         probegroup = self.get_probegroup()
+    #         write_probeinterface(folder / "probegroup.json", probegroup)
 
     def _extra_metadata_from_dict(self, dump_dict):
         # load probe and handle backward-compatibility with legacy "contact_vector"/"location" property
