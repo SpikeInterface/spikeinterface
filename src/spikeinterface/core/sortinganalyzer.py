@@ -178,8 +178,7 @@ def create_sorting_analyzer(
                 if overwrite:
                     shutil.rmtree(folder)
                 else:
-                    raise ValueError(
-                        f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
+                    raise ValueError(f"Folder {folder} already exists! Use overwrite=True to overwrite it.")
 
     # We used to allow users to pass sparsity kwargs directly to create_sorting_analyzer.
     # This is for backwards compatibility
@@ -252,9 +251,11 @@ def create_sorting_analyzer(
                     unit_offset += num_units
                     channel_offset += num_channels
 
-                sparsity = ChannelSparsity(unit_ids=aggregated_sorting.unit_ids,
-                                           channel_ids=aggregated_recording.channel_ids,
-                                           mask=sparsity_mask)
+                sparsity = ChannelSparsity(
+                    unit_ids=aggregated_sorting.unit_ids,
+                    channel_ids=aggregated_recording.channel_ids,
+                    mask=sparsity_mask,
+                )
                 sparsity_kwargs = {}
 
         return create_sorting_analyzer(
