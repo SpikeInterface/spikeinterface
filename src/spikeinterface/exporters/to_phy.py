@@ -21,6 +21,7 @@ def export_to_phy(
     output_folder: str | Path,
     compute_pc_features: bool = True,
     compute_amplitudes: bool = True,
+    add_waveforms: bool = False,
     sparsity: Optional[ChannelSparsity] = None,
     copy_binary: bool = True,
     remove_if_exists: bool = False,
@@ -46,6 +47,12 @@ def export_to_phy(
         If True, pc features are computed
     compute_amplitudes : bool, default: True
         If True, waveforms amplitudes are computed
+    add_waveforms : bool, default: False
+        If True, a subset of spike waveforms is saved in the phy "_phy_spikes_subset.*" files
+        (mimicking the "phy extract-waveforms" command), so that phy/phy-lib can display
+        individual spike waveforms without needing the raw recording. This requires (and will
+        compute, if missing and a recording is available) the "waveforms" SortingAnalyzer
+        extension.
     sparsity : ChannelSparsity or None, default: None
         The sparsity object
     copy_binary : bool, default: True
@@ -234,6 +241,59 @@ def export_to_phy(
             chan_inds = used_sparsity.unit_id_to_channel_indices[unit_id]
             pc_feature_ind[unit_ind, : len(chan_inds)] = chan_inds
         np.save(str(output_folder / "pc_feature_ind.npy"), pc_feature_ind)
+
+    if add_waveforms:
+        if not sorting_analyzer.has_extension("waveforms") or not sorting_analyzer.has_extension("random_spikes"):
+            warnings.warn(
+                "Cannot save the phy spikes-waveforms subset: the 'waveforms' or 'random_spikes' "
+                "extension is not computed."
+            )
+        else:
+            random_spikes_ext = sorting_analyzer.get_extension("random_spikes")
+            waveforms_ext = sorting_analyzer.get_extension("waveforms")
+
+            some_spikes = random_spikes_ext.get_random_spikes()
+            subset_spike_indices = random_spikes_ext.get_data()
+            subset_waveforms = waveforms_ext.get_data()
+
+            # order by absolute spike index, matching the row order of spike_times.npy
+            order = np.argsort(subset_spike_indices, kind="stable")
+            subset_spike_indices = subset_spike_indices[order]
+            subset_unit_index = some_spikes["unit_index"][order]
+            subset_waveforms = subset_waveforms[order]
+
+            max_num_channels_wf = max(len(chan_inds) for chan_inds in sparse_dict.values())
+            num_subset_spikes = subset_waveforms.shape[0]
+            num_samples_wf = subset_waveforms.shape[1]
+
+            # phy expects -1 for "no channel" padding
+            spike_channels = -np.ones((num_subset_spikes, max_num_channels_wf), dtype="int32")
+            spike_waveforms = np.zeros(
+                (num_subset_spikes, num_samples_wf, max_num_channels_wf), dtype=subset_waveforms.dtype
+            )
+
+            # if the "waveforms" extension itself is sparse, it already only stores (and orders)
+            # the channels of "sorting_analyzer.sparsity", which is the same as "used_sparsity"
+            # whenever the analyzer is sparse (see above). Otherwise, the extension is dense and
+            # we need to select the real channel indices for each unit.
+            waveforms_ext_is_sparse = waveforms_ext.sparsity is not None
+            for unit_id in unit_ids:
+                unit_index = sorting.id_to_index(unit_id)
+                spike_mask = subset_unit_index == unit_index
+                if not np.any(spike_mask):
+                    continue
+                chan_inds = sparse_dict[unit_id]
+                spike_channels[spike_mask, : len(chan_inds)] = chan_inds
+                if waveforms_ext_is_sparse:
+                    spike_waveforms[spike_mask, :, : len(chan_inds)] = subset_waveforms[spike_mask][
+                        :, :, : len(chan_inds)
+                    ]
+                else:
+                    spike_waveforms[spike_mask, :, : len(chan_inds)] = subset_waveforms[spike_mask][:, :, chan_inds]
+
+            np.save(str(output_folder / "_phy_spikes_subset.spikes.npy"), subset_spike_indices.astype("int64"))
+            np.save(str(output_folder / "_phy_spikes_subset.channels.npy"), spike_channels)
+            np.save(str(output_folder / "_phy_spikes_subset.waveforms.npy"), spike_waveforms)
 
     # Save .tsv metadata
     cluster_group = pd.DataFrame(
