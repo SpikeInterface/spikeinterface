@@ -411,6 +411,16 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
         return cached
 
+    def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
+        super()._extra_metadata_to_dict(dump_dict, _in_reduce=_in_reduce)
+
+        # Add times_kwargs if the recording has been modified in memory (e.g. by set_times or shift_times)
+        if _in_reduce and self._time_info_modified:
+            dump_dict["times_kwargs"] = []
+            for segment_index in range(self.get_num_segments()):
+                times_kwargs = self.segments[segment_index].get_times_kwargs()
+                dump_dict["times_kwargs"].append(times_kwargs)
+
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """
         Returns a new recording object with a subset of channels.

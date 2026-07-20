@@ -482,6 +482,7 @@ class BaseExtractor:
         include_properties: bool = False,
         relative_to: str | Path | None = None,
         recursive: bool = False,
+        _in_reduce: bool = False,
     ) -> dict:
         """
         Construct a nested dictionary representation of the extractor.
@@ -510,6 +511,9 @@ class BaseExtractor:
             by default None.
         recursive : bool, default: False
             If True, recursively apply `to_dict` to dictionaries within the kwargs, by default False.
+        _in_reduce : bool, default: False
+            Internal flag to indicate that the dictionary is being generated for pickle serialization purposes.
+            This can be used to handle special cases or optimizations during serialization, by default False.
 
         Raises
         ------
@@ -597,7 +601,7 @@ class BaseExtractor:
                 # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
                 dump_dict["relative_paths"] = False
 
-        self._extra_metadata_to_dict(dump_dict)
+        self._extra_metadata_to_dict(dump_dict, _in_reduce=_in_reduce)
 
         return dump_dict
 
@@ -800,7 +804,7 @@ class BaseExtractor:
         This function is used by pickle to serialize the object.
         """
         instance_constructor = self.from_dict
-        intialization_args = (self.to_dict(),)
+        intialization_args = (self.to_dict(_in_reduce=True),)
         return (instance_constructor, intialization_args)
 
     def _save(self, folder, **save_kwargs):
@@ -812,7 +816,7 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
-    def _extra_metadata_to_dict(self, dump_dict):
+    def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
         # This implemented in BaseRecording for probe
         pass
 

@@ -327,7 +327,16 @@ class BaseRecordingSnippets(BaseExtractor):
             probegroup = dump_dict["probegroup"]
             self._probegroup = ProbeGroup.from_dict(probegroup)
 
-    def _extra_metadata_to_dict(self, dump_dict):
+        if "times_kwargs" in dump_dict:
+            # When serializing, dump timestamps information because this could have been
+            # set in memory
+            times_kwargs_list = dump_dict["times_kwargs"]
+            for segment_index, times_kwargs in enumerate(times_kwargs_list):
+                self.segments[segment_index].sampling_frequency = times_kwargs["sampling_frequency"]
+                self.segments[segment_index].t_start = times_kwargs["t_start"]
+                self.segments[segment_index].time_vector = times_kwargs["time_vector"]
+
+    def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
         # save probe
         if self.has_probe():
             probegroup = self.get_probegroup()

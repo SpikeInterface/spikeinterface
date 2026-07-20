@@ -492,7 +492,8 @@ def test_time_slice_with_time_vector():
     assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
 
 
-def test_save_load_binary_with_time_vector(create_cache_folder):
+@pytest.mark.parametrize("mp_context", ["fork", "forkserver", "spawn"])
+def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
     cache_folder = create_cache_folder
     rec = generate_recording(durations=[5.0], num_channels=3, sampling_frequency=10_000.0)
     times = rec.get_times(segment_index=0) + 100.0
@@ -500,22 +501,32 @@ def test_save_load_binary_with_time_vector(create_cache_folder):
     # Set time vector
     rec.set_times(times=times, segment_index=0, with_warning=False)
     # Save
-    rec_saved = rec.save(folder=cache_folder / "recording_with_time_vector", format="binary")
+    rec_saved = rec.save(folder=cache_folder / f"recording_with_time_vector_{mp_context}", format="binary")
     assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))
 
     # Save
-    rec_saved_par = rec.save(folder=cache_folder / "recording_with_time_vector_par", format="binary", n_jobs=2)
+    rec_saved_par = rec.save(
+        folder=cache_folder / f"recording_with_time_vector_par_{mp_context}",
+        format="binary",
+        n_jobs=2,
+        mp_context=mp_context,
+    )
     assert np.allclose(rec.get_times(segment_index=0), rec_saved_par.get_times(segment_index=0))
 
     # Now reset_times and save again, to check that the time vector is not saved
     rec_saved.reset_times()
-    rec_saved_no_time_vector = rec_saved.save(folder=cache_folder / "recording_without_time_vector", format="binary")
+    rec_saved_no_time_vector = rec_saved.save(
+        folder=cache_folder / f"recording_without_time_vector_{mp_context}", format="binary"
+    )
     assert not rec_saved_no_time_vector.has_time_vector(segment_index=0)
 
     # Now make sure the same happens if we save in parallel with multiple jobs, which requires pickling/unpickling
     # the recording object
     rec_saved_no_time_vector_par = rec_saved.save(
-        folder=cache_folder / "recording_without_time_vector_par", format="binary", n_jobs=2
+        folder=cache_folder / f"recording_without_time_vector_par_{mp_context}",
+        format="binary",
+        n_jobs=2,
+        mp_context=mp_context,
     )
     assert not rec_saved_no_time_vector_par.has_time_vector(segment_index=0)
 

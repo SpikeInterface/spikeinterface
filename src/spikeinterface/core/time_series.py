@@ -33,6 +33,8 @@ class TimeSeries(ABC):
     """
 
     _preferred_mp_context = None
+    # Flag to indicate whether time info has been modified in-memory (e.g. by set_times or shift_times).
+    _time_info_modified = False
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -248,6 +250,7 @@ class TimeSeries(ABC):
                 "times are not always propagated across preprocessing"
                 "Use this carefully!"
             )
+        self._time_info_modified = True
 
     def reset_times(self):
         """
@@ -262,6 +265,7 @@ class TimeSeries(ABC):
                 rs.time_vector = None
             rs.t_start = None
             rs.sampling_frequency = self.sampling_frequency
+        self._time_info_modified = True
 
     def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
         """
@@ -297,6 +301,7 @@ class TimeSeries(ABC):
             else:
                 new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
                 rs.t_start = new_start_time
+        self._time_info_modified = True
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
