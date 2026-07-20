@@ -40,7 +40,6 @@ from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
-from .globals import get_global_job_kwargs
 
 # Typing hints
 PeakSignType = Literal["both", "neg", "pos"]
@@ -187,7 +186,7 @@ def create_sorting_analyzer(
         warnings.warn(
             "Passing sparsity and job arguments via keyword arguments will be deprecated in 0.106.0. "
             "Please pass them as a `sparsity_kwargs` or `job_kwargs` dictionary instead.",
-            FutureWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
     else:
@@ -495,7 +494,7 @@ class SortingAnalyzer:
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled if return_in_uV is None else return_in_uV
@@ -922,7 +921,7 @@ class SortingAnalyzer:
             # See https://github.com/SpikeInterface/spikeinterface/issues/2788
             warnings.warn(
                 "settings.json not found in this analyzer folder. Creating one with default settings.",
-                category=DeprecationWarning(),
+                category=FutureWarning,
                 stacklevel=2,
             )
             with open(settings_file, "w") as f:
