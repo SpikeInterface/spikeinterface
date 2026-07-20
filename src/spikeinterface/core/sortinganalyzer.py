@@ -680,7 +680,7 @@ class SortingAnalyzer:
         sorting_folder = folder / "sorting"
         sorting_provenance_file = folder / "sorting_provenance.json"
         sparsity_file = folder / "sparsity_mask.npy"
-        recording_provenance_file = folder / "recording.json"
+        recording_provenance_file = folder / "recording"  # .json (default) or .pickle (if not json-serializable)
         rec_attributes_file = recording_info_folder / "recording_attributes.json"
         probegroup_file = recording_info_folder / "probegroup.json"
 
@@ -715,7 +715,7 @@ class SortingAnalyzer:
         if recording is not None:
             # save recording and sorting provenance
             if recording.check_serializability("json"):
-                recording.dump(recording_provenance_file, relative_to=folder)
+                recording.dump(recording_provenance_file.with_suffix(".json"), relative_to=folder)
             elif recording.check_serializability("pickle"):
                 recording.dump(recording_provenance_file.with_suffix(".pickle"), relative_to=folder)
             else:
@@ -894,7 +894,7 @@ class SortingAnalyzer:
         settings_file = folder / "settings.json"
         sorting_folder = folder / "sorting"
         sparsity_file = folder / "sparsity_mask.npy"
-        recording_provenance_file = folder / "recording.json"
+        recording_provenance_file = folder / "recording"  # .json (default) or .pickle (if not json-serializable)
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
