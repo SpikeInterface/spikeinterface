@@ -3,16 +3,11 @@ from typing import Literal
 from pathlib import Path
 
 import numpy as np
-from probeinterface import read_probeinterface, write_probeinterface
+from probeinterface import write_probeinterface
 
 from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import (
-    convert_bytes_to_str,
-    convert_seconds_to_str,
-    save_properties_to_binary_folder,
-    load_properties_from_binary_folder,
-)
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str, save_properties_to_binary_folder
 from .job_tools import split_job_kwargs
 
 
@@ -372,6 +367,10 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
             # save properties
             save_properties_to_binary_folder(folder / "properties", self)
+            # save probegroup
+            if self.has_probe():
+                probegroup = self.get_probegroup()
+                write_probeinterface(folder / "probegroup.json", probegroup)
 
             cached = BinaryFolderRecording(folder_path=folder)
 
