@@ -504,7 +504,7 @@ def test_save_load_binary_with_time_vector(create_cache_folder):
     assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))
 
     # Save
-    rec_saved_par = rec.save(folder=cache_folder / "recording_with_time_vector_par", format="binary")
+    rec_saved_par = rec.save(folder=cache_folder / "recording_with_time_vector_par", format="binary", n_jobs=2)
     assert np.allclose(rec.get_times(segment_index=0), rec_saved_par.get_times(segment_index=0))
 
     # Now reset_times and save again, to check that the time vector is not saved
