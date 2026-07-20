@@ -305,13 +305,36 @@ def _get_backend_from_local_file(file_path: str | Path) -> str:
         try:
             import zarr
 
-            with zarr.open(file_path, "r") as f:
-                backend = "zarr"
+            _ = zarr.open(file_path, mode="r")
+            backend = "zarr"
         except:
             raise RuntimeError(f"{file_path} is not a valid Zarr folder!")
     else:
         raise RuntimeError(f"File {file_path} is not an existing file or folder!")
     return backend
+
+
+def _zarr_group_child_names(group):
+    """
+    Return the names of the immediate children of a zarr group without parsing their metadata.
+
+    zarr-python 3.x eagerly reads and validates every child's metadata when iterating
+    ``group.keys()``. Some arrays written by hdmf-zarr (e.g. variable-length string columns
+    with an integer ``fill_value``) cannot be parsed by zarr-python 3.x and make the whole
+    iteration fail. Listing the store directly avoids touching the children's metadata.
+    """
+    if hasattr(group, "store_path"):  # zarr v3
+        from zarr.core.sync import sync
+
+        async def _collect():
+            return [key async for key in group.store.list_dir(group.path)]
+
+        # Filter out this group's own metadata files (".zgroup", ".zattrs", "zarr.json", ...).
+        # list_dir does not guarantee an order, so sort for deterministic traversal (matches h5py).
+        names = [name for name in sync(_collect()) if not name.startswith(".") and name != "zarr.json"]
+        return sorted(names)
+    else:  # zarr v2
+        return list(group.keys())
 
 
 def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_type="ElectricalSeries", backend="hdf5"):
@@ -323,15 +346,24 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
         import h5py
 
         group_class = h5py.Group
+        child_names = list(group.keys())
     else:
         import zarr
 
         group_class = zarr.Group
+        child_names = _zarr_group_child_names(group)
 
     if result is None:
         result = []
 
-    for neurodata_name, value in group.items():
+    for neurodata_name in child_names:
+        try:
+            value = group[neurodata_name]
+        except Exception:
+            # Skip children whose metadata cannot be parsed (e.g. hdmf-zarr arrays with a
+            # fill_value that zarr-python 3.x rejects). These are never groups, so skipping
+            # them is safe when searching for a neurodata_type.
+            continue
         # Check if it's a group and if it has the neurodata_type
         if isinstance(value, group_class):
             current_path = f"{path}/{neurodata_name}" if path else neurodata_name
@@ -1611,7 +1643,8 @@ def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
     if result is None:
         result = []
 
-    for name, value in group.items():
+    for name in group.keys():
+        value = group[name]
         if isinstance(value, group_class):
             current_path = f"{path}/{name}" if path else name
             if value.attrs.get("neurodata_type") == "TimeSeries":
