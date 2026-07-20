@@ -50,9 +50,10 @@ def export_to_phy(
     add_waveforms : bool, default: False
         If True, a subset of spike waveforms is saved in the phy "_phy_spikes_subset.*" files
         (mimicking the "phy extract-waveforms" command), so that phy/phy-lib can display
-        individual spike waveforms without needing the raw recording. This requires (and will
-        compute, if missing and a recording is available) the "waveforms" SortingAnalyzer
-        extension.
+        individual spike waveforms without needing the raw recording. This requires the
+        "waveforms" and "random_spikes" SortingAnalyzer extensions to already be computed
+        (e.g. via `sorting_analyzer.compute(["random_spikes", "waveforms"])`); if they are not,
+        a warning is raised and the files are not saved.
     sparsity : ChannelSparsity or None, default: None
         The sparsity object
     copy_binary : bool, default: True
