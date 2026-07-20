@@ -5,6 +5,7 @@ but check only for BaseRecording general methods.
 
 import json
 import pickle
+import platform
 from pathlib import Path
 import pytest
 import numpy as np
@@ -492,7 +493,19 @@ def test_time_slice_with_time_vector():
     assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
 
 
-@pytest.mark.parametrize("mp_context", ["fork", "forkserver", "spawn"])
+@pytest.mark.parametrize(
+    "mp_context",
+    [
+        pytest.param(
+            "fork", marks=pytest.mark.skipif(platform.system() != "Linux", reason="fork only supported on Linux")
+        ),
+        pytest.param(
+            "forkserver",
+            marks=pytest.mark.skipif(platform.system() != "Linux", reason="forkserver only supported on Linux"),
+        ),
+        "spawn",
+    ],
+)
 def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
     cache_folder = create_cache_folder
     rec = generate_recording(durations=[5.0], num_channels=3, sampling_frequency=10_000.0)
