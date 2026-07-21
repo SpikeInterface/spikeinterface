@@ -7,7 +7,7 @@ authors = [
 ]
 description = "Python toolkit for analysis, visualization, and comparison of spike sorting output"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "License :: OSI Approved :: MIT License",
@@ -20,8 +20,7 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=1.20;python_version<'3.13'",
-    "numpy>=2.0.0;python_version>='3.13'",
+    "numpy>=2.0",
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
@@ -104,19 +103,19 @@ postprocessing = [
 metrics = [
     "scikit-learn<1.8",
     "scipy",
-    "pandas>=3",
+    "pandas",
     "numba>=0.59",
 ]
 
 comparison = [
     "scipy",
-    "pandas>=3",
+    "pandas",
     "networkx",
 ]
 
 generation = [
     "scipy",
-    "pandas>=3",
+    "pandas",
 ]
 
 sorters = [
@@ -149,7 +148,7 @@ curation = [
     "spikeinterface[metrics]",
     "spikeinterface[postprocessing]",
     "spikeinterface[comparison]",
-    "pandas>=3",
+    "pandas",
     "scikit-learn<1.8",
     "skops",
     "huggingface_hub",
@@ -160,7 +159,7 @@ curation = [
 exporters = [
     "spikeinterface[postprocessing]",
     "spikeinterface[widgets]",
-    "pandas>=3",
+    "pandas",
     "pynapple",
 ]
 
@@ -221,7 +220,7 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
-    "pandas>=3", # in the modules gallery comparison tutorial
+    "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
     "numba>=0.59", # For many postprocessing functions
     "networkx",
@@ -248,7 +247,7 @@ test-common = [
 
 test-core = [
     {include-group = "test-common"},
-    "pandas>=3",
+    "pandas",
 ]
 
 test-extractors = [
@@ -278,7 +277,7 @@ test-preprocessing = [
 
 test-postprocessing = [
     {include-group = "test-common"},
-    "pandas>=3",
+    "pandas",
     ]
 test-metrics = [{include-group = "test-common"}]
 
