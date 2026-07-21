@@ -68,16 +68,15 @@ extractors = [
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
     "pyedflib>=0.1.30",
-    "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
+    "ibllib>=3.4.1", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
+    "ibllib>=3.4.1", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -104,19 +103,19 @@ postprocessing = [
 metrics = [
     "scikit-learn<1.8",
     "scipy",
-    "pandas<3",
+    "pandas",
     "numba>=0.59",
 ]
 
 comparison = [
     "scipy",
-    "pandas<3",
+    "pandas",
     "networkx",
 ]
 
 generation = [
     "scipy",
-    "pandas<3",
+    "pandas",
 ]
 
 sorters = [
@@ -149,7 +148,7 @@ curation = [
     "spikeinterface[metrics]",
     "spikeinterface[postprocessing]",
     "spikeinterface[comparison]",
-    "pandas<3",
+    "pandas",
     "scikit-learn<1.8",
     "skops",
     "huggingface_hub",
@@ -160,7 +159,7 @@ curation = [
 exporters = [
     "spikeinterface[postprocessing]",
     "spikeinterface[widgets]",
-    "pandas<3",
+    "pandas",
     "pynapple",
 ]
 
@@ -221,9 +220,9 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
-    "pandas<3", # in the modules gallery comparison tutorial
+    "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
-    "numba", # For many postprocessing functions
+    "numba>=0.59", # For many postprocessing functions
     "networkx",
     "seaborn",
     "skops", # For automated curation
@@ -248,7 +247,7 @@ test-common = [
 
 test-core = [
     {include-group = "test-common"},
-    "pandas<3",
+    "pandas",
 ]
 
 test-extractors = [
@@ -270,7 +269,7 @@ test-streaming-extractors = [
 
 test-preprocessing = [
     {include-group = "test-common"},
-    "ibllib>=3.4.1;python_version>='3.10'",
+    "ibllib>=3.4.1",
     "pooch",
     "datalad",
     "torch",  # preprocessing tests exercise sortingcomponents.motion.dredge
@@ -278,7 +277,7 @@ test-preprocessing = [
 
 test-postprocessing = [
     {include-group = "test-common"},
-    "pandas<3",
+    "pandas",
     ]
 test-metrics = [{include-group = "test-common"}]
 
@@ -305,6 +304,7 @@ test-widgets = [
     "scikit-learn",
     "pyvips",
     "networkx",
+    "upsetplot-bombcell",  # pandas>=3 compatible fork used by BombcellUpsetPlotWidget
 ]
 
 test-exporters = [{include-group = "test-common"}]
