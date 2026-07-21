@@ -170,7 +170,7 @@ def create_sorting_analyzer(
     """
     assert format in ["memory", "binary_folder", "zarr"], "Format must be 'memory', 'binary_folder' or 'zarr'."
 
-    # Remove folder if overwrite is True        
+    # Remove folder if overwrite is True
     if format != "memory":
         assert folder is not None, "For format='binary_folder'|'zarr', folder name must be provided"
         if not is_path_remote(folder):
