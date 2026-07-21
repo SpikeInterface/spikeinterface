@@ -103,7 +103,7 @@ jobs:
 
       - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
         run: |
-          uv run --isolated --no-project --python 3.11 \
+          uv run --isolated --no-project --python 3.10 \
             --with "spikeinterface[core]==${{ matrix.si-version }}" \
             python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
