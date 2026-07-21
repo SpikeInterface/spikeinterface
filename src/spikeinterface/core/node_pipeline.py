@@ -1,6 +1,6 @@
-from typing import Type
-import struct
+from typing import Type, Literal
 import copy
+import struct
 import warnings
 
 from pathlib import Path
@@ -534,7 +534,7 @@ def run_node_pipeline(
     nodes: list[PipelineNode],
     job_kwargs: dict,
     job_name: str = "pipeline",
-    gather_mode: str = "memory",
+    gather_mode: Literal["memory", "npy", "zarr"] = "memory",
     gather_kwargs: dict = {},
     squeeze_output: bool = True,
     folder: str | None = None,
@@ -580,14 +580,14 @@ def run_node_pipeline(
         The classical job_kwargs
     job_name : str
         The name of the pipeline used for the progress_bar
-    gather_mode : "memory" | "npy"
+    gather_mode : "memory" | "npy" | "zarr"
         How to gather the output of the nodes.
     gather_kwargs : dict
-        Options to control the "gather engine". See GatherToMemory or GatherToNpy.
+        Options to control the "gather engine". See GatherToMemory, GatherToNpy or GatherToZarr.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
     folder : str | Path | None
-        Used for gather_mode="npy"
+        Used for gather_mode="npy" or gather_mode="zarr"
     names : list of str
         Names of outputs.
     verbose : bool, default False
@@ -622,6 +622,8 @@ def run_node_pipeline(
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
         gather_func = GatherToNpy(folder, names, **gather_kwargs)
+    elif gather_mode == "zarr":
+        gather_func = GatherToZarr(folder, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -908,5 +910,96 @@ class GatherToNpy:
 
 
 class GatherToZarr:
-    pass
-    # Fot me (sam) this is not necessary unless someone realy really want to use
+    """
+    Gather output of nodes into a zarr folder and then open them back as zarr arrays.
+
+    Each returned output ("name") is stored as a zarr array in the root group. Buffers
+    are appended chunk by chunk along the first axis as the pipeline runs, so the full
+    result never has to be held in memory. This is the on-disk equivalent of
+    GatherToNpy but with chunking and compression.
+
+    Parameters
+    ----------
+    folder : str | Path
+        The folder where the zarr store is created.
+    names : list of str
+        Names of the outputs. One zarr array is created per name.
+    compressor : numcodecs codec | "default" | None, default: "default"
+        The compressor used for every array. If "default", the SpikeInterface default
+        zarr compressor is used (Blosc-zstd, level 5, bitshuffle). If None, no compression.
+    zarr_chunk_size : int | None, default: None
+        Number of rows (first axis) per zarr chunk. If None, the size of the first
+        gathered buffer is used.
+    """
+
+    def __init__(self, folder, names, compressor="default", zarr_chunk_size=None):
+        import zarr
+
+        from spikeinterface.core.zarrextractors import get_default_zarr_compressor
+
+        self.folder = Path(folder)
+        assert names is not None
+        self.names = names
+        self.zarr_chunk_size = zarr_chunk_size
+
+        if compressor == "default":
+            compressor = get_default_zarr_compressor()
+        self.compressor = compressor
+
+        self.zarr_root = zarr.open(str(self.folder), mode="w")
+        # arrays are created lazily on the first buffer so we know dtype and trailing shape
+        self.arrays = [None] * len(names)
+
+        self.tuple_mode = None
+
+    def __call__(self, res):
+        if res is None:
+            return
+
+        if self.tuple_mode is None:
+            # first loop only
+            self.tuple_mode = isinstance(res, tuple)
+            if self.tuple_mode:
+                assert len(self.names) == len(res)
+            else:
+                assert len(self.names) == 1
+
+        if not self.tuple_mode:
+            res = (res,)
+
+        # distribute buffers to zarr arrays
+        for i, name in enumerate(self.names):
+            buf = np.require(res[i], requirements="C")
+            if self.arrays[i] is None:
+                # first loop only : create the array with the right dtype and trailing shape
+                trailing_shape = buf.shape[1:]
+                chunk0 = self.zarr_chunk_size if self.zarr_chunk_size is not None else max(1, buf.shape[0])
+                self.arrays[i] = self.zarr_root.create_dataset(
+                    name=name,
+                    shape=(0,) + trailing_shape,
+                    chunks=(chunk0,) + trailing_shape,
+                    dtype=buf.dtype,
+                    compressor=self.compressor,
+                )
+            self.arrays[i].append(buf, axis=0)
+
+    def finalize_buffers(self, squeeze_output=False):
+        import zarr
+
+        # consolidate metadata for faster/cleaner re-opening
+        zarr.consolidate_metadata(self.zarr_root.store)
+
+        if self.tuple_mode:
+            outs = ()
+            for i, name in enumerate(self.names):
+                outs += (self.zarr_root[name],)
+
+            if len(outs) == 1 and squeeze_output:
+                # when tuple size == 1 then remove the tuple
+                return outs[0]
+            else:
+                # always a tuple even of size 1
+                return outs
+        else:
+            # only one array
+            return self.zarr_root[self.names[0]]

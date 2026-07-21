@@ -2296,7 +2296,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         self.extensions[extension_name] = extension_instance
         return extension_instance
 
-    def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
+    def compute_several_extensions(
+        self, extensions, save=True, verbose=False, gather_mode="memory", gather_kwargs=None, **job_kwargs
+    ):
         """
         Compute several extensions
 
@@ -2312,6 +2314,11 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
+        gather_mode : "memory" | "numpy", default: "memory"
+            Gather mode for node_pipeline extensions. If "memory", the results are gathered in memory.
+            If "numpy", the results are gathered in numpy arrays.
+        gather_kwargs : dict | None, default: None
+            Additional keyword arguments for the gather function. If None, default gather kwargs are used.
 
         Returns
         -------
@@ -2401,7 +2408,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 all_nodes,
                 job_kwargs=job_kwargs,
                 job_name=job_name,
-                gather_mode="memory",
+                gather_mode=gather_mode,
+                gather_kwargs=gather_kwargs,
                 squeeze_output=False,
                 verbose=verbose,
             )

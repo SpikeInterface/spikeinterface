@@ -180,6 +180,35 @@ def test_run_node_pipeline(cache_folder_creation):
         assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms2)
         assert np.array_equal(denoised_waveforms_rms2, denoised_waveforms_rms3)
 
+        # gather zarr mode
+        import zarr
+
+        zarr_folder = cache_folder / f"pipeline_folder_{loop}.zarr"
+        if zarr_folder.is_dir():
+            shutil.rmtree(zarr_folder)
+        output = run_node_pipeline(
+            recording,
+            nodes,
+            job_kwargs,
+            gather_mode="zarr",
+            folder=zarr_folder,
+            names=["amplitudes", "waveforms_rms", "denoised_waveforms_rms"],
+        )
+        amplitudes_z, waveforms_rms_z, denoised_waveforms_rms_z = output
+
+        # values must match the memory gather
+        assert np.array_equal(amplitudes, amplitudes_z[:])
+        assert np.array_equal(waveforms_rms, waveforms_rms_z[:])
+        assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_z[:])
+
+        # arrays must be persisted on disk and re-openable
+        zarr_root = zarr.open(str(zarr_folder), mode="r")
+        for name in ("amplitudes", "waveforms_rms", "denoised_waveforms_rms"):
+            assert name in zarr_root
+        assert np.array_equal(amplitudes, zarr_root["amplitudes"][:])
+        assert np.array_equal(waveforms_rms, zarr_root["waveforms_rms"][:])
+        assert np.array_equal(denoised_waveforms_rms, zarr_root["denoised_waveforms_rms"][:])
+
         # Test pickle mechanism
         for node in nodes:
             import pickle
