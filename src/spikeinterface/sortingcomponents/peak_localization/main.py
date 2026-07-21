@@ -12,6 +12,7 @@ from spikeinterface.core.node_pipeline import (
     PeakRetriever,
     SpikeRetriever,
     ExtractDenseWaveforms,
+    ExtractSparseWaveforms,
 )
 
 
@@ -24,6 +25,9 @@ def get_localization_pipeline_nodes(
     method_kwargs=None,
     ms_before=0.5,
     ms_after=0.5,
+    nbefore=None,
+    nafter=None,
+    waveform_method="dense",
     job_kwargs=None,
 ):
 
@@ -34,10 +38,15 @@ def get_localization_pipeline_nodes(
     assert method_kwargs is not None
 
     # peak_retriever = PeakRetriever(recording, peaks)
-
-    extract_dense_waveforms = ExtractDenseWaveforms(
-        recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
-    )
+    waveform_kwargs = dict(ms_before=ms_before, ms_after=ms_after, nbefore=nbefore, nafter=nafter)
+    if waveform_method == "dense":
+        extract_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], return_output=False, **waveform_kwargs
+        )
+    else:
+        extract_waveforms = ExtractSparseWaveforms(
+            recording, parents=[peak_source], return_output=False, **waveform_kwargs
+        )
 
     method_class = peak_localization_methods[method]
 
@@ -55,9 +64,9 @@ def get_localization_pipeline_nodes(
             recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
         )
 
-    localization_nodes = method_class(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs)
+    localization_nodes = method_class(recording, parents=[peak_source, extract_waveforms], **method_kwargs)
 
-    pipeline_nodes = [peak_source, extract_dense_waveforms, localization_nodes]
+    pipeline_nodes = [peak_source, extract_waveforms, localization_nodes]
 
     return pipeline_nodes
 
@@ -69,6 +78,9 @@ def localize_peaks(
     method_kwargs=None,
     ms_before=0.5,
     ms_after=0.5,
+    nbefore=None,
+    nafter=None,
+    waveform_method="dense",
     pipeline_kwargs=None,
     verbose=False,
     job_kwargs=None,
@@ -149,6 +161,9 @@ def localize_peaks(
         method_kwargs=method_kwargs,
         ms_before=ms_before,
         ms_after=ms_after,
+        nbefore=nbefore,
+        nafter=nafter,
+        waveform_method=waveform_method,
         job_kwargs=job_kwargs,
     )
 

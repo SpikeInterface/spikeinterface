@@ -7,18 +7,25 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
-def test_localize_peaks():
+@pytest.fixture
+def peaks_and_recording():
     recording, _ = make_dataset()
-
-    # job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
     peaks = detect_peaks(
         recording,
         method="locally_exclusive",
         method_kwargs=dict(peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0),
-        job_kwargs=job_kwargs,
+        job_kwargs=dict(n_jobs=1, chunk_size=10000, progress_bar=True),
     )
+
+    return recording, peaks
+
+
+def test_localize_peaks(peaks_and_recording):
+    recording, peaks = peaks_and_recording
+
+    # job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
 
     list_locations = []
 
@@ -90,6 +97,25 @@ def test_localize_peaks():
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality_v_peak", peak_locations))
+
+
+@pytest.mark.parametrize("method", ["center_of_mass", "grid_convolution", "monopolar_triangulation"])
+def test_localize_peaks_sparse(peaks_and_recording, method):
+    recording, peaks = peaks_and_recording
+
+    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+
+    # test sparse waveforms
+    peak_locations = localize_peaks(
+        recording,
+        peaks,
+        method_kwargs=dict(
+            method=method,
+        ),
+        waveform_method="sparse",
+        job_kwargs=job_kwargs,
+    )
+    assert peaks.size == peak_locations.shape[0]
 
     # DEBUG
     # import MEArec

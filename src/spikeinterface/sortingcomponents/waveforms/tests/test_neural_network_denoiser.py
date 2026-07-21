@@ -1,5 +1,5 @@
 from spikeinterface.core.node_pipeline import run_node_pipeline, PeakRetriever, ExtractDenseWaveforms
-from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import SingleChannelDenoiser
+from spikeinterface.sortingcomponents.waveforms.denoising.neural_network_denoiser import SingleChannelDenoiser
 
 
 def test_single_channel_toy_denoiser_in_peak_pipeline(generated_recording, detected_peaks, chunk_executor_kwargs):

@@ -60,11 +60,6 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
         self.optimizer = optimizer
         self.feature = feature
 
-        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
-        if waveform_extractor is None:
-            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
-
-        self.nbefore = waveform_extractor.nbefore
         if enforce_decrease:
             self.enforce_decrease_radial_parents = make_radial_order_parents(
                 self.contact_locations, self.neighbours_mask
@@ -88,7 +83,7 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            wf = waveforms[i, :][:, chan_inds]
+            wf = self.get_sparse_waveform(waveforms[i, :], chan_inds)
             if self.feature == "ptp":
                 wf_data = np.ptp(wf, axis=0)
             elif self.feature == "energy":

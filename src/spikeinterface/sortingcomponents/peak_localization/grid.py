@@ -69,14 +69,7 @@ class LocalizeGridConvolution(LocalizeBase):
         self.peak_sign = peak_sign
         self.percentile = 100 - percentile
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
-        contact_locations = recording.get_channel_locations()
-        # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
-        if waveform_extractor is None:
-            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
 
-        self.nbefore = waveform_extractor.nbefore
-        self.nafter = waveform_extractor.nafter
         self.weight_method = weight_method
         fs = self.recording.get_sampling_frequency()
 
@@ -96,7 +89,7 @@ class LocalizeGridConvolution(LocalizeBase):
             self.nearest_template_mask,
             self.z_factors,
         ) = get_grid_convolution_templates_and_weights(
-            contact_locations,
+            self.contact_locations,
             self.radius_um,
             self.upsampling_um,
             self.margin_um,
@@ -131,8 +124,11 @@ class LocalizeGridConvolution(LocalizeBase):
 
             num_templates = np.sum(nearest_mask)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
+
+            wf = self.get_sparse_waveform(waveforms[idx], np.flatnonzero(self.neighbours_mask[main_chan]))
+
             sub_w = self.weights[:, channel_mask, :][:, :, nearest_mask]
-            global_products = (waveforms[idx][:, :, channel_mask] * self.prototype).sum(axis=1)
+            global_products = (wf * self.prototype).sum(axis=1)
 
             dot_products = np.zeros((nb_weights, num_spikes, num_templates), dtype=np.float32)
             for count in range(nb_weights):

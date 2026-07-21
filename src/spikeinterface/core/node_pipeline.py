@@ -19,6 +19,7 @@ class PipelineNode:
 
     # If False (general case) then compute(traces_chunk, *node_input_args)
     # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+    name = None
     _compute_has_extended_signature = False
 
     def __init__(
