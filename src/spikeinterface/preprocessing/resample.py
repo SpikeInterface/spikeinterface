@@ -8,6 +8,11 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
+from ._decimation_tools import (
+    _MAX_SINGLE_PASS_DECIMATION,
+    get_balanced_decimation_factors,
+    get_antialiased_decimated_traces,
+)
 from spikeinterface.core import get_chunk_with_margin, BaseRecordingSegment
 
 
@@ -15,17 +20,19 @@ class ResampleRecording(BasePreprocessor):
     """
     Resample the recording extractor traces.
 
-    If the original sampling rate is multiple of the resample_rate, it will use
-    the signal.decimate method from scipy. In other cases, it uses signal.resample. In the
-    later case, the resulting signal can have issues on the edges, mainly on the
-    rightmost.
+    If the parent sampling rate is an exact integer multiple of `resample_rate`, the
+    ``signal.decimate`` method from scipy is used (anti-aliased decimation). In other cases
+    ``signal.resample`` is used, in which case the resulting signal can have issues on the edges,
+    mainly on the rightmost. See Notes for a caveat on how the integer multiple is detected.
 
     Parameters
     ----------
     recording : Recording
         The recording extractor to be re-referenced
-    resample_rate : int
-        The resampling frequency
+    resample_rate : int | float
+        The resampling frequency. Integer ratios (parent_rate / resample_rate) use
+        ``scipy.signal.decimate``; non-integer ratios use ``scipy.signal.resample`` (FFT-based),
+        which can have edge effects, mainly on the rightmost samples.
     gap_tolerance_ms : float | None, default: None
         Maximum acceptable gap size in milliseconds for automatic segmentation.
 
@@ -60,6 +67,19 @@ class ResampleRecording(BasePreprocessor):
     resample_recording : ResampleRecording
         The resampled recording extractor object.
 
+    Notes
+    -----
+    The (anti-aliased) decimation path is selected by an exact check,
+    ``parent_rate % resample_rate == 0``. This only detects an integer downsampling factor when
+    both rates make that modulo exactly zero. If either the parent rate or `resample_rate` is a
+    non-integer float (i.e. ``float(int(x)) != float(x)``), a conceptually integer ratio can go
+    undetected and silently fall back to the FFT-based ``scipy.signal.resample`` path. For example,
+    decimating a 625 Hz recording by a factor of 6 means a target of 104.1666... Hz, and
+    ``625 % 104.1666... != 0``, so the integer-decimation path is not taken (whereas a factor of 5,
+    i.e. a 125 Hz target, is detected since ``625 % 125 == 0``). To force anti-aliased integer
+    decimation by a known factor regardless of the rates, use
+    ``spikeinterface.preprocessing.DecimateRecording`` with ``antialias=True``.
+
     """
 
     def __init__(
@@ -71,13 +91,24 @@ class ResampleRecording(BasePreprocessor):
         dtype=None,
         skip_checks=False,
     ):
-        # Floating point resampling rates can lead to unexpected results, avoid actively
-        msg = "Non integer resampling rates can lead to unexpected results."
-        assert isinstance(resample_rate, (int, np.integer)), msg
-        # Original sampling frequency
         self._orig_samp_freq = recording.get_sampling_frequency()
         self._resample_rate = resample_rate
         self._sampling_frequency = resample_rate
+        # When the parent rate is an exact integer multiple of resample_rate, get_traces uses
+        # anti-aliased decimation. Large factors are split into several balanced sub-13 passes
+        # (see _decimation_tools); only an unsplittable factor (a prime > 13) falls back to a
+        # single, potentially unstable, pass and warns.
+        if self._orig_samp_freq % resample_rate == 0:
+            decimation_factor = int(self._orig_samp_freq / resample_rate)
+            decimation_factors = get_balanced_decimation_factors(decimation_factor)
+            if decimation_factors == [decimation_factor] and decimation_factor > _MAX_SINGLE_PASS_DECIMATION:
+                warnings.warn(
+                    f"Resampling by an integer factor of {decimation_factor} cannot be split into "
+                    f"anti-aliasing passes of <= 13 (it has a prime factor > 13); a single "
+                    f"`scipy.signal.decimate` pass will be used, which may be unstable."
+                )
+        else:
+            decimation_factors = None
         # fix_dtype not always returns the str, make sure it does
         dtype = fix_dtype(recording, dtype).str
         # Ensure that the requested resample rate is doable:
@@ -97,6 +128,7 @@ class ResampleRecording(BasePreprocessor):
                     margin,
                     dtype,
                     gap_tolerance_ms,
+                    decimation_factors,
                 )
             )
 
@@ -119,6 +151,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         margin,
         dtype,
         gap_tolerance_ms=None,
+        decimation_factors=None,
     ):
         self._resample_rate = resample_rate
         self._parent_segment = parent_recording_segment
@@ -126,6 +159,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         self._margin = margin
         self._dtype = dtype
         self._has_gaps = False
+        # Per-pass integer decimation factors when the ratio is an exact integer, else None
+        # (non-integer ratio -> FFT-based scipy.signal.resample).
+        self._decimation_factors = decimation_factors
 
         # Compute time_vector or t_start, following the pattern from DecimateRecordingSegment.
         # Do not use BasePreprocessorSegment because we have to reset the sampling rate!
@@ -248,8 +284,23 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         if self._has_gaps:
             return self._get_traces_gapped(start_frame, end_frame, channel_indices)
 
-        # Original code path: no gaps (or no time_vector)
-        # get parent traces with margin
+        if self._decimation_factors is not None:
+            # Integer ratio, no gaps: anti-aliased multi-pass decimation.
+            decimation_factor = int(self._parent_rate / self._resample_rate)
+            return get_antialiased_decimated_traces(
+                self._parent_segment,
+                start_frame,
+                end_frame,
+                channel_indices,
+                decimation_factor,
+                self._decimation_factors,
+                self._margin,
+                self._dtype,
+            )
+
+        # Non-integer ratio, no gaps: FFT-based resampling with proportional margins.
+        from scipy import signal
+
         parent_start_frame, parent_end_frame = [
             int((frame / self._resample_rate) * self._parent_rate) for frame in [start_frame, end_frame]
         ]
@@ -267,23 +318,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             int((margin / self._parent_rate) * self._resample_rate) for margin in [left_margin, right_margin]
         ]
 
-        # get the size for the resampled traces in case of resample:
+        # get the size for the resampled traces
         num = int((end_frame + right_margin_rs) - (start_frame - left_margin_rs))
-
-        # Decimate can misbehave on some cases, while resample always looks nice enough.
-        # Check which method to use:
-        from scipy.signal import decimate, resample
-
-        if np.mod(self._parent_rate, self._resample_rate) == 0:
-            # Ratio between sampling frequencies
-            q = int(self._parent_rate / self._resample_rate)
-            # Decimate can have issues for some cases, returning NaNs
-            resampled_traces = decimate(parent_traces, q=q, axis=0)
-            # If that's the case, use signal.resample
-            if np.any(np.isnan(resampled_traces)):
-                resampled_traces = resample(parent_traces, num, axis=0)
-        else:
-            resampled_traces = resample(parent_traces, num, axis=0)
+        resampled_traces = signal.resample(parent_traces, num, axis=0)
 
         # now take care of the edges
         resampled_traces = resampled_traces[left_margin_rs : num - right_margin_rs]
@@ -368,10 +405,13 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             chunk_len = int(local_out_end - local_out_start)
             num = chunk_len + left_margin_rs + right_margin_rs
 
-            # Resample this section
+            # Resample this section. Integer ratios use anti-aliased multi-pass decimation
+            # (the balanced sub-13 passes computed in ResampleRecording.__init__), applied
+            # within the section only so filtering never crosses a gap.
             if is_integer_ratio:
-                q = int(self._parent_rate / self._resample_rate)
-                resampled = decimate(parent_traces, q=q, axis=0)
+                resampled = parent_traces
+                for sub_q in self._decimation_factors:
+                    resampled = decimate(resampled, q=sub_q, axis=0)
                 if np.any(np.isnan(resampled)):
                     resampled = resample(parent_traces, num, axis=0)
             else:

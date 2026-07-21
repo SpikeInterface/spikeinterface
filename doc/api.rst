@@ -216,6 +216,7 @@ spikeinterface.preprocessing
     .. autofunction:: get_motion_parameters_preset
     .. autofunction:: load_motion_info
     .. autofunction:: save_motion_info
+    .. autofunction:: decimate
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: detect_and_interpolate_bad_channels
