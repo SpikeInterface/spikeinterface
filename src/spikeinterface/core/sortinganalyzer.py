@@ -909,7 +909,6 @@ class SortingAnalyzer:
                 settings = json.load(f)
         else:
             # TODO: Remove support for analyzers that have no settings.json (throw an error instead)
-
             settings = dict()
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
