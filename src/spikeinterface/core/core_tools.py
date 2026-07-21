@@ -207,11 +207,9 @@ def check_json(dictionary: dict) -> dict:
     return json.loads(json_string)
 
 
-def clean_zarr_folder_name(folder):
+def clean_zarr_folder_name(folder: str | Path) -> Path:
     folder = Path(folder)
-    if folder.suffix != ".zarr":
-        folder = folder.parent / f"{folder.stem}.zarr"
-    return folder
+    return folder if folder.suffix == ".zarr" else folder.with_suffix(".zarr")
 
 
 def add_suffix(file_path, possible_suffix):
@@ -772,7 +770,7 @@ def is_path_remote(path: str | Path) -> bool:
 
     Returns
     -------
-    bool
+    is_remote: bool
         Whether the path is a remote path.
     """
     return "s3://" in str(path) or "gcs://" in str(path)

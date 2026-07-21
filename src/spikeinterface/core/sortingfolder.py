@@ -13,7 +13,7 @@ class NumpyFolderSorting(BaseSorting):
     NumpyFolderSorting is the new internal format used in spikeinterface (>=0.99.0) for caching sorting objects.
 
     It is a simple folder that contains:
-      * a file "spike.npy" (numpy format) with all flatten spikes (using sorting.to_spike_vector())
+      * a file "spikes.npy" (numpy format) with all flatten spikes (using sorting.to_spike_vector())
       * a "numpysorting_info.json" containing sampling_frequency, unit_ids and num_segments
       * a metadata folder for units properties.
 
@@ -24,28 +24,28 @@ class NumpyFolderSorting(BaseSorting):
     mode = "folder"
     name = "NumpyFolder"
 
-    def __init__(self, folder_path, mmap_mode=None):
+    def __init__(self, folder_path, mmap_mode: str | None = None):
         folder_path = Path(folder_path)
 
+        # Load general info
         with open(folder_path / "numpysorting_info.json", "r") as f:
             info = json.load(f)
-
         sampling_frequency = info["sampling_frequency"]
         unit_ids = np.array(info["unit_ids"])
         num_segments = info["num_segments"]
 
-        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        # Init superclass
+        super().__init__(sampling_frequency, unit_ids)
 
         self.spikes = np.load(folder_path / "spikes.npy", mmap_mode=mmap_mode)
 
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
-
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes
 
-        folder_metadata = folder_path
-        self.load_metadata_from_folder(folder_metadata)
+        # Load metadata
+        self.load_metadata_from_folder(folder_path)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
