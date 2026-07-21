@@ -592,7 +592,9 @@ class SortingAnalyzer:
         return sorting_analyzer
 
     @classmethod
-    def create_memory(cls, sorting, recording, sparsity, return_in_uV, peak_sign, peak_mode, rec_attributes):
+    def create_memory(
+        cls, sorting, recording, sparsity, return_in_uV, peak_sign, peak_mode, rec_attributes, copy_sorting=True
+    ):
         # used by create and save_as
 
         if rec_attributes is None:
@@ -603,11 +605,17 @@ class SortingAnalyzer:
             # a copy is done to avoid shared dict between instances (which can block garbage collector)
             rec_attributes = rec_attributes.copy()
 
-        # a copy of sorting is copied in memory for fast access
-        sorting_copy = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+        if copy_sorting:
+            # a copy of sorting is materialized in memory for fast access
+            analyzer_sorting = NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True)
+        else:
+            # keep the given (possibly lazy) sorting as-is: its spike times are read on demand rather
+            # than materialized up front. Useful for large streamed sortings where a view may need only
+            # a few units' trains (e.g. curation from stored templates + metrics).
+            analyzer_sorting = sorting
 
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting_copy,
+            sorting=analyzer_sorting,
             recording=recording,
             rec_attributes=rec_attributes,
             format="memory",
@@ -1279,6 +1287,37 @@ class SortingAnalyzer:
             return dict(zip(self.unit_ids, main_chans))
         else:
             return main_chans
+
+    def is_aggregated(self):
+        """
+        Returns True if the SortingAnalyzer is aggregated, False otherwise.
+        """
+        return (
+            "aggregation_key" in self.get_sorting_property_keys()
+            and "aggregation_key" in self.get_recording_property_keys()
+        )
+
+    def split_by(self):
+        """
+        Returns a dictionary of SortingAnalyzer objects, split by the aggregation_key.
+        The keys of the dictionary are the unique values of the aggregation_key, and the values
+        are the SortingAnalyzer objects corresponding to each unique value.
+        """
+        if not self.is_aggregated():
+            raise ValueError("SortingAnalyzer is not aggregated")
+
+        units_aggregation_key = self.get_sorting_property("aggregation_key")
+        channel_aggregation_key = self.get_recording_property("aggregation_key")
+        unique_keys = np.unique(units_aggregation_key)
+        split_analyzers = {}
+        for key in unique_keys:
+            unit_ids = self.unit_ids[units_aggregation_key == key]
+            channel_ids = self.channel_ids[channel_aggregation_key == key]
+            analyzer_units = self.select_units(unit_ids)
+            analyzer_split = analyzer_units.select_channels(channel_ids)
+            split_analyzers[key] = analyzer_split
+
+        return split_analyzers
 
     def are_units_mergeable(
         self,
