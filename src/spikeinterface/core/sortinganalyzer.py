@@ -168,7 +168,9 @@ def create_sorting_analyzer(
     In some situation, sparsity is not needed, so to make it fast creation, you need to turn
     sparsity off (or give external sparsity) like this.
     """
-    # Remove folder if overwrite is True
+    assert format in ["memory", "binary_folder", "zarr"], "Format must be 'memory', 'binary_folder' or 'zarr'."
+
+    # Remove folder if overwrite is True        
     if format != "memory":
         assert folder is not None, "For format='binary_folder'|'zarr', folder name must be provided"
         if not is_path_remote(folder):

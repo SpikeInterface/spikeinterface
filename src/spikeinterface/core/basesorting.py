@@ -548,7 +548,7 @@ class BaseSorting(BaseExtractor):
         # Re-register the recording if saving to disk (not memory)
         if self.has_recording() and format != "memory":
             warnings.warn(
-                "The recording registered to this sorting object will not be saved to disk"
+                "The recording registered to this sorting object will not be saved to disk. "
                 "Reloading the sorting later will not include the recording"
             )
             cached.register_recording(self._recording)
