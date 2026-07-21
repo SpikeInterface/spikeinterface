@@ -2516,7 +2516,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
 
         # delete from folder or zarr
-        if self.format != "memory" and self.has_extension(extension_name):
+        if self.format != "memory" and self.has_extension(extension_name) and not self._lazy:
             # need a reload to reset the folder
             ext = self.load_extension(extension_name)
             ext.delete()
