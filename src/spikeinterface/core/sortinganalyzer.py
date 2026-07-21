@@ -3167,8 +3167,10 @@ class AnalyzerExtension:
                     # The lazy loading of an extension is complicated because if we compute again
                     # and have a link to the old buffer on windows then it fails.
                     # So, by default, we use full loading, but lazy can be requested on demand.
-                    kwargs = dict(mmap_mode="r") if lazy else dict()
-                    ext_data = np.load(ext_data_file, **kwargs)
+                    if lazy:
+                        ext_data = np.load(ext_data_file, mmap_mode="r")
+                    else:
+                        ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
 
