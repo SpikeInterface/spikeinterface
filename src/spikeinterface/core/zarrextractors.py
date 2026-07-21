@@ -63,7 +63,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     root = None
     exception = None
-    if is_path_remote(str(folder_path)):
+    if is_path_remote(folder_path):
         for open_func in open_funcs:
             if root is not None:
                 break
