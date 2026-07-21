@@ -13,6 +13,7 @@ def interpolate_templates(
     source_locations: np.ndarray,
     dest_locations: np.ndarray,
     interpolation_method: Literal["cubic", "linear", "nearest", "thin_plate"] = "cubic",
+    interpolation_kwargs: None | dict = None,
 ):
     """
     Interpolate templates_array to new positions.
@@ -29,10 +30,13 @@ def interpolate_templates(
         The channel source location corresponding to templates_array.
         shape = (num_channels, 2)
     dest_locations : np.array
-        The new channel position, if ndim == 3, then the interpolation is broadcated with last dim.
+        The new channel position, if ndim == 3, then the interpolation is broadcasted with last dim.
         shape = (num_channels, 2) or (num_motions, num_channels, 2)
     interpolation_method : str, default "cubic"
         The interpolation method.
+    interpolation_kwargs
+        Kwargs that are passed to RBFInterpolator (if interpolation_method = "thin_plate") or to
+        griddata (otherwise).
 
     Returns
     -------
@@ -40,6 +44,9 @@ def interpolate_templates(
         shape = (num_templates, num_samples, num_channels) or = (num_motions, num_templates, num_samples, num_channel)
     """
     from scipy.interpolate import griddata, RBFInterpolator
+
+    if interpolation_kwargs is None:
+        interpolation_kwargs = dict()
 
     source_locations = np.asarray(source_locations)
     dest_locations = np.asarray(dest_locations)
@@ -65,7 +72,15 @@ def interpolate_templates(
 
             if interpolation_method == "thin_plate":
 
-                tps_interpolator = RBFInterpolator(source_locations, template, kernel="thin_plate_spline", neighbors=12)
+                if "neighbors" not in interpolation_kwargs:
+                    # If neighbors it not passed, `RBFInterpolator` uses all channels.
+                    # This works poorly for standard ephys template interpolation.
+                    # Depending on the probe, you might want to decrease this value.
+                    interpolation_kwargs["neighbors"] = 12
+
+                tps_interpolator = RBFInterpolator(
+                    source_locations, template, kernel="thin_plate_spline", **interpolation_kwargs
+                )
                 if dest_locations_dims == 2:
                     interp_template = tps_interpolator(dest_locations)
                 elif dest_locations_dims == 3:
@@ -75,7 +90,12 @@ def interpolate_templates(
 
             else:
                 interp_template = griddata(
-                    source_locations, template, dest_locations, method=interpolation_method, fill_value=0
+                    source_locations,
+                    template,
+                    dest_locations,
+                    method=interpolation_method,
+                    fill_value=0,
+                    **interpolation_kwargs,
                 )
 
             if dest_locations_dims == 2:
@@ -138,7 +158,7 @@ class DriftingTemplates(Templates):
 
     This class supports 2 different strategies:
       * move every templates on-the-fly, this lead to one interpolation per spike
-      * precompute some displacements for all templates and use a discreate interpolation, for instance by step of 1um
+      * precompute some displacements for all templates and use a discrete interpolation, for instance by step of 1um
         This is the same strategy used by MEArec.
 
     Parameters
@@ -323,7 +343,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     drifting_templates : DriftingTemplates
         The drifting template object
     displacement_vectors : list of numpy array
-        The lenght of the list is the number of segment.
+        The length of the list is the number of segment.
         Per segment, the drift vector is a numpy array with shape (num_times, 2, num_motions)
         num_motions is generally = 1 but can be > 1 in case of combining several drift vectors
     displacement_sampling_frequency : float
@@ -446,7 +466,7 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             ), "drifting_templates must have precomputed displacements"
             displacements = drifting_templates.displacements
 
-            # compute the displacement indicies
+            # compute the displacement indices
             segment_slices = []
             displacement_indices = np.zeros(self.spike_vector.size, dtype="int64")
             for segment_index in range(sorting.get_num_segments()):
@@ -564,9 +584,9 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         end_frame = self.num_samples if end_frame is None else end_frame
 
         if channel_indices is None:
-            n_channels = self.drifting_templates.num_channels
+            n_channels = self.get_num_channels()
         elif isinstance(channel_indices, slice):
-            stop = channel_indices.stop if channel_indices.stop is not None else self.drifting_templates.num_channels
+            stop = channel_indices.stop if channel_indices.stop is not None else self.get_num_channels()
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)

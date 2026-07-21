@@ -85,5 +85,47 @@ def test_remove_artifacts():
     )
 
 
+def test_remove_artifacts_sparsity():
+    # non-regression test for issue #3290: "median"/"average" modes with sparsity
+    # used to raise "shapes not aligned" because the template was kept full-channel
+    # while the traces were sparsified before the np.dot / subtraction.
+    rec = generate_recording(num_channels=4, durations=[10.0], seed=0)
+    rec.annotate(is_filtered=True)
+
+    ms = 10
+    ms_frames = int(ms * rec.get_sampling_frequency() / 1000)
+
+    # two artifact labels, each removed on a different subset of channels
+    triggers = [15000, 30000, 45000, 60000]
+    labels = [0, 1, 0, 1]
+    list_triggers = [triggers]
+    list_labels = [labels]
+    sparsity = {
+        0: np.array([True, False, True, False]),
+        1: np.array([False, True, False, True]),
+    }
+
+    for mode in ("median", "average"):
+        rec_rmart = remove_artifacts(
+            rec,
+            list_triggers,
+            ms_before=ms,
+            ms_after=ms,
+            mode=mode,
+            list_labels=list_labels,
+            sparsity=sparsity,
+        )
+        for trig, label in zip(triggers, labels):
+            mask = sparsity[label]
+            traces_clean = rec.get_traces(start_frame=trig - ms_frames, end_frame=trig + ms_frames)
+            # get_traces must not raise (the bug reported in issue #3290)
+            traces = rec_rmart.get_traces(start_frame=trig - ms_frames, end_frame=trig + ms_frames)
+            # channels outside the sparsity mask are left untouched
+            assert np.array_equal(traces[:, ~mask], traces_clean[:, ~mask])
+            # channels inside the sparsity mask have the artifact subtracted
+            assert not np.allclose(traces[:, mask], traces_clean[:, mask])
+
+
 if __name__ == "__main__":
     test_remove_artifacts()
+    test_remove_artifacts_sparsity()

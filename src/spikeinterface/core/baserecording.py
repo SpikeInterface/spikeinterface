@@ -285,7 +285,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -293,7 +293,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
-                    # here we do not truely have scale but we assume this is scaled
+                    # here we do not truly have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass
                 else:
@@ -638,6 +638,15 @@ class BaseRecordingSegment(TimeSeriesSegment):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
+
+    # Segments that know their channel count at construction (e.g. BinaryRecordingSegment,
+    # which needs it before being attached to a parent to compute the on-disk layout) set
+    # self.num_channels. Segments that don't leave it unset and inherit the count from the
+    # parent recording, which is always attached by the time get_traces runs.
+    def get_num_channels(self) -> int:
+        if hasattr(self, "num_channels") and self.num_channels is not None:
+            return self.num_channels
+        return self.parent_extractor.get_num_channels()
 
     def get_traces(
         self,
