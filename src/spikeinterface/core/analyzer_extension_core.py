@@ -1532,13 +1532,23 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     def _run(self, verbose=False, **job_kwargs):
         from spikeinterface.core.node_pipeline import run_node_pipeline
 
-        # TODO: should we save directly to npy in binary_folder format / or to zarr?
-        # if self.sorting_analyzer.format == "binary_folder":
-        #     gather_mode = "npy"
-        #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
-        #     gather_kwargs = {"folder": extension_folder}
-        gather_mode = "memory"
-        gather_kwargs = {}
+        # gather results directly to the final on-disk location (one npy file / zarr dataset per
+        # nodepipeline variable) to avoid an extra in-memory copy. This is only done when we are
+        # actually saving to a disk format (see AnalyzerExtension.run()); otherwise gather in memory.
+        gather_to_disk = getattr(self, "_save_to_disk", False) and self.format in ("binary_folder", "zarr")
+        if gather_to_disk:
+            extension_folder = self.sorting_analyzer.folder / "extensions" / self.extension_name
+            names = self.nodepipeline_variables
+            if self.format == "binary_folder":
+                gather_mode = "npy"
+                folder = [extension_folder / f"{name}.npy" for name in names]
+            else:
+                gather_mode = "zarr"
+                folder = [extension_folder / name for name in names]
+        else:
+            gather_mode = "memory"
+            folder = None
+            names = None
 
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
@@ -1548,7 +1558,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name=self.extension_name,
             gather_mode=gather_mode,
-            gather_kwargs=gather_kwargs,
+            folder=folder,
+            names=names,
             verbose=False,
         )
         if isinstance(data, tuple):
@@ -1599,6 +1610,11 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
 
         all_data = self.data[return_data_name]
+        # data gathered directly into a zarr store (e.g. by the node pipeline) is kept as a
+        # zarr.Array handle. On a non-lazy analyzer we materialize it to a numpy array (this mirrors
+        # the non-lazy load convention). A memmap is an np.ndarray subclass so it is left untouched.
+        if not self.sorting_analyzer._lazy and not isinstance(all_data, np.ndarray):
+            all_data = np.asarray(all_data)
         keep_mask = None
         if periods is not None:
             keep_mask = select_sorting_periods_mask(
@@ -1659,7 +1675,9 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         new_data = dict()
         for data_name in self.nodepipeline_variables:
             if self.data.get(data_name) is not None:
-                new_data[data_name] = self.data[data_name][keep_spike_mask]
+                # np.asarray materializes a zarr.Array to numpy (needed for boolean-mask indexing)
+                # while leaving a numpy array / memmap untouched (the mask then reads only the subset)
+                new_data[data_name] = np.asarray(self.data[data_name])[keep_spike_mask]
 
         return new_data
 
@@ -1670,15 +1688,18 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for data_name in self.nodepipeline_variables:
             if self.data.get(data_name) is not None:
                 if keep_mask is None:
-                    new_data[data_name] = self.data[data_name].copy()
+                    # return an independent copy (also materializes a zarr.Array to numpy)
+                    new_data[data_name] = np.array(self.data[data_name])
                 else:
-                    new_data[data_name] = self.data[data_name][keep_mask]
+                    # np.asarray leaves a numpy array / memmap untouched; the mask reads only the subset
+                    new_data[data_name] = np.asarray(self.data[data_name])[keep_mask]
 
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        # splitting only changes random spikes assignments
-        return self.data.copy()
+        # splitting only changes random spikes assignments, the per-spike data is unchanged.
+        # materialize to numpy in case data is a zarr.Array so it can be saved to the new store.
+        return {data_name: np.array(data) for data_name, data in self.data.items()}
 
 
 def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):

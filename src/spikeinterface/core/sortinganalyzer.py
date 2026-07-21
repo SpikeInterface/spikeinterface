@@ -40,7 +40,6 @@ from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
 from .node_pipeline import run_node_pipeline
-from .globals import get_global_job_kwargs
 
 
 # high level function
@@ -2297,7 +2296,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         return extension_instance
 
     def compute_several_extensions(
-        self, extensions, save=True, verbose=False, gather_mode="memory", gather_kwargs=None, **job_kwargs
+        self, extensions, save=True, verbose=False, gather_mode=None, gather_kwargs=None, **job_kwargs
     ):
         """
         Compute several extensions
@@ -2314,9 +2313,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
-        gather_mode : "memory" | "numpy", default: "memory"
-            Gather mode for node_pipeline extensions. If "memory", the results are gathered in memory.
-            If "numpy", the results are gathered in numpy arrays.
+        gather_mode : "memory" | "numpy" | "zarr" | None, default: None
+            Gather mode for node_pipeline extensions. If None, the results are gathered using the same format
+            as the SortingAnalyzer ("memory" for "memory", "npy" for "binary_folder", "zarr" for "zarr").
         gather_kwargs : dict | None, default: None
             Additional keyword arguments for the gather function. If None, default gather kwargs are used.
 
@@ -2384,14 +2383,40 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             result_routage = []
             extension_instances = {}
 
+            # decide how the pipeline results are gathered.
+            # when we save to a disk format we gather directly to the extension final location
+            # (npy files or zarr datasets) to avoid an extra in-memory copy. Otherwise (memory
+            # format, save=False or read-only analyzer) we gather in memory.
+            save_to_disk = save and not self.is_read_only()
+            if gather_mode is None:
+                if save_to_disk and self.format == "binary_folder":
+                    gather_mode = "npy"
+                elif save_to_disk and self.format == "zarr":
+                    gather_mode = "zarr"
+                else:
+                    gather_mode = "memory"
+            if gather_kwargs is None:
+                gather_kwargs = {}
+
+            # for disk gather modes we build one destination per output variable
+            gather_folder = [] if gather_mode in ("npy", "zarr") else None
+            gather_names = [] if gather_mode in ("npy", "zarr") else None
+
             for extension_name, extension_params in extensions_with_pipeline.items():
                 extension_class = get_extension_class(extension_name)
                 assert (
                     self.has_recording() or self.has_temporary_recording()
                 ), f"Extension {extension_name} requires the recording"
 
+                extension_folder = self.folder / "extensions" / extension_name if gather_folder is not None else None
                 for variable_name in extension_class.nodepipeline_variables:
                     result_routage.append((extension_name, variable_name))
+                    if gather_mode == "npy":
+                        gather_folder.append(extension_folder / f"{variable_name}.npy")
+                        gather_names.append(variable_name)
+                    elif gather_mode == "zarr":
+                        gather_folder.append(extension_folder / variable_name)
+                        gather_names.append(variable_name)
 
                 extension_instance = extension_class(self)
                 extension_instance.set_params(save=save, **extension_params)
@@ -2399,6 +2424,13 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
                 nodes = extension_instance.get_pipeline_nodes()
                 all_nodes.extend(nodes)
+
+            # reset and save params before running so the pipeline can gather directly into the
+            # (freshly created) extension folders/groups (mirrors AnalyzerExtension.run())
+            if save_to_disk:
+                for extension_instance in extension_instances.values():
+                    extension_instance._save_params()
+                    extension_instance._save_importing_provenance()
 
             job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
@@ -2409,6 +2441,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 job_kwargs=job_kwargs,
                 job_name=job_name,
                 gather_mode=gather_mode,
+                folder=gather_folder,
+                names=gather_names,
                 gather_kwargs=gather_kwargs,
                 squeeze_output=False,
                 verbose=verbose,
@@ -2425,7 +2459,18 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
             for extension_name, extension_instance in extension_instances.items():
                 self.extensions[extension_name] = extension_instance
-                if save:
+                if save_to_disk:
+                    # params/provenance already saved above (before the run). Here we only persist
+                    # the run info and the data. For disk gather modes the data is already written
+                    # to its final location so _save_data() is a no-op for those variables.
+                    extension_instance._save_run_info()
+                    extension_instance._save_data()
+                    if self.format == "zarr":
+                        import zarr
+
+                        zarr.consolidate_metadata(self._get_zarr_root().store)
+                elif save:
+                    # memory format or read-only : keep the previous behavior
                     extension_instance.save()
 
         for extension_name, extension_params in extensions_post_pipeline.items():
@@ -3234,10 +3279,16 @@ class AnalyzerExtension:
         return new_extension
 
     def run(self, save=True, **kwargs):
-        if save and not self.sorting_analyzer.is_read_only():
+        save_to_disk = save and not self.sorting_analyzer.is_read_only()
+        if save_to_disk:
             # NB: this call to _save_params() also resets the folder or zarr group
             self._save_params()
             self._save_importing_provenance()
+
+        # let _run() know whether it may gather results directly to the final on-disk location.
+        # This is only valid when we actually save to a disk format (the folder/group has just
+        # been reset above). Otherwise _run() must gather in memory.
+        self._save_to_disk = save_to_disk
 
         t_start = perf_counter()
         self._run(**kwargs)
@@ -3245,7 +3296,7 @@ class AnalyzerExtension:
         self.run_info["runtime_s"] = t_end - t_start
         self.run_info["run_completed"] = True
 
-        if save and not self.sorting_analyzer.is_read_only():
+        if save_to_disk:
             self._save_run_info()
             self._save_data()
             if self.format == "zarr":
@@ -3304,6 +3355,8 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
+            import zarr
+
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
@@ -3312,6 +3365,10 @@ class AnalyzerExtension:
                 saving_options["compressor"] = get_default_zarr_compressor()
 
             for ext_data_name, ext_data in self.data.items():
+                if isinstance(ext_data, zarr.Array):
+                    # the data was gathered directly into the extension group (e.g. by the node
+                    # pipeline), so it is already in its final location : nothing to copy
+                    continue
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, (dict, list)):
@@ -3319,7 +3376,10 @@ class AnalyzerExtension:
                     _write_object_array(extension_group, ext_data_name, ext_data_, codec="json")
                     extension_group[ext_data_name].attrs["dict"] = True
                 elif isinstance(ext_data, np.ndarray):
-                    extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
+                    # only save the array if the dataset does not already exist, since it is created directly
+                    # by the run_node_pipeline() function in the case of nodepipeline extensions
+                    if ext_data_name not in extension_group:
+                        extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     df_group = extension_group.create_group(ext_data_name)
                     # first we save the index

@@ -209,12 +209,114 @@ def test_run_node_pipeline(cache_folder_creation):
         assert np.array_equal(waveforms_rms, zarr_root["waveforms_rms"][:])
         assert np.array_equal(denoised_waveforms_rms, zarr_root["denoised_waveforms_rms"][:])
 
+        # gather npy mode with an explicit list of file paths (final location)
+        npy_files_folder = cache_folder / f"pipeline_npy_files_{loop}"
+        if npy_files_folder.is_dir():
+            shutil.rmtree(npy_files_folder)
+        npy_files = [
+            npy_files_folder / "amp.npy",
+            npy_files_folder / "sub" / "rms.npy",
+            npy_files_folder / "denoised_rms.npy",
+        ]
+        output = run_node_pipeline(
+            recording,
+            nodes,
+            job_kwargs,
+            gather_mode="npy",
+            folder=npy_files,
+        )
+        amplitudes_f, waveforms_rms_f, denoised_waveforms_rms_f = output
+        for npy_file in npy_files:
+            assert npy_file.is_file()
+        assert np.array_equal(amplitudes, amplitudes_f)
+        assert np.array_equal(waveforms_rms, waveforms_rms_f)
+        assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_f)
+
+        # gather zarr mode with an explicit list of dataset paths, created on the fly
+        # inside an existing store (final location, e.g. an analyzer extension group)
+        datasets_store = cache_folder / f"pipeline_zarr_datasets_{loop}.zarr"
+        if datasets_store.is_dir():
+            shutil.rmtree(datasets_store)
+        # pre-existing store that must not be wiped
+        root = zarr.open(str(datasets_store), mode="w")
+        root.attrs["preexisting"] = True
+        dataset_paths = [
+            datasets_store / "extensions" / "amplitudes",
+            datasets_store / "extensions" / "waveforms_rms",
+            datasets_store / "extensions" / "denoised_waveforms_rms",
+        ]
+        output = run_node_pipeline(
+            recording,
+            nodes,
+            job_kwargs,
+            gather_mode="zarr",
+            folder=dataset_paths,
+        )
+        amplitudes_d, waveforms_rms_d, denoised_waveforms_rms_d = output
+        assert np.array_equal(amplitudes, amplitudes_d[:])
+        assert np.array_equal(waveforms_rms, waveforms_rms_d[:])
+        assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_d[:])
+        # data must be persisted at the passed final location and the store not wiped
+        root_reopen = zarr.open(str(datasets_store), mode="r")
+        assert root_reopen.attrs.get("preexisting", False)
+        assert np.array_equal(amplitudes, root_reopen["extensions"]["amplitudes"][:])
+        assert np.array_equal(waveforms_rms, root_reopen["extensions"]["waveforms_rms"][:])
+        assert np.array_equal(denoised_waveforms_rms, root_reopen["extensions"]["denoised_waveforms_rms"][:])
+
         # Test pickle mechanism
         for node in nodes:
             import pickle
 
             pickled_node = pickle.dumps(node)
             unpickled_node = pickle.loads(pickled_node)
+
+
+def test_gather_to_zarr_chunking(tmp_path):
+    # the zarr chunk size along the first axis must be picked from a byte target (not from the
+    # size of the first gathered buffer), so it stays sensible for billions of spikes and never
+    # collapses to 1 row per chunk on a quiet first chunk.
+    recording, sorting = generate_ground_truth_recording(num_channels=8, num_units=5, durations=[20.0], seed=7)
+
+    # small chunks + n_jobs>1 so the first non-empty buffer is small (would give chunk0==1 with the
+    # old first-buffer heuristic)
+    job_kwargs = dict(chunk_duration="0.1s", n_jobs=2, progress_bar=False)
+
+    spikes = sorting.to_spike_vector()
+    peaks = np.zeros(spikes.size, dtype=spike_peak_dtype)
+    peaks["sample_index"] = spikes["sample_index"]
+    peaks["segment_index"] = spikes["segment_index"]
+
+    peak_retriever = PeakRetriever(recording, peaks)
+    ms_before, ms_after = 0.5, 1.0
+    dense_waveforms = ExtractDenseWaveforms(
+        recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=True
+    )
+    nodes = [peak_retriever, dense_waveforms]
+
+    # default byte target (10 MiB)
+    target_bytes = 10 * 1024 * 1024
+    waveforms = run_node_pipeline(
+        recording, nodes, job_kwargs, gather_mode="zarr", folder=tmp_path / "wfs.zarr", names=["waveforms"]
+    )
+    nbefore_after = dense_waveforms.nbefore + dense_waveforms.nafter
+    row_nbytes = nbefore_after * recording.get_num_channels() * np.dtype("float32").itemsize
+    expected_chunk0 = max(1, target_bytes // row_nbytes)
+    assert waveforms.chunks[0] == expected_chunk0
+    assert waveforms.chunks[0] > 1
+    assert waveforms.chunks[1:] == waveforms.shape[1:]
+
+    # explicit override is respected
+    waveforms2 = run_node_pipeline(
+        recording,
+        nodes,
+        job_kwargs,
+        gather_mode="zarr",
+        folder=tmp_path / "wfs2.zarr",
+        names=["waveforms"],
+        gather_kwargs={"zarr_chunk_size": 1234},
+    )
+    assert waveforms2.chunks[0] == 1234
+    assert np.array_equal(waveforms[:], waveforms2[:])
 
 
 def test_skip_after_n_peaks_and_recording_slices():
