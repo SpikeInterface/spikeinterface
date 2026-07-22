@@ -40,7 +40,6 @@ class TemporalPCBaseNode(WaveformsNode):
             parents=parents,
         )
 
-        self.sparse_waveforms = waveform_node.sparse_waveforms
         if pca_model is None:
             self.model_folder_path = model_folder_path
 
@@ -62,6 +61,9 @@ class TemporalPCBaseNode(WaveformsNode):
             self.assert_model_and_waveform_temporal_match(waveform_node)
         else:
             self.pca_model = pca_model
+        # Propagate waveforms node parameters
+        self.sparse_waveforms = waveform_node.sparse_waveforms
+        self.neighbours_mask = waveform_node.neighbours_mask
 
     def assert_model_and_waveform_temporal_match(self, waveform_node: WaveformsNode):
         """

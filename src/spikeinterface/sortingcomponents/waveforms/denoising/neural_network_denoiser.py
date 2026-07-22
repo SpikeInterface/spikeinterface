@@ -77,7 +77,6 @@ class SingleChannelDenoiser(WaveformsNode):
             return_output=return_output,
             parents=parents,
         )
-        self.sparse_waveforms = waveform_node.sparse_waveforms
         if model_folder is None and repo_id is None:
             raise ValueError("You need to specify either model_folder or repo_id")
         if model_folder is not None and repo_id is not None:
@@ -91,6 +90,9 @@ class SingleChannelDenoiser(WaveformsNode):
         self.assert_model_and_waveform_temporal_match(
             waveform_node, model_folder=model_folder, repo_id=repo_id, model_relative_path=model_relative_path
         )
+        # Propagate waveforms node parameters
+        self.sparse_waveforms = waveform_node.sparse_waveforms
+        self.neighbours_mask = waveform_node.neighbours_mask
 
     def assert_model_and_waveform_temporal_match(
         self,

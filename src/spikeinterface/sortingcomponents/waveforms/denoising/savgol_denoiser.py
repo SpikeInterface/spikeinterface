@@ -50,11 +50,14 @@ class SavGolDenoiser(WaveformsNode):
             return_output=return_output,
             parents=parents,
         )
-        self.sparse_waveforms = waveform_node.sparse_waveforms
-        self.order = order
         waveforms_sampling_frequency = self.recording.get_sampling_frequency()
+
+        self.order = order
         self.window_length = int(window_length_ms * waveforms_sampling_frequency / 1000)
         self.order = min(self.order, self.window_length - 1)
+        # Propagate waveforms node parameters
+        self.sparse_waveforms = waveform_node.sparse_waveforms
+        self.neighbours_mask = waveform_node.neighbours_mask
         self._kwargs.update(dict(order=order, window_length_ms=window_length_ms))
 
     def compute(self, traces, peaks, waveforms):
