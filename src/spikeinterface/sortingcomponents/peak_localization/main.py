@@ -12,6 +12,7 @@ from spikeinterface.core.node_pipeline import (
     PeakRetriever,
     SpikeRetriever,
     ExtractDenseWaveforms,
+    ExtractSparseWaveforms,
 )
 
 
@@ -24,6 +25,10 @@ def get_localization_pipeline_nodes(
     method_kwargs=None,
     ms_before=0.5,
     ms_after=0.5,
+    nbefore=None,
+    nafter=None,
+    waveform_method="dense",
+    waveform_kwargs=None,
     job_kwargs=None,
 ):
 
@@ -34,10 +39,18 @@ def get_localization_pipeline_nodes(
     assert method_kwargs is not None
 
     # peak_retriever = PeakRetriever(recording, peaks)
-
-    extract_dense_waveforms = ExtractDenseWaveforms(
-        recording, parents=[peak_source], ms_before=ms_before, ms_after=ms_after, return_output=False
-    )
+    if waveform_kwargs is None:
+        waveform_kwargs = dict()
+    waveform_kwargs.update(dict(ms_before=ms_before, ms_after=ms_after, nbefore=nbefore, nafter=nafter))
+    if waveform_method == "dense":
+        extract_waveforms = ExtractDenseWaveforms(
+            recording, parents=[peak_source], return_output=False, **waveform_kwargs
+        )
+    else:
+        extract_waveforms = ExtractSparseWaveforms(
+            recording, parents=[peak_source], return_output=False, **waveform_kwargs
+        )
+        print("Sparsity radius for waveform extraction:", extract_waveforms.radius_um)
 
     method_class = peak_localization_methods[method]
 
@@ -55,9 +68,9 @@ def get_localization_pipeline_nodes(
             recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
         )
 
-    localization_nodes = method_class(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs)
+    localization_nodes = method_class(recording, parents=[peak_source, extract_waveforms], **method_kwargs)
 
-    pipeline_nodes = [peak_source, extract_dense_waveforms, localization_nodes]
+    pipeline_nodes = [peak_source, extract_waveforms, localization_nodes]
 
     return pipeline_nodes
 
@@ -69,6 +82,10 @@ def localize_peaks(
     method_kwargs=None,
     ms_before=0.5,
     ms_after=0.5,
+    nbefore=None,
+    nafter=None,
+    waveform_method="dense",
+    waveform_kwargs=None,
     pipeline_kwargs=None,
     verbose=False,
     job_kwargs=None,
@@ -95,6 +112,16 @@ def localize_peaks(
         The number of milliseconds to include before the peak of the spike
     ms_after : float
         The number of milliseconds to include after the peak of the spike
+    nbefore : int | None
+        The number of samples to include before the peak of the spike. If None, it is
+        computed from ms_before and the sampling frequency of the recording.
+    nafter : int | None
+        The number of samples to include after the peak of the spike. If None, it is
+        computed from ms_after and the sampling frequency of the recording.
+    waveform_method : str, default: "dense"
+        The method to use for extracting waveforms. Can be "dense" or "sparse
+    waveform_kwargs : dict
+        Params specific of the waveform extraction method.
     pipeline_kwargs : dict
         Dict transmited to run_node_pipelines to handle fine details
         like : gather_mode/folder/skip_after_n_peaks/recording_slices
@@ -149,6 +176,10 @@ def localize_peaks(
         method_kwargs=method_kwargs,
         ms_before=ms_before,
         ms_after=ms_after,
+        nbefore=nbefore,
+        nafter=nafter,
+        waveform_method=waveform_method,
+        waveform_kwargs=waveform_kwargs,
         job_kwargs=job_kwargs,
     )
 

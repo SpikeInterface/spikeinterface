@@ -12,13 +12,14 @@ from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
-from spikeinterface.core.core_tools import ms_to_samples
+from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
 
 
 class PipelineNode:
 
     # If False (general case) then compute(traces_chunk, *node_input_args)
     # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+    name = None
     _compute_has_extended_signature = False
 
     def __init__(
@@ -297,8 +298,10 @@ class WaveformsNode(PipelineNode):
     def __init__(
         self,
         recording: BaseRecording,
-        ms_before: float,
-        ms_after: float,
+        ms_before: float | None = None,
+        ms_after: float | None = None,
+        nbefore: int | None = None,
+        nafter: int | None = None,
         parents: list[PipelineNode] | None = None,
         return_output: bool = False,
     ):
@@ -319,22 +322,42 @@ class WaveformsNode(PipelineNode):
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
         """
+        if ms_before is None and nbefore is None:
+            raise ValueError("Either ms_before or nbefore must be provided.")
+        if ms_after is None and nafter is None:
+            raise ValueError("Either ms_after or nafter must be provided.")
+        if ms_before is not None and nbefore is not None:
+            raise ValueError("Only one of ms_before or nbefore should be provided.")
+        if ms_after is not None and nafter is not None:
+            raise ValueError("Only one of ms_after or nafter should be provided.")
 
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.recording = recording
-        self.ms_before = ms_before
-        self.ms_after = ms_after
-        self.nbefore = ms_to_samples(ms_before, recording.get_sampling_frequency())
-        self.nafter = ms_to_samples(ms_after, recording.get_sampling_frequency())
+        sampling_frequency = recording.sampling_frequency
+        if nbefore is not None:
+            self.nbefore = nbefore
+            self.ms_before = samples_to_ms(nbefore, sampling_frequency)
+        else:
+            self.ms_before = ms_before
+            self.nbefore = ms_to_samples(ms_before, sampling_frequency)
+        if nafter is not None:
+            self.nafter = nafter
+            self.ms_after = samples_to_ms(nafter, sampling_frequency)
+        else:
+            self.ms_after = ms_after
+            self.nafter = ms_to_samples(ms_after, sampling_frequency)
         self.neighbours_mask = None
+        self.sparse_waveforms = False
 
 
 class ExtractDenseWaveforms(WaveformsNode):
     def __init__(
         self,
         recording: BaseRecording,
-        ms_before: float,
-        ms_after: float,
+        ms_before: float | None = None,
+        ms_after: float | None = None,
+        nbefore: int | None = None,
+        nafter: int | None = None,
         parents: list[PipelineNode] | None = None,
         return_output: bool = False,
     ):
@@ -347,10 +370,14 @@ class ExtractDenseWaveforms(WaveformsNode):
         ----------
         recording : BaseRecording
             The recording object.
-        ms_before : float
+        ms_before : float | None
             The number of milliseconds to include before the peak of the spike
-        ms_after : float
+        ms_after : float | None
             The number of milliseconds to include after the peak of the spike
+        nbefore : int | None, default: None
+            The number of samples to include before the peak of the spike
+        nafter : int | None, default: None
+            The number of samples to include after the peak of the spike
         parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
@@ -364,6 +391,8 @@ class ExtractDenseWaveforms(WaveformsNode):
             parents=parents,
             ms_before=ms_before,
             ms_after=ms_after,
+            nbefore=nbefore,
+            nafter=nafter,
             return_output=return_output,
         )
 
@@ -379,8 +408,10 @@ class ExtractSparseWaveforms(WaveformsNode):
     def __init__(
         self,
         recording: BaseRecording,
-        ms_before: float,
-        ms_after: float,
+        ms_before: float | None = None,
+        ms_after: float | None = None,
+        nbefore: int | None = None,
+        nafter: int | None = None,
         parents: list[PipelineNode] | None = None,
         return_output: bool = False,
         radius_um: float = 100.0,
@@ -401,10 +432,14 @@ class ExtractSparseWaveforms(WaveformsNode):
         ----------
         recording : BaseRecording
             The recording object
-        ms_before : float
+        ms_before : float | None
             The number of milliseconds to include before the peak of the spike
-        ms_after : float
+        ms_after : float | None
             The number of milliseconds to include after the peak of the spike
+        nbefore : int | None, default: None
+            The number of samples to include before the peak of the spike
+        nafter : int | None, default: None
+            The number of samples to include after the peak of the spike
         parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
@@ -421,6 +456,8 @@ class ExtractSparseWaveforms(WaveformsNode):
             parents=parents,
             ms_before=ms_before,
             ms_after=ms_after,
+            nbefore=nbefore,
+            nafter=nafter,
             return_output=return_output,
         )
 
@@ -434,6 +471,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.radius_um = radius_um
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
+        self.sparse_waveforms = True
 
     def get_margin(self):
         return max(self.nbefore, self.nafter)
