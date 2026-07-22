@@ -10,6 +10,7 @@ from spikeinterface.core.node_pipeline import (
 )
 
 from spikeinterface.core import get_channel_distances
+from spikeinterface.sortingcomponents import waveforms
 
 
 # TODO: make this sparse and pre-instantiate neighbor mask in case of ExtractSparseWaveforms
@@ -20,6 +21,7 @@ class LocalizeBase(PipelineNode):
         self.recording = recording
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
 
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
@@ -27,22 +29,35 @@ class LocalizeBase(PipelineNode):
             raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
         self.nbefore = waveform_extractor.nbefore
         self.nafter = waveform_extractor.nafter
+
+        self.neighbours_mask = self.channel_distance <= radius_um
         if isinstance(waveform_extractor, ExtractSparseWaveforms):
             self.sparse_waveforms = True
-            self.neighbours_mask = waveform_extractor.neighbours_mask
+            # waveforms only exist for channels within the extractor's own sparsity,
+            # so radius_um can only narrow that neighborhood down, never extend it
+            self.extraction_neighbours_mask = waveform_extractor.neighbours_mask
+            self.neighbours_mask &= self.extraction_neighbours_mask
         else:
             self.sparse_waveforms = False
-            self.channel_distance = get_channel_distances(recording)
-            self.neighbours_mask = self.channel_distance <= radius_um
-            self._kwargs["radius_um"] = radius_um
+        self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):
         return self._dtype
 
-    # TODO: fix sparsity here
-    def get_sparse_waveform(self, waveform, chan_inds):
+    def get_sparse_waveform(self, waveform, chan_inds, main_chan):
         """Get sparse waveforms from dense waveforms"""
         if self.sparse_waveforms:
-            return waveform
+            # sparse waveforms are stored contiguously (zero-padded) following the
+            # extractor's own sparsity mask for main_chan, so chan_inds (a subset of
+            # that sparsity) must be mapped to its position among the stored channels
+            extraction_chan_inds = np.flatnonzero(self.extraction_neighbours_mask[main_chan])
+            local_inds = np.searchsorted(extraction_chan_inds, chan_inds)
+            if waveform.ndim == 2:
+                return waveform[:, local_inds]
+            else:
+                return waveform[:, :, local_inds]
         else:
-            return waveform[:, :, chan_inds]
+            if waveform.ndim == 2:
+                return waveform[:, chan_inds]
+            else:
+                return waveform[:, :, chan_inds]

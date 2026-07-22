@@ -83,7 +83,7 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            wf = self.get_sparse_waveform(waveforms[i, :], chan_inds)
+            wf = self.get_sparse_waveform(waveforms[i, :], chan_inds, peak["channel_index"])
             if self.feature == "ptp":
                 wf_data = np.ptp(wf, axis=0)
             elif self.feature == "energy":

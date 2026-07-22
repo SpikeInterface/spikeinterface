@@ -42,7 +42,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            wf = self.get_sparse_waveform(waveforms[idx], chan_inds)
+            wf = self.get_sparse_waveform(waveforms[idx], chan_inds, main_chan)
 
             if self.feature == "ptp":
                 wf_data = np.ptp(wf, axis=1)

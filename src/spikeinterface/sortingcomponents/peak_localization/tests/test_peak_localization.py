@@ -7,8 +7,7 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 
-@pytest.fixture
-def peaks_and_recording():
+def _peaks_and_recording():
     recording, _ = make_dataset()
 
     peaks = detect_peaks(
@@ -19,6 +18,11 @@ def peaks_and_recording():
     )
 
     return recording, peaks
+
+
+@pytest.fixture
+def peaks_and_recording():
+    return _peaks_and_recording()
 
 
 def test_localize_peaks(peaks_and_recording):
@@ -99,11 +103,11 @@ def test_localize_peaks(peaks_and_recording):
     list_locations.append(("minimize_with_log_penality_v_peak", peak_locations))
 
 
-@pytest.mark.parametrize("method", ["center_of_mass", "grid_convolution", "monopolar_triangulation"])
+@pytest.mark.parametrize("method", ["center_of_mass", "monopolar_triangulation", "grid_convolution"])
 def test_localize_peaks_sparse(peaks_and_recording, method):
     recording, peaks = peaks_and_recording
 
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
 
     # test sparse waveforms
     peak_locations = localize_peaks(
@@ -112,41 +116,49 @@ def test_localize_peaks_sparse(peaks_and_recording, method):
         method_kwargs=dict(
             method=method,
         ),
-        waveform_method="sparse",
+        waveform_method="sparse",  # if method != "grid_convolution" else "dense",
         job_kwargs=job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
 
-    # DEBUG
-    # import MEArec
-    # recgen = MEArec.load_recordings(recordings=local_path, return_h5_objects=True,
-    # check_suffix=False,
-    # load=['recordings', 'spiketrains', 'channel_positions'],
-    # load_waveforms=False)
-    # soma_positions = np.zeros((len(recgen.spiketrains), 3), dtype='float32')
-    # for i, st in enumerate(recgen.spiketrains):
-    # soma_positions[i, :] = st.annotations['soma_position']
-    # import matplotlib.pyplot as plt
-    # import spikeinterface.widgets as sw
-    # from probeinterface.plotting import plot_probe
-    # for title, peak_locations in list_locations:
-    # probe = recording.get_probe()
-    # fig, axs = plt.subplots(ncols=2, sharey=True)
-    # ax = axs[0]
-    # ax.set_title(title)
-    # plot_probe(probe, ax=ax)
-    # ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('y')
-    # #MEArec is "yz" in 2D
-    # ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
-    # ax = axs[1]
-    # if 'z' in peak_locations.dtype.fields:
-    # ax.scatter(peak_locations['z'], peak_locations['y'], color='k', s=1, alpha=0.5)
-    # ax.set_xlabel('z')
-    # ax.set_title(title)
-    # plt.show()
+
+@pytest.mark.parametrize("method", ["center_of_mass", "monopolar_triangulation", "grid_convolution"])
+def test_sparse_and_dense_are_close(peaks_and_recording, method):
+    recording, peaks = peaks_and_recording
+
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
+
+    # test sparse waveforms
+    radius_um = 150.0
+    peak_locations_sparse = localize_peaks(
+        recording,
+        peaks,
+        method_kwargs=dict(
+            method=method,
+        ),
+        waveform_method="sparse",
+        waveform_kwargs=dict(radius_um=radius_um),
+        job_kwargs=job_kwargs,
+    )
+    peak_locations_dense = localize_peaks(
+        recording,
+        peaks,
+        method_kwargs=dict(
+            method=method,
+        ),
+        waveform_method="dense",
+        job_kwargs=job_kwargs,
+    )
+    # Allow a 2um tolerance for the difference between sparse and dense localization results
+    np.testing.assert_allclose(peak_locations_sparse["x"], peak_locations_dense["x"], rtol=0.01, atol=1)
+    np.testing.assert_allclose(peak_locations_sparse["y"], peak_locations_dense["y"], rtol=0.01, atol=1)
+    if "z" in peak_locations_sparse.dtype.names:
+        np.testing.assert_allclose(peak_locations_sparse["z"], peak_locations_dense["z"], rtol=0.01, atol=1)
 
 
 if __name__ == "__main__":
-    test_localize_peaks()
+    import pytest
+
+    # run the is close test only for center of mass
+    peaks_and_recording_obj = _peaks_and_recording()
+    test_sparse_and_dense_are_close(peaks_and_recording_obj, method="center_of_mass")

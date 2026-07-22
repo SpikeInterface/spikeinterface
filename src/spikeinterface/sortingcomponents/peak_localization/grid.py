@@ -125,7 +125,7 @@ class LocalizeGridConvolution(LocalizeBase):
             num_templates = np.sum(nearest_mask)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
 
-            wf = self.get_sparse_waveform(waveforms[idx], np.flatnonzero(self.neighbours_mask[main_chan]))
+            wf = self.get_sparse_waveform(waveforms[idx], np.flatnonzero(channel_mask), main_chan)
 
             sub_w = self.weights[:, channel_mask, :][:, :, nearest_mask]
             global_products = (wf * self.prototype).sum(axis=1)
