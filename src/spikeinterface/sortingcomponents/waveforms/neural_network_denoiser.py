@@ -1,19 +1,20 @@
-from pathlib import Path
 import json
+import importlib.util
 from typing import List, Optional
 
-try:
+if importlib.util.find_spec("torch") is not None:
     import torch
     from torch import nn
 
     HAVE_TORCH = True
-except ImportError:
+else:
     HAVE_TORCH = False
-try:
+
+if importlib.util.find_spec("huggingface_hub") is not None:
     from huggingface_hub import hf_hub_download
 
     HAVE_HUGGINFACE = True
-except ImportError:
+else:
     HAVE_HUGGINFACE = False
 
 from spikeinterface.core import BaseRecording

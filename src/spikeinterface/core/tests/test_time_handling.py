@@ -64,7 +64,7 @@ class TestTimeHandling:
             times_recording.set_times(times=time_vector, segment_index=segment_index)
 
             assert np.array_equal(
-                times_recording.segments[segment_index].time_vector,
+                times_recording.segments[segment_index]._time_vector,
                 time_vector,
             ), "time_vector was not properly set during test setup"
 
@@ -84,7 +84,7 @@ class TestTimeHandling:
             t_start = (segment_index + 1) * 100
 
             all_t_starts.append(t_start + t_start_recording.get_times(segment_index))
-            t_start_recording.segments[segment_index].t_start = t_start
+            t_start_recording.segments[segment_index]._t_start = t_start
 
         return (raw_recording, t_start_recording, all_t_starts)
 
@@ -375,6 +375,31 @@ class TestTimeHandling:
                 times_recording.get_times(segment_index=idx), loaded_recording.get_times(segment_index=idx)
             )
 
+    @pytest.mark.parametrize("save_format", ["binary", "zarr"])
+    def test_shift_times_after_load(self, request, save_format, tmp_path):
+        """
+        Shift times on a recording loaded from disk as a read-only np.memmap
+        (binary folder) and a lazy zarr.Array (zarr). Neither supports an in-place
+        `+=`, so `shift_times` must shift a writable copy.
+        """
+        _, times_recording, all_times = self._get_fixture_data(request, "time_vector_recording")
+
+        folder = tmp_path / "rec"
+        times_recording.save(format=save_format, folder=folder)
+        load_path = folder.with_suffix(".zarr") if save_format == "zarr" else folder
+        loaded = si.load(load_path)
+
+        # Confirm we are actually exercising a non-writeable / non-ndarray path.
+        for idx in range(loaded.get_num_segments()):
+            tv = loaded.segments[idx]._time_vector
+            assert not (isinstance(tv, np.ndarray) and tv.flags.writeable)
+
+        shift = 123.456
+        loaded.shift_times(shift)
+
+        for idx in range(loaded.get_num_segments()):
+            assert np.allclose(loaded.get_times(segment_index=idx), all_times[idx] + shift, rtol=0, atol=1e-8)
+
     def _store_all_times(self, recording):
         """
         Convenience function to store original times of all segments to a dict.
@@ -441,7 +466,7 @@ def test_shift_times_with_None_as_t_start():
     """Ensures we can shift times even when t_stat is None which is interpeted as zero"""
     recording = generate_recording(num_channels=4, durations=[10])
 
-    assert recording.segments[0].t_start is None
+    assert recording.segments[0]._t_start is None
     recording.shift_times(shift=1.0)  # Shift by one seconds should not generate an error
     assert recording.get_start_time() == 1.0
 

@@ -203,7 +203,7 @@ def detect_bad_channels(
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the International Brain Laboratory.
     https://www.internationalbrainlab.com/repro-ephys
     """
-    import scipy.stats
+    from scipy.stats import median_abs_deviation, mode
 
     method_list = ("std", "mad", "coherence+psd", "neighborhood_r2")
     assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
@@ -241,7 +241,7 @@ def detect_bad_channels(
         if method == "std":
             deviations = np.std(random_data, axis=0)
         else:
-            deviations = scipy.stats.median_abs_deviation(random_data, axis=0)
+            deviations = median_abs_deviation(random_data, axis=0)
         thresh = std_mad_threshold * np.median(deviations)
         mask = deviations > thresh
         bad_channel_ids = recording.channel_ids[mask]
@@ -287,7 +287,7 @@ def detect_bad_channels(
             chunk_channel_labels[:, i] = chunk_labels[order_r] if order_r is not None else chunk_labels
 
         # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
-        mode_channel_labels, _ = scipy.stats.mode(chunk_channel_labels, axis=1, keepdims=False)
+        mode_channel_labels, _ = mode(chunk_channel_labels, axis=1, keepdims=False)
 
         (bad_inds,) = np.where(mode_channel_labels != 0)
         bad_channel_ids = recording.channel_ids[bad_inds]
@@ -307,6 +307,9 @@ def detect_bad_channels(
 
         if channel_filters is None:
             channel_filters = allowed_filters
+
+        if isinstance(channel_filters, list):
+            channel_filters = set(channel_filters)
 
         if not isinstance(channel_filters, set):
             raise ValueError(f"channel_filters must be None or a set of the following values : {allowed_filters} ")
@@ -453,12 +456,12 @@ def detect_bad_channels_ibl(
     1d array
         Channels labels: 0: good,  1: dead low coherence / amplitude, 2: noisy, 3: outside of the brain
     """
-    import scipy
+    from scipy.signal import welch
 
     # Compute PSD
     raw = raw - np.mean(raw, axis=0, keepdims=True)
     nperseg = int(welch_window_ms * fs / 1000)
-    fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0, window="hann", nperseg=nperseg)
+    fscale, psd = welch(raw, fs=fs, axis=0, window="hann", nperseg=nperseg)
     psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold)], axis=0)
 
     # Compute similarities

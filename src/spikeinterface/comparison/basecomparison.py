@@ -234,7 +234,7 @@ class BasePairComparison(BaseComparison):
     """
     Base class for pair comparisons.
 
-    It handles the matching procedurs.
+    It handles the matching procedures.
 
     Agreement scores must be computed in inherited classes by overriding the
     "_do_agreement(self)" function

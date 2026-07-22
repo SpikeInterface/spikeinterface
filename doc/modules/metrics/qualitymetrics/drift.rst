@@ -45,7 +45,7 @@ Example code
 	# Combine sorting and recording into sorting_analyzer
 	# It is required to run sorting_analyzer.compute(input="spike_locations") first
 	# (if missing, values will be NaN)
-	drift_ptps, drift_stds, drift_mads = sqm.compute_drift_metrics(sorting_analyzer=sorting_analyzer peak_sign="neg")
+	drift_ptps, drift_stds, drift_mads = sqm.compute_drift_metrics(sorting_analyzer=sorting_analyzer)
 	# drift_ptps, drift_stds, and drift_mads are each a dict containing the unit IDs as keys,
 	# and their metrics as values.
 
