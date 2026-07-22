@@ -50,7 +50,7 @@ class SavGolDenoiser(WaveformsNode):
             return_output=return_output,
             parents=parents,
         )
-
+        self.sparse_waveforms = waveform_node.sparse_waveforms
         self.order = order
         waveforms_sampling_frequency = self.recording.get_sampling_frequency()
         self.window_length = int(window_length_ms * waveforms_sampling_frequency / 1000)

@@ -77,6 +77,7 @@ class SingleChannelDenoiser(WaveformsNode):
             return_output=return_output,
             parents=parents,
         )
+        self.sparse_waveforms = waveform_node.sparse_waveforms
         if model_folder is None and repo_id is None:
             raise ValueError("You need to specify either model_folder or repo_id")
         if model_folder is not None and repo_id is not None:
