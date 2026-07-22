@@ -364,30 +364,16 @@ def read_kilosort_as_analyzer(
         probe = Probe(si_units="um")
         channel_positions = np.load(phy_path / "channel_positions.npy")
         probe.set_contacts(channel_positions)
-        channel_map = np.load(phy_path / "channel_map.npy")
-        probe.set_device_channel_indices(channel_map)
-
+        probe.set_device_channel_indices(np.arange(len(channel_positions)))
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
     else:
         AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
     if recording is not None:
-        # Re-wire recording to match the output from the kilosort probe
+        channel_map = np.load(phy_path / "channel_map.npy")
+        recording = recording.select_channels(recording.channel_ids[channel_map])
         user_gave_recording = True
-        all_contact_positions = np.vstack([probe.contact_positions for probe in probegroup.probes])
-
-        new_device_channel_indices = []
-        for recording_channel_location in recording.get_channel_locations():
-            for channel_index, probe_contact_position in enumerate(all_contact_positions):
-                if np.all(recording_channel_location == probe_contact_position):
-                    new_device_channel_indices.append(channel_index)
-                    break
-
-        if len(new_device_channel_indices) != len(all_contact_positions):
-            raise ValueError("The channel locations in your `recording` and the probe channel locations do not match.")
-
-        recording.get_probegroup().set_global_device_channel_indices(new_device_channel_indices)
 
     else:
         user_gave_recording = False
