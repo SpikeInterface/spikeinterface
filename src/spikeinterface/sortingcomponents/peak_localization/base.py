@@ -24,21 +24,19 @@ class LocalizeBase(PipelineNode):
         self.channel_distance = get_channel_distances(recording)
 
         # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
-        if waveform_extractor is None:
+        waveform_node = find_parent_of_type(self.parents, WaveformsNode)
+        if waveform_node is None:
             raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
-        self.nbefore = waveform_extractor.nbefore
-        self.nafter = waveform_extractor.nafter
+        self.nbefore = waveform_node.nbefore
+        self.nafter = waveform_node.nafter
 
         self.neighbours_mask = self.channel_distance <= radius_um
-        if isinstance(waveform_extractor, ExtractSparseWaveforms):
-            self.sparse_waveforms = True
+        self.sparse_waveforms = waveform_node.sparse_waveforms
+        if self.sparse_waveforms:
             # waveforms only exist for channels within the extractor's own sparsity,
             # so radius_um can only narrow that neighborhood down, never extend it
-            self.extraction_neighbours_mask = waveform_extractor.neighbours_mask
+            self.extraction_neighbours_mask = waveform_node.neighbours_mask
             self.neighbours_mask &= self.extraction_neighbours_mask
-        else:
-            self.sparse_waveforms = False
         self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):
