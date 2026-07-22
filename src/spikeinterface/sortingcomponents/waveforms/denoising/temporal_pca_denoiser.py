@@ -3,10 +3,11 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.node_pipeline import PipelineNode
-from ..temporal_pca import TemporalPCBaseNode, to_temporal_representation, from_temporal_representation
+from ..waveform_utils import WaveformTransformer
+from ..temporal_pca import TemporalPCMixin, to_temporal_representation, from_temporal_representation
 
 
-class TemporalPCADenoiser(TemporalPCBaseNode):
+class TemporalPCADenoiser(WaveformTransformer, TemporalPCMixin):
     """
     A step that performs a PCA denoising on the waveforms extracted by a peak_detection function.
 
@@ -44,11 +45,10 @@ class TemporalPCADenoiser(TemporalPCBaseNode):
         model_folder_path=None,
         return_output=True,
     ):
-        TemporalPCBaseNode.__init__(
+        WaveformTransformer.__init__(self, recording=recording, parents=parents, return_output=return_output)
+        TemporalPCMixin.__init__(
             self,
-            recording=recording,
-            parents=parents,
-            return_output=return_output,
+            waveform_node=self.waveforms_node,
             pca_model=pca_model,
             model_folder_path=model_folder_path,
         )

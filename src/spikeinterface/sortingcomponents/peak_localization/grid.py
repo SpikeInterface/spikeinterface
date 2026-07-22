@@ -1,13 +1,6 @@
 import numpy as np
 import warnings
 
-
-from spikeinterface.core.node_pipeline import (
-    find_parent_of_type,
-    PipelineNode,
-    WaveformsNode,
-)
-
 from .base import LocalizeBase
 from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method
 
@@ -124,6 +117,9 @@ class LocalizeGridConvolution(LocalizeBase):
 
             num_templates = np.sum(nearest_mask)
             channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_mask], axis=(0, 2)) > 0
+            if self.sparse_waveforms:
+                # channels outside the waveform extractor's own sparsity have no data at all
+                channel_mask &= self.extraction_neighbours_mask[main_chan]
 
             wf = self.get_sparse_waveform(waveforms[idx], np.flatnonzero(channel_mask), main_chan)
 

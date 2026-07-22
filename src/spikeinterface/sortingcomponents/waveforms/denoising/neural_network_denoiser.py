@@ -21,11 +21,11 @@ else:
     HAVE_HUGGINGFACE = False
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
-from ..waveform_utils import to_temporal_representation, from_temporal_representation
+from spikeinterface.core.node_pipeline import PipelineNode
+from ..waveform_utils import to_temporal_representation, from_temporal_representation, WaveformTransformer
 
 
-class SingleChannelDenoiser(WaveformsNode):
+class SingleChannelDenoiser(WaveformTransformer):
     """
     Denoiser for temporal dimension of waveforms. It takes as input a WaveformsNode and outputs denoised waveforms.
 
@@ -66,14 +66,9 @@ class SingleChannelDenoiser(WaveformsNode):
         device=None,
     ):
         assert HAVE_TORCH, "To use the SingleChannelDenoiser you need to install torch"
-        waveform_node = find_parent_of_type(parents, WaveformsNode)
-        if waveform_node is None:
-            raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
 
         super().__init__(
             recording,
-            waveform_node.ms_before,
-            waveform_node.ms_after,
             return_output=return_output,
             parents=parents,
         )
@@ -81,22 +76,18 @@ class SingleChannelDenoiser(WaveformsNode):
             raise ValueError("You need to specify either model_folder or repo_id")
         if model_folder is not None and repo_id is not None:
             raise ValueError("You cannot specify both model_folder and repo_id")
-        spike_size = waveform_node.nbefore + waveform_node.nafter
+        spike_size = self.waveforms_node.nbefore + self.waveforms_node.nafter
         # Load model
         self.denoiser, model_relative_path = self.load_model(
             model_folder=model_folder, repo_id=repo_id, model_name=model_name, spike_size=spike_size, device=device
         )
 
         self.assert_model_and_waveform_temporal_match(
-            waveform_node, model_folder=model_folder, repo_id=repo_id, model_relative_path=model_relative_path
+            model_folder=model_folder, repo_id=repo_id, model_relative_path=model_relative_path
         )
-        # Propagate waveforms node parameters
-        self.sparse_waveforms = waveform_node.sparse_waveforms
-        self.neighbours_mask = waveform_node.neighbours_mask
 
     def assert_model_and_waveform_temporal_match(
         self,
-        waveform_node: WaveformsNode,
         model_relative_path: str,
         model_folder: Optional[str] = None,
         repo_id: Optional[str] = None,
@@ -105,9 +96,9 @@ class SingleChannelDenoiser(WaveformsNode):
         Asserts that the model and the waveform extractor have the same temporal parameters
         """
         # Extract temporal parameters from the waveform extractor
-        waveforms_ms_before = waveform_node.ms_before
-        waveforms_ms_after = waveform_node.ms_after
-        waveforms_sampling_frequency = waveform_node.recording.sampling_frequency
+        waveforms_ms_before = self.waveforms_node.ms_before
+        waveforms_ms_after = self.waveforms_node.ms_after
+        waveforms_sampling_frequency = self.waveforms_node.recording.sampling_frequency
 
         json_file_path = None
         if model_folder is not None:
@@ -134,7 +125,7 @@ class SingleChannelDenoiser(WaveformsNode):
         model_nbefore = model_info.get("nbefore")
 
         if model_num_samples is not None:
-            if model_num_samples != waveform_node.nbefore + waveform_node.nafter:
+            if model_num_samples != self.waveforms_node.nbefore + self.waveforms_node.nafter:
                 raise ValueError(
                     f"Model num_samples {model_num_samples} does not match waveform extractor num_samples {waveform_node.num_samples}"
                 )
@@ -154,7 +145,7 @@ class SingleChannelDenoiser(WaveformsNode):
                     f"Difference between sampling_frequency {model_sampling_frequency} does not match waveform extractor sampling_frequency {waveforms_sampling_frequency}"
                 )
         if model_nbefore is not None:
-            if abs(model_nbefore - waveform_node.nbefore) > 5:
+            if abs(model_nbefore - self.waveforms_node.nbefore) > 5:
                 raise ValueError(
                     f"Difference between model nbefore {model_nbefore} and waveform extractor nbefore {waveform_node.nbefore} is too large"
                 )

@@ -5,15 +5,12 @@ from spikeinterface.core.node_pipeline import (
 from spikeinterface.core.node_pipeline import (
     find_parent_of_type,
     WaveformsNode,
-    ExtractDenseWaveforms,
-    ExtractSparseWaveforms,
 )
 
 from spikeinterface.core import get_channel_distances
 from spikeinterface.sortingcomponents import waveforms
 
 
-# TODO: make this sparse and pre-instantiate neighbor mask in case of ExtractSparseWaveforms
 class LocalizeBase(PipelineNode):
 
     def __init__(self, recording, parents, return_output=True, radius_um=75.0):
@@ -49,7 +46,13 @@ class LocalizeBase(PipelineNode):
             # extractor's own sparsity mask for main_chan, so chan_inds (a subset of
             # that sparsity) must be mapped to its position among the stored channels
             extraction_chan_inds = np.flatnonzero(self.extraction_neighbours_mask[main_chan])
-            local_inds = np.searchsorted(extraction_chan_inds, chan_inds)
+            local_inds = np.searchsorted(extraction_chan_inds, chan_inds).clip(max=len(extraction_chan_inds) - 1)
+            if not np.array_equal(extraction_chan_inds[local_inds], chan_inds):
+                raise ValueError(
+                    "Requested channels fall outside the sparsity radius used to extract the waveforms: "
+                    "the localization radius_um (plus, for grid_convolution, margin_um) must not exceed "
+                    "the waveform extraction radius_um."
+                )
             if waveform.ndim == 2:
                 return waveform[:, local_inds]
             else:

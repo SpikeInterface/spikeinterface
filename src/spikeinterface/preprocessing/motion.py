@@ -454,7 +454,10 @@ def compute_motion(
             key: denoise_kwarg for key, denoise_kwarg in denoise_kwargs.items() if key != "method"
         }
         denoise_node = denoise_class(
-            recording, parents=[peaks_node, extract_waveforms_node], **denoise_kwargs_without_method
+            recording,
+            parents=[peaks_node, extract_waveforms_node],
+            return_output=False,
+            **denoise_kwargs_without_method,
         )
         extract_waveforms_for_localization = denoise_node
         pipeline_nodes.append(denoise_node)

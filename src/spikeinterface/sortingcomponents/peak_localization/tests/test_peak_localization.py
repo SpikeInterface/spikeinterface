@@ -123,6 +123,28 @@ def test_localize_peaks_sparse(peaks_and_recording, method):
 
 
 @pytest.mark.parametrize("method", ["center_of_mass", "monopolar_triangulation", "grid_convolution"])
+def test_localize_sparse_narrow(peaks_and_recording, method):
+    """Test that a smaller sparsity in waveforms than localization is handled"""
+    recording, peaks = peaks_and_recording
+
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
+
+    # test sparse waveforms
+    peak_locations = localize_peaks(
+        recording,
+        peaks,
+        method_kwargs=dict(
+            method=method,
+            radius_um=150,  # larger than waveform radius
+        ),
+        waveform_method="sparse",  # if method != "grid_convolution" else "dense",
+        waveform_kwargs=dict(radius_um=50),  # smaller than localization radius
+        job_kwargs=job_kwargs,
+    )
+    assert peaks.size == peak_locations.shape[0]
+
+
+@pytest.mark.parametrize("method", ["center_of_mass", "monopolar_triangulation", "grid_convolution"])
 def test_sparse_and_dense_are_close(peaks_and_recording, method):
     recording, peaks = peaks_and_recording
 

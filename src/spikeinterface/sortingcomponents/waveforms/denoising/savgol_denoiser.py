@@ -1,10 +1,11 @@
 from typing import List, Optional
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode
+from ..waveform_utils import WaveformTransformer
 
 
-class SavGolDenoiser(WaveformsNode):
+class SavGolDenoiser(WaveformTransformer):
     """
     Waveform Denoiser based on a simple Savitzky-Golay filtering
     https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
@@ -39,14 +40,8 @@ class SavGolDenoiser(WaveformsNode):
         order: int = 3,
         window_length_ms: float = 0.25,
     ):
-        waveform_node = find_parent_of_type(parents, WaveformsNode)
-        if waveform_node is None:
-            raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
-
         super().__init__(
             recording,
-            waveform_node.ms_before,
-            waveform_node.ms_after,
             return_output=return_output,
             parents=parents,
         )
@@ -55,9 +50,6 @@ class SavGolDenoiser(WaveformsNode):
         self.order = order
         self.window_length = int(window_length_ms * waveforms_sampling_frequency / 1000)
         self.order = min(self.order, self.window_length - 1)
-        # Propagate waveforms node parameters
-        self.sparse_waveforms = waveform_node.sparse_waveforms
-        self.neighbours_mask = waveform_node.neighbours_mask
         self._kwargs.update(dict(order=order, window_length_ms=window_length_ms))
 
     def compute(self, traces, peaks, waveforms):

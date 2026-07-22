@@ -14,32 +14,18 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class TemporalPCBaseNode(WaveformsNode):
+class TemporalPCMixin:
     def __init__(
         self,
-        recording: BaseRecording,
-        parents: List[PipelineNode],
+        waveform_node,
         pca_model=None,
         model_folder_path=None,
-        return_output=True,
     ):
         """
         Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        waveform_node = find_parent_of_type(parents, WaveformsNode)
-        if waveform_node is None:
-            raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
-
-        super().__init__(
-            recording,
-            waveform_node.ms_before,
-            waveform_node.ms_after,
-            return_output=return_output,
-            parents=parents,
-        )
-
         if pca_model is None:
             self.model_folder_path = model_folder_path
 
@@ -61,9 +47,6 @@ class TemporalPCBaseNode(WaveformsNode):
             self.assert_model_and_waveform_temporal_match(waveform_node)
         else:
             self.pca_model = pca_model
-        # Propagate waveforms node parameters
-        self.sparse_waveforms = waveform_node.sparse_waveforms
-        self.neighbours_mask = waveform_node.neighbours_mask
 
     def assert_model_and_waveform_temporal_match(self, waveform_node: WaveformsNode):
         """
@@ -173,10 +156,33 @@ class TemporalPCBaseNode(WaveformsNode):
         return model_folder_path
 
 
-TemporalPCBaseNode.fit.__doc__ = TemporalPCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc)
+TemporalPCMixin.fit.__doc__ = TemporalPCMixin.fit.__doc__.format(_shared_job_kwargs_doc)
 
 
-class TemporalPCAProjection(TemporalPCBaseNode):
+class TemporalPCABaseNode(PipelineNode, TemporalPCMixin):
+    """
+    Base class for temporal PCA projection node
+    """
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        parents: List[PipelineNode],
+        pca_model=None,
+        model_folder_path=None,
+        return_output=True,
+    ):
+        PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
+        waveform_node = find_parent_of_type(parents, WaveformsNode)
+        if waveform_node is None:
+            raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
+        TemporalPCMixin.__init__(
+            self, waveform_node=waveform_node, model_folder_path=model_folder_path, pca_model=pca_model
+        )
+        self.recording = recording
+
+
+class TemporalPCAProjection(TemporalPCABaseNode):
     """
     A step that performs a PCA projection on the waveforms extracted by a waveforms parent node.
 
@@ -208,7 +214,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         dtype="float32",
         return_output=True,
     ):
-        TemporalPCBaseNode.__init__(
+        TemporalPCABaseNode.__init__(
             self,
             recording=recording,
             parents=parents,
@@ -249,7 +255,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         return projected_waveforms.astype(self.dtype, copy=False)
 
 
-class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
+class MotionAwareTemporalPCAProjection(TemporalPCABaseNode):
     """
     Similar to TemporalPCAProjection but also apply interpolation to revert a motion.
 
@@ -285,7 +291,7 @@ class MotionAwareTemporalPCAProjection(TemporalPCBaseNode):
         dtype="float32",
         return_output=True,
     ):
-        TemporalPCBaseNode.__init__(
+        TemporalPCABaseNode.__init__(
             self,
             recording=recording,
             parents=parents,
