@@ -158,7 +158,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     del data
 
     if file_timestamps_dict is not None:
-        # Some segments might not have
+        # Some segments might not have timestamps to save
         if segment_index in file_timestamps_dict:
             file_timestamps = file_timestamps_dict[segment_index]
             timestamps = time_series.get_times(
