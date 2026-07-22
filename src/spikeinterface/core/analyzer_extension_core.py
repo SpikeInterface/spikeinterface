@@ -1618,7 +1618,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             sorting = self.sorting_analyzer.sorting
 
         if outputs == "numpy":
-            if copy:
+            if copy and not self.sorting_analyzer._lazy:
                 return all_data.copy()  # return a copy to avoid modification
             else:
                 return all_data

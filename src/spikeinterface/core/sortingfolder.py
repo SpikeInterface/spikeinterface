@@ -24,7 +24,7 @@ class NumpyFolderSorting(BaseSorting):
     mode = "folder"
     name = "NumpyFolder"
 
-    def __init__(self, folder_path: str | Path):
+    def __init__(self, folder_path, mmap_mode: str | None = None):
         folder_path = Path(folder_path)
 
         # Load general info
@@ -37,8 +37,8 @@ class NumpyFolderSorting(BaseSorting):
         # Init superclass
         super().__init__(sampling_frequency, unit_ids)
 
-        # Load spikes vector
-        self.spikes = np.load(folder_path / "spikes.npy")
+        self.spikes = np.load(folder_path / "spikes.npy", mmap_mode=mmap_mode)
+
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
         # important trick : the cache is already spikes vector
@@ -47,8 +47,7 @@ class NumpyFolderSorting(BaseSorting):
         # Load metadata
         self.load_metadata_from_folder(folder_path)
 
-        # Save folder_path as kwargs for serialization
-        self._kwargs = {"folder_path": str(folder_path.absolute())}
+        self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
     @staticmethod
     def write_sorting(sorting, save_path):
