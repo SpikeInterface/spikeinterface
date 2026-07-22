@@ -22,7 +22,12 @@ from spikeinterface.core.generate import (
     _ensure_unit_params,
     _ensure_seed,
 )
-from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
+from .drift_tools import (
+    DriftingTemplates,
+    generate_drifting_templates_synthetic,
+    make_linear_displacement,
+    InjectDriftingTemplatesRecording,
+)
 from .noise_tools import generate_noise
 
 
@@ -470,11 +475,6 @@ def generate_drifting_recording(
         probe.set_device_channel_indices(np.arange(num_channels))
 
     channel_locations = probe.contact_positions
-    # import matplotlib.pyplot as plt
-    # import probeinterface.plotting
-    # fig, ax = plt.subplots()
-    # probeinterface.plotting.plot_probe(probe, ax=ax)
-    # plt.show()
 
     # unit locations
     if unit_locations is None:
@@ -512,47 +512,12 @@ def generate_drifting_recording(
     generate_templates_kwargs["unit_params"] = unit_params
 
     # generate templates
-    templates_array = generate_templates(
-        channel_locations, unit_locations, sampling_frequency=sampling_frequency, seed=seed, **generate_templates_kwargs
+    drifting_templates, static_templates = generate_drifting_templates_synthetic(
+        probe, unit_locations, displacements_steps, sampling_frequency, generate_templates_kwargs, seed
     )
-
-    num_displacement = displacements_steps.shape[0]
-    templates_array_moved = np.zeros(shape=(num_displacement,) + templates_array.shape, dtype=templates_array.dtype)
-    for i in range(num_displacement):
-        unit_locations_moved = unit_locations.copy()
-        unit_locations_moved[:, :2] += displacements_steps[i, :][np.newaxis, :]
-        templates_array_moved[i, :, :, :] = generate_templates(
-            channel_locations,
-            unit_locations_moved,
-            sampling_frequency=sampling_frequency,
-            seed=seed,
-            **generate_templates_kwargs,
-        )
-
-    ms_before = generate_templates_kwargs["ms_before"]
-    nbefore = ms_to_samples(ms_before, sampling_frequency)
-    templates = Templates(
-        templates_array=templates_array,
-        sampling_frequency=sampling_frequency,
-        nbefore=nbefore,
-        probe=probe,
-        is_in_uV=True,
-    )
-
-    drifting_templates = DriftingTemplates.from_static_templates(templates)
-
-    sorting.set_property("gt_unit_locations", unit_locations)
 
     distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :], axis=2)
     max_channel_index = np.argmin(distances, axis=1)
-    sorting.set_property("max_channel_index", max_channel_index)
-
-    ## Important precompute displacement do not work on border and so do not work for tetrode
-    # here we bypass the interpolation and regenerate templates at several positions.
-    ## drifting_templates.precompute_displacements(displacements_steps)
-    # shape (num_displacement, num_templates, num_samples, num_channels)
-    drifting_templates.templates_array_moved = templates_array_moved
-    drifting_templates.displacements = displacements_steps
 
     if noise is None:
         noise = generate_noise(
@@ -566,6 +531,10 @@ def generate_drifting_recording(
         assert noise.sampling_frequency == sampling_frequency, "Noise sampling frequency mismatch"
         assert noise.probe.get_contact_count() == probe.get_contact_count(), "Noise num channels mismatch"
         assert noise.get_total_duration() == duration, "Noise duration should be the same as the recording duration"
+
+    sorting.set_property("gt_unit_locations", unit_locations)
+    sorting.set_property("max_channel_index", max_channel_index)
+    sorting.set_property("main_channel_id", noise.channel_ids[max_channel_index])
 
     amplitude_factor = synthesize_amplitude_factor(
         num_spikes=sorting.count_total_num_spikes(),
@@ -603,7 +572,8 @@ def generate_drifting_recording(
             unit_locations=unit_locations,
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
-            templates=templates,
+            templates=static_templates,
+            drifting_templates=drifting_templates,
             generate_templates_kwargs=generate_templates_kwargs,
         )
         return static_recording, drifting_recording, sorting, extra_infos

@@ -2253,8 +2253,19 @@ def generate_unit_locations(
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype="float32")
 
-    minimum_x, maximum_x = np.min(channel_locations[:, 0]) - margin_um, np.max(channel_locations[:, 0]) + margin_um
-    minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
+    if isinstance(margin_um, (int, float)):
+        margin_um = (float(margin_um), float(margin_um))
+    else:
+        assert len(margin_um) == 2, "margin_um must be a float or a tuple of two floats"
+
+    minimum_x, maximum_x = (
+        np.min(channel_locations[:, 0]) - margin_um[0],
+        np.max(channel_locations[:, 0]) + margin_um[0],
+    )
+    minimum_y, maximum_y = (
+        np.min(channel_locations[:, 1]) - margin_um[1],
+        np.max(channel_locations[:, 1]) + margin_um[1],
+    )
 
     units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
     if distribution == "uniform":
