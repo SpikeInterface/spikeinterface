@@ -744,7 +744,7 @@ class SortingAnalyzer:
         sorting_analyzer = SortingAnalyzer(
             sorting=sorting,
             recording=recording,
-            rec_attributes={**rec_attributes_to_save, 'probegroup': probegroup},
+            rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="binary_folder",
             sparsity=sparsity,
             return_in_uV=return_in_uV,
@@ -915,10 +915,11 @@ class SortingAnalyzer:
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
         # Check all required files are present
-        if not (settings_file.is_file() and sorting_folder.is_dir() and
-                rec_attributes_file.is_file()):
-            raise ValueError(f"Folder {folder} is not a valid SortingAnalyzer binary folder."
-                             " Please ensure that you are loading a valid SortingAnalyzer folder.")
+        if not (settings_file.is_file() and sorting_folder.is_dir() and rec_attributes_file.is_file()):
+            raise ValueError(
+                f"Folder {folder} is not a valid SortingAnalyzer binary folder."
+                " Please ensure that you are loading a valid SortingAnalyzer folder."
+            )
 
         # Load settings file
         with open(settings_file, "r") as f:
@@ -1081,7 +1082,7 @@ class SortingAnalyzer:
         sorting_analyzer = SortingAnalyzer(
             sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
             recording=recording,
-            rec_attributes={**rec_attributes_to_save, 'probegroup': probegroup},
+            rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="zarr",
             sparsity=sparsity,
             return_in_uV=return_in_uV,
@@ -1125,12 +1126,16 @@ class SortingAnalyzer:
                 )
 
         # Check all required inputs exist
-        if (zarr_root.attrs.get("settings") is None or zarr_root.get("sorting") is None
+        if (
+            zarr_root.attrs.get("settings") is None
+            or zarr_root.get("sorting") is None
             or zarr_root.get("recording_info") is None
             or zarr_root["recording_info"].attrs.get("recording_attributes") is None
         ):
-            raise ValueError(f"Folder {folder} is not a valid SortingAnalyzer Zarr folder."
-                             " Please ensure that you are loading a valid SortingAnalyzer folder.")
+            raise ValueError(
+                f"Folder {folder} is not a valid SortingAnalyzer Zarr folder."
+                " Please ensure that you are loading a valid SortingAnalyzer folder."
+            )
 
         # Load settings
         settings = zarr_root.attrs["settings"]
