@@ -390,7 +390,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                 segment_t_start = parent_segment._t_start
                 if not ignore_times:
                     assert segment_t_start is None, (
-                        "ConcatenateSegmentSorting does not handle Sorting.t_start. "
+                        "ConcatenateSegmentSorting does not handle Sorting t_start. "
                         "Set time information only in the sortings' assigned recordings, "
                         "or use ignore_times=True to ignore time information."
                     )
