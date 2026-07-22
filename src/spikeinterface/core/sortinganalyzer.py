@@ -414,8 +414,8 @@ class SortingAnalyzer:
         self,
         sorting: BaseSorting,
         recording: BaseRecording | None = None,
+        format: Literal["memory", "binary_folder", "zarr"] = "memory",
         rec_attributes: dict | None = None,
-        format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
         peak_sign: PeakSignType = "both",
@@ -697,7 +697,7 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        sorting.save(folder=sorting_folder)
+        sorting = sorting.save(folder=sorting_folder)
 
         # Dump sorting provenance
         if sorting.check_serializability("json"):
@@ -740,7 +740,21 @@ class SortingAnalyzer:
         if probegroup is not None:
             probeinterface.write_probeinterface(probegroup_file, probegroup)
 
-        return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
+        # Create SortingAnalyzer
+        sorting_analyzer = SortingAnalyzer(
+            sorting=sorting,
+            recording=recording,
+            rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
+            format="binary_folder",
+            sparsity=sparsity,
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            backend_options=backend_options,
+        )
+        sorting_analyzer.folder = folder
+
+        return sorting_analyzer
 
     @classmethod
     def _handle_backward_compatibility_settings_pre_init(cls, settings: dict[str, Any]):
@@ -900,33 +914,17 @@ class SortingAnalyzer:
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
-        # Check that rec_attributes_file exists, otherwise this is not a valid SortingAnalyzer folder
-        if not rec_attributes_file.is_file():
-            raise ValueError("This folder is not a SortingAnalyzer with format='binary_folder'")
+        # Check all required files are present
+        if not (settings_file.is_file() and sorting_folder.is_dir() and rec_attributes_file.is_file()):
+            raise ValueError(
+                f"Folder {folder} is not a valid SortingAnalyzer binary folder."
+                " Please ensure that you are loading a valid SortingAnalyzer folder."
+            )
 
         # Load settings file
-        analyzer_has_settings_file = settings_file.exists()
-        if analyzer_has_settings_file:
-            with open(settings_file, "r") as f:
-                settings = json.load(f)
-        else:
-            # TODO: Remove support for analyzers that have no settings.json (throw an error instead)
-            settings = dict()
+        with open(settings_file, "r") as f:
+            settings = json.load(f)
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
-
-        # Create settings file (if not originally in the analyzer)
-        if not analyzer_has_settings_file:
-            # PATCH: Because SortingAnalyzer added settings.json during the development of 0.101.0 we need to save
-            # this as a bridge for early adopters. The else branch can be removed in version 0.102.0/0.103.0
-            # so that this can be simplified in the future
-            # See https://github.com/SpikeInterface/spikeinterface/issues/2788
-            warnings.warn(
-                "settings.json not found in this analyzer folder. Creating one with default settings.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            with open(settings_file, "w") as f:
-                json.dump(check_json(settings), f, indent=4)
 
         # Load sorting (in memory)
         sorting = NumpySorting.from_sorting(
@@ -1080,7 +1078,21 @@ class SortingAnalyzer:
         # Consolidate metadata (for faster reads)
         zarr.consolidate_metadata(zarr_root.store)
 
-        return cls.load_from_zarr(folder, recording=recording, backend_options=backend_options)
+        # Create SortingAnalyzer
+        sorting_analyzer = SortingAnalyzer(
+            sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
+            recording=recording,
+            rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
+            format="zarr",
+            sparsity=sparsity,
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            backend_options=backend_options,
+        )
+        sorting_analyzer.folder = folder
+
+        return sorting_analyzer
 
     @classmethod
     def load_from_zarr(
@@ -1112,6 +1124,18 @@ class SortingAnalyzer:
                     "This may lead to unexpected behavior in loading extensions. "
                     "Consider re-generating the SortingAnalyzer object."
                 )
+
+        # Check all required inputs exist
+        if (
+            zarr_root.attrs.get("settings") is None
+            or zarr_root.get("sorting") is None
+            or zarr_root.get("recording_info") is None
+            or zarr_root["recording_info"].attrs.get("recording_attributes") is None
+        ):
+            raise ValueError(
+                f"Folder {folder} is not a valid SortingAnalyzer Zarr folder."
+                " Please ensure that you are loading a valid SortingAnalyzer folder."
+            )
 
         # Load settings
         settings = zarr_root.attrs["settings"]
