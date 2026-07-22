@@ -436,6 +436,63 @@ def generate_drifting_templates_synthetic(
     return drifting_templates, static_templates
 
 
+def check_relocation_within_source_hull(templates, probe, unit_locations, displacements):
+    """
+    Check that relocating `templates` to `unit_locations` (see `move_templates_by_position()`)
+    will not produce fully invalid (all-zero) templates.
+
+    `move_templates_by_position` interpolates each unit's template by translating the destination
+    probe geometry so that it aligns with the template's own main channel, then calling
+    `griddata(..., fill_value=0)` (used by the default "cubic"/"linear" interpolation methods).
+    `griddata` only returns valid (non-zero) values for destination points that fall within the
+    convex hull of the source probe's channel locations. If a unit's target location is far enough
+    from its template's main channel, every destination channel can end up outside that hull, so the
+    whole interpolated template silently becomes zero.
+
+    Parameters
+    ----------
+    templates : Templates
+        The static templates to be relocated.
+    probe : Probe
+        The destination probe on which the relocated templates will be defined.
+    unit_locations : np.array
+        The target locations of the units, shape (num_units, 2) or (num_units, 3).
+    displacements : np.array
+        The displacement vectors that will be applied on top of the relocation, shape (num_displacement, 2).
+
+    Raises
+    ------
+    ValueError
+        If one or more units would produce a fully invalid (all-zero) template.
+    """
+    from scipy.spatial import Delaunay
+
+    main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
+    source_locations = templates.probe.contact_positions[main_channel_indices]
+    source_hull = Delaunay(templates.probe.contact_positions)
+
+    dest_positions = probe.contact_positions
+    displacements = np.asarray(displacements)
+
+    invalid_unit_ids = []
+    for unit_index in range(templates.num_units):
+        shift = source_locations[unit_index] - unit_locations[unit_index, :2]
+        moved_locations = (
+            dest_positions[np.newaxis, :, :] + shift[np.newaxis, np.newaxis, :] - displacements[:, np.newaxis, :]
+        )
+        is_inside_hull = source_hull.find_simplex(moved_locations.reshape(-1, 2)) >= 0
+        if not np.any(is_inside_hull):
+            invalid_unit_ids.append(templates.unit_ids[unit_index])
+
+    if len(invalid_unit_ids) > 0:
+        raise ValueError(
+            f"Relocation would produce fully invalid (all-zero) templates for unit(s) {invalid_unit_ids}: "
+            "the target location is too far from the source template's own spatial footprint for any "
+            "destination channel to fall within its interpolation range. Consider reducing the `margin_um` "
+            "in `generate_unit_locations_kwargs`, or passing more centered `unit_locations`."
+        )
+
+
 def generate_drifting_templates_by_interpolation(
     templates, probe, unit_locations, displacements, interpolation_method="cubic"
 ):

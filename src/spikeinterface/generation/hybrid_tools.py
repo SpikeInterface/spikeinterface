@@ -14,6 +14,7 @@ from spikeinterface.core.generate import (
 from spikeinterface.core.motion import Motion
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
+    check_relocation_within_source_hull,
     generate_drifting_templates_by_interpolation,
     generate_drifting_templates_synthetic,
     make_linear_displacement,
@@ -486,6 +487,8 @@ def generate_hybrid_recording(
             templates_.templates_array = templates_array
         else:
             templates_ = templates
+
+        check_relocation_within_source_hull(templates_, probe, unit_locations, displacements)
 
         drifting_templates = generate_drifting_templates_by_interpolation(
             templates_, probe, unit_locations, displacements, interpolation_method="cubic"

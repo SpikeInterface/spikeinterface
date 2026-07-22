@@ -296,7 +296,10 @@ def test_generate_hybrid_with_unit_locations():
     num_units = 10
     templates = _make_templates(num_units=num_units)
     rec, _ = generate_ground_truth_recording(sampling_frequency=20000, durations=[10], num_channels=16, seed=0)
-    unit_locations = generate_unit_locations(num_units, channel_locations=rec.get_channel_locations(), seed=1)
+    # margin_um=0 keeps unit_locations within the (small) probe's footprint, so relocation stays interpolatable
+    unit_locations = generate_unit_locations(
+        num_units, channel_locations=rec.get_channel_locations(), margin_um=0, seed=1
+    )
     hybrid, sorting_hybrid = generate_hybrid_recording(rec, templates=templates, unit_locations=unit_locations, seed=0)
     assert sorting_hybrid.get_num_units() == num_units
     assert np.array_equal(sorting_hybrid.get_property("gt_unit_locations"), unit_locations)
