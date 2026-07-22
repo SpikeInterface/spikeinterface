@@ -329,11 +329,10 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
-            t_starts = self._get_t_starts()
-            time_vectors = self._get_time_vectors()
-            if time_vectors is not None:
+            t_starts = self.get_segment_t_starts()
+            # Check if there are any time vectors
+            if self.has_any_time_vector():
                 file_timestamps_paths = [folder / f"times_cached_seg{i}.raw" for i in range(self.get_num_segments())]
-                kwargs["file_timestamps_paths"] = file_timestamps_paths
             else:
                 file_timestamps_paths = None
 
@@ -348,7 +347,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
-
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
@@ -366,7 +364,9 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             binary_rec.dump(folder / "binary.json", relative_to=folder)
 
             # save properties
-            save_properties_to_binary_folder(folder / "properties", self)
+            properties_folder = folder / "properties"
+            properties_folder.mkdir(parents=True, exist_ok=True)
+            save_properties_to_binary_folder(properties_folder, self)
             # save probegroup
             if self.has_probe():
                 probegroup = self.get_probegroup()
@@ -414,7 +414,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
     def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
         super()._extra_metadata_to_dict(dump_dict, _in_reduce=_in_reduce)
 
-        # Add times_kwargs if the recording has been modified in memory (e.g. by set_times or shift_times)
+        # Add times_kwargs if the recording has been modified in memory (e.g. by set_times / shift_times / reset_times)
         if _in_reduce and self._time_info_modified:
             dump_dict["times_kwargs"] = []
             for segment_index in range(self.get_num_segments()):

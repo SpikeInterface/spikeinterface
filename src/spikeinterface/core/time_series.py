@@ -218,9 +218,7 @@ class TimeSeries(ABC):
             True if the recording has time vectors, False otherwise
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self.segments[segment_index]
-        d = rs.get_times_kwargs()
-        return d["time_vector"] is not None
+        return self.segments[segment_index].has_time_vector()
 
     def set_times(self, times, segment_index=None, with_warning=True):
         """Set times for a recording segment.
@@ -366,7 +364,7 @@ class TimeSeries(ABC):
         duration = sum([self.get_duration(segment_index) for segment_index in range(self.get_num_segments())])
         return duration
 
-    def _get_t_starts(self):
+    def get_segment_t_starts(self):
         # handle t_starts
         t_starts = []
         for rs in self.segments:
@@ -377,14 +375,11 @@ class TimeSeries(ABC):
             t_starts = None
         return t_starts
 
-    def _get_time_vectors(self):
-        time_vectors = []
+    def has_any_time_vector(self):
         for rs in self.segments:
-            d = rs.get_times_kwargs()
-            time_vectors.append(d["time_vector"])
-        if all(time_vector is None for time_vector in time_vectors):
-            time_vectors = None
-        return time_vectors
+            if rs.has_time_vector():
+                return True
+        return False
 
 
 def _searchsorted_right_lazy(time_vector: TimeVector, time_s: float | np.ndarray) -> np.int64 | np.ndarray:
@@ -525,6 +520,17 @@ class TimeSeriesSegment(BaseSegment):
             sample_index = _searchsorted_right_lazy(self._time_vector, time_s) - 1
 
         return sample_index
+
+    def has_time_vector(self) -> bool:
+        """
+        Returns whether the segment has a time vector.
+
+        Returns
+        -------
+        bool
+            True if the segment has a time vector, False otherwise.
+        """
+        return self._time_vector is not None
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment

@@ -68,8 +68,13 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         d = d.copy()
         if d["time_vector"] is None:
             d["t_start"] = parent_recording_segment.sample_index_to_time(start_frame)
+            parent_has_time_vector = False
+        else:
+            d["time_vector"] = None
+            parent_has_time_vector = True
         BaseRecordingSegment.__init__(self, **d)
         self._parent_recording_segment = parent_recording_segment
+        self._parent_has_time_vector = parent_has_time_vector
         self.start_frame = start_frame
         self.end_frame = end_frame
 
@@ -90,30 +95,38 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
     # is rebuilt from scratch once per worker process in a multiprocessing job, that cost
     # would be paid again in every worker instead of being read lazily per chunk.
     def get_times(self, start_frame=None, end_frame=None):
-        if self._time_vector is None:
+        if self._parent_has_time_vector:
+            start_frame = int(start_frame) if start_frame is not None else 0
+            end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+            return self._parent_recording_segment.get_times(
+                start_frame=self.start_frame + start_frame, end_frame=self.start_frame + end_frame
+            )
+        else:
             return super().get_times(start_frame=start_frame, end_frame=end_frame)
-        start_frame = int(start_frame) if start_frame is not None else 0
-        end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
-        return self._parent_recording_segment.get_times(
-            start_frame=self.start_frame + start_frame, end_frame=self.start_frame + end_frame
-        )
 
     def get_start_time(self) -> float:
-        if self._time_vector is None:
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.sample_index_to_time(self.start_frame)
+        else:
             return super().get_start_time()
-        return self._parent_recording_segment.sample_index_to_time(self.start_frame)
 
     def get_end_time(self) -> float:
-        if self._time_vector is None:
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.sample_index_to_time(self.end_frame - 1)
+        else:
             return super().get_end_time()
-        return self._parent_recording_segment.sample_index_to_time(self.end_frame - 1)
 
     def sample_index_to_time(self, sample_ind):
-        if self._time_vector is None:
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.sample_index_to_time(self.start_frame + sample_ind)
+        else:
             return super().sample_index_to_time(sample_ind)
-        return self._parent_recording_segment.sample_index_to_time(self.start_frame + sample_ind)
 
     def time_to_sample_index(self, time_s):
-        if self._time_vector is None:
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.time_to_sample_index(time_s) - self.start_frame
+        else:
             return super().time_to_sample_index(time_s)
-        return self._parent_recording_segment.time_to_sample_index(time_s) - self.start_frame
+
+    def has_time_vector(self) -> bool:
+        return self._parent_has_time_vector

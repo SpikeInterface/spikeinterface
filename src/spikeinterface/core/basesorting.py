@@ -517,7 +517,10 @@ class BaseSorting(BaseExtractor):
 
             folder = save_kwargs.pop("folder")
             NumpyFolderSorting.write_sorting(self, folder)
-            save_properties_to_binary_folder(folder / "properties", self)
+            # save properties
+            properties_folder = folder / "properties"
+            properties_folder.mkdir(parents=True, exist_ok=True)
+            save_properties_to_binary_folder(properties_folder, self)
             cached = NumpyFolderSorting(folder)
 
         elif format == "zarr":

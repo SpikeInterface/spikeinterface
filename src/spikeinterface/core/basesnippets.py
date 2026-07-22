@@ -227,7 +227,10 @@ class BaseSnippets(BaseRecordingSnippets):
             from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 
             NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
-            save_properties_to_binary_folder(folder / "properties", self)
+            # save properties
+            properties_folder = folder / "properties"
+            properties_folder.mkdir(parents=True, exist_ok=True)
+            save_properties_to_binary_folder(properties_folder, self)
             cached = NpySnippetsExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),

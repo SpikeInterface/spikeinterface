@@ -70,12 +70,20 @@ def write_binary(
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     if file_timestamps_paths is not None:
-        file_timestamps_path_dict = {
-            segment_index: file_path for segment_index, file_path in enumerate(file_timestamps_paths)
-        }
+        file_timestamps_path_list = (
+            [file_timestamps_paths] if not isinstance(file_timestamps_paths, list) else file_timestamps_paths
+        )
+        if len(file_timestamps_path_list) != num_segments:
+            raise ValueError(
+                "'file_timestamps_paths' must be a list of the same size as the number of segments in the time_series"
+            )
     else:
-        file_timestamps_path_dict = None
-    for segment_index, file_path in file_path_dict.items():
+        file_timestamps_path_list = [None] * num_segments
+
+    file_path_dict = {}
+    file_timestamps_path_dict = {}
+    for segment_index, file_path in enumerate(file_path_list):
+        file_path_dict[segment_index] = file_path
         num_samples = time_series.get_num_samples(segment_index=segment_index)
         data_size_bytes = sample_size_bytes * num_samples
         file_size_bytes = data_size_bytes + byte_offset
@@ -86,13 +94,12 @@ def write_binary(
             file.seek(file_size_bytes - 1)
             file.write(b"\0")
 
-        if file_timestamps_path_dict is not None:
-            file_timestamps_path = file_timestamps_path_dict[segment_index]
+        file_timestamps_path = file_timestamps_path_list[segment_index]
+        if file_timestamps_path is not None and time_series.has_time_vector(segment_index=segment_index):
+            file_timestamps_path_dict[segment_index] = file_timestamps_path
             with open(file_timestamps_path, "wb+") as file:
                 file.seek(num_samples * 8 - 1)  # 8 bytes for float64 timestamps
                 file.write(b"\0")
-
-        assert Path(file_path).is_file()
 
     # use executor (loop or workers)
     func = _write_binary_chunk
@@ -151,14 +158,18 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     del data
 
     if file_timestamps_dict is not None:
-        file_timestamps = file_timestamps_dict[segment_index]
-        timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
-        timestamps = timestamps.astype("float64", order="c", copy=False)
-        timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
-        file_timestamps.seek(timestamp_byte_offset)
-        file_timestamps.write(timestamps.data)
-        file_timestamps.flush()
-        del timestamps
+        # Some segments might not have
+        if segment_index in file_timestamps_dict:
+            file_timestamps = file_timestamps_dict[segment_index]
+            timestamps = time_series.get_times(
+                start_frame=start_frame, end_frame=end_frame, segment_index=segment_index
+            )
+            timestamps = timestamps.astype("float64", order="c", copy=False)
+            timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
+            file_timestamps.seek(timestamp_byte_offset)
+            file_timestamps.write(timestamps.data)
+            file_timestamps.flush()
+            del timestamps
 
     # fix memory leak by forcing garbage collection (same issue as _write_zarr_chunk,
     # e.g. reading compressed zarr chunks leaves reference cycles that the generational

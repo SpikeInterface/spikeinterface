@@ -815,8 +815,6 @@ def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtract
     extractor : BaseExtractor
         The extractor from which the properties will be saved.
     """
-    folder = Path(folder)
-    folder.mkdir(parents=True, exist_ok=True)
     for key in extractor.get_property_keys():
         values = extractor.get_property(key)
         np.save(folder / f"{key}.npy", values, allow_pickle=True)
