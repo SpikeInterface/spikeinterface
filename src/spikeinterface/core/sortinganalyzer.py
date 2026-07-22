@@ -357,7 +357,9 @@ def create_sorting_analyzer(
     return sorting_analyzer
 
 
-def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_options=None) -> "SortingAnalyzer":
+def load_sorting_analyzer(
+    folder, load_extensions=True, format="auto", backend_options=None, lazy=False
+) -> "SortingAnalyzer":
     """
     Load a SortingAnalyzer object from disk.
 
@@ -385,7 +387,9 @@ def load_sorting_analyzer(folder, load_extensions=True, format="auto", backend_o
         The loaded SortingAnalyzer
 
     """
-    return SortingAnalyzer.load(folder, load_extensions=load_extensions, format=format, backend_options=backend_options)
+    return SortingAnalyzer.load(
+        folder, load_extensions=load_extensions, format=format, backend_options=backend_options, lazy=lazy
+    )
 
 
 class SortingAnalyzer:
@@ -421,6 +425,7 @@ class SortingAnalyzer:
         peak_sign: PeakSignType = "both",
         peak_mode: PeakModeType = "extremum",
         backend_options: dict | None = None,
+        lazy: bool = False,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -448,6 +453,9 @@ class SortingAnalyzer:
         # - saving_options: dict | None
         # (additional saving options for creating and saving datasets, e.g. compression/filters for zarr)
         self._backend_options = {} if backend_options is None else backend_options
+
+        # the lazy flag is used to load the extensions in a lazy way (only when needed)
+        self._lazy = lazy
 
         # extensions are not loaded at init
         self.extensions = dict()
@@ -581,6 +589,7 @@ class SortingAnalyzer:
         load_extensions: bool = True,
         format: Literal["auto", "binary_folder", "zarr"] = "auto",
         backend_options: dict | None = None,
+        lazy: bool = False,
     ):
         """
         Load folder or zarr.
@@ -594,16 +603,16 @@ class SortingAnalyzer:
 
         if format == "binary_folder":
             sorting_analyzer = SortingAnalyzer.load_from_binary_folder(
-                folder, recording=recording, backend_options=backend_options
+                folder, recording=recording, backend_options=backend_options, lazy=lazy
             )
         elif format == "zarr":
             sorting_analyzer = SortingAnalyzer.load_from_zarr(
-                folder, recording=recording, backend_options=backend_options
+                folder, recording=recording, backend_options=backend_options, lazy=lazy
             )
         else:
             raise ValueError(f"SortingAnalyzer.load: wrong format {format}")
 
-        if load_extensions and not is_path_remote(folder):
+        if load_extensions and not lazy and not is_path_remote(folder):
             sorting_analyzer.load_all_saved_extension()
 
         return sorting_analyzer
@@ -885,6 +894,7 @@ class SortingAnalyzer:
         folder: str | Path,
         recording: BaseRecording | None = None,
         backend_options: dict | None = None,
+        lazy: bool = False,
     ) -> "SortingAnalyzer":
         from .loading import load
 
@@ -928,9 +938,18 @@ class SortingAnalyzer:
             with open(settings_file, "w") as f:
                 json.dump(check_json(settings), f, indent=4)
 
-        # Load sorting (in memory)
+        # Load sorting (in memory or lazy)
+        if lazy:
+            numpy_folder_kwargs = dict(mmap_mode="r")
+            copy_spike_vector = False
+        else:
+            numpy_folder_kwargs = dict()
+            copy_spike_vector = True
+
         sorting = NumpySorting.from_sorting(
-            NumpyFolderSorting(sorting_folder), with_metadata=True, copy_spike_vector=True
+            NumpyFolderSorting(folder / "sorting", **numpy_folder_kwargs),
+            with_metadata=True,
+            copy_spike_vector=copy_spike_vector,
         )
 
         # Load recording (if available)
@@ -970,6 +989,7 @@ class SortingAnalyzer:
             peak_sign=settings["peak_sign"],
             peak_mode=settings["peak_mode"],
             backend_options=backend_options,
+            lazy=lazy,
         )
         sorting_analyzer.folder = folder
 
@@ -1088,6 +1108,7 @@ class SortingAnalyzer:
         folder: str | Path,
         recording: BaseRecording | None = None,
         backend_options: dict | None = None,
+        lazy: bool = False,
     ) -> "SortingAnalyzer":
         import zarr
         from .loading import load
@@ -1117,11 +1138,22 @@ class SortingAnalyzer:
         settings = zarr_root.attrs["settings"]
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
-        # Load sorting (in memory)
+        # Load sorting (in memory or lazy)
+        if lazy:
+            copy_spike_vector = False
+            lazy_spike_vector = True
+        else:
+            copy_spike_vector = True
+            lazy_spike_vector = False
         sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(folder, zarr_group="sorting", storage_options=storage_options),
+            ZarrSortingExtractor(
+                folder,
+                zarr_group="sorting",
+                storage_options=storage_options,
+                lazy_spike_vector=lazy_spike_vector,
+            ),
             with_metadata=True,
-            copy_spike_vector=True,
+            copy_spike_vector=copy_spike_vector,
         )
 
         # Load recording (if available)
@@ -1161,6 +1193,7 @@ class SortingAnalyzer:
             peak_sign=settings["peak_sign"],
             peak_mode=settings["peak_mode"],
             backend_options=backend_options,
+            lazy=lazy,
         )
         sorting_analyzer.folder = folder
 
@@ -1486,6 +1519,11 @@ class SortingAnalyzer:
         new_sorting_analyzer : SortingAnalyzer
             The newly created SortingAnalyzer object.
         """
+        if self._lazy:
+            raise ValueError(
+                "Cannot save, select, merge or split units when the SortingAnalyzer is lazy. "
+                "Please load the SortingAnalyzer with lazy=False."
+            )
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
@@ -2212,6 +2250,10 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 )
 
         """
+        if self._lazy:
+            # If the analyzer is lazy, we can compute extensions in memory but we won't save / overwrite any existing
+            # extension on disk. This is to avoid overwriting existing extensions when the analyzer is lazy.
+            save = False
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
         elif isinstance(input, dict):
@@ -2508,7 +2550,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         if extension_class is None:
             return None
 
-        extension_instance = extension_class.load(self)
+        extension_instance = extension_class.load(self, lazy=self._lazy)
 
         self.extensions[extension_name] = extension_instance
 
@@ -2527,7 +2569,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
 
         # delete from folder or zarr
-        if self.format != "memory" and self.has_extension(extension_name):
+        if self.format != "memory" and self.has_extension(extension_name) and not self._lazy:
             # need a reload to reset the folder
             ext = self.load_extension(extension_name)
             ext.delete()
@@ -2990,20 +3032,20 @@ class AnalyzerExtension:
         return extension_group
 
     @classmethod
-    def load(cls, sorting_analyzer):
+    def load(cls, sorting_analyzer, lazy=False):
         ext = cls(sorting_analyzer)
         ext.load_params()
         ext.load_run_info()
         if ext.run_info is not None:
             if ext.run_info["run_completed"]:
-                ext.load_data()
+                ext.load_data(lazy=lazy)
                 if cls.need_backward_compatibility_on_load:
                     ext._handle_backward_compatibility_on_load()
                 if len(ext.data) > 0:
                     return ext
         else:
             # this is for back-compatibility of old analyzers
-            ext.load_data()
+            ext.load_data(lazy=lazy)
             if cls.need_backward_compatibility_on_load:
                 ext._handle_backward_compatibility_on_load()
             if len(ext.data) > 0:
@@ -3103,7 +3145,7 @@ class AnalyzerExtension:
 
         self.params = params
 
-    def load_data(self):
+    def load_data(self, lazy=False):
         ext_data = None
         if self.format == "binary_folder":
             extension_folder = self._get_binary_extension_folder()
@@ -3123,10 +3165,12 @@ class AnalyzerExtension:
                         ext_data = json.load(f)
                 elif ext_data_file.suffix == ".npy":
                     # The lazy loading of an extension is complicated because if we compute again
-                    # and have a link to the old buffer on windows then it fails
-                    # ext_data = np.load(ext_data_file, mmap_mode="r")
-                    # so we go back to full loading
-                    ext_data = np.load(ext_data_file)
+                    # and have a link to the old buffer on windows then it fails.
+                    # So, by default, we use full loading, but lazy can be requested on demand.
+                    if lazy:
+                        ext_data = np.load(ext_data_file, mmap_mode="r")
+                    else:
+                        ext_data = np.load(ext_data_file)
                 elif ext_data_file.suffix == ".csv":
                     import pandas as pd
 
@@ -3162,8 +3206,7 @@ class AnalyzerExtension:
                 elif "object" in ext_data_.attrs:
                     ext_data = ext_data_[0]
                 else:
-                    # this load in memory
-                    ext_data = np.array(ext_data_)
+                    ext_data = ext_data_ if lazy else np.array(ext_data_[:])
                 self.set_data(ext_data_name, ext_data)
 
         if len(self.data) == 0:

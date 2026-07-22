@@ -131,7 +131,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
     assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
-    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
@@ -213,7 +213,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
     assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
-    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
 def test_create_by_dict():
@@ -359,6 +359,53 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     # check that locations are correct
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
+
+
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+def test_load_in_lazy_mode(tmp_path, dataset, format):
+    recording, sorting = dataset
+
+    folder = tmp_path / "test_SortingAnalyzer_folder"
+    if format == "zarr":
+        import zarr
+        from spikeinterface.core.zarrextractors import ZarrSpikeVector
+
+        folder = folder.with_suffix(".zarr")
+        array_class = zarr.Array
+        spike_vector_class = ZarrSpikeVector
+    else:
+        array_class = np.memmap
+        spike_vector_class = np.memmap
+    if folder.exists():
+        shutil.rmtree(folder)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=None
+    )
+
+    sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
+    # load in lazy mode and check that spike vector and extension data are memmap
+    sorting_analyzer_lazy = load_sorting_analyzer(folder, format="auto", lazy=True)
+
+    assert isinstance(sorting_analyzer_lazy.sorting.to_spike_vector(), spike_vector_class)
+
+    template_ext = sorting_analyzer_lazy.get_extension("templates")
+    template_data = template_ext.data
+    for key, value in template_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, array_class)
+    spike_amplitudes_ext = sorting_analyzer_lazy.get_extension("spike_amplitudes")
+    spike_amplitudes_data = spike_amplitudes_ext.data
+    for key, value in spike_amplitudes_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, array_class)
+
+    # check that the lazy mode does not overwrite existing extensions
+    sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
+    # reload the analyzer to check that the original extension is not overwritten
+    sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
+    random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
+    assert random_spikes_ext.params["max_spikes_per_unit"] != 10
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
