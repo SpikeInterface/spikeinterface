@@ -221,7 +221,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.num_samples = self.data_size_in_bytes // self.bytes_per_sample
         self.file_timestamps_path = file_timestamps_path
         if file_timestamps_path is not None:
-            self.time_vector = np.memmap(file_timestamps_path, dtype="float64", mode="r", shape=(self.num_samples,))
+            self._time_vector = np.memmap(file_timestamps_path, dtype="float64", mode="r", shape=(self.num_samples,))
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -288,10 +288,10 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             warnings.warn(f"Error closing file handle in BinaryRecordingSegment: {e}")
             pass
 
-        if self.time_vector is not None:
+        if self._time_vector is not None:
             try:
-                self.time_vector._mmap.close()  # Close the underlying mmap object
-                del self.time_vector
+                self._time_vector._mmap.close()  # Close the underlying mmap object
+                del self._time_vector
             except Exception as e:
                 pass
 

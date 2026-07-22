@@ -17,7 +17,7 @@ base = Path(tempfile.gettempdir()) / "spikeinterface_cache"
 temp_folder_set = False
 
 
-def get_global_tmp_folder():
+def get_global_tmp_folder() -> Path:
     """
     Get the global path temporary folder.
     """
@@ -30,7 +30,7 @@ def get_global_tmp_folder():
     return temp_folder
 
 
-def set_global_tmp_folder(folder):
+def set_global_tmp_folder(folder: str | Path):
     """
     Set the global path temporary folder.
     """

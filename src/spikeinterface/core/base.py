@@ -19,6 +19,7 @@ from .core_tools import (
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
+    is_path_remote,
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
@@ -1027,24 +1028,17 @@ class BaseExtractor:
             cache_folder = get_global_tmp_folder()
             if name is None:
                 name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                zarr_path = cache_folder / f"{name}.zarr"
-                if verbose:
-                    print(f"Use zarr_path={zarr_path}")
-            else:
-                zarr_path = cache_folder / f"{name}.zarr"
-                if not is_set_global_tmp_folder():
-                    if verbose:
-                        print(f"Use zarr_path={zarr_path}")
+            zarr_path = (cache_folder / name).with_suffix(".zarr")
+            if verbose:
+                print(f"Saving to zarr_path={zarr_path}")
         else:
-            if storage_options is None:
+            if storage_options is None:  # save locally (not cloud storage)
                 folder = clean_zarr_folder_name(folder)
                 if folder.is_dir() and overwrite:
                     shutil.rmtree(folder)
-                zarr_path = folder
-            else:
-                zarr_path = folder
+            zarr_path = folder
 
-        if isinstance(zarr_path, Path):
+        if not is_path_remote(zarr_path):
             assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options

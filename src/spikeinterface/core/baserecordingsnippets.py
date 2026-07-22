@@ -332,9 +332,9 @@ class BaseRecordingSnippets(BaseExtractor):
             # set in memory
             times_kwargs_list = dump_dict["times_kwargs"]
             for segment_index, times_kwargs in enumerate(times_kwargs_list):
-                self.segments[segment_index].sampling_frequency = times_kwargs["sampling_frequency"]
-                self.segments[segment_index].t_start = times_kwargs["t_start"]
-                self.segments[segment_index].time_vector = times_kwargs["time_vector"]
+                self.segments[segment_index]._sampling_frequency = times_kwargs["sampling_frequency"]
+                self.segments[segment_index]._t_start = times_kwargs["t_start"]
+                self.segments[segment_index]._time_vector = times_kwargs["time_vector"]
 
     def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
         # save probe

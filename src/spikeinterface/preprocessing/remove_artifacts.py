@@ -376,7 +376,12 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     mask = self.sparsity[label]
                 else:
                     mask = None
-                artifact_duration = len(self.artifacts[label])
+                artifact = self.artifacts[label]
+                if mask is not None:
+                    # restrict the template to the sparse channels so that it aligns
+                    # with the sparsified traces (see issue #3290)
+                    artifact = artifact[:, mask]
+                artifact_duration = len(artifact)
                 if self.time_pad > 0:
                     jitters = np.arange(-self.time_pad, self.time_pad, 1)
                 else:
@@ -404,7 +409,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     if mask is not None:
                         trace_slice_values = trace_slice_values[:, mask]
 
-                    artifact_slice_values = self.artifacts[label][artifact_slice]
+                    artifact_slice_values = artifact[artifact_slice]
 
                     norm = np.linalg.norm(trace_slice_values) * np.linalg.norm(artifact_slice_values)
                     best_amplitudes[count] = (
@@ -435,11 +440,9 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     best_amp = 1
 
                 if mask is not None:
-                    traces[trace_slice][:, mask] -= (best_amp * self.artifacts[label][artifact_slice]).astype(
-                        traces.dtype
-                    )
+                    traces[trace_slice][:, mask] -= (best_amp * artifact[artifact_slice]).astype(traces.dtype)
                 else:
-                    traces[trace_slice] -= (best_amp * self.artifacts[label][artifact_slice]).astype(traces.dtype)
+                    traces[trace_slice] -= (best_amp * artifact[artifact_slice]).astype(traces.dtype)
             traces = traces[:, channel_indices]
 
         return traces

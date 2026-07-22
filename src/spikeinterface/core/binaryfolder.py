@@ -115,7 +115,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         for segment_index, rs in enumerate(self.segments):
             time_file = self.folder_path / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
-                rs.time_vector = np.load(time_file, mmap_mode="r")
+                rs._time_vector = np.load(time_file, mmap_mode="r")
 
 
 read_binary_folder = define_function_from_class(source_class=BinaryFolderRecording, name="read_binary_folder")
