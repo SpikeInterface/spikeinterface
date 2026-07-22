@@ -77,7 +77,7 @@ def generate_recording(
     if t_starts is not None:
         assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
         for segment_index, t_start in enumerate(t_starts):
-            recording.segments[segment_index].t_start = t_start
+            recording.segments[segment_index]._t_start = t_start
 
     recording.annotate(is_filtered=True)
 
@@ -2007,7 +2007,7 @@ class InjectTemplatesRecording(BaseRecording):
 
             parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectTemplatesRecordingSegment(
-                self.sampling_frequency,
+                self._sampling_frequency,
                 self.dtype,
                 spikes,
                 templates,
@@ -2067,7 +2067,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(
             self,
             sampling_frequency,
-            t_start=0 if parent_recording_segment is None else parent_recording_segment.t_start,
+            t_start=0 if parent_recording_segment is None else parent_recording_segment._t_start,
         )
         assert not (parent_recording_segment is None and num_samples is None)
 
@@ -2087,9 +2087,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         channel_indices: list | None = None,
     ) -> np.ndarray:
         if channel_indices is None:
-            n_channels = self.templates.shape[2]
+            n_channels = self.get_num_channels()
         elif isinstance(channel_indices, slice):
-            stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
+            stop = channel_indices.stop if channel_indices.stop is not None else self.get_num_channels()
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)
