@@ -39,14 +39,14 @@ class SavGolDenoiser(WaveformsNode):
         order: int = 3,
         window_length_ms: float = 0.25,
     ):
-        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
-        if waveform_extractor is None:
+        waveform_node = find_parent_of_type(parents, WaveformsNode)
+        if waveform_node is None:
             raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
 
         super().__init__(
             recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
+            waveform_node.ms_before,
+            waveform_node.ms_after,
             return_output=return_output,
             parents=parents,
         )

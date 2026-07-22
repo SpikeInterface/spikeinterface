@@ -347,6 +347,7 @@ class WaveformsNode(PipelineNode):
             self.ms_after = ms_after
             self.nafter = ms_to_samples(ms_after, sampling_frequency)
         self.neighbours_mask = None
+        self.sparse_waveforms = False
 
 
 class ExtractDenseWaveforms(WaveformsNode):
@@ -470,6 +471,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.radius_um = radius_um
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
+        self.sparse_waveforms = True
 
     def get_margin(self):
         return max(self.nbefore, self.nafter)

@@ -28,18 +28,19 @@ class TemporalPCBaseNode(WaveformsNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
-        if waveform_extractor is None:
+        waveform_node = find_parent_of_type(parents, WaveformsNode)
+        if waveform_node is None:
             raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
 
         super().__init__(
             recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
+            waveform_node.ms_before,
+            waveform_node.ms_after,
             return_output=return_output,
             parents=parents,
         )
 
+        self.sparse_waveforms = waveform_node.sparse_waveforms
         if pca_model is None:
             self.model_folder_path = model_folder_path
 
@@ -58,18 +59,18 @@ class TemporalPCBaseNode(WaveformsNode):
             with open(params_path, "rb") as f:
                 self.params = json.load(f)
 
-            self.assert_model_and_waveform_temporal_match(waveform_extractor)
+            self.assert_model_and_waveform_temporal_match(waveform_node)
         else:
             self.pca_model = pca_model
 
-    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):
+    def assert_model_and_waveform_temporal_match(self, waveform_node: WaveformsNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """
         # Extract the first waveform extractor in the parents
-        waveforms_ms_before = waveform_extractor.ms_before
-        waveforms_ms_after = waveform_extractor.ms_after
-        waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
+        waveforms_ms_before = waveform_node.ms_before
+        waveforms_ms_after = waveform_node.ms_after
+        waveforms_sampling_frequency = waveform_node.recording.get_sampling_frequency()
 
         model_ms_before = self.params["ms_before"]
         model_ms_after = self.params["ms_after"]
