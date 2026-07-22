@@ -22,10 +22,9 @@ class WaveformTransformer(WaveformsNode):
         if waveforms_node is None:
             raise TypeError(f"{self.__class__.__name__} should have a single {WaveformsNode.__name__} in its parents")
 
+        # We only propagate nbefore/nafter since the WaveformNode already made the conversion
         super().__init__(
             recording,
-            ms_before=waveforms_node.ms_before,
-            ms_after=waveforms_node.ms_after,
             nbefore=waveforms_node.nbefore,
             nafter=waveforms_node.nafter,
             return_output=return_output,
