@@ -24,8 +24,10 @@ class WaveformTransformer(WaveformsNode):
 
         super().__init__(
             recording,
-            waveforms_node.ms_before,
-            waveforms_node.ms_after,
+            ms_before=waveforms_node.ms_before,
+            ms_after=waveforms_node.ms_after,
+            nbefore=waveforms_node.nbefore,
+            nafter=waveforms_node.nafter,
             return_output=return_output,
             parents=parents,
         )
