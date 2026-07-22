@@ -311,9 +311,10 @@ def compute_motion(
     detect_kwargs: dict = {},
     select_kwargs: dict = {},
     denoise_kwargs: dict = {},
-    extract_waveforms_kwargs=None,
     localize_peaks_kwargs: dict = {},
     estimate_motion_kwargs: dict = {},
+    extract_waveforms_method: Literal["dense", "sparse"] = "dense",
+    extract_waveforms_kwargs=None,
     output_motion_info: bool = False,
     folder: str | Path | None = None,
     overwrite: bool = False,
@@ -362,7 +363,12 @@ def compute_motion(
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.waveforms.denoising import denoising_methods
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, peak_localization_methods
-    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline, PeakRetriever
+    from spikeinterface.core.node_pipeline import (
+        PeakRetriever,
+        ExtractSparseWaveforms,
+        ExtractDenseWaveforms,
+        run_node_pipeline,
+    )
     from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion, estimate_motion_methods
 
     # get preset params and update if necessary
@@ -435,8 +441,11 @@ def compute_motion(
 
     if extract_waveforms_kwargs is None:
         extract_waveforms_kwargs = {"ms_before": 0.1, "ms_after": 0.3}
-    extract_dense_node = ExtractDenseWaveforms(recording, parents=[peaks_node], **extract_waveforms_kwargs)
-    pipeline_nodes.append(extract_dense_node)
+    if extract_waveforms_method == "sparse":
+        extract_waveforms_node = ExtractSparseWaveforms(recording, parents=[peaks_node], **extract_waveforms_kwargs)
+    else:
+        extract_waveforms_node = ExtractDenseWaveforms(recording, parents=[peaks_node], **extract_waveforms_kwargs)
+    pipeline_nodes.append(extract_waveforms_node)
 
     if denoise_kwargs is not None and len(denoise_kwargs) > 0:
         denoise_method = denoise_kwargs["method"]
@@ -445,13 +454,13 @@ def compute_motion(
             key: denoise_kwarg for key, denoise_kwarg in denoise_kwargs.items() if key != "method"
         }
         denoise_node = denoise_class(
-            recording, parents=[peaks_node, extract_dense_node], **denoise_kwargs_without_method
+            recording, parents=[peaks_node, extract_waveforms_node], **denoise_kwargs_without_method
         )
-        extract_waveforms_node = denoise_node
+        extract_waveforms_for_localization = denoise_node
         pipeline_nodes.append(denoise_node)
         pipeline_run_time_name += "denoise-localize"
     else:
-        extract_waveforms_node = extract_dense_node
+        extract_waveforms_for_localization = extract_waveforms_node
         pipeline_run_time_name += "localize"
 
     # node detect + localize
@@ -462,7 +471,7 @@ def compute_motion(
     }
     localize_node = method_class(
         recording,
-        parents=[peaks_node, extract_waveforms_node],
+        parents=[peaks_node, extract_waveforms_for_localization],
         return_output=True,
         **localize_peaks_kwargs_without_method,
     )
