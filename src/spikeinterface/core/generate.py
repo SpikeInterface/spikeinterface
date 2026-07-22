@@ -469,7 +469,7 @@ class TransformSorting(BaseSorting):
         common_ids = sorting2.unit_ids[mask1]
         exclusive_ids = sorting2.unit_ids[~mask1]
 
-        # We detect the indicies in the spike_vectors
+        # We detect the indices in the spike_vectors
         idx1 = sorting1.ids_to_indices(common_ids)
         idx2 = sorting2.ids_to_indices(common_ids)
 
@@ -801,7 +801,7 @@ def synthesize_poisson_spike_vector(
     spike_frames[:num_correct_frames] = spike_frames[mask]  # Avoids a malloc
     unit_indices = unit_indices[mask]
 
-    # Sort globaly
+    # Sort globally
     spike_frames = spike_frames[:num_correct_frames]
     # the `stable` is important because this guarantees result is equivalent to
     # np.lexsort((unit_indices, spike_frames, ))
@@ -1732,8 +1732,8 @@ def generate_templates(
         Templates dtype
     upsample_factor : int | None, default: None
         If not None then template are generated upsampled by this factor.
-        Then a new dimention (axis=3) is added to the template with intermediate inter sample representation.
-        This allow easy random jitter by choising a template this new dim
+        Then a new dimension (axis=3) is added to the template with intermediate inter sample representation.
+        This allow easy random jitter by choosing a template this new dim
     unit_params : dict[np.array] | dict[float] | dict[tuple] | None, default: None
         An optional dict containing parameters per units.
         Keys are parameter names:
@@ -1933,7 +1933,7 @@ class InjectTemplatesRecording(BaseRecording):
         check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
-        # TODO: this should be external to this class. It is not the responsability of this class to check the templates
+        # TODO: this should be external to this class. It is not the responsibility of this class to check the templates
         if check_borders:
             self._check_templates(templates)
             # lets test this only once so force check_borders=False for kwargs
@@ -2363,7 +2363,7 @@ def generate_ground_truth_recording(
     probe : Probe | None
         An external Probe object. If not provided a probe is generated using generate_probe_kwargs.
     generate_probe_kwargs : dict
-        A dict to constuct the Probe using :py:func:`probeinterface.generate_multi_columns_probe()`.
+        A dict to construct the Probe using :py:func:`probeinterface.generate_multi_columns_probe()`.
     templates : np.ndarray | None
         The templates of units.
         If None they are generated.
@@ -2391,8 +2391,8 @@ def generate_ground_truth_recording(
         The dtype of the recording.
     seed : int | None
         Seed for random initialization.
-        If None a diffrent Recording is generated at every call.
-        Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
+        If None a different Recording is generated at every call.
+        Note: even with None a generated recording keep internally a seed to regenerate the same signal after dump/load.
 
     Returns
     -------

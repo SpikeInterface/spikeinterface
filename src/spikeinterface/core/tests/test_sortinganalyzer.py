@@ -764,6 +764,128 @@ def test_select_channels(dataset):
         assert len(p) == len(keep_channel_ids)
 
 
+def test_main_channel_from_templates_dense_recordingless(tmp_path):
+    """When a dense analyzer has a `templates` extension but no attached recording, `get_main_channels`
+    recovers each unit's main channel from the templates (its peak channel) and reports it consistently
+    both as a positional index and as a channel id.
+    """
+    recording, sorting = generate_ground_truth_recording(
+        num_channels=8,
+        num_units=2,
+        durations=[10.0],
+        sampling_frequency=30000.0,
+        seed=0,
+    )
+    # `generate_ground_truth_recording` names channels "0".."7" (numeric strings that equal their own
+    # index). Rename them to letters so a channel id is unmistakably distinct from its positional index:
+    # the recovery converts the stored `main_channel_id` (an id) into a `main_channel_index`, and letters
+    # make that conversion observable instead of silently coinciding.
+    channel_ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    recording = recording.rename_channels(channel_ids)
+    # the pre-set `main_channel_id` still references the old ids; drop it so it is re-estimated on the renamed recording
+    sorting = sorting.clone()
+    sorting._properties.pop("main_channel_id")
+
+    # place each unit's template peak on a known (index, id) pair
+    unit0_main_channel_index, unit0_main_channel_id = 0, "a"
+    unit1_main_channel_index, unit1_main_channel_id = 7, "h"
+    expected_main_channel_indices = [unit0_main_channel_index, unit1_main_channel_index]
+    expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
+
+    folder = tmp_path / "analyzer_recordingless"
+    analyzer = create_sorting_analyzer(sorting, recording, format="binary_folder", folder=folder, sparse=False)
+    analyzer.compute(["random_spikes", "templates"])
+
+    # simulate the recording being unavailable at load time by removing its serialized copy on disk
+    for file_ext in ("json", "pickle"):
+        recording_file = folder / f"recording.{file_ext}"
+        if recording_file.exists():
+            recording_file.unlink()
+
+    reloaded_analyzer = load_sorting_analyzer(folder)
+    assert not reloaded_analyzer.has_recording()
+    assert reloaded_analyzer.has_extension("templates")
+
+    # craft a clear negative peak on each unit's main channel
+    templates = reloaded_analyzer.get_extension("templates")
+    average = templates.data["average"]
+    average[:] = 0.0
+    average[0, templates.nbefore, unit0_main_channel_index] = -100.0
+    average[1, templates.nbefore, unit1_main_channel_index] = -100.0
+    templates.data["average"] = average
+
+    # recovery must not raise, and must map correctly between positional indices and channel ids
+    recovered_main_channel_indices = np.asarray(reloaded_analyzer.get_main_channels(outputs="index"))
+    recovered_main_channel_ids = np.asarray(reloaded_analyzer.get_main_channels(outputs="id"))
+    assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
+    assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
+
+
+def test_main_channel_from_templates_sparse_recordingless():
+    """When a sparse analyzer has a `templates` extension but no attached recording, `get_main_channels`
+    reports each unit's main channel as its template peak channel, not the geometric centroid of the
+    unit's sparse channel set.
+    """
+    from spikeinterface.core.sparsity import ChannelSparsity
+
+    # 8 channels on a single linear column with uniform spacing, 2 units. The single column is the
+    # essential geometry: it makes the centroid of a contiguous channel set its middle channel, so the
+    # template peaks placed on the endpoints below differ from the centroids and the test can tell the
+    # two apart. ypitch sets that uniform spacing explicitly; nothing else about the probe matters here.
+    recording, sorting = generate_ground_truth_recording(
+        num_channels=8,
+        num_units=2,
+        durations=[10.0],
+        sampling_frequency=30000.0,
+        seed=0,
+        generate_probe_kwargs=dict(num_columns=1, ypitch=20),
+    )
+    # Rename channels "0".."7" to letters so a channel id is unmistakably distinct from its positional
+    # index, keeping the id-vs-index conversion in the recovery observable.
+    channel_ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    recording = recording.rename_channels(channel_ids)
+
+    # Each unit's true main channel is the template peak we place below, put on an endpoint of the unit's
+    # sparse set so it is off the set's geometric centroid, which is what makes the correct (peak) answer
+    # and the wrong (centroid) fallback distinguishable.
+    unit0_main_channel_index, unit0_main_channel_id = 0, "a"  # unit 0's sparse set {a..e}; centroid is "c" (index 2)
+    unit1_main_channel_index, unit1_main_channel_id = 7, "h"  # unit 1's sparse set {d..h}; centroid is "f" (index 5)
+    expected_main_channel_indices = [unit0_main_channel_index, unit1_main_channel_index]
+    expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
+
+    # explicit sparsity matching the sets referenced above
+    mask = np.zeros((2, 8), dtype=bool)
+    mask[0, 0:5] = True
+    mask[1, 3:8] = True
+    sparsity = ChannelSparsity(mask=mask, unit_ids=sorting.unit_ids, channel_ids=recording.channel_ids)
+
+    # point `main_channel_id` at the (in-mask) centroid channels so create's sparsity-consistency check
+    # passes; the recovery ignores this value because there is no recording, so it does not bias the test.
+    sorting = sorting.clone()
+    sorting.set_property("main_channel_id", ["c", "f"])
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=sparsity)
+    analyzer.compute(["random_spikes", "templates"])
+
+    # craft a clear negative peak on each unit's main channel
+    templates = analyzer.get_extension("templates")
+    average = templates.data["average"]
+    average[:] = 0.0
+    average[0, templates.nbefore, unit0_main_channel_index] = -100.0
+    average[1, templates.nbefore, unit1_main_channel_index] = -100.0
+    templates.data["average"] = average
+
+    # recordingless, and force the backwards-compatibility recompute
+    analyzer._recording = None
+    analyzer._main_channel_indices = None
+
+    # must be the template peak channels, not the geometric centroids ("c", "f" / indices [2, 5])
+    recovered_main_channel_indices = np.asarray(analyzer.get_main_channels(outputs="index"))
+    recovered_main_channel_ids = np.asarray(analyzer.get_main_channels(outputs="id"))
+    assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
+    assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
+
+
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()

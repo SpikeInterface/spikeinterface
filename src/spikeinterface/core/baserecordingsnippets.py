@@ -346,7 +346,7 @@ class BaseRecordingSnippets(BaseExtractor):
             write_probeinterface(folder / "probegroup.json", probegroup)
 
     def _extra_metadata_from_dict(self, dump_dict):
-        # load probe and hanlde backward-compatibility with legacy "contact_vector"/"location" property
+        # load probe and handle backward-compatibility with legacy "contact_vector"/"location" property
         if "probegroup" in dump_dict:
             # this is for SI>=0.105.0
             probegroup = dump_dict["probegroup"]
@@ -377,7 +377,7 @@ class BaseRecordingSnippets(BaseExtractor):
             if "contact_vector" in self.get_property_keys():
                 # this is for SI<0.105.0 and from pickle
                 contact_vector = self.get_property("contact_vector")
-                probegroup = ProbeGroup.from_numpy(contact_vector=contact_vector)
+                probegroup = ProbeGroup.from_numpy(contact_vector)
                 self._probegroup = probegroup
                 check_for_probes_info = True
             elif "location" in self.get_property_keys():
@@ -459,7 +459,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 "set_channel_locations() is deprecated and will be removed in version 0.106.0. "
                 "If you want to set probe information, use `set_dummy_probe_from_locations()`."
             ),
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         self.set_dummy_probe_from_locations(locations, axes="xy")
@@ -486,7 +486,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 "clear_channel_locations() is deprecated and will be removed in version 0.106.0. "
                 "If you want to remove probe information, use `remove_probe()`."
             ),
-            DeprecationWarning,
+            FutureWarning,
             stacklevel=2,
         )
         self.remove_probe()
