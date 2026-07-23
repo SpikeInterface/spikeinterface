@@ -70,7 +70,7 @@ def get_dataset_to_merge():
         num_channels=10,
         num_units=10,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=2.0, maximum_z=15.0, minimum_distance=20),
         seed=2205,
     )
@@ -97,7 +97,7 @@ def get_dataset_to_split():
         num_channels=10,
         num_units=10,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
 

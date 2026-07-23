@@ -1,10 +1,10 @@
-from typing import Literal
-
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.generate import _ensure_seed
 from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessorSegment
+from spikeinterface.core.recording_tools import get_chunk_with_margin
 
 
 class NoiseGeneratorRecording(BaseRecording):
@@ -30,16 +30,18 @@ class NoiseGeneratorRecording(BaseRecording):
         Std of the white noise (if an array, defined by per channels)
     cov_matrix : np.ndarray | None, default: None
         The covariance matrix of the noise
+    spectral_density : np.ndarray | None, default: None
+        The spectral density of the noise, as you could estimate from an array of snippets with shape
+        `(n_snippets, spectral_snippet_length)` by the following method (Welch's method):
+
+        ```python
+        periodogram = rfft(snippets, n=next_fast_len(snippets.shape[1]), norm="ortho")
+        spectral_density = np.sqrt((periodogram * periodogram.conj()).mean(axis=0))
+        ```
     dtype : np.dtype | str | None, default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : int | None, default: None
         The seed for np.random.default_rng.
-    strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
-        The strategy of generating noise chunk:
-          * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
-                                 very fast and consume only one noise block.
-          * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
-                          no memory preallocation but a bit more computation (random)
     noise_block_size : int, default: 30000
         Size in sample of noise block.
 
@@ -56,9 +58,9 @@ class NoiseGeneratorRecording(BaseRecording):
         durations: list[float],
         noise_levels: float | np.ndarray = 1.0,
         cov_matrix: np.ndarray | None = None,
+        spectral_density: np.ndarray | None = None,
         dtype: np.dtype | str | None = "float32",
         seed: int | None = None,
-        strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
         noise_block_size: int = 30000,
     ):
 
@@ -66,7 +68,6 @@ class NoiseGeneratorRecording(BaseRecording):
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
-        assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
         if np.isscalar(noise_levels):
             noise_levels = np.ones((1, num_channels)) * noise_levels
@@ -104,8 +105,9 @@ class NoiseGeneratorRecording(BaseRecording):
                 cov_matrix,
                 dtype,
                 segments_seeds[i],
-                strategy,
             )
+            if spectral_density is not None:
+                rec_segment = AddTemporalCorrelationsSegment(rec_segment, spectral_density)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = {
@@ -116,9 +118,17 @@ class NoiseGeneratorRecording(BaseRecording):
             "cov_matrix": cov_matrix,
             "dtype": dtype,
             "seed": seed,
-            "strategy": strategy,
             "noise_block_size": noise_block_size,
         }
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "strategy" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("strategy", None)
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
@@ -132,7 +142,6 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         cov_matrix,
         dtype,
         seed,
-        strategy,
     ):
         assert seed is not None, "Please include a seed value"
 
@@ -145,23 +154,6 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.cov_matrix = cov_matrix
         self.dtype = dtype
         self.seed = seed
-        self.strategy = strategy
-
-        if self.strategy == "tile_pregenerated":
-            rng = np.random.default_rng(seed=self.seed)
-
-            if self.cov_matrix is None:
-                self.noise_block = (
-                    rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                    * noise_levels
-                )
-            else:
-                self.noise_block = rng.multivariate_normal(
-                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                )
-
-        elif self.strategy == "on_the_fly":
-            pass
 
     def get_num_samples(self) -> int:
         return self.num_samples
@@ -170,7 +162,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self,
         start_frame: int | None = None,
         end_frame: int | None = None,
-        channel_indices: list | None = None,
+        channel_indices: list | np.ndarray | tuple | None = None,
     ) -> np.ndarray:
 
         if start_frame is None:
@@ -189,18 +181,15 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
 
         pos = 0
         for block_index in range(first_block_index, last_block_index + 1):
-            if self.strategy == "tile_pregenerated":
-                noise_block = self.noise_block
-            elif self.strategy == "on_the_fly":
-                rng = np.random.default_rng(seed=(self.seed, block_index))
-                if self.cov_matrix is None:
-                    noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
-                else:
-                    noise_block = rng.multivariate_normal(
-                        np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
-                    )
+            rng = np.random.default_rng(seed=(self.seed, block_index))
+            if self.cov_matrix is None:
+                noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels), dtype=self.dtype)
+            else:
+                noise_block = rng.multivariate_normal(
+                    np.zeros(self.num_channels), self.cov_matrix, size=self.noise_block_size
+                )
 
-                noise_block *= self.noise_levels
+            noise_block *= self.noise_levels
 
             if block_index == first_block_index:
                 if first_block_index != last_block_index:
@@ -223,13 +212,57 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 
+class AddTemporalCorrelationsSegment(BasePreprocessorSegment):
+    def __init__(self, parent_recording_segment, spectral_density: np.ndarray):
+        super().__init__(parent_recording_segment)
+        assert spectral_density.ndim == 1
+        self.spectral_density = spectral_density
+        self.margin = spectral_density.shape[0] - 1
+        self.block_len = 2 * spectral_density.shape[0] - 1
+        self.kernel = np.fft.fftshift(np.fft.irfft(spectral_density, n=self.block_len))
+
+    def get_traces(
+        self,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | np.ndarray | tuple | None = None,
+    ):
+        from scipy.signal import convolve
+
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
+        traces, *_ = get_chunk_with_margin(
+            self.parent_recording_segment,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            channel_indices=channel_indices,
+            margin=self.margin,
+            add_reflect_padding=True,
+        )
+        # need to use "direct", or else output differs numerically when start_frame, end_frame change
+        # that's because the FFT method would FFT the traces, and there would be slight numerical differences
+        traces = convolve(traces.T, self.kernel[None], mode="valid", method="direct").T
+        assert traces.shape[0] == end_frame - start_frame
+        return traces
+
+
 noise_generator_recording = define_function_from_class(
     source_class=NoiseGeneratorRecording, name="noise_generator_recording"
 )
 
 
 def generate_noise(
-    probe, sampling_frequency, durations, dtype="float32", noise_levels=15.0, spatial_decay=None, seed=None
+    probe,
+    sampling_frequency,
+    durations,
+    dtype="float32",
+    noise_levels=15.0,
+    spatial_decay=None,
+    spectral_density=None,
+    seed=None,
 ):
     """
     Generate a noise recording.
@@ -250,6 +283,14 @@ def generate_noise(
         If tuple, then this represent the range.
     spatial_decay : float | None, default: None
         If not None, the spatial decay of the noise used to generate the noise covariance matrix.
+    spectral_density : np.ndarray | None, default: None
+        The spectral density of the noise, as you could estimate from an array of snippets with shape
+        `(n_snippets, spectral_snippet_length)` by the following method (Welch's method):
+
+        ```python
+        periodogram = rfft(snippets, n=next_fast_len(snippets.shape[1]), norm="ortho")
+        spectral_density = np.sqrt((periodogram * periodogram.conj()).mean(axis=0))
+        ```
     seed : int | None, default: None
         The seed for random generator.
 
@@ -285,9 +326,9 @@ def generate_noise(
         sampling_frequency=sampling_frequency,
         durations=durations,
         dtype=dtype,
-        strategy="on_the_fly",
         noise_levels=noise_levels,
         cov_matrix=cov_matrix,
+        spectral_density=spectral_density,
         seed=seed,
     )
 

@@ -39,7 +39,7 @@ def make_dataset(job_kwargs={}):
             contact_shape_params={"radius": 6},
         ),
         generate_sorting_kwargs=dict(firing_rates=6.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
 
