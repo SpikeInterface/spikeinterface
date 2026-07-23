@@ -91,7 +91,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         for segment_index, rs in enumerate(self.segments):
             time_file = folder_path / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
-                rs.time_vector = np.load(time_file, mmap_mode="r")
+                rs._time_vector = np.load(time_file, mmap_mode="r")
 
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
