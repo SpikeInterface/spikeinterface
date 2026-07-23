@@ -2969,10 +2969,16 @@ class AnalyzerExtension:
         self.data = dict()
 
     def __del__(self):
+        # Ensure open memmap file handles are released when the extension is garbage collected.
+        # Best-effort: __del__ must never raise.
+        self._release_data_file_handles()
+
+    def _release_data_file_handles(self):
         # Close any open memmap file handles held in `data` (e.g. when an extension gathers or
         # loads its data as a memmap). On Windows an open memmap prevents deleting the underlying
-        # file, so releasing the handles here allows the extension folder to be removed when the
-        # extension is dropped (e.g. on recompute). Best-effort: __del__ must never raise.
+        # file, so releasing the handles allows the extension folder to be removed (e.g. on
+        # recompute). This closes the file handle but leaves the (now unusable) array object and any
+        # non-memmap data in `data` untouched.
         data = self.__dict__.get("data", None)
         if not data:
             return
@@ -3478,12 +3484,14 @@ class AnalyzerExtension:
         Delete the extension in a folder (binary or zarr) and create an empty one.
         """
         if self.format == "binary_folder":
-            # Drop the analyzer's reference to a previously computed extension of the same name so
-            # it can be garbage collected. Its __del__ releases any open file handles (e.g. a memmap
-            # kept in `data` when gathering directly to npy) which, on Windows, would otherwise
-            # prevent deleting the folder below.
-            old_extension = self.sorting_analyzer.extensions.pop(self.extension_name, None)
-            del old_extension
+            # Release open file handles (e.g. a memmap kept in `data` when gathering/extracting
+            # directly to npy) of a previously computed extension of the same name. On Windows an
+            # open memmap would otherwise prevent deleting the folder below. We deliberately do NOT
+            # remove it from `self.sorting_analyzer.extensions` nor clear its data: some extensions
+            # (e.g. metrics) read the previous extension back during their computation.
+            old_extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
+            if old_extension is not None and old_extension is not self:
+                old_extension._release_data_file_handles()
 
             extension_folder = self._get_binary_extension_folder()
             if extension_folder.is_dir():
