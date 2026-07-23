@@ -465,15 +465,19 @@ def extract_waveforms_to_single_buffer(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: "memmap" | "shared_memory", default: "memmap"
-        The mode to use for the buffer
+    mode: "memmap" | "shared_memory" | "zarr", default: "memmap"
+        The mode to use for the buffer. In "zarr" mode the waveforms are written directly to a zarr
+        dataset (workers return their block and the main process writes it, so parallel writes are safe).
     return_scaled : bool | None, default: None
         DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
     file_path: str or path or None, default: None
-        In case of memmap mode, file to save npy file
+        In "memmap" mode, the npy file to save the waveforms to.
+        In "zarr" mode, a path pointing inside a zarr store, e.g.
+        "my-analyzer.zarr/extensions/waveforms/waveforms" (the ".zarr" part identifies the store and
+        the dataset is created on the fly).
     dtype: numpy.dtype, default: None
         dtype for waveforms buffer
     sparsity_mask: None or array of bool, default: None
@@ -516,8 +520,9 @@ def extract_waveforms_to_single_buffer(
 
     if mode == "shared_memory":
         assert file_path is None
-    else:
+    elif mode == "memmap":
         file_path = Path(file_path)
+    # for mode == "zarr", file_path is a path pointing inside a zarr store (handled below)
 
     num_spikes = spikes.size
     if sparsity_mask is None:
@@ -526,6 +531,7 @@ def extract_waveforms_to_single_buffer(
         num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
     shape = (int(num_spikes), int(n_samples), int(num_chans))
 
+    zarr_writer = None
     if mode == "memmap":
         all_waveforms = np.lib.format.open_memmap(file_path, mode="w+", dtype=dtype, shape=shape)
         # wf_array_info = str(file_path)
@@ -540,6 +546,33 @@ def extract_waveforms_to_single_buffer(
             shm_name = shm.name
         # wf_array_info = (shm, shm_name, dtype.str, shape)
         wf_array_info = dict(shm=shm, shm_name=shm_name, dtype=dtype.str, shape=shape)
+    elif mode == "zarr":
+        # Create the zarr dataset up front, then fill it. Because zarr's write unit is a whole
+        # (compressed) chunk, parallel workers cannot safely write directly (two workers may touch
+        # the same boundary chunk). Instead workers return their contiguous block and the main
+        # process writes it (single writer) via the `zarr_writer` gather function below.
+        import zarr
+
+        from .zarrextractors import get_default_zarr_compressor
+        from .node_pipeline import _split_zarr_store_path
+
+        assert file_path is not None, "zarr mode requires a `file_path` pointing inside a .zarr store"
+        store_path, dataset_path = _split_zarr_store_path(file_path)
+        # chunk along the first (spike) axis so that a chunk is about 10 MiB
+        row_nbytes = int(n_samples) * int(num_chans) * dtype.itemsize
+        chunk0 = max(1, (10 * 1024 * 1024) // max(1, row_nbytes))
+        zarr_root = zarr.open(str(store_path), mode="a")
+        all_waveforms = zarr_root.create_dataset(
+            name=dataset_path,
+            shape=shape,
+            chunks=(chunk0, int(n_samples), int(num_chans)),
+            dtype=dtype,
+            fill_value=0,
+            compressor=get_default_zarr_compressor(),
+            overwrite=True,
+        )
+        wf_array_info = None
+        zarr_writer = _ZarrSingleBufferWriter(all_waveforms)
     else:
         raise ValueError("allocate_waveforms_buffers bad mode")
 
@@ -547,28 +580,57 @@ def extract_waveforms_to_single_buffer(
 
     if num_spikes > 0 and num_chans > 0:
         # and run
-        func = _worker_distribute_single_buffer
-        init_func = _init_worker_distribute_single_buffer
+        if mode == "zarr":
+            # workers return their contiguous block, the main process writes it (single writer)
+            func = _worker_return_single_buffer
+            init_func = _init_worker_return_single_buffer
+            init_args = (
+                recording,
+                spikes,
+                nbefore,
+                nafter,
+                return_in_uV,
+                sparsity_mask,
+                dtype.str,
+                int(n_samples),
+                int(num_chans),
+            )
+            if job_name is None:
+                job_name = "extract waveforms zarr mono buffer"
+            processor = TimeSeriesChunkExecutor(
+                recording,
+                func,
+                init_func,
+                init_args,
+                gather_func=zarr_writer,
+                job_name=job_name,
+                verbose=verbose,
+                **job_kwargs,
+            )
+            processor.run()
+        else:
+            func = _worker_distribute_single_buffer
+            init_func = _init_worker_distribute_single_buffer
 
-        init_args = (
-            recording,
-            spikes,
-            wf_array_info,
-            nbefore,
-            nafter,
-            return_in_uV,
-            mode,
-            sparsity_mask,
-        )
-        if job_name is None:
-            job_name = f"extract waveforms {mode} mono buffer"
+            init_args = (
+                recording,
+                spikes,
+                wf_array_info,
+                nbefore,
+                nafter,
+                return_in_uV,
+                mode,
+                sparsity_mask,
+            )
+            if job_name is None:
+                job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = TimeSeriesChunkExecutor(
-            recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
-        )
-        processor.run()
+            processor = TimeSeriesChunkExecutor(
+                recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
+            )
+            processor.run()
 
-    if mode == "memmap":
+    if mode in ("memmap", "zarr"):
         return all_waveforms
     elif mode == "shared_memory":
         if copy:
@@ -672,6 +734,103 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
 
         if worker_dict["mode"] == "memmap":
             all_waveforms.flush()
+
+
+class _ZarrSingleBufferWriter:
+    """
+    Gather function used by `extract_waveforms_to_single_buffer` in "zarr" mode.
+
+    Each worker returns a (start_row, block) tuple for a contiguous range of spikes. This is called
+    in the main process (single writer) so concurrent writes to the same zarr chunk cannot happen.
+    """
+
+    def __init__(self, zarr_array):
+        self.zarr_array = zarr_array
+
+    def __call__(self, res):
+        if res is None:
+            return
+        start_row, block = res
+        self.zarr_array[start_row : start_row + block.shape[0]] = block
+
+
+def _init_worker_return_single_buffer(
+    recording, spikes, nbefore, nafter, return_in_uV, sparsity_mask, dtype, n_samples, num_chans
+):
+    worker_dict = {}
+    worker_dict["recording"] = recording
+    worker_dict["spikes"] = spikes
+    worker_dict["nbefore"] = nbefore
+    worker_dict["nafter"] = nafter
+    worker_dict["return_in_uV"] = return_in_uV
+    worker_dict["sparsity_mask"] = sparsity_mask
+    worker_dict["dtype"] = np.dtype(dtype)
+    worker_dict["n_samples"] = n_samples
+    worker_dict["num_chans"] = num_chans
+
+    # prepare segment slices
+    segment_slices = []
+    for segment_index in range(recording.get_num_segments()):
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
+        segment_slices.append((s0, s1))
+    worker_dict["segment_slices"] = segment_slices
+
+    return worker_dict
+
+
+# used by TimeSeriesChunkExecutor for mode="zarr": build and return a contiguous block of waveforms
+# (rather than writing to a shared buffer), so the main process can write it to the zarr array.
+def _worker_return_single_buffer(segment_index, start_frame, end_frame, worker_dict):
+    recording = worker_dict["recording"]
+    segment_slices = worker_dict["segment_slices"]
+    spikes = worker_dict["spikes"]
+    nbefore = worker_dict["nbefore"]
+    nafter = worker_dict["nafter"]
+    return_in_uV = worker_dict["return_in_uV"]
+    sparsity_mask = worker_dict["sparsity_mask"]
+    dtype = worker_dict["dtype"]
+    n_samples = worker_dict["n_samples"]
+    num_chans = worker_dict["num_chans"]
+
+    seg_size = recording.get_num_samples(segment_index=segment_index)
+
+    s0, s1 = segment_slices[segment_index]
+    in_seg_spikes = spikes[s0:s1]
+
+    # take only spikes in range [start_frame, end_frame]; borders are protected by nbefore/nafter
+    i0, i1 = np.searchsorted(
+        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
+    )
+
+    if i1 <= i0:
+        return None
+
+    sub_spikes = in_seg_spikes[i0:i1]
+    start = sub_spikes[0]["sample_index"] - nbefore
+    end = sub_spikes[-1]["sample_index"] + nafter
+
+    traces = recording.get_traces(
+        start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
+    )
+
+    onset = start + nbefore
+    offset = nbefore + nafter
+    sample_indices = sub_spikes["sample_index"] - onset
+    unit_indices = sub_spikes["unit_index"]
+
+    block = np.zeros((i1 - i0, n_samples, num_chans), dtype=dtype)
+    for local_index, (sample_index, unit_index) in enumerate(zip(sample_indices, unit_indices)):
+        wf = traces[sample_index : sample_index + offset, :]
+        if sparsity_mask is None:
+            block[local_index, :, :] = wf
+        else:
+            mask = sparsity_mask[unit_index, :]
+            wf = wf[:, mask]
+            block[local_index, :, : wf.shape[1]] = wf
+
+    # spike_indices s0 + [i0, i1) are contiguous -> write as a single slice in the main process
+    start_row = s0 + i0
+    return (start_row, block)
 
 
 def split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=None, folder=None):
