@@ -466,16 +466,21 @@ class SortingAnalyzer:
         nchan = self.get_num_channels()
         nunits = self.get_num_units()
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
-        if self.format != "memory" and is_path_remote(self.folder):
-            txt += " (remote)"
+        if self.format != "memory":
+            if is_path_remote(self.folder):
+                if self._lazy:
+                    txt += " (remote + lazy)"
+                else:
+                    txt += " (remote)"
+            elif self._lazy:
+                txt += " (lazy)"
         if self.is_sparse():
             txt += " - sparse"
         if self.has_recording():
             txt += " - has recording"
         if self.has_temporary_recording():
             txt += " - has temporary recording"
-        if self._lazy:
-            txt += " (lazy)"
+
         ext_txt = f"Loaded {len(self.extensions)} extensions"
         if len(self.extensions) > 0:
             ext_txt += f": {', '.join(self.extensions.keys())}"
