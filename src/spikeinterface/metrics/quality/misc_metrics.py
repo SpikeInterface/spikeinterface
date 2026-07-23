@@ -16,6 +16,7 @@ import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import SortingAnalyzer, NumpySorting
+from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.template_tools import (
     get_template_amplitude_on_main_channel,
     get_dense_templates_array,
@@ -576,9 +577,7 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes, slices = sorting.to_reordered_spike_vector(
-        ["sample_index", "segment_index", "unit_index"], return_order=False
-    )
+    spikes, slices = sorting.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False)
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)

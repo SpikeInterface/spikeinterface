@@ -7,6 +7,14 @@ import numpy as np
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
 
+#: Makes each unit's spiketrain compact in memory (unit, then segment, then sample).
+LEXSORT_UNIT_COMPACT = ("sample_index", "segment_index", "unit_index")
+#: Makes each segment compact, units compact within a segment (segment, then unit, then sample).
+LEXSORT_SEGMENT_COMPACT = ("sample_index", "unit_index", "segment_index")
+
+# The reorderings that `BaseSorting.to_reordered_spike_vector()` can produce.
+_ALLOWED_LEXSORTS = (LEXSORT_UNIT_COMPACT, LEXSORT_SEGMENT_COMPACT)
+
 
 class BaseSorting(BaseExtractor):
     """
@@ -166,8 +174,7 @@ class BaseSorting(BaseExtractor):
             If True, returns spike times in seconds instead of frames
         use_cache : bool, default: True
             If True, then precompute (or use) the to_reordered_spike_vector using
-            lexsort=("sample_index", "segment_index", "unit_index"), which makes a spiketrain
-            per unit and per segment compact in memory.
+            lexsort=LEXSORT_UNIT_COMPACT, which makes each unit's spiketrain compact in memory.
             Using the cache makes the first call quite slow but then future calls are very fast.
 
         Note: if use_cache=False, but the lexsorted cache is already computed then it will be used anyway.
@@ -195,7 +202,7 @@ class BaseSorting(BaseExtractor):
 
         segment_index = self._check_segment_index(segment_index)
 
-        lexsort_key = ("sample_index", "segment_index", "unit_index")
+        lexsort_key = LEXSORT_UNIT_COMPACT
         if lexsort_key in self._cached_lexsorted_spike_vector.keys():
             use_cache = True
 
@@ -580,11 +587,11 @@ class BaseSorting(BaseExtractor):
         """
 
         # speed strategy by order
-        # 1. if _cached_lexsorted_spike_vector has  ("sample_index", "segment_index", "unit_index") then use it and sum
+        # 1. if _cached_lexsorted_spike_vector has LEXSORT_UNIT_COMPACT then use it and sum
         # 2. if _cached_spike_vector not None then use it with np.unique()
         # 3. compute spikevector and do np.unique()
 
-        cache_key = ("sample_index", "segment_index", "unit_index")
+        cache_key = LEXSORT_UNIT_COMPACT
 
         if unit_ids is not None:
             assert outputs == "dict", "count_num_spikes_per_unit() with unit_ids not None works only for output='dict'"
@@ -867,9 +874,9 @@ class BaseSorting(BaseExtractor):
     def precompute_spike_trains(self):
         """
         Pre-computes and caches all spike trains for this sorting.
-        This is equivalent to cache lexsort ("sample_index", "segment_index", "unit_index").
+        This is equivalent to cache lexsort LEXSORT_UNIT_COMPACT.
         """
-        cache_key = ("sample_index", "segment_index", "unit_index")
+        cache_key = LEXSORT_UNIT_COMPACT
         if cache_key not in self._cached_lexsorted_spike_vector:
             self.to_reordered_spike_vector(lexsort=cache_key)
 
@@ -1033,7 +1040,7 @@ class BaseSorting(BaseExtractor):
 
     def to_reordered_spike_vector(
         self,
-        lexsort=("sample_index", "segment_index", "unit_index"),
+        lexsort=LEXSORT_UNIT_COMPACT,
         return_order=True,
         return_slices=True,
     ):
@@ -1045,31 +1052,22 @@ class BaseSorting(BaseExtractor):
 
         Please note that the lexsort syntax is the **reverse** of natural reading.
 
-        By default the spike_vector is lexsort-ed like this:
-          - ("unit_index", "sample_index", "segment_index") (segment then sample then unit)
-
-        But particular orderings can be better for some computations:
-          - ("sample_index", "unit_index", "segment_index") (segment then unit_index then sample)
-          - ("sample_index", "segment_index", "unit_index") (unit_index then segment then sample)
-
-        Note that the last representation makes the spiketrain per segment compact in memory.
+        Two reorderings are supported:
+          - LEXSORT_UNIT_COMPACT: ("sample_index", "segment_index", "unit_index").
+            Makes each unit's spiketrain compact in memory. This is the default, and is what
+            unit-by-unit computations (e.g. isi violations) want.
+          - LEXSORT_SEGMENT_COMPACT: ("sample_index", "unit_index", "segment_index").
+            Makes each segment compact, with each unit's spiketrain compact within a segment.
+            Rarely (if ever) used, but might be useful when iterating segment by segment.
 
         This operation is internally cached.
 
-        The order vector is also computed and can be applied to other external vectors like
-        spike_amplitudes, spike_locations, ...
-
-        An array of internal slices is also precomputed to have a fast access to a compact
-        portion of the reordered spikes.
-        Theses slices are stored as a 3d array to handle start->stop and depend of the lexsort itself.
-        Theses slices are pre computed using nested searchsorted.
-
         Parameters
         ----------
-        lexsort : tuple, default: ("sample_index", "unit_index", "segment_index")
-            Tuple for lexsort. Please note that this is the reverse natural reading order!
+        lexsort : tuple, default: LEXSORT_UNIT_COMPACT
+            The requested sort order. Must be one of the two orderings listed above.
         return_order: bool, default: True
-            Return the order, or not. See Returns.
+            Return the numpy array needed to sort the spike vector (given the requested sort).
         return_slices: bool, default: True
             Return the slices, or not. See Returns.
 
@@ -1079,82 +1077,59 @@ class BaseSorting(BaseExtractor):
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes in the desired
             lexsort order
         order : np.array
-            Numpy array needed to sort the spike vector given the lexsort
-        slices :  np.array
-            Numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2) given the lexsort,
-            where one can obtain the indices amin, amax of all the (segment,unit_index) values.
+            Numpy array needed to sort the spike vector given the lexsort. Can be used
+            to sort other external vectors like spike_amplitudes, spike_locations, ...
+        slices : np.array
+            A 3D array of internal slices for fast access to a compact portion of the reordered spikes.
+            Depending on the lexsort, a numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2).
+            The last dimension contains the start and end indices of each segment-unit pair.
+
+        Raises
+        ------
+        ValueError
+            If `lexsort` is not one of the two supported orderings.
         """
-        lexsort = tuple(lexsort)
-
         if lexsort == ("unit_index", "sample_index", "segment_index"):
-            assert (
-                not return_order and not return_slices
-            ), 'If lexsort = ("unit_index", "sample_index", "segment_index"), both `return_order` and `return_slices` must be set to `False`.'
+            raise ValueError(
+                '`lexsort` = ("unit_index", "sample_index", "segment_index") is not supported: '
+                "Use `to_spike_vector()` to get the default order."
+            )
 
-            spikes = self.to_spike_vector(concatenated=True)
-            return spikes
+        if lexsort not in _ALLOWED_LEXSORTS:
+            raise ValueError(f"`lexsort` must be one of {_ALLOWED_LEXSORTS}; got {lexsort}.")
 
-        assert lexsort in [
-            ("sample_index", "unit_index", "segment_index"),
-            ("sample_index", "segment_index", "unit_index"),
-        ], '`lexsort` must be equal to ("unit_index", "sample_index", "segment_index"),  ("sample_index", "unit_index", "segment_index") or ("sample_index", "segment_index", "unit_index")'
+        if lexsort not in self._cached_lexsorted_spike_vector.keys():
+            from .sorting_tools import reorder_spike_vector_by_unit_and_segment
 
-        key = str(lexsort)
-
-        if key not in self._cached_lexsorted_spike_vector.keys():
             spikes = self.to_spike_vector()
-            order = np.lexsort((spikes[lexsort[0]], spikes[lexsort[1]], spikes[lexsort[2]]))
-            ordered_spikes = spikes[order]
-            self._cached_lexsorted_spike_vector[key] = {}
-            self._cached_lexsorted_spike_vector[key]["ordered_spikes"] = ordered_spikes
-            self._cached_lexsorted_spike_vector[key]["order"] = order
-
             num_units = len(self.unit_ids)
             num_segments = self.get_num_segments()
 
-            # precompute the slices with nested search sorted
-            if lexsort == ("sample_index", "segment_index", "unit_index"):
-                # this case make spiketrain per unit compact in memory
+            unit_major = lexsort == LEXSORT_UNIT_COMPACT
+            slices_shape = (num_units, num_segments) if unit_major else (num_segments, num_units)
 
-                slices = np.zeros((num_units, num_segments, 2), dtype=np.int64)
-                unit_slices = np.searchsorted(ordered_spikes["unit_index"], np.arange(num_units + 1), side="left")
-                for unit_index, unit_id in enumerate(self.unit_ids):
-                    u0 = unit_slices[unit_index]
-                    u1 = unit_slices[unit_index + 1]
-                    seg_slices = np.searchsorted(
-                        ordered_spikes[u0:u1]["segment_index"], np.arange(num_segments + 1), side="left"
-                    )
-                    for segment_index in range(num_segments):
-                        s0 = seg_slices[segment_index]
-                        s1 = seg_slices[segment_index + 1]
-                        slices[unit_index, segment_index, :] = [u0 + s0, u0 + s1]
+            ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(
+                spikes, num_units, num_segments, unit_major=unit_major
+            )
 
-            elif ("sample_index", "unit_index", "segment_index"):
-                slices = np.zeros((num_segments, num_units, 2), dtype=np.int64)
-                seg_slices = np.searchsorted(ordered_spikes["segment_index"], np.arange(num_segments + 1), side="left")
-                for segment_index in range(self.get_num_segments()):
-                    s0 = seg_slices[segment_index]
-                    s1 = seg_slices[segment_index + 1]
-                    unit_slices = np.searchsorted(
-                        ordered_spikes[s0:s1]["unit_index"], np.arange(num_units + 1), side="left"
-                    )
-                    for unit_index, unit_id in enumerate(self.unit_ids):
-                        u0 = unit_slices[unit_index]
-                        u1 = unit_slices[unit_index + 1]
-                        slices[segment_index, unit_index, :] = [s0 + u0, s0 + u1]
+            counts = counts.reshape(slices_shape)
+            stops = np.cumsum(counts.ravel()).reshape(slices_shape)
+            starts = stops - counts
+            slices = np.stack([starts, stops], axis=-1).astype(np.int64, copy=False)
 
-            self._cached_lexsorted_spike_vector[key]["slices"] = slices
+            self._cached_lexsorted_spike_vector[lexsort] = {
+                "ordered_spikes": ordered_spikes,
+                "order": order,
+                "slices": slices,
+            }
 
-        ordered_spikes = self._cached_lexsorted_spike_vector[key]["ordered_spikes"]
-        out = (ordered_spikes,)
+        cached = self._cached_lexsorted_spike_vector[lexsort]
+        out = [cached["ordered_spikes"]]
         if return_order:
-            out += (self._cached_lexsorted_spike_vector[key]["order"],)
+            out.append(cached["order"])
         if return_slices:
-            out += (self._cached_lexsorted_spike_vector[key]["slices"],)
-        if len(out) == 1:
-            return out[0]
-        else:
-            return out
+            out.append(cached["slices"])
+        return tuple(out) if len(out) > 1 else out[0]
 
     def to_numpy_sorting(self, propagate_cache=True):
         """

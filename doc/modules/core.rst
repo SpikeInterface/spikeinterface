@@ -175,8 +175,9 @@ the spiketrain, which are optimally organized for specific types of calculation.
 
 Computations involving combined recording-sorting information, such as fetching recording chunks and
 spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
-this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
-a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+this use case, we use an internal representation called the `spike_vector`, obtained by calling
+`sorting.to_spike_vector()`. This is a unique buffer: a numpy.array with dtype
+`[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
 
 For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
 spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
@@ -185,8 +186,8 @@ spikes from a single unit are concurrent in memory. For these other cases, we ca
 * order by unit, then segment, then sample
 * order by segment, then unit, then sample
 
-This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
-reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done,
+the reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
 details, but developers should keep memory layout in mind when implementing new features.
 
 

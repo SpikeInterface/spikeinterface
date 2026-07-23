@@ -13,8 +13,18 @@ from spikeinterface.core.sorting_tools import (
     _get_ids_after_merging,
     generate_unit_ids_for_merge_group,
     remap_unit_indices_in_vector,
+    reorder_spike_vector_by_unit_and_segment,
 )
 from spikeinterface.core.base import minimum_spike_dtype
+
+
+@pytest.fixture(params=[True, False], ids=["numba", "numpy"])
+def force_numba(request, monkeypatch):
+    """Run each test once with numba enabled (if installed) and once with the numpy fallback."""
+    if request.param and importlib.util.find_spec("numba") is None:
+        pytest.skip("numba not installed")
+    monkeypatch.setattr("spikeinterface.core.sorting_tools.HAVE_NUMBA", request.param)
+    return request.param
 
 
 @pytest.mark.skipif(
@@ -43,6 +53,61 @@ def test_spike_vector_to_indices():
             spike_vector[segment_index][inds]["sample_index"],
             sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index),
         )
+
+
+def _make_spike_vector(sample_indices, unit_indices, segment_indices):
+    spikes = np.empty(len(sample_indices), dtype=minimum_spike_dtype)
+    spikes["sample_index"] = sample_indices
+    spikes["unit_index"] = unit_indices
+    spikes["segment_index"] = segment_indices
+    return spikes
+
+
+def test_reorder_spike_vector_by_unit_and_segment(force_numba):
+    # 3 units, 1 segment, so the output is simply grouped by unit.
+    spikes = _make_spike_vector(
+        sample_indices=[10, 10, 11, 12, 12, 13],
+        unit_indices=[2, 0, 1, 2, 0, 0],
+        segment_indices=[0, 0, 0, 0, 0, 0],
+    )
+
+    ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(spikes, 3, 1)
+
+    assert np.array_equal(counts, [3, 1, 2])
+    assert np.array_equal(spikes[order], ordered_spikes)
+    assert np.array_equal(ordered_spikes["unit_index"], [0, 0, 0, 1, 2, 2])
+    # Stability: within each bucket, sample_index keeps its (ascending) input order.
+    assert np.array_equal(ordered_spikes["sample_index"], [10, 12, 13, 11, 10, 12])
+
+
+def test_reorder_spike_vector_by_unit_and_segment_raises(force_numba):
+    """Out-of-range indices must raise on both paths, rather than write out of bounds."""
+    spikes = _make_spike_vector([0, 1, 2], [0, 1, 0], 0)
+
+    with pytest.raises(ValueError, match="must not be negative"):
+        reorder_spike_vector_by_unit_and_segment(spikes, -1, 1)
+
+    with pytest.raises(ValueError, match="outside"):
+        reorder_spike_vector_by_unit_and_segment(spikes, 1, 1)  # unit_index 1 >= num_units
+    with pytest.raises(ValueError, match="outside"):
+        reorder_spike_vector_by_unit_and_segment(_make_spike_vector([0], [0], [5]), 1, 1)
+
+
+@pytest.mark.parametrize("num_units", [2, 300, 70_000], ids=["uint8", "uint16", "uint32"])
+def test_reorder_spike_vector_by_unit_and_segment_bucket_dtypes(monkeypatch, num_units):
+    """The numpy path narrows the bucket dtype to num_buckets; every width must stay correct."""
+    monkeypatch.setattr("spikeinterface.core.sorting_tools.HAVE_NUMBA", False)
+    rng = np.random.default_rng(0)
+    num_spikes = 1_000
+    spikes = _make_spike_vector(
+        sample_indices=np.arange(num_spikes),
+        unit_indices=rng.integers(0, num_units, size=num_spikes),
+        segment_indices=0,
+    )
+    ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(spikes, num_units, 1)
+    assert np.array_equal(spikes[order], ordered_spikes)
+    assert np.array_equal(ordered_spikes, spikes[np.argsort(spikes["unit_index"], kind="stable")])
+    assert counts.sum() == num_spikes
 
 
 def test_random_spikes_selection():
