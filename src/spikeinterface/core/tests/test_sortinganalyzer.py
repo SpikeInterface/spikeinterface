@@ -830,29 +830,28 @@ def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
     analyzer.compute(["random_spikes", "templates"])
     analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
 
-    ext = analyzer.get_extension("dummy_pipeline")
-    assert np.array_equal(ext.get_data(), amp_ref)
+    # NB: do not keep a local reference to the extension (or to `ext.data["amp"]`) across the
+    # recompute below: on Windows an open memmap on amp.npy would prevent deleting the folder.
+    assert np.array_equal(analyzer.get_extension("dummy_pipeline").get_data(), amp_ref)
 
     if format == "binary_folder":
         # written directly to the final npy file and kept as a memmap (not re-copied by _save_data)
         amp_file = folder / "extensions" / "dummy_pipeline" / "amp.npy"
         assert amp_file.is_file()
-        assert isinstance(ext.data["amp"], np.memmap)
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
     elif format == "zarr":
         # written directly as a zarr dataset in the extension group
         root = analyzer._get_zarr_root(mode="r")
         assert "amp" in root["extensions"]["dummy_pipeline"]
-        assert isinstance(ext.data["amp"], zarr.Array)
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
 
     if format != "memory":
         # data must survive a reload from disk
-        analyzer_reloaded = load_sorting_analyzer(folder)
-        assert np.array_equal(analyzer_reloaded.get_extension("dummy_pipeline").get_data(), amp_ref)
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
         # recompute (overwrite) must not corrupt or leave stale data behind
         analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
-        analyzer_reloaded = load_sorting_analyzer(folder)
-        assert np.array_equal(analyzer_reloaded.get_extension("dummy_pipeline").get_data(), amp_ref)
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
 
 @pytest.mark.parametrize("format", ["binary_folder", "zarr"])
@@ -903,25 +902,24 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
     # single string -> compute_one_extension -> BaseSpikeVectorExtension._run
     analyzer.compute("dummy_pipeline", param0=5.5)
 
-    ext = analyzer.get_extension("dummy_pipeline")
-    assert np.array_equal(ext.get_data(), amp_ref)
+    # NB: do not keep a local reference to the extension (or to `ext.data["amp"]`) across the
+    # recompute below: on Windows an open memmap on amp.npy would prevent deleting the folder.
+    assert np.array_equal(analyzer.get_extension("dummy_pipeline").get_data(), amp_ref)
 
     if format == "binary_folder":
         assert (folder / "extensions" / "dummy_pipeline" / "amp.npy").is_file()
-        assert isinstance(ext.data["amp"], np.memmap)
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
     elif format == "zarr":
         root = analyzer._get_zarr_root(mode="r")
         assert "amp" in root["extensions"]["dummy_pipeline"]
-        assert isinstance(ext.data["amp"], zarr.Array)
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
 
     if format != "memory":
         # data must survive a reload and recompute (overwrite) must work
-        analyzer_reloaded = load_sorting_analyzer(folder)
-        assert np.array_equal(analyzer_reloaded.get_extension("dummy_pipeline").get_data(), amp_ref)
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
         analyzer.compute("dummy_pipeline", param0=5.5)
-        analyzer_reloaded = load_sorting_analyzer(folder)
-        assert np.array_equal(analyzer_reloaded.get_extension("dummy_pipeline").get_data(), amp_ref)
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
         # save=False on a disk analyzer: computed in memory, nothing written to disk
         folder2 = tmp_path / ("analyzer_nosave" + (".zarr" if format == "zarr" else ""))

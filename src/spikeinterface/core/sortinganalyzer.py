@@ -2968,6 +2968,22 @@ class AnalyzerExtension:
         self.run_info = self._default_run_info_dict()
         self.data = dict()
 
+    def __del__(self):
+        # Close any open memmap file handles held in `data` (e.g. when an extension gathers or
+        # loads its data as a memmap). On Windows an open memmap prevents deleting the underlying
+        # file, so releasing the handles here allows the extension folder to be removed when the
+        # extension is dropped (e.g. on recompute). Best-effort: __del__ must never raise.
+        data = self.__dict__.get("data", None)
+        if not data:
+            return
+        for value in data.values():
+            mmap = getattr(value, "_mmap", None) if isinstance(value, np.memmap) else None
+            if mmap is not None:
+                try:
+                    mmap.close()
+                except Exception:
+                    pass
+
     def _default_run_info_dict(self):
         return dict(run_completed=False, runtime_s=None)
 
@@ -3460,6 +3476,13 @@ class AnalyzerExtension:
         Delete the extension in a folder (binary or zarr) and create an empty one.
         """
         if self.format == "binary_folder":
+            # Drop the analyzer's reference to a previously computed extension of the same name so
+            # it can be garbage collected. Its __del__ releases any open file handles (e.g. a memmap
+            # kept in `data` when gathering directly to npy) which, on Windows, would otherwise
+            # prevent deleting the folder below.
+            old_extension = self.sorting_analyzer.extensions.pop(self.extension_name, None)
+            del old_extension
+
             extension_folder = self._get_binary_extension_folder()
             if extension_folder.is_dir():
                 shutil.rmtree(extension_folder)
