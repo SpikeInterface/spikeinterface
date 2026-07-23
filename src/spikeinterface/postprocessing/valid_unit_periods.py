@@ -539,12 +539,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             (start_sample_index, end_sample_index) tuples.
         """
         if outputs == "numpy":
-            good_periods = self.data["valid_unit_periods"].copy()
+            good_periods = np.asarray(self.data["valid_unit_periods"]).copy()
         else:
             # by_unit
             unit_ids = self.sorting_analyzer.unit_ids
             good_periods = []
-            good_periods_array = self.data["valid_unit_periods"]
+            good_periods_array = np.asarray(self.data["valid_unit_periods"])
             for segment_index in range(self.sorting_analyzer.get_num_segments()):
                 segment_mask = good_periods_array["segment_index"] == segment_index
                 periods_dict = {}
