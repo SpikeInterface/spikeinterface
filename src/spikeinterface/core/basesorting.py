@@ -983,7 +983,9 @@ class BaseSorting(BaseExtractor):
         else:
             spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
-            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
+            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector[
+                ["sample_index", "unit_index", "segment_index"]
+            ]
 
             spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
 
