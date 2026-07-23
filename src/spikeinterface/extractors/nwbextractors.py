@@ -7,7 +7,14 @@ import importlib.util
 import numpy as np
 
 from spikeinterface import get_global_tmp_folder
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
+from spikeinterface.core import (
+    BaseRecording,
+    BaseRecordingSegment,
+    BaseSorting,
+    BaseSortingSegment,
+    SortingAnalyzer,
+    get_default_analyzer_extension_params,
+)
 from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -343,6 +350,25 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
     return result
 
 
+def _find_electrical_series_paths(file_handle, backend="hdf5"):
+    """Paths of every ElectricalSeries, searching only where they can live instead of the whole file.
+
+    In NWB, ElectricalSeries live under ``/acquisition`` (raw) or ``/processing/ecephys`` (LFP/filtered,
+    possibly nested in an LFP or FilteredEphys container). Restricting the recursive search to those two
+    subtrees avoids walking hundreds of unrelated objects (trials, behavior, stimulus, ...) over a stream,
+    where each object visited is a network round-trip. A file that stores an ElectricalSeries in a
+    non-standard location must be read by passing ``electrical_series_path`` explicitly.
+    """
+    result = []
+    for root in ("acquisition", "processing/ecephys"):
+        try:
+            group = file_handle[root]
+        except (KeyError, TypeError):
+            continue
+        _find_neurodata_type_from_backend(group, root, result, "ElectricalSeries", backend)
+    return result
+
+
 def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, electrical_series, backend="hdf5"):
     """
     Retrieves the indices of the electrodes from the electrical series.
@@ -556,14 +582,23 @@ class _NWBReader:
         # Resolve unit_table_path (auto-discovering it when the file has exactly one Units table)
         # and return the table handle, raising a helpful error that lists the options on failure.
         if self.unit_table_path is None:
-            available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
-            if len(available) != 1:
-                raise ValueError(
-                    "Multiple Units tables found in the file. "
-                    "Please specify the 'unit_table_path' argument:"
-                    f"Available options are: {available}."
-                )
-            self.unit_table_path = available[0]
+            # Fast path: the primary NWB Units table lives at the canonical top-level "units". Check it
+            # directly instead of walking the whole HDF5/zarr tree, which over a stream costs one network
+            # round-trip per object (hundreds on a rich file, dominating the extractor init). Only fall
+            # back to a full search when "units" is absent (a file that stores units in a non-standard
+            # location). When "units" is present it is used as-is, so a file with several Units tables is no
+            # longer flagged here; pass `unit_table_path` explicitly to select a non-canonical one.
+            if "units" in self.file and self.file["units"].attrs.get("neurodata_type") == "Units":
+                self.unit_table_path = "units"
+            else:
+                available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
+                if len(available) != 1:
+                    raise ValueError(
+                        "Multiple Units tables found in the file. "
+                        "Please specify the 'unit_table_path' argument:"
+                        f"Available options are: {available}."
+                    )
+                self.unit_table_path = available[0]
         try:
             return self.file[self.unit_table_path]
         except KeyError:
@@ -631,11 +666,8 @@ class _NWBReader:
             electrical_series = [item for item in self.nwbfile.all_children() if isinstance(item, ElectricalSeries)]
         else:
             backend = "zarr" if self.reading_method == "use_zarr" else "hdf5"
-            electrical_series = _find_neurodata_type_from_backend(
-                self.file, neurodata_type="ElectricalSeries", backend=backend
-            )
-        file_has_electrical_series = len(electrical_series) > 0
-        return file_has_electrical_series
+            electrical_series = _find_electrical_series_paths(self.file, backend=backend)
+        return len(electrical_series) > 0
 
     def _fetch_unit_properties(self):
         # Return the unit-table columns as a name -> per-unit values mapping in a backend-independent
@@ -735,7 +767,7 @@ class _NWBReader:
         # Resolve electrical_series_path (auto-discovering it when the file has exactly one series)
         # and return the series handle, raising a helpful error that lists the options on failure.
         if self.electrical_series_path is None:
-            available = _find_neurodata_type_from_backend(self.file, neurodata_type="ElectricalSeries", backend=backend)
+            available = _find_electrical_series_paths(self.file, backend=backend)
             if len(available) != 1:
                 raise ValueError(
                     "Multiple ElectricalSeries found in the file. "
@@ -1326,8 +1358,6 @@ class NwbSortingExtractor(BaseSorting):
         # unless it is named, because the ElectricalSeries in a file is not necessarily the one the
         # sorting was computed from.
 
-        # First, look for any ElectricalSeries in the file.
-        file_has_electrical_series = self._reader._has_electrical_series()
         electrical_series_path_is_provided = electrical_series_path is not None
         sampling_frequency_is_provided = self.provided_sampling_frequency is not None
         t_start_is_provided = self.t_start is not None
@@ -1353,15 +1383,15 @@ class NwbSortingExtractor(BaseSorting):
             # No ElectricalSeries named. An unnamed recording is ambiguous (it may not be the one the
             # sorting was computed from), so t_start must be given explicitly. With no recording in the
             # file, anchor the frame grid at 0 (the spike times in seconds are preserved regardless).
-            unnamed_recording_needs_t_start = file_has_electrical_series and not t_start_is_provided
-            if unnamed_recording_needs_t_start:
-                raise ValueError(
-                    "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
-                    "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
-                )
-
-            no_recording_to_align_to = not file_has_electrical_series and not t_start_is_provided
-            if no_recording_to_align_to:
+            # Whether the file has an ElectricalSeries only affects t_start's origin, so when t_start is
+            # already provided we skip that search entirely: it walks the whole HDF5 tree (one network
+            # round-trip per object) and otherwise dominates the extractor init on a rich streamed file.
+            if not t_start_is_provided:
+                if self._reader._has_electrical_series():
+                    raise ValueError(
+                        "The file contains an ElectricalSeries but 't_start' was not provided. Pass "
+                        "'electrical_series_path' to read the time base from it, or pass 't_start' explicitly."
+                    )
                 self.t_start = 0.0
 
             # sampling_frequency: the argument, or the Units.resolution attribute.
@@ -1545,6 +1575,25 @@ class NwbSortingSegment(BaseSortingSegment):
         unit_indices = np.repeat(np.arange(counts.size, dtype="int64"), counts)
         sample_indices = self._times_to_samples(spike_times)
         return sample_indices, unit_indices
+
+    def get_last_spike_time(self, segment_index: int | None = None) -> float:
+        """Get the time of the last spike in a segment across all units.
+        Overridden from BaseSorting to use spike_times_data.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The time of the last spike in seconds, or 0.0 if no spikes exist.
+        """
+        segment = self.segments[segment_index] if segment_index is not None else self.segments[0]
+        if segment.spike_times_data.size == 0:
+            return 0.0
+        return segment.spike_times_data[-1]
 
     def get_unit_spike_train_in_seconds(
         self,
@@ -1870,3 +1919,552 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
         outputs = outputs[0]
 
     return outputs
+
+
+# Where each SortingAnalyzer extension's data lives in an NWB file. Each extension maps to an ordered
+# list of read-sources tried until one resolves: the typed ndx-spikesorting container first, then the
+# generic-NWB convention. A user/dataset override merges over this (see `extension_map` in
+# `read_nwb_sorting_analyzer`); `None` disables an extension. This is only for real analyzer extensions;
+# sparsity, sorting properties, and recording metadata are handled separately by the reader.
+#
+# The "typed_container" source is a hook: the typed reader currently lives in ndx-spikesorting, so for
+# now it never resolves here and the convention source is used. When that logic moves into
+# spikeinterface, this source will resolve against the ndx-spikesorting types.
+DEFAULT_EXTENSION_MAP = {
+    "templates": [
+        {"source": "typed_container", "type": "Templates"},
+        {"source": "column", "column": "waveform_mean", "std_column": "waveform_sd"},
+    ],
+    "quality_metrics": [
+        {"source": "typed_container", "type": "UnitsMetrics"},
+        {"source": "columns", "columns": "canonical_quality"},
+    ],
+    "template_metrics": [
+        {"source": "typed_container", "type": "UnitsMetrics"},
+    ],
+    "unit_locations": [
+        {"source": "typed_container", "type": "UnitLocations"},
+    ],
+}
+
+
+def _resolve_extension_columns(extension_map, scalar_colnames, all_colnames):
+    """Resolve the convention (column-based) sources of an extension map against a Units table's columns.
+
+    Returns a dict with the resolved template column (and optional std column) and the per-extension
+    column lists for the column-backed extensions. The "typed_container" source is skipped here (the
+    typed reader lives in ndx-spikesorting for now), so resolution falls through to the "column"/
+    "columns" sources. `scalar_colnames` are the 1-D per-unit columns eligible to be metrics/properties;
+    `all_colnames` is every column name (used to check a source's target exists).
+    """
+    from spikeinterface.metrics.quality import ComputeQualityMetrics
+
+    resolved = {"templates_column": None, "templates_std_column": None, "quality_metric_colnames": []}
+
+    for extension, sources in extension_map.items():
+        if sources is None:  # explicitly disabled
+            continue
+        for source in sources:
+            kind = source.get("source")
+            if kind == "typed_container":
+                continue  # hook: not resolvable here yet
+            if kind == "column":
+                column = source.get("column")
+                if column in all_colnames:
+                    if extension == "templates":
+                        resolved["templates_column"] = column
+                        std_column = source.get("std_column")
+                        resolved["templates_std_column"] = std_column if std_column in all_colnames else None
+                    break
+            if kind == "columns":
+                spec = source.get("columns")
+                if spec == "canonical_quality":
+                    canonical = set(ComputeQualityMetrics.get_metric_columns())
+                    cols = [c for c in scalar_colnames if c in canonical]
+                else:  # an explicit list of column names
+                    cols = [c for c in spec if c in scalar_colnames]
+                if extension == "quality_metrics":
+                    resolved["quality_metric_colnames"] = cols
+                break
+
+    # every scalar column not claimed as a quality metric becomes a sorting property
+    claimed = set(resolved["quality_metric_colnames"])
+    resolved["property_colnames"] = [c for c in scalar_colnames if c not in claimed]
+    return resolved
+
+
+def read_nwb_sorting_analyzer(
+    file_path: str | Path,
+    t_start: float | None = None,
+    sampling_frequency: float | None = None,
+    electrical_series_path: str | None = None,
+    unit_table_path: str | None = None,
+    stream_mode: Literal["fsspec", "remfile", "zarr"] | None = None,
+    stream_cache_path: str | Path | None = None,
+    cache: bool = False,
+    storage_options: dict | None = None,
+    use_pynwb: bool = False,
+    group_name: str | None = None,
+    compute_extra: List[str] | None = ["unit_locations"],
+    compute_extra_params: dict | None = None,
+    extension_map: dict | None = None,
+    rescale_templates_to_uV: bool = True,
+    verbose: bool = False,
+) -> SortingAnalyzer:
+    # extension_map overrides (per extension) merge over DEFAULT_EXTENSION_MAP; see its docstring.
+    resolved_extension_map = dict(DEFAULT_EXTENSION_MAP)
+    if extension_map is not None:
+        resolved_extension_map.update(extension_map)
+    # try to read recording object to get the analyzer
+    try:
+        recording = NwbRecordingExtractor(
+            file_path=file_path,
+            electrical_series_path=electrical_series_path,
+            stream_mode=stream_mode,
+            stream_cache_path=stream_cache_path,
+            cache=cache,
+            storage_options=storage_options,
+            use_pynwb=use_pynwb,
+        )
+    except Exception:
+        if verbose:
+            print("Could not load recording, proceeding without it")
+        recording = None
+
+    t_start_tmp = 0 if t_start is None else t_start
+
+    sorting_tmp = NwbSortingExtractor(
+        file_path=file_path,
+        electrical_series_path=electrical_series_path,
+        unit_table_path=unit_table_path,
+        stream_mode=stream_mode,
+        stream_cache_path=stream_cache_path,
+        cache=cache,
+        storage_options=storage_options,
+        use_pynwb=use_pynwb,
+        t_start=t_start_tmp,
+        sampling_frequency=sampling_frequency,
+        load_unit_properties=False,  # columns are read deliberately below, into their extensions
+    )
+
+    sorting = sorting_tmp
+    # Recordingless case: leave t_start at 0 (set when the sorting was constructed). NWB spike times are
+    # in seconds from session start, so they are always >= 0 and map to non-negative frames with
+    # t_start = 0. Anchoring t_start to the first spike would only remove empty space before it on the
+    # timeline (cosmetic) and would cost a streamed read, so we skip it to keep the build cheap.
+
+    # Read the Units table deliberately. Classify each column and only materialize the ones that
+    # become part of the analyzer: `waveform_mean` (templates), the `electrodes` region (sparsity), the
+    # per-unit numeric metric columns (quality/template metrics), and the per-unit label columns
+    # (identity properties). The large per-spike columns (spike amplitudes, spike depths, each as long
+    # as the whole spike vector) are never read here, which is what makes streaming this table viable.
+    if use_pynwb:
+        units_table = sorting.units_table
+        colnames = list(units_table.colnames)
+        units = units_table.to_dataframe(index=True)
+        structural = {"waveform_mean", "waveform_sd", "electrodes"}
+        metric_colnames = [c for c in units.columns if c not in structural and units[c].dtype.kind in "fiu"]
+        label_colnames = [
+            c
+            for c in units.columns
+            if c not in structural
+            and units[c].dtype.kind == "O"
+            and not isinstance(units[c].iloc[0], (list, np.ndarray))
+        ]
+    else:
+        units_group = sorting.units_table
+        colnames = list(units_group.keys())
+        structural = ("id", "spike_times", "waveform_mean", "waveform_sd", "electrodes")
+        metric_colnames, label_colnames = [], []
+        for column_name in colnames:
+            if column_name.endswith("_index") or column_name in structural or f"{column_name}_index" in colnames:
+                continue  # index columns, structural columns, and ragged/per-spike columns
+            dataset = units_group[column_name]
+            if dataset.attrs.get("neurodata_type") == "DynamicTableRegion":
+                continue  # e.g. max_electrode: a per-unit reference into electrodes, not a metric
+            if dataset.ndim == 1 and dataset.dtype.kind in "fiu":
+                metric_colnames.append(column_name)
+            elif dataset.ndim == 1 and dataset.dtype.kind in "OSU":
+                label_colnames.append(column_name)
+
+    # Resolve the extension map against the Units columns: which column holds the templates, and which
+    # scalar columns are quality metrics (canonical names by default) vs plain sorting properties.
+    scalar_colnames = metric_colnames + label_colnames
+    resolved = _resolve_extension_columns(resolved_extension_map, scalar_colnames, colnames)
+    templates_column = resolved["templates_column"]
+    templates_std_column = resolved["templates_std_column"]
+    quality_metric_colnames = resolved["quality_metric_colnames"]
+    property_colnames = resolved["property_colnames"]
+
+    if not use_pynwb:
+        # deliberate read: only the resolved template column(s), the electrodes region, and the scalar
+        # columns that become metrics or properties are materialized; ragged/per-spike columns are not.
+        needed = [c for c in (templates_column, templates_std_column, "electrodes") if c and c in colnames]
+        needed += scalar_colnames
+        units = _create_df_from_nwb_table(units_group, columns=needed)
+
+    electrodes_indices = None
+    if use_pynwb:
+        electrodes_table = sorting._reader.nwbfile.electrodes.to_dataframe(index=True)
+        if "electrodes" in colnames:
+            electrodes_indices = units["electrodes"]
+    else:
+        electrodes_table = _create_df_from_nwb_table(sorting._reader.file["/general/extracellular_ephys/electrodes"])
+        if "electrodes" in colnames:
+            electrodes_indices = electrodes_indices = units["electrodes"][:]
+
+    if electrodes_indices is not None:
+        # here we assume all groups are the same for each unit, so we just check one.
+        if "group_name" in electrodes_table.columns:
+            group_names = np.array([electrodes_table.iloc[int(ei[0])]["group_name"] for ei in electrodes_indices])
+            if len(np.unique(group_names)) > 1:
+                if group_name is None:
+                    raise Exception(
+                        f"More than one group, use group_name option to select units. Available groups: {np.unique(group_names)}"
+                    )
+                else:
+                    unit_mask = group_names == group_name
+                    if verbose:
+                        print(f"Selecting {sum(unit_mask)} / {len(units)} units from {group_name}")
+                    sorting = sorting.select_units(unit_ids=sorting.unit_ids[unit_mask])
+                    units = units.loc[units.index[unit_mask]]
+                    electrodes_indices = units["electrodes"]
+
+    # Every scalar column not claimed as a quality metric becomes a sorting property (labels like
+    # cluster_uuid, and any non-canonical numeric column). Properties show up in the GUI's unit table
+    # alongside metrics, so nothing is lost, without asserting an unknown column is a "quality metric".
+    for property_column in property_colnames:
+        if property_column in units.columns and len(units[property_column]) == sorting.get_num_units():
+            sorting.set_property(property_column, units[property_column].values)
+
+    # Obtain a recording for the analyzer. With a real recording we use it directly. Without one (the
+    # streaming curation case) we build a lightweight placeholder recording that carries only the probe
+    # geometry, hand it to the standard constructor, and drop it afterwards. This mirrors
+    # `read_kilosort_as_analyzer` and avoids hand-assembling `rec_attributes` and channel ids.
+    if recording is not None:
+        group_names = np.unique(recording.get_channel_groups())
+        if group_name is not None and len(group_names) > 1:
+            recording = recording.split_by("group")[group_name]
+        analyzer_recording = recording
+        analyzer_channel_ids = list(recording.get_channel_ids())
+    else:
+        # The placeholder recording only needs to loosely bound the timeline: it is dropped right after the
+        # build and its length feeds the GUI time axis, not any curation quantity. Reading the full
+        # spike_times array for the exact last spike would cost ~130 MB over a stream, so instead read only
+        # the last stored spike (one chunk, ~4 MB) and double it. spike_times is stored per-unit-
+        # concatenated (not globally time-sorted), so the last stored value is a lower bound on the true
+        # last spike; doubling generously covers the gap while over-estimating only adds a harmless empty
+        # tail. Read from sorting_tmp because a group selection wraps `sorting` in a UnitsSelectionSorting
+        # whose segment has no spike_times_data.
+        spike_times_data = sorting_tmp._sorting_segments[0].spike_times_data
+        last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
+        placeholder_duration = max(last_stored_spike_time * 2.0, 1.0)
+        analyzer_recording, analyzer_channel_ids = _make_placeholder_recording_from_electrodes(
+            sorting, electrodes_table, electrodes_indices, duration=placeholder_duration, verbose=verbose
+        )
+
+    # Per-unit sparsity and channel map from the Units `electrodes` region. Each unit's `waveform_mean`
+    # is stored only on a subset of channels (near its peak); the region gives which channels those are.
+    # We use it both for the analyzer sparsity and to scatter the waveforms onto their true channel
+    # positions instead of stacking the sparse block densely.
+    sparsity, unit_local_channels = _make_sparsity_from_electrodes(
+        sorting, electrodes_table, electrodes_indices, analyzer_channel_ids
+    )
+
+    # Instantiate the analyzer through the standard constructor. For the recordingless case keep the
+    # lazy sorting (copy_sorting=False) so spike_times is read on demand rather than materialized here,
+    # and drop the placeholder recording once its geometry has been captured into rec_attributes.
+    analyzer = SortingAnalyzer.create_memory(
+        sorting=sorting,
+        recording=analyzer_recording,
+        sparsity=sparsity,
+        return_in_uV=True,
+        peak_sign="neg",
+        peak_mode="extremum",
+        rec_attributes=None,
+        copy_sorting=recording is not None,
+    )
+    if recording is None:
+        analyzer._recording = None
+
+    num_channels = len(analyzer_channel_ids)
+
+    # templates (from the resolved templates column), and the required random_spikes extension
+    if templates_column is not None and templates_column in units and unit_local_channels is not None:
+        # random_spikes only needs the total spike count of the (possibly group-selected) sorting. Read it
+        # from the NWB spike_times_index (per-unit cumulative counts, ~KB) on the unwrapped sorting_tmp,
+        # restricted to the selected units, rather than counting through the sorting object: a group
+        # selection wraps `sorting` in a UnitsSelectionSorting whose count materializes the parent's whole
+        # spike vector (~130-480 MB). np.isin keeps the units still present after any group selection.
+        per_unit_spike_counts = np.diff(sorting_tmp._sorting_segments[0].spike_times_index_data[:], prepend=0)
+        selected_units_mask = np.isin(sorting_tmp.unit_ids, sorting.unit_ids)
+        total_num_spikes = int(per_unit_spike_counts[selected_units_mask].sum())
+        _make_random_spikes(analyzer, total_num_spikes)
+        _make_templates(
+            analyzer,
+            units,
+            templates_column,
+            templates_std_column,
+            unit_local_channels,
+            num_channels,
+            rescale_to_uV=rescale_templates_to_uV,
+        )
+
+    # the resolved quality-metric columns -> quality_metrics extension
+    _make_metrics(analyzer, units, quality_metric_colnames, verbose=verbose)
+
+    # compute extra required
+    if compute_extra is not None:
+        if verbose:
+            print(f"Computing extra extensions: {compute_extra}")
+        compute_extra_params = {} if compute_extra_params is None else compute_extra_params
+        analyzer.compute(compute_extra, **compute_extra_params)
+
+    return analyzer
+
+
+def _make_placeholder_recording_from_electrodes(sorting, electrodes_table, electrodes_indices, duration, verbose=False):
+    """Build a lightweight placeholder recording that carries only the probe geometry of the electrodes
+    a unit's waveforms live on, for the recordingless (streaming) case.
+
+    Mirrors `read_kilosort_as_analyzer`: `generate_ground_truth_recording` produces a fully lazy
+    recording (noise generated on the fly, no traces materialized) whose only purpose is to feed probe
+    geometry, channel ids, and a bounding length into the standard analyzer constructor. The caller drops
+    the recording (`analyzer._recording = None`) right after construction. Returns the recording and the
+    ordered channel ids.
+    """
+    from probeinterface import Probe
+    from spikeinterface.core import generate_ground_truth_recording
+
+    # union of electrode rows referenced by any unit, in sorted order
+    electrode_indices_all = []
+    for region in electrodes_indices:
+        electrode_indices_all.extend(region)
+    electrode_indices_all = np.sort(np.unique(electrode_indices_all))
+    if verbose:
+        print(f"Found {len(electrode_indices_all)} electrodes")
+    electrodes_table_sliced = electrodes_table.iloc[electrode_indices_all]
+
+    if "channel_name" in electrodes_table_sliced:
+        # channel_name is already decoded to str at the source (_create_df_from_nwb_table), but pandas
+        # holds string columns as object dtype; cast to a numpy unicode array so SpikeInterface accepts
+        # the channel ids (object-dtype ids are rejected).
+        channel_ids = np.asarray(electrodes_table_sliced["channel_name"][:], dtype=str)
+    else:
+        channel_ids = electrodes_table_sliced.index.to_numpy()
+
+    electrode_colnames = electrodes_table_sliced.columns
+    assert (
+        "rel_x" in electrode_colnames and "rel_y" in electrode_colnames
+    ), "'rel_x' and 'rel_y' should be columns in the electrodes table"
+    locations = np.array([electrodes_table_sliced["rel_x"][:], electrodes_table_sliced["rel_y"][:]]).T
+
+    probe = Probe(si_units="um")
+    probe.set_contacts(locations, shapes="circle", shape_params={"radius": 1})
+    probe.set_device_channel_indices(np.arange(len(channel_ids)))
+
+    recording, _ = generate_ground_truth_recording(
+        durations=[duration],
+        sampling_frequency=sorting.sampling_frequency,
+        probe=probe,
+        num_units=1,
+        seed=0,
+    )
+    recording = recording.rename_channels(channel_ids)
+    return recording, list(channel_ids)
+
+
+def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices, analyzer_channel_ids):
+    """Build the analyzer `ChannelSparsity` and the per-unit local channel lists from the Units
+    `electrodes` region, mapping each unit's electrode rows onto positions in `analyzer_channel_ids`.
+    Returns (sparsity, unit_local_channels), or (None, None) if there is no electrodes region."""
+    if electrodes_indices is None:
+        return None, None
+
+    from spikeinterface.core.sparsity import ChannelSparsity
+
+    num_channels = len(analyzer_channel_ids)
+    if "channel_name" in electrodes_table.columns:
+        electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
+    else:
+        electrode_row_to_channel_id = electrodes_table.index.to_numpy()
+    position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
+
+    unit_local_channels = []
+    sparsity_mask = np.zeros((sorting.get_num_units(), num_channels), dtype=bool)
+    for unit_index, region in enumerate(electrodes_indices):
+        positions = [
+            position_of_channel_id[electrode_row_to_channel_id[int(electrode_row)]]
+            for electrode_row in region
+            if electrode_row_to_channel_id[int(electrode_row)] in position_of_channel_id
+        ]
+        unit_local_channels.append(positions)
+        sparsity_mask[unit_index, positions] = True
+    sparsity = ChannelSparsity(
+        mask=sparsity_mask,
+        unit_ids=np.asarray(sorting.unit_ids),
+        channel_ids=np.asarray(analyzer_channel_ids),
+    )
+    return sparsity, unit_local_channels
+
+
+def _make_random_spikes(analyzer, total_num_spikes):
+    """Attach the required `random_spikes` extension, always using the "all" method.
+
+    With no recording this extension is never used to extract waveforms (there are no traces), but it is a
+    required dependency of templates, so it must exist and be consistent with the sorting's spike count.
+    `method="all"` means the indices are just `arange(total_num_spikes)`; the caller supplies the count
+    (read cheaply from `spike_times_index`) so this never materializes the spike vector.
+    """
+    from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
+
+    random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
+    random_spikes_ext.set_params(method="all")
+    random_spikes_ext.data["random_spikes_indices"] = np.arange(total_num_spikes, dtype="int64")
+    random_spikes_ext.run_info["run_completed"] = True
+    analyzer.extensions["random_spikes"] = random_spikes_ext
+
+
+def _infer_template_scale_to_uV(dense_templates):
+    """Infer the factor that brings templates into microvolts, SpikeInterface's convention.
+
+    The NWB waveform unit attribute is schema-fixed to "volts" and never reflects the true scale
+    (pynwb issue #2162), so it cannot drive the conversion. The template magnitude can: an extracellular
+    spike peaks at roughly tens to hundreds of microvolts, so pick the factor in {1, 1e3, 1e6} that lands
+    the median per-unit peak in that physiological window. This reads no extra data (it operates on the
+    already-built templates). Returns 1.0 if the magnitude is unusable (all zero).
+    """
+    per_unit_peak = np.abs(dense_templates).max(axis=(1, 2))
+    per_unit_peak = per_unit_peak[per_unit_peak > 0]
+    if per_unit_peak.size == 0:
+        return 1.0
+    median_peak = float(np.median(per_unit_peak))
+    for factor in (1.0, 1e3, 1e6):
+        if 5.0 <= median_peak * factor <= 2000.0:
+            return factor
+    return 1.0
+
+
+def _make_templates(
+    analyzer,
+    units,
+    templates_column,
+    templates_std_column,
+    unit_local_channels,
+    num_channels,
+    rescale_to_uV=False,
+):
+    """Attach the `templates` extension from the resolved templates column, scattering each unit's
+    sparse waveform block onto its true channel positions."""
+    from spikeinterface.core.analyzer_extension_core import ComputeTemplates
+
+    waveform_mean = np.array([np.asarray(t, dtype="float") for t in units[templates_column].values])
+    num_samples_template = waveform_mean.shape[1]
+
+    # Scatter each unit's waveform onto its channels. This relies on the alignment contract that
+    # waveform_mean[:, i] corresponds to the unit's electrodes-region entry i. The IBL writer guarantees
+    # it by ordering each unit's real channels first (padding last) and building the electrodes region
+    # from exactly those real channels in the same order, so the first k = len(region) columns are the
+    # real channels in region order and any trailing padding columns are correctly dropped by [:, :k].
+    dense_templates = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
+    for unit_index, positions in enumerate(unit_local_channels):
+        k = len(positions)
+        dense_templates[unit_index][:, positions] = waveform_mean[unit_index][:, :k]
+
+    # The stored waveform unit attribute is schema-fixed to "volts" and never reflects the real scale
+    # (pynwb #2162), so it cannot drive a conversion. When rescaling is requested, infer the factor from
+    # the template magnitude instead and apply the same factor to the std templates below so both stay in
+    # the same unit. On by default (read_nwb_sorting_analyzer) so templates read in microvolts; it can be
+    # turned off to keep the file's native unit, since the scale does not affect peak channel, shape,
+    # location, or sparsity.
+    template_scale = _infer_template_scale_to_uV(dense_templates) if rescale_to_uV else 1.0
+    if template_scale != 1.0:
+        dense_templates *= template_scale
+
+    # scalar alignment (nbefore): the sample where the average peak-channel amplitude is largest
+    peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
+    nbefore = int(np.argmax(peak_amplitude_per_sample))
+
+    templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
+    templates_ext.data["average"] = dense_templates
+    operators = ["average"]
+
+    # Only expose the "std" operator when the file actually stores a std column (resolved). Fabricating a
+    # zero std would falsely imply the unit's spikes have no waveform variability, so when it is absent we
+    # declare only "average" rather than inventing data.
+    if templates_std_column is not None and templates_std_column in units.columns:
+        waveform_sd = np.array([np.asarray(t, dtype="float") for t in units[templates_std_column].values])
+        dense_std = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
+        for unit_index, positions in enumerate(unit_local_channels):
+            k = len(positions)
+            dense_std[unit_index][:, positions] = waveform_sd[unit_index][:, :k]
+        if template_scale != 1.0:
+            dense_std *= template_scale
+        templates_ext.data["std"] = dense_std
+        operators.append("std")
+
+    templates_ext.set_params(
+        ms_before=nbefore / analyzer.sampling_frequency * 1000,
+        ms_after=(num_samples_template - nbefore) / analyzer.sampling_frequency * 1000,
+        operators=operators,
+    )
+    templates_ext.run_info["run_completed"] = True
+    analyzer.extensions["templates"] = templates_ext
+
+
+def _make_metrics(analyzer, units, quality_metric_colnames, verbose=False):
+    """Attach the `quality_metrics` extension from the resolved quality-metric columns. Other per-unit
+    scalar columns are loaded as sorting properties instead (see the caller), and `template_metrics` is
+    never synthesized from value columns because it carries structured data a values-only table lacks."""
+    import pandas as pd
+    from spikeinterface.metrics.quality import ComputeQualityMetrics
+
+    quality_metric_df = pd.DataFrame(index=analyzer.unit_ids)
+    for col in quality_metric_colnames:
+        if col in units.columns:
+            quality_metric_df.loc[:, col] = units[col].values
+
+    if len(quality_metric_df.columns) > 0:
+        if verbose:
+            print("Adding quality metrics")
+        quality_metrics_ext = ComputeQualityMetrics(analyzer)
+        quality_metrics_ext.data["metrics"] = quality_metrics_ext._cast_metrics(quality_metric_df)
+        quality_metrics_ext.run_info["run_completed"] = True
+        analyzer.extensions["quality_metrics"] = quality_metrics_ext
+
+
+def _create_df_from_nwb_table(group, columns=None):
+    """Makes pandas DataFrame from hdf5/zarr NWB group.
+
+    If `columns` is given, only those columns (plus the `id` index) are read; the data of every other
+    column is never touched. This lets callers avoid materializing large columns, e.g. the per-spike
+    arrays of a Units table (spike amplitudes, spike depths), when only a few columns are needed.
+    """
+    import pandas as pd
+
+    all_colnames = list(group.keys())
+    if columns is None:
+        colnames = all_colnames
+    else:
+        colnames = [c for c in ["id", *columns] if c in all_colnames]
+    data = {}
+    for col in colnames:
+        if "_index" in col:
+            continue
+        item = group[col][:]
+        if f"{col}_index" in all_colnames:
+            item = np.split(item, group[f"{col}_index"][:])[:-1]
+            data[col] = item
+        elif item.ndim > 1:
+            data[col] = [item_flat for item_flat in item]
+        else:
+            if item.dtype.kind in ("O", "S"):
+                # HDF5 stores string columns as variable-length or fixed-length bytes (e.g. b"AP0",
+                # b"Probe00"). Decode to str at the source so every caller gets plain strings: channel and
+                # group ids must be str (SpikeInterface rejects object-dtype byte-string ids), and group
+                # selection compares the column against a str argument.
+                item = np.array([v.decode("utf-8") if isinstance(v, bytes) else v for v in item])
+            data[col] = item
+    df = pd.DataFrame(data=data)
+    df.set_index("id", inplace=True)
+    return df
