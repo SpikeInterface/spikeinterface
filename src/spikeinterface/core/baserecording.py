@@ -3,11 +3,11 @@ from typing import Literal
 from pathlib import Path
 
 import numpy as np
-from probeinterface import read_probeinterface, write_probeinterface
+from probeinterface import write_probeinterface
 
 from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import convert_bytes_to_str, convert_seconds_to_str
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str, save_properties_to_binary_folder
 from .job_tools import split_job_kwargs
 
 
@@ -329,13 +329,24 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             folder = kwargs["folder"]
             file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
-            t_starts = self._get_t_starts()
+            t_starts = self.get_segment_t_starts()
+            # Check if there are any time vectors
+            if self.has_any_time_vector():
+                file_timestamps_paths = [folder / f"times_cached_seg{i}.raw" for i in range(self.get_num_segments())]
+            else:
+                file_timestamps_paths = None
 
-            write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
+            write_binary(
+                self,
+                file_paths=file_paths,
+                dtype=dtype,
+                verbose=verbose,
+                file_timestamps_paths=file_timestamps_paths,
+                **job_kwargs,
+            )
 
             # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
             # See the __init__ of `BinaryFolderRecording`
-
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
@@ -348,16 +359,20 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 is_filtered=self.is_filtered(),
                 gain_to_uV=self.get_channel_gains(),
                 offset_to_uV=self.get_channel_offsets(),
+                file_timestamps_paths=file_timestamps_paths,
             )
             binary_rec.dump(folder / "binary.json", relative_to=folder)
-            cached = BinaryFolderRecording(folder_path=folder)
 
-            # timestamps are not saved in binary, so we have to set them explicitly
-            for segment_index in range(self.get_num_segments()):
-                if self.has_time_vector(segment_index):
-                    # the use of get_times is preferred since timestamps are converted to array
-                    time_vector = self.get_times(segment_index=segment_index)
-                    cached.set_times(time_vector, segment_index=segment_index)
+            # save properties
+            properties_folder = folder / "properties"
+            properties_folder.mkdir(parents=True, exist_ok=True)
+            save_properties_to_binary_folder(properties_folder, self)
+            # save probegroup
+            if self.has_probe():
+                probegroup = self.get_probegroup()
+                write_probeinterface(folder / "probegroup.json", probegroup)
+
+            cached = BinaryFolderRecording(folder_path=folder)
 
         elif format == "memory":
             if kwargs.get("sharedmem", True):
@@ -396,26 +411,15 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
 
         return cached
 
-    def _extra_metadata_from_folder(self, folder):
-        # load probe
-        super()._extra_metadata_from_folder(folder)
+    def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
+        super()._extra_metadata_to_dict(dump_dict, _in_reduce=_in_reduce)
 
-        # load time vector if any
-        for segment_index, rs in enumerate(self.segments):
-            time_file = folder / f"times_cached_seg{segment_index}.npy"
-            if time_file.is_file():
-                time_vector = np.load(time_file, mmap_mode="r")
-                rs._time_vector = time_vector
-
-    def _extra_metadata_to_folder(self, folder):
-        super()._extra_metadata_to_folder(folder)
-
-        # save time vector if any
-        for segment_index, rs in enumerate(self.segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
-            if time_vector is not None:
-                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+        # Add times_kwargs if the recording has been modified in memory (e.g. by set_times / shift_times / reset_times)
+        if _in_reduce and self._time_info_modified:
+            dump_dict["times_kwargs"] = []
+            for segment_index in range(self.get_num_segments()):
+                times_kwargs = self.segments[segment_index].get_times_kwargs()
+                dump_dict["times_kwargs"].append(times_kwargs)
 
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """

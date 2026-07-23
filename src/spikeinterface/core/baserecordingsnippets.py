@@ -320,31 +320,6 @@ class BaseRecordingSnippets(BaseExtractor):
         if self._probegroup is not None:
             other._probegroup = self._probegroup.copy()
 
-    def _extra_metadata_from_folder(self, folder):
-        # load probe from folder
-        # Note: we don't need any fix for legacy probegroups, since the
-        # set_probegroup() method will handle the device_channel_indices
-        # sorting and global contact order
-        folder = Path(folder)
-        probe_file = folder / "probegroup.json"
-        legacy_probe_file = folder / "probe.json"
-        if probe_file.is_file():
-            probegroup = read_probeinterface(probe_file)
-            self.set_probegroup(probegroup)
-        elif legacy_probe_file.is_file():
-            probegroup = read_probeinterface(legacy_probe_file)
-            self.set_probegroup(probegroup)
-
-        # remove "contact_vector" property if present as it is not needed anymore
-        if "contact_vector" in self.get_property_keys():
-            self.delete_property("contact_vector")
-
-    def _extra_metadata_to_folder(self, folder):
-        # save probe
-        if self.has_probe():
-            probegroup = self.get_probegroup()
-            write_probeinterface(folder / "probegroup.json", probegroup)
-
     def _extra_metadata_from_dict(self, dump_dict):
         # load probe and handle backward-compatibility with legacy "contact_vector"/"location" property
         if "probegroup" in dump_dict:
@@ -352,7 +327,16 @@ class BaseRecordingSnippets(BaseExtractor):
             probegroup = dump_dict["probegroup"]
             self._probegroup = ProbeGroup.from_dict(probegroup)
 
-    def _extra_metadata_to_dict(self, dump_dict):
+        if "times_kwargs" in dump_dict:
+            # When serializing, dump timestamps information because this could have been
+            # set in memory
+            times_kwargs_list = dump_dict["times_kwargs"]
+            for segment_index, times_kwargs in enumerate(times_kwargs_list):
+                self.segments[segment_index]._sampling_frequency = times_kwargs["sampling_frequency"]
+                self.segments[segment_index]._t_start = times_kwargs["t_start"]
+                self.segments[segment_index]._time_vector = times_kwargs["time_vector"]
+
+    def _extra_metadata_to_dict(self, dump_dict, _in_reduce: bool = False):
         # save probe
         if self.has_probe():
             probegroup = self.get_probegroup()

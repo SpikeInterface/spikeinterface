@@ -5,7 +5,7 @@ import numpy as np
 
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .npzsortingextractor import NpzSortingExtractor
-from .core_tools import define_function_from_class, make_paths_absolute
+from .core_tools import define_function_from_class, load_properties_from_binary_folder, make_paths_absolute
 
 
 class NumpyFolderSorting(BaseSorting):
@@ -44,8 +44,7 @@ class NumpyFolderSorting(BaseSorting):
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes
 
-        # Load metadata
-        self.load_metadata_from_folder(folder_path)
+        load_properties_from_binary_folder(folder_path / "properties", self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
@@ -107,8 +106,7 @@ class NpzFolderSorting(NpzSortingExtractor):
 
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 
-        folder_metadata = folder_path
-        self.load_metadata_from_folder(folder_metadata)
+        load_properties_from_binary_folder(folder_path / "properties", self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
         self._npz_kwargs = d["kwargs"]
