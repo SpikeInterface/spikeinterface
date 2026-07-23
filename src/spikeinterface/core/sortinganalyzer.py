@@ -474,6 +474,8 @@ class SortingAnalyzer:
             txt += " - has recording"
         if self.has_temporary_recording():
             txt += " - has temporary recording"
+        if self._lazy:
+            txt += " (lazy)"
         ext_txt = f"Loaded {len(self.extensions)} extensions"
         if len(self.extensions) > 0:
             ext_txt += f": {', '.join(self.extensions.keys())}"
