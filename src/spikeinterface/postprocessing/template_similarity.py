@@ -341,9 +341,10 @@ if HAVE_NUMBA:
             tgt_sliced = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
 
             for i in prange(num_templates):
-                src_template = src_sliced[i]
-                overlapping_ids = overlapping_j_list[i]
-                overlapping_chs = active_channels_list[i]
+                i_ = np.int64(i)
+                src_template = src_sliced[i_]
+                overlapping_ids = overlapping_j_list[i_]
+                overlapping_chs = active_channels_list[i_]
 
                 for pair_idx in range(len(overlapping_ids)):
                     j = np.uint16(overlapping_ids[pair_idx])

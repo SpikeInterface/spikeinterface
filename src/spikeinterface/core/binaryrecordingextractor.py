@@ -156,17 +156,6 @@ class BinaryRecordingExtractor(BaseRecording):
         )
         return d
 
-    def __del__(self):
-        """
-        Ensures that all segment resources are properly cleaned up when this recording extractor is deleted.
-        Closes any open file handles in the recording segments.
-        """
-        # Close all recording segments
-        for segment in self.segments:
-            # This will trigger the __del__ method of the BinaryRecordingSegment
-            # which will close the file handle
-            del segment
-
 
 BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
     _shared_job_kwargs_doc
