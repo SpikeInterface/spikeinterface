@@ -98,6 +98,42 @@ class ComputePrincipalComponents(AnalyzerExtension):
                 new_data[k] = v
         return new_data
 
+    def _select_channels_extension_data(self, channel_ids):
+
+        unit_ids = self.sorting_analyzer.unit_ids
+        old_unit_id_to_channel_ids = self.sorting_analyzer.sparsity.unit_id_to_channel_ids
+
+        unit_sparsity_slices = {}
+        for unit_id in unit_ids:
+            channel_indices = []
+            unit_channel_ids = old_unit_id_to_channel_ids[unit_id]
+
+            for channel_id in channel_ids:
+                if channel_id in unit_channel_ids:
+                    idx = np.where(old_unit_id_to_channel_ids[unit_id] == channel_id)[0][0]
+                    channel_indices.append(idx)
+            unit_sparsity_slices[unit_id] = np.array(channel_indices)
+
+        old_pcs = self.data["pca_projection"]
+        random_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+        new_waveforms = np.zeros_like(old_pcs)
+        max_num_active_channels = 0
+        for waveform_index, (waveform, spike) in enumerate(zip(old_pcs, random_spikes)):
+
+            unit_index = spike["unit_index"]
+            unit_id = unit_ids[unit_index]
+            channel_slice = unit_sparsity_slices[unit_id]
+
+            size_of_new_mask = len(channel_slice)
+            new_waveforms[waveform_index, :, :size_of_new_mask] = waveform[:, channel_slice]
+
+            max_num_active_channels = max(max_num_active_channels, size_of_new_mask)
+
+        data = {"pca_projection": new_waveforms[:, :, :max_num_active_channels]}
+
+        return data
+
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
