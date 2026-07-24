@@ -1,6 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension

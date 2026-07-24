@@ -792,6 +792,146 @@ def test_runtime_dependencies(dataset):
     assert not sorting_analyzer.has_extension("dummy_pipeline")
 
 
+def _compute_reference_pipeline_data(dataset):
+    """Compute the dummy_pipeline extension in memory to use as a reference."""
+    recording, sorting = dataset
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    analyzer.compute(["random_spikes", "templates"])
+    analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
+    return analyzer.get_extension("dummy_pipeline").get_data()
+
+
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
+    """
+    When computing node-pipeline extensions on a disk-backed analyzer, the results are gathered
+    directly to their final location (npy files for binary_folder, zarr datasets for zarr) instead
+    of being accumulated in memory and copied afterwards. This test checks that:
+      * the auto gather_mode selection matches the analyzer format
+      * the data is written in place and kept as a memmap / zarr.Array (no extra copy)
+      * the values match a plain in-memory computation and survive a reload
+      * recomputing (overwriting) works
+    """
+    import zarr
+
+    register_result_extension(DummyPipelineAnalyzerExtension)
+    recording, sorting = dataset
+
+    amp_ref = _compute_reference_pipeline_data(dataset)
+
+    if format == "memory":
+        folder = None
+    elif format == "binary_folder":
+        folder = tmp_path / "analyzer"
+    else:
+        folder = tmp_path / "analyzer.zarr"
+
+    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer.compute(["random_spikes", "templates"])
+    analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
+
+    # NB: do not keep a local reference to the extension (or to `ext.data["amp"]`) across the
+    # recompute below: on Windows an open memmap on amp.npy would prevent deleting the folder.
+    assert np.array_equal(analyzer.get_extension("dummy_pipeline").get_data(), amp_ref)
+
+    if format == "binary_folder":
+        # written directly to the final npy file and kept as a memmap (not re-copied by _save_data)
+        amp_file = folder / "extensions" / "dummy_pipeline" / "amp.npy"
+        assert amp_file.is_file()
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+    elif format == "zarr":
+        # written directly as a zarr dataset in the extension group
+        root = analyzer._get_zarr_root(mode="r")
+        assert "amp" in root["extensions"]["dummy_pipeline"]
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+
+    if format != "memory":
+        # data must survive a reload from disk
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
+
+        # recompute (overwrite) must not corrupt or leave stale data behind
+        analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
+
+
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
+    """
+    With save=False on a disk-backed analyzer, node-pipeline extensions are computed in memory
+    and nothing is written to disk.
+    """
+    register_result_extension(DummyPipelineAnalyzerExtension)
+    recording, sorting = dataset
+
+    folder = tmp_path / ("analyzer" if format == "binary_folder" else "analyzer.zarr")
+    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer.compute(["random_spikes", "templates"])
+    analyzer.compute({"dummy_pipeline": {"param0": 5.5}}, save=False)
+
+    # in memory the extension is available
+    assert analyzer.has_extension("dummy_pipeline")
+
+    # but nothing was written to disk
+    analyzer_reloaded = load_sorting_analyzer(folder)
+    assert not analyzer_reloaded.has_extension("dummy_pipeline")
+
+
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
+    """
+    Same as test_compute_pipeline_extension_gather_to_disk but through compute_one_extension
+    (i.e. computing a single node-pipeline extension via a string input), which uses
+    BaseSpikeVectorExtension._run() to gather directly to disk.
+    """
+    import zarr
+
+    register_result_extension(DummyPipelineAnalyzerExtension)
+    recording, sorting = dataset
+
+    amp_ref = _compute_reference_pipeline_data(dataset)
+
+    if format == "memory":
+        folder = None
+    elif format == "binary_folder":
+        folder = tmp_path / "analyzer"
+    else:
+        folder = tmp_path / "analyzer.zarr"
+
+    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer.compute(["random_spikes", "templates"])
+    # single string -> compute_one_extension -> BaseSpikeVectorExtension._run
+    analyzer.compute("dummy_pipeline", param0=5.5)
+
+    # NB: do not keep a local reference to the extension (or to `ext.data["amp"]`) across the
+    # recompute below: on Windows an open memmap on amp.npy would prevent deleting the folder.
+    assert np.array_equal(analyzer.get_extension("dummy_pipeline").get_data(), amp_ref)
+
+    if format == "binary_folder":
+        assert (folder / "extensions" / "dummy_pipeline" / "amp.npy").is_file()
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+    elif format == "zarr":
+        root = analyzer._get_zarr_root(mode="r")
+        assert "amp" in root["extensions"]["dummy_pipeline"]
+        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+
+    if format != "memory":
+        # data must survive a reload and recompute (overwrite) must work
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
+
+        analyzer.compute("dummy_pipeline", param0=5.5)
+        assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
+
+        # save=False on a disk analyzer: computed in memory, nothing written to disk
+        folder2 = tmp_path / ("analyzer_nosave" + (".zarr" if format == "zarr" else ""))
+        analyzer2 = create_sorting_analyzer(
+            sorting, recording, format=format, folder=folder2, sparse=False, sparsity=None
+        )
+        analyzer2.compute(["random_spikes", "templates"])
+        analyzer2.compute("dummy_pipeline", param0=5.5, save=False)
+        assert analyzer2.has_extension("dummy_pipeline")
+        assert not load_sorting_analyzer(folder2).has_extension("dummy_pipeline")
+
+
 def test_select_channels(dataset):
     recording, sorting = dataset
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
