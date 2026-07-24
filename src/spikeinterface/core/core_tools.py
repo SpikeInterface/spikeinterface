@@ -782,24 +782,67 @@ def ms_to_samples(ms: float, sampling_frequency: float) -> int:
     return round(ms * sampling_frequency / 1000.0)
 
 
-def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -> np.ndarray:
+def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list, axis: int = 0) -> np.ndarray:
     """
-    Slice a 2D array to select specific rows based on provided indices.
+    Slice an array to select specific indices/mask along one axis.
 
     Parameters
     ----------
     array : np.ndarray | zarr.Array
         A numpy or zarr array or boolean mask from which rows will be selected.
     row_indices : np.ndarray | list
-        A list or array of row indices to select from the array.
+        A list or array of indices (or a boolean mask) to select along `axis`.
+    axis : int, default: 0
+        The axis along which to select. Use 0 (the default) for spike/unit rows,
+        or a later axis (e.g. the channel axis of a 3D templates/waveforms array).
 
     Returns
     -------
     np.ndarray
-        A new 2D numpy array containing only the selected rows.
+        A new numpy array containing only the selected entries along `axis`.
     """
     if isinstance(array, zarr.Array):
-        # For zarr arrays, we need to convert the list of indices to a numpy array for advanced indexing
-        return array.oindex[row_indices]
+        # For zarr arrays, we need orthogonal indexing to select along a single axis
+        selection = (slice(None),) * axis + (row_indices,)
+        return array.oindex[selection]
     else:
-        return array[row_indices, ...]
+        selection = (slice(None),) * axis + (row_indices, ...)
+        return array[selection]
+
+
+def materialize_array(array: np.ndarray | zarr.Array) -> np.ndarray:
+    """
+    Return an independent, writable in-memory numpy array, ready for in-place mutation.
+
+    Extension data is often shared by reference across analyzers (e.g. during merge/split) to
+    avoid unnecessary copies, since sharing is safe as long as nothing mutates the array in
+    place. A few operations (e.g. summing correlogram rows/columns into a merged unit, sparse
+    channel realignment of waveforms/PCA projections) do need to mutate in place, and for those
+    a real copy is required: zarr.Array has no `.copy()` method and is read-only from a
+    previously-saved store, while `copy.deepcopy()` does not actually clone a zarr array's
+    underlying data. Use this right before the in-place mutation, not as a default habit.
+
+    Parameters
+    ----------
+    array : np.ndarray | zarr.Array
+        A numpy or zarr array about to be mutated in place.
+
+    Returns
+    -------
+    np.ndarray
+        A new, independent, writable numpy array with the same data.
+    """
+    if isinstance(array, zarr.Array):
+        return array[:]
+    else:
+        return array.copy()
+
+
+def _ensure_seed(seed):
+    # when seed is None:
+    # we want to set one to push it in the Recordind._kwargs to reconstruct the same signal
+    # this is a better approach than having seed=42 or seed=my_dog_birthday because we ensure to have
+    # a new signal for all call with seed=None but the dump/load will still work
+    if seed is None:
+        seed = np.random.default_rng(seed=None).integers(0, 2**63)
+    return seed
