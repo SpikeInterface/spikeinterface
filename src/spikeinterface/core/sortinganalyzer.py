@@ -1404,7 +1404,7 @@ class SortingAnalyzer:
             unit_ids = self.unit_ids[units_aggregation_key == key]
             channel_ids = self.channel_ids[channel_aggregation_key == key]
             analyzer_units = self.select_units(unit_ids)
-            analyzer_split = analyzer_units.select_channels(channel_ids)
+            analyzer_split = analyzer_units._select_channels(channel_ids)
             split_analyzers[key] = analyzer_split
 
         return split_analyzers
@@ -1767,7 +1767,7 @@ class SortingAnalyzer:
             folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
 
-    def select_channels(self, channel_ids) -> "SortingAnalyzer":
+    def _select_channels(self, channel_ids) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()` but with a subset of channels.
         Filters channels by creating a new sorting analyzer object in a new folder.
@@ -1788,6 +1788,9 @@ class SortingAnalyzer:
         if not np.all(np.isin(channel_ids, self.channel_ids)):
             wrong_channel_ids = [ch for ch in channel_ids if ch not in self.channel_ids]
             raise ValueError(f"Some channel_ids are not in the current channel_ids: {wrong_channel_ids}")
+
+        select_channel_indices_in_old_recording = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
+
         if self.has_recording() or self.has_temporary_recording():
             new_recording = self.recording.select_channels(channel_ids)
             new_rec_attributes = None
@@ -1802,8 +1805,7 @@ class SortingAnalyzer:
                     values_arr = np.array(values)
                     if len(values_arr) == len(self.channel_ids):
                         # only slice properties that have the same length as channel_ids
-                        channel_indices = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
-                        new_properties[key] = values_arr[channel_indices]
+                        new_properties[key] = values_arr[select_channel_indices_in_old_recording]
                     else:
                         new_properties[key] = values_arr
                 new_rec_attributes["properties"] = new_properties
@@ -1811,8 +1813,9 @@ class SortingAnalyzer:
                 slice_indices = self.channel_ids_to_indices(channel_ids)
                 new_probegroup = new_rec_attributes["probegroup"].get_slice(slice_indices)
                 new_rec_attributes["probegroup"] = new_probegroup
+
         if self.sparsity is not None:
-            sparsity_mask = self.sparsity.mask[:, np.isin(self.channel_ids, channel_ids)]
+            sparsity_mask = self.sparsity.mask[:, select_channel_indices_in_old_recording]
             new_sparsity = ChannelSparsity(sparsity_mask, self.unit_ids, np.array(channel_ids))
         else:
             new_sparsity = None
