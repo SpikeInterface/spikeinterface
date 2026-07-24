@@ -400,12 +400,18 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
         if isinstance(value, np.ndarray):
             assert isinstance(value, array_class)
 
-    # check that the lazy mode does not overwrite existing extensions
+    # a lazy (but not read-only) analyzer is allowed to overwrite existing extensions
     sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
-    # reload the analyzer to check that the original extension is not overwritten
     sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
     random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
-    assert random_spikes_ext.params["max_spikes_per_unit"] != 10
+    assert random_spikes_ext.params["max_spikes_per_unit"] == 10
+
+    # check that a lazy+read-only analyzer does not overwrite existing extensions
+    sorting_analyzer_lazy_ro = load_sorting_analyzer(folder, format="auto", lazy=True, read_only=True)
+    sorting_analyzer_lazy_ro.compute("random_spikes", max_spikes_per_unit=20)
+    sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
+    random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
+    assert random_spikes_ext.params["max_spikes_per_unit"] != 20
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
