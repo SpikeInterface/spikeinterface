@@ -2628,6 +2628,11 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
         # delete from folder or zarr
         if self.format != "memory" and self.has_extension(extension_name) and not self._read_only:
+            # close any memmap handles already held (e.g. by a previous lazy load), possibly shared with
+            # an external reference, before touching disk (ext.delete() below closes its own)
+            old_extension = self.extensions.get(extension_name)
+            if old_extension is not None:
+                old_extension._close_memmaps()
             # need a reload to reset the folder
             ext = self.load_extension(extension_name)
             ext.delete()
@@ -3484,6 +3489,9 @@ class AnalyzerExtension:
         """
         Delete the extension from the folder or zarr and from the dict.
         """
+        # close any memmap handles onto these files first (e.g. from a lazy load) so the
+        # folder/files can actually be removed
+        self._close_memmaps()
         self._delete_extension_folder()
         self.params = None
         self.run_info = self._default_run_info_dict()
