@@ -61,7 +61,9 @@ extensions_with_rel_tolerance_merge = {
     "template_metrics": 0.2,  # some metrics are very sensitive to template changes, so we put a large tolerance
     "quality_metrics": 1e-2,
 }
-extensions_with_rel_tolerance_splits = {"amplitude_scalings": 1e-1}
+extensions_with_rel_tolerance_splits = {
+    "amplitude_scalings": 1e-1,
+}
 
 
 def get_dataset_to_merge():
@@ -286,6 +288,9 @@ def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, fo
     extension_dict_ = extension_dict_split.copy()
     extension_dict_.pop("random_spikes")
     analyzer_hard.extensions["random_spikes"] = analyzer_split.extensions["random_spikes"]
+    # noise_levels' random slice sampling is seeded: reuse the exact same seed so a fresh
+    # recompute matches the original instead of sampling a different (but similarly valid) subset
+    extension_dict_["noise_levels"] = dict(sorting_analyzer.get_extension("noise_levels").params)
     analyzer_hard.compute(extension_dict_, n_jobs=1)
 
     for ext in extension_dict:

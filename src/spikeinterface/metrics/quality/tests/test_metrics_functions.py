@@ -790,7 +790,7 @@ def test_unit_id_order_independence(small_sorting_analyzer):
 
     extensions_to_compute = {
         "random_spikes": {"seed": 1205},
-        "noise_levels": {"seed": 1205},
+        "noise_levels": {"random_slices_kwargs": {"seed": 1205}},
         "waveforms": {},
         "templates": {},
         "spike_amplitudes": {},
