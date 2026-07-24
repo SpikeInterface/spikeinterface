@@ -798,7 +798,7 @@ def test_select_channels(dataset):
     sorting_analyzer.compute(["random_spikes", "templates", "noise_levels"])
     # select channels
     keep_channel_ids = recording.channel_ids[::2]
-    sorting_analyzer2 = sorting_analyzer.select_channels(channel_ids=keep_channel_ids)
+    sorting_analyzer2 = sorting_analyzer._select_channels(channel_ids=keep_channel_ids)
 
     assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
     assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
@@ -815,6 +815,28 @@ def test_select_channels(dataset):
     assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
     for p in sorting_analyzer2.rec_attributes["properties"].values():
         assert len(p) == len(keep_channel_ids)
+
+
+def test_select_channels_independent(dataset):
+    """
+    Test that `_select_channels` is independent of channel id order.
+    """
+    recording, sorting = dataset
+    # Make a very sparse analyzer
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs={"method": "radius", "radius_um": 30}
+    )
+
+    select_channel_ids = np.array(["3", "7", "8"])
+    sa_one = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+
+    # Make another analyzer with select_channel_ids ['7', '3', '8']
+    shuffle_order = np.array([1, 0, 2])
+    second_channel = select_channel_ids[shuffle_order]
+    sa_two = sorting_analyzer._select_channels(channel_ids=second_channel)
+
+    assert np.all(sa_one.sparsity.mask == sa_two.sparsity.mask[:, shuffle_order])
+    assert np.all(sa_one.get_channel_locations() == sa_two.get_channel_locations()[shuffle_order])
 
 
 def test_main_channel_from_templates_dense_recordingless(tmp_path):
