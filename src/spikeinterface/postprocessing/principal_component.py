@@ -10,9 +10,8 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
-
 from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
@@ -197,7 +196,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
-        projections = self.data["pca_projection"][spike_mask]
+        projections = slice_rows(self.data["pca_projection"], spike_mask)
 
         if sparsity is None:
             return projections
