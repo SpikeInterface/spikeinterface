@@ -806,6 +806,15 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     def _set_params(self, **noise_level_params):
         params = noise_level_params.copy()
+        # ensure that random_slices_kwargs is always present and has a seed for reproducibility
+        if "random_slices_kwargs" not in params:
+            params["random_slices_kwargs"] = dict()
+        if "seed" not in params["random_slices_kwargs"]:
+            params["random_slices_kwargs"]["seed"] = None
+        if params["random_slices_kwargs"]["seed"] is None:
+            from spikeinterface.core.core_tools import _ensure_seed
+
+            params["random_slices_kwargs"]["seed"] = _ensure_seed(params["random_slices_kwargs"]["seed"])
         return params
 
     def _select_units_extension_data(self, unit_ids):

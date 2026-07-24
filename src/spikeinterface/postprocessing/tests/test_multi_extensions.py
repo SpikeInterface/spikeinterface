@@ -15,7 +15,7 @@ from spikeinterface.core.core_tools import slice_rows
 
 # even if this is in postprocessing, we make an extension for quality metrics
 extension_dict = {
-    "noise_levels": dict(),
+    "noise_levels": dict(force_recompute=True),
     "random_spikes": dict(),
     "waveforms": dict(),
     "templates": dict(),
@@ -127,8 +127,10 @@ def dataset_to_split():
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-# skip if format is memory and lazy is True
 def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, format, tmp_path):
+    if format == "memory" and lazy:
+        pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
+
     set_global_job_kwargs(n_jobs=1)
 
     recording, sorting, other_ids = dataset_to_merge
@@ -250,6 +252,8 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
 @pytest.mark.parametrize("sparse", [False, True])
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, format, tmp_path):
+    if format == "memory" and lazy:
+        pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
     set_global_job_kwargs(n_jobs=1)
 
     recording, sorting, units_to_split = dataset_to_split
