@@ -472,6 +472,18 @@ class SortingAnalyzer:
         # the read_only flag is used to load the extensions in a read-only way (cannot be modified)
         self._read_only = read_only
 
+        if self.format == "memory":
+            if self._lazy:
+                warnings.warn(
+                    "Lazy mode is not supported for format='memory'. The extensions will be loaded in memory.",
+                )
+                self._lazy = False
+            if self._read_only:
+                warnings.warn(
+                    "Read-only mode is not supported for format='memory'. Extensions can be modified in memory, but changes will not be saved to disk.",
+                )
+                self._read_only = False
+
         # extensions are not loaded at init
         self.extensions = dict()
 
