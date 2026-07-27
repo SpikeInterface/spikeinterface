@@ -835,26 +835,26 @@ def test_select_channels_sparse_waveforms_templates(dataset):
 
     # Select channels, in a non-monotonic way
     select_channel_ids = np.array(["3", "8", "7"])
-    analyzer_seleted = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+    analyzer_selected = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
 
     # Prepare the data
     original_id_index_map = dict(
         zip(sorting_analyzer.channel_ids, sorting_analyzer.channel_ids_to_indices(sorting_analyzer.channel_ids))
     )
     selected_id_index_map = dict(
-        zip(analyzer_seleted.channel_ids, analyzer_seleted.channel_ids_to_indices(analyzer_seleted.channel_ids))
+        zip(analyzer_selected.channel_ids, analyzer_selected.channel_ids_to_indices(analyzer_selected.channel_ids))
     )
 
     original_templates = sorting_analyzer.get_extension("templates").get_data()
-    selected_templates = analyzer_seleted.get_extension("templates").get_data()
+    selected_templates = analyzer_selected.get_extension("templates").get_data()
 
     original_waveforms = sorting_analyzer.get_extension("waveforms")
-    selected_waveforms = analyzer_seleted.get_extension("waveforms")
+    selected_waveforms = analyzer_selected.get_extension("waveforms")
 
     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
 
         original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
-        selected_units_to_channels = analyzer_seleted.sparsity.unit_id_to_channel_ids[unit_id]
+        selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
 
         original_waveforms_one_unit = original_waveforms.get_waveforms_one_unit(unit_id)
         selected_waveforms_one_unit = selected_waveforms.get_waveforms_one_unit(unit_id)

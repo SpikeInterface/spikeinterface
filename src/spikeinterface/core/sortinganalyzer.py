@@ -1789,7 +1789,7 @@ class SortingAnalyzer:
             wrong_channel_ids = [ch for ch in channel_ids if ch not in self.channel_ids]
             raise ValueError(f"Some channel_ids are not in the current channel_ids: {wrong_channel_ids}")
 
-        select_channel_indices_in_old_recording = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
+        select_channel_indices_in_old_recording = self.channel_ids_to_indices(channel_ids)
 
         if self.has_recording() or self.has_temporary_recording():
             new_recording = self.recording.select_channels(channel_ids)

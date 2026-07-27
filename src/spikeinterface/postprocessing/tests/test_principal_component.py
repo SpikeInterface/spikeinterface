@@ -216,16 +216,16 @@ def test_select_channels_sparse_pca():
 
     # Select channels, in a non-monotonic way
     select_channel_ids = np.array(["3", "8", "7"])
-    analyzer_seleted = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+    analyzer_selected = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
 
     # Prepare the data
     original_pca = sorting_analyzer.get_extension("principal_components")
-    selected_pca = analyzer_seleted.get_extension("principal_components")
+    selected_pca = analyzer_selected.get_extension("principal_components")
 
     for unit_id in sorting_analyzer.unit_ids:
 
         original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
-        selected_units_to_channels = analyzer_seleted.sparsity.unit_id_to_channel_ids[unit_id]
+        selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
 
         original_pca_one_unit, _ = original_pca.get_projections_one_unit(unit_id, sparse=True)
         selected_pca_one_unit, _ = selected_pca.get_projections_one_unit(unit_id, sparse=True)
