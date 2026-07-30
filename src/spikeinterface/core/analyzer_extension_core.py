@@ -265,14 +265,14 @@ class ComputeWaveforms(AnalyzerExtension):
         # Compute how to slice the original sparsity to get the newly selected sparsity
         unit_sparsity_slices = {}
         for unit_id in unit_ids:
-            channel_indices = []
+            unit_sparsity_channel_indices = []
             unit_channel_ids = old_unit_id_to_channel_ids[unit_id]
 
             for channel_id in channel_ids:
                 if channel_id in unit_channel_ids:
                     idx = np.where(old_unit_id_to_channel_ids[unit_id] == channel_id)[0][0]
-                    channel_indices.append(idx)
-            unit_sparsity_slices[unit_id] = np.array(channel_indices)
+                    unit_sparsity_channel_indices.append(idx)
+            unit_sparsity_slices[unit_id] = np.array(unit_sparsity_channel_indices)
 
         old_waveforms = self.data["waveforms"]
         random_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
