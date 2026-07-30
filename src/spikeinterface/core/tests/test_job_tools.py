@@ -6,7 +6,7 @@ import pytest
 from spikeinterface.core import (
     generate_recording,
     get_best_job_kwargs,
-    get_global_job_kwargs,
+    reset_global_job_kwargs,
     set_global_job_kwargs,
 )
 from spikeinterface.core.job_tools import (
@@ -244,7 +244,6 @@ def test_fix_job_kwargs():
         fixed_job_kwargs = fix_job_kwargs(job_kwargs)
 
     # test mutually exclusive
-    _old_global = get_global_job_kwargs().copy()
     set_global_job_kwargs(chunk_memory="50M")
     job_kwargs = dict()
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
@@ -254,7 +253,7 @@ def test_fix_job_kwargs():
     fixed_job_kwargs = fix_job_kwargs(job_kwargs)
     assert "chunk_memory" not in fixed_job_kwargs
     assert fixed_job_kwargs["chunk_duration"] == "300ms"
-    set_global_job_kwargs(**_old_global)
+    reset_global_job_kwargs()
 
 
 def test_split_job_kwargs():
