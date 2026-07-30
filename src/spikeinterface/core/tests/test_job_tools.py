@@ -247,11 +247,11 @@ def test_fix_job_kwargs():
     _old_global = get_global_job_kwargs().copy()
     set_global_job_kwargs(chunk_memory="50M")
     job_kwargs = dict()
-    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    fixed_job_kwargs = fix_job_kwargs(job_kwargs)
     assert "chunk_memory" in fixed_job_kwargs
 
     job_kwargs = dict(chunk_duration="300ms")
-    fixed_job_kwargs = fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    fixed_job_kwargs = fix_job_kwargs(job_kwargs)
     assert "chunk_memory" not in fixed_job_kwargs
     assert fixed_job_kwargs["chunk_duration"] == "300ms"
     set_global_job_kwargs(**_old_global)
