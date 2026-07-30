@@ -36,9 +36,12 @@ class ChannelsAggregationRecording(BaseRecording):
             )
 
         self._recordings = recording_list
-
-        for group_id, recording in zip(recording_ids, recording_list):
-            recording.set_property("aggregation_key", [group_id] * recording.get_num_channels())
+        aggregation_key = np.concatenate(
+            [
+                np.asarray([recording_id] * recording.get_num_channels())
+                for recording_id, recording in zip(recording_ids, recording_list)
+            ]
+        )
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()
@@ -90,6 +93,7 @@ class ChannelsAggregationRecording(BaseRecording):
                             del property_dict[prop_name]
                             break
 
+        property_dict["aggregation_key"] = aggregation_key
         for prop_name, prop_values in property_dict.items():
             self.set_property(key=prop_name, values=prop_values)
 
