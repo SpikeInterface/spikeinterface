@@ -231,6 +231,17 @@ def test_aggretion_labeling_for_dicts():
     assert np.all(user_group_property == [6, 6, 7, 7])
 
 
+def test_aggregate_channels_does_not_change_inputs():
+    recording1 = generate_recording(num_channels=4, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    aggregate_channels([recording1, recording2])
+    aggregate_channels({"X": recording1, "Y": recording2})
+
+    assert "aggregation_key" not in recording1.get_property_keys()
+    assert "aggregation_key" not in recording2.get_property_keys()
+
+
 def test_channel_aggregation_does_not_preserve_ids_if_not_unique():
 
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
