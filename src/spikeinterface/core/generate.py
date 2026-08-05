@@ -2191,6 +2191,58 @@ def _generate_multimodal(rng, size, num_modes, lim0, lim1):
     return values
 
 
+def _indices_closer_than(points, minimum_distance):
+    """
+    Return the sorted indices of the points that lie within `minimum_distance` of another point.
+
+    This answers the same question as taking the full pairwise distance matrix and collecting the
+    rows that contain a violation, but it only ever compares points that share a grid cell or one
+    of its neighbours. Cells are `minimum_distance` wide, so a violating pair can never be more
+    than one cell apart on any axis and nothing outside that block has to be looked at. The cost
+    then follows the number of points rather than its square.
+
+    Parameters
+    ----------
+    points : numpy.ndarray
+        A (num_points, 3) array of positions.
+    minimum_distance : float
+        Positions strictly closer together than this are reported.
+
+    Returns
+    -------
+    indices : numpy.ndarray
+        The sorted, unique indices of the offending points.
+    """
+    num_points = points.shape[0]
+    if num_points < 2:
+        return np.zeros(0, dtype="int64")
+
+    coordinates = np.asarray(points, dtype="float64")
+    origin = coordinates.min(axis=0)
+    cells = np.floor((coordinates - origin) / minimum_distance).astype("int64")
+
+    # group the point indices by cell, so a cell can be looked up without scanning every point
+    buckets = {}
+    for index, cell in enumerate(map(tuple, cells)):
+        buckets.setdefault(cell, []).append(index)
+
+    offsets = [(dx, dy, dz) for dx in (-1, 0, 1) for dy in (-1, 0, 1) for dz in (-1, 0, 1)]
+    squared_minimum = minimum_distance * minimum_distance
+    offending = set()
+    for cell, members in buckets.items():
+        neighbourhood = []
+        for dx, dy, dz in offsets:
+            neighbourhood.extend(buckets.get((cell[0] + dx, cell[1] + dy, cell[2] + dz), ()))
+        neighbour_indices = np.asarray(neighbourhood, dtype="int64")
+        deltas = coordinates[members][:, np.newaxis, :] - coordinates[neighbour_indices][np.newaxis, :, :]
+        squared = np.sum(deltas * deltas, axis=2)
+        # a point always finds itself at distance zero, so drop the self pairing before testing
+        squared[np.asarray(members)[:, np.newaxis] == neighbour_indices[np.newaxis, :]] = np.inf
+        offending.update(np.asarray(members)[np.any(squared < squared_minimum, axis=1)].tolist())
+
+    return np.array(sorted(offending), dtype="int64")
+
+
 def _poisson_disk_sampling_3d(rng, lower, upper, radius, min_points=0, num_candidates=30, max_sweeps=20):
     """
     Fill an axis aligned 3D box with points that are all at least `radius` apart, using Bridson's
@@ -2408,28 +2460,37 @@ def generate_unit_locations(
     if minimum_distance is None or minimum_distance <= 0 or num_units == 0:
         return draw_unconstrained(num_units)
 
+    # First keep drawing positions uniformly and redrawing the ones that sit too close, which is
+    # what this function has always done. That leaves the units spread the way callers already
+    # depend on: they are only ever pushed apart as far as minimum_distance actually requires,
+    # rather than as far as the box would allow. The one thing that changes is how the offending
+    # units are found, a uniform grid instead of the full pairwise distance matrix, which is what
+    # made the old loop cost grow with the square of num_units.
+    units_locations = draw_unconstrained(num_units)
+    renew_inds = None
+    for _ in range(max_iteration):
+        too_close = _indices_closer_than(units_locations, minimum_distance)
+        if too_close.size == 0:
+            return units_locations
+        # narrow to the ones that were already bad last round, matching the previous behaviour
+        renew_inds = too_close if renew_inds is None else renew_inds[np.isin(renew_inds, too_close)]
+        units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
+        if distribution == "uniform":
+            units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+        else:
+            units_locations[:, 1][renew_inds] = _generate_multimodal(
+                rng, renew_inds.size, num_modes, minimum_y, maximum_y
+            )
+        units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+
+    # Redrawing never converged. That is the case the old implementation gave up on, warning and
+    # handing back locations that still broke the constraint it promises. A box packed close to
+    # what minimum_distance allows is exactly where independent redraws keep colliding, so fall
+    # back to placing the units directly with Poisson disk sampling, which fills such a box in one
+    # pass instead of hoping a redraw happens to land clear.
     lower = np.array([minimum_x, minimum_y, minimum_z], dtype="float64")
     upper = np.array([maximum_x, maximum_y, maximum_z], dtype="float64")
-
-    # Poisson disk sampling fills the box rather than emitting a chosen number of points, and how
-    # many it emits scales as volume / radius ** 3. Starting from a radius that is expected to land
-    # a little over num_units keeps the work proportional to what is actually asked for instead of
-    # to the capacity of the box, which matters when minimum_distance is small compared to the
-    # probe. If that radius comes up short it is shrunk back towards minimum_distance, at which
-    # point the box is packed as tightly as the constraint allows.
-    # "multimodal" then keeps the units it wants by weighting that pool by the layer density, so it
-    # needs a pool it can actually be selective within, while "uniform" only needs enough to choose
-    # from.
-    box_volume = float(np.prod(np.maximum(upper - lower, minimum_distance)))
-    pool_factor = 2.0 if distribution == "uniform" else 8.0
-    sampling_distance = max(minimum_distance, float(np.cbrt(box_volume / (pool_factor * num_units))))
-
-    points = np.zeros((0, 3), dtype="float32")
-    for _ in range(max(max_iteration, 1)):
-        points = _poisson_disk_sampling_3d(rng, lower, upper, sampling_distance, min_points=num_units)
-        if points.shape[0] >= num_units or sampling_distance <= minimum_distance:
-            break
-        sampling_distance = max(minimum_distance, sampling_distance / 1.5)
+    points = _poisson_disk_sampling_3d(rng, lower, upper, minimum_distance, min_points=num_units)
 
     if points.shape[0] >= num_units:
         if distribution == "uniform":
