@@ -566,7 +566,16 @@ def extract_waveforms_to_single_buffer(
         processor = TimeSeriesChunkExecutor(
             recording, func, init_func, init_args, job_name=job_name, verbose=verbose, **job_kwargs
         )
-        processor.run()
+        try:
+            processor.run()
+        except Exception:
+            # the buffer is never handed over to the caller when the run fails, so nobody else can
+            # release it. Without this, a failed run leaves a shared memory segment behind.
+            if mode == "shared_memory" and shm is not None:
+                del all_waveforms
+                shm.unlink()
+                shm.close()
+            raise
 
     if mode == "memmap":
         return all_waveforms
@@ -830,21 +839,51 @@ def estimate_templates(
             copy=False,
             **job_kwargs,
         )
-        templates_array = np.zeros(
-            (len(unit_ids), all_waveforms.shape[1], all_waveforms.shape[2]), dtype=all_waveforms.dtype
-        )
-        for unit_index, unit_id in enumerate(unit_ids):
-            wfs = all_waveforms[spikes["unit_index"] == unit_index]
-            templates_array[unit_index, :, :] = np.median(wfs, axis=0)
-        # release shared memory after the median
-        del all_waveforms
-        wf_array_info["shm"].close()
-        wf_array_info["shm"].unlink()
+        try:
+            templates_array = np.zeros(
+                (len(unit_ids), all_waveforms.shape[1], all_waveforms.shape[2]), dtype=all_waveforms.dtype
+            )
+            for unit_index, unit_id in enumerate(unit_ids):
+                wfs = all_waveforms[spikes["unit_index"] == unit_index]
+                templates_array[unit_index, :, :] = np.median(wfs, axis=0)
+        finally:
+            # release shared memory after the median, also when the median raises
+            del all_waveforms
+            shm = wf_array_info["shm"]
+            if shm is not None:
+                # empty arrays have no shared memory
+                shm.unlink()
+                shm.close()
 
     else:
         raise ValueError(f"estimate_templates(..., operator={operator}) wrong operator must be average or median")
 
     return templates_array
+
+
+def _allocate_accumulator_shared_array(shape, dtype):
+    """
+    Allocate one shared memory accumulator for `estimate_templates_with_accumulator()`.
+
+    The accumulator is allocated per worker, so its size scales with n_jobs and the allocation
+    can fail on machines with a small shared memory area (/dev/shm on Linux). The raw failure is
+    an opaque "OSError: [Errno 28] No space left on device", so it is re-raised with the sizes
+    that caused it.
+    """
+    try:
+        return make_shared_array(shape, dtype)
+    except (OSError, MemoryError) as err:
+        dtype = np.dtype(dtype)
+        num_worker, num_units, num_samples, num_chans = shape
+        nbytes = int(np.prod(shape)) * dtype.itemsize
+        size = f"{nbytes / 1e9:.2f} GB" if nbytes >= 1e9 else f"{nbytes / 1e6:.2f} MB"
+        raise MemoryError(
+            f"estimate_templates_with_accumulator() could not allocate its shared memory accumulator of "
+            f"{size}. The accumulator is allocated per worker, so its size is "
+            f"n_jobs * num_units * num_samples * num_channels * itemsize = "
+            f"{num_worker} * {num_units} * {num_samples} * {num_chans} * {dtype.itemsize} bytes. "
+            f"Lower n_jobs, or pass an explicit sparsity so that num_channels is smaller."
+        ) from err
 
 
 def estimate_templates_with_accumulator(
@@ -921,68 +960,86 @@ def estimate_templates_with_accumulator(
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
 
     dtype = np.dtype("float32")
-    waveform_accumulator_per_worker, shm = make_shared_array(shape, dtype)
+    waveform_accumulator_per_worker, shm = _allocate_accumulator_shared_array(shape, dtype)
     shm_name = shm.name
-    if return_std:
-        waveform_squared_accumulator_per_worker, shm_squared = make_shared_array(shape, dtype)
-        shm_squared_name = shm_squared.name
-    else:
-        waveform_squared_accumulator_per_worker = None
-        shm_squared_name = None
+    waveform_squared_accumulator_per_worker = None
+    shm_squared = None
+    shm_squared_name = None
 
-    func = _worker_estimate_templates
-    init_func = _init_worker_estimate_templates
+    # everything below must release the shared memory, including on error. A segment that is not
+    # unlinked outlives the failure, keeps consuming the resource that is already scarce here, and
+    # is reported at interpreter shutdown as "leaked shared_memory objects".
+    try:
+        if return_std:
+            waveform_squared_accumulator_per_worker, shm_squared = _allocate_accumulator_shared_array(shape, dtype)
+            shm_squared_name = shm_squared.name
 
-    init_args = (
-        recording,
-        spikes,
-        shm_name,
-        shm_squared_name,
-        shape,
-        dtype,
-        nbefore,
-        nafter,
-        return_in_uV,
-        sparsity_mask,
-    )
+        func = _worker_estimate_templates
+        init_func = _init_worker_estimate_templates
 
-    if job_name is None:
-        job_name = "estimate_templates_with_accumulator"
-    processor = TimeSeriesChunkExecutor(
-        recording, func, init_func, init_args, job_name=job_name, verbose=verbose, need_worker_index=True, **job_kwargs
-    )
-    processor.run()
+        init_args = (
+            recording,
+            spikes,
+            shm_name,
+            shm_squared_name,
+            shape,
+            dtype,
+            nbefore,
+            nafter,
+            return_in_uV,
+            sparsity_mask,
+        )
 
-    # average
-    waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
-    if return_std:
-        # we need a copy here because we will use the means to compute the stds
-        template_means = waveforms_sum.copy()
-    else:
-        # waveforms_sum will also be changed in this case when acting on template_means
-        template_means = waveforms_sum
+        if job_name is None:
+            job_name = "estimate_templates_with_accumulator"
+        processor = TimeSeriesChunkExecutor(
+            recording,
+            func,
+            init_func,
+            init_args,
+            job_name=job_name,
+            verbose=verbose,
+            need_worker_index=True,
+            **job_kwargs,
+        )
+        processor.run()
 
-    unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
-    template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
+        # average
+        waveforms_sum = np.sum(waveform_accumulator_per_worker, axis=0)
+        if return_std:
+            # we need a copy here because we will use the means to compute the stds
+            template_means = waveforms_sum.copy()
+        else:
+            # waveforms_sum will also be changed in this case when acting on template_means
+            template_means = waveforms_sum
 
-    if return_std:
-        waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
-        # standard deviation
-        template_stds = np.zeros_like(template_means)
-        for unit_index, count in zip(unit_indices, spike_count):
-            residuals = (
-                waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
-            ) + count * template_means[unit_index] ** 2
-            residuals[residuals < 0] = 0
-            template_stds[unit_index] = np.sqrt(residuals / count)
+        unit_indices, spike_count = np.unique(spikes["unit_index"], return_counts=True)
+        template_means[unit_indices, :, :] /= spike_count[:, np.newaxis, np.newaxis]
+
+        if return_std:
+            waveforms_squared_sum = np.sum(waveform_squared_accumulator_per_worker, axis=0)
+            # standard deviation
+            template_stds = np.zeros_like(template_means)
+            for unit_index, count in zip(unit_indices, spike_count):
+                residuals = (
+                    waveforms_squared_sum[unit_index] - 2 * template_means[unit_index] * waveforms_sum[unit_index]
+                ) + count * template_means[unit_index] ** 2
+                residuals[residuals < 0] = 0
+                template_stds[unit_index] = np.sqrt(residuals / count)
+    finally:
+        # important : release the sharedmem.
+        # the numpy views on the buffers must be dropped before closing, otherwise numpy raises
+        # "BufferError: cannot close exported pointers exist". unlink() is what actually frees the
+        # segment so it comes first, a failing close() must not leave the segment behind.
+        del waveform_accumulator_per_worker
         del waveform_squared_accumulator_per_worker
-        shm_squared.unlink()
-        shm_squared.close()
+        shm.unlink()
+        shm.close()
+        if shm_squared is not None:
+            shm_squared.unlink()
+            shm_squared.close()
 
-    # important : release the sharedmem
-    del waveform_accumulator_per_worker
-    shm.unlink()
-    shm.close()
+    # the returned arrays come from np.sum / np.zeros_like, so they do not view the shared buffers
 
     if return_std:
         return template_means, template_stds
