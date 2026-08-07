@@ -113,6 +113,68 @@ def test_reorder_spike_vector_by_unit_and_segment_bucket_dtypes(monkeypatch, num
     assert counts.sum() == num_spikes
 
 
+def _legacy_reorder(spikes, unit_major=True):
+    """The pre-counting-sort implementation, for parity testing."""
+    if unit_major:
+        keys = (spikes["sample_index"], spikes["segment_index"], spikes["unit_index"])
+    else:
+        keys = (spikes["sample_index"], spikes["unit_index"], spikes["segment_index"])
+    order = np.lexsort(keys)
+    return spikes[order]
+
+
+@pytest.mark.parametrize("unit_major", [True, False], ids=["unit_major", "segment_major"])
+def test_reorder_spike_vector_by_unit_and_segment_extra_fields(force_numba, unit_major):
+    """Fields beyond `minimum_spike_dtype` must survive the reorder, travelling with their spike.
+
+    This is needed because `to_spike_vector(main_channel_indices=...)` appends a "channel_index" field.
+    """
+    wide_dtype = minimum_spike_dtype + [("channel_index", "int64")]
+    num_units, num_segments, num_spikes = 5, 2, 500
+
+    rng = np.random.default_rng(0)
+    spikes = np.empty(num_spikes, dtype=wide_dtype)
+    segment_indices = np.sort(rng.integers(0, num_segments, size=num_spikes))
+    spikes["segment_index"] = segment_indices
+    for segment_index in range(num_segments):
+        in_segment = segment_indices == segment_index
+        spikes["sample_index"][in_segment] = np.sort(rng.integers(0, 1_000, size=in_segment.sum()))
+    spikes["unit_index"] = rng.integers(0, num_units, size=num_spikes)
+    # Tie channel_index to unit_index so a mis-shuffled column is detectable.
+    spikes["channel_index"] = spikes["unit_index"] * 7 + 3
+
+    ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(
+        spikes, num_units, num_segments, unit_major=unit_major
+    )
+
+    assert ordered_spikes.dtype == spikes.dtype
+    assert np.array_equal(ordered_spikes, spikes[order])
+    assert np.array_equal(ordered_spikes["channel_index"], ordered_spikes["unit_index"] * 7 + 3)
+    assert np.array_equal(ordered_spikes, _legacy_reorder(spikes, unit_major=unit_major))
+    assert counts.sum() == num_spikes
+
+
+@pytest.mark.parametrize("extra_field", [("amplitude", "float32"), ("amplitude", "float64")])
+def test_reorder_spike_vector_by_unit_and_segment_non_uniform_dtype(force_numba, extra_field):
+    """`NumpySorting` stores whatever dtype its caller hands it. Make sure these weird spike
+    vectors still get reordered correctly.
+    """
+    dtype = minimum_spike_dtype + [extra_field]
+    spikes = np.empty(6, dtype=dtype)
+    spikes["sample_index"] = [10, 10, 11, 12, 12, 13]
+    spikes["unit_index"] = [2, 0, 1, 2, 0, 0]
+    spikes["segment_index"] = 0
+    spikes["amplitude"] = [1.5, -2.25, 3.75, -4.5, 5.125, 6.0]
+
+    ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(spikes, 3, 1)
+
+    assert ordered_spikes.dtype == spikes.dtype
+    assert np.array_equal(counts, [3, 1, 2])
+    assert np.array_equal(ordered_spikes, spikes[order])
+    assert np.array_equal(ordered_spikes["amplitude"], [-2.25, 5.125, 6.0, 3.75, 1.5, -4.5])
+    assert np.array_equal(ordered_spikes, _legacy_reorder(spikes))
+
+
 def test_random_spikes_selection():
     recording, sorting = generate_ground_truth_recording(
         durations=[20.0, 10.0],
