@@ -12,7 +12,7 @@ import numpy as np
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
-from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -100,39 +100,10 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     def _select_channels_extension_data(self, channel_ids):
 
-        unit_ids = self.sorting_analyzer.unit_ids
-        old_unit_id_to_channel_ids = self.sorting_analyzer.sparsity.unit_id_to_channel_ids
-
-        # Compute how to slice the original sparsity to get the newly selected sparsity
-        unit_sparsity_slices = {}
-        for unit_id in unit_ids:
-            unit_sparsity_channel_indices = []
-            unit_channel_ids = old_unit_id_to_channel_ids[unit_id]
-
-            for channel_id in channel_ids:
-                if channel_id in unit_channel_ids:
-                    idx = np.where(old_unit_id_to_channel_ids[unit_id] == channel_id)[0][0]
-                    unit_sparsity_channel_indices.append(idx)
-            unit_sparsity_slices[unit_id] = np.array(unit_sparsity_channel_indices)
-
         old_pcs = self.data["pca_projection"]
-        random_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        new_pcs = _select_channels_sparse_data(self.sorting_analyzer, old_pcs, channel_ids)
 
-        new_pcs = np.zeros_like(old_pcs)
-        max_num_active_channels = 0
-        for pc_index, (old_pc, unit_index) in enumerate(zip(old_pcs, random_spikes["unit_index"])):
-
-            unit_id = unit_ids[unit_index]
-            channel_slice = unit_sparsity_slices[unit_id]
-
-            if len(channel_slice) > 0:
-
-                size_of_new_mask = len(channel_slice)
-                new_pcs[pc_index, :, :size_of_new_mask] = old_pc[:, channel_slice]
-
-                max_num_active_channels = max(max_num_active_channels, size_of_new_mask)
-
-        data = {"pca_projection": new_pcs[:, :, :max_num_active_channels]}
+        data = {"pca_projection": new_pcs}
 
         for key, value in self.data.items():
             if key != "pca_projection":
