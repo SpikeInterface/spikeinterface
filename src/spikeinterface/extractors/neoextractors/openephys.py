@@ -392,6 +392,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         }
         return neo_kwargs
 
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "load_sync_channel" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("load_sync_channel")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
+
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     """

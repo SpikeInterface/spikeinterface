@@ -129,8 +129,8 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # Compute time_vector or t_start, following the pattern from DecimateRecordingSegment.
         # Do not use BasePreprocessorSegment because we have to reset the sampling rate!
-        if parent_recording_segment.time_vector is not None:
-            parent_tv = np.asarray(parent_recording_segment.time_vector)
+        if parent_recording_segment._time_vector is not None:
+            parent_tv = np.asarray(parent_recording_segment._time_vector)
 
             # Detect gaps in the parent time vector.
             # A true gap means at least one dropped sample, so dt >= 2 * expected_dt.
@@ -236,12 +236,12 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             BaseRecordingSegment.__init__(self, sampling_frequency=None, t_start=None, time_vector=time_vector)
         else:
             BaseRecordingSegment.__init__(
-                self, sampling_frequency=resample_rate, t_start=parent_recording_segment.t_start
+                self, sampling_frequency=resample_rate, t_start=parent_recording_segment._t_start
             )
 
     def get_num_samples(self):
-        if self.time_vector is not None:
-            return len(self.time_vector)
+        if self._time_vector is not None:
+            return len(self._time_vector)
         return int(self._parent_segment.get_num_samples() / self._parent_rate * self._resample_rate)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -272,18 +272,18 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # Decimate can misbehave on some cases, while resample always looks nice enough.
         # Check which method to use:
-        from scipy import signal
+        from scipy.signal import decimate, resample
 
         if np.mod(self._parent_rate, self._resample_rate) == 0:
             # Ratio between sampling frequencies
             q = int(self._parent_rate / self._resample_rate)
             # Decimate can have issues for some cases, returning NaNs
-            resampled_traces = signal.decimate(parent_traces, q=q, axis=0)
+            resampled_traces = decimate(parent_traces, q=q, axis=0)
             # If that's the case, use signal.resample
             if np.any(np.isnan(resampled_traces)):
-                resampled_traces = signal.resample(parent_traces, num, axis=0)
+                resampled_traces = resample(parent_traces, num, axis=0)
         else:
-            resampled_traces = signal.resample(parent_traces, num, axis=0)
+            resampled_traces = resample(parent_traces, num, axis=0)
 
         # now take care of the edges
         resampled_traces = resampled_traces[left_margin_rs : num - right_margin_rs]
@@ -291,7 +291,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
     def _get_traces_gapped(self, start_frame, end_frame, channel_indices):
         """Resample traces section-by-section, avoiding FFT processing across gaps."""
-        from scipy import signal
+        from scipy.signal import decimate, resample
 
         # Determine the post-indexing channel count via a 1-sample parent fetch.
         # channel_indices may be a slice, list, ndarray, or None, so we cannot
@@ -371,11 +371,11 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             # Resample this section
             if is_integer_ratio:
                 q = int(self._parent_rate / self._resample_rate)
-                resampled = signal.decimate(parent_traces, q=q, axis=0)
+                resampled = decimate(parent_traces, q=q, axis=0)
                 if np.any(np.isnan(resampled)):
-                    resampled = signal.resample(parent_traces, num, axis=0)
+                    resampled = resample(parent_traces, num, axis=0)
             else:
-                resampled = signal.resample(parent_traces, num, axis=0)
+                resampled = resample(parent_traces, num, axis=0)
 
             # Trim margins and write directly into the pre-allocated buffer.
             # Clamp to the remaining space in case decimate's output length

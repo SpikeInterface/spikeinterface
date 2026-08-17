@@ -111,6 +111,15 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "load_sync_channel" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("load_sync_channel")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
+
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
 

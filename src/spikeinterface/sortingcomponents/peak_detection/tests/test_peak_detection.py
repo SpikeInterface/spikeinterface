@@ -1,45 +1,34 @@
-import numpy as np
-import shutil
 from pathlib import Path
 import tempfile
+import importlib.util
 
 import pytest
-
+import numpy as np
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
-from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
-from spikeinterface.sortingcomponents.waveforms.features_from_peaks import PeakToPeakFeature
-
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCADenoising
 from spikeinterface.sortingcomponents.peak_detection.iterative import IterativePeakDetector
-
-
 from spikeinterface.sortingcomponents.peak_detection.by_channel import ByChannelPeakDetector, ByChannelTorchPeakDetector
 from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import (
     LocallyExclusivePeakDetector,
     LocallyExclusiveTorchPeakDetector,
 )
-
 from spikeinterface.core import get_noise_levels
 from spikeinterface.core.node_pipeline import run_node_pipeline
 from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_peaks
 
 from spikeinterface.sortingcomponents.tests.common import make_dataset
 
-try:
-    import pyopencl
-
+if importlib.util.find_spec("pyopencl") is not None:
     HAVE_PYOPENCL = True
-except:
+else:
     HAVE_PYOPENCL = False
 
-try:
-    import torch
-
+if importlib.util.find_spec("torch") is not None:
     HAVE_TORCH = True
-except:
+else:
     HAVE_TORCH = False
 
 

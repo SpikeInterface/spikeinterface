@@ -442,14 +442,14 @@ freq_max : float, default: 20.0
     Cut-off frequency (Hz) for the Gaussian low-pass filter applied to the
     rectified signal when building the envelope.
 seed : int | None, default: None
-    Random seed forwarded to :func:`~spikeinterface.core.get_noise_levels`.
-    If ``None``, ``get_noise_levels`` uses ``seed=0``.
+    Random seed forwarded to :func:`~spikeinterface.core.get_random_data_chunks`.
 job_kwargs : dict | None, default: None
     Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
     ``n_jobs``, ``chunk_duration``).
 random_slices_kwargs : dict | None, default: None
     Additional keyword arguments forwarded to the ``random_slices_kwargs``
-    argument of :func:`~spikeinterface.core.get_noise_levels`."""
+    argument of :func:`~spikeinterface.core.get_random_data_chunks`. Any ``"seed"``
+    key in this dictionary is overridden by the ``seed`` argument of this function."""
 
 
 def detect_artifact_periods_by_envelope(
@@ -584,13 +584,15 @@ def _transform_internal_dtype_to_artifact_dtype(
         sub_thr = artifacts[mask]
         if len(sub_thr) > 0:
             if not sub_thr["front"][0]:
-                local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))
+                local_thr = np.zeros(1, dtype=sub_thr.dtype)
                 local_thr["sample_index"] = 0
+                local_thr["segment_index"] = seg_index
                 local_thr["front"] = True
                 sub_thr = np.hstack((local_thr, sub_thr))
             if sub_thr["front"][-1]:
-                local_thr = np.zeros(1, dtype=np.dtype(base_period_dtype + [("front", "bool")]))
+                local_thr = np.zeros(1, dtype=sub_thr.dtype)
                 local_thr["sample_index"] = recording.get_num_samples(seg_index)
+                local_thr["segment_index"] = seg_index
                 local_thr["front"] = False
                 sub_thr = np.hstack((sub_thr, local_thr))
 
@@ -710,9 +712,8 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
             Keyword arguments forwarded to :func:`run_node_pipeline` (e.g.
             ``n_jobs``, ``chunk_duration``).
         noise_levels_kwargs : dict | None, default: None
-            Keyword arguments for `spikeinterface.core.get_noise_levels()` function.
-
-        If none, `get_noise_levels` uses `seed=0` and `NoiseGeneratorRecording` generates a random seed using `numpy.random.default_rng`.
+            Keyword arguments for `spikeinterface.core.get_noise_levels()`, used only
+            when ``mode="noise"``.
         mode : "zeros" | "noise" | "apodization", default: "zeros"
             Determines what periods are replaced by. Can be one of the following:
 
@@ -725,7 +726,9 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         apodization_samples : int, default: 7
             The factor used for the cosine taper when mode is "apodization". Higher values create a wider taper.
         seed : int | None, default: None
-            Random seed for `get_noise_levels` and `NoiseGeneratorRecording`.
+            Random seed, if applicable. When ``method="envelope"``, used for chunk
+            subsampling. When ``mode="noise"``, for the noise used to fill the
+            silenced periods.
         artifact_periods : np.ndarray | None, default: None
             Optionally, pre-computed artifact periods can be passed directly to the constructor to skip the
             detection step. If ``None``, artifact periods are detected on the fly using the specified method
@@ -749,8 +752,14 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         else:
             if recording_to_detect is None:
                 recording_to_detect = recording
+            detect_method_kwargs = dict(method_kwargs) if method_kwargs else {}
+            if method == "envelope":
+                detect_method_kwargs["seed"] = seed
             artifact_periods = detect_artifact_periods(
-                recording_to_detect, method=method, method_kwargs=method_kwargs, job_kwargs=job_kwargs
+                recording_to_detect,
+                method=method,
+                method_kwargs=detect_method_kwargs,
+                job_kwargs=job_kwargs,
             )
         super().__init__(
             recording,

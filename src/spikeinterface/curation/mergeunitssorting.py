@@ -1,7 +1,9 @@
+from copy import deepcopy
+
 import numpy as np
+
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from copy import deepcopy
 from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
 

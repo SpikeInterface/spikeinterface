@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-from spikeinterface import create_sorting_analyzer, get_template_extremum_channel, generate_ground_truth_recording
+from spikeinterface import create_sorting_analyzer, generate_ground_truth_recording
 from spikeinterface.core.base import spike_peak_dtype
 from spikeinterface.core.job_tools import divide_time_series_into_chunks
 
@@ -80,9 +80,9 @@ def test_run_node_pipeline(cache_folder_creation):
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    peaks = sorting_to_peaks(sorting, main_channel_indices, spike_peak_dtype)
     # print(peaks.size)
 
     peak_retriever = PeakRetriever(recording, peaks)
@@ -90,20 +90,17 @@ def test_run_node_pipeline(cache_folder_creation):
     peak_retriever_few = PeakRetriever(recording, peaks[: peaks.size // 2])
 
     # channel index is from template
-    spike_retriever_T = SpikeRetriever(
-        sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
-    )
+    spike_retriever_T = SpikeRetriever(sorting, recording, channel_from_template=True)
     # channel index is per spike
     spike_retriever_S = SpikeRetriever(
         sorting,
         recording,
         channel_from_template=False,
-        extremum_channel_inds=extremum_channel_inds,
         radius_um=50,
         peak_sign="neg",
     )
 
-    # test with 3 differents first nodes
+    # test with 3 different first nodes
     for loop, peak_source in enumerate((peak_retriever, peak_retriever_few, spike_retriever_T, spike_retriever_S)):
         # one step only : squeeze output
         nodes = [
@@ -202,9 +199,9 @@ def test_skip_after_n_peaks_and_recording_slices():
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, peak_sign="neg", outputs="index")
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
-    peaks = sorting_to_peaks(sorting, extremum_channel_inds, spike_peak_dtype)
+    peaks = sorting_to_peaks(sorting, main_channel_indices, spike_peak_dtype)
     # print(peaks.size)
 
     node0 = PeakRetriever(recording, peaks)

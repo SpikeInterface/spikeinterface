@@ -13,19 +13,19 @@ def analyse_residual(
     """
     This create the residual by removing each spike from the recording.
     This take in account the spike amplitude scaling, analyzer need "amplitude_scalings" extensions.
-    Then a peak detector is run on this residual tarces and then number of peaks can be analyzed (the less the better).
+    Then a peak detector is run on this residual traces and then number of peaks can be analyzed (the less the better).
 
-    This residual is not perfect at the moement because it do not take in the account the jitter per spikes
+    This residual is not perfect at the moment because it do not take in the account the jitter per spikes
     and so the residual can be high for high amplitude when there is a inherent jitter per spike.
 
-    Paramters
+    Parameters
     ----------
     analyzer : SortingAnalyzer
 
     Returns
     -------
     residual : Recording
-        The resdiual
+        The residual
     peaks : np.array
         The peaks vector detected on the residual.
 
@@ -41,16 +41,16 @@ def analyse_residual(
 
 def make_residual_recording(analyzer):
     """
-    This make a lazy recording residual from an anlyzer.
+    This make a lazy recording residual from an analyzer.
 
-    Paramters
+    Parameters
     ----------
     analyzer : SortingAnalyzer
 
     Returns
     -------
     residual : Recording
-        The resdiual
+        The residual
     """
 
     templates = analyzer.get_extension("templates").get_templates(outputs="Templates")

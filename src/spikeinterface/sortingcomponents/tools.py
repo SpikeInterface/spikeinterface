@@ -1,19 +1,21 @@
 import numpy as np
 import shutil
+import importlib.util
 
-try:
+if importlib.util.find_spec("psutil") is not None:
     import psutil
 
     HAVE_PSUTIL = True
-except:
+else:
     HAVE_PSUTIL = False
+
 
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface.core.sparsity import compute_sparsity
-from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift
+from spikeinterface.core.template_tools import get_template_peak_shift_on_main_channel
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
 from spikeinterface.core.core_tools import ms_to_samples
@@ -493,7 +495,10 @@ def create_sorting_analyzer_with_existing_templates(
 
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
+    main_channel_indices = templates.get_main_channels()
+    sa = create_sorting_analyzer(
+        non_empty_sorting, recording, format="memory", sparsity=sparsity, main_channel_indices=main_channel_indices
+    )
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
     sa.extensions["templates"].params = {
@@ -602,6 +607,7 @@ def clean_templates(
         sparsity = compute_sparsity(
             templates,
             method="snr",
+            peak_sign="neg",
             amplitude_mode="peak_to_peak",
             noise_levels=noise_levels,
             threshold=sparsify_threshold,
@@ -620,7 +626,7 @@ def clean_templates(
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
         n_before = len(templates.unit_ids)
-        shifts = get_template_extremum_channel_peak_shift(templates)
+        shifts = get_template_peak_shift_on_main_channel(templates, with_dict=True)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:
@@ -637,6 +643,7 @@ def clean_templates(
         sparsity = compute_sparsity(
             templates.to_dense(),
             method="snr",
+            peak_sign="neg",
             amplitude_mode="peak_to_peak",
             noise_levels=noise_levels,
             threshold=min_snr,

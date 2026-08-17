@@ -8,9 +8,9 @@ Unit Labels:
     non_soma: Non-somatic units (axonal)
 """
 
-import operator
 from pathlib import Path
 import json
+
 import numpy as np
 
 from .curation_tools import is_threshold_disabled
@@ -304,7 +304,6 @@ def save_bombcell_results(
     save_wide : bool, default: True
         Save wide format (one row per unit, metrics as columns).
     """
-    from pathlib import Path
     import pandas as pd
 
     folder = Path(folder)

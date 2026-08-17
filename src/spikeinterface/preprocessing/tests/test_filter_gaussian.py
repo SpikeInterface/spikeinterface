@@ -67,10 +67,10 @@ def test_bandpower(freq_min, freq_max, debug=False):
     # Welch power density
     trace = rec.get_traces()[:, 0]
     trace_filt = rec_filt.get_traces(0)[:, 0]
-    import scipy
+    from scipy.signal import welch
 
-    f, Pxx = scipy.signal.welch(trace, fs=fs)
-    _, Pxx_filt = scipy.signal.welch(trace_filt, fs=fs)
+    f, Pxx = welch(trace, fs=fs)
+    _, Pxx_filt = welch(trace_filt, fs=fs)
 
     if debug:
         import matplotlib.pyplot as plt

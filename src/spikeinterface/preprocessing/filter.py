@@ -93,7 +93,7 @@ class FilterRecording(BasePreprocessor):
         dtype=None,
         direction="forward-backward",
     ):
-        import scipy.signal
+        from scipy.signal import iirfilter
 
         assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
         fs = recording.get_sampling_frequency()
@@ -101,7 +101,7 @@ class FilterRecording(BasePreprocessor):
             assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
             # coefficient
             # self.coeff is 'sos' or 'ab' style
-            filter_coeff = scipy.signal.iirfilter(
+            filter_coeff = iirfilter(
                 filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
             )
         else:
@@ -192,23 +192,23 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
-        import scipy.signal
+        from scipy.signal import sosfiltfilt, filtfilt, sosfilt, lfilter
 
         if self.direction == "forward-backward":
             if self.filter_mode == "sos":
-                filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
+                filtered_traces = sosfiltfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.filtfilt(b, a, traces_chunk, axis=0)
+                filtered_traces = filtfilt(b, a, traces_chunk, axis=0)
         else:
             if self.direction == "backward":
                 traces_chunk = np.flip(traces_chunk, axis=0)
 
             if self.filter_mode == "sos":
-                filtered_traces = scipy.signal.sosfilt(self.coeff, traces_chunk, axis=0)
+                filtered_traces = sosfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.lfilter(b, a, traces_chunk, axis=0)
+                filtered_traces = lfilter(b, a, traces_chunk, axis=0)
 
             if self.direction == "backward":
                 filtered_traces = np.flip(filtered_traces, axis=0)
@@ -388,13 +388,13 @@ class NotchFilterRecording(FilterRecording):
     """
 
     def __init__(self, recording, freq=3000, q=30, margin_ms="auto", dtype=None, **filter_kwargs):
-        import scipy.signal
+        from scipy.signal import iirnotch
 
         if margin_ms == "auto":
             margin_ms = adjust_margin_ms_for_notch(q, freq)
 
         fn = 0.5 * float(recording.get_sampling_frequency())
-        coeff = scipy.signal.iirnotch(freq / fn, q)
+        coeff = iirnotch(freq / fn, q)
 
         dtype = fix_dtype(recording, dtype)
 
