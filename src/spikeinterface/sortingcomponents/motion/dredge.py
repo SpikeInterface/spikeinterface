@@ -588,6 +588,33 @@ def dredge_online_lfp(
     if extra_outputs:
         extra = dict(window_centers=window_centers, windows=windows)
 
+    P_online = compute_P_online
+
+    motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction=direction)
+
+    if extra_outputs:
+        return motion, extra
+    else:
+        return motion
+
+
+def compute_P_online(
+    lfp_recording,
+    B,
+    T_total,
+    T_chunk,
+    windows,
+    contact_depths,
+    # parameters
+    win_scale_um,
+    full_xcorr_kw,
+    mincorr,
+    mincorr_percentile,
+    threshold_kw,
+    thomas_kw,
+    chunk_len_s,
+):
+
     # -- allocate output and initialize first chunk
     P_online = np.empty((B, T_total), dtype=np.float32)
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
@@ -601,15 +628,15 @@ def dredge_online_lfp(
         mincorr_percentile=mincorr_percentile,
         **threshold_kw,
     )
-    if extra_outputs:
-        extra["D"] = [Ds0]
-        extra["C"] = [Cs0]
-        extra["S"] = [Ss0]
-        extra["D01"] = []
-        extra["C01"] = []
-        extra["S01"] = []
-        extra["mincorrs"] = [mincorr0]
-        extra["max_disp_um"] = max_disp_um
+    # if extra_outputs:
+    #     extra["D"] = [Ds0]
+    #     extra["C"] = [Cs0]
+    #     extra["S"] = [Ss0]
+    #     extra["D01"] = []
+    #     extra["C01"] = []
+    #     extra["S01"] = []
+    #     extra["mincorrs"] = [mincorr0]
+    #     extra["max_disp_um"] = max_disp_um
 
     P_online[:, t0:t1], _ = thomas_solve(Ds0, Ss0, **thomas_kw)
 
@@ -647,14 +674,14 @@ def dredge_online_lfp(
         )
         Ss10, _ = threshold_correlation_matrix(Cs10, mincorr=mincorr1, t_offset_bins=T_chunk, **threshold_kw)
 
-        if extra_outputs:
-            extra["mincorrs"].append(mincorr1)
-            extra["D"].append(Ds1)
-            extra["C"].append(Cs1)
-            extra["S"].append(Ss1)
-            extra["D01"].append(Ds10)
-            extra["C01"].append(Cs10)
-            extra["S01"].append(Ss10)
+        # if extra_outputs:
+        #     extra["mincorrs"].append(mincorr1)
+        #     extra["D"].append(Ds1)
+        #     extra["C"].append(Cs1)
+        #     extra["S"].append(Ss1)
+        #     extra["D01"].append(Ds10)
+        #     extra["C01"].append(Cs10)
+        #     extra["S01"].append(Ss10)
 
         # solve online problem
         P_online[:, t1:t2], _ = thomas_solve(
@@ -671,13 +698,6 @@ def dredge_online_lfp(
         # update loop vars
         t0, t1 = t1, t2
         traces0 = traces1
-
-    motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction=direction)
-
-    if extra_outputs:
-        return motion, extra
-    else:
-        return motion
 
 
 dredge_online_lfp.__doc__ = dredge_online_lfp.__doc__.format(DredgeLfpRegistration.params_doc)
