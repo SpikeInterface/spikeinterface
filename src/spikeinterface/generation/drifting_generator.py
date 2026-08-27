@@ -8,8 +8,6 @@ This module implements generation of more realistic signal than `spikeinterface.
 
 """
 
-
-
 from probeinterface import generate_multi_columns_probe, get_probe, generate_tetrode
 
 from spikeinterface import Templates
