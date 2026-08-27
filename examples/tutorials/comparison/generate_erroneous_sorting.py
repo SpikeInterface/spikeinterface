@@ -4,9 +4,6 @@ some possible mistake catch in ground truth comparison.
 
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
-
 import spikeinterface.extractors as se
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
@@ -34,10 +31,12 @@ def generate_erroneous_sorting():
         A tuple containing the true sorting and the erroneous sorting in that order
     """
 
-    rec, sorting_true = se.toy_example(num_channels=4, num_units=10, duration=10, seed=10, num_segments=1)
+    rec, sorting_true = se.toy_example(
+        num_channels=4, num_units=10, duration=10, seed=10, num_segments=1)
 
     # artificially remap to one based
-    sorting_true = sorting_true.select_units(unit_ids=None, renamed_unit_ids=np.arange(10, dtype="int64") + 1)
+    sorting_true = sorting_true.select_units(
+        unit_ids=None, renamed_unit_ids=np.arange(10, dtype="int64") + 1)
 
     sampling_frequency = sorting_true.get_sampling_frequency()
 
@@ -97,6 +96,7 @@ def generate_erroneous_sorting():
 if __name__ == "__main__":
     # just for check
     sorting_true, sorting_err = generate_erroneous_sorting()
-    comp = sc.compare_sorter_to_ground_truth(sorting_true, sorting_err, exhaustive_gt=True)
+    comp = sc.compare_sorter_to_ground_truth(
+        sorting_true, sorting_err, exhaustive_gt=True)
     sw.plot_agreement_matrix(comp, ordered=True)
     plt.show()
