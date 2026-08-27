@@ -8,7 +8,7 @@ This module implements generation of more realistic signal than `spikeinterface.
 
 """
 
-import numpy as np
+
 
 from probeinterface import generate_multi_columns_probe, get_probe, generate_tetrode
 
