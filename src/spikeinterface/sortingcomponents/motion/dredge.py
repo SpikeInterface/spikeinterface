@@ -29,6 +29,7 @@ import importlib.util
 import numpy as np
 from tqdm.auto import trange
 
+from spikeinterface.core import BaseRecording
 from spikeinterface.core.motion import Motion
 from .motion_utils import (
     get_spatial_bin_edges,
@@ -173,6 +174,7 @@ def dredge_ap(
     progress_bar=True,
     extra_outputs=False,
     precomputed_D_C_maxdisp=None,
+    resolution_mode="simultaneous",
 ):
     """Estimate motion from spikes
 
@@ -324,28 +326,57 @@ def dredge_ap(
 
     full_xcorr_kw = dict(
         rigid=rigid,
-        bin_um=np.median(np.diff(contact_depths)),
+        bin_um=bin_um,
         max_disp_um=max_disp_um,
         progress_bar=False,
         device=device,
         **xcorr_kw,
     )
 
-    displacement, extra = compute_displacement_simultaneous(
-        raster,
-        windows,
-        spatial_bin_edges_um,
-        win_scale_um,
-        bin_s,
-        mincorr_percentile,
-        extra,
-        extra_outputs,
-        thomas_kw,
-        weights_kw,
-        full_xcorr_kw,
-        precomputed_D_C_maxdisp,
-        post_transform,
-    )
+    if resolution_mode == "simultaneous":
+        displacement, extra = compute_displacement_simultaneous(
+            raster,
+            windows,
+            spatial_bin_edges_um,
+            win_scale_um,
+            bin_s,
+            mincorr_percentile,
+            extra,
+            extra_outputs,
+            thomas_kw,
+            weights_kw,
+            full_xcorr_kw,
+            precomputed_D_C_maxdisp,
+            post_transform,
+        )
+    elif resolution_mode == "online":
+        T_total = raster.shape[1]
+        T_chunk = 10
+        threshold_kw = dict(
+            mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
+            in_place=True,
+            soft=False,
+            # time_horizon_s=weights_kw["time_horizon_s"],  # max_dt not implemented for lfp at this point
+            time_horizon_s=time_horizon_s,
+            bin_s=10,
+        )
+        displacement, extra = compute_displacement_online(
+            raster,
+            windows,
+            T_total,
+            T_chunk,
+            spatial_bin_edges_um,
+            win_scale_um,
+            mincorr_percentile,
+            extra,
+            extra_outputs,
+            thomas_kw,
+            weights_kw,
+            full_xcorr_kw,
+            threshold_kw,
+        )
+    else:
+        raise ValueError(f"No resolution mode called {resolution_mode}")
 
     if extra_outputs:
         extra["windows"] = windows
@@ -596,7 +627,6 @@ def compute_displacement_online(
     T_chunk,
     spatial_bin_edges_um,
     win_scale_um,
-    bin_s,
     mincorr_percentile,
     extra,
     extra_outputs,
@@ -613,7 +643,10 @@ def compute_displacement_online(
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
     t0, t1 = 0, T_chunk
 
-    traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
+    if isinstance(lfp_recording, BaseRecording):
+        traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
+    else:
+        traces0 = lfp_recording[:, t0:t1].T
 
     Ds0, Cs0, max_disp_um = xcorr_windows(
         traces0.T,
@@ -653,7 +686,11 @@ def compute_displacement_online(
         )
     for t1 in chunk_starts:
         t2 = min(T_total, t1 + T_chunk)
-        traces1 = lfp_recording.get_traces(start_frame=t1, end_frame=t2)
+
+        if isinstance(lfp_recording, BaseRecording):
+            traces1 = lfp_recording.get_traces(start_frame=t1, end_frame=t2)
+        else:
+            traces1 = lfp_recording[:, t1:t2].T
 
         # cross-correlations between prev/cur chunks
         # these are T1, T0 shaped
@@ -701,7 +738,7 @@ def compute_displacement_online(
         t0, t1 = t1, t2
         traces0 = traces1
 
-    return P_online
+    return P_online, extra
 
 
 def compute_displacement_simultaneous(
