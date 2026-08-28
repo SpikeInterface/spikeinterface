@@ -65,6 +65,7 @@ class BaseRasterWidget(BaseWidget):
         y_axis_data: dict,
         unit_ids: list | None = None,
         segment_indices: list | None = None,
+        segment_start_stop_times: np.ndarray | None = None,
         durations: list | None = None,
         plot_histograms: bool = False,
         bins: int | None = None,
@@ -82,6 +83,11 @@ class BaseRasterWidget(BaseWidget):
         backend: str | None = None,
         **backend_kwargs,
     ):
+        if durations is not None and segment_start_stop_times is not None:
+            raise ValueError("`durations` should not be passed with `segment_start_stop_times`. Use `segment_start_stop_times` only.")
+
+        if durations is not None and segment_start_stop_times is None:
+            segment_start_stop_times = np.r_[np.cumsum(durations)]
 
         # Set default segment boundary kwargs if not provided
         if segment_boundary_kwargs is None:
@@ -112,15 +118,14 @@ class BaseRasterWidget(BaseWidget):
             unit_ids = list(all_units)
 
         # Calculate cumulative durations for segment boundaries
-        segment_boundaries = np.cumsum(durations)
-        cumulative_durations = np.concatenate([[0], segment_boundaries])
+        # segment_boundaries = np.array(np.r_[seg[0], seg[1]] for seg in segment_start_stop_times) # np.cumsum(durations)
+        # cumulative_durations = np.concatenate([[0], segment_boundaries])
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
         concatenated_y_axis = {unit_id: np.array([]) for unit_id in unit_ids}
 
-        for offset, spike_train_segment, y_axis_segment in zip(
-            cumulative_durations,
+        for spike_train_segment, y_axis_segment in zip(
             [spike_train_data[idx] for idx in segments_to_use],
             [y_axis_data[idx] for idx in segments_to_use],
         ):
@@ -133,11 +138,11 @@ class BaseRasterWidget(BaseWidget):
                 y_values = y_axis_segment[unit_id]
 
                 # Apply offset to spike times
-                adjusted_times = spike_times + offset
+                # adjusted_times = spike_times + offset
 
                 # Add to concatenated data
                 concatenated_spike_trains[unit_id] = np.concatenate(
-                    [concatenated_spike_trains[unit_id], adjusted_times]
+                    [concatenated_spike_trains[unit_id], spike_times]
                 )
                 concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
 
@@ -153,12 +158,13 @@ class BaseRasterWidget(BaseWidget):
             unit_colors=unit_colors,
             y_label=y_label,
             title=title,
-            durations=durations,
+            segment_start_stop_times=segment_start_stop_times,
+            # durations=durations,
             plot_legend=plot_legend,
             bins=bins,
             y_ticks=y_ticks,
             hide_unit_selector=hide_unit_selector,
-            segment_boundaries=segment_boundaries,
+            # segment_boundaries=segment_boundaries,
             segment_boundary_kwargs=segment_boundary_kwargs,
         )
 
@@ -226,8 +232,8 @@ class BaseRasterWidget(BaseWidget):
                 ax_hist.plot(count, bins[:-1], color=unit_colors[unit_id], alpha=0.8)
 
         # Add segment boundary lines if provided
-        if getattr(dp, "segment_boundaries", None) is not None:
-            for boundary in dp.segment_boundaries:
+        if dp.segment_start_stop_times is not None:
+            for boundary in dp.segment_start_stop_times:
                 scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
 
         if dp.plot_histograms:
@@ -245,9 +251,10 @@ class BaseRasterWidget(BaseWidget):
         if dp.y_lim is not None:
             scatter_ax.set_ylim(*dp.y_lim)
         x_lim = dp.x_lim
-        if x_lim is None:
-            x_lim = [0, np.sum(dp.durations)]
-        scatter_ax.set_xlim(x_lim)
+        
+        if x_lim is None and dp.segment_start_stop_times is not None:
+            x_lim = (dp.segment_start_stop_times[0], dp.segment_start_stop_times[-1])
+            scatter_ax.set_xlim(x_lim)
 
         if dp.y_ticks:
             scatter_ax.set_yticks(**dp.y_ticks)
