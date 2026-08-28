@@ -47,8 +47,8 @@ def _read_cbin_probe(meta_file, meta):
     if "snsSaveChanSubset_orig" not in meta:
         return probeinterface.read_spikeglx(meta_file)
 
-    # probeinterface 0.3.2 removed the single-shot `_read_imro_string` helper
-    # used previously. The equivalent flow in 0.3.2 is: build the full geometric
+    # probeinterface removed the single-shot `_read_imro_string` helper used
+    # previously (in 0.3.2). The equivalent flow is: build the full geometric
     # probe, parse the IMRO table to a dict, resolve which contact IDs are
     # active, and slice the full probe down to those contacts.
     from probeinterface.neuropixels_tools import (
@@ -67,7 +67,7 @@ def _read_cbin_probe(meta_file, meta):
         imro_table_string = "(" + ")(".join(imro_table_string) + ")"
 
     full_probe = build_neuropixels_probe(probe_part_number=imDatPrb_pn)
-    imro_per_channel = _parse_imro_string(imro_table_string, imDatPrb_pn)
+    imro_per_channel = _parse_imro_string(imro_table_string)
     active_contact_ids = _get_imro_active_contact_ids(imro_per_channel)
     contact_id_to_index = {cid: i for i, cid in enumerate(full_probe.contact_ids)}
     selected = np.array([contact_id_to_index[cid] for cid in active_contact_ids])
