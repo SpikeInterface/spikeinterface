@@ -38,8 +38,8 @@ def make_multi_segment_recording(num_segments=3, seed=2205):
 
 def main():
     recording, sorting = make_multi_segment_recording()
+    sorting.register_recording(recording)
 
-    print(f"Number of segments: {recording.get_num_segments()}")
     for seg in range(recording.get_num_segments()):
         print(f"  segment {seg}: start={recording.get_start_time(seg):.1f}s end={recording.get_end_time(seg):.1f}s")
 
