@@ -114,8 +114,12 @@ class BaseRasterWidget(BaseWidget):
             unit_ids = list(all_units)
 
         # Calculate cumulative durations for segment boundaries
-        segment_boundaries = np.cumsum(durations)
-        cumulative_durations = np.concatenate([[0], segment_boundaries])
+        if durations is not None:
+            segment_boundaries = np.cumsum(durations)
+            cumulative_durations = np.concatenate([[0], segment_boundaries])
+        else:
+            segment_boundaries = None
+            cumulative_durations = [0]
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
