@@ -1151,8 +1151,7 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    is_old_version = not _check_same_version(class_name, dic["version"])
-    if is_old_version and hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
+    if hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
         new_kwargs = extractor_class._handle_kwargs_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
