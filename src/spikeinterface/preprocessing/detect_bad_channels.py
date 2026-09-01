@@ -4,6 +4,8 @@ import numpy as np
 from typing import Literal
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs
+from spikeinterface.core.time_series_tools import get_random_sample_slices
 from .filter import highpass_filter
 from spikeinterface.core import get_random_data_chunks, order_channels_by_depth, BaseRecording
 from spikeinterface.core.channelslice import ChannelSliceRecording
@@ -75,6 +77,12 @@ seed : int | None, default: None
     The random seed to extract chunks
 channel_filters : set | None, default: None
     For coherence+psd - only return `bad_channel_ids` whose labels are in the set `channel_filter`.
+job_kwargs : dict | None, default: None
+    Keyword arguments for parallel processing. Only used for the "coherence+psd" method. Only the
+    execution-related keys (`pool_engine`, `n_jobs`, `progress_bar`, `mp_context`,
+    `max_threads_per_worker`) apply; the chunking size is fixed by `chunk_duration_s` and
+    `num_random_chunks` above, so `chunk_size`, `chunk_memory`, `total_memory` and `chunk_duration`
+    are not used here.
 """
 
 
@@ -153,6 +161,39 @@ def _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs):
     return all_detect_bad_channels_kwargs
 
 
+def _detect_bad_channels_chunk_init(recording, method_kwargs):
+    return {"recording": recording, "method_kwargs": method_kwargs}
+
+
+def _detect_bad_channels_chunk(segment_index, start_frame, end_frame, worker_context):
+    recording = worker_context["recording"]
+    method_kwargs = worker_context["method_kwargs"]
+
+    random_chunk = recording.get_traces(
+        start_frame=start_frame,
+        end_frame=end_frame,
+        segment_index=segment_index,
+        return_in_uV=True,
+    )
+
+    order_f = method_kwargs["order_f"]
+    order_r = method_kwargs["order_r"]
+    random_chunk_sorted = random_chunk[:, order_f] if order_f is not None else random_chunk
+    chunk_labels = detect_bad_channels_ibl(
+        raw=random_chunk_sorted,
+        fs=recording.sampling_frequency,
+        psd_hf_threshold=method_kwargs["psd_hf_threshold"],
+        dead_channel_thr=method_kwargs["dead_channel_threshold"],
+        noisy_channel_thr=method_kwargs["noisy_channel_threshold"],
+        outside_channel_thr=method_kwargs["outside_channel_threshold"],
+        n_neighbors=method_kwargs["n_neighbors"],
+        nyquist_threshold=method_kwargs["nyquist_threshold"],
+        welch_window_ms=method_kwargs["welch_window_ms"],
+        outside_channels_location=method_kwargs["outside_channels_location"],
+    )
+    return chunk_labels[order_r] if order_r is not None else chunk_labels
+
+
 def detect_bad_channels(
     recording: BaseRecording,
     method: str = "coherence+psd",
@@ -173,6 +214,7 @@ def detect_bad_channels(
     neighborhood_r2_radius_um: float = 30.0,
     seed: int | None = None,
     channel_filters: set | None = None,
+    job_kwargs: dict | None = None,
 ):
     """
     Perform bad channel detection.
@@ -225,14 +267,12 @@ def detect_bad_channels(
     if method in ("std", "mad"):
         random_chunk_kwargs["return_in_uV"] = False
         random_chunk_kwargs["concatenated"] = True
-    elif method == "coherence+psd":
-        random_chunk_kwargs["return_in_uV"] = True
-        random_chunk_kwargs["concatenated"] = False
     elif method == "neighborhood_r2":
         random_chunk_kwargs["return_in_uV"] = False
         random_chunk_kwargs["concatenated"] = False
 
-    random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
+    if method != "coherence+psd":
+        random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
 
     channel_labels = np.zeros(recording.get_num_channels(), dtype="U5")
     channel_labels[:] = "good"
@@ -248,6 +288,14 @@ def detect_bad_channels(
         channel_labels[mask] = "noise"
 
     elif method == "coherence+psd":
+        if job_kwargs is None:
+            job_kwargs = {"progress_bar": False}
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        executor_job_kwargs = {
+            key: job_kwargs[key]
+            for key in ("pool_engine", "n_jobs", "progress_bar", "mp_context", "max_threads_per_worker")
+        }
+
         # some checks
         assert recording.has_scaleable_traces(), (
             "The 'coherence+psd' method uses thresholds assuming the traces are in uV, "
@@ -267,24 +315,30 @@ def detect_bad_channels(
             order_f = None
             order_r = None
 
-        # Create empty channel labels and fill with bad-channel detection estimate for each chunk
-        chunk_channel_labels = np.zeros((recording.get_num_channels(), len(random_data)), dtype=np.int8)
-
-        for i, random_chunk in enumerate(random_data):
-            random_chunk_sorted = random_chunk[:, order_f] if order_f is not None else random_chunk
-            chunk_labels = detect_bad_channels_ibl(
-                raw=random_chunk_sorted,
-                fs=recording.sampling_frequency,
-                psd_hf_threshold=psd_hf_threshold,
-                dead_channel_thr=dead_channel_threshold,
-                noisy_channel_thr=noisy_channel_threshold,
-                outside_channel_thr=outside_channel_threshold,
-                n_neighbors=n_neighbors,
-                nyquist_threshold=nyquist_threshold,
-                welch_window_ms=welch_window_ms,
-                outside_channels_location=outside_channels_location,
-            )
-            chunk_channel_labels[:, i] = chunk_labels[order_r] if order_r is not None else chunk_labels
+        method_kwargs = dict(
+            order_f=order_f,
+            order_r=order_r,
+            psd_hf_threshold=psd_hf_threshold,
+            dead_channel_threshold=dead_channel_threshold,
+            noisy_channel_threshold=noisy_channel_threshold,
+            outside_channel_threshold=outside_channel_threshold,
+            n_neighbors=n_neighbors,
+            nyquist_threshold=nyquist_threshold,
+            welch_window_ms=welch_window_ms,
+            outside_channels_location=outside_channels_location,
+        )
+        random_slices = get_random_sample_slices(recording_hp, **random_chunk_kwargs)
+        executor = TimeSeriesChunkExecutor(
+            recording_hp,
+            _detect_bad_channels_chunk,
+            _detect_bad_channels_chunk_init,
+            (recording_hp, method_kwargs),
+            handle_returns=True,
+            chunk_size=random_chunk_kwargs["chunk_size"],
+            job_name="detect_bad_channels",
+            **executor_job_kwargs,
+        )
+        chunk_channel_labels = np.stack(executor.run(slices=random_slices), axis=1)
 
         # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
         mode_channel_labels, _ = mode(chunk_channel_labels, axis=1, keepdims=False)
