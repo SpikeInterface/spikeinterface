@@ -250,14 +250,6 @@ def dredge_ap(
     #     count_bin_min=count_bin_min,
     # )
 
-    weights_kw = dict(
-        mincorr=mincorr,
-        time_horizon_s=time_horizon_s,
-        do_window_weights=do_window_weights,
-        weights_threshold_low=weights_threshold_low,
-        weights_threshold_high=weights_threshold_high,
-    )
-
     # this will store return values other than the MotionEstimate
     extra = {}
 
@@ -324,6 +316,14 @@ def dredge_ap(
     # if extra_outputs and count_masked_correlation:
     #     extra["counts"] = counts
 
+    weights_kw = dict(
+        mincorr=mincorr,
+        time_horizon_s=time_horizon_s,
+        do_window_weights=do_window_weights,
+        weights_threshold_low=weights_threshold_low,
+        weights_threshold_high=weights_threshold_high,
+    )
+
     full_xcorr_kw = dict(
         rigid=rigid,
         bin_um=bin_um,
@@ -334,32 +334,37 @@ def dredge_ap(
     )
 
     if resolution_mode == "simultaneous":
+
+        threshold_kw = dict(bin_s=bin_s)
+
         displacement, extra = compute_displacement_simultaneous(
             raster,
             windows,
             spatial_bin_edges_um,
             win_scale_um,
-            bin_s,
             mincorr_percentile,
             extra,
             extra_outputs,
             thomas_kw,
             weights_kw,
             full_xcorr_kw,
+            threshold_kw,
             precomputed_D_C_maxdisp,
             post_transform,
         )
+
     elif resolution_mode == "online":
+
         T_total = raster.shape[1]
         T_chunk = 10
         threshold_kw = dict(
             mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
             in_place=True,
             soft=False,
-            # time_horizon_s=weights_kw["time_horizon_s"],  # max_dt not implemented for lfp at this point
             time_horizon_s=time_horizon_s,
             bin_s=10,
         )
+
         displacement, extra = compute_displacement_online(
             raster,
             windows,
@@ -544,22 +549,6 @@ def dredge_online_lfp(
     # need lfp-specific defaults
     xcorr_kw = xcorr_kw if xcorr_kw is not None else {}
     thomas_kw = thomas_kw if thomas_kw is not None else {}
-    full_xcorr_kw = dict(
-        rigid=rigid,
-        bin_um=np.median(np.diff(contact_depths)),
-        max_disp_um=max_disp_um,
-        progress_bar=False,
-        device=device,
-        **xcorr_kw,
-    )
-    threshold_kw = dict(
-        mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
-        in_place=True,
-        soft=soft,
-        # time_horizon_s=weights_kw["time_horizon_s"],  # max_dt not implemented for lfp at this point
-        time_horizon_s=time_horizon_s,
-        bin_s=1 / fs,  # only relevant for time_horizon_s
-    )
 
     # here we check that contact positons are unique on the direction
     if contact_depths.size != np.unique(contact_depths).size:
@@ -594,7 +583,23 @@ def dredge_online_lfp(
         time_horizon_s=time_horizon_s,
     )
 
-    bin_s = 1 / lfp_recording.sampling_frequency
+    full_xcorr_kw = dict(
+        rigid=rigid,
+        bin_um=np.median(np.diff(contact_depths)),
+        max_disp_um=max_disp_um,
+        progress_bar=False,
+        device=device,
+        **xcorr_kw,
+    )
+
+    threshold_kw = dict(
+        mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
+        in_place=True,
+        soft=soft,
+        time_horizon_s=time_horizon_s,
+        bin_s=1 / lfp_recording.sampling_frequency,  # only relevant for time_horizon_s
+    )
+
     P_online = compute_displacement_online(
         lfp_recording,
         windows,
@@ -602,7 +607,6 @@ def dredge_online_lfp(
         T_chunk,
         contact_depths,
         win_scale_um,
-        bin_s,
         mincorr_percentile,
         extra,
         extra_outputs,
@@ -746,13 +750,13 @@ def compute_displacement_simultaneous(
     windows,
     spatial_bin_edges_um,
     win_scale_um,
-    bin_s,
     mincorr_percentile,
     extra,
     extra_outputs,
     thomas_kw,
     weights_kw,
     full_xcorr_kw,
+    threshold_kw,
     precomputed_D_C_maxdisp,
     post_transform,
 ):
@@ -779,7 +783,7 @@ def compute_displacement_simultaneous(
         windows,
         raster,
         spatial_bin_edges_um,
-        bin_s,
+        threshold_kw,
         # raster_kw, #@charlie this is removed
         post_transform=post_transform,  # @charlie this isnew
         lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
@@ -1465,7 +1469,7 @@ def weight_correlation_matrix(
     windows,
     raster,
     depth_bin_edges,
-    bin_s,
+    threshold_kw,
     # @charlie raster_kw is remove in favor of post_transform only
     # raster_kw,
     post_transform=np.log1p,
@@ -1500,9 +1504,9 @@ def weight_correlation_matrix(
         mincorr_percentile=mincorr_percentile,
         mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
         time_horizon_s=time_horizon_s,
-        bin_s=bin_s,
         T=T,
         in_place=in_place,
+        **threshold_kw,
     )
     extra["S"] = Ss
     extra["mincorr"] = mincorr
