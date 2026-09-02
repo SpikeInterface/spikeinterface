@@ -305,8 +305,9 @@ def _get_backend_from_local_file(file_path: str | Path) -> str:
         try:
             import zarr
 
-            with zarr.open(file_path, "r") as f:
-                backend = "zarr"
+            # `mode` is keyword-only in zarr v3, and its groups are not context managers
+            zarr.open(file_path, mode="r")
+            backend = "zarr"
         except:
             raise RuntimeError(f"{file_path} is not a valid Zarr folder!")
     else:
