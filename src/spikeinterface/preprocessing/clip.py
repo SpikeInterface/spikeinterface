@@ -167,7 +167,5 @@ class ClipRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-clip = define_function_handling_dict_from_class(source_class=ClipRecording, name="clip")
-blank_saturation = define_function_handling_dict_from_class(
-    source_class=BlankSaturationRecording, name="blank_saturation"
-)
+define_function_handling_dict_from_class(source_class=ClipRecording, name="clip")
+define_function_handling_dict_from_class(source_class=BlankSaturationRecording, name="blank_saturation")

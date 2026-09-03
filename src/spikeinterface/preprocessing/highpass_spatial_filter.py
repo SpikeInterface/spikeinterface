@@ -272,9 +272,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
 
 # function for API
-highpass_spatial_filter = define_function_handling_dict_from_class(
-    source_class=HighpassSpatialFilterRecording, name="highpass_spatial_filter"
-)
+define_function_handling_dict_from_class(source_class=HighpassSpatialFilterRecording, name="highpass_spatial_filter")
 
 
 # -----------------------------------------------------------------------------------------------

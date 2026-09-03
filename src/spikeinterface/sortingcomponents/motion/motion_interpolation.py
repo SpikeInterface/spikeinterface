@@ -523,6 +523,4 @@ class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
         return traces
 
 
-interpolate_motion = define_function_handling_dict_from_class(
-    source_class=InterpolateMotionRecording, name="interpolate_motion"
-)
+define_function_handling_dict_from_class(source_class=InterpolateMotionRecording, name="interpolate_motion")

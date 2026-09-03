@@ -56,7 +56,8 @@ def define_function_handling_dict_from_class(source_class, name):
     source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
     source_class_or_dict_of_sources_classes.__name__ = name
 
-    return source_class_or_dict_of_sources_classes
+    # This is a trick to make the function available in the global namespace of the caller module
+    sys._getframe(1).f_globals[name] = source_class_or_dict_of_sources_classes
 
 
 # Generic typing needed to help propagate typing
@@ -67,7 +68,7 @@ T = TypeVar("T")
 
 
 def define_function_from_class(source_class: Callable[P, T], name: str) -> Callable[P, T]:
-    "Wrapper to change the name of a class"
+    "Wrapper to inject source_class into the caller's module namespace under name."
 
     return source_class
 

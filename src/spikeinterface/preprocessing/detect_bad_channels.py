@@ -137,7 +137,7 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 DetectAndRemoveBadChannelsRecording.__doc__ = DetectAndRemoveBadChannelsRecording.__doc__.format(
     _bad_channel_detection_kwargs_doc
 )
-detect_and_remove_bad_channels = define_function_handling_dict_from_class(
+define_function_handling_dict_from_class(
     source_class=DetectAndRemoveBadChannelsRecording, name="detect_and_remove_bad_channels"
 )
 

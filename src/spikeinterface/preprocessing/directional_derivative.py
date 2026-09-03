@@ -134,6 +134,4 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-directional_derivative = define_function_handling_dict_from_class(
-    source_class=DirectionalDerivativeRecording, name="directional_derivative"
-)
+define_function_handling_dict_from_class(source_class=DirectionalDerivativeRecording, name="directional_derivative")

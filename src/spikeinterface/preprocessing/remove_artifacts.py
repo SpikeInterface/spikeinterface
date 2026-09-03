@@ -449,6 +449,4 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-remove_artifacts = define_function_handling_dict_from_class(
-    source_class=RemoveArtifactsRecording, name="remove_artifacts"
-)
+define_function_handling_dict_from_class(source_class=RemoveArtifactsRecording, name="remove_artifacts")

@@ -106,7 +106,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-phase_shift = define_function_handling_dict_from_class(source_class=PhaseShiftRecording, name="phase_shift")
+define_function_handling_dict_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
 def apply_frequency_shift(signal, shift_samples, axis=0):
