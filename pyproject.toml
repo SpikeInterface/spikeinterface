@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.104.1"
+version = "0.105.0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -20,13 +20,15 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=1.20;python_version<'3.13'",
-    "numpy>=2.0.0;python_version>='3.13'",
+    "numpy>=2.0.0",
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=2.18,<3",
-    "neo>=0.14.4",
-    "probeinterface>=0.3.2",
+    # for release we need pypi, so this needs to be commented
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    # "neo>=0.14.4",
+    # "probeinterface>=0.3.2",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
@@ -66,16 +68,15 @@ extractors = [
     "pynwb>=2.6.0",
     "hdmf-zarr>=0.11.0",
     "pyedflib>=0.1.30",
-    "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "scipy",
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
+    "ibllib>=3.4.1", # streaming IBL
     "pymatreader>=0.0.32", # For cell explorer matlab files
     "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
-    "ibllib>=3.4.1;python_version>='3.10'", # streaming IBL
+    "ibllib>=3.4.1", # streaming IBL
     # Following dependencies are for streaming with nwb files
     "pynwb>=2.6.0",
     "fsspec",
@@ -102,19 +103,19 @@ postprocessing = [
 metrics = [
     "scikit-learn<1.8",
     "scipy",
-    "pandas<3",
+    "pandas",
     "numba>=0.59",
 ]
 
 comparison = [
     "scipy",
-    "pandas<3",
+    "pandas",
     "networkx",
 ]
 
 generation = [
     "scipy",
-    "pandas<3",
+    "pandas",
 ]
 
 sorters = [
@@ -133,6 +134,9 @@ sortingcomponents = [
     # `torch` is an optional heavy dep used by neural-network peak detection,
     # motion estimation, and template matching. Install separately if needed:
     # pip install torch
+    # `medicine-neuro` is likewise optional (and itself depends on torch), needed only
+    # for the "medicine" motion estimation method. Install separately if needed:
+    # pip install medicine-neuro
 ]
 
 sorters_internal = [
@@ -144,7 +148,7 @@ curation = [
     "spikeinterface[metrics]",
     "spikeinterface[postprocessing]",
     "spikeinterface[comparison]",
-    "pandas<3",
+    "pandas",
     "scikit-learn<1.8",
     "skops",
     "huggingface_hub",
@@ -155,7 +159,7 @@ curation = [
 exporters = [
     "spikeinterface[postprocessing]",
     "spikeinterface[widgets]",
-    "pandas<3",
+    "pandas",
     "pynapple",
 ]
 
@@ -166,6 +170,26 @@ widgets = [
     "figpack",
     "figpack-spike-sorting",
     "distinctipy",
+]
+
+lupin = [
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "torch"
+]
+
+spykingcircus2 = [
+    "scipy",
+    "hdbscan",
+    "numba",
+]
+
+tridesclous2= [
+    "scipy",
+    "numba",
+    "scikit-learn",
+    "torch",
 ]
 
 # `full` installs every module's optional feature deps. Defined as the union of
@@ -196,18 +220,14 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec", # Use as an example
-    "pandas<3", # in the modules gallery comparison tutorial
+    "pandas", # in the modules gallery comparison tutorial
     "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
-    "numba", # For many postprocessing functions
+    "numba>=0.59", # For many postprocessing functions
     "networkx",
     "seaborn",
     "skops", # For automated curation
     "scikit-learn<1.8", # For automated curation
     "huggingface_hub", # For automated curation
-
-    # for release we need pypi, so this needs to be commented
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 ]
 
 dev = [
@@ -217,21 +237,17 @@ dev = [
 ]
 
 [dependency-groups]
-# Shared test infrastructure used by every per-module group. The neo and
-# probeinterface git pins match CI behavior before the PEP 735 migration.
-# For a release, comment the two git lines out.
+# Shared test infrastructure used by every per-module group.
 test-common = [
     "pytest",
     "pytest-cov",
     "pytest-mock",
     "psutil",
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 test-core = [
     {include-group = "test-common"},
-    "pandas<3",
+    "pandas",
 ]
 
 test-extractors = [
@@ -253,7 +269,7 @@ test-streaming-extractors = [
 
 test-preprocessing = [
     {include-group = "test-common"},
-    "ibllib>=3.4.1;python_version>='3.10'",
+    "ibllib>=3.4.1",
     "pooch",
     "datalad",
     "torch",  # preprocessing tests exercise sortingcomponents.motion.dredge
@@ -261,7 +277,7 @@ test-preprocessing = [
 
 test-postprocessing = [
     {include-group = "test-common"},
-    "pandas<3",
+    "pandas",
     ]
 test-metrics = [{include-group = "test-common"}]
 
@@ -272,8 +288,11 @@ test-comparison = [
 
 test-sorters-internal = [
     {include-group = "test-common"},
-    "torch",  # spyking_circus2 template matching
-    "hdbscan>=0.8.33",  # simplesorter / tridesclous2
+    "scipy",
+    "torch",
+    "hdbscan>=0.8.33",
+    "numba",
+    "scikit-learn",
 ]
 test-sorters = [{include-group = "test-sorters-internal"}]
 test-curation = [{include-group = "test-common"}]
@@ -285,12 +304,14 @@ test-widgets = [
     "scikit-learn",
     "pyvips",
     "networkx",
+    "upsetplot-bombcell",  # pandas>=3 compatible fork used by BombcellUpsetPlotWidget
 ]
 
 test-exporters = [{include-group = "test-common"}]
 test-sortingcomponents = [
     {include-group = "test-common"},
     "torch",  # neural network peak detection, motion, matching
+    "medicine-neuro",  # "medicine" motion estimation method
     "huggingface_hub", # for `test_single_channel_toy_denoiser_in_peak_pipeline`
 ]
 test-generation = [

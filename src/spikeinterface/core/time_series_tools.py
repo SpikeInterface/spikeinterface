@@ -1,8 +1,8 @@
 from pathlib import Path
 import warnings
 
-
 import numpy as np
+import numpy.typing
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (
@@ -62,9 +62,11 @@ def write_binary(
     if add_file_extension:
         file_path_list = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_path_list]
 
+    # Resolve dtype to a concrete type. This is important because the (possibly None) dtype is
+    # passed to the workers, and `np.dtype(None)` resolves to float64, which would corrupt the output.
     dtype = dtype if dtype is not None else time_series.get_dtype()
 
-    sample_size_bytes = time_series.get_sample_size_in_bytes()
+    sample_size_bytes = time_series.get_sample_size_in_bytes(dtype=dtype)
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     if file_timestamps_paths is not None:
@@ -125,7 +127,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     byte_offset = worker_ctx["byte_offset"]
     file = worker_ctx["file_dict"][segment_index]
     file_timestamps_dict = worker_ctx["file_timestamps_dict"]
-    sample_size_bytes = time_series.get_sample_size_in_bytes()
+    sample_size_bytes = time_series.get_sample_size_in_bytes(dtype=dtype)
 
     # Calculate byte offsets for the start frames relative to the entire recording
     start_byte = byte_offset + start_frame * sample_size_bytes

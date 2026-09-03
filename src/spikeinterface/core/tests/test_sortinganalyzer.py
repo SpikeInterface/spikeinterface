@@ -35,13 +35,6 @@ def get_dataset():
         seed=2205,
     )
 
-    # TODO: the tests or the sorting analyzer make assumptions about the ids being integers
-    # So keeping this the way it was
-    integer_channel_ids = [int(id) for id in recording.get_channel_ids()]
-    integer_unit_ids = [int(id) for id in sorting.get_unit_ids()]
-
-    recording = recording.rename_channels(new_channel_ids=integer_channel_ids)
-    sorting = sorting.rename_units(new_unit_ids=integer_unit_ids)
     return recording, sorting
 
 
@@ -52,6 +45,16 @@ def dataset():
 
 def test_SortingAnalyzer_memory(tmp_path, dataset):
     recording, sorting = dataset
+
+    # The sorting contain already main_channel_ids
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    main_channel_ids = sorting.get_property("main_channel_id")
+    main_channel_indices = recording.ids_to_indices(main_channel_ids)
+
+    assert np.array_equal(sorting_analyzer.get_main_channels(), main_channel_indices)
+
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
@@ -75,6 +78,15 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     assert "quality" in sorting_analyzer.sorting.get_property_keys()
     assert "number" in sorting_analyzer.sorting.get_property_keys()
 
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
+
+    # Create when main_channel_indices is not given : this is estimated
+    sorting2 = sorting.clone()
+    sorting2._properties.pop("main_channel_id")
+    sorting_analyzer = create_sorting_analyzer(sorting2, recording, format="memory", sparse=False, sparsity=None)
+    _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
+
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
@@ -93,7 +105,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
     assert len(select_units_sorting_analyer.unit_ids) == 1
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
@@ -119,7 +131,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(folder, format="auto")
     assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
-    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
@@ -147,9 +159,9 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
     # this bug requires that we have an info.json file so we calculate templates above
-    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=[1])
+    select_units_sorting_analyer = sorting_analyzer.select_units(unit_ids=["1"])
     assert len(select_units_sorting_analyer.unit_ids) == 1
-    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=[1])
+    remove_units_sorting_analyer = sorting_analyzer.remove_units(remove_unit_ids=["1"])
     assert len(remove_units_sorting_analyer.unit_ids) == len(sorting_analyzer.unit_ids) - 1
     assert 1 not in remove_units_sorting_analyer.unit_ids
 
@@ -201,7 +213,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert "number" in sorting_analyzer.sorting.get_property_keys()
     sorting_analyzer_reloded = load_sorting_analyzer(sorting_analyzer.folder, format="auto")
     assert "quality" in sorting_analyzer_reloded.sorting.get_property_keys()
-    assert "number" in sorting_analyzer.sorting.get_property_keys()
+    assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
 def test_create_by_dict():
@@ -210,9 +222,12 @@ def test_create_by_dict():
     Interally, this aggregates the dicts of recordings and sortings. This test checks that the
     unit structure is maintained from the dicts to the analyzer. Then checks that the function
     fails if the dict keys are different for the recordings and the sortings.
+
+    Note, in this tests sparse is False because units are randomlly assign to differents of the
+    recording and they can have no channels
     """
 
-    rec, sort = generate_ground_truth_recording(num_channels=6)
+    rec, sort = generate_ground_truth_recording(num_channels=6, seed=2205)
 
     rec.set_property(key="group", values=[1, 2, 1, 1, 2, 2])
     sort.set_property(key="group", values=[2, 2, 2, 1, 2, 2, 2, 1, 2, 1])
@@ -220,7 +235,7 @@ def test_create_by_dict():
     unit_ids = sort.unit_ids
     split_sort = sort.split_by("group")
     split_rec = rec.split_by("group")
-    analyzer = create_sorting_analyzer(split_sort, split_rec)
+    analyzer = create_sorting_analyzer(split_sort, split_rec, sparse=False)
     analyzer_unit_ids = analyzer.unit_ids
 
     assert set(analyzer.unit_ids) == set(sort.unit_ids)
@@ -236,7 +251,7 @@ def test_create_by_dict():
     }
 
     with pytest.raises(ValueError):
-        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"))
+        analyzer = create_sorting_analyzer(split_sort_bad_keys, rec.split_by("group"), sparse=False)
 
     # make a dict of sortings, in a different order than the recording. This should
     # still work
@@ -244,8 +259,29 @@ def test_create_by_dict():
         2: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 2]),
         1: sort.select_units(unit_ids=unit_ids[sort.get_property("group") == 1]),
     }
-    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"))
+    combined_analyzer = create_sorting_analyzer(split_sort_different_order, rec.split_by("group"), sparse=False)
     assert np.all(sort.get_unit_spike_train(unit_id="5") == combined_analyzer.sorting.get_unit_spike_train(unit_id="5"))
+
+    # test with sparsity
+    analyzer_with_sparsity = create_sorting_analyzer(split_sort, split_rec, sparse=True)
+    assert analyzer_with_sparsity.sparsity is not None
+    # check that the main channel indices are correct
+    main_channel_indices = analyzer_with_sparsity.get_main_channels(outputs="index")
+    sparsity_mask = analyzer_with_sparsity.sparsity.mask
+    # check that sparsity mask is false on channels from other groups
+    unit_groups = analyzer_with_sparsity.get_sorting_property("aggregation_key")
+    recording_groups = analyzer_with_sparsity.recording.get_property("aggregation_key")
+    for i, main_channel_index in enumerate(main_channel_indices):
+        group = unit_groups[i]
+        other_group_channel_indices = np.flatnonzero(recording_groups != group)
+        assert not np.any(sparsity_mask[i][other_group_channel_indices])
+        assert sparsity_mask[i, main_channel_index]
+
+    # test split aggregated
+    analyzers_split = analyzer_with_sparsity.split_by()
+    for group, analyzer in analyzers_split.items():
+        assert np.all(analyzer.get_sorting_property("aggregation_key") == group)
+        assert np.all(analyzer.recording.get_property("aggregation_key") == group)
 
 
 def test_load_without_runtime_info(tmp_path, dataset):
@@ -318,11 +354,58 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     probegroup.add_probe(probe2)
     probegroup.set_global_device_channel_indices(np.random.permutation(num_channels))
 
-    recording = recording.set_probegroup(probegroup)
+    recording.set_probegroup(probegroup)
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
     # check that locations are correct
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
+
+
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+def test_load_in_lazy_mode(tmp_path, dataset, format):
+    recording, sorting = dataset
+
+    folder = tmp_path / "test_SortingAnalyzer_folder"
+    if format == "zarr":
+        import zarr
+        from spikeinterface.core.zarrextractors import ZarrSpikeVector
+
+        folder = folder.with_suffix(".zarr")
+        array_class = zarr.Array
+        spike_vector_class = ZarrSpikeVector
+    else:
+        array_class = np.memmap
+        spike_vector_class = np.memmap
+    if folder.exists():
+        shutil.rmtree(folder)
+
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=None
+    )
+
+    sorting_analyzer.compute(["random_spikes", "templates", "spike_amplitudes"])
+    # load in lazy mode and check that spike vector and extension data are memmap
+    sorting_analyzer_lazy = load_sorting_analyzer(folder, format="auto", lazy=True)
+
+    assert isinstance(sorting_analyzer_lazy.sorting.to_spike_vector(), spike_vector_class)
+
+    template_ext = sorting_analyzer_lazy.get_extension("templates")
+    template_data = template_ext.data
+    for key, value in template_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, array_class)
+    spike_amplitudes_ext = sorting_analyzer_lazy.get_extension("spike_amplitudes")
+    spike_amplitudes_data = spike_amplitudes_ext.data
+    for key, value in spike_amplitudes_data.items():
+        if isinstance(value, np.ndarray):
+            assert isinstance(value, array_class)
+
+    # check that the lazy mode does not overwrite existing extensions
+    sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
+    # reload the analyzer to check that the original extension is not overwritten
+    sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
+    random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
+    assert random_spikes_ext.params["max_spikes_per_unit"] != 10
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
@@ -349,7 +432,6 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
     assert ext is None
 
     assert sorting_analyzer.has_recording()
-
     # save to several format
     for format in ("memory", "binary_folder", "zarr"):
         if format != "memory":
@@ -436,10 +518,10 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer4, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]], format=format, folder=folder, return_new_unit_ids=True
+            merge_unit_groups=[["0", "1"]], format=format, folder=folder, return_new_unit_ids=True
         )
-        assert 0 not in sorting_analyzer4.unit_ids
-        assert 1 not in sorting_analyzer4.unit_ids
+        assert "0" not in sorting_analyzer4.unit_ids
+        assert "1" not in sorting_analyzer4.unit_ids
         assert len(sorting_analyzer4.unit_ids) == len(sorting_analyzer.unit_ids) - 1
         is_merged_values = sorting_analyzer4.sorting.get_property("is_merged")
         assert is_merged_values[sorting_analyzer4.sorting.ids_to_indices(new_unit_ids)][0]
@@ -454,19 +536,19 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         else:
             folder = None
         sorting_analyzer5, new_unit_ids = sorting_analyzer.merge_units(
-            merge_unit_groups=[[0, 1]],
-            new_unit_ids=[50],
+            merge_unit_groups=[["0", "1"]],
+            new_unit_ids=["50"],
             format=format,
             folder=folder,
             merging_mode="hard",
             return_new_unit_ids=True,
         )
-        assert 0 not in sorting_analyzer5.unit_ids
-        assert 1 not in sorting_analyzer5.unit_ids
+        assert "0" not in sorting_analyzer5.unit_ids
+        assert "1" not in sorting_analyzer5.unit_ids
         assert len(sorting_analyzer5.unit_ids) == len(sorting_analyzer.unit_ids) - 1
-        assert 50 in sorting_analyzer5.unit_ids
+        assert "50" in sorting_analyzer5.unit_ids
         is_merged_values = sorting_analyzer5.sorting.get_property("is_merged")
-        assert is_merged_values[sorting_analyzer5.sorting.id_to_index(50)]
+        assert is_merged_values[sorting_analyzer5.sorting.id_to_index("50")]
 
         # test splitting
         if format != "memory":
@@ -541,7 +623,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
         self.data["result_two"] = spikes["unit_index"].copy()
         self.data["result_three"] = np.zeros((len(self.sorting_analyzer.unit_ids), 2))
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -574,7 +656,7 @@ class DummyAnalyzerExtension(AnalyzerExtension):
                 keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
                 new_data["result_three"][unit_ind] = arr[keep_unit_index]
             else:
-                id = np.flatnonzero(new_unit_ids == unit_id)[0]
+                id = list(new_unit_ids).index(unit_id)
                 keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_groups[id])
                 new_data["result_three"][unit_ind] = arr[keep_unit_indices].mean(axis=0)
 
@@ -615,15 +697,11 @@ class DummyPipelineAnalyzerExtension(BaseSpikeVectorExtension):
         return params
 
     def _get_pipeline_nodes(self):
-        from spikeinterface.core.template_tools import get_template_extremum_channel
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
 
-        extremum_channel_inds = get_template_extremum_channel(self.sorting_analyzer, outputs="index")
-        spike_retriever_node = SpikeRetriever(
-            sorting, recording, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
-        )
+        spike_retriever_node = SpikeRetriever(sorting, recording, channel_from_template=True)
         spike_amplitudes_node = AmplitudeExtractionNode(
             recording,
             parents=[spike_retriever_node],
@@ -714,6 +792,153 @@ def test_runtime_dependencies(dataset):
     assert not sorting_analyzer.has_extension("dummy_pipeline")
 
 
+def test_select_channels(dataset):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
+    sorting_analyzer.compute(["random_spikes", "templates", "noise_levels"])
+    # select channels
+    keep_channel_ids = recording.channel_ids[::2]
+    sorting_analyzer2 = sorting_analyzer.select_channels(channel_ids=keep_channel_ids)
+
+    assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
+    assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
+    assert sorting_analyzer2.get_extension("templates").data["average"].shape[2] == len(keep_channel_ids)
+    assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
+    for p in sorting_analyzer2.rec_attributes["properties"].values():
+        assert len(p) == len(keep_channel_ids)
+
+    # Now test in recordingless mode
+    sorting_analyzer2._recording = None
+    assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
+    assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
+    assert sorting_analyzer2.get_extension("templates").data["average"].shape[2] == len(keep_channel_ids)
+    assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
+    for p in sorting_analyzer2.rec_attributes["properties"].values():
+        assert len(p) == len(keep_channel_ids)
+
+
+def test_main_channel_from_templates_dense_recordingless(tmp_path):
+    """When a dense analyzer has a `templates` extension but no attached recording, `get_main_channels`
+    recovers each unit's main channel from the templates (its peak channel) and reports it consistently
+    both as a positional index and as a channel id.
+    """
+    recording, sorting = generate_ground_truth_recording(
+        num_channels=8,
+        num_units=2,
+        durations=[10.0],
+        sampling_frequency=30000.0,
+        seed=0,
+    )
+    # `generate_ground_truth_recording` names channels "0".."7" (numeric strings that equal their own
+    # index). Rename them to letters so a channel id is unmistakably distinct from its positional index:
+    # the recovery converts the stored `main_channel_id` (an id) into a `main_channel_index`, and letters
+    # make that conversion observable instead of silently coinciding.
+    channel_ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    recording = recording.rename_channels(channel_ids)
+    # the pre-set `main_channel_id` still references the old ids; drop it so it is re-estimated on the renamed recording
+    sorting = sorting.clone()
+    sorting._properties.pop("main_channel_id")
+
+    # place each unit's template peak on a known (index, id) pair
+    unit0_main_channel_index, unit0_main_channel_id = 0, "a"
+    unit1_main_channel_index, unit1_main_channel_id = 7, "h"
+    expected_main_channel_indices = [unit0_main_channel_index, unit1_main_channel_index]
+    expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
+
+    folder = tmp_path / "analyzer_recordingless"
+    analyzer = create_sorting_analyzer(sorting, recording, format="binary_folder", folder=folder, sparse=False)
+    analyzer.compute(["random_spikes", "templates"])
+
+    # simulate the recording being unavailable at load time by removing its serialized copy on disk
+    for file_ext in ("json", "pickle"):
+        recording_file = folder / f"recording.{file_ext}"
+        if recording_file.exists():
+            recording_file.unlink()
+
+    reloaded_analyzer = load_sorting_analyzer(folder)
+    assert not reloaded_analyzer.has_recording()
+    assert reloaded_analyzer.has_extension("templates")
+
+    # craft a clear negative peak on each unit's main channel
+    templates = reloaded_analyzer.get_extension("templates")
+    average = templates.data["average"]
+    average[:] = 0.0
+    average[0, templates.nbefore, unit0_main_channel_index] = -100.0
+    average[1, templates.nbefore, unit1_main_channel_index] = -100.0
+    templates.data["average"] = average
+
+    # recovery must not raise, and must map correctly between positional indices and channel ids
+    recovered_main_channel_indices = np.asarray(reloaded_analyzer.get_main_channels(outputs="index"))
+    recovered_main_channel_ids = np.asarray(reloaded_analyzer.get_main_channels(outputs="id"))
+    assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
+    assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
+
+
+def test_main_channel_from_templates_sparse_recordingless():
+    """When a sparse analyzer has a `templates` extension but no attached recording, `get_main_channels`
+    reports each unit's main channel as its template peak channel, not the geometric centroid of the
+    unit's sparse channel set.
+    """
+    from spikeinterface.core.sparsity import ChannelSparsity
+
+    # 8 channels on a single linear column with uniform spacing, 2 units. The single column is the
+    # essential geometry: it makes the centroid of a contiguous channel set its middle channel, so the
+    # template peaks placed on the endpoints below differ from the centroids and the test can tell the
+    # two apart. ypitch sets that uniform spacing explicitly; nothing else about the probe matters here.
+    recording, sorting = generate_ground_truth_recording(
+        num_channels=8,
+        num_units=2,
+        durations=[10.0],
+        sampling_frequency=30000.0,
+        seed=0,
+        generate_probe_kwargs=dict(num_columns=1, ypitch=20),
+    )
+    # Rename channels "0".."7" to letters so a channel id is unmistakably distinct from its positional
+    # index, keeping the id-vs-index conversion in the recovery observable.
+    channel_ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
+    recording = recording.rename_channels(channel_ids)
+
+    # Each unit's true main channel is the template peak we place below, put on an endpoint of the unit's
+    # sparse set so it is off the set's geometric centroid, which is what makes the correct (peak) answer
+    # and the wrong (centroid) fallback distinguishable.
+    unit0_main_channel_index, unit0_main_channel_id = 0, "a"  # unit 0's sparse set {a..e}; centroid is "c" (index 2)
+    unit1_main_channel_index, unit1_main_channel_id = 7, "h"  # unit 1's sparse set {d..h}; centroid is "f" (index 5)
+    expected_main_channel_indices = [unit0_main_channel_index, unit1_main_channel_index]
+    expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
+
+    # explicit sparsity matching the sets referenced above
+    mask = np.zeros((2, 8), dtype=bool)
+    mask[0, 0:5] = True
+    mask[1, 3:8] = True
+    sparsity = ChannelSparsity(mask=mask, unit_ids=sorting.unit_ids, channel_ids=recording.channel_ids)
+
+    # point `main_channel_id` at the (in-mask) centroid channels so create's sparsity-consistency check
+    # passes; the recovery ignores this value because there is no recording, so it does not bias the test.
+    sorting = sorting.clone()
+    sorting.set_property("main_channel_id", ["c", "f"])
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True, sparsity=sparsity)
+    analyzer.compute(["random_spikes", "templates"])
+
+    # craft a clear negative peak on each unit's main channel
+    templates = analyzer.get_extension("templates")
+    average = templates.data["average"]
+    average[:] = 0.0
+    average[0, templates.nbefore, unit0_main_channel_index] = -100.0
+    average[1, templates.nbefore, unit1_main_channel_index] = -100.0
+    templates.data["average"] = average
+
+    # recordingless, and force the backwards-compatibility recompute
+    analyzer._recording = None
+    analyzer._main_channel_indices = None
+
+    # must be the template peak channels, not the geometric centroids ("c", "f" / indices [2, 5])
+    recovered_main_channel_indices = np.asarray(analyzer.get_main_channels(outputs="index"))
+    recovered_main_channel_ids = np.asarray(analyzer.get_main_channels(outputs="id"))
+    assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
+    assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
+
+
 if __name__ == "__main__":
     tmp_path = Path("test_SortingAnalyzer")
     dataset = get_dataset()
@@ -723,4 +948,4 @@ if __name__ == "__main__":
     test_SortingAnalyzer_tmp_recording(dataset)
     test_extension()
     test_extension_params()
-    test_runtime_dependencies()
+    test_runtime_dependencies(dataset)

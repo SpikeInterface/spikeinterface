@@ -1,14 +1,15 @@
 import warnings
-
 from typing import Tuple
-import numpy as np
 import math
+import importlib.util
 
-try:
-    import numba
+import numpy as np
+
+if importlib.util.find_spec("numba") is not None:
+    from numba import jit
 
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 from spikeinterface.core import SortingAnalyzer
@@ -191,7 +192,6 @@ def compute_merge_unit_groups(
 
     However, it has been greatly consolidated and refined depending on the presets.
     """
-    import scipy
 
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
@@ -282,8 +282,9 @@ def compute_merge_unit_groups(
         elif step == "unit_locations":
             location_ext = sorting_analyzer.get_extension("unit_locations")
             unit_locations = location_ext.get_data()[:, :2]
+            from scipy.spatial import distance
 
-            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            unit_distances = distance.cdist(unit_locations, unit_locations, metric="euclidean")
             pair_mask = pair_mask & (unit_distances <= params["max_distance_um"])
             outs["unit_distances"] = unit_distances
 
@@ -671,7 +672,7 @@ def get_potential_auto_merge(
     # deprecation moved to 0.105.0 for @zm711
     warnings.warn(
         "get_potential_auto_merge() is deprecated and will be removed in version 0.105.0. Use compute_merge_unit_groups() instead",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
 
@@ -994,11 +995,11 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
-    import scipy.signal
+    from scipy.signal import fftconvolve, butter, filtfilt
 
     # OLD implementation : smooth correlogram by low pass filter
-    # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
-    # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
+    # b, a = butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
+    # correlograms_smoothed = filtfilt(b, a, correlograms, axis=2)
 
     # new implementation smooth by convolution with a Gaussian kernel
     if len(correlograms) == 0:  # fftconvolve will not return the correct shape.
@@ -1007,7 +1008,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     smooth_kernel = np.exp(-(bins**2) / (2 * sigma_smooth_ms**2))
     smooth_kernel /= np.sum(smooth_kernel)
     smooth_kernel = smooth_kernel[None, None, :]
-    correlograms_smoothed = scipy.signal.fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
+    correlograms_smoothed = fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
 
     return correlograms_smoothed
 
@@ -1030,13 +1031,13 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     unit_window : int
         Index at which the adaptive window has been calculated.
     """
-    import scipy.signal
+    from scipy.signal import find_peaks
 
     if np.sum(np.abs(auto_corr)) == 0:
         return 20.0
 
     derivative_2 = -np.gradient(np.gradient(auto_corr))
-    peaks = scipy.signal.find_peaks(derivative_2)[0]
+    peaks = find_peaks(derivative_2)[0]
 
     keep = auto_corr[peaks] >= threshold
     peaks = peaks[keep]
@@ -1212,7 +1213,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
     d : float
         The presence distance between the two units.
     """
-    import scipy
+    from scipy.stats import wasserstein_distance
 
     distances = []
     if num_samples is not None:
@@ -1244,7 +1245,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
         h2 = h2.astype(float)
 
         xaxis = bins[1:] / sorting.sampling_frequency
-        d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
+        d = wasserstein_distance(xaxis, xaxis, h1, h2)
         distances.append(d)
 
     return np.mean(d)
@@ -1315,20 +1316,21 @@ def binom_sf(x: int, n: float, p: float) -> float:
         The survival function of the binomial distribution.
     """
 
-    import scipy
+    from scipy.stats import binom
+    from scipy.interpolate import interp1d
 
     n_array = np.arange(math.floor(n - 2), math.ceil(n + 3), 1)
     n_array = n_array[n_array >= 0]
 
-    res = [scipy.stats.binom.sf(x, n_, p) for n_ in n_array]
-    f = scipy.interpolate.interp1d(n_array, res, kind="quadratic")
+    res = [binom.sf(x, n_, p) for n_ in n_array]
+    f = interp1d(n_array, res, kind="quadratic")
 
     return f(n)
 
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def _get_border_probabilities(max_time) -> tuple[int, int, float, float]:
         """
         Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
@@ -1360,7 +1362,7 @@ if HAVE_NUMBA:
 
         return border_low, border_high, p_low, p_high
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def compute_nb_violations(spike_train, max_time) -> float:
         """
         Computes the number of refractory period violations in a spike train.
@@ -1401,7 +1403,7 @@ if HAVE_NUMBA:
 
         return n_violations + p_high * n_violations_high + p_low * n_violations_low
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
         """
         Computes the number of coincident spikes between two spike trains.

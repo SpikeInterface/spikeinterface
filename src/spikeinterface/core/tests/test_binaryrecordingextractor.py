@@ -2,10 +2,9 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from spikeinterface.core import BinaryRecordingExtractor
+from spikeinterface.core import BinaryRecordingExtractor, MockRecording
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.core.core_tools import measure_memory_allocation
-from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 def test_BinaryRecordingExtractor(create_cache_folder):
@@ -73,7 +72,7 @@ def folder_with_binary_files(tmpdir_factory):
     num_channels = 32
     sampling_frequency = 30_000.0
     dtype = "float32"
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=[1.0],
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
@@ -86,7 +85,7 @@ def folder_with_binary_files(tmpdir_factory):
 
 
 def test_sequential_reading_of_small_traces(folder_with_binary_files):
-    # Test that memmap is readed correctly when pointing to specific frames
+    # Test that memmap is read correctly when pointing to specific frames
     folder = folder_with_binary_files
     num_channels = 32
     sampling_frequency = 30_000.0

@@ -84,7 +84,13 @@ class ShellScript:
         self._start_time = time.time()
         encoding = sys.getdefaultencoding()
         self._process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True, encoding=encoding
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+            encoding=encoding,
+            errors="ignore",
         )
         with open(script_log_path, "w+") as script_log_file:
             for line in self._process.stdout:

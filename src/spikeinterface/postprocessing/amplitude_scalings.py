@@ -1,8 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.core_tools import ms_to_samples
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array, _get_nbefore
+from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
@@ -103,10 +102,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
         else:
             cut_out_after = nafter
 
-        peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
-        extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
-        )
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         # collisions
         handle_collisions = self.params["handle_collisions"]
@@ -138,7 +134,6 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             sorting,
             recording,
             channel_from_template=True,
-            extremum_channel_inds=extremum_channels_indices,
             include_spikes_in_margin=True,
         )
         amplitude_scalings_node = AmplitudeScalingNode(
@@ -527,7 +522,7 @@ def fit_collision(
         full_template = np.zeros_like(local_waveform)
 
         # For the collision spike, take its unit template and insert
-        # it into `full_template` at the time the collision spike occured.
+        # it into `full_template` at the time the collision spike occurred.
         sample_centered = spike["sample_index"] - local_waveform_start
         template = all_templates[spike["unit_index"]][:, sparse_indices]
         template_cut = template[nbefore - cut_out_before : nbefore + cut_out_after]
