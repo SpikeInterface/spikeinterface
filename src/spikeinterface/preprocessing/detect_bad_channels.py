@@ -288,13 +288,8 @@ def detect_bad_channels(
         channel_labels[mask] = "noise"
 
     elif method == "coherence+psd":
-        if job_kwargs is None:
-            job_kwargs = {"progress_bar": False}
+        job_kwargs = {}  if job_kwargs is None else job_kwargs
         job_kwargs = fix_job_kwargs(job_kwargs)
-        executor_job_kwargs = {
-            key: job_kwargs[key]
-            for key in ("pool_engine", "n_jobs", "progress_bar", "mp_context", "max_threads_per_worker")
-        }
 
         # some checks
         assert recording.has_scaleable_traces(), (
@@ -336,7 +331,7 @@ def detect_bad_channels(
             handle_returns=True,
             chunk_size=random_chunk_kwargs["chunk_size"],
             job_name="detect_bad_channels",
-            **executor_job_kwargs,
+            **job_kwargs,
         )
         chunk_channel_labels = np.stack(executor.run(slices=random_slices), axis=1)
 
