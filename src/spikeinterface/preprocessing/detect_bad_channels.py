@@ -288,7 +288,7 @@ def detect_bad_channels(
         channel_labels[mask] = "noise"
 
     elif method == "coherence+psd":
-        job_kwargs = {}  if job_kwargs is None else job_kwargs
+        job_kwargs = {} if job_kwargs is None else job_kwargs
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         # some checks
