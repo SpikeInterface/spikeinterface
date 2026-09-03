@@ -90,5 +90,5 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 
-read_plexon = define_function_from_class(source_class=PlexonRecordingExtractor, name="read_plexon")
-read_plexon_sorting = define_function_from_class(source_class=PlexonSortingExtractor, name="read_plexon_sorting")
+define_function_from_class(source_class=PlexonRecordingExtractor, name="read_plexon")
+define_function_from_class(source_class=PlexonSortingExtractor, name="read_plexon_sorting")

@@ -50,4 +50,4 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_spike2 = define_function_from_class(source_class=Spike2RecordingExtractor, name="read_spike2")
+define_function_from_class(source_class=Spike2RecordingExtractor, name="read_spike2")

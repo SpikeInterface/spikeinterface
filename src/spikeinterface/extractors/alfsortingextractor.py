@@ -65,4 +65,4 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)].astype("int64", copy=False)
 
 
-read_alf_sorting = define_function_from_class(source_class=ALFSortingExtractor, name="read_alf_sorting")
+define_function_from_class(source_class=ALFSortingExtractor, name="read_alf_sorting")

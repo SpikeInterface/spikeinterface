@@ -71,4 +71,4 @@ class NeuroExplorerRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_neuroexplorer = define_function_from_class(source_class=NeuroExplorerRecordingExtractor, name="read_neuroexplorer")
+define_function_from_class(source_class=NeuroExplorerRecordingExtractor, name="read_neuroexplorer")

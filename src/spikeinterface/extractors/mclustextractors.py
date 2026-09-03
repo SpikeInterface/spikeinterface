@@ -101,4 +101,4 @@ class MClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_mclust = define_function_from_class(source_class=MClustSortingExtractor, name="read_mclust")
+define_function_from_class(source_class=MClustSortingExtractor, name="read_mclust")

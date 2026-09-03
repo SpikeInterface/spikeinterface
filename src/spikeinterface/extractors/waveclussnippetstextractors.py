@@ -149,6 +149,4 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
         return self._spikestimes[indices]
 
 
-read_waveclus_snippets = define_function_from_class(
-    source_class=WaveClusSnippetsExtractor, name="read_waveclus_snippets"
-)
+define_function_from_class(source_class=WaveClusSnippetsExtractor, name="read_waveclus_snippets")

@@ -56,4 +56,4 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_ced = define_function_from_class(source_class=CedRecordingExtractor, name="read_ced")
+define_function_from_class(source_class=CedRecordingExtractor, name="read_ced")

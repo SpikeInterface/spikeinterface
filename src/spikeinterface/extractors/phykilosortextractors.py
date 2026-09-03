@@ -345,8 +345,8 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "keep_good_only": keep_good_only}
 
 
-read_phy = define_function_from_class(source_class=PhySortingExtractor, name="read_phy")
-read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
+define_function_from_class(source_class=PhySortingExtractor, name="read_phy")
+define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
 
 
 def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offset_to_uV=None) -> SortingAnalyzer:

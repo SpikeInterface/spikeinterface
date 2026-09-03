@@ -148,5 +148,5 @@ class MaxwellEventSegment(BaseEventSegment):
         return event
 
 
-read_maxwell = define_function_from_class(source_class=MaxwellRecordingExtractor, name="read_maxwell")
-read_maxwell_event = define_function_from_class(source_class=MaxwellEventExtractor, name="read_maxwell_event")
+define_function_from_class(source_class=MaxwellRecordingExtractor, name="read_maxwell")
+define_function_from_class(source_class=MaxwellEventExtractor, name="read_maxwell_event")

@@ -75,4 +75,4 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
         return times
 
 
-read_herdingspikes = define_function_from_class(source_class=HerdingspikesSortingExtractor, name="read_herdingspikes")
+define_function_from_class(source_class=HerdingspikesSortingExtractor, name="read_herdingspikes")

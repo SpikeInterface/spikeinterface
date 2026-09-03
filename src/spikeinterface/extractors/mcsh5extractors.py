@@ -161,4 +161,4 @@ def openMCSH5File(filename, stream_id):
     return mcs_info
 
 
-read_mcsh5 = define_function_from_class(source_class=MCSH5RecordingExtractor, name="read_mcsh5")
+define_function_from_class(source_class=MCSH5RecordingExtractor, name="read_mcsh5")

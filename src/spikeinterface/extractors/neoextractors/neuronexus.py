@@ -61,4 +61,4 @@ class NeuroNexusRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_neuronexus = define_function_from_class(source_class=NeuroNexusRecordingExtractor, name="read_neuronexus")
+define_function_from_class(source_class=NeuroNexusRecordingExtractor, name="read_neuronexus")

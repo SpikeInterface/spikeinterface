@@ -128,7 +128,7 @@ class MergeUnitsSorting(BaseSorting):
         )
 
 
-merge_units_sorting = define_function_from_class(source_class=MergeUnitsSorting, name="merge_units_sorting")
+define_function_from_class(source_class=MergeUnitsSorting, name="merge_units_sorting")
 
 
 class MergeUnitsSortingSegment(BaseSortingSegment):

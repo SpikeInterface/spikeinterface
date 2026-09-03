@@ -45,4 +45,4 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_axona = define_function_from_class(source_class=AxonaRecordingExtractor, name="read_axona")
+define_function_from_class(source_class=AxonaRecordingExtractor, name="read_axona")

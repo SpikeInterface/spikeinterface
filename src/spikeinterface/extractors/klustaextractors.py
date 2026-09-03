@@ -150,4 +150,4 @@ class KlustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_klusta = define_function_from_class(source_class=KlustaSortingExtractor, name="read_klusta")
+define_function_from_class(source_class=KlustaSortingExtractor, name="read_klusta")

@@ -223,9 +223,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-noise_generator_recording = define_function_from_class(
-    source_class=NoiseGeneratorRecording, name="noise_generator_recording"
-)
+define_function_from_class(source_class=NoiseGeneratorRecording, name="noise_generator_recording")
 
 
 def generate_noise(

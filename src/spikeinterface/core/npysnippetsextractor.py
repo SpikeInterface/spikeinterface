@@ -160,7 +160,7 @@ class NpySnippetsSegment(BaseSnippetsSegment):
         """
         if indices is None:
             return self._spikestimes
-        raise self._spikestimes[indices]
+        return self._spikestimes[indices]
 
 
-read_npy_snippets = define_function_from_class(source_class=NpySnippetsExtractor, name="read_npy_snippets")
+define_function_from_class(source_class=NpySnippetsExtractor, name="read_npy_snippets")

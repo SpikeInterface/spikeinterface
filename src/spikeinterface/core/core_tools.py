@@ -60,17 +60,10 @@ def define_function_handling_dict_from_class(source_class, name):
     sys._getframe(1).f_globals[name] = source_class_or_dict_of_sources_classes
 
 
-# Generic typing needed to help propagate typing
-# across multiple language servers
-# see https://github.com/SpikeInterface/spikeinterface/issues/4319
-P = ParamSpec("P")
-T = TypeVar("T")
-
-
-def define_function_from_class(source_class: Callable[P, T], name: str) -> Callable[P, T]:
+def define_function_from_class(source_class, name: str) -> None:
     "Wrapper to inject source_class into the caller's module namespace under name."
 
-    return source_class
+    sys._getframe(1).f_globals[name] = source_class
 
 
 def read_python(path):

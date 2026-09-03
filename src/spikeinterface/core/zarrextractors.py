@@ -483,8 +483,8 @@ class ZarrSortingExtractor(BaseSorting):
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
 
 
-read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
-read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
+define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
+define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
 
 
 def read_zarr(

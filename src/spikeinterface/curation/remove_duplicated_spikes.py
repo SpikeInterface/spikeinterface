@@ -91,6 +91,4 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         return spike_train[start:end]
 
 
-remove_duplicated_spikes = define_function_from_class(
-    source_class=RemoveDuplicatedSpikesSorting, name="remove_duplicated_spikes"
-)
+define_function_from_class(source_class=RemoveDuplicatedSpikesSorting, name="remove_duplicated_spikes")

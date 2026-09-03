@@ -290,8 +290,8 @@ class MdaSortingSegment(BaseSortingSegment):
         return np.rint(self._spike_times[inds]).astype(int)
 
 
-read_mda_recording = define_function_from_class(source_class=MdaRecordingExtractor, name="read_mda_recording")
-read_mda_sorting = define_function_from_class(source_class=MdaSortingExtractor, name="read_mda_sorting")
+define_function_from_class(source_class=MdaRecordingExtractor, name="read_mda_recording")
+define_function_from_class(source_class=MdaSortingExtractor, name="read_mda_sorting")
 
 
 def _concatenate(list):

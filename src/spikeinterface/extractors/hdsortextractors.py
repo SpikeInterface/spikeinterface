@@ -257,4 +257,4 @@ def _squeeze(arr):
     return arr
 
 
-read_hdsort = define_function_from_class(source_class=HDSortSortingExtractor, name="read_hdsort")
+define_function_from_class(source_class=HDSortSortingExtractor, name="read_hdsort")

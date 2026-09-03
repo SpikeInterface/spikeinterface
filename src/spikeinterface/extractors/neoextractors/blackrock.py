@@ -135,7 +135,5 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 
-read_blackrock = define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")
-read_blackrock_sorting = define_function_from_class(
-    source_class=BlackrockSortingExtractor, name="read_blackrock_sorting"
-)
+define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")
+define_function_from_class(source_class=BlackrockSortingExtractor, name="read_blackrock_sorting")
