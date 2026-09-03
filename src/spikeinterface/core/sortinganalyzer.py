@@ -1868,7 +1868,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             except (Exception, KeyboardInterrupt):
                 for extension_name, extension_instance in extension_instances.items():
                     self.extensions.pop(extension_name, None)
-                    if save and not self.is_read_only(): extension_instance._delete_extension_folder()
+                    if save and not self.is_read_only():
+                        extension_instance._delete_extension_folder()
                 raise
 
         for extension_name, extension_params in extensions_post_pipeline.items():
