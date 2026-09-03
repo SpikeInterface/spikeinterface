@@ -356,7 +356,7 @@ def dredge_ap(
     elif resolution_mode == "online":
 
         T_total = raster.shape[1]
-        T_chunk = 2048/bin_s
+        T_chunk = 2048 / bin_s
         threshold_kw = dict(
             mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
             in_place=True,
