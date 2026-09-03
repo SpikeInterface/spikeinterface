@@ -1677,7 +1677,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         ----------
         extension_name : str
             The name of the extension.
-            For instance "waveforms", "templates", ...
+            For instance "waveforms", "templates", ..j
         save : bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
@@ -1726,11 +1726,18 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
         extension_instance = extension_class(self)
-        extension_instance.set_params(save=save, **params)
-        if extension_class.need_job_kwargs:
-            extension_instance.run(save=save, verbose=verbose, **job_kwargs)
-        else:
-            extension_instance.run(save=save, verbose=verbose)
+        should_save = save and not self.is_read_only()
+        try:
+            extension_instance.set_params(save=save, **params)
+            if extension_class.need_job_kwargs:
+                extension_instance.run(save=save, verbose=verbose, **job_kwargs)
+            else:
+                extension_instance.run(save=save, verbose=verbose)
+        except (Exception, KeyboardInterrupt):
+            if should_save:
+                extension_instance._delete_extension_folder()
+                self.extensions.pop(extension_name, None)
+            raise
 
         self.extensions[extension_name] = extension_instance
         return extension_instance
@@ -1815,49 +1822,54 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             all_nodes = []
             result_routage = []
             extension_instances = {}
+            try:
+                for extension_name, extension_params in extensions_with_pipeline.items():
+                    extension_class = get_extension_class(extension_name)
+                    assert (
+                        self.has_recording() or self.has_temporary_recording()
+                    ), f"Extension {extension_name} requires the recording"
 
-            for extension_name, extension_params in extensions_with_pipeline.items():
-                extension_class = get_extension_class(extension_name)
-                assert (
-                    self.has_recording() or self.has_temporary_recording()
-                ), f"Extension {extension_name} requires the recording"
+                    for variable_name in extension_class.nodepipeline_variables:
+                        result_routage.append((extension_name, variable_name))
 
-                for variable_name in extension_class.nodepipeline_variables:
-                    result_routage.append((extension_name, variable_name))
+                    extension_instance = extension_class(self)
+                    extension_instance.set_params(save=save, **extension_params)
+                    extension_instances[extension_name] = extension_instance
 
-                extension_instance = extension_class(self)
-                extension_instance.set_params(save=save, **extension_params)
-                extension_instances[extension_name] = extension_instance
+                    nodes = extension_instance.get_pipeline_nodes()
+                    all_nodes.extend(nodes)
 
-                nodes = extension_instance.get_pipeline_nodes()
-                all_nodes.extend(nodes)
+                job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
-            job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
+                t_start = perf_counter()
+                results = run_node_pipeline(
+                    self.recording,
+                    all_nodes,
+                    job_kwargs=job_kwargs,
+                    job_name=job_name,
+                    gather_mode="memory",
+                    squeeze_output=False,
+                    verbose=verbose,
+                )
+                t_end = perf_counter()
+                # for pipeline node extensions we can only track the runtime of the run_node_pipeline
+                runtime_s = t_end - t_start
 
-            t_start = perf_counter()
-            results = run_node_pipeline(
-                self.recording,
-                all_nodes,
-                job_kwargs=job_kwargs,
-                job_name=job_name,
-                gather_mode="memory",
-                squeeze_output=False,
-                verbose=verbose,
-            )
-            t_end = perf_counter()
-            # for pipeline node extensions we can only track the runtime of the run_node_pipeline
-            runtime_s = t_end - t_start
+                for r, result in enumerate(results):
+                    extension_name, variable_name = result_routage[r]
+                    extension_instances[extension_name].data[variable_name] = result
+                    extension_instances[extension_name].run_info["runtime_s"] = runtime_s
+                    extension_instances[extension_name].run_info["run_completed"] = True
 
-            for r, result in enumerate(results):
-                extension_name, variable_name = result_routage[r]
-                extension_instances[extension_name].data[variable_name] = result
-                extension_instances[extension_name].run_info["runtime_s"] = runtime_s
-                extension_instances[extension_name].run_info["run_completed"] = True
-
-            for extension_name, extension_instance in extension_instances.items():
-                self.extensions[extension_name] = extension_instance
-                if save:
-                    extension_instance.save()
+                for extension_name, extension_instance in extension_instances.items():
+                    self.extensions[extension_name] = extension_instance
+                    if save:
+                        extension_instance.save()
+            except (Exception, KeyboardInterrupt):
+                for extension_name, extension_instance in extension_instances.items():
+                    self.extensions.pop(extension_name, None)
+                    if save and not self.is_read_only(): extension_instance._delete_extension_folder()
+                raise
 
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
