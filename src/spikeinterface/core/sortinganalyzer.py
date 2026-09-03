@@ -1962,16 +1962,31 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         for extension_name in self.get_saved_extension_names():
             self.load_extension(extension_name)
 
+    def _delete_extension_storage(self, extension_name) -> None:
+        if self.format == "binary_folder":
+            extension_folder = Path(self.folder).joinpath("extensions", extension_name)
+            if extension_folder.is_dir(): shutil.rmtree(extension_folder)
+        if self.format == "zarr":
+            import zarr
+            zarr_root = self._get_zarr_root(mode="r+")
+            if extension_name in (root:=zarr_root["extensions"]):
+                del root[extension_name]
+                zarr.consolidate_metadata(zarr_root.store)
+
+
     def delete_extension(self, extension_name) -> None:
         """
         Delete the extension from the dict and also in the persistent zarr or folder.
         """
 
         # delete from folder or zarr
-        if self.format != "memory" and self.has_extension(extension_name):
+        if self.format != "memory":
+            if self.has_extension(extension_name):
             # need a reload to reset the folder
-            ext = self.load_extension(extension_name)
-            ext.delete()
+                ext = self.load_extension(extension_name)
+                ext.delete()
+            else:
+                self._delete_extension_storage(extension_name)
 
         # remove from dict
         self.extensions.pop(extension_name, None)
