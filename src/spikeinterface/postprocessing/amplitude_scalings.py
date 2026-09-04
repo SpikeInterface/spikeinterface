@@ -158,33 +158,6 @@ register_result_extension(ComputeAmplitudeScalings)
 compute_amplitude_scalings = ComputeAmplitudeScalings.function_factory()
 
 
-def _scale_local_waveform_to_uV(local_waveform, gains, offsets, sparse_indices):
-    """
-    Scale a cut-out local waveform to uV, using only the gain/offset of the channels
-    it was cut from.
-
-    Parameters
-    ----------
-    local_waveform : np.ndarray
-        The cut-out waveform, of shape (n_samples, len(sparse_indices)).
-    gains : np.ndarray
-        The gains of all channels in the recording.
-    offsets : np.ndarray
-        The offsets of all channels in the recording.
-    sparse_indices : np.ndarray
-        The channel indices `local_waveform` was cut from, used to index `gains`/`offsets`.
-
-    Returns
-    -------
-    np.ndarray
-        The waveform scaled to uV. `local_waveform` is cast to float32 first, but the
-        result follows numpy's promotion rules against `gains`/`offsets`, so it comes
-        out float64 whenever those are float64 (which is what `get_channel_gains()` /
-        `get_channel_offsets()` return for a gain/offset set from a Python float).
-    """
-    return local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
-
-
 class AmplitudeScalingNode(PipelineNode):
     def __init__(
         self,
@@ -316,7 +289,7 @@ class AmplitudeScalingNode(PipelineNode):
                 local_waveform = traces[cut_out_start:cut_out_end, sparse_indices]
             # scale the waveform to match the scaling of the templates
             if gains is not None:
-                local_waveform = _scale_local_waveform_to_uV(local_waveform, gains, offsets, sparse_indices)
+                local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
             assert template.shape == local_waveform.shape
 
             # here we use linregress, which is equivalent to using sklearn LinearRegression with fit_intercept=True
@@ -553,7 +526,7 @@ def fit_collision(
     local_waveform = traces_with_margin[local_waveform_start:local_waveform_end, sparse_indices]
     # scale the waveform to match the scaling of the templates
     if gains is not None:
-        local_waveform = _scale_local_waveform_to_uV(local_waveform, gains, offsets, sparse_indices)
+        local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
     num_samples_local_waveform = local_waveform.shape[0]
 
     y = local_waveform.T.flatten()
