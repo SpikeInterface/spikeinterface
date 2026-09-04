@@ -280,7 +280,7 @@ class ZarrArrayExtractor(BaseRecording):
     Parameters
     ----------
     file_path : str
-        Path to the binary file
+        Path to the directory where the zarr array is stored
     sampling_frequency : float
         The sampling frequency
     gain_to_uV : float or array-like, default: None
@@ -300,12 +300,12 @@ class ZarrArrayExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_path,
-        sampling_frequency,
-        gain_to_uV=None,
-        offset_to_uV=None,
-        is_filtered=None,
-        storage_options=None,
+        file_path: str | Path,
+        sampling_frequency: float,
+        gain_to_uV: float | np.ndarray | None = None,
+        offset_to_uV: float | np.ndarray | None = None,
+        is_filtered: bool | None = None,
+        storage_options: dict | None = None,
     ):
 
         folder_path, _ = resolve_zarr_path(file_path)
