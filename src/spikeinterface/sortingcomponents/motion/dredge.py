@@ -174,7 +174,7 @@ def dredge_ap(
     progress_bar=True,
     extra_outputs=False,
     precomputed_D_C_maxdisp=None,
-    resolution_mode="simultaneous",
+    resolution_mode="offline",
 ):
     """Estimate motion from spikes
 
@@ -333,7 +333,7 @@ def dredge_ap(
         **xcorr_kw,
     )
 
-    if resolution_mode == "simultaneous":
+    if resolution_mode == "offline":
 
         threshold_kw = dict(bin_s=bin_s)
 
@@ -353,9 +353,11 @@ def dredge_ap(
             post_transform,
         )
 
-    elif resolution_mode == "online":
+    elif resolution_mode == "batch":
 
+        # T_total is number of bin_s in recording
         T_total = raster.shape[1]
+
         T_chunk = 2048 / bin_s
         threshold_kw = dict(
             mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
@@ -381,7 +383,7 @@ def dredge_ap(
             threshold_kw,
         )
     else:
-        raise ValueError(f"No resolution mode called {resolution_mode}")
+        raise ValueError(f"No `resolution_mode` called {resolution_mode}. Available modes are ['batch', 'offline'].")
 
     if extra_outputs:
         extra["windows"] = windows
