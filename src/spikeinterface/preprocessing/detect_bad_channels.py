@@ -161,11 +161,11 @@ def _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs):
     return all_detect_bad_channels_kwargs
 
 
-def _detect_bad_channels_coherence_psd_chunk_init(recording, method_kwargs):
+def _detect_bad_channels_chunk_init(recording, method_kwargs):
     return {"recording": recording, "method_kwargs": method_kwargs}
 
 
-def _detect_bad_channels_coherence_psd_chunk(segment_index, start_frame, end_frame, worker_context):
+def _detect_bad_channels_chunk(segment_index, start_frame, end_frame, worker_context):
     recording = worker_context["recording"]
     method_kwargs = worker_context["method_kwargs"]
 
@@ -263,10 +263,31 @@ def detect_bad_channels(
     else:
         recording_hp = recording
 
+    # Adjust random chunk kwargs based on method
+    if method in ("std", "mad"):
+        random_chunk_kwargs["return_in_uV"] = False
+        random_chunk_kwargs["concatenated"] = True
+    elif method == "neighborhood_r2":
+        random_chunk_kwargs["return_in_uV"] = False
+        random_chunk_kwargs["concatenated"] = False
+
+    if method != "coherence+psd":
+        random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
+
     channel_labels = np.zeros(recording.get_num_channels(), dtype="U5")
     channel_labels[:] = "good"
 
-    if method == "coherence+psd":
+    if method in ("std", "mad"):
+        if method == "std":
+            deviations = np.std(random_data, axis=0)
+        else:
+            deviations = median_abs_deviation(random_data, axis=0)
+        thresh = std_mad_threshold * np.median(deviations)
+        mask = deviations > thresh
+        bad_channel_ids = recording.channel_ids[mask]
+        channel_labels[mask] = "noise"
+
+    elif method == "coherence+psd":
         job_kwargs = {} if job_kwargs is None else job_kwargs
         job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -304,8 +325,8 @@ def detect_bad_channels(
         random_slices = get_random_sample_slices(recording_hp, **random_chunk_kwargs)
         executor = TimeSeriesChunkExecutor(
             recording_hp,
-            _detect_bad_channels_coherence_psd_chunk,
-            _detect_bad_channels_coherence_psd_chunk_init,
+            _detect_bad_channels_chunk,
+            _detect_bad_channels_chunk_init,
             (recording_hp, method_kwargs),
             handle_returns=True,
             chunk_size=random_chunk_kwargs["chunk_size"],
@@ -350,72 +371,52 @@ def detect_bad_channels(
         filtered_bad_channel_mask = np.isin(channel_labels, list(channel_filters))
         bad_channel_ids = recording.channel_ids[filtered_bad_channel_mask]
 
-    else:
-        if method in ("std", "mad"):
-            random_chunk_kwargs["return_in_uV"] = False
-            random_chunk_kwargs["concatenated"] = True
-        else:  # neighborhood_r2
-            random_chunk_kwargs["return_in_uV"] = False
-            random_chunk_kwargs["concatenated"] = False
+    elif method == "neighborhood_r2":
+        # make neighboring channels structure. this should probably be a function in core.
+        geom = recording.get_channel_locations()
+        num_channels = recording.get_num_channels()
+        chan_distances = np.linalg.norm(geom[:, None, :] - geom[None, :, :], axis=2)
+        np.fill_diagonal(chan_distances, neighborhood_r2_radius_um + 1)
+        neighbors_mask = chan_distances < neighborhood_r2_radius_um
+        if neighbors_mask.sum(axis=1).min() < 1:
+            warnings.warn(
+                f"neighborhood_r2_radius_um={neighborhood_r2_radius_um} led "
+                "to channels with no neighbors for this geometry, which has "
+                f"minimal channel distance {chan_distances.min()}um. These "
+                "channels will not be marked as bad, but you might want to "
+                "check them."
+            )
+        max_neighbors = neighbors_mask.sum(axis=1).max()
+        channel_index = np.full((num_channels, max_neighbors), num_channels)
+        for c in range(num_channels):
+            my_neighbors = np.flatnonzero(neighbors_mask[c])
+            channel_index[c, : my_neighbors.size] = my_neighbors
 
-        random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
+        # get the correlation of each channel with its neighbors' median inside each chunk
+        # note that we did not concatenate the chunks here
+        correlations = []
+        for chunk in random_data:
+            chunk = chunk.astype(np.float32, copy=False)
+            chunk = chunk - np.median(chunk, axis=0, keepdims=True)
+            padded_chunk = np.pad(chunk, [(0, 0), (0, 1)], constant_values=np.nan)
+            # channels with no neighbors will get a pure-nan median trace here
+            neighbmeans = np.nanmedian(
+                padded_chunk[:, channel_index],
+                axis=2,
+            )
+            denom = np.sqrt(np.nanmean(np.square(chunk), axis=0) * np.nanmean(np.square(neighbmeans), axis=0))
+            denom[denom == 0] = 1
+            # channels with no neighbors will get a nan here
+            chunk_correlations = np.nanmean(chunk * neighbmeans, axis=0) / denom
+            correlations.append(chunk_correlations)
 
-        if method in ("std", "mad"):
-            if method == "std":
-                deviations = np.std(random_data, axis=0)
-            else:
-                deviations = median_abs_deviation(random_data, axis=0)
-            thresh = std_mad_threshold * np.median(deviations)
-            mask = deviations > thresh
-            bad_channel_ids = recording.channel_ids[mask]
-            channel_labels[mask] = "noise"
-
-        else:  # neighborhood_r2
-            # make neighboring channels structure. this should probably be a function in core.
-            geom = recording.get_channel_locations()
-            num_channels = recording.get_num_channels()
-            chan_distances = np.linalg.norm(geom[:, None, :] - geom[None, :, :], axis=2)
-            np.fill_diagonal(chan_distances, neighborhood_r2_radius_um + 1)
-            neighbors_mask = chan_distances < neighborhood_r2_radius_um
-            if neighbors_mask.sum(axis=1).min() < 1:
-                warnings.warn(
-                    f"neighborhood_r2_radius_um={neighborhood_r2_radius_um} led "
-                    "to channels with no neighbors for this geometry, which has "
-                    f"minimal channel distance {chan_distances.min()}um. These "
-                    "channels will not be marked as bad, but you might want to "
-                    "check them."
-                )
-            max_neighbors = neighbors_mask.sum(axis=1).max()
-            channel_index = np.full((num_channels, max_neighbors), num_channels)
-            for c in range(num_channels):
-                my_neighbors = np.flatnonzero(neighbors_mask[c])
-                channel_index[c, : my_neighbors.size] = my_neighbors
-
-            # get the correlation of each channel with its neighbors' median inside each chunk
-            # note that we did not concatenate the chunks here
-            correlations = []
-            for chunk in random_data:
-                chunk = chunk.astype(np.float32, copy=False)
-                chunk = chunk - np.median(chunk, axis=0, keepdims=True)
-                padded_chunk = np.pad(chunk, [(0, 0), (0, 1)], constant_values=np.nan)
-                # channels with no neighbors will get a pure-nan median trace here
-                neighbmeans = np.nanmedian(
-                    padded_chunk[:, channel_index],
-                    axis=2,
-                )
-                denom = np.sqrt(np.nanmean(np.square(chunk), axis=0) * np.nanmean(np.square(neighbmeans), axis=0))
-                denom[denom == 0] = 1
-                # channels with no neighbors will get a nan here
-                chunk_correlations = np.nanmean(chunk * neighbmeans, axis=0) / denom
-                correlations.append(chunk_correlations)
-
-            # now take the median over chunks and threshold to finish
-            median_correlations = np.nanmedian(correlations, 0)
-            r2s = median_correlations**2
-            # channels with no neighbors will have r2==nan, and nan<x==False always
-            bad_channel_mask = r2s < neighborhood_r2_threshold
-            bad_channel_ids = recording.channel_ids[bad_channel_mask]
-            channel_labels[bad_channel_mask] = "noise"
+        # now take the median over chunks and threshold to finish
+        median_correlations = np.nanmedian(correlations, 0)
+        r2s = median_correlations**2
+        # channels with no neighbors will have r2==nan, and nan<x==False always
+        bad_channel_mask = r2s < neighborhood_r2_threshold
+        bad_channel_ids = recording.channel_ids[bad_channel_mask]
+        channel_labels[bad_channel_mask] = "noise"
 
     return bad_channel_ids, channel_labels
 
