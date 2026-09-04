@@ -2298,7 +2298,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         ----------
         extension_name : str
             The name of the extension.
-            For instance "waveforms", "templates", ..j
+            For instance "waveforms", "templates", ...
         save : bool, default: True
             It the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
