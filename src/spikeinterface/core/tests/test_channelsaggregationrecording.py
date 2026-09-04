@@ -1,8 +1,21 @@
 import numpy as np
+from probeinterface import generate_linear_probe
 
 from spikeinterface.core import aggregate_channels
 from spikeinterface.core import generate_recording
 from spikeinterface.core.testing import check_recordings_equal
+
+
+def _make_rec_with_named_probe(name, manufacturer, x_shift):
+    """Helper: single-probe recording with annotated name and manufacturer."""
+    probe = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe.move([x_shift, 0.0])
+    probe.annotate(name=name, manufacturer=manufacturer)
+    probe.set_device_channel_indices(np.arange(8))
+    probe.create_auto_shape()
+    rec = generate_recording(num_channels=8, durations=[1.0], set_probe=False)
+    rec.set_probe(probe)
+    return rec
 
 
 def test_channelsaggregationrecording():
@@ -218,6 +231,17 @@ def test_aggretion_labeling_for_dicts():
     assert np.all(user_group_property == [6, 6, 7, 7])
 
 
+def test_aggregate_channels_does_not_change_inputs():
+    recording1 = generate_recording(num_channels=4, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    aggregate_channels([recording1, recording2])
+    aggregate_channels({"X": recording1, "Y": recording2})
+
+    assert "aggregation_key" not in recording1.get_property_keys()
+    assert "aggregation_key" not in recording2.get_property_keys()
+
+
 def test_channel_aggregation_does_not_preserve_ids_if_not_unique():
 
     recording1 = generate_recording(num_channels=3, durations=[10], set_probe=False)  # To avoid location check
@@ -260,6 +284,158 @@ def test_channel_aggregation_with_string_dtypes_of_different_size():
     aggregated_recording_channel_ids = list(aggregated_recording.get_channel_ids())
     assert aggregated_recording_channel_ids == ["8", "9", "10", "11"]
     assert aggregated_recording.channel_ids.dtype == np.dtype("<U2")
+
+
+def test_aggregate_channels_preserves_probe_metadata():
+    """Regression test for #4545: aggregate_channels must preserve per-probe name/manufacturer."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+    combined = aggregate_channels([rec_A, rec_B])
+
+    probes = combined.get_probes()
+    assert len(probes) == 2
+    probe_names = {p.annotations.get("name") for p in probes}
+    manufacturers = {p.annotations.get("manufacturer") for p in probes}
+    assert probe_names == {"probe_A", "probe_B"}
+    assert manufacturers == {"vendor_X", "vendor_Y"}
+
+
+def test_aggregate_channels_group_reindexing():
+    """Regression test for #4546: groups must be unique per probe after aggregate_channels."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+    combined = aggregate_channels([rec_A, rec_B])
+
+    groups = combined.get_property("group")
+    assert len(np.unique(groups)) == 2, "Each probe must have a distinct group index"
+
+    # Group values assigned to probe A channels and probe B channels must be disjoint
+    groups_A = set(groups[:8].tolist())
+    groups_B = set(groups[8:].tolist())
+    assert groups_A.isdisjoint(groups_B), "Group values must not overlap between the two probes"
+
+
+def test_aggregate_channels_split_by_round_trip():
+    """Regression test for #4549: aggregate then split_by(group) must recover one recording per probe."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+    combined = aggregate_channels([rec_A, rec_B])
+
+    parts = combined.split_by("group")
+    assert len(parts) == 2, "split_by must yield one sub-recording per probe"
+
+    recovered_names = set()
+    for sub in parts.values():
+        assert sub.has_probe()
+        assert len(sub.get_probes()) == 1
+        recovered_names.add(sub.get_probe().annotations.get("name"))
+    assert recovered_names == {"probe_A", "probe_B"}
+
+
+def test_aggregate_channels_propagates_shared_annotations():
+    """Annotations present in every recording with the same value are propagated (issue #3983)."""
+    recording1 = generate_recording(num_channels=3, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    recording1.annotate(experimenter="alice", session_id=7)
+    recording2.annotate(experimenter="alice", session_id=7)
+
+    aggregated_recording = aggregate_channels([recording1, recording2])
+
+    assert aggregated_recording.get_annotation("experimenter") == "alice"
+    assert aggregated_recording.get_annotation("session_id") == 7
+
+    # `is_filtered` is set by all recordings and agrees, so it must be propagated rather than
+    # falling back to the `BaseRecording.__init__` default of False
+    assert recording1.get_annotation("is_filtered") == recording2.get_annotation("is_filtered")
+    assert aggregated_recording.get_annotation("is_filtered") == recording1.get_annotation("is_filtered")
+
+
+def test_aggregate_channels_drops_conflicting_annotations():
+    """Annotations present everywhere but with different values are not propagated (issue #3983)."""
+    recording1 = generate_recording(num_channels=3, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    recording1.annotate(experimenter="alice")
+    recording2.annotate(experimenter="bob")
+
+    aggregated_recording = aggregate_channels([recording1, recording2])
+
+    assert "experimenter" not in aggregated_recording.get_annotation_keys()
+
+
+def test_aggregate_channels_drops_partial_annotations():
+    """Annotations present in only some recordings are not propagated (issue #3983)."""
+    recording1 = generate_recording(num_channels=3, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    recording1.annotate(experimenter="alice")
+
+    aggregated_recording = aggregate_channels([recording1, recording2])
+
+    assert "experimenter" not in aggregated_recording.get_annotation_keys()
+
+    # also check the other direction, the loop is seeded from the first recording's keys
+    aggregated_recording_reversed = aggregate_channels([recording2, recording1])
+    assert "experimenter" not in aggregated_recording_reversed.get_annotation_keys()
+
+
+def test_aggregate_channels_with_array_valued_annotations():
+    """Array-valued and ragged annotations must never raise during aggregation (issue #3983)."""
+    recording1 = generate_recording(num_channels=3, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    # equal arrays: shared, so propagated
+    recording1.annotate(reference_waveform=np.arange(5))
+    recording2.annotate(reference_waveform=np.arange(5))
+
+    # arrays of different shape: not shared, so dropped, and must not raise
+    recording1.annotate(coverage=np.zeros((2, 3)))
+    recording2.annotate(coverage=np.zeros((4, 7)))
+
+    # ragged object values: not provably equal, so dropped, and must not raise
+    recording1.annotate(ragged=[np.arange(2), np.arange(3)])
+    recording2.annotate(ragged=[np.arange(2), np.arange(3)])
+
+    aggregated_recording = aggregate_channels([recording1, recording2])
+
+    assert np.array_equal(aggregated_recording.get_annotation("reference_waveform"), np.arange(5))
+    assert "coverage" not in aggregated_recording.get_annotation_keys()
+    # the ragged annotation may be propagated or dropped, the contract is only that we did not crash
+    assert aggregated_recording.get_num_channels() == 5
+
+
+def test_aggregate_channels_annotations_do_not_leak_to_inputs():
+    """The aggregated recording must not share mutable annotation values with its children."""
+    recording1 = generate_recording(num_channels=3, durations=[1.0], set_probe=False)
+    recording2 = generate_recording(num_channels=2, durations=[1.0], set_probe=False)
+
+    recording1.annotate(shared_list=[1, 2, 3])
+    recording2.annotate(shared_list=[1, 2, 3])
+
+    aggregated_recording = aggregate_channels([recording1, recording2])
+    aggregated_recording.get_annotation("shared_list", copy=False).append(4)
+
+    assert recording1.get_annotation("shared_list") == [1, 2, 3]
+    assert recording2.get_annotation("shared_list") == [1, 2, 3]
+
+
+def test_aggregate_channels_annotations_preserve_probe_information():
+    """Propagating annotations must not disturb the probe metadata of the aggregated recording."""
+    rec_A = _make_rec_with_named_probe("probe_A", "vendor_X", 0.0)
+    rec_B = _make_rec_with_named_probe("probe_B", "vendor_Y", 1000.0)
+
+    contours = [np.asarray(rec.get_probe().probe_planar_contour) for rec in (rec_A, rec_B)]
+    assert all(contour is not None and contour.size > 0 for contour in contours)
+
+    combined = aggregate_channels([rec_A, rec_B])
+
+    probes = combined.get_probes()
+    assert len(probes) == 2
+    for probe, expected_contour in zip(probes, contours):
+        assert np.array_equal(np.asarray(probe.probe_planar_contour), expected_contour)
+    assert np.array_equal(combined.get_channel_locations()[:8], rec_A.get_channel_locations())
+    assert np.array_equal(combined.get_channel_locations()[8:], rec_B.get_channel_locations())
 
 
 if __name__ == "__main__":

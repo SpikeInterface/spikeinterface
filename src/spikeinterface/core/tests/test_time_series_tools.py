@@ -1,12 +1,11 @@
 import numpy as np
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, MockRecording
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
-from spikeinterface.core.chunkable_tools import (
+from spikeinterface.core.time_series_tools import (
     write_binary,
     write_memory,
     get_random_sample_slices,
@@ -22,7 +21,7 @@ def test_write_binary(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -49,7 +48,7 @@ def test_write_binary_offset(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -81,7 +80,7 @@ def test_write_binary_parallel(tmp_path):
     num_channels = 2
     dtype = "float32"
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -112,7 +111,7 @@ def test_write_binary_multiple_segment(tmp_path):
     dtype = "float32"
 
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -137,7 +136,7 @@ def test_write_binary_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
     recording = recording.save()

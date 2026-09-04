@@ -2,12 +2,16 @@ import warnings
 
 import numpy as np
 
+from probeinterface import ProbeGroup
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
 class ChannelsAggregationRecording(BaseRecording):
     """
     Class that handles aggregating channels from different recordings, e.g. from different channel groups.
+
+    Annotations shared by all the recordings, meaning present in every recording and with the same value
+    everywhere, are propagated to the aggregated recording. All other annotations are dropped.
 
     Do not use this class directly but use `si.aggregate_channels(...)`
 
@@ -18,7 +22,7 @@ class ChannelsAggregationRecording(BaseRecording):
         if recording_list is not None:
             warnings.warn(
                 "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             recording_list_or_dict = recording_list
@@ -35,9 +39,12 @@ class ChannelsAggregationRecording(BaseRecording):
             )
 
         self._recordings = recording_list
-
-        for group_id, recording in zip(recording_ids, recording_list):
-            recording.set_property("aggregation_key", [group_id] * recording.get_num_channels())
+        aggregation_key = np.concatenate(
+            [
+                np.asarray([recording_id] * recording.get_num_channels())
+                for recording_id, recording in zip(recording_ids, recording_list)
+            ]
+        )
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()
@@ -89,32 +96,43 @@ class ChannelsAggregationRecording(BaseRecording):
                             del property_dict[prop_name]
                             break
 
+        property_dict["aggregation_key"] = aggregation_key
         for prop_name, prop_values in property_dict.items():
-            if prop_name == "contact_vector":
-                # remap device channel indices correctly
-                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
-        # if locations are present, check that they are all different!
-        if "location" in self.get_property_keys():
-            location_tuple = [tuple(loc) for loc in self.get_property("location")]
-            assert len(set(location_tuple)) == self.get_num_channels(), (
-                "Locations are not unique! " "Cannot aggregate recordings!"
-            )
+        # Propagate the annotations that are shared by the recordings. An annotation is shared when every
+        # recording carries it and all of them agree on its value. Anything else is dropped, which is the
+        # same rule used by `UnitsAggregationSorting` in unitsaggregationsorting.py.
+        for annotation_name in recording_list[0].get_annotation_keys():
+            if not all(annotation_name in rec.get_annotation_keys() for rec in recording_list):
+                continue
+            values = [rec.get_annotation(annotation_name, copy=False) for rec in recording_list]
+            try:
+                # `np.array_equal` gives a single bool for scalars, strings and arrays alike. Values it
+                # cannot compare (e.g. ragged object arrays) raise, and are then treated as not shared.
+                all_values_are_equal = all(np.array_equal(value, values[0]) for value in values[1:])
+            except Exception:
+                all_values_are_equal = False
+            if all_values_are_equal:
+                # take a copy so the aggregate does not share mutable state with its first child
+                self.set_annotation(annotation_name, recording_list[0].get_annotation(annotation_name), overwrite=True)
 
-        planar_contour_keys = [
-            key for recording in recording_list for key in recording.get_annotation_keys() if "planar_contour" in key
-        ]
-        if len(planar_contour_keys) > 0:
-            if all(
-                k == planar_contour_keys[0] for k in planar_contour_keys
-            ):  # we add the 'planar_contour' annotations only if there is a unique one in the recording_list
-                planar_contour_key = planar_contour_keys[0]
-                collect_planar_contours = []
-                for rec in recording_list:
-                    collect_planar_contours.append(rec.get_annotation(planar_contour_key))
-                if all(np.array_equal(arr, collect_planar_contours[0]) for arr in collect_planar_contours):
-                    self.set_annotation(planar_contour_key, collect_planar_contours[0])
+        # Aggregate probe information
+        all_probegroups = [rec.get_probegroup() for rec in recording_list if rec.has_probe()]
+        if len(all_probegroups) == len(recording_list):
+            # Now make a new probegroup with all probes and set global device channel indices
+            probegroup_agg = ProbeGroup()
+            for probegroup in all_probegroups:
+                for probe in probegroup.probes:
+                    probegroup_agg.add_probe(probe.copy())
+            probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
+            # contact positions are already checked to be unique above; probe bounding
+            # boxes may overlap when aggregating channels split from a single probe
+            self.set_probegroup(probegroup_agg, check_overlap=False)
+        elif len(all_probegroups) > 0 and len(all_probegroups) < len(recording_list):
+            raise ValueError(
+                "Some recordings have probes while others do not. Cannot aggregate recordings with inconsistent probe information."
+            )
 
         # finally add segments, we need a channel mapping
         ch_id = 0
@@ -256,6 +274,12 @@ def aggregate_channels(
     -------
     aggregate_recording: ChannelsAggregationRecording
         The aggregated recording object
+
+    Notes
+    -----
+    Annotations are propagated only when they are shared by all the recordings, meaning present in every
+    recording and with the same value everywhere. Annotations missing from one recording, or with differing
+    values, are dropped.
     """
 
     return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)

@@ -23,6 +23,19 @@ markdown_output = f"## \n\n| Imported Module ({n_samples=}) | Importing Time (se
 exceptions = []
 
 for import_statement in import_statement_list:
+    # Warm-up subprocess. Discarded from the timing data because the first
+    # `python -c "import X"` after a fresh install pays cold-start cost
+    # (filesystem cache priming, DLL loading, antivirus scanning a new
+    # package) that has nothing to do with spikeinterface's actual import
+    # weight. On Windows this can be 10x+ the steady-state and dominate
+    # the average.
+    warmup_script = (
+        f"import timeit \n"
+        f"import_statement = '{import_statement}' \n"
+        f"timeit.timeit(import_statement, number=1) \n"
+    )
+    subprocess.run(["python", "-c", warmup_script], capture_output=True, text=True)
+
     time_taken_list = []
     for _ in range(n_samples):
         script_to_execute = (
@@ -45,8 +58,7 @@ for import_statement in import_statement_list:
         time_taken_list.append(time_taken)
 
     for time in time_taken_list:
-        # TODO: lower this back toward 3.0 s once the Windows runner outliers are diagnosed.
-        import_time_threshold = 6.0
+        import_time_threshold = 3.0
         if time >= import_time_threshold:
             exceptions.append(
                 f"Importing {import_statement} took: {time:.2f} s. Should be <: {import_time_threshold} s."

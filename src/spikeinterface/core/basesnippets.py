@@ -11,7 +11,7 @@ class BaseSnippets(BaseRecordingSnippets):
     Abstract class representing several multichannel snippets.
     """
 
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = ["group", "gain_to_uV", "offset_to_uV"]
     _main_features = []
 
     def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
@@ -120,7 +120,7 @@ class BaseSnippets(BaseRecordingSnippets):
         if return_scaled is not None:
             warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -181,7 +181,7 @@ class BaseSnippets(BaseRecordingSnippets):
         if return_scaled is not None:
             warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -259,7 +259,7 @@ class BaseSnippets(BaseRecordingSnippets):
         else:
             raise ValueError(f"format {format} not supported")
 
-        if self.get_property("contact_vector") is not None:
+        if self.has_probe():
             probegroup = self.get_probegroup()
             cached.set_probegroup(probegroup)
 

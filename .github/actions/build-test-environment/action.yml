@@ -9,7 +9,7 @@ runs:
         git config --global user.email "CI@example.com"
         git config --global user.name "CI Almighty"
         uv pip install --system tabulate  # This produces summaries at the end
-        uv pip install --system -e .[test,extractors,streaming_extractors,test_extractors,full]
+        uv pip install --system -e .[extractors,streaming_extractors,full] --group test-all
       shell: bash
     - name: Install git-annex
       shell: bash

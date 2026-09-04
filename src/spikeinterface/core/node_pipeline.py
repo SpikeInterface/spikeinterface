@@ -1,19 +1,16 @@
-""" """
-
 from typing import Type
-
 import struct
 import copy
+import warnings
 
 from pathlib import Path
-
 
 import numpy as np
 
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
-from spikeinterface.core.chunkable import ChunkableMixin
+from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
-from spikeinterface.core.job_tools import ChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
 from spikeinterface.core.core_tools import ms_to_samples
 
@@ -26,7 +23,7 @@ class PipelineNode:
 
     def __init__(
         self,
-        chunkable: ChunkableMixin,
+        time_series: TimeSeries,
         return_output: bool | tuple[bool] = True,
         parents: list[Type["PipelineNode"]] | None = None,
     ):
@@ -38,8 +35,8 @@ class PipelineNode:
 
         Parameters
         ----------
-        chunkable : ChunkableMixin
-            The chunkable object.
+        time_series : TimeSeries
+            The time_series object.
         return_output : bool or tuple[bool], default: True
             Whether or not the output of the node is returned by the pipeline.
             When a Node have several toutputs then this can be a tuple of bool
@@ -47,7 +44,7 @@ class PipelineNode:
             Pass parents nodes to perform a previous computation.
         """
 
-        self.chunkable = chunkable
+        self.time_series = time_series
         self.return_output = return_output
         if isinstance(parents, str):
             # only one parents is allowed
@@ -57,7 +54,7 @@ class PipelineNode:
         self._kwargs = dict()
 
     def get_margin(self):
-        # can optionaly be overwritten
+        # can optionally be overwritten
         return 0
 
     def get_dtype(self):
@@ -97,7 +94,7 @@ class PeakSource(PipelineNode):
         # see need_first_call_before_pipeline = True
         margin = self.get_margin()
         traces = self.recording.get_traces(start_frame=0, end_frame=margin * 2 + 1, segment_index=0)
-        self.compute(traces, 0, margin * 2 + 1, 0, margin)
+        self.compute(traces, margin, margin + 1, 0, margin)
 
 
 # this is used in sorting components
@@ -145,7 +142,6 @@ class PeakRetriever(PeakSource):
         return (local_peaks,)
 
 
-# this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
     """
     This class is useful to inject a sorting object in the node pipepline mechanism.
@@ -164,10 +160,10 @@ class SpikeRetriever(PeakSource):
     recording : BaseRecording
         The recording object.
     channel_from_template : bool, default: True
-        If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
+        If True, then the channel_index is taken from the sorting object.
         If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds : dict of int | None, default: None
-        The extremum channel index dict given from template.
+        Deprecated, sorting.get_property("main_channel_id") is used instead.
     radius_um : float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
@@ -192,7 +188,13 @@ class SpikeRetriever(PeakSource):
 
         self.channel_from_template = channel_from_template
 
-        assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
+        if extremum_channel_inds is not None:
+            warnings.warn(
+                "`extremum_channel_inds` has been deprecated. The SpikeRetriever will now use `main_channel_ids` "
+                "from the given sorting. This will be removed in 0.106.0",
+                category=FutureWarning,
+                stacklevel=2,
+            )
 
         self._dtype = spike_peak_dtype
 
@@ -200,7 +202,10 @@ class SpikeRetriever(PeakSource):
         if include_spikes_in_margin:
             self._dtype = spike_peak_dtype + [("in_margin", "bool")]
 
-        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds, self._dtype)
+        main_channel_ids = sorting.get_property("main_channel_id")
+        assert main_channel_ids is not None, "SpikeRetriever needs the sorting to have `main_channel_id`s."
+        main_channel_indices = recording.ids_to_indices(main_channel_ids)
+        self.peaks = sorting_to_peaks(sorting, main_channel_indices, self._dtype)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
@@ -269,12 +274,11 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peaks(sorting, extremum_channel_inds, dtype=spike_peak_dtype):
+def sorting_to_peaks(sorting, main_channel_indices, dtype=spike_peak_dtype):
     spikes = sorting.to_spike_vector()
     peaks = np.zeros(spikes.size, dtype=dtype)
     peaks["sample_index"] = spikes["sample_index"]
-    extremum_channel_inds_ = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
-    peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
+    peaks["channel_index"] = main_channel_indices[spikes["unit_index"]]
     peaks["amplitude"] = 0.0
     peaks["segment_index"] = spikes["segment_index"]
     peaks["unit_index"] = spikes["unit_index"]
@@ -503,7 +507,7 @@ def find_parents_of_type(list_of_parents, parent_type):
 
 def check_graph(nodes, check_for_peak_source=True):
     """
-    Check that node list is orderd in a good (parents are before children)
+    Check that node list is ordered in a good (parents are before children)
     """
 
     node0 = nodes[0]
@@ -526,7 +530,7 @@ def check_graph(nodes, check_for_peak_source=True):
 
 
 def run_node_pipeline(
-    chunkable: ChunkableMixin,
+    time_series: TimeSeries,
     nodes: list[PipelineNode],
     job_kwargs: dict,
     job_name: str = "pipeline",
@@ -566,8 +570,8 @@ def run_node_pipeline(
 
     Parameters
     ----------
-    chunkable: ChunkableMixin
-        The chunkable object to run the pipeline on. This is typically a recording but it can be anything that have the
+    time_series: TimeSeries
+        The time_series object to run the pipeline on. This is typically a recording but it can be anything that have the
         same interface for getting chunks with margin.
     nodes: a list of PipelineNode
         The list of nodes to run in the pipeline. The order of the nodes is important as it defines
@@ -592,7 +596,7 @@ def run_node_pipeline(
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
     slices : None | list[tuple]
-        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        Optionally give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
         If None (default), the function iterates over the entire duration of the recording.
     check_for_peak_source : bool, default False
@@ -626,10 +630,10 @@ def run_node_pipeline(
         # See need_first_call_before_pipeline : this trigger numba compilation before the run
         node0._first_call_before_pipeline()
 
-    init_args = (chunkable, nodes, skip_after_n_peaks_per_worker)
+    init_args = (time_series, nodes, skip_after_n_peaks_per_worker)
 
-    processor = ChunkExecutor(
-        chunkable,
+    processor = TimeSeriesChunkExecutor(
+        time_series,
         _compute_peak_pipeline_chunk,
         _init_peak_pipeline,
         init_args,
@@ -645,10 +649,10 @@ def run_node_pipeline(
     return outs
 
 
-def _init_peak_pipeline(chunkable, nodes, skip_after_n_peaks_per_worker):
+def _init_peak_pipeline(time_series, nodes, skip_after_n_peaks_per_worker):
     # create a local dict per worker
     worker_ctx = {}
-    worker_ctx["chunkable"] = chunkable
+    worker_ctx["time_series"] = time_series
     worker_ctx["nodes"] = nodes
     worker_ctx["max_margin"] = max(node.get_margin() for node in nodes)
     worker_ctx["skip_after_n_peaks_per_worker"] = skip_after_n_peaks_per_worker
@@ -657,12 +661,12 @@ def _init_peak_pipeline(chunkable, nodes, skip_after_n_peaks_per_worker):
 
 
 def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    chunkable = worker_ctx["chunkable"]
+    time_series = worker_ctx["time_series"]
     max_margin = worker_ctx["max_margin"]
     nodes = worker_ctx["nodes"]
     skip_after_n_peaks_per_worker = worker_ctx["skip_after_n_peaks_per_worker"]
 
-    chunkable_segment = chunkable.segments[segment_index]
+    chunkable_segment = time_series.segments[segment_index]
     retrievers = find_parents_of_type(nodes, (SpikeRetriever, PeakRetriever))
     # get peak slices once for all retrievers
     peak_slice_by_retriever = {}

@@ -80,7 +80,7 @@ def test_detect_bad_channels_std_mad():
 
     probe = generate_linear_probe(num_elec=num_channels)
     probe.set_device_channel_indices(np.arange(num_channels))
-    rec.set_probe(probe, in_place=True)
+    rec.set_probe(probe)
 
     bad_channels_std, bad_labels_std = detect_bad_channels(rec, method="std")
     bad_channels_mad, bad_labels_mad = detect_bad_channels(rec, method="std")
@@ -94,7 +94,7 @@ def test_detect_bad_channels_std_mad():
     # Check that the size of the segments os maintained after preprocessor
     assert np.array_equal(
         *([r.get_num_frames(x) for x in range(rec.get_num_segments())] for r in [rec, rec2])
-    ), "wrong lenght of resulting segments."
+    ), "wrong length of resulting segments."
     # Check that locations are mantained
     assert np.array_equal(
         rec.get_channel_locations()[[0, 2, 3]], rec2.get_channel_locations()
@@ -125,7 +125,7 @@ def test_detect_bad_channels_extremes(outside_channels_location):
 
     probe = generate_linear_probe(num_elec=num_channels)
     probe.set_device_channel_indices(np.arange(num_channels))
-    rec.set_probe(probe, in_place=True)
+    rec.set_probe(probe)
 
     bad_channel_ids, bad_labels = detect_bad_channels(
         rec, method="coherence+psd", outside_channels_location=outside_channels_location
@@ -250,7 +250,7 @@ def add_noisy_and_dead_channels(recording, is_dead, is_noisy, not_noisy):
     psd_cutoff = reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     recording = add_dead_channels(recording, is_dead)
     # Note this will reduce the PSD for these channels but
-    # as noisy have higher freq > 80% nyqist this does not matter
+    # as noisy have higher freq > 80% nyquist this does not matter
 
     return psd_cutoff
 

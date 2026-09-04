@@ -84,20 +84,20 @@ def estimate_motion(
         The motion object.
     extra: dict
         Optional output if `extra_outputs=True`
-        This dict contain histogram, pairwise_displacement usefull for ploting.
+        This dict contain histogram, pairwise_displacement useful for plotting.
     """
 
     if margin_um is not None:
-        warnings.warn("estimate_motion() margin_um has been removed used hist_margin_um or win_margin_um")
+        warnings.warn("estimate_motion() margin_um has been removed use hist_margin_um or win_margin_um")
 
     # TODO handle multi segment one day : Charlie this is for you
-    assert recording.get_num_segments() == 1, "At the moment estimate_motion handle only unique segment"
+    assert recording.get_num_segments() == 1, "At the moment estimate_motion handles only unique segment"
 
     method_class = estimate_motion_methods[method]
 
     if method_class.need_peak_location:
         if peaks is None or peak_locations is None:
-            raise ValueError(f"estimate_motion: the method {method} need peaks and peak_locations")
+            raise ValueError(f"estimate_motion: the method {method} requires peaks and peak_locations")
 
     if extra_outputs:
         extra = {}

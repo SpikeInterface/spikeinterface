@@ -3,7 +3,12 @@ import warnings
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
-from spikeinterface.core import get_chunk_with_margin, ensure_chunk_size, get_global_job_kwargs
+from spikeinterface.core import (
+    get_chunk_with_margin,
+    ensure_chunk_size,
+    get_global_job_kwargs,
+    is_set_global_job_kwargs_set,
+)
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -88,7 +93,7 @@ class FilterRecording(BasePreprocessor):
         dtype=None,
         direction="forward-backward",
     ):
-        import scipy.signal
+        from scipy.signal import iirfilter
 
         assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
         fs = recording.get_sampling_frequency()
@@ -96,7 +101,7 @@ class FilterRecording(BasePreprocessor):
             assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
             # coefficient
             # self.coeff is 'sos' or 'ab' style
-            filter_coeff = scipy.signal.iirfilter(
+            filter_coeff = iirfilter(
                 filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
             )
         else:
@@ -118,7 +123,7 @@ class FilterRecording(BasePreprocessor):
         margin = int(margin_ms * fs / 1000.0)
 
         global_job_kwargs_chunk_size = ensure_chunk_size(recording, **get_global_job_kwargs())
-        if margin > MARGIN_TO_CHUNK_PERCENT_WARNING * global_job_kwargs_chunk_size:
+        if is_set_global_job_kwargs_set() and margin > MARGIN_TO_CHUNK_PERCENT_WARNING * global_job_kwargs_chunk_size:
             warnings.warn(
                 f"The margin size ({margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
                 f"of the global chunk size {global_job_kwargs_chunk_size} samples. This may lead to performance bottlenecks when "
@@ -187,23 +192,23 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
-        import scipy.signal
+        from scipy.signal import sosfiltfilt, filtfilt, sosfilt, lfilter
 
         if self.direction == "forward-backward":
             if self.filter_mode == "sos":
-                filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
+                filtered_traces = sosfiltfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.filtfilt(b, a, traces_chunk, axis=0)
+                filtered_traces = filtfilt(b, a, traces_chunk, axis=0)
         else:
             if self.direction == "backward":
                 traces_chunk = np.flip(traces_chunk, axis=0)
 
             if self.filter_mode == "sos":
-                filtered_traces = scipy.signal.sosfilt(self.coeff, traces_chunk, axis=0)
+                filtered_traces = sosfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.lfilter(b, a, traces_chunk, axis=0)
+                filtered_traces = lfilter(b, a, traces_chunk, axis=0)
 
             if self.direction == "backward":
                 filtered_traces = np.flip(filtered_traces, axis=0)
@@ -280,7 +285,7 @@ class BandpassFilterRecording(FilterRecording):
         self._kwargs.update(filter_kwargs)
 
     @classmethod
-    def _handle_backward_compatibility(cls, old_kwargs, full_dict):
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
         new_kwargs = old_kwargs.copy()
         is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
         if "ignore_low_freq_error" not in new_kwargs:
@@ -339,11 +344,17 @@ class HighpassFilterRecording(FilterRecording):
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
         )
         dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs = dict(
+            recording=recording,
+            freq_min=freq_min,
+            margin_ms=margin_ms,
+            dtype=dtype.str,
+            ignore_low_freq_error=ignore_low_freq_error,
+        )
         self._kwargs.update(filter_kwargs)
 
     @classmethod
-    def _handle_backward_compatibility(cls, old_kwargs, full_dict):
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
         new_kwargs = old_kwargs.copy()
         is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
         if "ignore_low_freq_error" not in new_kwargs:
@@ -377,13 +388,13 @@ class NotchFilterRecording(FilterRecording):
     """
 
     def __init__(self, recording, freq=3000, q=30, margin_ms="auto", dtype=None, **filter_kwargs):
-        import scipy.signal
+        from scipy.signal import iirnotch
 
         if margin_ms == "auto":
             margin_ms = adjust_margin_ms_for_notch(q, freq)
 
         fn = 0.5 * float(recording.get_sampling_frequency())
-        coeff = scipy.signal.iirnotch(freq / fn, q)
+        coeff = iirnotch(freq / fn, q)
 
         dtype = fix_dtype(recording, dtype)
 

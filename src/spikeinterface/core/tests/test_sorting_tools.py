@@ -10,9 +10,12 @@ from spikeinterface.core.sorting_tools import (
     random_spikes_selection,
     spike_vector_to_indices,
     apply_merges_to_sorting,
+    apply_splits_to_sorting,
     _get_ids_after_merging,
     generate_unit_ids_for_merge_group,
     remap_unit_indices_in_vector,
+    set_properties_after_merging,
+    set_properties_after_splits,
 )
 from spikeinterface.core.base import minimum_spike_dtype
 
@@ -78,6 +81,25 @@ def test_random_spikes_selection():
     # all
     random_spikes_indices = random_spikes_selection(sorting, num_samples, method="all")
     assert random_spikes_indices.size == spikes.size
+
+
+@pytest.mark.parametrize("method", ["uniform", "percentage", "maximum_rate", "all"])
+def test_random_spikes_selection_no_unit(method):
+    # a sorting with no unit is valid and should give an empty selection, not raise
+    recording, sorting = generate_ground_truth_recording(
+        durations=[5.0],
+        sampling_frequency=16000.0,
+        num_channels=4,
+        num_units=3,
+        seed=2205,
+    )
+    empty_sorting = sorting.select_units([])
+    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+
+    random_spikes_indices = random_spikes_selection(
+        empty_sorting, num_samples, method=method, percentage=0.5, maximum_rate=10.0, seed=2205
+    )
+    assert random_spikes_indices.size == 0
 
 
 def test_apply_merges_to_sorting():
@@ -163,6 +185,151 @@ def test_generate_unit_ids_for_merge_group():
         ["0", "5", "12", "9", "15"], [["0", "5"], ["9", "15"]], new_id_strategy="join"
     )
     assert np.array_equal(new_unit_ids, ["0-5", "9-15"])
+
+
+def _make_sorting_with_properties():
+    """Helper: 4-unit sorting with float and str properties."""
+    times = np.array([0, 10, 20, 30, 40])
+    labels = np.array(["a", "b", "c", "d", "a"])
+    sorting = NumpySorting.from_samples_and_labels([times], [labels], 10_000.0, unit_ids=["a", "b", "c", "d"])
+    # same value for "a" and "b", different for "c" and "d"
+    sorting.set_property("quality", np.array([1.0, 1.0, 2.0, 3.0]))
+    sorting.set_property("group", np.array(["g1", "g1", "g2", "g3"]))
+    return sorting
+
+
+def test_set_properties_after_merging():
+    sorting = _make_sorting_with_properties()
+
+    # --- append strategy (baseline) ---
+    sorting_merged, _, _ = apply_merges_to_sorting(
+        sorting, [["a", "b"]], censor_ms=None, new_id_strategy="append", return_extra=True
+    )
+    is_merged = sorting_merged.get_property("is_merged")
+    # "merge0" is the new merged unit; "c" and "d" are kept
+    merged_idx = sorting_merged.id_to_index("merge0")
+    kept_c_idx = sorting_merged.id_to_index("c")
+    kept_d_idx = sorting_merged.id_to_index("d")
+    assert is_merged[merged_idx] is True or bool(is_merged[merged_idx])
+    assert not is_merged[kept_c_idx]
+    assert not is_merged[kept_d_idx]
+    # same quality value for "a" and "b" → propagated
+    quality = sorting_merged.get_property("quality")
+    assert quality[merged_idx] == 1.0
+
+    # --- take_first strategy (the bug fix) ---
+    sorting_merged2, _, _ = apply_merges_to_sorting(
+        sorting, [["a", "b"]], censor_ms=None, new_id_strategy="take_first", return_extra=True
+    )
+    is_merged2 = sorting_merged2.get_property("is_merged")
+    # "a" is the new merged unit (take_first); "c" and "d" are kept
+    merged_idx2 = sorting_merged2.id_to_index("a")
+    kept_c_idx2 = sorting_merged2.id_to_index("c")
+    kept_d_idx2 = sorting_merged2.id_to_index("d")
+    assert is_merged2[merged_idx2]  # was False before the fix
+    assert not is_merged2[kept_c_idx2]
+    assert not is_merged2[kept_d_idx2]
+    # same quality for "a" and "b" → propagated (merge logic, not raw copy)
+    quality2 = sorting_merged2.get_property("quality")
+    assert quality2[merged_idx2] == 1.0
+
+    # --- join strategy ---
+    sorting_merged3, _, _ = apply_merges_to_sorting(
+        sorting, [["a", "b"]], censor_ms=None, new_id_strategy="join", return_extra=True
+    )
+    is_merged3 = sorting_merged3.get_property("is_merged")
+    merged_idx3 = sorting_merged3.id_to_index("a-b")
+    assert is_merged3[merged_idx3]
+
+    # --- multiple merge groups ---
+    sorting5 = NumpySorting.from_samples_and_labels(
+        [np.array([0, 10, 20, 30, 40, 50])],
+        [np.array(["a", "b", "c", "d", "e", "f"])],
+        10_000.0,
+        unit_ids=["a", "b", "c", "d", "e", "f"],
+    )
+    sorting5.set_property("quality", np.array([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]))
+    sorting_merged5 = apply_merges_to_sorting(
+        sorting5, [["a", "b"], ["c", "d"]], censor_ms=None, new_id_strategy="take_first"
+    )
+    is_merged5 = sorting_merged5.get_property("is_merged")
+    assert is_merged5[sorting_merged5.id_to_index("a")]
+    assert is_merged5[sorting_merged5.id_to_index("c")]
+    assert not is_merged5[sorting_merged5.id_to_index("e")]
+    assert not is_merged5[sorting_merged5.id_to_index("f")]
+
+    # --- different property values for merged units → default fill ---
+    sorting_diff = NumpySorting.from_samples_and_labels(
+        [np.array([0, 10, 20])],
+        [np.array(["a", "b", "c"])],
+        10_000.0,
+        unit_ids=["a", "b", "c"],
+    )
+    sorting_diff.set_property("quality", np.array([1.0, 2.0, 3.0]))  # a≠b
+    sorting_diff_merged = apply_merges_to_sorting(
+        sorting_diff, [["a", "b"]], censor_ms=None, new_id_strategy="take_first"
+    )
+    is_merged_diff = sorting_diff_merged.get_property("is_merged")
+    assert is_merged_diff[sorting_diff_merged.id_to_index("a")]
+    assert not is_merged_diff[sorting_diff_merged.id_to_index("c")]
+
+
+def test_set_properties_after_splits():
+    times = np.array([0, 10, 20, 30, 40])
+    labels = np.array(["a", "b", "b", "c", "c"])
+    sorting = NumpySorting.from_samples_and_labels([times], [labels], 10_000.0, unit_ids=["a", "b", "c"])
+    sorting.set_property("quality", np.array([1.0, 2.0, 3.0]))
+    sorting.set_property("group", np.array(["g1", "g2", "g3"]))
+
+    # --- append strategy: split "b" into two new units ---
+    unit_splits = {"b": [np.array([0]), np.array([1])]}
+    sorting_split, new_unit_ids = apply_splits_to_sorting(
+        sorting, unit_splits, new_id_strategy="append", return_extra=True
+    )
+    is_split = sorting_split.get_property("is_split")
+    # new units for "b" → is_split=True; "a" and "c" kept → is_split=False
+    for new_uid in new_unit_ids[0]:
+        assert is_split[sorting_split.id_to_index(new_uid)]
+    assert not is_split[sorting_split.id_to_index("a")]
+    assert not is_split[sorting_split.id_to_index("c")]
+    # quality of "b" (2.0) propagated to both sub-units
+    quality = sorting_split.get_property("quality")
+    for new_uid in new_unit_ids[0]:
+        assert quality[sorting_split.id_to_index(new_uid)] == 2.0
+
+    # --- split strategy with str unit ids ---
+    sorting_split2, new_unit_ids2 = apply_splits_to_sorting(
+        sorting, unit_splits, new_id_strategy="split", return_extra=True
+    )
+    is_split2 = sorting_split2.get_property("is_split")
+    # new units are "b-0" and "b-1"
+    for new_uid in new_unit_ids2[0]:
+        assert is_split2[sorting_split2.id_to_index(new_uid)]
+    assert not is_split2[sorting_split2.id_to_index("a")]
+    assert not is_split2[sorting_split2.id_to_index("c")]
+
+    # --- edge case: call set_properties_after_splits directly with a new split unit id
+    #     that overlaps with an existing pre-split unit id (defensive fix) ---
+    # Manually build post-split sorting: "b" was split into ["a_new", "x"] but we
+    # simulate a hypothetical overlap by calling set_properties_after_splits directly
+    # with new_unit_ids containing a pre-existing id.
+    times2 = np.array([0, 10, 20, 30])
+    labels2 = np.array(["a", "x", "x", "c"])
+    sorting_post = NumpySorting.from_samples_and_labels([times2], [labels2], 10_000.0, unit_ids=["a", "x", "c"])
+    sorting_post.set_property("quality", np.empty(3))
+    # "x" is a new split sub-unit of "b"; "a" and "c" are kept
+    # In this case none of the new split unit ids are in pre_unit_ids, so untouched_unit_ids=["a","c"]
+    set_properties_after_splits(
+        sorting_post,
+        sorting,
+        split_unit_ids=["b"],
+        new_unit_ids=[["x", "c"]],  # "c" overlaps with pre_unit_ids — the edge case
+    )
+    is_split3 = sorting_post.get_property("is_split")
+    # "c" is a new split unit here (overlapping id), so it must be is_split=True
+    assert is_split3[sorting_post.id_to_index("c")]
+    assert is_split3[sorting_post.id_to_index("x")]
+    assert not is_split3[sorting_post.id_to_index("a")]
 
 
 def test_remap_unit_indices_in_vector():

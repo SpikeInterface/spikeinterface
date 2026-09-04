@@ -24,6 +24,7 @@ but the original function dredge_ap() and dredge_online_lfp() can be used direct
 
 import gc
 import warnings
+import importlib.util
 
 import numpy as np
 from tqdm.auto import trange
@@ -106,11 +107,11 @@ class DredgeApRegistration:
         extra,
         **method_kwargs,
     ):
-
-        try:
+        torch_spec = importlib.util.find_spec("torch")
+        if torch_spec is not None:
             import torch
-        except ImportError:
-            raise ImportError("The dredge method require torch: pip install torch")
+        else:
+            raise ImportError("The DREDGE method requires torch: pip install torch")
 
         outs = dredge_ap(
             recording,
