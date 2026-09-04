@@ -287,8 +287,6 @@ class ZarrArrayExtractor(BaseRecording):
         Number of channels
     dtype : str or dtype
         The dtype of the binary file
-    channel_ids : list, default: None
-        A list of channel ids
     gain_to_uV : float or array-like, default: None
         The gain to apply to the traces
     offset_to_uV : float or array-like, default: None
@@ -318,11 +316,7 @@ class ZarrArrayExtractor(BaseRecording):
     ):
 
         assert num_channels is not None, "`num_channels` must be given."
-
-        if channel_ids is None:
-            channel_ids = list(range(num_channels))
-        else:
-            assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
+        channel_ids = list(range(num_channels))
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
