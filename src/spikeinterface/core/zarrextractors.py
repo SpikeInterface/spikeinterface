@@ -246,7 +246,11 @@ class ZarrRecordingExtractor(BaseRecording):
 class ZarrRecordingSegment(BaseRecordingSegment):
     def __init__(self, root, dataset_name, **time_kwargs):
         BaseRecordingSegment.__init__(self, **time_kwargs)
-        self._timeseries = root[dataset_name]
+        if dataset_name is None:
+            # In this case, root is a simple array
+            self._timeseries = root
+        else:
+            self._timeseries = root[dataset_name]
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -266,6 +270,89 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         if channel_indices is not None:
             traces = traces[:, channel_indices]
         return traces
+
+
+class ZarrArrayExtractor(BaseRecording):
+    """
+    RecordingExtractor for a plain Zarr array with shape num_samples x num_channels.
+    Mimics loading a binary array using BinaryRecordingExtractor.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the binary file
+    sampling_frequency : float
+        The sampling frequency
+    num_channels : int
+        Number of channels
+    dtype : str or dtype
+        The dtype of the binary file
+    channel_ids : list, default: None
+        A list of channel ids
+    gain_to_uV : float or array-like, default: None
+        The gain to apply to the traces
+    offset_to_uV : float or array-like, default: None
+        The offset to apply to the traces
+    is_filtered : bool or None, default: None
+        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    storage_options : dict or None: None
+        Storage options passed to the `zarr.open` function
+
+    Returns
+    -------
+    recording : ZarrArrayExtractor
+        The recording Extractor
+    """
+
+    def __init__(
+        self,
+        file_path,
+        sampling_frequency,
+        dtype,
+        num_channels: int | None = None,
+        channel_ids=None,
+        gain_to_uV=None,
+        offset_to_uV=None,
+        is_filtered=None,
+        storage_options=None,
+    ):
+
+        assert num_channels is not None, "`num_channels` must be given."
+
+        if channel_ids is None:
+            channel_ids = list(range(num_channels))
+        else:
+            assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
+
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        dtype = np.dtype(dtype)
+
+        folder_path, _ = resolve_zarr_path(file_path)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
+
+        rec_segment = ZarrRecordingSegment(self._root, None, sampling_frequency=sampling_frequency)
+        self.add_recording_segment(rec_segment)
+
+        if is_filtered is not None:
+            self.annotate(is_filtered=is_filtered)
+
+        if gain_to_uV is not None:
+            self.set_channel_gains(gain_to_uV)
+
+        if offset_to_uV is not None:
+            self.set_channel_offsets(offset_to_uV)
+
+        self._kwargs = {
+            "file_path": str(Path(file_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+            "num_channels": num_channels,
+            "dtype": dtype.str,
+            "channel_ids": channel_ids,
+            "gain_to_uV": gain_to_uV,
+            "offset_to_uV": offset_to_uV,
+            "is_filtered": is_filtered,
+        }
 
 
 class _ZarrSegmentIndex:
@@ -485,6 +572,7 @@ class ZarrSortingExtractor(BaseSorting):
 
 read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
 read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
+read_zarr_array = define_function_from_class(source_class=ZarrArrayExtractor, name="read_zarr_array")
 
 
 def read_zarr(
