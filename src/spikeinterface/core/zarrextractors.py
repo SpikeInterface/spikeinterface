@@ -283,10 +283,6 @@ class ZarrArrayExtractor(BaseRecording):
         Path to the binary file
     sampling_frequency : float
         The sampling frequency
-    num_channels : int
-        Number of channels
-    dtype : str or dtype
-        The dtype of the binary file
     gain_to_uV : float or array-like, default: None
         The gain to apply to the traces
     offset_to_uV : float or array-like, default: None
@@ -306,24 +302,20 @@ class ZarrArrayExtractor(BaseRecording):
         self,
         file_path,
         sampling_frequency,
-        dtype,
-        num_channels: int | None = None,
-        channel_ids=None,
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
         storage_options=None,
     ):
 
-        assert num_channels is not None, "`num_channels` must be given."
+        folder_path, _ = resolve_zarr_path(file_path)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
+
+        dtype = self._root.dtype
+        num_channels = self._root.shape[1]
         channel_ids = list(range(num_channels))
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
-
-        dtype = np.dtype(dtype)
-
-        folder_path, _ = resolve_zarr_path(file_path)
-        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
 
         rec_segment = ZarrRecordingSegment(self._root, None, sampling_frequency=sampling_frequency)
         self.add_recording_segment(rec_segment)
