@@ -135,6 +135,30 @@ def test_equal_results_correlograms(window_and_bin_ms):
     assert np.array_equal(result_numpy, result_numba)
 
 
+def test_equal_results_when_units_are_silent_in_a_segment():
+    """Keep global unit coordinates when a segment has silent units."""
+    sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[np.array([0, 20, 40, 60]), np.array([0, 20, 40, 60])],
+        labels_list=[np.array([0, 1, 0, 1]), np.array([0, 2, 0, 2])],
+        sampling_frequency=1000.0,
+        unit_ids=[0, 1, 2],
+    )
+
+    ccg_numpy, _ = compute_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numpy")
+    acg_numpy, _ = compute_auto_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numpy")
+
+    assert ccg_numpy.shape == (3, 3, 10)
+    assert acg_numpy.shape == (3, 10)
+    assert np.count_nonzero(acg_numpy[1]) > 0
+    assert np.count_nonzero(acg_numpy[2]) > 0
+
+    if HAVE_NUMBA:
+        ccg_numba, _ = compute_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numba")
+        acg_numba, _ = compute_auto_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numba")
+        assert np.array_equal(ccg_numpy, ccg_numba)
+        assert np.array_equal(acg_numpy, acg_numba)
+
+
 @pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 @pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
 def test_equal_results_fast_correlograms(window_and_bin_ms):
