@@ -89,25 +89,3 @@ def test_unitrefine_label_units_with_local_models(sorting_analyzer_for_unitrefin
         sorting_analyzer_for_unitrefine_curation,
         noise_neural_classifier=trained_pipeline_path / "best_model.skops",
     )
-
-
-def test_unitrefine_label_units_with_metrics(sorting_analyzer_for_unitrefine_curation):
-    # test passing metrics instead of sorting_analyzer
-    sorting_analyzer_for_unitrefine_curation.compute(
-        {
-            "spike_amplitudes": {},
-            "template_metrics": {"include_multi_channel_metrics": True},
-            "quality_metrics": {},
-        }
-    )
-    metrics = sorting_analyzer_for_unitrefine_curation.get_metrics_extension_data()
-
-    labels = unitrefine_label_units(
-        metrics=metrics,
-        noise_neural_classifier="SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
-        sua_mua_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
-    )
-
-    assert "unitrefine_label" in labels.columns
-    assert "unitrefine_probability" in labels.columns
-    assert labels.shape[0] == len(metrics)

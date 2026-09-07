@@ -165,24 +165,6 @@ def test_predict_labels_with_phy_export(sorting_analyzer_for_unitrefine_curation
         model_based_classification.predict_labels(export_to_phy=True, phy_folder=None)
 
 
-def test_model_based_classification_from_dataframe(sorting_analyzer_for_unitrefine_curation, model):
-    """Test that the ModelBasedClassification can be initialised from a DataFrame of metrics."""
-
-    sorting_analyzer_for_unitrefine_curation.compute(
-        "template_metrics", metric_names=["half_width", "peak_to_trough_duration", "number_of_peaks"]
-    )
-    sorting_analyzer_for_unitrefine_curation.compute("quality_metrics", metric_names=["num_spikes", "snr"])
-
-    metrics_dataframe = sorting_analyzer_for_unitrefine_curation.get_metrics_extension_data()
-
-    model_based_classification = ModelBasedClassification(metrics=metrics_dataframe, pipeline=model[0])
-    classified_units = model_based_classification.predict_labels()
-    predictions = classified_units["prediction"].values
-
-    expected_result = np.array([1] * 6 + [0] * 6)
-    assert np.all(predictions == expected_result)
-
-
 def test_get_required_metrics_from_model(model, required_metrics):
     """Test that the get_required_metrics_from_model function returns the correct required metrics and columns."""
 

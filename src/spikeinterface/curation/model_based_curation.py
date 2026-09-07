@@ -35,10 +35,10 @@ class ModelBasedClassification:
     ----------
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting data.
-    metrics : pd.DataFrame
-        A DataFrame containing the metrics for the units.
     pipeline : Pipeline
         The pipeline object representing the trained classification model.
+    unit_ids : list | None
+        The list of unit IDs to consider for classification. If None, all units in the sorting analyzer are used.
 
     Methods
     -------
@@ -46,28 +46,30 @@ class ModelBasedClassification:
         Predicts the labels for the spike sorting data using the trained model.
     """
 
-    def __init__(
-        self, sorting_analyzer: SortingAnalyzer | None = None, metrics: "pd.DataFrame | None" = None, pipeline=None
-    ):
+    def __init__(self, sorting_analyzer: SortingAnalyzer, pipeline=None, unit_ids: list[str | int] | None = None):
         from sklearn.pipeline import Pipeline
 
         if not isinstance(pipeline, Pipeline):
             raise ValueError("The `pipeline` must be an instance of sklearn.pipeline.Pipeline")
 
-        if sorting_analyzer is None and metrics is None:
-            raise ValueError("At least one of `sorting_analyzer` or `metrics` must be provided.")
+        if sorting_analyzer is None:
+            raise ValueError("`sorting_analyzer` must be provided.")
         self.sorting_analyzer = sorting_analyzer
-        self.metrics = metrics
         self.pipeline = pipeline
         self.required_metrics = pipeline.feature_names_in_
+        if unit_ids is None:
+            unit_ids = sorting_analyzer.unit_ids
+        self.unit_ids = unit_ids
 
     def predict_labels(
         self,
         label_conversion: dict[int, str] | None = None,
+        metrics=None,
         export_to_phy: bool = False,
         phy_folder: Path | None = None,
         model_info: dict | None = None,
         enforce_metric_params: bool = False,
+        set_predictions_as_properties: bool = True,
     ):
         """
         Predicts the labels for the spike sorting data using the trained model.
@@ -91,6 +93,9 @@ class ModelBasedClassification:
         enforce_metric_params : bool, default: False
             If True and the parameters used to compute the metrics in `sorting_analyzer` are different than the parmeters
             used to compute the metrics used to train the model, this function will raise an error. Otherwise, a warning is raised.
+        set_predictions_as_properties : bool, default: True
+            Whether to set the predictions as properties in the sorting object.
+            If True, the predicted labels and probabilities will be stored in the 'classifier_label' and 'classifier_probability' properties of the sorting object.
 
         Returns
         -------
@@ -101,14 +106,15 @@ class ModelBasedClassification:
         import pandas as pd
 
         # Get metrics DataFrame for classification
-        if self.metrics is None:
+        if metrics is None:
             metrics = self.sorting_analyzer.get_metrics_extension_data()
-            unit_ids = self.sorting_analyzer.unit_ids
         else:
-            metrics = self.metrics
             if not isinstance(metrics, pd.DataFrame):
                 raise ValueError("Input data must be a pandas DataFrame")
-            unit_ids = metrics.index.to_list()
+
+        # Restrict metrics to the unit_ids of the sorting_analyzer if available
+        if len(metrics) > len(self.unit_ids):
+            metrics = metrics.loc[self.unit_ids]
 
         metrics = _handle_backwards_compatibility_in_metrics(metrics, model_info=model_info)
         metrics = check_required_metrics_are_present(self.required_metrics, metrics)
@@ -134,22 +140,20 @@ class ModelBasedClassification:
         probabilities = np.max(probabilities, axis=1)
 
         if isinstance(label_conversion, dict):
-
             if set(predictions).issubset(set(label_conversion.keys())) is False:
                 raise ValueError("Labels in predictions do not match those in label_conversion")
             predictions = [label_conversion[label] for label in predictions]
 
         classified_units = pd.DataFrame(
-            zip(predictions, probabilities), columns=["prediction", "probability"], index=unit_ids
+            zip(predictions, probabilities), columns=["prediction", "probability"], index=self.unit_ids
         )
 
         # Set predictions and probability as sorting properties
-        if self.sorting_analyzer is not None:
+        if set_predictions_as_properties:
             self.sorting_analyzer.set_sorting_property("classifier_label", predictions)
             self.sorting_analyzer.set_sorting_property("classifier_probability", probabilities)
 
         if export_to_phy:
-
             if phy_folder is None:
                 raise ValueError("Phy folder must be provided using the `phy_folder` parameter.")
             classified_units.to_csv(f"{phy_folder}/cluster_prediction.tsv", sep="\t", index_label="cluster_id")
@@ -207,8 +211,8 @@ class ModelBasedClassification:
 
 
 def model_based_label_units(
-    sorting_analyzer: SortingAnalyzer | None,
-    metrics=None,
+    sorting_analyzer: SortingAnalyzer,
+    unit_ids=None,
     model_folder=None,
     repo_id=None,
     model_name=None,
@@ -217,6 +221,7 @@ def model_based_label_units(
     trusted=None,
     export_to_phy=False,
     enforce_metric_params=False,
+    set_predictions_as_properties=True,
 ):
     """
     Automatically labels units based on a model-based classification, either from a model
@@ -228,10 +233,10 @@ def model_based_label_units(
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer | None
+    sorting_analyzer : SortingAnalyzer
         The sorting analyzer object containing the spike sorting results.
-    metrics : pd.DataFrame | None, default: None
-        A DataFrame with metrics for the units. If None, metrics will be computed from the sorting_analyzer.
+    unit_ids : list[str | int] | None, default: None
+        A list of unit IDs to consider. If None, all units in the sorting_analyzer will be used.
     model_folder : str or Path, default: None
         The path to the folder containing the model
     repo_id : str, default: None
@@ -251,6 +256,9 @@ def model_based_label_units(
     enforce_metric_params : bool, default: False
             If True and the parameters used to compute the metrics in `sorting_analyzer` are different than the parmeters
             used to compute the metrics used to train the model, this function will raise an error. Otherwise, a warning is raised.
+    set_predictions_as_properties : bool, default: True
+        Whether to set the predictions as properties in the sorting object.
+        If True, the predicted labels and probabilities will be stored in the 'classifier_label' and 'classifier_probability' properties of the sorting object.
 
 
     Returns
@@ -275,7 +283,7 @@ def model_based_label_units(
         raise ValueError("The model must be an instance of sklearn.pipeline.Pipeline")
 
     model_based_classification = ModelBasedClassification(
-        sorting_analyzer=sorting_analyzer, metrics=metrics, pipeline=model
+        sorting_analyzer=sorting_analyzer, unit_ids=unit_ids, pipeline=model
     )
 
     classified_units = model_based_classification.predict_labels(
@@ -283,6 +291,7 @@ def model_based_label_units(
         export_to_phy=export_to_phy,
         model_info=model_info,
         enforce_metric_params=enforce_metric_params,
+        set_predictions_as_properties=set_predictions_as_properties,
     )
 
     return classified_units
@@ -398,6 +407,26 @@ def _load_model_from_huggingface(repo_id=None, model_name=None, trust_model=Fals
     return model, model_info
 
 
+def _patch_sklearn_imputer_compatibility(model):
+    """Fix SimpleImputer attribute rename from _fill_dtype (sklearn<1.5) to _fit_dtype (sklearn>=1.5)."""
+    from sklearn.impute import SimpleImputer
+
+    steps_to_check = []
+    if hasattr(model, "steps"):
+        steps_to_check = [step for _, step in model.steps]
+    elif hasattr(model, "estimators_"):
+        steps_to_check = list(model.estimators_)
+
+    for step in steps_to_check:
+        if hasattr(step, "steps"):
+            _patch_sklearn_imputer_compatibility(step)
+        elif isinstance(step, SimpleImputer):
+            if hasattr(step, "_fill_dtype") and not hasattr(step, "_fit_dtype"):
+                step._fit_dtype = step._fill_dtype
+            elif hasattr(step, "_fit_dtype") and not hasattr(step, "_fill_dtype"):
+                step._fill_dtype = step._fit_dtype
+
+
 def _load_model_from_folder(model_folder=None, model_name=None, trust_model=False, trusted=None):
     """
     Loads a model and model_info from a folder
@@ -442,6 +471,7 @@ def _load_model_from_folder(model_folder=None, model_name=None, trust_model=Fals
             trusted = [list_item for list_item in string_list.split("'") if len(list_item) > 2]
 
     model = skio.load(skops_file, trusted=trusted)
+    _patch_sklearn_imputer_compatibility(model)
 
     model_info_path = folder / "model_info.json"
     if not model_info_path.is_file():
