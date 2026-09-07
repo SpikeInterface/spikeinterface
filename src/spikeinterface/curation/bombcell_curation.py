@@ -152,8 +152,7 @@ def bombcell_label_units(
         Refractory-period violation: include exactly ONE of ``"sliding_rp_violation"``
         or ``"rp_contamination"`` under ``thresholds["mua"]``. This single entry
         selects BOTH which RPV metric is used AND its threshold — there is no
-        separate knob for the method choice. ``run_bombcell_qc`` also reads this
-        entry to decide which RPV metric to compute.
+        separate knob for the method choice.
     split_non_somatic : bool, default: False
         If True, split non-somatic units into "non_soma_good" and "non_soma_mua"
         based on whether they pass MUA thresholds. If False, all non-somatic
@@ -168,8 +167,7 @@ def bombcell_label_units(
     ``external_metrics``) and applies the thresholds. It does NOT compute or
     recompute any extension. If you want quality metrics restricted to valid
     unit periods, compute ``valid_unit_periods`` and ``quality_metrics`` with
-    ``use_valid_periods=True`` yourself before calling this function (or use
-    ``run_bombcell_qc`` with ``params["compute_valid_periods"]=True``).
+    ``use_valid_periods=True`` yourself before calling this function.
 
     Returns
     -------
