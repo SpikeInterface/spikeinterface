@@ -241,18 +241,23 @@ def bombcell_label_units(
     # This allows optional metrics (e.g. isolation_distance, l_ratio) to be included
     # in the default thresholds without crashing when they haven't been computed.
     available_columns = set(combined_metrics.columns)
+    missing_by_section = {}
     for section in ("noise", "mua", "non-somatic"):
         if section not in thresholds_dict:
             continue
         missing = [m for m in thresholds_dict[section] if m not in available_columns]
         if missing:
-            warnings.warn(
-                f"Bombcell thresholds reference metrics not found in the metrics DataFrame "
-                f"(section '{section}'): {missing}. These will be skipped. "
-                f"Compute them first if you want them included in the labeling."
-            )
+            missing_by_section[section] = missing
             for m in missing:
                 del thresholds_dict[section][m]
+
+    if len(missing_by_section) > 0:
+        missing_str = ", ".join(f"{section}: {metrics}" for section, metrics in missing_by_section.items())
+        warnings.warn(
+            f"Bombcell thresholds reference metrics not found in the metrics DataFrame and "
+            f"will be skipped ({missing_str}). "
+            f"Compute them first if you want them included in the labeling."
+        )
 
     n_units = len(combined_metrics)
 
