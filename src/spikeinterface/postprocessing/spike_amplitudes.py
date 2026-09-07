@@ -102,7 +102,6 @@ class SpikeAmplitudeNode(PipelineNode):
 
         # and scale
         if self._gains is not None:
-            traces = traces.astype("float32") * self._gains + self._offsets
             amplitudes = amplitudes.astype("float32", copy=True)
             amplitudes *= self._gains[chan_inds]
             amplitudes += self._offsets[chan_inds]
