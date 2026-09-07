@@ -1,7 +1,7 @@
 import operator
 import pytest
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, NumpyRecording
 
 from spikeinterface.preprocessing import common_reference
 
@@ -170,6 +170,74 @@ def test_common_reference_groups(recording):
     assert np.allclose(traces[:, 1], 0)
 
 
+def test_common_reference_groups_cross(recording):
+    # "global" reference with groups AND a per-group ref_channel_ids: each group is
+    # referenced to a (possibly external) set of channels -> enables cross-group referencing.
+    original_traces = recording.get_traces()
+    groups = [["a", "c"], ["b", "d"]]
+    ref_channel_ids = [["b", "d"], ["a", "c"]]  # reference each group to the OTHER group's channels
+
+    rec_cross = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids=ref_channel_ids
+    )
+    traces = rec_cross.get_traces(channel_ids=["a", "b", "c", "d"])
+    # a, c (group 0) referenced to median of b, d
+    ref0 = np.median(original_traces[:, [1, 3]], axis=1)
+    assert np.allclose(traces[:, 0], original_traces[:, 0] - ref0, atol=0.01)
+    assert np.allclose(traces[:, 2], original_traces[:, 2] - ref0, atol=0.01)
+    # b, d (group 1) referenced to median of a, c
+    ref1 = np.median(original_traces[:, [0, 2]], axis=1)
+    assert np.allclose(traces[:, 1], original_traces[:, 1] - ref1, atol=0.01)
+    assert np.allclose(traces[:, 3], original_traces[:, 3] - ref1, atol=0.01)
+
+    # mismatched lengths raise
+    with pytest.raises(AssertionError):
+        common_reference(recording, reference="global", groups=groups, ref_channel_ids=[["b", "d"]])
+
+
+def test_out_of_group_common_reference(recording):
+    # ref_channel_ids="out_of_group" shortcut: reference each group to all channels NOT in it.
+    groups = [["a", "c"], ["b", "d"]]
+    # out-of-group channels for these groups within {a,b,c,d} are exactly [["b","d"], ["a","c"]]
+    explicit = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids=[["b", "d"], ["a", "c"]]
+    )
+    sugar = common_reference(
+        recording, reference="global", operator="median", groups=groups, ref_channel_ids="out_of_group"
+    )
+    assert np.allclose(sugar.get_traces(), explicit.get_traces(), atol=1e-6)
+
+    # "out_of_group" requires groups
+    with pytest.raises(ValueError):
+        common_reference(recording, reference="global", ref_channel_ids="out_of_group")
+
+
+def test_common_reference_int_dtype_rounds():
+    # Casting the re-referenced float traces down to an integer dtype must round
+    # to the nearest integer, not truncate toward zero (b3).
+    traces = np.array([[0.0, 10.4], [0.0, -10.4]], dtype="float32")
+    recording = NumpyRecording([traces], sampling_frequency=1.0)
+    recording = recording.rename_channels(np.array(["a", "b"]))
+
+    rec_sin = common_reference(recording, reference="single", ref_channel_ids=["a"], dtype="int16")
+    result = rec_sin.get_traces(channel_ids=["b"])
+
+    # 10.4 rounds to 10, -10.4 rounds to -10: truncation toward zero would give the
+    # same values here, so also check a case where rounding and truncation differ.
+    assert result[0, 0] == 10
+    assert result[1, 0] == -10
+
+    traces2 = np.array([[0.0, 10.6], [0.0, -10.6]], dtype="float32")
+    recording2 = NumpyRecording([traces2], sampling_frequency=1.0)
+    recording2 = recording2.rename_channels(np.array(["a", "b"]))
+    rec_sin2 = common_reference(recording2, reference="single", ref_channel_ids=["a"], dtype="int16")
+    result2 = rec_sin2.get_traces(channel_ids=["b"])
+
+    # Truncation toward zero would give 10 / -10; correct rounding gives 11 / -11.
+    assert result2[0, 0] == 11
+    assert result2[1, 0] == -11
+
+
 def test_min_local_radius():
     # Test that local radius smaller than the number of channels is handled correctly
     recording = generate_recording(durations=[1.0], num_channels=32)
@@ -179,6 +247,54 @@ def test_min_local_radius():
         recording_local_car = common_reference(
             recording, reference="local", local_radius=(60, 150), operator="average", min_local_neighbors=5
         )
+
+
+@pytest.mark.parametrize("operator", ["median", "average"])
+def test_local_reference_no_channel_beyond_exclude_radius(operator):
+    # When no channel at all lies beyond the exclude (inner) radius, there is nothing to build a
+    # local reference from. This used to raise a ZeroDivisionError at init. The channels should now
+    # be left unreferenced and a warning should be raised instead.
+    recording = generate_recording(durations=[1.0], num_channels=4, set_probe=False)
+    recording = recording.rename_channels(np.array(["a", "b", "c", "d"]))
+    # Tetrode-like geometry: every channel is within 30 um of every other one
+    recording.set_dummy_probe_from_locations(np.array([[0.0, 0.0], [0.0, 20.0], [20.0, 0.0], [20.0, 20.0]]))
+
+    with pytest.warns(UserWarning, match="left unreferenced"):
+        rec_local = common_reference(recording, reference="local", local_radius=(30.0, 55.0), operator=operator)
+
+    traces = recording.get_traces()
+    assert np.array_equal(rec_local.get_traces(), traces)
+
+
+@pytest.mark.parametrize("operator", ["median", "average"])
+def test_local_reference_partially_empty_annulus(operator):
+    # Only some channels have no channel beyond the exclude radius. Those are left unreferenced while
+    # the others are referenced normally.
+    recording = generate_recording(durations=[1.0], num_channels=5, set_probe=False)
+    recording = recording.rename_channels(np.array(["a", "b", "c", "d", "e"]))
+    # "a" sits at the center of a cross, so the farthest channel from it is 100 um away. Every other
+    # channel has the opposite arm of the cross 200 um away.
+    locations = np.array([[0.0, 0.0], [-100.0, 0.0], [100.0, 0.0], [0.0, -100.0], [0.0, 100.0]])
+    recording.set_dummy_probe_from_locations(locations)
+
+    with pytest.warns(UserWarning, match="left unreferenced"):
+        rec_local = common_reference(
+            recording,
+            reference="local",
+            local_radius=(150.0, 400.0),
+            operator=operator,
+            min_local_neighbors=1,
+        )
+
+    traces = recording.get_traces()
+    referenced_traces = rec_local.get_traces()
+
+    # "a" has no channel beyond 150 um, so it is passed through unchanged
+    assert np.array_equal(referenced_traces[:, 0], traces[:, 0])
+    # the four arms are each referenced to the single opposite arm, which is 200 um away
+    for channel_index, opposite_index in ((1, 2), (2, 1), (3, 4), (4, 3)):
+        expected = traces[:, channel_index] - traces[:, opposite_index]
+        assert np.allclose(referenced_traces[:, channel_index], expected, atol=1e-5)
 
 
 @pytest.mark.skip(reason="This test can be used to check local CAR vs local CMR performance")

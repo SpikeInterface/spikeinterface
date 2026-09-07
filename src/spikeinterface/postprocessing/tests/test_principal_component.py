@@ -101,7 +101,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
 
         random_spikes_ext = sorting_analyzer.get_extension("random_spikes")
         random_spikes_indices = random_spikes_ext.get_data()
-        unit_ids_num_random_spikes = np.sum(random_spikes_ext.params["max_spikes_per_unit"] for _ in some_unit_ids)
+        unit_ids_num_random_spikes = sum(random_spikes_ext.params["max_spikes_per_unit"] for _ in some_unit_ids)
 
         # this should be all spikes all channels
         some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)

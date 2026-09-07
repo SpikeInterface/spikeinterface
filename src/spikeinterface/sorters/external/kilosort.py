@@ -213,7 +213,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
             # Kilosort's default behavior if nNeighPC is None in params (from _default_params)
             ops["nNeighPC"] = min(
                 12.0, ops["Nchan"]
-            )  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
+            )  # visualization only (Phy): number of channels to mask the PCs, leave empty to skip (12)
 
         ops["nNeigh"] = params[
             "nNeigh"
@@ -270,7 +270,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["loc_range"] = params["loc_range"]  # ranges to detect peaks; plus/minus in time and channel ([3 1])
         ops["long_range"] = params["long_range"]  # ranges to detect isolated peaks ([30 6])
         ops["maskMaxChannels"] = params["maskMaxChannels"]  # how many channels to mask up/down ([5])
-        ops["crit"] = params["crit"]  # upper criterion for discarding spike repeates (0.65)
+        ops["crit"] = params["crit"]  # upper criterion for discarding spike repeats (0.65)
         ops["nFiltMax"] = params["nFiltMax"]  # maximum "unique" spikes to consider (10000)
 
         # options for posthoc merges (under construction)

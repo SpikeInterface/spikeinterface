@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 
 from spikeinterface.sortingcomponents.clustering.merging_tools import (
     merge_peak_labels_from_features,

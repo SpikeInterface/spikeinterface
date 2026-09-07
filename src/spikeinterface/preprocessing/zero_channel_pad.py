@@ -35,7 +35,6 @@ class TracePaddedRecording(BasePreprocessor):
         for segment in recording.segments:
             recording_segment = TracePaddedRecordingSegment(
                 segment,
-                recording.get_num_channels(),
                 self.dtype,
                 self.padding_start,
                 self.padding_end,
@@ -55,7 +54,6 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
         recording_segment: BaseRecordingSegment,
-        num_channels,
         dtype,
         padding_left,
         padding_end,
@@ -64,7 +62,6 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         self.padding_start = padding_left
         self.padding_end = padding_end
         self.fill_value = fill_value
-        self.num_channels = num_channels
         self.num_samples_in_original_segment = recording_segment.get_num_samples()
         self.dtype = dtype
 
@@ -76,7 +73,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         if isinstance(channel_indices, (np.ndarray, list)):
             num_channels = len(channel_indices)
         elif channel_indices == slice(None):
-            num_channels = self.num_channels
+            num_channels = self.get_num_channels()
         else:
             raise ValueError(f"Unsupported channel_indices type: {type(channel_indices)} raise an issue on github ")
 
@@ -157,7 +154,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
                 "The new mapping cannot exceed total number of channels " "in the zero-chanenl-padded recording."
             )
         else:
-            if "locations" in recording.get_property_keys() or "contact_vector" in recording.get_property_keys():
+            if recording.has_probe():
                 self.channel_mapping = np.argsort(recording.get_channel_locations()[:, 1])
             else:
                 self.channel_mapping = np.arange(recording.get_num_channels())
@@ -165,7 +162,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
         self.parent_recording = recording
         self.num_channels = num_channels
         for segment in recording.segments:
-            recording_segment = ZeroChannelPaddedRecordingSegment(segment, self.num_channels, self.channel_mapping)
+            recording_segment = ZeroChannelPaddedRecordingSegment(segment, self.channel_mapping)
             self.add_recording_segment(recording_segment)
 
         # only copy relevant metadata and properties
@@ -182,14 +179,13 @@ class ZeroChannelPaddedRecording(BaseRecording):
 
 
 class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, recording_segment: BaseRecordingSegment, num_channels: int, channel_mapping: list):
+    def __init__(self, recording_segment: BaseRecordingSegment, channel_mapping: list):
         BasePreprocessorSegment.__init__(self, recording_segment)
         self.parent_recording_segment = recording_segment
-        self.num_channels = num_channels
         self.channel_mapping = channel_mapping
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = np.zeros((end_frame - start_frame, self.num_channels))
+        traces = np.zeros((end_frame - start_frame, self.get_num_channels()))
         traces[:, self.channel_mapping] = self.parent_recording_segment.get_traces(
             start_frame=start_frame, end_frame=end_frame, channel_indices=self.channel_mapping
         )

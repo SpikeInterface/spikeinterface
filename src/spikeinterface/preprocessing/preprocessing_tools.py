@@ -50,7 +50,7 @@ def get_spatial_interpolation_kernel(
     -------
     interpolation_kernel: array (m, n)
     """
-    import scipy.spatial
+    from scipy.spatial import distance
 
     target_is_inside = np.ones(target_location.shape[0], dtype=bool)
     for dim in range(source_location.shape[1]):
@@ -77,7 +77,7 @@ def get_spatial_interpolation_kernel(
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == "idw":
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        distances = distance.cdist(source_location, target_location, metric="euclidean")
         interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[:, c])
@@ -94,7 +94,7 @@ def get_spatial_interpolation_kernel(
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == "nearest":
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        distances = distance.cdist(source_location, target_location, metric="euclidean")
         interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_closest = np.argmin(distances[:, c])
@@ -135,9 +135,9 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
     """
 
     if np.isscalar(sigma_um):
-        import scipy
+        from scipy.spatial import distance
 
-        dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric=distance_metric)
+        dist = distance.cdist(locations_1, locations_2, metric=distance_metric)
         kernel_dist = np.exp(-((dist / sigma_um) ** p))
     else:
         # this mimic the kilosort case where a sigma on x and y are diffrents.

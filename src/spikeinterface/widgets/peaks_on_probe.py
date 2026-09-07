@@ -131,7 +131,7 @@ class PeaksOnProbeWidget(BaseWidget):
             )
 
             if dp.ylim is None:
-                padding = 25  # arbitary padding just to give some space around highests and lowest peaks on the plot
+                padding = 25  # arbitrary padding just to give some space around highest and lowest peaks on the plot
                 ylim = (np.min(peak_locs_to_plot["y"]) - padding, np.max(peak_locs_to_plot["y"]) + padding)
             else:
                 ylim = dp.ylim
@@ -188,7 +188,7 @@ class PeaksOnProbeWidget(BaseWidget):
 
     def _check_and_format_inputs(self, peaks, peak_locations):
         """
-        Check that the inpust are in expected form. Corresponding peaks
+        Check that the inputs are in expected form. Corresponding peaks
         and peak_locations of same size and format must be provided.
         """
         types_are_list = [isinstance(peaks, list), isinstance(peak_locations, list)]

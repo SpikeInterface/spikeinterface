@@ -16,7 +16,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
     Plot UpSet plots showing which metrics fail together for each unit label after Bombcell
     curation.
 
-    Requires `upsetplot` package.
+    Requires `upsetplot-bombcell` package.
     Each unit label shows relevant metrics based on the threshold dictionary.
 
     Parameters
@@ -24,7 +24,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object with computed metrics extensions.
     unit_labels : np.ndarray
-        Array of unit labels as strings, includeing bombcell labels like "noise", "mua",
+        Array of unit labels as strings, including bombcell labels like "noise", "mua",
         "non_soma", "non_soma_good", "non_soma_mua".
     thresholds : dict, optional
         Threshold dictionary with structure "noise", "mua", "non-somatic" as sections. Each section contains
@@ -103,7 +103,7 @@ class BombcellUpsetPlotWidget(BaseWidget):
             ax.text(
                 0.5,
                 0.5,
-                "UpSet plots require 'upsetplot' package.\n\npip install upsetplot",
+                "UpSet plots require 'upsetplot-bombcell' package.\n\npip install upsetplot-bombcell",
                 ha="center",
                 va="center",
                 fontsize=14,
@@ -151,6 +151,12 @@ class BombcellUpsetPlotWidget(BaseWidget):
                 upset_data = from_memberships(memberships)
                 upset_data = upset_data[upset_data >= min_subset_size]
                 if len(upset_data) == 0:
+                    continue
+
+                if upset_data.index.nlevels == 1:
+                    warnings.warn(
+                        f"Skipping UpSet plot: only one metric, {memberships[0][0]}, was responsible for all failures."
+                    )
                     continue
 
                 fig = plt.figure(figsize=(12, 6))
@@ -224,7 +230,7 @@ def plot_bombcell_unit_labeling_all(
     thresholds : dict, optional
         Threshold dictionary. If None, uses default thresholds.
     include_upset : bool, default: True
-        Whether to include UpSet plots (requires upsetplot package).
+        Whether to include UpSet plots (requires upsetplot-bombcell package).
     **kwargs
         Additional arguments passed to plot functions.
 

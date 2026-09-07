@@ -12,6 +12,7 @@ import copy
 import warnings
 from pathlib import Path
 import json
+
 import numpy as np
 
 from .curation_tools import is_threshold_disabled

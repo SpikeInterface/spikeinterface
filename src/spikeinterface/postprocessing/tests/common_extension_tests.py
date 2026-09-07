@@ -65,7 +65,7 @@ class AnalyzerExtensionCommonTestSuite:
     def setUpClass(self, create_cache_folder):
         """
         This method sets up the class once at the start of testing. It is
-        in scope for the lifetime of te class and is reused across all
+        in scope for the lifetime of the class and is reused across all
         tests that inherit from this base class to save processing time and
         force a small radius.
 

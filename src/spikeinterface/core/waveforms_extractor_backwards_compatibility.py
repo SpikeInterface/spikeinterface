@@ -5,9 +5,7 @@ This backwards compatibility module aims to:
 """
 
 import warnings
-
 from pathlib import Path
-
 import json
 
 import numpy as np
@@ -376,10 +374,10 @@ def load_waveforms(
     output="MockWaveformExtractor",
 ) -> MockWaveformExtractor | SortingAnalyzer:
     """
-    This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
+    This read an old WaveformsExtractor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
 
     It also mimic the old load_waveforms by opening a Sortingresult folder and return a MockWaveformExtractor.
-    This later behavior is usefull to no break old code like this in versio >=0.101
+    This later behavior is useful to no break old code like this in version >=0.101
 
     >>> # In this example we is a MockWaveformExtractor that behave the same as before
     >>> we = extract_waveforms(..., folder="/my_we")
@@ -493,7 +491,13 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
             sorting = load(folder / "sorting.pickle", base_folder=folder)
 
     sorting_analyzer = SortingAnalyzer.create_memory(
-        sorting, recording, sparsity=sparsity, return_in_uV=return_in_uV, rec_attributes=rec_attributes
+        sorting,
+        recording,
+        sparsity=sparsity,
+        peak_mode="extremum",
+        peak_sign="neg",
+        return_in_uV=return_in_uV,
+        rec_attributes=rec_attributes,
     )
 
     # waveforms
@@ -629,12 +633,16 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
                     pc_all[mask, ...] = pc_one
                 ext.data["pca_projection"] = pc_all
 
-        # update params
-        new_params = ext._set_params()
-        updated_params = make_ext_params_up_to_date(ext, params, new_params)
-        ext.set_params(**updated_params, save=False)
+        # Install raw on-disk params and run compat handler first,
+        # matching what AnalyzerExtension.load does for non-legacy folders.
+        ext.params = dict(params)
         if ext.need_backward_compatibility_on_load:
             ext._handle_backward_compatibility_on_load()
+
+        # Now merge and validate — deprecated names are already migrated.
+        new_params = ext._set_params()
+        updated_params = make_ext_params_up_to_date(ext, ext.params, new_params)
+        ext.set_params(**updated_params, save=False)
         ext.run_info = None
 
         sorting_analyzer.extensions[new_name] = ext

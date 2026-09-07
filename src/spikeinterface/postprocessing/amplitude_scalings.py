@@ -1,8 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.core_tools import ms_to_samples
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array, _get_nbefore
+from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
@@ -103,10 +102,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
         else:
             cut_out_after = nafter
 
-        peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
-        extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
-        )
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         # collisions
         handle_collisions = self.params["handle_collisions"]
@@ -138,7 +134,6 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             sorting,
             recording,
             channel_from_template=True,
-            extremum_channel_inds=extremum_channels_indices,
             include_spikes_in_margin=True,
         )
         amplitude_scalings_node = AmplitudeScalingNode(
@@ -234,10 +229,8 @@ class AmplitudeScalingNode(PipelineNode):
     def compute(self, traces, peaks):
         from scipy.stats import linregress
 
-        # scale traces with margin to match scaling of templates
-        if self._gains is not None:
-            traces = traces.astype("float32") * self._gains + self._offsets
-
+        gains = self._gains
+        offsets = self._offsets
         all_templates = self._all_templates
         sparsity_mask = self._sparsity_mask
         nbefore = self._nbefore
@@ -294,6 +287,9 @@ class AmplitudeScalingNode(PipelineNode):
                 template = template[: -(sample_centered + cut_out_after - (traces.shape[0]))]
             else:
                 local_waveform = traces[cut_out_start:cut_out_end, sparse_indices]
+            # scale the waveform to match the scaling of the templates
+            if gains is not None:
+                local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
             assert template.shape == local_waveform.shape
 
             # here we use linregress, which is equivalent to using sklearn LinearRegression with fit_intercept=True
@@ -323,6 +319,8 @@ class AmplitudeScalingNode(PipelineNode):
                     sparsity_mask,
                     cut_out_before,
                     cut_out_after,
+                    gains,
+                    offsets,
                 )
                 # the scaling for the current spike is at index 0
                 scalings[spike_index] = scaled_amps[0]
@@ -331,7 +329,7 @@ class AmplitudeScalingNode(PipelineNode):
         # TODO: switch to collision mask and return that (to use concatenation)
         return (scalings, spike_collision_mask)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self._margin
 
 
@@ -452,6 +450,8 @@ def fit_collision(
     sparsity_mask,
     cut_out_before,
     cut_out_after,
+    gains=None,
+    offsets=None,
 ):
     """
     Compute the best fit for a collision between a spike and its overlapping spikes.
@@ -490,6 +490,12 @@ def fit_collision(
         The number of samples to cut out before the spike.
     cut_out_after: int
         The number of samples to cut out after the spike.
+    gains : np.ndarray or None, default: None
+        The channel gains used to scale the local waveform to uV. If None, the
+        traces are used as they are.
+    offsets : np.ndarray or None, default: None
+        The channel offsets used to scale the local waveform to uV. If None, the
+        traces are used as they are.
 
     Returns
     -------
@@ -518,6 +524,9 @@ def fit_collision(
     local_waveform_start = max(0, sample_first_centered - cut_out_before)
     local_waveform_end = min(traces_with_margin.shape[0], sample_last_centered + cut_out_after)
     local_waveform = traces_with_margin[local_waveform_start:local_waveform_end, sparse_indices]
+    # scale the waveform to match the scaling of the templates
+    if gains is not None:
+        local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
     num_samples_local_waveform = local_waveform.shape[0]
 
     y = local_waveform.T.flatten()
@@ -527,7 +536,7 @@ def fit_collision(
         full_template = np.zeros_like(local_waveform)
 
         # For the collision spike, take its unit template and insert
-        # it into `full_template` at the time the collision spike occured.
+        # it into `full_template` at the time the collision spike occurred.
         sample_centered = spike["sample_index"] - local_waveform_start
         template = all_templates[spike["unit_index"]][:, sparse_indices]
         template_cut = template[nbefore - cut_out_before : nbefore + cut_out_after]

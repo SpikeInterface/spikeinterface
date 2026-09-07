@@ -1,0 +1,17 @@
+.. _release0.104.4:
+
+SpikeInterface 0.104.4 release notes
+------------------------------------
+
+June 10th 2026
+
+Minor release with bug fixes
+
+preprocessing:
+
+* Hotfix: overflow error in correct LSB (#4610)
+
+
+Contributors:
+
+* @alejoe91

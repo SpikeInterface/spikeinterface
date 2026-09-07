@@ -15,7 +15,10 @@ import warnings
 
 import probeinterface
 
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neuropixels_utils import (
+    get_neuropixels_sample_shifts_from_probe,
+    compute_saturation_threshold_from_probe,
+)
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
@@ -224,6 +227,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         experiment_names: str | list | None = None,
         all_annotations: bool = False,
     ):
+        folder_path = Path(folder_path)
+
         # Handle experiment_names deprecation
         if experiment_names is not None:
             warnings.warn(
@@ -319,25 +324,35 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             if "NI-DAQmx" not in stream_name:
                 settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
-                if Path(settings_file).is_file():
-                    probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=oe_stream_name, raise_error=False
+                if Path(settings_file).is_file() and probeinterface.has_neuropixels_probes(
+                    settings_file, stream_name=oe_stream_name
+                ):
+                    probe = probeinterface.read_openephys_neuropixels(
+                        settings_file=settings_file, stream_name=oe_stream_name
                     )
-                else:
-                    probe = None
-
-                if probe is not None:
                     if probe.shank_ids is not None:
-                        self.set_probe(probe, in_place=True, group_mode="by_shank")
+                        self.set_probe(probe, group_mode="by_shank")
                     else:
-                        self.set_probe(probe, in_place=True)
+                        self.set_probe(probe)
                     # get inter-sample shifts based on the probe information and mux channels
                     sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
                     if sample_shifts is not None:
                         self.set_property("inter_sample_shift", sample_shifts)
 
-            # load synchronized timestamps and set_times to recording
-            recording_folder = Path(folder_path) / record_node
+                    # add saturation levels if available
+                    saturation_threshold_uV = compute_saturation_threshold_from_probe(probe, oe_stream_name)
+                    if saturation_threshold_uV is not None:
+                        self.annotate(saturation_threshold_uV=saturation_threshold_uV)
+
+            # folder_path can point to different levels of the OE folder structure
+            # (root, record node, experiment, or recording). We need to find the root folder
+            # in order to load the sync timestamps and set them as times to the recording.
+            if record_node in folder_path.parts:
+                root_index = len(folder_path.parts) - folder_path.parts.index(record_node) - 1
+                root_folder = folder_path.parents[root_index]
+            else:
+                root_folder = folder_path
+            recording_folder = root_folder / record_node
             stream_folders = []
             for segment_index, rec_id in enumerate(rec_ids):
                 stream_folder = (
@@ -376,6 +391,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             "experiment_names": experiment_names,
         }
         return neo_kwargs
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "load_sync_channel" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("load_sync_channel")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):

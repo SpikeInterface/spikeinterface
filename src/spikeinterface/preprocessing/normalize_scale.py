@@ -161,7 +161,6 @@ class ScaleRecording(BasePreprocessor):
             offset = np.asarray(offset)
         if offset.ndim == 1:
             offset = offset[None, :]
-        offset = offset.astype(dtype)
         assert offset.shape == (1, num_chans)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
@@ -235,7 +234,7 @@ class ZScoreRecording(BasePreprocessor):
     mode : "median+mad" | "mean+std", default: "median+mad"
         The mode to compute the zscore
     dtype : None or dtype
-        If None the the parent dtype is kept.
+        If None the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     gain : None or np.array
         Pre-computed gain.

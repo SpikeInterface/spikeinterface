@@ -10,7 +10,7 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 * Creating a new spike sorter.
 * Designing a new post-processing algorithm.
 * Enhancing documentation, including docstrings, tutorials, and examples.
-* Crafting tutorials for common workflows (e.g., spike sorting, post-processing, etc.).
+* Crafting tutorials for common workflows (e.g., spike sorting, postprocessing, etc.).
 * Writing unit tests to expand code coverage and use case scenarios.
 * Reporting bugs and issues.
 
@@ -65,9 +65,30 @@ Note that you should install spikeinterface before running the tests. You can do
 
 .. code-block:: bash
 
-    pip install -e .[test,extractors,full]
+    pip install -e .[extractors,full] --group test-all
 
-You can change the :code:`[test,extractors,full]` to install only the dependencies you need. The dependencies are specified in the :code:`pyproject.toml` file in the root of the repository.
+You can change the :code:`[extractors,full]` extras to install only the runtime dependencies you need, and swap :code:`--group test-all` for a per-module test group (for example :code:`--group test-postprocessing`). Both lists are defined in :code:`pyproject.toml`: feature extras live under :code:`[project.optional-dependencies]` and test groups under :code:`[dependency-groups]` (PEP 735). Note that :code:`--group` requires pip 25.1+ or uv.
+
+With :code:`uv`, you can run the tests for a single module without creating and activating a virtual environment explicitly. :code:`uv run` resolves the project, extras, and dependency groups on the fly. The general pattern is:
+
+.. code-block:: bash
+
+    uv run --extra <module> --group test-<module> pytest src/spikeinterface/<module>/tests
+
+For example:
+
+.. code-block:: bash
+
+    uv run --extra postprocessing --group test-postprocessing pytest src/spikeinterface/postprocessing/tests
+    uv run --extra sortingcomponents --group test-sortingcomponents pytest src/spikeinterface/sortingcomponents/tests
+
+To replicate the nightly CI environment and run the whole suite at once:
+
+.. code-block:: bash
+
+    uv run --extra extractors --extra streaming_extractors --extra full --group test-all pytest
+
+Both :code:`--extra` and :code:`--group` lists are enumerated in :code:`pyproject.toml`. Some modules' tests happen to work with just :code:`--group test-<module>` because the group pulls the runtime deps transitively (preprocessing is one such case), but declaring the matching :code:`--extra` explicitly is the reliable pattern.
 
 The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can
 find the full tests in the :code:`.github/workflows/full_test.yml` file.
@@ -363,12 +384,11 @@ In order to check if your spike sorter is installed, a :code:`try` - :code:`exce
 sorter is implemented in Python (installed with the package :code:`myspikesorter`), this block will look as follows:
 
 .. code-block:: python
-
-    try:
-        import myspikesorter
-        HAVE_MSS = True
-    except ImportError:
-        HAVE_MSS = False
+    import importlib.util
+    if importlib.util.find_spec("myspikesorter"):
+        HAVE_MYSORTER = True
+    else:
+        HAVE_MYSORTER = False
 
 Then, you can start creating a new class:
 
@@ -381,7 +401,7 @@ Then, you can start creating a new class:
     """
 
     sorter_name = 'myspikesorter'
-    installed = HAVE_MSS
+    installed = HAVE_MYSORTER
 
     _default_params = {
         'param1': None,
@@ -415,7 +435,7 @@ Now you can start filling out the required methods:
     def is_installed(cls):
 
         # Fill code to check sorter installation. It returns a boolean
-        return HAVE_MSS
+        return HAVE_MYSORTER
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
@@ -477,7 +497,7 @@ Checklist
 * In the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``) set ``DEV_MODE`` to ``False`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
-There can be large releases like:
+It can be a large release like:
 
 ``doc/releases/0.101.0.rst``
 
@@ -485,7 +505,7 @@ Which contain a section called "Main Changes" and minor releases which include o
 
 ``doc/releases/0.101.2.rst``
 
-To collect all the PRs and bug fixes we have a script in:
+To collect all the PRs and bug fixes we have a bash script in:
 ``doc/scripts/``
 called ``auto-release-notes.sh``. Run it with ``bash auto-release-notes.sh`` and it will create the release notes for the module specific changes.
 
