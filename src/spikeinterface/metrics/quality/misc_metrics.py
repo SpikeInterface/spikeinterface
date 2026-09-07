@@ -34,6 +34,69 @@ else:
     HAVE_NUMBA = False
 
 
+# Metrics that read spike_amplitudes/amplitude_scalings by unit. Their by-unit amplitude data is
+# pre-fetched once in `ComputeQualityMetrics._prepare_data` and shared via `tmp_data` instead of each
+# metric independently re-fetching the full array from the extension.
+amplitude_based_metric_names = {"amplitude_cutoff", "amplitude_median", "noise_cutoff", "amplitude_cv", "sd_ratio"}
+
+
+def _amplitude_extension_name_for_metric(metric_name, metric_params, sorting_analyzer):
+    if metric_name == "amplitude_median":
+        # only depends on spike_amplitudes (no amplitude_scalings fallback)
+        return "spike_amplitudes"
+    if metric_name == "sd_ratio":
+        return "spike_amplitudes"
+    if metric_name == "amplitude_cv":
+        configured = metric_params.get("amplitude_cv", {}).get("amplitude_extension")
+        if configured is not None:
+            return configured
+        return "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+    if metric_name in ("amplitude_cutoff", "noise_cutoff"):
+        return "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+    raise ValueError(f"Unknown amplitude-based metric name: {metric_name}")
+
+
+def get_amplitudes_by_segment(sorting_analyzer, requested_metric_names, metric_params, periods=None):
+    """Fetch each needed spike_amplitudes/amplitude_scalings extension's by-unit data (per-segment,
+    unconcatenated) once, so it can be shared across all requested amplitude-based metrics."""
+    needed_extension_names = {
+        _amplitude_extension_name_for_metric(metric_name, metric_params, sorting_analyzer)
+        for metric_name in requested_metric_names
+    }
+
+    amplitudes_by_segment = {}
+    for extension_name in needed_extension_names:
+        extension = sorting_analyzer.get_extension(extension_name)
+        if extension is not None:
+            amplitudes_by_segment[extension_name] = extension.get_data(
+                outputs="by_unit", concatenated=False, periods=periods
+            )
+    return amplitudes_by_segment
+
+
+def _amplitudes_by_unit_from_cache(sorting_analyzer, extension_name, periods, concatenated, tmp_data):
+    """Return by-unit amplitude data for `extension_name`, reusing the pre-fetched `tmp_data` cache
+    (built by `get_amplitudes_by_segment`) when available, falling back to a direct fetch otherwise
+    (e.g. when the metric function is called directly, outside the metrics-dataframe machinery)."""
+    amplitudes_by_segment = None
+    if tmp_data is not None:
+        amplitudes_by_segment = tmp_data.get("amplitudes_by_segment", {}).get(extension_name)
+    if amplitudes_by_segment is None:
+        extension = sorting_analyzer.get_extension(extension_name)
+        amplitudes_by_segment = extension.get_data(outputs="by_unit", concatenated=False, periods=periods)
+
+    if not concatenated:
+        return amplitudes_by_segment
+
+    num_segments = len(amplitudes_by_segment)
+    return {
+        unit_id: np.concatenate(
+            [amplitudes_by_segment[segment_index][unit_id] for segment_index in range(num_segments)]
+        )
+        for unit_id in sorting_analyzer.unit_ids
+    }
+
+
 def compute_presence_ratios(
     sorting_analyzer, unit_ids=None, periods=None, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0
 ):
@@ -805,11 +868,12 @@ class FiringRange(BaseMetric):
 def compute_amplitude_cv_metrics(
     sorting_analyzer,
     unit_ids=None,
+    tmp_data=None,
     periods=None,
     average_num_spikes_per_bin=50,
     percentiles=(5, 95),
     min_num_bins=10,
-    amplitude_extension="spike_amplitudes",
+    amplitude_extension=None,
 ):
     """
     Calculate coefficient of variation of spike amplitudes within defined temporal bins.
@@ -834,8 +898,9 @@ def compute_amplitude_cv_metrics(
     min_num_bins : int, default: 10
         The minimum number of bins to compute the median and range. If the number of bins is less than this then
         the median and range are set to NaN.
-    amplitude_extension : str, default: "spike_amplitudes"
-        The name of the extension to load the amplitudes from. "spike_amplitudes" or "amplitude_scalings".
+    amplitude_extension : "spike_amplitudes" | "amplitude_scalings" | None, default: None
+        The name of the extension to load the amplitudes from. If None, "spike_amplitudes" is used
+        if available, otherwise "amplitude_scalings".
 
     Returns
     -------
@@ -850,6 +915,10 @@ def compute_amplitude_cv_metrics(
     """
     check_has_required_extensions("amplitude_cv", sorting_analyzer)
     res = namedtuple("amplitude_cv", ["amplitude_cv_median", "amplitude_cv_range"])
+    if amplitude_extension is None:
+        amplitude_extension = (
+            "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
+        )
     assert amplitude_extension in (
         "spike_amplitudes",
         "amplitude_scalings",
@@ -861,8 +930,8 @@ def compute_amplitude_cv_metrics(
 
     total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
     num_spikes = sorting.count_num_spikes_per_unit(outputs="dict", unit_ids=unit_ids)
-    amps = sorting_analyzer.get_extension(amplitude_extension).get_data(
-        outputs="by_unit", concatenated=False, periods=periods
+    amps = _amplitudes_by_unit_from_cache(
+        sorting_analyzer, amplitude_extension, periods, concatenated=False, tmp_data=tmp_data
     )
 
     amplitude_cv_medians, amplitude_cv_ranges = {}, {}
@@ -909,7 +978,7 @@ class AmplitudeCV(BaseMetric):
         "average_num_spikes_per_bin": 50,
         "percentiles": (5, 95),
         "min_num_bins": 10,
-        "amplitude_extension": "spike_amplitudes",
+        "amplitude_extension": None,
     }
     metric_columns = {"amplitude_cv_median": float, "amplitude_cv_range": float}
     metric_descriptions = {
@@ -917,12 +986,14 @@ class AmplitudeCV(BaseMetric):
         "amplitude_cv_range": "Range of the coefficient of variation of spike amplitudes within temporal bins.",
     }
     supports_periods = True
+    needs_tmp_data = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
 def compute_amplitude_cutoffs(
     sorting_analyzer,
     unit_ids=None,
+    tmp_data=None,
     periods=None,
     num_histogram_bins=500,
     histogram_smoothing_value=3,
@@ -977,8 +1048,9 @@ def compute_amplitude_cutoffs(
     available_extension = (
         "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
     )
-    extension = sorting_analyzer.get_extension(available_extension)
-    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
+    amplitudes_by_units = _amplitudes_by_unit_from_cache(
+        sorting_analyzer, available_extension, periods, concatenated=True, tmp_data=tmp_data
+    )
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -1015,10 +1087,11 @@ class AmplitudeCutoff(BaseMetric):
         "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
     }
     supports_periods = True
+    needs_tmp_data = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
-def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
+def compute_amplitude_medians(sorting_analyzer, unit_ids=None, tmp_data=None, periods=None):
     """
     Compute median of the amplitude distributions.
 
@@ -1048,8 +1121,9 @@ def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
         unit_ids = sorting_analyzer.unit_ids
 
     all_amplitude_medians = {}
-    amplitude_extension = sorting_analyzer.get_extension("spike_amplitudes")
-    amplitudes_by_units = amplitude_extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
+    amplitudes_by_units = _amplitudes_by_unit_from_cache(
+        sorting_analyzer, "spike_amplitudes", periods, concatenated=True, tmp_data=tmp_data
+    )
     for unit_id in unit_ids:
         all_amplitude_medians[unit_id] = np.median(amplitudes_by_units[unit_id])
 
@@ -1062,11 +1136,12 @@ class AmplitudeMedian(BaseMetric):
     metric_columns = {"amplitude_median": float}
     metric_descriptions = {"amplitude_median": "Median of the amplitude distributions for each unit in µV."}
     supports_periods = True
+    needs_tmp_data = True
     depend_on = ["spike_amplitudes"]
 
 
 def compute_noise_cutoffs(
-    sorting_analyzer, unit_ids=None, periods=None, high_quantile=0.25, low_quantile=0.1, n_bins=100
+    sorting_analyzer, unit_ids=None, tmp_data=None, periods=None, high_quantile=0.25, low_quantile=0.1, n_bins=100
 ):
     """
     A metric to determine if a unit's amplitude distribution is cut off as it approaches zero, without assuming a Gaussian distribution.
@@ -1116,8 +1191,9 @@ def compute_noise_cutoffs(
     available_extension = (
         "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
     )
-    extension = sorting_analyzer.get_extension(available_extension)
-    amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
+    amplitudes_by_units = _amplitudes_by_unit_from_cache(
+        sorting_analyzer, available_extension, periods, concatenated=True, tmp_data=tmp_data
+    )
 
     for unit_id in unit_ids:
         amplitudes = amplitudes_by_units[unit_id]
@@ -1148,6 +1224,7 @@ class NoiseCutoff(BaseMetric):
         "noise_ratio": "Ratio of counts in the lower-amplitude bins to the count in the highest bin.",
     }
     supports_periods = True
+    needs_tmp_data = True
     depend_on = ["spike_amplitudes|amplitude_scalings"]
 
 
@@ -1228,10 +1305,9 @@ def compute_drift_metrics(
     spike_locations_by_unit_and_segments = spike_locations_ext.get_data(
         outputs="by_unit", concatenated=False, periods=periods
     )
-    spike_locations_by_unit = spike_locations_ext.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(sorting_analyzer.get_num_segments())]
-    data = spike_locations_by_unit[unit_ids[0]]
+    data = spike_locations_by_unit_and_segments[0][unit_ids[0]]
     assert direction in data.dtype.names, (
         f"Direction {direction} is invalid. Available directions: " f"{data.dtype.names}"
     )
@@ -1249,8 +1325,15 @@ def compute_drift_metrics(
     reference_positions = {}
     median_position_segments = {unit_id: np.array([]) for unit_id in unit_ids}
 
+    num_segments = sorting_analyzer.get_num_segments()
     for unit_id in unit_ids:
-        reference_positions[unit_id] = np.median(spike_locations_by_unit[unit_id][direction])
+        unit_direction_values = np.concatenate(
+            [
+                spike_locations_by_unit_and_segments[segment_index][unit_id][direction]
+                for segment_index in range(num_segments)
+            ]
+        )
+        reference_positions[unit_id] = np.median(unit_direction_values)
 
     for segment_index in range(sorting_analyzer.get_num_segments()):
         for unit_id in unit_ids:
@@ -1326,6 +1409,7 @@ class Drift(BaseMetric):
 def compute_sd_ratio(
     sorting_analyzer: SortingAnalyzer,
     unit_ids=None,
+    tmp_data=None,
     periods=None,
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
@@ -1385,8 +1469,8 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    spike_amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data(
-        outputs="by_unit", concatenated=False, periods=periods
+    spike_amplitudes = _amplitudes_by_unit_from_cache(
+        sorting_analyzer, "spike_amplitudes", periods, concatenated=False, tmp_data=tmp_data
     )
 
     if not HAVE_NUMBA:
@@ -1472,6 +1556,7 @@ class SDRatio(BaseMetric):
     }
     needs_recording = True
     supports_periods = True
+    needs_tmp_data = True
     depend_on = ["templates", "spike_amplitudes"]
 
 

@@ -137,12 +137,28 @@ class ComputeQualityMetrics(BaseMetricExtension):
             skip_pc_metrics=skip_pc_metrics,
         )
 
-    def _prepare_data(self, sorting_analyzer, unit_ids=None):
+    def _prepare_data(self, sorting_analyzer, unit_ids=None, periods=None):
         """Prepare shared data for quality metrics computation."""
         # Pre-compute shared PCA data
         from spikeinterface.metrics.spiketrain.metrics import compute_num_spikes, compute_firing_rates
+        from .misc_metrics import amplitude_based_metric_names, get_amplitudes_by_segment
 
         tmp_data = {}
+
+        if unit_ids is None:
+            unit_ids = sorting_analyzer.unit_ids
+
+        # Pre-fetch amplitude data (spike_amplitudes/amplitude_scalings) once and share it across
+        # amplitude_cutoff/amplitude_median/noise_cutoff/amplitude_cv/sd_ratio, instead of each metric
+        # independently rebuilding its own full by-unit copy of the same underlying array.
+        requested_amplitude_metrics = [m for m in self.params["metric_names"] if m in amplitude_based_metric_names]
+        if requested_amplitude_metrics:
+            tmp_data["amplitudes_by_segment"] = get_amplitudes_by_segment(
+                sorting_analyzer,
+                requested_amplitude_metrics,
+                self.params["metric_params"],
+                periods=periods,
+            )
 
         # Check if any PCA metrics are requested
         pca_metric_names = [m.metric_name for m in pca_metrics_list]
@@ -155,9 +171,6 @@ class ComputeQualityMetrics(BaseMetricExtension):
         pca_ext = sorting_analyzer.get_extension("principal_components")
         if pca_ext is None:
             return tmp_data
-
-        if unit_ids is None:
-            unit_ids = sorting_analyzer.unit_ids
 
         # Get dense PCA projections for all requested units
         dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)

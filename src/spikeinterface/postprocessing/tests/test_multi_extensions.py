@@ -5,15 +5,17 @@ import numpy as np
 
 from spikeinterface import (
     create_sorting_analyzer,
+    load_sorting_analyzer,
     generate_ground_truth_recording,
     set_global_job_kwargs,
     get_template_amplitude_on_main_channel,
 )
 from spikeinterface.core.generate import inject_some_split_units
+from spikeinterface.core.core_tools import slice_rows
 
 # even if this is in postprocessing, we make an extension for quality metrics
 extension_dict = {
-    "noise_levels": dict(),
+    "noise_levels": dict(force_recompute=True),
     "random_spikes": dict(),
     "waveforms": dict(),
     "templates": dict(),
@@ -59,7 +61,9 @@ extensions_with_rel_tolerance_merge = {
     "template_metrics": 0.2,  # some metrics are very sensitive to template changes, so we put a large tolerance
     "quality_metrics": 1e-2,
 }
-extensions_with_rel_tolerance_splits = {"amplitude_scalings": 1e-1}
+extensions_with_rel_tolerance_splits = {
+    "amplitude_scalings": 1e-1,
+}
 
 
 def get_dataset_to_merge():
@@ -122,8 +126,13 @@ def dataset_to_split():
     return get_dataset_to_split()
 
 
+@pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, format, tmp_path):
+    if format == "memory" and lazy:
+        pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
+
     set_global_job_kwargs(n_jobs=1)
 
     recording, sorting, other_ids = dataset_to_merge
@@ -137,6 +146,13 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
     unmerged_unit_ids = sorting_analyzer.unit_ids[~np.isin(sorting_analyzer.unit_ids, split_unit_ids)]
 
     sorting_analyzer.compute(extension_dict_merge, n_jobs=1)
+
+    if format != "memory":
+        analyzer_folder_name = f"sorting_analyzer_{sparse}_{lazy}"
+        if format == "zarr":
+            analyzer_folder_name += ".zarr"
+        sorting_analyzer.save_as(folder=tmp_path / analyzer_folder_name, format=format)
+        sorting_analyzer = load_sorting_analyzer(tmp_path / analyzer_folder_name, format=format, lazy=lazy)
 
     # TODO: still some UserWarnings for n_jobs, where from?
     t0 = time.perf_counter()
@@ -183,7 +199,22 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
         np.testing.assert_array_equal(data_original_unmerged, data_soft_unmerged)
 
         if ext not in random_computation:
-            np.testing.assert_array_equal(data_original_unmerged, data_hard_unmerged)
+            # unmerged units should be unchanged by a hard recompute; allow a tiny tolerance for
+            # floating point summation-order noise (e.g. different chunking/parallelization),
+            # not to be confused with a real discrepancy
+            if extension_data_type[ext] == "pandas":
+                original_for_hard_check = data_original_unmerged.dropna().to_numpy().astype("float")
+                hard_for_hard_check = data_hard_unmerged.dropna().to_numpy().astype("float")
+            else:
+                original_for_hard_check = data_original_unmerged
+                hard_for_hard_check = data_hard_unmerged
+            if original_for_hard_check.dtype.kind in ["U", "S", "O"]:
+                assert np.array_equal(original_for_hard_check, hard_for_hard_check)
+            elif original_for_hard_check.dtype.fields is None:
+                np.testing.assert_allclose(original_for_hard_check, hard_for_hard_check, rtol=1e-8, atol=1e-8)
+            else:
+                for f in original_for_hard_check.dtype.fields:
+                    np.testing.assert_allclose(original_for_hard_check[f], hard_for_hard_check[f], rtol=1e-8, atol=1e-8)
         else:
             print(f"Skipping hard test for {ext} due to randomness in computation")
 
@@ -219,15 +250,26 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, sparse):
                         raise Exception(f"Failed for {ext} - field {f} - max error {max_error}")
 
 
+@pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-def test_SortingAnalyzer_split_all_extensions(dataset_to_split, sparse):
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, format, tmp_path):
+    if format == "memory" and lazy:
+        pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
     set_global_job_kwargs(n_jobs=1)
 
     recording, sorting, units_to_split = dataset_to_split
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse)
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse, lazy=lazy)
     extension_dict_split = extension_dict.copy()
     sorting_analyzer.compute(extension_dict, n_jobs=1)
+
+    if format != "memory":
+        analyzer_folder_name = f"sorting_analyzer_{sparse}_{lazy}"
+        if format == "zarr":
+            analyzer_folder_name += ".zarr"
+        sorting_analyzer.save_as(folder=tmp_path / analyzer_folder_name, format=format)
+        sorting_analyzer = load_sorting_analyzer(tmp_path / analyzer_folder_name, format=format, lazy=lazy)
 
     # we randomly apply splits (at half of spiketrain)
     num_spikes = sorting.count_num_spikes_per_unit()
@@ -246,6 +288,9 @@ def test_SortingAnalyzer_split_all_extensions(dataset_to_split, sparse):
     extension_dict_ = extension_dict_split.copy()
     extension_dict_.pop("random_spikes")
     analyzer_hard.extensions["random_spikes"] = analyzer_split.extensions["random_spikes"]
+    # noise_levels' random slice sampling is seeded: reuse the exact same seed so a fresh
+    # recompute matches the original instead of sampling a different (but similarly valid) subset
+    extension_dict_["noise_levels"] = dict(sorting_analyzer.get_extension("noise_levels").params)
     analyzer_hard.compute(extension_dict_, n_jobs=1)
 
     for ext in extension_dict:
@@ -310,14 +355,14 @@ def get_extension_data_for_units(sorting_analyzer, data, unit_ids, ext_data_type
     elif ext_data_type == "random":
         random_indices = sorting_analyzer.get_extension("random_spikes").get_data()
         unit_mask = np.isin(spike_vector[random_indices]["unit_index"], unit_indices)
-        return data[unit_mask]
+        return slice_rows(data, unit_mask)
     elif ext_data_type == "matrix":
-        return data[unit_indices][:, unit_indices]
+        return slice_rows(data, unit_indices)[:, unit_indices]
     elif ext_data_type == "unit":
-        return data[unit_indices]
+        return slice_rows(data, unit_indices)
     elif ext_data_type == "spike":
         unit_mask = np.isin(spike_vector["unit_index"], unit_indices)
-        return data[unit_mask]
+        return slice_rows(data, unit_mask)
     elif ext_data_type == "pandas":
         return data.loc[unit_ids].dropna()
 

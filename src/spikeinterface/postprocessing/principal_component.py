@@ -10,7 +10,7 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from spikeinterface.core.core_tools import slice_rows
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
 
@@ -91,7 +91,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
-        new_data["pca_projection"] = self.data["pca_projection"][keep_spike_mask, :, :]
+        new_data["pca_projection"] = slice_rows(self.data["pca_projection"], keep_spike_mask)
         # one or several model
         for k, v in self.data.items():
             if "model" in k:
@@ -109,12 +109,15 @@ class ComputePrincipalComponents(AnalyzerExtension):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
-            pca_projections = pca_projections[valid]
-        else:
-            pca_projections = pca_projections.copy()
+            # slice_rows already returns an independent, materialized array
+            pca_projections = slice_rows(pca_projections, valid)
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
+            if keep_mask is None:
+                # about to mutate pca_projections in place below (sparse realignment): we need a
+                # genuinely independent, writable buffer rather than sharing the original reference
+                pca_projections = materialize_array(pca_projections)
 
             # we need a realignement inside each group because we take the channel intersection sparsity
             # the story is same as in "waveforms" extension

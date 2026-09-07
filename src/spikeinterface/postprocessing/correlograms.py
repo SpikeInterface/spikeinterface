@@ -1,7 +1,6 @@
 import importlib.util
 import warnings
 import platform
-from copy import deepcopy
 from tqdm.auto import tqdm
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
@@ -13,6 +12,7 @@ import numpy as np
 
 from spikeinterface.core import BaseSorting
 from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     SortingAnalyzer,
@@ -99,7 +99,7 @@ class ComputeCorrelograms(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_ccgs = self.data["ccgs"][unit_indices][:, unit_indices]
+        new_ccgs = slice_rows(self.data["ccgs"], unit_indices)[:, unit_indices]
         new_bins = self.data["bins"]
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
@@ -166,7 +166,8 @@ class ComputeCorrelograms(AnalyzerExtension):
                 if unit_involved_in_merge is False:
                     old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
 
-            correlograms, new_bins = deepcopy(self.get_data())
+            correlograms = materialize_array(self.data["ccgs"])
+            new_bins = self.data["bins"]
 
             for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
                 merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
@@ -274,7 +275,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_acgs = self.data["acgs"][unit_indices]
+        new_acgs = slice_rows(self.data["acgs"], unit_indices)
         new_bins = self.data["bins"]
         new_data = dict(ccgs=new_acgs, bins=new_bins)
         return new_data
@@ -1212,8 +1213,8 @@ class ComputeACG3D(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_acgs_3d = self.data["acgs_3d"][unit_indices]
-        new_firing_quantiles = self.data["firing_quantiles"][unit_indices]
+        new_acgs_3d = slice_rows(self.data["acgs_3d"], unit_indices)
+        new_firing_quantiles = slice_rows(self.data["firing_quantiles"], unit_indices)
         new_bins = self.data["bins"][:]
         new_data = dict(acgs_3d=new_acgs_3d, firing_quantiles=new_firing_quantiles, bins=new_bins)
         return new_data
@@ -1241,10 +1242,10 @@ class ComputeACG3D(AnalyzerExtension):
         new_firing_quantiles = np.zeros((len(new_sorting.unit_ids), firing_rate_quantiles.shape[1]))
 
         new_acgs_3d[new_unit_ids_indices, :, :] = acgs_3d
-        new_acgs_3d[old_unit_ids_indices, :, :] = self.data["acgs_3d"][old_unit_ids_indices, :, :]
+        new_acgs_3d[old_unit_ids_indices, :, :] = slice_rows(self.data["acgs_3d"], old_unit_ids_indices)
 
         new_firing_quantiles[new_unit_ids_indices, :] = firing_rate_quantiles
-        new_firing_quantiles[old_unit_ids_indices, :] = self.data["firing_quantiles"][old_unit_ids_indices, :]
+        new_firing_quantiles[old_unit_ids_indices, :] = slice_rows(self.data["firing_quantiles"], old_unit_ids_indices)
 
         new_data = dict(
             acgs_3d=new_acgs_3d,
