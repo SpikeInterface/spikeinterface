@@ -55,6 +55,13 @@ _NON_SOMATIC_RATIO_GROUP = {"peak_before_to_trough_ratio", "peak_before_to_peak_
 _NON_SOMATIC_MAIN_PEAK_GROUP = {"main_peak_to_trough_ratio"}
 _NON_SOMATIC_BUILTIN_METRICS = _NON_SOMATIC_WIDTH_GROUP | _NON_SOMATIC_RATIO_GROUP | _NON_SOMATIC_MAIN_PEAK_GROUP
 
+# Metrics whose NaN is a result rather than a missing value, and therefore means "fail".
+# "sliding_rp_violation" is the minimum contamination reached with 90% confidence, and is
+# NaN when no contamination level reaches that confidence - i.e. the unit did not pass the
+# test at any level, or has too few spikes to be conclusive. Every other MUA metric is NaN
+# only when it could not be computed, where NaN must not fail the unit.
+_NAN_MEANS_FAIL_METRICS = {"sliding_rp_violation"}
+
 
 def bombcell_get_default_thresholds() -> dict:
     """
@@ -278,15 +285,27 @@ def bombcell_label_units(
     mua_thresholds = thresholds_dict.get("mua", {})
     if len(mua_thresholds) > 0:
         neural_metrics = combined_metrics.iloc[non_noise_indices]
-        mua_labels = threshold_metrics_label_units(
-            metrics=neural_metrics,
-            thresholds=mua_thresholds,
-            pass_label="good",
-            fail_label="mua",
-            operator="and",
-            nan_policy="ignore",
-        )
-        unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
+        # Metrics listed in _NAN_MEANS_FAIL_METRICS have to be thresholded separately: a NaN
+        # there is a failing result, while for every other MUA metric a NaN only means the
+        # metric could not be computed and must not fail the unit.
+        nan_fail_thresholds = {m: t for m, t in mua_thresholds.items() if m in _NAN_MEANS_FAIL_METRICS}
+        nan_ignore_thresholds = {m: t for m, t in mua_thresholds.items() if m not in _NAN_MEANS_FAIL_METRICS}
+
+        passes_mua = np.ones(len(neural_metrics), dtype=bool)
+        for sub_thresholds, nan_policy in ((nan_ignore_thresholds, "ignore"), (nan_fail_thresholds, "fail")):
+            if len(sub_thresholds) == 0:
+                continue
+            sub_labels = threshold_metrics_label_units(
+                metrics=neural_metrics,
+                thresholds=sub_thresholds,
+                pass_label="good",
+                fail_label="mua",
+                operator="and",
+                nan_policy=nan_policy,
+            )
+            passes_mua &= (sub_labels["label"] == "good").to_numpy()
+
+        unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = np.where(passes_mua, "good", "mua")
 
     # Non-somatic labeling is driven by whether the user supplied any thresholds
     # in the non-somatic section — no separate on/off flag. The deprecated
