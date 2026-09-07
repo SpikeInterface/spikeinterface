@@ -115,6 +115,61 @@ def test_ComputeWaveforms(format, sparse, create_cache_folder):
     _check_result_extension(sorting_analyzer, "waveforms", cache_folder)
 
 
+@pytest.mark.parametrize("sparse", [False, True])
+def test_ComputeWaveforms_consistent_across_formats(create_cache_folder, sparse):
+    # Computing waveforms (and templates) on memory / binary_folder / zarr analyzers with the same
+    # data and fixed seeds must produce identical results, and the saved on-disk files (the npy for
+    # binary_folder and the zarr dataset) must match the in-memory computation.
+    import zarr
+
+    cache_folder = create_cache_folder
+    recording, sorting = generate_ground_truth_recording(
+        durations=[15.0],
+        sampling_frequency=16000.0,
+        num_channels=8,
+        num_units=5,
+        seed=2406,
+    )
+    job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=False)
+
+    analyzers = {}
+    for fmt in ["memory", "binary_folder", "zarr"]:
+        if fmt == "memory":
+            folder = None
+        elif fmt == "binary_folder":
+            folder = cache_folder / f"consistency_across_formats_{sparse}_binary"
+        else:
+            folder = cache_folder / f"consistency_across_formats_{sparse}.zarr"
+        if folder is not None and folder.exists():
+            shutil.rmtree(folder)
+
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format=fmt, folder=folder, sparse=sparse, sparsity=None
+        )
+        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=50, seed=2205)
+        sorting_analyzer.compute("waveforms", **job_kwargs)
+        sorting_analyzer.compute("templates", operators=["average", "std"])
+        analyzers[fmt] = sorting_analyzer
+
+    # waveforms and templates must be identical across formats
+    wfs_mem = np.asarray(analyzers["memory"].get_extension("waveforms").get_data())
+    for fmt in ["binary_folder", "zarr"]:
+        wfs = np.asarray(analyzers[fmt].get_extension("waveforms").get_data())
+        assert np.array_equal(wfs, wfs_mem), f"waveforms differ for format {fmt}"
+        for operator in ["average", "std"]:
+            template_mem = analyzers["memory"].get_extension("templates").get_templates(operator=operator)
+            template_fmt = analyzers[fmt].get_extension("templates").get_templates(operator=operator)
+            assert np.allclose(template_fmt, template_mem), f"templates '{operator}' differ for format {fmt}"
+
+    # the files saved on disk must match the in-memory waveforms
+    binary_waveforms = np.load(analyzers["binary_folder"].folder / "extensions" / "waveforms" / "waveforms.npy")
+    assert np.array_equal(binary_waveforms, wfs_mem)
+
+    zarr_root = zarr.open(str(analyzers["zarr"].folder), mode="r")
+    zarr_waveforms = zarr_root["extensions"]["waveforms"]["waveforms"][:]
+    assert np.array_equal(zarr_waveforms, wfs_mem)
+
+
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeTemplates(format, sparse, create_cache_folder):
