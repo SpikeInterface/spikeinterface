@@ -8,6 +8,7 @@ Unit Labels:
     non_soma: Non-somatic units (axonal)
 """
 
+import copy
 import operator
 import warnings
 from pathlib import Path
@@ -222,7 +223,9 @@ def bombcell_label_units(
         with open(thresholds, "r") as f:
             thresholds_dict = json.load(f)
     elif isinstance(thresholds, dict):
-        thresholds_dict = thresholds
+        # Copied because metrics that are not available are deleted from thresholds_dict below,
+        # which would otherwise strip them from the caller's dict.
+        thresholds_dict = copy.deepcopy(thresholds)
     else:
         raise ValueError("thresholds must be a dict, a JSON file path, or None")
 
