@@ -105,6 +105,8 @@ def bombcell_label_units(
     thresholds: dict | str | Path | None = None,
     split_non_somatic: bool = False,
     external_metrics: "pd.DataFrame | list[pd.DataFrame] | None" = None,
+    label_non_somatic: bool | None = None,
+    split_non_somatic_good_mua: bool | None = None,
 ) -> "pd.DataFrame":
     """
     Label units based on quality metrics and template metrics using Bombcell logic:
@@ -160,6 +162,13 @@ def bombcell_label_units(
         of ``thresholds`` is empty (non-somatic labeling is off in that case).
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
+    label_non_somatic : bool | None, default: None
+        Deprecated, will be removed in version 0.105.0. Non-somatic labeling is now driven by
+        whether ``thresholds["non-somatic"]`` is non-empty. Passing False is still honored and
+        skips non-somatic labeling; passing True has no effect.
+    split_non_somatic_good_mua : bool | None, default: None
+        Deprecated, will be removed in version 0.105.0. Use ``split_non_somatic`` instead;
+        if given, its value is used for ``split_non_somatic``.
 
     Notes
     -----
@@ -181,6 +190,24 @@ def bombcell_label_units(
     See [Fabre]_ for more details on the original implementation and rationale behind the thresholds.
     """
     import pandas as pd
+
+    if split_non_somatic_good_mua is not None:
+        warnings.warn(
+            "'split_non_somatic_good_mua' is deprecated and will be removed in version 0.105.0. "
+            "Use 'split_non_somatic' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        split_non_somatic = split_non_somatic_good_mua
+
+    if label_non_somatic is not None:
+        warnings.warn(
+            "'label_non_somatic' is deprecated and will be removed in version 0.105.0. "
+            "Non-somatic labeling is now driven by the 'non-somatic' section of 'thresholds': "
+            "leave it empty or omit it to skip non-somatic labeling.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     if thresholds is None:
         thresholds_dict = bombcell_get_default_thresholds()
@@ -257,8 +284,12 @@ def bombcell_label_units(
         unit_labels.loc[unit_labels.index[non_noise_indices], "label"] = mua_labels["label"].values
 
     # Non-somatic labeling is driven by whether the user supplied any thresholds
-    # in the non-somatic section — no separate on/off flag.
-    non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
+    # in the non-somatic section — no separate on/off flag. The deprecated
+    # label_non_somatic=False still forces it off.
+    if label_non_somatic is False:
+        non_somatic_thresholds = {}
+    else:
+        non_somatic_thresholds = thresholds_dict.get("non-somatic", {})
     if len(non_somatic_thresholds) > 0:
         width_thresholds = {
             m: non_somatic_thresholds[m] for m in ["peak_before_width", "trough_width"] if m in non_somatic_thresholds
