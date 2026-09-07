@@ -92,7 +92,7 @@ bombcell_default_thresholds = sc.bombcell_get_default_thresholds()
 pprint(bombcell_default_thresholds)
 
 # %%
-bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True)
+bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, split_non_somatic=True)
 
 # %%
 bombcell_labels["bombcell_label"].value_counts()
