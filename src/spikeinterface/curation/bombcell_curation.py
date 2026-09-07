@@ -9,7 +9,6 @@ Unit Labels:
 """
 
 import copy
-import operator
 import warnings
 from pathlib import Path
 import json
@@ -394,7 +393,6 @@ def bombcell_label_units(
                 nan_policy="ignore",
             )
             is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
-            is_non_somatic = is_non_somatic | (standalone_labels["label"] == "fail")
 
         if split_non_somatic:
             good_mask = unit_labels["label"] == "good"
@@ -437,7 +435,6 @@ def save_bombcell_results(
     save_wide : bool, default: True
         Save wide format (one row per unit, metrics as columns).
     """
-    from pathlib import Path
     import pandas as pd
 
     folder = Path(folder)
