@@ -273,7 +273,9 @@ def bombcell_label_units(
         pca_missing = {"isolation_distance", "l_ratio"} & {m for ms in missing_by_section.values() for m in ms}
         pca_hint = (
             " isolation_distance and l_ratio come from the 'principal_components' extension, "
-            "which is not computed by default." if pca_missing else ""
+            "which is not computed by default."
+            if pca_missing
+            else ""
         )
         warnings.warn(
             f"These metrics have not been computed, so their thresholds are ignored and units are "
