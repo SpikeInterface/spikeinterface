@@ -71,11 +71,16 @@ def bombcell_get_default_thresholds() -> dict:
     Each metric has 'greater' and 'less' values. Use None to disable a threshold (e.g. to ignore a metric completely
     or to only have a greater or a less threshold).
 
-    Refractory-period violations: the "mua" section must contain exactly ONE of
-    ``"sliding_rp_violation"`` or ``"rp_contamination"``. That single key picks
-    both the RPV method that gets computed and the threshold applied to it —
-    the pipeline reads this entry to decide which RPV metric to compute.
-    The default here uses ``"sliding_rp_violation"``.
+    All metrics used here have to have been computed on the analyzer beforehand. In particular
+    ``"isolation_distance"`` and ``"l_ratio"`` come from the ``principal_components`` extension,
+    which is not computed by default: without it those two thresholds are skipped and a warning
+    lists them. Compute the extension first to include them, or remove them from the thresholds.
+
+    Refractory-period violations: the "mua" section thresholds a single RPV metric,
+    ``"sliding_rp_violation"`` by default. Replace that entry with
+    ``"rp_contamination"`` to threshold the other one instead. Whichever metric is
+    used has to have been computed on the analyzer beforehand, since this function
+    only applies thresholds and does not compute anything.
     """
     # bombcell
     return {
@@ -262,11 +267,18 @@ def bombcell_label_units(
                 del thresholds_dict[section][m]
 
     if len(missing_by_section) > 0:
-        missing_str = ", ".join(f"{section}: {metrics}" for section, metrics in missing_by_section.items())
+        missing_str = "; ".join(
+            f"{', '.join(metrics)} (from the '{section}' thresholds)" for section, metrics in missing_by_section.items()
+        )
+        pca_missing = {"isolation_distance", "l_ratio"} & {m for ms in missing_by_section.values() for m in ms}
+        pca_hint = (
+            " isolation_distance and l_ratio come from the 'principal_components' extension, "
+            "which is not computed by default." if pca_missing else ""
+        )
         warnings.warn(
-            f"Bombcell thresholds reference metrics not found in the metrics DataFrame and "
-            f"will be skipped ({missing_str}). "
-            f"Compute them first if you want them included in the labeling."
+            f"These metrics have not been computed, so their thresholds are ignored and units are "
+            f"labeled using the remaining ones: {missing_str}.{pca_hint} "
+            f"Compute them and re-run to include them, or remove them from the thresholds."
         )
 
     n_units = len(combined_metrics)

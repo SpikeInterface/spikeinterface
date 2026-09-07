@@ -162,24 +162,37 @@ file.
 .. parsed-literal::
 
     {'mua': {'amplitude_cutoff': {'greater': None, 'less': 0.2},
-            'amplitude_median': {'abs': True, 'greater': 30, 'less': None},
-            'drift_ptp': {'greater': None, 'less': 100},
-            'num_spikes': {'greater': 300, 'less': None},
-            'presence_ratio': {'greater': 0.7, 'less': None},
-            'rp_contamination': {'greater': None, 'less': 0.1},
-            'snr': {'greater': 5, 'less': None}},
-    'noise': {'exp_decay': {'greater': 0.01, 'less': 0.1},
-            'num_negative_peaks': {'greater': None, 'less': 1},
-            'num_positive_peaks': {'greater': None, 'less': 2},
-            'peak_after_to_trough_ratio': {'greater': None, 'less': 0.8},
-            'peak_to_trough_duration': {'greater': 0.0001, 'less': 0.00115},
-            'waveform_baseline_flatness': {'greater': None, 'less': 0.5}},
-    'non-somatic': {'main_peak_to_trough_ratio': {'greater': None, 'less': 0.8},
-                    'peak_before_to_peak_after_ratio': {'greater': None, 'less': 3},
-                    'peak_before_to_trough_ratio': {'greater': None, 'less': 3},
-                    'peak_before_width': {'greater': 0.00015, 'less': None},
-                    'trough_width': {'greater': 0.0002, 'less': None}}}
+             'amplitude_median': {'abs': True, 'greater': 30, 'less': None},
+             'drift_ptp': {'greater': None, 'less': 100},
+             'isolation_distance': {'greater': 20, 'less': None},
+             'l_ratio': {'greater': None, 'less': 0.3},
+             'num_spikes': {'greater': 300, 'less': None},
+             'presence_ratio': {'greater': 0.7, 'less': None},
+             'sliding_rp_violation': {'greater': None, 'less': 0.1},
+             'snr': {'greater': 5, 'less': None}},
+     'noise': {'exp_decay': {'greater': 0.01, 'less': 0.1},
+               'num_negative_peaks': {'greater': None, 'less': 1},
+               'num_positive_peaks': {'greater': None, 'less': 2},
+               'peak_after_to_trough_ratio': {'greater': None, 'less': 0.8},
+               'peak_to_trough_duration': {'greater': 0.0001, 'less': 0.00115},
+               'waveform_baseline_flatness': {'greater': None, 'less': 0.5}},
+     'non-somatic': {'main_peak_to_trough_ratio': {'greater': None, 'less': 0.8},
+                     'peak_before_to_peak_after_ratio': {'greater': None,
+                                                         'less': 3},
+                     'peak_before_to_trough_ratio': {'greater': None, 'less': 3},
+                     'peak_before_width': {'greater': 0.00015, 'less': None},
+                     'trough_width': {'greater': 0.0002, 'less': None}}}
 
+
+Note that ``isolation_distance`` and ``l_ratio`` are computed from the
+principal components, so they are only available if the
+``principal_components`` extension has been computed on the analyzer
+beforehand. Any threshold whose metric is missing is skipped, with a
+warning listing what was left out - which is what happens here, since
+this analyzer has no principal components. To include them, compute the
+extension first with
+``sorting_analyzer.compute("principal_components")``, or remove them
+from the thresholds to silence the warning.
 
 .. code:: ipython3
 
@@ -233,7 +246,7 @@ many units failed for that combination. For example, in the following
 plot, we see that 9 units were labeled as “noise” because they didn’t
 pass the ``num_positive_peaks`` and ``num_negative_peaks`` thresholds.
 19 units were labeled as “mua” for poor SNR and high refractory period
-contamination (``rp_contamination``).
+contamination (``sliding_rp_violation``).
 
 .. code:: ipython3
 
