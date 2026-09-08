@@ -329,7 +329,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 self, folder=kwargs["folder"], dtype=kwargs.get("dtype", None), **job_kwargs
             )
 
-
         elif format == "memory":
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording

@@ -502,7 +502,6 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-
     def save(self, format="numpy_folder", **save_kwargs):
         """
         Save a sorting object to disk in a specified format.

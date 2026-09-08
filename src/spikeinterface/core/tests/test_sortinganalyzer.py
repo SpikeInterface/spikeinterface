@@ -985,6 +985,7 @@ def test_main_channel_from_templates_sparse_recordingless():
 if __name__ == "__main__":
     import tempfile
     from pathlib import Path
+
     tmp_path = Path(tempfile.mkdtemp()) / "test_SortingAnalyzer"
 
     dataset = get_dataset()

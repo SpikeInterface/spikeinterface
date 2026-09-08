@@ -653,7 +653,6 @@ class BaseExtractor:
         #     load_properties_from_binary_folder(folder_metadata, self)
         return extractor
 
-
     def clone(self) -> "BaseExtractor":
         """
         Clones an existing extractor into a new instance.
