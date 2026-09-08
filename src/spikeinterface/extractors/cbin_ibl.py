@@ -220,7 +220,7 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         return traces[:, channel_indices]
 
 
-read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")
+define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")
 
 
 def extract_stream_info(meta_file, meta):

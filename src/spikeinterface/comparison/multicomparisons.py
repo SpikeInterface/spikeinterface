@@ -244,9 +244,7 @@ class AgreementSortingSegment(BaseSortingSegment):
         return spiketrain
 
 
-compare_multiple_sorters = define_function_from_class(
-    source_class=MultiSortingComparison, name="compare_multiple_sorters"
-)
+define_function_from_class(source_class=MultiSortingComparison, name="compare_multiple_sorters")
 
 
 class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
@@ -331,6 +329,4 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
                 self.graph.add_node(node)
 
 
-compare_multiple_templates = define_function_from_class(
-    source_class=MultiTemplateComparison, name="compare_multiple_templates"
-)
+define_function_from_class(source_class=MultiTemplateComparison, name="compare_multiple_templates")

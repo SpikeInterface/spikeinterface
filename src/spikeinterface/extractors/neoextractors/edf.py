@@ -55,4 +55,4 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_edf = define_function_from_class(source_class=EDFRecordingExtractor, name="read_edf")
+define_function_from_class(source_class=EDFRecordingExtractor, name="read_edf")

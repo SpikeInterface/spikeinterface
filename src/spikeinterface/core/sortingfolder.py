@@ -126,7 +126,5 @@ class NpzFolderSorting(NpzSortingExtractor):
         cached.dump(save_path / "npz.json", relative_to=save_path)
 
 
-read_numpy_sorting_folder = define_function_from_class(
-    source_class=NumpyFolderSorting, name="read_numpy_sorting_folder"
-)
-read_npz_folder = define_function_from_class(source_class=NpzFolderSorting, name="read_npz_folder")
+define_function_from_class(source_class=NumpyFolderSorting, name="read_numpy_sorting_folder")
+define_function_from_class(source_class=NpzFolderSorting, name="read_npz_folder")

@@ -60,4 +60,4 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_waveclus = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclus")
+define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclus")

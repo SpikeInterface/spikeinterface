@@ -355,12 +355,8 @@ def _handle_xml_file_path(folder_path: str | Path, initial_xml_file_path: str | 
     return xml_file_path
 
 
-read_neuroscope_recording = define_function_from_class(
-    source_class=NeuroScopeRecordingExtractor, name="read_neuroscope_recording"
-)
-read_neuroscope_sorting = define_function_from_class(
-    source_class=NeuroScopeSortingExtractor, name="read_neuroscope_sorting"
-)
+define_function_from_class(source_class=NeuroScopeRecordingExtractor, name="read_neuroscope_recording")
+define_function_from_class(source_class=NeuroScopeSortingExtractor, name="read_neuroscope_sorting")
 
 
 def read_neuroscope(

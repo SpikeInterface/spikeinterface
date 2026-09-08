@@ -56,20 +56,14 @@ def define_function_handling_dict_from_class(source_class, name):
     source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
     source_class_or_dict_of_sources_classes.__name__ = name
 
-    return source_class_or_dict_of_sources_classes
+    # This is a trick to make the function available in the global namespace of the caller module
+    sys._getframe(1).f_globals[name] = source_class_or_dict_of_sources_classes
 
 
-# Generic typing needed to help propagate typing
-# across multiple language servers
-# see https://github.com/SpikeInterface/spikeinterface/issues/4319
-P = ParamSpec("P")
-T = TypeVar("T")
+def define_function_from_class(source_class, name: str) -> None:
+    "Wrapper to inject source_class into the caller's module namespace under name."
 
-
-def define_function_from_class(source_class: Callable[P, T], name: str) -> Callable[P, T]:
-    "Wrapper to change the name of a class"
-
-    return source_class
+    sys._getframe(1).f_globals[name] = source_class
 
 
 def read_python(path):

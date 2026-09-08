@@ -134,4 +134,4 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         ].astype(self._dtype)
 
 
-decimate = define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")
+define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")

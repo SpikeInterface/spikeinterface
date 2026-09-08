@@ -81,4 +81,4 @@ class NpzSortingSegment(BaseSortingSegment):
         return spike_times.astype("int64")
 
 
-read_npz_sorting = define_function_from_class(source_class=NpzSortingExtractor, name="read_npz_sorting")
+define_function_from_class(source_class=NpzSortingExtractor, name="read_npz_sorting")

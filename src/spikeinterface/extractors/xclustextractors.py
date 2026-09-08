@@ -165,4 +165,4 @@ class XClustSortingSegment(BaseSortingSegment):
         return spike_times[start_index:end_index]
 
 
-read_xclust = define_function_from_class(source_class=XClustSortingExtractor, name="read_xclust")
+define_function_from_class(source_class=XClustSortingExtractor, name="read_xclust")

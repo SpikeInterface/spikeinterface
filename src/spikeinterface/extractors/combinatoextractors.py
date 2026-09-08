@@ -100,4 +100,4 @@ class CombinatoSortingSegment(BaseSortingSegment):
         return times
 
 
-read_combinato = define_function_from_class(source_class=CombinatoSortingExtractor, name="read_combinato")
+define_function_from_class(source_class=CombinatoSortingExtractor, name="read_combinato")

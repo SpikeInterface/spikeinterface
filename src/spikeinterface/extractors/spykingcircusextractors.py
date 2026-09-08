@@ -109,4 +109,4 @@ def _load_sample_rate(params_file):
     return sample_rate
 
 
-read_spykingcircus = define_function_from_class(source_class=SpykingCircusSortingExtractor, name="read_spykingcircus")
+define_function_from_class(source_class=SpykingCircusSortingExtractor, name="read_spykingcircus")

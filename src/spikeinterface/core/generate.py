@@ -2145,7 +2145,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-inject_templates = define_function_from_class(source_class=InjectTemplatesRecording, name="inject_templates")
+define_function_from_class(source_class=InjectTemplatesRecording, name="inject_templates")
 
 
 ## toy example zone ##

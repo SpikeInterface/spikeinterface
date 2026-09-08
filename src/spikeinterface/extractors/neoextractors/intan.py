@@ -104,7 +104,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_property(key="group_names", values=group_names)
 
 
-read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
+define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")
 
 
 class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegmentRecording):
@@ -205,6 +205,4 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegme
         )
 
 
-read_split_intan_files = define_function_from_class(
-    source_class=IntanSplitFilesRecordingExtractor, name="read_split_intan_files"
-)
+define_function_from_class(source_class=IntanSplitFilesRecordingExtractor, name="read_split_intan_files")

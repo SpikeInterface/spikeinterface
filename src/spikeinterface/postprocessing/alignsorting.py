@@ -51,4 +51,4 @@ class AlignSortingSegment(BaseSortingSegment):
         return original_spike_train - self._unit_peak_shifts[unit_id]
 
 
-align_sorting = define_function_from_class(source_class=AlignSortingExtractor, name="align_sorting")
+define_function_from_class(source_class=AlignSortingExtractor, name="align_sorting")

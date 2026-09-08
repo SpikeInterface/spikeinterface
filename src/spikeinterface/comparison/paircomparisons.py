@@ -207,7 +207,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             return self.agreement_scores.at[unit1, unit2]
 
 
-compare_two_sorters = define_function_from_class(source_class=SymmetricSortingComparison, name="compare_two_sorters")
+define_function_from_class(source_class=SymmetricSortingComparison, name="compare_two_sorters")
 
 
 class GroundTruthComparison(BasePairSorterComparison):
@@ -744,9 +744,7 @@ num_bad: {num_bad}
 """
 
 
-compare_sorter_to_ground_truth = define_function_from_class(
-    source_class=GroundTruthComparison, name="compare_sorter_to_ground_truth"
-)
+define_function_from_class(source_class=GroundTruthComparison, name="compare_sorter_to_ground_truth")
 
 
 class TemplateComparison(BasePairComparison, MixinTemplateComparison):
@@ -859,4 +857,4 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         self.agreement_scores = pd.DataFrame(agreement_scores, index=self.unit_ids[0], columns=self.unit_ids[1])
 
 
-compare_templates = define_function_from_class(source_class=TemplateComparison, name="compare_templates")
+define_function_from_class(source_class=TemplateComparison, name="compare_templates")

@@ -192,11 +192,9 @@ class SiNAPSH5RecordingSegment(BaseRecordingSegment):
         return traces
 
 
-read_sinaps_research_platform = define_function_from_class(
-    source_class=SinapsResearchPlatformRecordingExtractor, name="read_sinaps_research_platform"
-)
+define_function_from_class(source_class=SinapsResearchPlatformRecordingExtractor, name="read_sinaps_research_platform")
 
-read_sinaps_research_platform_h5 = define_function_from_class(
+define_function_from_class(
     source_class=SinapsResearchPlatformH5RecordingExtractor, name="read_sinaps_research_platform_h5"
 )
 

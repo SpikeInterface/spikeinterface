@@ -61,4 +61,4 @@ class AxonRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_axon = define_function_from_class(source_class=AxonRecordingExtractor, name="read_axon")
+define_function_from_class(source_class=AxonRecordingExtractor, name="read_axon")

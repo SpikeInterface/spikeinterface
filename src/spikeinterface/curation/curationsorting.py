@@ -291,4 +291,4 @@ class CurationSorting:
         self._sorting_stages_i += 1
 
 
-curation_sorting = define_function_from_class(source_class=CurationSorting, name="curation_sorting")
+define_function_from_class(source_class=CurationSorting, name="curation_sorting")

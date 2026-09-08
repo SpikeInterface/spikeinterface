@@ -191,6 +191,4 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-deepinterpolate = define_function_handling_dict_from_class(
-    source_class=DeepInterpolatedRecording, name="deepinterpolate"
-)
+define_function_handling_dict_from_class(source_class=DeepInterpolatedRecording, name="deepinterpolate")

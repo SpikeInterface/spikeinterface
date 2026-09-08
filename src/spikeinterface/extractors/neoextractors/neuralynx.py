@@ -132,7 +132,5 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 
-read_neuralynx = define_function_from_class(source_class=NeuralynxRecordingExtractor, name="read_neuralynx")
-read_neuralynx_sorting = define_function_from_class(
-    source_class=NeuralynxSortingExtractor, name="read_neuralynx_sorting"
-)
+define_function_from_class(source_class=NeuralynxRecordingExtractor, name="read_neuralynx")
+define_function_from_class(source_class=NeuralynxSortingExtractor, name="read_neuralynx_sorting")

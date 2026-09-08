@@ -1834,9 +1834,9 @@ class NwbTimeSeriesSegment(BaseRecordingSegment):
 # Create the reading function
 
 
-read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
-read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
-read_nwb_timeseries = define_function_from_class(source_class=NwbTimeSeriesExtractor, name="read_nwb_timeseries")
+define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
+define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
+define_function_from_class(source_class=NwbTimeSeriesExtractor, name="read_nwb_timeseries")
 
 
 def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_path=None):

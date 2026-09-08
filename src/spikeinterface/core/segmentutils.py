@@ -83,7 +83,7 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
         return self.parent_segment.get_traces(*args, **kwargs)
 
 
-append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="append_segment_recording")
+define_function_from_class(source_class=AppendSegmentRecording, name="append_recordings")
 
 
 class ConcatenateSegmentRecording(BaseRecording):
@@ -211,9 +211,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-concatenate_recordings = define_function_from_class(
-    source_class=ConcatenateSegmentRecording, name="concatenate_recordings"
-)
+define_function_from_class(source_class=ConcatenateSegmentRecording, name="concatenate_recordings")
 
 
 class SelectSegmentRecording(BaseRecording):
@@ -269,9 +267,7 @@ def split_recording(recording: BaseRecording):
     return recording_list
 
 
-select_segment_recording = define_function_from_class(
-    source_class=SelectSegmentRecording, name="select_segment_recording"
-)
+define_function_from_class(source_class=SelectSegmentRecording, name="select_segment_recording")
 
 
 class AppendSegmentSorting(BaseSorting):
@@ -319,7 +315,7 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
         return self.parent_segment.get_unit_spike_train(*args, **kwargs)
 
 
-append_sortings = define_function_from_class(source_class=AppendSegmentSorting, name="append_sortings")
+define_function_from_class(source_class=AppendSegmentSorting, name="append_sortings")
 
 
 class ConcatenateSegmentSorting(BaseSorting):
@@ -511,7 +507,7 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
         return spike_frames
 
 
-concatenate_sortings = define_function_from_class(source_class=ConcatenateSegmentSorting, name="concatenate_sortings")
+define_function_from_class(source_class=ConcatenateSegmentSorting, name="concatenate_sortings")
 
 
 class SplitSegmentSorting(BaseSorting):
@@ -570,7 +566,7 @@ class SplitSegmentSorting(BaseSorting):
         self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
 
 
-split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name="split_sorting")
+define_function_from_class(source_class=SplitSegmentSorting, name="split_sorting")
 
 
 class SelectSegmentSorting(BaseSorting):
@@ -604,7 +600,7 @@ class SelectSegmentSorting(BaseSorting):
         self._kwargs = {"sorting": sorting, "segment_indices": [int(s) for s in segment_indices]}
 
 
-select_segment_sorting = define_function_from_class(source_class=SelectSegmentSorting, name="select_segment_sorting")
+define_function_from_class(source_class=SelectSegmentSorting, name="select_segment_sorting")
 
 
 class SelectSegmentEvent(BaseEvent):

@@ -137,6 +137,6 @@ class Plexon2EventExtractor(NeoBaseEventExtractor):
         return neo_kwargs
 
 
-read_plexon2 = define_function_from_class(source_class=Plexon2RecordingExtractor, name="read_plexon2")
-read_plexon2_sorting = define_function_from_class(source_class=Plexon2SortingExtractor, name="read_plexon2_sorting")
-read_plexon2_event = define_function_from_class(source_class=Plexon2EventExtractor, name="read_plexon2_event")
+define_function_from_class(source_class=Plexon2RecordingExtractor, name="read_plexon2")
+define_function_from_class(source_class=Plexon2SortingExtractor, name="read_plexon2_sorting")
+define_function_from_class(source_class=Plexon2EventExtractor, name="read_plexon2_event")

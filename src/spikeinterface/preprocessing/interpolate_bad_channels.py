@@ -134,7 +134,7 @@ class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
 DetectAndInterpolateBadChannelsRecording.__doc__ = DetectAndInterpolateBadChannelsRecording.__doc__.format(
     _bad_channel_detection_kwargs_doc
 )
-detect_and_interpolate_bad_channels = define_function_handling_dict_from_class(
+define_function_handling_dict_from_class(
     source_class=DetectAndInterpolateBadChannelsRecording, name="detect_and_interpolate_bad_channels"
 )
 
@@ -170,6 +170,4 @@ def estimate_recommended_sigma_um(recording):
     return mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
 
 
-interpolate_bad_channels = define_function_handling_dict_from_class(
-    source_class=InterpolateBadChannelsRecording, name="interpolate_bad_channels"
-)
+define_function_handling_dict_from_class(source_class=InterpolateBadChannelsRecording, name="interpolate_bad_channels")

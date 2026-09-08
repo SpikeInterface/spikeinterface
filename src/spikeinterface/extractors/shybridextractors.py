@@ -238,10 +238,8 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
         return train[idxs]
 
 
-read_shybrid_recording = define_function_from_class(
-    source_class=SHYBRIDRecordingExtractor, name="read_shybrid_recording"
-)
-read_shybrid_sorting = define_function_from_class(source_class=SHYBRIDSortingExtractor, name="read_shybrid_sorting")
+define_function_from_class(source_class=SHYBRIDRecordingExtractor, name="read_shybrid_recording")
+define_function_from_class(source_class=SHYBRIDSortingExtractor, name="read_shybrid_sorting")
 
 
 class GeometryNotLoadedError(Exception):

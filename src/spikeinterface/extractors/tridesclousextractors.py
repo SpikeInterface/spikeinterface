@@ -71,4 +71,4 @@ class TridesclousSortingSegment(BaseSortingSegment):
         return spike_times.copy()
 
 
-read_tridesclous = define_function_from_class(source_class=TridesclousSortingExtractor, name="read_tridesclous")
+define_function_from_class(source_class=TridesclousSortingExtractor, name="read_tridesclous")

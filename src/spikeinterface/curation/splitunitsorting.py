@@ -117,7 +117,7 @@ class SplitUnitSorting(BaseSorting):
         )
 
 
-split_unit_sorting = define_function_from_class(source_class=SplitUnitSorting, name="split_unit_sorting")
+define_function_from_class(source_class=SplitUnitSorting, name="split_unit_sorting")
 
 
 class SplitSortingUnitSegment(BaseSortingSegment):

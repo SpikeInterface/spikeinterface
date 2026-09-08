@@ -91,4 +91,4 @@ class WhiteMatterRecordingExtractor(BinaryRecordingExtractor):
 
 
 # Define function equivalent for convenience
-read_whitematter = define_function_from_class(source_class=WhiteMatterRecordingExtractor, name="read_whitematter")
+define_function_from_class(source_class=WhiteMatterRecordingExtractor, name="read_whitematter")

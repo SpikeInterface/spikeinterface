@@ -66,4 +66,4 @@ class YassSortingSegment(BaseSortingSegment):
         return times
 
 
-read_yass = define_function_from_class(source_class=YassSortingExtractor, name="read_yass")
+define_function_from_class(source_class=YassSortingExtractor, name="read_yass")

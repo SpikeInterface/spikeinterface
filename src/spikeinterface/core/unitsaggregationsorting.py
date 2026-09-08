@@ -171,4 +171,4 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
         return times
 
 
-aggregate_units = define_function_from_class(UnitsAggregationSorting, "aggregate_units")
+define_function_from_class(UnitsAggregationSorting, "aggregate_units")

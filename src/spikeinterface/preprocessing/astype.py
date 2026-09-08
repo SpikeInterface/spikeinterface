@@ -78,4 +78,4 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-astype = define_function_handling_dict_from_class(source_class=AstypeRecording, name="astype")
+define_function_handling_dict_from_class(source_class=AstypeRecording, name="astype")

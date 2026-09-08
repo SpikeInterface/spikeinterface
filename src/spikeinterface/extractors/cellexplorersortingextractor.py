@@ -195,4 +195,4 @@ class CellExplorerSortingSegment(BaseSortingSegment):
         return spike_frames
 
 
-read_cellexplorer = define_function_from_class(source_class=CellExplorerSortingExtractor, name="read_cellexplorer")
+define_function_from_class(source_class=CellExplorerSortingExtractor, name="read_cellexplorer")

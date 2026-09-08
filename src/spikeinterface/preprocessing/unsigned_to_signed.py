@@ -65,6 +65,4 @@ class UnsignedToSignedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-unsigned_to_signed = define_function_handling_dict_from_class(
-    source_class=UnsignedToSignedRecording, name="unsigned_to_signed"
-)
+define_function_handling_dict_from_class(source_class=UnsignedToSignedRecording, name="unsigned_to_signed")

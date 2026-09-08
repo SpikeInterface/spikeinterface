@@ -247,6 +247,4 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-silence_periods = define_function_handling_dict_from_class(
-    source_class=SilencedPeriodsRecording, name="silence_periods"
-)
+define_function_handling_dict_from_class(source_class=SilencedPeriodsRecording, name="silence_periods")

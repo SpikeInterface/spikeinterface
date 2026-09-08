@@ -244,4 +244,4 @@ class BinaryRecordingSegment(BaseRecordingSegment):
 # For backward compatibility (old good time)
 BinDatRecordingExtractor = BinaryRecordingExtractor
 
-read_binary = define_function_from_class(source_class=BinaryRecordingExtractor, name="read_binary")
+define_function_from_class(source_class=BinaryRecordingExtractor, name="read_binary")

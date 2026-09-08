@@ -121,7 +121,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         return new_kwargs
 
 
-read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
+define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")
 
 
 class SpikeGLXEventExtractor(NeoBaseEventExtractor):
