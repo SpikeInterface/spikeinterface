@@ -137,7 +137,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder, recording)
 
-
         if recording.has_probe():
             probegroup = recording.get_probegroup()
             write_probeinterface(folder / "probegroup.json", probegroup)
@@ -167,7 +166,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             time_vector = d["time_vector"]
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
-
 
         # make the si_folder file to make the load() easier until version 0.105.0
         cached = BinaryFolderRecording(folder_path=folder)
