@@ -355,7 +355,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         elif format == "zarr":
             if "folder" not in kwargs:
                 raise ValueError("Missing folder in recording.save(folder='...')")
-            
+
             from .zarrextractors import ZarrRecordingExtractor
 
             folder_path = kwargs["folder"]

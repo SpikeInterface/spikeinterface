@@ -27,9 +27,9 @@ def make_sorting(times1, labels1, times2, labels2, times3, labels3, sorting_fold
     sorting1 = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
     sorting2 = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency)
     sorting3 = NumpySorting.from_samples_and_labels([times3], [labels3], sampling_frequency)
-    sorting1 = sorting1.save(folder=sorting_folder/"sorting1")
-    sorting2 = sorting2.save(folder=sorting_folder/"sorting2")
-    sorting3 = sorting3.save(folder=sorting_folder/"sorting3")
+    sorting1 = sorting1.save(folder=sorting_folder / "sorting1")
+    sorting2 = sorting2.save(folder=sorting_folder / "sorting2")
+    sorting3 = sorting3.save(folder=sorting_folder / "sorting3")
     return sorting1, sorting2, sorting3
 
 
@@ -44,7 +44,7 @@ def test_compare_multiple_sorters(setup_module):
         [0, 1, 2, 0, 1, 2, 0, 1, 2, 3, 3, 4, 4],
         [101, 201, 301, 400, 500, 600, 700, 800, 900, 1000, 1100, 2000, 3000, 3100, 3200, 3300],
         [0, 1, 2, 0, 1, 2, 0, 1, 2, 3, 3, 4, 4, 5, 5, 5],
-        sorting_folder
+        sorting_folder,
     )
     msc = compare_multiple_sorters([sorting1, sorting2, sorting3], verbose=True)
     msc_shuffle = compare_multiple_sorters([sorting3, sorting1, sorting2])
