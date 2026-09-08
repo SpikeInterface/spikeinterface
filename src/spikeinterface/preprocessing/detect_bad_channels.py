@@ -78,11 +78,7 @@ seed : int | None, default: None
 channel_filters : set | None, default: None
     For coherence+psd - only return `bad_channel_ids` whose labels are in the set `channel_filter`.
 job_kwargs : dict | None, default: None
-    Keyword arguments for parallel processing. Only used for the "coherence+psd" method. Only the
-    execution-related keys (`pool_engine`, `n_jobs`, `progress_bar`, `mp_context`,
-    `max_threads_per_worker`) apply; the chunking size is fixed by `chunk_duration_s` and
-    `num_random_chunks` above, so `chunk_size`, `chunk_memory`, `total_memory` and `chunk_duration`
-    are not used here.
+    Keyword arguments for parallel processing (only used for the "coherence+psd" method).
 """
 
 
