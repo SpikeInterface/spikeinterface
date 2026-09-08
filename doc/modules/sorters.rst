@@ -470,6 +470,7 @@ versions.
 
 Here is the list of external sorters accessible using the run_sorter wrapper:
 
+* **DARTsort** :code:`run_sorter(sorter_name='dartsort')`
 * **HerdingSpikes2** :code:`run_sorter(sorter_name='herdingspikes')`
 * **IronClust** :code:`run_sorter(sorter_name='ironclust')`
 * **Kilosort**  :code:`run_sorter(sorter_name='kilosort')`
