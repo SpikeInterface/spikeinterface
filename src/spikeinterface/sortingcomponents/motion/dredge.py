@@ -174,7 +174,7 @@ def dredge_ap(
     progress_bar=True,
     extra_outputs=False,
     precomputed_D_C_maxdisp=None,
-    resolution_mode="offline",
+    batching_mode="full",
 ):
     """Estimate motion from spikes
 
@@ -333,11 +333,11 @@ def dredge_ap(
         **xcorr_kw,
     )
 
-    if resolution_mode == "offline":
+    if batching_mode == "full":
 
         threshold_kw = dict(bin_s=bin_s)
 
-        displacement, extra = compute_displacement_simultaneous(
+        displacement, extra = compute_displacement_full(
             raster,
             windows,
             spatial_bin_edges_um,
@@ -353,18 +353,18 @@ def dredge_ap(
             post_transform,
         )
 
-    elif resolution_mode == "batch":
+    elif batching_mode == "online":
 
         # T_total is number of bin_s in recording
         T_total = raster.shape[1]
 
-        T_chunk = 2048 / bin_s
+        T_chunk = max(time_horizon_s, int(np.floor(100 / bin_s)))
         threshold_kw = dict(
             mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
             in_place=True,
             soft=False,
             time_horizon_s=time_horizon_s,
-            bin_s=10,
+            bin_s=bin_s,
         )
 
         displacement, extra = compute_displacement_online(
@@ -383,7 +383,7 @@ def dredge_ap(
             threshold_kw,
         )
     else:
-        raise ValueError(f"No `resolution_mode` called {resolution_mode}. Available modes are ['batch', 'offline'].")
+        raise ValueError(f"No `batching_mode` called {batching_mode}. Available modes are ['batch', 'offline'].")
 
     if extra_outputs:
         extra["windows"] = windows
@@ -579,6 +579,8 @@ def dredge_online_lfp(
 
     if extra_outputs:
         extra = dict(window_centers=window_centers, windows=windows)
+    else:
+        extra = dict()
 
     weights_kw = dict(
         mincorr=mincorr,
@@ -747,7 +749,7 @@ def compute_displacement_online(
     return P_online, extra
 
 
-def compute_displacement_simultaneous(
+def compute_displacement_full(
     raster,
     windows,
     spatial_bin_edges_um,
