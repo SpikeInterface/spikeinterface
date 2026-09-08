@@ -99,11 +99,10 @@ class MatchedFilteringPeakDetector(PeakDetector):
     def get_dtype(self):
         return self._dtype
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.exclude_sweep_size + self.conv_margin + 1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-
         assert HAVE_NUMBA, "You need to install numba"
         conv_traces = self.get_convolved_traces(traces)
         conv_traces = conv_traces[:, self.conv_margin : -self.conv_margin]

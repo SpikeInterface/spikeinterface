@@ -1,11 +1,12 @@
 """Classes and functions for computing multiple quality metrics."""
 
 import warnings
+
 import numpy as np
 
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseMetricExtension
+from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype
 
 from .misc_metrics import misc_metrics_list
 from .pca_metrics import pca_metrics_list
@@ -59,6 +60,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if (qm_params := self.params.get("qm_params")) is not None:
             self.params["metric_params"] = qm_params
             del self.params["qm_params"]
+
         # handle metric names change: isolation_distance/l_ratio merged into mahalanobis
         if "isolation_distance" in self.params["metric_names"]:
             self.params["metric_names"].remove("isolation_distance")
@@ -69,6 +71,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if "mahalanobis" not in self.params["metric_names"]:
                 self.params["metric_names"].append("mahalanobis")
 
+        # handle removal of peak_sign from metrics module
         if "amplitude_cutoff" in self.params["metric_names"]:
             if "peak_sign" in self.params["metric_params"]["amplitude_cutoff"]:
                 del self.params["metric_params"]["amplitude_cutoff"]["peak_sign"]
@@ -77,19 +80,21 @@ class ComputeQualityMetrics(BaseMetricExtension):
             if "peak_sign" in self.params["metric_params"]["amplitude_median"]:
                 del self.params["metric_params"]["amplitude_median"]["peak_sign"]
 
-        # TODO: update this once `main_channel_index` PR is merged
-        # global peak_sign used to find appropriate channels for pca metric computation
-        # If not found, use a "peak_sign" set by any metric
-        global_peak_sign_from_params = self.params.get("peak_sign")
-        if global_peak_sign_from_params is None:
-            for metric_params in self.params["metric_params"].values():
-                if "peak_sign" in metric_params:
-                    global_peak_sign_from_params = metric_params["peak_sign"]
-                    break
-            # If still not found, use <0.104.0 default, "neg"
-            if global_peak_sign_from_params is None:
-                global_peak_sign_from_params = "neg"
-            self.params["peak_sign"] = global_peak_sign_from_params
+        if "snr" in self.params["metric_names"]:
+            if "peak_mode" in self.params["metric_params"]["snr"]:
+                self.params["metric_params"]["snr"]["method"] = self.params["metric_params"]["snr"]["peak_mode"]
+                del self.params["metric_params"]["snr"]["peak_mode"]
+            if "peak_sign" in self.params["metric_params"]["snr"]:
+                del self.params["metric_params"]["snr"]["peak_sign"]
+
+        metrics_which_used_to_have_peak_sign = ["sd_ratio", "nn_isolation", "nn_noise_overlap", "nn_advanced"]
+        for metric_name in metrics_which_used_to_have_peak_sign:
+            if metric_name in self.params["metric_params"]:
+                if "peak_sign" in self.params["metric_params"][metric_name]:
+                    del self.params["metric_params"][metric_name]["peak_sign"]
+
+        if "peak_sign" in self.params:
+            del self.params["peak_sign"]
 
     def _set_params(
         self,
@@ -100,7 +105,6 @@ class ComputeQualityMetrics(BaseMetricExtension):
         use_valid_periods=False,
         periods=None,
         # common extension kwargs
-        peak_sign="neg",
         seed=None,
         skip_pc_metrics=False,
     ):
@@ -115,17 +119,20 @@ class ComputeQualityMetrics(BaseMetricExtension):
             metric_names = [m for m in metric_names if m not in pc_metric_names]
 
         if use_valid_periods:
+            valid_periods = self.sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
             if periods is not None:
-                raise ValueError("If use_valid_periods is True, periods should not be provided.")
-            periods = self.sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
+                provided_periods = cast_periods_to_unit_period_dtype(np.asarray(periods))
+                if not np.array_equal(valid_periods, provided_periods):
+                    raise ValueError("Provided periods do not match valid periods from the sorting analyzer.")
+            periods = valid_periods
 
         return super()._set_params(
             metric_names=metric_names,
             metric_params=metric_params,
             delete_existing_metrics=delete_existing_metrics,
             metrics_to_compute=metrics_to_compute,
+            use_valid_periods=use_valid_periods,
             periods=periods,
-            peak_sign=peak_sign,
             seed=seed,
             skip_pc_metrics=skip_pc_metrics,
         )
@@ -149,35 +156,39 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if pca_ext is None:
             return tmp_data
 
-        if unit_ids is None:
-            unit_ids = sorting_analyzer.unit_ids
+        target_unit_ids = sorting_analyzer.unit_ids if unit_ids is None else unit_ids
+        context_unit_ids = sorting_analyzer.unit_ids
 
-        # Get dense PCA projections for all requested units
-        dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
+        # Unit-level PCA metrics require neighboring units as comparison data, even when
+        # only a subset of metric rows is being recomputed after a merge or split.
+        dense_projections, spike_unit_indices = pca_ext.get_some_projections(
+            channel_ids=None, unit_ids=context_unit_ids
+        )
         all_labels = sorting_analyzer.sorting.unit_ids[spike_unit_indices]
 
         # Get extremum channels for neighbor selection in sparse mode
-        extremum_channels = get_template_extremum_channel(sorting_analyzer, peak_sign=self.params["peak_sign"])
+
+        main_channels = sorting_analyzer.get_main_channels(outputs="id", with_dict=True)
 
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric
         if any(m in advanced_nn_metrics for m in requested_pca_metrics):
-            tmp_data["n_spikes_all_units"] = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
-            tmp_data["fr_all_units"] = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
+            tmp_data["n_spikes_all_units"] = compute_num_spikes(sorting_analyzer, unit_ids=context_unit_ids)
+            tmp_data["fr_all_units"] = compute_firing_rates(sorting_analyzer, unit_ids=context_unit_ids)
 
         # Pre-compute per-unit PCA data and neighbor information
         pca_data_per_unit = {}
-        for unit_id in unit_ids:
+        for unit_id in target_unit_ids:
             # Determine neighbor units based on sparsity
             if sorting_analyzer.is_sparse():
                 neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
                 neighbor_unit_ids = [
-                    other_unit for other_unit in unit_ids if extremum_channels[other_unit] in neighbor_channel_ids
+                    other_unit for other_unit in context_unit_ids if main_channels[other_unit] in neighbor_channel_ids
                 ]
                 neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
             else:
                 neighbor_channel_ids = sorting_analyzer.channel_ids
-                neighbor_unit_ids = unit_ids
+                neighbor_unit_ids = context_unit_ids
                 neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
             # Filter projections to neighbor units
@@ -243,7 +254,7 @@ def get_default_qm_params(metric_names=None):
     warnings.warn(
         "`get_default_qm_params` is deprecated and will be removed in a version 0.105.0. "
         "Please use `get_default_quality_metrics_params` instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_default_quality_metrics_params(metric_names=metric_names)

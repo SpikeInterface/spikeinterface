@@ -282,11 +282,7 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
     if object_type == "SortingAnalyzer":
         from .sortinganalyzer import load_sorting_analyzer
 
-        backend_options = kwargs.get("backend_options", None)
-        load_extensions = kwargs.get("load_extensions", True)
-        analyzer = load_sorting_analyzer(
-            folder_or_url, backend_options=backend_options, load_extensions=load_extensions
-        )
+        analyzer = load_sorting_analyzer(folder_or_url, **kwargs)
         return analyzer
     elif object_type == "Templates":
         from .template import Templates

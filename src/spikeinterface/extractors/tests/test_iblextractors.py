@@ -11,9 +11,6 @@ from spikeinterface.extractors.extractor_classes import read_ibl_recording, read
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 
-if sys.version_info < (3, 10):
-    pytest.skip("IBL support requires Python 3.10 or higher", allow_module_level=True)
-
 
 @pytest.mark.streaming_extractors
 class TestDefaultIblRecordingExtractorApBand(TestCase):
@@ -31,11 +28,13 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 cache_dir=None,
             )
         except:
+            print("Skipping test due to server being down.")
             pytest.skip("Skipping test due to server being down.")
         try:
             cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 503:
+                print("Skipping test due to server being down (HTTP 503).")
                 pytest.skip("Skipping test due to server being down (HTTP 503).")
             else:
                 raise
@@ -68,11 +67,11 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
     def test_gains(self):
         expected_gains = 2.34375 * np.ones(shape=384)
-        assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
+        assert_array_equal(self.recording.get_channel_gains(), expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=384)
-        assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
+        assert_array_equal(self.recording.get_channel_offsets(), expected_offsets)
 
     def test_probe_representation(self):
         probe = self.recording.get_probe()
@@ -84,8 +83,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
         expected_property_keys = [
             "gain_to_uV",
             "offset_to_uV",
-            "contact_vector",
-            "location",
             "group",
             "shank",
             "shank_row",
@@ -96,6 +93,9 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
             "index_on_probe",
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
+
+    def test_has_probe(self):
+        assert self.recording.has_probe() is True
 
     def test_trace_shape(self):
         expected_shape = (21, 384)
@@ -142,11 +142,11 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
     def test_gains(self):
         expected_gains = np.concatenate([2.34375 * np.ones(shape=384), [1171.875]])
-        assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
+        assert_array_equal(self.recording.get_channel_gains(), expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=385)
-        assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
+        assert_array_equal(self.recording.get_channel_offsets(), expected_offsets)
 
     def test_probe_representation(self):
         expected_exception = ValueError

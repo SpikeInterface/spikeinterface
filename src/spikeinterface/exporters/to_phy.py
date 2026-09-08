@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
+import shutil
+import warnings
 
 import numpy as np
 import numpy.typing as npt
-import shutil
-import warnings
 
 from spikeinterface.core import (
     write_binary_recording,
@@ -87,7 +87,7 @@ def export_to_phy(
     if (num_chans > 64) and (sparsity is None and not sorting_analyzer.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
-            "informative visualization. You can use use a sparse SortingAnalyzer or you can use the 'sparsity' "
+            "informative visualization. You can use a sparse SortingAnalyzer or you can use the 'sparsity' "
             "argument to enforce sparsity (see compute_sparsity())"
         )
 
@@ -101,7 +101,7 @@ def export_to_phy(
     else:
         used_sparsity = ChannelSparsity.create_dense(sorting_analyzer)
         save_sparse = False
-    # convenient sparsity dict for the 3 cases to retrieve channl_inds
+    # convenient sparsity dict for the 3 cases to retrieve channel_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
 
     empty_flag = False
@@ -131,7 +131,7 @@ def export_to_phy(
     if dtype is None:
         dtype = sorting_analyzer.get_dtype()
 
-    if sorting_analyzer.has_recording():
+    if sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
             write_binary_recording(sorting_analyzer.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)

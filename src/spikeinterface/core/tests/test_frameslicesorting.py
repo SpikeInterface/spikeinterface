@@ -91,5 +91,25 @@ def test_FrameSliceSorting():
     assert_raises(Exception, sorting_exceeding.frame_slice, None, None)
 
 
+def test_time_slice_propagates_t_start():
+    """`time_slice` goes through `frame_slice`, so the propagated start time should
+    equal the requested `start_time`. Covers both the parent-with-no-t_start case
+    and the parent-with-explicit-t_start case (which should stack)."""
+    sf = 10.0
+    spike_times = {"0": np.arange(100, 900)}
+
+    # Parent has no explicit t_start (treated as 0).
+    sorting = NumpySorting.from_unit_dict([spike_times], sf)
+    sub = sorting.time_slice(start_time=20.0, end_time=50.0)
+    assert sub.get_start_time(segment_index=0) == 20.0
+
+    # Parent has an explicit t_start; the slice offset stacks on top.
+    sorting_shifted = NumpySorting.from_unit_dict([spike_times], sf)
+    sorting_shifted.shift_times(shift=100.0)
+    sub_shifted = sorting_shifted.time_slice(start_time=120.0, end_time=150.0)
+    assert sub_shifted.get_start_time(segment_index=0) == 120.0
+
+
 if __name__ == "__main__":
     test_FrameSliceSorting()
+    test_time_slice_propagates_t_start()

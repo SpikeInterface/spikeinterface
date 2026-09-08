@@ -7,7 +7,6 @@ from spikeinterface.core import (
     NumpySorting,
     estimate_templates_with_accumulator,
     Templates,
-    compute_sparsity,
     ms_to_samples,
 )
 
@@ -59,7 +58,7 @@ class LupinSorter(ComponentsBasedSorter):
         "template_sparsify_threshold": 1.0,
         "template_min_snr_ptp": 4.0,
         "template_max_jitter_ms": 0.2,
-        "template_matching_engine": "circus-omp",
+        "template_matching_engine": "wobble",
         "min_firing_rate": 0.1,
         "gather_mode": "memory",
         "job_kwargs": {},
@@ -102,7 +101,21 @@ class LupinSorter(ComponentsBasedSorter):
         "debug": "Save debug files",
     }
 
+    installation_mesg = "\tpip install 'spikeinterface[lupin]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[lupin]'"
+
     handle_multi_segment = True
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        lupin_deps = ["scipy", "numba", "sklearn", "torch"]
+
+        for package_name in lupin_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
 
     @classmethod
     def get_sorter_version(cls):
@@ -326,7 +339,7 @@ class LupinSorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
-        # preestimate the sparsity unsing peaks channel
+        # preestimate the sparsity using peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
         sparsity, unit_locations = compute_sparsity_from_peaks_and_label(
             kept_peaks, spike_vector["unit_index"], sorting_pre_peeler.unit_ids, recording, params["template_radius_um"]

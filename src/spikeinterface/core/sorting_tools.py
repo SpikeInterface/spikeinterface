@@ -1,6 +1,5 @@
 import warnings
 import importlib.util
-
 from typing import Literal
 
 import numpy as np
@@ -58,7 +57,7 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
     Similar to spike_vector_to_spike_trains but instead having the spike_trains (aka spike times) return
     spike indices by segment and units.
 
-    This is usefull to split back other unique vector like "spike_amplitudes", "spike_locations" into dict of dict
+    This is useful to split back other unique vector like "spike_amplitudes", "spike_locations" into dict of dict
     Internally calls numba if numba is installed.
 
     Parameters
@@ -117,9 +116,9 @@ def get_numba_vector_to_list_of_spiketrain():
     if hasattr(get_numba_vector_to_list_of_spiketrain, "_cached_numba_function"):
         return get_numba_vector_to_list_of_spiketrain._cached_numba_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def vector_to_list_of_spiketrain_numba(sample_indices, unit_indices, num_units):
         """
         Fast implementation of vector_to_dict using numba loop.
@@ -189,7 +188,7 @@ def random_spikes_selection(
     Returns
     -------
     random_spikes_indices: np.array
-        Selected spike indices coresponding to the sorting spike vector.
+        Selected spike indices corresponding to the sorting spike vector.
     """
     rng_methods = ("uniform", "percentage", "maximum_rate")
 
@@ -251,7 +250,11 @@ def random_spikes_selection(
 
             random_spikes_indices.append(selected_unit_indices)
 
-        random_spikes_indices = np.concatenate(random_spikes_indices)
+        if len(random_spikes_indices) > 0:
+            random_spikes_indices = np.concatenate(random_spikes_indices)
+        else:
+            # a sorting with no unit is valid, np.concatenate would raise on the empty list
+            random_spikes_indices = np.zeros(0, dtype="int64")
         random_spikes_indices = np.sort(random_spikes_indices)
 
     else:
@@ -488,13 +491,14 @@ def set_properties_after_merging(
     pre_unit_ids = sorting_pre_merge.unit_ids
     post_unit_ids = sorting_post_merge.unit_ids
 
-    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
-    keep_pre_inds = sorting_pre_merge.ids_to_indices(kept_unit_ids)
-    keep_post_inds = sorting_post_merge.ids_to_indices(kept_unit_ids)
+    untouched_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids) & ~np.isin(post_unit_ids, new_unit_ids)]
+    keep_pre_inds = sorting_pre_merge.ids_to_indices(untouched_unit_ids)
+    keep_post_inds = sorting_post_merge.ids_to_indices(untouched_unit_ids)
 
     default_missing_values = BaseExtractor.default_missing_property_values
 
     for key in prop_keys:
+
         parent_values = sorting_pre_merge.get_property(key)
 
         # propagate keep values
@@ -511,6 +515,12 @@ def set_properties_after_merging(
             if same_property_values:
                 # and new values only if they are all similar
                 new_values[new_index] = merge_values[0]
+            elif (not same_property_values) and key == "main_channel_id":
+                # Main channel id is special. For now, if there is a disagreement, we take the value of the unit
+                # with the most spikes. TODO: overwrite this for analyzer if templates exist.
+                num_spikes_per_unit = sorting_pre_merge.count_num_spikes_per_unit(unit_ids=merge_group)
+                max_unit_index = np.argmax(num_spikes_per_unit.values())
+                new_values[new_index] = merge_values[max_unit_index]
             else:
                 if parent_values.dtype.kind not in default_missing_values:
                     # if the property doesn't have a default missing value and it is not the same
@@ -766,9 +776,12 @@ def set_properties_after_splits(
     pre_unit_ids = sorting_pre_split.unit_ids
     post_unit_ids = sorting_post_split.unit_ids
 
-    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
-    keep_pre_inds = sorting_pre_split.ids_to_indices(kept_unit_ids)
-    keep_post_inds = sorting_post_split.ids_to_indices(kept_unit_ids)
+    all_new_split_unit_ids = [uid for group in new_unit_ids for uid in group]
+    untouched_unit_ids = post_unit_ids[
+        np.isin(post_unit_ids, pre_unit_ids) & ~np.isin(post_unit_ids, all_new_split_unit_ids)
+    ]
+    keep_pre_inds = sorting_pre_split.ids_to_indices(untouched_unit_ids)
+    keep_post_inds = sorting_post_split.ids_to_indices(untouched_unit_ids)
 
     for key in prop_keys:
         parent_values = sorting_pre_split.get_property(key)

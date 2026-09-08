@@ -45,7 +45,7 @@ def check_recordings_equal(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -104,7 +104,11 @@ def check_recordings_equal(
 
 
 def check_sortings_equal(
-    SX1: BaseSorting, SX2: BaseSorting, check_annotations: bool = False, check_properties: bool = False
+    SX1: BaseSorting,
+    SX2: BaseSorting,
+    check_annotations: bool = False,
+    check_properties: bool = False,
+    check_exact_lexsort: bool = True,
 ) -> None:
     assert SX1.get_num_segments() == SX2.get_num_segments()
 
@@ -112,6 +116,11 @@ def check_sortings_equal(
 
     s1 = SX1.to_spike_vector()
     s2 = SX2.to_spike_vector()
+    if not check_exact_lexsort:
+        # 2 sorting can be equal even if the internal lexsort is not the same.
+        # spiketrains still will be the same per units
+        s1 = s1[np.lexsort((s1["unit_index"], s1["sample_index"], s1["segment_index"]))]
+        s2 = s2[np.lexsort((s2["unit_index"], s2["sample_index"], s2["segment_index"]))]
     assert_array_equal(s1, s2)
 
     for start_frame, end_frame in [
