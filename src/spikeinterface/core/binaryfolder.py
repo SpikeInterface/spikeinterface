@@ -148,11 +148,11 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         )
         binary_rec.dump(folder / "binary.json", relative_to=folder)
 
-        for segment_index, rs in enumerate(recording.segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
-            if time_vector is not None:
-                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+        # for segment_index, rs in enumerate(recording.segments):
+        #     d = rs.get_times_kwargs()
+        #     time_vector = d["time_vector"]
+        #     if time_vector is not None:
+        #         np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
         # make the si_folder file to make the load() easier
         cached = BinaryFolderRecording(folder_path=folder)

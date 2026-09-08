@@ -196,7 +196,7 @@ def _guess_object_from_local_folder(folder):
         # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
         return "WaveformExtractor"
     elif (folder / f"si_folder.json").is_file():
-        # In later versions (0.94<v<0.102) we use the si_folder.json file
+        # In later versions (0.94<v<=0.105) we use the si_folder.json file
         # This should be Recording | Sorting
         return "Recording|Sorting"
     else:

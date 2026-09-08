@@ -140,6 +140,7 @@ class NpzFolderSorting(NpzSortingExtractor):
 
         # make the si_folder file to make the load() easier
         cached = NpzFolderSorting(folder_path=save_path)
+        cached._annotations = deepcopy({k: sorting._annotations[k] for k in sorting._annotations.keys()})
         si_folder_path = save_path / f"si_folder.json"
         cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
 

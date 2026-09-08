@@ -322,6 +322,8 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
+            if "folder" not in kwargs:
+                raise ValueError("Missing folder in recording.save(folder='...')")
 
             from .binaryfolder import BinaryFolderRecording
 
@@ -352,6 +354,9 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             #         cached.set_times(time_vector, segment_index=segment_index)
 
         elif format == "zarr":
+            if "folder" not in kwargs:
+                raise ValueError("Missing folder in recording.save(folder='...')")
+            
             from .zarrextractors import ZarrRecordingExtractor
 
             folder_path = kwargs["folder"]

@@ -140,9 +140,9 @@ class TestCausalFilter:
         }
 
 
-def test_filter():
+def test_filter(create_cache_folder):
     rec = generate_recording()
-    rec = rec.save()
+    rec = rec.save(folder=create_cache_folder / "test_filter_recording")
 
     rec2 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
 
@@ -221,4 +221,9 @@ def test_filter_opencl():
 
 
 if __name__ == "__main__":
-    test_filter()
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp())
+
+    test_filter(tmp_path)
