@@ -67,7 +67,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, exclude_filename, strict_gap_mode):
+    def map_to_neo_kwargs(cls, folder_path, exclude_filename=None, strict_gap_mode=False):
         neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
         if version("neo") >= "0.13.1":
             neo_kwargs["strict_gap_mode"] = strict_gap_mode
@@ -92,6 +92,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     stream_name : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
+    exclude_filename : list[str], default: None
+        List of filename to exclude from the loading.
+        For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
     """
 
     NeoRawIOClass = "NeuralynxRawIO"
@@ -104,8 +107,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         sampling_frequency: float | None = None,
         stream_id: str | None = None,
         stream_name: str | None = None,
+        exclude_filename: list[str] | None = None,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename)
         NeoBaseSortingExtractor.__init__(
             self,
             sampling_frequency=sampling_frequency,
@@ -119,11 +123,12 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,
+            "exclude_filename": exclude_filename,
         }
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, exclude_filename=None):
+        neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
         return neo_kwargs
 
 
