@@ -135,22 +135,37 @@ def test_equal_results_correlograms(window_and_bin_ms):
     assert np.array_equal(result_numpy, result_numba)
 
 
-def test_equal_results_when_units_are_silent_in_a_segment():
+@pytest.mark.parametrize("num_units", [2, 3])
+def test_equal_results_when_units_are_silent_in_a_segment(num_units):
     """Keep global unit coordinates when a segment has silent units."""
     sorting = NumpySorting.from_samples_and_labels(
-        samples_list=[np.array([0, 20, 40, 60]), np.array([0, 20, 40, 60])],
-        labels_list=[np.array([0, 1, 0, 1]), np.array([0, 2, 0, 2])],
+        samples_list=[
+            np.array([0, 40]) if num_units == 2 else np.array([0, 20, 40, 60]),
+            np.array([0, 20, 40, 60]),
+            np.array([], dtype="int64"),
+        ],
+        labels_list=[
+            np.array([0, 0]) if num_units == 2 else np.array([0, 2, 0, 2]),
+            np.array([0, 1, 0, 1]),
+            np.array([], dtype="int64"),
+        ],
         sampling_frequency=1000.0,
-        unit_ids=[0, 1, 2],
+        unit_ids=np.arange(num_units),
     )
 
     ccg_numpy, _ = compute_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numpy")
     acg_numpy, _ = compute_auto_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numpy")
 
-    assert ccg_numpy.shape == (3, 3, 10)
-    assert acg_numpy.shape == (3, 10)
-    assert np.count_nonzero(acg_numpy[1]) > 0
-    assert np.count_nonzero(acg_numpy[2]) > 0
+    # Each active unit has two spikes 40 ms apart. Unit 0 occurs in both
+    # nonempty segments, and their timestamps must never be correlated.
+    expected = np.zeros((num_units, num_units, 10), dtype="int64")
+    expected[0, 0, [1, 9]] = 2
+    for unit_index in range(1, num_units):
+        expected[unit_index, unit_index, [1, 9]] = 1
+        expected[0, unit_index, [3, 7]] = [2, 1]
+        expected[unit_index, 0, [3, 7]] = [1, 2]
+    np.testing.assert_array_equal(ccg_numpy, expected)
+    np.testing.assert_array_equal(acg_numpy, expected[np.arange(num_units), np.arange(num_units)])
 
     if HAVE_NUMBA:
         ccg_numba, _ = compute_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numba")
