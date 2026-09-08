@@ -176,11 +176,11 @@ def bombcell_label_units(
     external_metrics: "pd.DataFrame | list[pd.DataFrame]" | None = None
         External metrics DataFrame(s) (index = unit_ids) to use instead of those from SortingAnalyzer.
     label_non_somatic : bool | None, default: None
-        Deprecated, will be removed in version 0.105.0. Non-somatic labeling is now driven by
+        Deprecated, will be removed in version 0.106.0. Non-somatic labeling is now driven by
         whether ``thresholds["non-somatic"]`` is non-empty. Passing False is still honored and
         skips non-somatic labeling; passing True has no effect.
     split_non_somatic_good_mua : bool | None, default: None
-        Deprecated, will be removed in version 0.105.0. Use ``split_non_somatic`` instead;
+        Deprecated, will be removed in version 0.106.0. Use ``split_non_somatic`` instead;
         if given, its value is used for ``split_non_somatic``.
 
     Notes
@@ -206,7 +206,7 @@ def bombcell_label_units(
 
     if split_non_somatic_good_mua is not None:
         warnings.warn(
-            "'split_non_somatic_good_mua' is deprecated and will be removed in version 0.105.0. "
+            "'split_non_somatic_good_mua' is deprecated and will be removed in version 0.106.0. "
             "Use 'split_non_somatic' instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -215,7 +215,7 @@ def bombcell_label_units(
 
     if label_non_somatic is not None:
         warnings.warn(
-            "'label_non_somatic' is deprecated and will be removed in version 0.105.0. "
+            "'label_non_somatic' is deprecated and will be removed in version 0.106.0. "
             "Non-somatic labeling is now driven by the 'non-somatic' section of 'thresholds': "
             "leave it empty or omit it to skip non-somatic labeling.",
             DeprecationWarning,
