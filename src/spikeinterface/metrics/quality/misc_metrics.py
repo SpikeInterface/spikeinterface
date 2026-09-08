@@ -1682,7 +1682,7 @@ def slidingRP_violations(
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram. Note that as opposed to the syntax in compute_correlogram(), 
+        Window in seconds to compute correlogram. Note that as opposed to the syntax in compute_correlogram(),
         the window_size here is half the duration of the total window computed
     exclude_ref_period_below_ms : float, default: 0.5
         Refractory periods below this value are excluded
