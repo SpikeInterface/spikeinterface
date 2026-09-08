@@ -4,6 +4,7 @@ from packaging.version import parse
 from ..basesorter import BaseSorter
 from ...core import NumpyFolderSorting, NumpySorting
 
+
 class DartsortSorter(BaseSorter):
     """Dartsort wrapper"""
 
@@ -18,26 +19,25 @@ class DartsortSorter(BaseSorter):
       * https://github.com/cwindolf/dartsort
     """
 
-    _default_params = {
-    }
+    _default_params = {}
 
-    _params_description = {
-    }
+    _params_description = {}
 
     @classmethod
     def _dynamic_params(cls):
         from dartsort import DARTsortUserConfig
         from pydantic import RootModel
+
         # the trick is to transform the DARTsortUserConfig  (a pydantic.dataclass) into a pydantic model
         Model = RootModel[DARTsortUserConfig]
         # so we can dump to dict
         cfg = Model(DARTsortUserConfig())
-        default_params = cfg.model_dump(mode='python')
+        default_params = cfg.model_dump(mode="python")
         # and retrieve properties
         schema = Model.model_json_schema()
         default_params_descriptions = {}
-        for k, props in schema['$defs']['DARTsortUserConfig']['properties'].items():
-            default_params_descriptions[k] = props['title']
+        for k, props in schema["$defs"]["DARTsortUserConfig"]["properties"].items():
+            default_params_descriptions[k] = props["title"]
 
         return default_params, default_params_descriptions
 
@@ -45,6 +45,7 @@ class DartsortSorter(BaseSorter):
     def is_installed(cls):
         try:
             import dartsort
+
             HAVE_DARTSORT = True
         except ImportError:
             HAVE_DARTSORT = False
@@ -54,6 +55,7 @@ class DartsortSorter(BaseSorter):
     @staticmethod
     def get_sorter_version():
         import dartsort
+
         if hasattr(dartsort, "__version__"):
             return dartsort.__version__
         return "unknown"
@@ -82,7 +84,7 @@ class DartsortSorter(BaseSorter):
             motion=motion,
         )
         # the DARTsortSorting is not the spikeinterface sorting
-        dartsort_sorting = ret['sorting']
+        dartsort_sorting = ret["sorting"]
         sorting = dartsort_sorting.to_numpy_sorting()
 
         NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")

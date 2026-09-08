@@ -12,6 +12,7 @@ class DartsortCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 
 if __name__ == "__main__":
     from pathlib import Path
+
     test = DartsortCommonTestSuite()
     test.cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "sorters"
     test.setUp()
