@@ -1744,7 +1744,7 @@ def _select_channels_sparse_data(old_sorting_analyzer, old_data, new_channel_ids
     this function remaps the sparsity for the underlying data.
     """
 
-    unit_ids = sorting_analyzer.unit_ids
+    unit_ids = old_sorting_analyzer.unit_ids
     old_unit_id_to_channel_ids = old_sorting_analyzer.sparsity.unit_id_to_channel_ids
 
     # Compute how to slice the original sparsity to get the new sparsity
