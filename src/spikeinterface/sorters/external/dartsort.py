@@ -69,25 +69,22 @@ class DartsortSorter(BaseSorter):
 
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
+        # Dartsort can be given the motion object optionaly
+        motion = params.pop("motion", None)
+
         # dartsort config are set using dataclass we need to map this
         cfg = DARTsortUserConfig(**params)
-        
+
         ret = dartsort_main(
             recording,
             sorter_output_folder,
             cfg,
+            motion=motion,
         )
-        # the dartsort_sorting is not the spikeinterface sorting!!!
+        # the DARTsortSorting is not the spikeinterface sorting
         dartsort_sorting = ret['sorting']
+        sorting = dartsort_sorting.to_numpy_sorting()
 
-        times_samples = dartsort_sorting.times_samples
-        labels = dartsort_sorting.labels
-        mask = labels >= 0
-
-        sorting = NumpySorting.from_samples_and_labels(
-            [times_samples[mask]], [labels[mask]], dartsort_sorting.sampling_frequency
-        )
-        
         NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")
 
     @classmethod
