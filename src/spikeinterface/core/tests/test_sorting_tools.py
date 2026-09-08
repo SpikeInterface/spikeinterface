@@ -83,6 +83,25 @@ def test_random_spikes_selection():
     assert random_spikes_indices.size == spikes.size
 
 
+@pytest.mark.parametrize("method", ["uniform", "percentage", "maximum_rate", "all"])
+def test_random_spikes_selection_no_unit(method):
+    # a sorting with no unit is valid and should give an empty selection, not raise
+    recording, sorting = generate_ground_truth_recording(
+        durations=[5.0],
+        sampling_frequency=16000.0,
+        num_channels=4,
+        num_units=3,
+        seed=2205,
+    )
+    empty_sorting = sorting.select_units([])
+    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+
+    random_spikes_indices = random_spikes_selection(
+        empty_sorting, num_samples, method=method, percentage=0.5, maximum_rate=10.0, seed=2205
+    )
+    assert random_spikes_indices.size == 0
+
+
 def test_apply_merges_to_sorting():
 
     times = np.array([0, 0, 10, 20, 300])

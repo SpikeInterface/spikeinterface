@@ -37,7 +37,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     Returns
     -------
-    root: zarr.hierarchy.Group
+    root: zarr.Group
         The zarr root group object
 
     Raises
@@ -313,7 +313,7 @@ class ZarrSpikeVector:
         self._sample_index = spikes_group["sample_index"]
         self._unit_index = spikes_group["unit_index"]
         self._segment_slices = np.asarray(segment_slices, dtype="int64")
-        self._n = len(self._sample_index)
+        self._n = self._sample_index.shape[0]
         self.dtype = np.dtype(minimum_spike_dtype)
 
     @property
@@ -436,7 +436,7 @@ class ZarrSortingExtractor(BaseSorting):
             spikes = ZarrSpikeVector(spikes_group, segment_slices_list)
         else:
             # Materialize the spike vector in memory and sort it by (segment_index, sample_index, unit_index)
-            spikes = np.zeros(len(spikes_group["sample_index"]), dtype=minimum_spike_dtype)
+            spikes = np.zeros(spikes_group["sample_index"].shape[0], dtype=minimum_spike_dtype)
             spikes["sample_index"] = spikes_group["sample_index"][:]
             spikes["unit_index"] = spikes_group["unit_index"][:]
             for i, (start, end) in enumerate(segment_slices_list):
@@ -610,7 +610,7 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
+def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
@@ -624,7 +624,7 @@ def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_o
     zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
 
 
-def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.Group, **kwargs):
+def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kwargs):
     """
     Add a sorting extractor to a zarr group.
 
@@ -632,7 +632,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     ----------
     sorting : BaseSorting
         The sorting extractor object to be added to the zarr group
-    zarr_group : zarr.hierarchy.Group
+    zarr_group : zarr.Group
         The zarr group
     kwargs : dict
         Other arguments passed to the zarr compressor
@@ -668,9 +668,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
 
 # Recording
-def add_recording_to_zarr_group(
-    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, dtype=None, **kwargs
-):
+def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group, verbose=False, dtype=None, **kwargs):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if recording.check_serializability("json"):
