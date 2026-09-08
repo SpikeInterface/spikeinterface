@@ -5,17 +5,17 @@ from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import normalize_by_quantile, scale, center, zscore
 
 
-def test_normalize_by_quantile():
+def test_normalize_by_quantile(create_cache_folder):
     rec = generate_recording()
 
     rec2 = normalize_by_quantile(rec, mode="by_channel")
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2", verbose=False)
 
     traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1
 
     rec2 = normalize_by_quantile(rec, mode="pool_channel")
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2_pool", verbose=False)
 
     # import matplotlib.pyplot as plt
     # from spikeinterface.widgets import plot_traces
