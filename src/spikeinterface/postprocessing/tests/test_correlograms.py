@@ -24,9 +24,11 @@ from spikeinterface.postprocessing.correlograms import (
     _compute_correlograms_on_sorting,
     _compute_auto_correlograms_on_sorting,
     _make_bins,
+    auto_correlogram_for_one_segment,
     compute_acgs_3d,
     compute_correlograms,
     compute_auto_correlograms,
+    correlogram_for_one_segment,
 )
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
@@ -133,6 +135,19 @@ def test_equal_results_correlograms(window_and_bin_ms):
     )
 
     assert np.array_equal(result_numpy, result_numba)
+
+
+def test_segment_helpers_preserve_default_unit_count():
+    # No pairs are in range: isolate the public helpers' allocation behavior
+    # without changing their historical handling of non-contiguous indices.
+    samples = np.array([0, 1000])
+    labels = np.array([0, 2])
+    for helper, shape in (
+        (correlogram_for_one_segment, (2, 2, 20)),
+        (auto_correlogram_for_one_segment, (2, 20)),
+    ):
+        result = helper(samples, labels, window_size=100, bin_size=10)
+        np.testing.assert_array_equal(result, np.zeros(shape, dtype="int64"))
 
 
 @pytest.mark.parametrize("num_units", [2, 3])

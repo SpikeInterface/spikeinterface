@@ -546,8 +546,8 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     bin_size : int
         The size of which to bin lags, in samples.
     num_units : int or None
-        Number of units in the complete sorting. If ``None``, infer it from
-        the largest unit index in ``spike_unit_indices``.
+        Number of units in the complete sorting. If ``None``, use the number
+        of unique indices in ``spike_unit_indices`` for backward compatibility.
 
     Returns
     -------
@@ -576,7 +576,7 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
     if num_units is None:
-        num_units = int(np.max(spike_unit_indices)) + 1 if spike_unit_indices.size else 0
+        num_units = len(np.unique(spike_unit_indices))
 
     correlograms = np.zeros((num_units, num_units, num_bins), dtype="int64")
 
@@ -994,8 +994,8 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     bin_size : int
         The size of which to bin lags, in samples.
     num_units : int or None
-        Number of units in the complete sorting. If ``None``, infer it from
-        the largest unit index in ``spike_unit_indices``.
+        Number of units in the complete sorting. If ``None``, use the number
+        of unique indices in ``spike_unit_indices`` for backward compatibility.
 
     Returns
     -------
@@ -1024,7 +1024,7 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
     if num_units is None:
-        num_units = int(np.max(spike_unit_indices)) + 1 if spike_unit_indices.size else 0
+        num_units = len(np.unique(spike_unit_indices))
 
     correlograms = np.zeros((num_units, num_bins), dtype="int64")
 
