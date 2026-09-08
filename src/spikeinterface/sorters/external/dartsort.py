@@ -14,7 +14,7 @@ class DartsortSorter(BaseSorter):
     installation_mesg = """\nTo use dartsort run:\n
        >>> pip install dartsort
 
-    More information on mountainsort5 at:
+    More information about installing dartsort at:
       * https://github.com/cwindolf/dartsort
     """
 
