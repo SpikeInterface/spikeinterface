@@ -1682,7 +1682,8 @@ def slidingRP_violations(
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram.
+        Window in seconds to compute correlogram. Note that as opposed to the syntax in compute_correlogram(), 
+        the window_size here is half the duration of the total window computed
     exclude_ref_period_below_ms : float, default: 0.5
         Refractory periods below this value are excluded
     max_ref_period_ms : float, default: 10
@@ -1716,7 +1717,7 @@ def slidingRP_violations(
 
     from spikeinterface.postprocessing.correlograms import compute_correlograms
 
-    correlogram = compute_correlograms(sorting, window_size_s * 1000, bin_size_ms, method=method)[0][0, 0]
+    correlogram = compute_correlograms(sorting, 2 * window_size_s * 1000, bin_size_ms, method=method)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
 
     conf_matrix = _compute_violations(
