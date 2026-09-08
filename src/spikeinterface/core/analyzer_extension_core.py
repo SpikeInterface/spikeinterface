@@ -1738,14 +1738,14 @@ def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_s
         )
 
 
-def _select_channels_sparse_data(sorting_analyzer, old_data, new_channel_ids):
+def _select_channels_sparse_data(old_sorting_analyzer, old_data, new_channel_ids):
     """
     When selecting channels from extensions which are sparse (waveforms, pcs),
     this function remaps the sparsity for the underlying data.
     """
 
     unit_ids = sorting_analyzer.unit_ids
-    old_unit_id_to_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids
+    old_unit_id_to_channel_ids = old_sorting_analyzer.sparsity.unit_id_to_channel_ids
 
     # Compute how to slice the original sparsity to get the new sparsity
     unit_sparsity_slices = {}
@@ -1759,11 +1759,11 @@ def _select_channels_sparse_data(sorting_analyzer, old_data, new_channel_ids):
                 unit_sparsity_channel_indices.append(idx)
         unit_sparsity_slices[unit_id] = np.array(unit_sparsity_channel_indices)
 
-    random_spikes = sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+    random_spikes = old_sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
     new_data = np.zeros_like(old_data)
     max_num_active_channels = 0
-    for pc_index, (one_old_data, unit_index) in enumerate(zip(old_data, random_spikes["unit_index"])):
+    for data_index, (one_old_data, unit_index) in enumerate(zip(old_data, random_spikes["unit_index"])):
 
         unit_id = unit_ids[unit_index]
         channel_slice = unit_sparsity_slices[unit_id]
@@ -1771,7 +1771,7 @@ def _select_channels_sparse_data(sorting_analyzer, old_data, new_channel_ids):
         if len(channel_slice) > 0:
 
             size_of_new_mask = len(channel_slice)
-            new_data[pc_index, :, :size_of_new_mask] = one_old_data[:, channel_slice]
+            new_data[data_index, :, :size_of_new_mask] = one_old_data[:, channel_slice]
 
             max_num_active_channels = max(max_num_active_channels, size_of_new_mask)
 
