@@ -806,8 +806,6 @@ def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -
         return array[row_indices, ...]
 
 
-
-
 def load_properties_from_binary_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
     """
     Load properties from a folder properties as .npy files and return sets them
@@ -847,6 +845,7 @@ def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtract
     for key in extractor.get_property_keys():
         values = extractor.get_property(key)
         np.save(folder / f"{key}.npy", values, allow_pickle=True)
+
 
 def save_extractor_provenance(folder: str | Path, extractor: "BaseExtractor"):
     folder = Path(folder)

@@ -6,7 +6,13 @@ import numpy as np
 
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .npzsortingextractor import NpzSortingExtractor
-from .core_tools import define_function_from_class, make_paths_absolute, load_properties_from_binary_folder, save_properties_to_binary_folder, save_extractor_provenance
+from .core_tools import (
+    define_function_from_class,
+    make_paths_absolute,
+    load_properties_from_binary_folder,
+    save_properties_to_binary_folder,
+    save_extractor_provenance,
+)
 
 
 class NumpyFolderSorting(BaseSorting):

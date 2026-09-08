@@ -9,7 +9,6 @@ from pathlib import Path
 
 from .core_tools import save_properties_to_binary_folder
 
-
 # snippets segments?
 
 

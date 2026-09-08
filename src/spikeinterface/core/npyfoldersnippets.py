@@ -6,8 +6,12 @@ from copy import deepcopy
 from probeinterface import read_probeinterface, write_probeinterface
 
 from .npysnippetsextractor import NpySnippetsExtractor
-from .core_tools import define_function_from_class, make_paths_absolute, load_properties_from_binary_folder, save_properties_to_binary_folder
-
+from .core_tools import (
+    define_function_from_class,
+    make_paths_absolute,
+    load_properties_from_binary_folder,
+    save_properties_to_binary_folder,
+)
 
 
 class NpyFolderSnippets(NpySnippetsExtractor):
@@ -54,7 +58,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
 
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
-    
+
     @staticmethod
     def write_snippets(snippets, folder, dtype=None):
 
@@ -86,7 +90,6 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         if snippets.has_probe():
             probegroup = snippets.get_probegroup()
             write_probeinterface(folder / "probegroup.json", probegroup)
-
 
         cached = NpyFolderSnippets(folder_path=folder)
         # important backward compatibility : annoations are handled (sadly) only is this file
