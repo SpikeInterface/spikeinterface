@@ -95,7 +95,7 @@ class SpikesOnTracesWidget(BaseWidget):
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FurtureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled

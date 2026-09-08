@@ -272,7 +272,7 @@ def isosplit(
     min_cluster_size : int, default 10
         Minimum cluster size. Too small clsuters are merged with neigbors.
     isocut_threshold : float, default 2.0
-        Threhold for the merging test when exploring the cluster pairs.
+        Threshold for the merging test when exploring the cluster pairs.
         Merge is applied when : dipscore < isocut_threshold.
     seed : Int | None
         Eventually a seed for the kmeans initial step.
@@ -631,7 +631,7 @@ if HAVE_NUMBA:
                     (modified_inds1,) = np.nonzero(L12[: inds1.size] == 2)
                     (modified_inds2,) = np.nonzero(L12[inds1.size :] == 1)
 
-                    # protect against pure swaping between label1<>label2
+                    # protect against pure swapping between label1<>label2
                     # pure_swaping = modified_inds1.size == inds1.size and modified_inds2.size == inds2.size
                     pure_swaping = (modified_inds1.size / inds1.size + modified_inds2.size / inds2.size) >= 1.0
 

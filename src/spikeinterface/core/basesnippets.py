@@ -3,6 +3,13 @@ from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
 
+from copy import deepcopy
+
+from pathlib import Path
+
+from .core_tools import save_properties_to_binary_folder
+
+
 # snippets segments?
 
 
@@ -120,7 +127,7 @@ class BaseSnippets(BaseRecordingSnippets):
         if return_scaled is not None:
             warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -181,15 +188,12 @@ class BaseSnippets(BaseRecordingSnippets):
         if return_scaled is not None:
             warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
 
         return self.get_snippets(indices, channel_ids=channel_ids, return_in_uV=return_in_uV)
-
-    def _save(self, format="binary", **save_kwargs):
-        raise NotImplementedError
 
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
@@ -208,36 +212,18 @@ class BaseSnippets(BaseRecordingSnippets):
 
         return SelectSegmentSnippets(self, segment_indices=segment_indices)
 
-    def _save(self, format="npy", **save_kwargs):
+    def save(self, format="npy", **save_kwargs):
         """
         At the moment only "npy" and "memory" avaiable:
         """
 
         if format == "npy":
-            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
-
-            folder = save_kwargs["folder"]
-            file_paths = [folder / f"traces_cached_seg{i}.npy" for i in range(self.get_num_segments())]
-            dtype = save_kwargs.get("dtype", None)
-            if dtype is None:
-                dtype = self.get_dtype()
-
-            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
-
-            NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
-            cached = NpySnippetsExtractor(
-                file_paths=file_paths,
-                sampling_frequency=self.get_sampling_frequency(),
-                channel_ids=self.get_channel_ids(),
-                nbefore=self.nbefore,
-                gain_to_uV=self.get_channel_gains(),
-                offset_to_uV=self.get_channel_offsets(),
-            )
-            cached.dump(folder / "npy.json", relative_to=folder)
-
             from spikeinterface.core.npyfoldersnippets import NpyFolderSnippets
 
-            cached = NpyFolderSnippets(folder_path=folder)
+            folder = save_kwargs["folder"]
+            folder = Path(folder)
+
+            cached = NpyFolderSnippets.write_snippets(self, folder, dtype=save_kwargs.get("dtype", None))
 
         elif format == "memory":
             snippets_list = []

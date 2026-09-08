@@ -970,7 +970,7 @@ if HAVE_NUMBA:
         traces, sparse_template, sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity
     ):
         """
-        numba implementation to compute several sample shift before template substraction
+        numba implementation to compute several sample shift before template subtraction
         """
         width = sparse_template.shape[0]
         total_chans = traces.shape[1]

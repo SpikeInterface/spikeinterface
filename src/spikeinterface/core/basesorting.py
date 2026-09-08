@@ -4,6 +4,8 @@ from copy import deepcopy
 
 import numpy as np
 
+from pathlib import Path
+
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
 
@@ -344,7 +346,7 @@ class BaseSorting(BaseExtractor):
                 warnings.warn(
                     "Some spikes exceed the recording's duration! "
                     "Removing these excess spikes with `spikeinterface.curation.remove_excess_spikes()` "
-                    "Might be necessary for further postprocessing."
+                    "might be necessary for further postprocessing."
                 )
         self._recording = recording
         # Copy the recording's start times into the sorting segments. This way,
@@ -500,14 +502,19 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
+
     def save(self, format="numpy_folder", **save_kwargs):
         """
-        This function replaces the old CachesortingExtractor, but enables more engines
+        Save a sorting object to disk in a specified format.
+
+        Note
+        ----
+        This function replaces the old CacheSortingExtractor, but enables more engines
+
         for caching a results.
 
         Since v0.98.0 "numpy_folder" is used by defult.
         From v0.96.0 to 0.97.0 "npz_folder" was the default.
-
         """
         if format == "numpy_folder":
             from .sortingfolder import NumpyFolderSorting
@@ -516,21 +523,17 @@ class BaseSorting(BaseExtractor):
             NumpyFolderSorting.write_sorting(self, folder)
             cached = NumpyFolderSorting(folder)
 
-            if self.has_recording():
-                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
-                cached.register_recording(self._recording)
-
         elif format == "zarr":
             from .zarrextractors import ZarrSortingExtractor
 
-            zarr_path = save_kwargs.pop("zarr_path")
-            storage_options = save_kwargs.pop("storage_options")
-            ZarrSortingExtractor.write_sorting(self, zarr_path, storage_options, **save_kwargs)
-            cached = ZarrSortingExtractor(zarr_path, storage_options)
+            folder_path = save_kwargs.pop("folder")
+            if isinstance(folder_path, Path) and folder_path.suffix != "zarr":
+                # automatically add the zarr suffix
+                folder_path = folder_path.with_suffix(".zarr")
 
-            if self.has_recording():
-                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
-                cached.register_recording(self._recording)
+            storage_options = save_kwargs.pop("storage_options", None)
+            ZarrSortingExtractor.write_sorting(self, folder_path, storage_options, **save_kwargs)
+            cached = ZarrSortingExtractor(folder_path, storage_options)
 
         elif format == "npz_folder":
             from .sortingfolder import NpzFolderSorting
@@ -539,21 +542,26 @@ class BaseSorting(BaseExtractor):
             NpzFolderSorting.write_sorting(self, folder)
             cached = NpzFolderSorting(folder_path=folder)
 
-            if self.has_recording():
-                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
-                cached.register_recording(self._recording)
-
         elif format == "memory":
             if save_kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemorySorting
 
-                cached = SharedMemorySorting.from_sorting(self)
+                cached = SharedMemorySorting.from_sorting(self, with_metadata=True)
             else:
                 from .numpyextractors import NumpySorting
 
-                cached = NumpySorting.from_sorting(self)
+                cached = NumpySorting.from_sorting(self, with_metadata=True)
         else:
-            raise ValueError(f"format {format} not supported")
+            raise ValueError(f"Format {format} not supported")
+
+        # Re-register the recording if saving to disk (not memory)
+        if self.has_recording() and format != "memory":
+            warnings.warn(
+                "The recording registered to this sorting object will not be saved to disk. "
+                "Reloading the sorting later will not include the recording"
+            )
+            cached.register_recording(self._recording)
+
         return cached
 
     def get_unit_property(self, unit_id, key):
@@ -952,8 +960,8 @@ class BaseSorting(BaseExtractor):
         extremum_channel_inds : None or dict, default: None
             This is deprecated. Used main_channel_indices instead.
         main_channel_indices: None or array
-            Give optionaly the main_channel_indices vector to add an extra field "channel_index".
-            This can be convinient for computing spikes postion after sorter.
+            Give optionally the main_channel_indices vector to add an extra field "channel_index".
+            This can be convenient for computing spikes position after sorter.
             This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=False)
         use_cache : bool, default: True
             When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
@@ -981,11 +989,12 @@ class BaseSorting(BaseExtractor):
 
         if main_channel_indices is None:
             spikes = self._cached_spike_vector
+        elif "channel_index" in self._cached_spike_vector.dtype.names:
+            spikes = self._cached_spike_vector
         else:
             spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
             spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
-
             spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
 
         if not concatenated:
@@ -1184,7 +1193,7 @@ class BaseSorting(BaseExtractor):
     def to_shared_memory_sorting(self):
         """
         Turn any sorting in a SharedMemorySorting.
-        Usefull to have it in memory with a unique vector representation and sharable across processes.
+        Useful to have it in memory with a unique vector representation and sharable across processes.
         """
         from .numpyextractors import SharedMemorySorting
 

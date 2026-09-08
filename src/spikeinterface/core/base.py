@@ -19,10 +19,12 @@ from .core_tools import (
     clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
+    is_path_remote,
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
     retrieve_importing_provenance,
+    load_properties_from_binary_folder,
 )
 from .job_tools import _shared_job_kwargs_doc
 
@@ -80,6 +82,10 @@ class BaseExtractor:
         # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
         self._main_ids = np.array(main_ids)
+        if self._main_ids.dtype.kind == "T":
+            # numpy's variable-width StringDType, which is what a zarr v3 store hands back for a
+            # string column. Store it as fixed-width unicode like every other source.
+            self._main_ids = np.array(self._main_ids.tolist())
         if len(self._main_ids) > 0:
             assert (
                 self._main_ids.dtype.kind in "uiSU"
@@ -637,43 +643,16 @@ class BaseExtractor:
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
             dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
-        folder_metadata = dictionary.get("folder_metadata", None)
-        if folder_metadata is not None:
-            folder_metadata = Path(folder_metadata)
-            if dictionary.get("relative_paths", False):
-                folder_metadata = base_folder / folder_metadata
-            extractor._load_metadata_from_folder(folder_metadata)
+
+        # TODO sam : need to check but normally this is not usefull anymore
+        # folder_metadata = dictionary.get("folder_metadata", None)
+        # if folder_metadata is not None:
+        #     folder_metadata = Path(folder_metadata)
+        #     if dictionary.get("relative_paths", False):
+        #         folder_metadata = base_folder / folder_metadata
+        #     load_properties_from_binary_folder(folder_metadata, self)
         return extractor
 
-    def _load_metadata_from_folder(self, folder):
-        """
-        Load properties from a 'properties' subfolder previously saved as npy.
-        """
-        folder = Path(folder)
-
-        # load properties
-        prop_folder = folder / "properties"
-        if prop_folder.is_dir():
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == ".npy":
-                    values = np.load(prop_file, allow_pickle=True)
-                    key = prop_file.stem
-                    self.set_property(key, values)
-
-        self._extra_metadata_from_folder(folder)
-
-    def _save_metadata_to_folder(self, folder_metadata):
-        """
-        Save properties into a 'properties' subfolder using npy format.
-        """
-        # self._extra_metadata_to_folder(folder_metadata)
-
-        # save properties
-        prop_folder = folder_metadata / "properties"
-        prop_folder.mkdir(parents=True, exist_ok=False)
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            np.save(prop_folder / (key + ".npy"), values)
 
     def clone(self) -> "BaseExtractor":
         """
@@ -700,34 +679,6 @@ class BaseExtractor:
                     if isinstance(v, BaseExtractor) and not v.check_serializability(type=type):
                         return False
         return self._serializability[type]
-
-    def check_if_memory_serializable(self) -> bool:
-        """
-        Check if the object is serializable to memory with pickle, including nested objects.
-
-        Returns
-        -------
-        bool
-            True if the object is memory serializable, False otherwise.
-        """
-        return self.check_serializability("memory")
-
-    def check_if_json_serializable(self) -> bool:
-        """
-        Check if the object is json serializable, including nested objects.
-
-        Returns
-        -------
-        bool
-            True if the object is json serializable, False otherwise.
-        """
-        # we keep this for backward compatilibity or not ????
-        # is this needed ??? I think no.
-        return self.check_serializability("json")
-
-    def check_if_pickle_serializable(self) -> bool:
-        # is this needed ??? I think no.
-        return self.check_serializability("pickle")
 
     @staticmethod
     def _get_file_path(file_path: str | Path, extensions: Sequence) -> Path:
@@ -846,7 +797,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
+        assert self.check_serializability("pickle"), "The extractor is not serializable to file with pickle"
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
@@ -891,66 +842,15 @@ class BaseExtractor:
         intialization_args = (self.to_dict(),)
         return (instance_constructor, intialization_args)
 
-    @staticmethod
-    def load_from_folder(folder) -> "BaseExtractor":
-        return BaseExtractor.load(folder)
-
-    def _save(self, folder, **save_kwargs):
-        # This implemented in BaseRecording or baseSorting
-        # this is internally call by cache(...) main function
-        raise NotImplementedError
-
-    # def _extra_metadata_from_folder(self, folder):
-    #     # This implemented in BaseRecording for probe
-    #     pass
-
-    # def _extra_metadata_to_folder(self, folder):
-    #     # This implemented in BaseRecording for probe
-    #     pass
-
     def _extra_metadata_from_dict(self, dump_dict):
+        # Hook for subclass (quite bad design)
         # This implemented in BaseRecording for probe
         pass
 
     def _extra_metadata_to_dict(self, dump_dict):
+        # Hook for subclass (quite bad design)
         # This implemented in BaseRecording for probe
         pass
-
-    # def save(self, **kwargs) -> "BaseExtractor":
-    #     """
-    #     Save a SpikeInterface object.
-
-    #     Parameters
-    #     ----------
-    #     kwargs: Keyword arguments for saving.
-    #         * format: "memory", "zarr", or "binary" (for recording) / "memory" or "numpy_folder" or "npz_folder" for sorting.
-    #             In case format is not memory, the recording is saved to a folder. See format specific functions for
-    #             more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
-    #         * folder: if provided, the folder path where the object is saved
-    #         * name: if provided and folder is not given, the name of the folder in the global temporary
-    #                 folder (use set_global_tmp_folder() to change this folder) where the object is saved.
-    #           If folder and name are not given, the object is saved in the global temporary folder with
-    #           a random string
-    #         * dump_ext: "json" or "pkl", default "json" (if format is "folder")
-    #         * verbose: if True output is verbose
-    #         * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
-    #         {}
-
-    #     Returns
-    #     -------
-    #     loaded_extractor: BaseRecording or BaseSorting
-    #         The reference to the saved object after it is loaded back
-    #     """
-    #     format = kwargs.get("format", None)
-    #     if format == "memory":
-    #         loaded_extractor = self.save_to_memory(**kwargs)
-    #     elif format == "zarr":
-    #         loaded_extractor = self.save_to_zarr(**kwargs)
-    #     else:
-    #         loaded_extractor = self.save_to_folder(**kwargs)
-    #     return loaded_extractor
-
-    # save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
     def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
         warnings.warn("save_to_memory() should be save(format='memory')", FutureWarning)
@@ -962,17 +862,10 @@ class BaseExtractor:
         # self.copy_metadata(cached)
         # return cached
 
-    def _save_provenance_to_folder(self, folder):
-        provenance_file_path = folder / f"provenance.json"
-        if self.check_serializability("json"):
-            self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
-        elif self.check_serializability("pickle"):
-            provenance_file = folder / f"provenance.pkl"
-            self.dump_to_pickle(provenance_file, relative_to=folder)
-        else:
-            warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
+    def save(self):
+        # Need to be implemented in Recording and Sorting
+        raise NotImplementedError()
 
-    # TODO rename to saveto_binary_folder
     def save_to_folder(
         self,
         name: str | None = None,
@@ -982,54 +875,11 @@ class BaseExtractor:
         **save_kwargs,
     ):
         """
-        Save the extractor and its data to a folder.
+        Legacy method.
 
-        This method extracts trace data, saves it to a file (using a memory-mapped approach),
-        and stores both the original extractor's provenance
-        and the extractor's metadata in JSON format.
-
-        The folder's final location and name can be specified in a couple of ways ways:
-
-        1. Explicitly providing the full path:
-        ```
-        extractor.save_to_folder(folder="/path/to/save/")
-        ```
-
-        2. Providing a subfolder name, with the base folder being determined automatically:
-        ```
-        extractor.save_to_folder(name="my_extractor_data")
-        ```
-        In this case, the data is saved in a subfolder named "my_extractor_data"
-        within the global temporary folder (set using `set_global_tmp_folder`). If no
-        global temporary folder is set, one will be generated automatically.
-
-        3. If neither `name` nor `folder` is provided, a random name will be generated
-        for the subfolder within the global temporary folder.
-
-        Parameters
-        ----------
-        name : str or Path, optional
-            The name of the subfolder within the global temporary folder. If `folder`
-            is provided, this argument must be None.
-        folder : str or Path, optional
-            The full path of the folder where the data should be saved. If `name` is
-            provided, this argument must be None.
-        overwrite : bool, default: False
-            If True, an existing folder at the specified path will be deleted before saving.
-        verbose : bool, default: True
-            If True, print information about the cache folder being used.
-        **save_kwargs
-            Additional keyword arguments to be passed to the underlying save method.
-
-        Returns
-        -------
-        cached_extractor
-            A saved copy of the extractor in the specified format.
-
-        Raises
-        ------
-        AssertionError
-            If the folder already exists and `overwrite` is False.
+        The 'new' way is :
+          * recording.save(format='binray', folder=...)
+          * sorting.save(format='numpy_folder', folder=...)
         """
 
         warnings.warn(
@@ -1147,24 +997,17 @@ class BaseExtractor:
             cache_folder = get_global_tmp_folder()
             if name is None:
                 name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                zarr_path = cache_folder / f"{name}.zarr"
-                if verbose:
-                    print(f"Use zarr_path={zarr_path}")
-            else:
-                zarr_path = cache_folder / f"{name}.zarr"
-                if not is_set_global_tmp_folder():
-                    if verbose:
-                        print(f"Use zarr_path={zarr_path}")
+            zarr_path = (cache_folder / name).with_suffix(".zarr")
+            if verbose:
+                print(f"Saving to zarr_path={zarr_path}")
         else:
-            if storage_options is None:
+            if storage_options is None:  # save locally (not cloud storage)
                 folder = clean_zarr_folder_name(folder)
                 if folder.is_dir() and overwrite:
                     shutil.rmtree(folder)
-                zarr_path = folder
-            else:
-                zarr_path = folder
+            zarr_path = folder
 
-        if isinstance(zarr_path, Path):
+        if not is_path_remote(zarr_path):
             assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
         save_kwargs["zarr_path"] = zarr_path
         save_kwargs["storage_options"] = storage_options
@@ -1220,8 +1063,7 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    is_old_version = not _check_same_version(class_name, dic["version"])
-    if is_old_version and hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
+    if hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
         new_kwargs = extractor_class._handle_kwargs_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor

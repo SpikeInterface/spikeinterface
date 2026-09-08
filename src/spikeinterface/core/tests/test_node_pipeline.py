@@ -100,7 +100,7 @@ def test_run_node_pipeline(cache_folder_creation):
         peak_sign="neg",
     )
 
-    # test with 3 differents first nodes
+    # test with 3 different first nodes
     for loop, peak_source in enumerate((peak_retriever, peak_retriever_few, spike_retriever_T, spike_retriever_S)):
         # one step only : squeeze output
         nodes = [

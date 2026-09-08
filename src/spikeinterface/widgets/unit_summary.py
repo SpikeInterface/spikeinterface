@@ -18,7 +18,7 @@ class UnitSummaryWidget(BaseWidget):
     """
     Plot a unit summary.
 
-    If amplitudes are alreday computed, they are displayed.
+    If amplitudes are already computed, they are displayed.
 
     Parameters
     ----------
@@ -107,7 +107,7 @@ class UnitSummaryWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        # and use custum grid spec
+        # and use custom grid spec
         fig = self.figure
         nrows = 2
         ncols = 2

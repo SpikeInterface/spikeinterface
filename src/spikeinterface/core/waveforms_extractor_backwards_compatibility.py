@@ -374,10 +374,10 @@ def load_waveforms(
     output="MockWaveformExtractor",
 ) -> MockWaveformExtractor | SortingAnalyzer:
     """
-    This read an old WaveformsExtactor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
+    This read an old WaveformsExtractor folder (folder or zarr) and convert it into a SortingAnalyzer or MockWaveformExtractor.
 
     It also mimic the old load_waveforms by opening a Sortingresult folder and return a MockWaveformExtractor.
-    This later behavior is usefull to no break old code like this in versio >=0.101
+    This later behavior is useful to no break old code like this in version >=0.101
 
     >>> # In this example we is a MockWaveformExtractor that behave the same as before
     >>> we = extract_waveforms(..., folder="/my_we")

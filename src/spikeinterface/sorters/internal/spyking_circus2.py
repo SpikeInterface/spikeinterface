@@ -113,7 +113,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             HAVE_TORCH = False
             print("spykingcircus2 could benefit from using torch. Consider installing it")
 
-        # this is importanted only on demand because numba import are too heavy
+        # this is imported only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks

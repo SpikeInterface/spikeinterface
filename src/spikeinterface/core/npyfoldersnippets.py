@@ -1,8 +1,13 @@
 from pathlib import Path
 import json
 
+from copy import deepcopy
+
+from probeinterface import read_probeinterface, write_probeinterface
+
 from .npysnippetsextractor import NpySnippetsExtractor
-from .core_tools import define_function_from_class, make_paths_absolute
+from .core_tools import define_function_from_class, make_paths_absolute, load_properties_from_binary_folder, save_properties_to_binary_folder
+
 
 
 class NpyFolderSnippets(NpySnippetsExtractor):
@@ -41,11 +46,55 @@ class NpyFolderSnippets(NpySnippetsExtractor):
 
         NpySnippetsExtractor.__init__(self, **d["kwargs"])
 
-        folder_metadata = folder_path
-        self._load_metadata_from_folder(folder_metadata)
+        probe_file = folder_path / "probegroup.json"
+        if probe_file.is_file():
+            self._probegroup = read_probeinterface(probe_file)
+
+        load_properties_from_binary_folder(folder_path / "properties", self)
 
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
+    
+    @staticmethod
+    def write_snippets(snippets, folder, dtype=None):
+
+        folder = Path(folder)
+
+        if dtype is None:
+            dtype = snippets.dtype
+
+        file_paths = [folder / f"traces_cached_seg{i}.npy" for i in range(snippets.get_num_segments())]
+
+        if dtype is None:
+            dtype = snippets.get_dtype()
+
+        # This is weird but for backward compatibility
+        # maybe this can be removed
+        NpySnippetsExtractor.write_snippets(snippets=snippets, file_paths=file_paths, dtype=dtype)
+        cached = NpySnippetsExtractor(
+            file_paths=file_paths,
+            sampling_frequency=snippets.get_sampling_frequency(),
+            channel_ids=snippets.get_channel_ids(),
+            nbefore=snippets.nbefore,
+            gain_to_uV=snippets.get_channel_gains(),
+            offset_to_uV=snippets.get_channel_offsets(),
+        )
+        cached.dump(folder / "npy.json", relative_to=folder)
+
+        save_properties_to_binary_folder(folder / "properties", snippets)
+
+        if snippets.has_probe():
+            probegroup = snippets.get_probegroup()
+            write_probeinterface(folder / "probegroup.json", probegroup)
+
+
+        cached = NpyFolderSnippets(folder_path=folder)
+        # important backward compatibility : annoations are handled (sadly) only is this file
+        # so we need to set then here (sad hack)
+        cached._annotations = deepcopy({k: snippets._annotations[k] for k in snippets._annotations.keys()})
+        cached.dump(folder / "si_folder.json", relative_to=folder)
+
+        return cached
 
 
 read_npy_snippets_folder = define_function_from_class(source_class=NpyFolderSnippets, name="read_npy_snippets_folder")

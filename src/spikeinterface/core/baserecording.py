@@ -285,7 +285,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_scaled is not None:
             warnings.warn(
                 "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
+                category=FutureWarning,
                 stacklevel=2,
             )
             return_in_uV = return_scaled
@@ -293,7 +293,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if return_in_uV:
             if not self.has_scaleable_traces():
                 if self._dtype.kind == "f":
-                    # here we do not truely have scale but we assume this is scaled
+                    # here we do not truly have scale but we assume this is scaled
                     # this helps a lot for simulated data
                     pass
                 else:
@@ -322,49 +322,13 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
-            # from .time_series_tools import write_binary
-            # from .binaryrecordingextractor import BinaryRecordingExtractor
-            # from .binaryfolder import BinaryFolderRecording
-
-            # folder = kwargs["folder"]
-            # file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
-            # dtype = kwargs.get("dtype", None) or self.get_dtype()
-            # t_starts = self._get_t_starts()
-
-            # write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
-
-            # # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
-            # # See the __init__ of `BinaryFolderRecording`
-
-            # binary_rec = BinaryRecordingExtractor(
-            #     file_paths=file_paths,
-            #     sampling_frequency=self.get_sampling_frequency(),
-            #     num_channels=self.get_num_channels(),
-            #     dtype=dtype,
-            #     t_starts=t_starts,
-            #     channel_ids=self.get_channel_ids(),
-            #     time_axis=0,
-            #     file_offset=0,
-            #     is_filtered=self.is_filtered(),
-            #     gain_to_uV=self.get_channel_gains(),
-            #     offset_to_uV=self.get_channel_offsets(),
-            # )
-            # binary_rec.dump(folder / "binary.json", relative_to=folder)
-            # cached = BinaryFolderRecording(folder_path=folder)
-
-            # # timestamps are not saved in binary, so we have to set them explicitly
-            # for segment_index in range(self.get_num_segments()):
-            #     if self.has_time_vector(segment_index):
-            #         # the use of get_times is preferred since timestamps are converted to array
-            #         time_vector = self.get_times(segment_index=segment_index)
-            #         cached.set_times(time_vector, segment_index=segment_index)
 
             from .binaryfolder import BinaryFolderRecording
 
-            BinaryFolderRecording.write_recording(
+            cached = BinaryFolderRecording.write_recording(
                 self, folder=kwargs["folder"], dtype=kwargs.get("dtype", None), **job_kwargs
             )
-            cached = BinaryFolderRecording(folder_path=kwargs["folder"])
+
 
         elif format == "memory":
             if kwargs.get("sharedmem", True):
@@ -390,12 +354,16 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         elif format == "zarr":
             from .zarrextractors import ZarrRecordingExtractor
 
-            zarr_path = kwargs.pop("zarr_path")
-            storage_options = kwargs.pop("storage_options")
+            folder_path = kwargs["folder"]
+            if isinstance(folder_path, Path) and folder_path.suffix != "zarr":
+                # automatically add the zarr suffix
+                folder_path = folder_path.with_suffix(".zarr")
+
+            storage_options = kwargs.pop("storage_options", None)
             ZarrRecordingExtractor.write_recording(
-                self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
+                self, folder_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
             )
-            cached = ZarrRecordingExtractor(zarr_path, storage_options)
+            cached = ZarrRecordingExtractor(folder_path, storage_options)
             # timestamps are saved and restored in zarr, so no need to set them explicitly
 
         else:
@@ -412,17 +380,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             time_file = folder / f"times_cached_seg{segment_index}.npy"
             if time_file.is_file():
                 time_vector = np.load(time_file, mmap_mode="r")
-                rs.time_vector = time_vector
-
-    # def _extra_metadata_to_folder(self, folder):
-    #     super()._extra_metadata_to_folder(folder)
-
-    #     # save time vector if any
-    #     for segment_index, rs in enumerate(self.segments):
-    #         d = rs.get_times_kwargs()
-    #         time_vector = d["time_vector"]
-    #         if time_vector is not None:
-    #             np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+                rs._time_vector = time_vector
 
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """
@@ -645,6 +603,15 @@ class BaseRecordingSegment(TimeSeriesSegment):
     """
     Abstract class representing a multichannel timeseries, or block of raw ephys traces
     """
+
+    # Segments that know their channel count at construction (e.g. BinaryRecordingSegment,
+    # which needs it before being attached to a parent to compute the on-disk layout) set
+    # self.num_channels. Segments that don't leave it unset and inherit the count from the
+    # parent recording, which is always attached by the time get_traces runs.
+    def get_num_channels(self) -> int:
+        if hasattr(self, "num_channels") and self.num_channels is not None:
+            return self.num_channels
+        return self.parent_extractor.get_num_channels()
 
     def get_traces(
         self,

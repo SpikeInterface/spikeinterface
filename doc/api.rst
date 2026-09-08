@@ -223,6 +223,7 @@ spikeinterface.preprocessing
     .. autofunction:: detect_artifact_periods
     .. autofunction:: detect_artifact_periods_by_envelope
     .. autofunction:: detect_saturation_periods
+    .. autofunction:: detect_and_remove_artifacts
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter

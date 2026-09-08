@@ -85,7 +85,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path, fill_gaps_strategy):
+    def map_to_neo_kwargs(cls, file_path, fill_gaps_strategy=None):
         neo_kwargs = {
             "filename": str(file_path),
             "fill_gaps_strategy": fill_gaps_strategy,

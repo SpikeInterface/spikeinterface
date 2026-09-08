@@ -156,7 +156,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         # update spike clusters and times values
         bad_clusters = [clust for clust in unique_unit_ids if clust not in cluster_info["cluster_id"].values]
         if len(bad_clusters) > 0:
-            # if no bad cluster we avoid this data reduction wich cost a lot for long dataset
+            # if no bad cluster we avoid this data reduction which cost a lot for long dataset
             spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
             spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
             spike_times_clean = spike_times[spike_clusters_clean_idxs]
@@ -165,7 +165,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             spike_times_clean = spike_times
 
         if "si_unit_id" in cluster_info.columns:
-            unit_ids = cluster_info["si_unit_id"].values
+            unit_ids = cluster_info["si_unit_id"].to_numpy(copy=True)
 
             if np.all(np.isnan(unit_ids)):
                 max_si_unit_id = -1
@@ -390,7 +390,7 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
 
     # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
     # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-    duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
+    duration = sorting.segments[0]._all_spike_times[-1] / sampling_frequency + 1
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
@@ -415,8 +415,11 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     )
 
     sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
+    main_channel_indices = _make_main_channel_indices_from_templates(sorting, recording, phy_path)
 
-    sorting_analyzer = create_sorting_analyzer(sorting, recording, sparse=True, sparsity=sparsity)
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, sparse=True, sparsity=sparsity, main_channel_indices=main_channel_indices
+    )
 
     # first compute random spikes. These do nothing, but are needed for si-gui to run
     sorting_analyzer.compute("random_spikes")
@@ -485,6 +488,17 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     # but are zero on many channels, which implicitly defines the sparsity
     mask = np.sum(np.abs(templates), axis=1) != 0
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
+
+
+def _make_main_channel_indices_from_templates(sorting, recording, kilosort_output_path):
+    """Constructs the `main_channel_indices` from kilosort output, by finding the
+    channel containing the largest peak-to-peak value."""
+
+    templates = np.load(kilosort_output_path / "templates.npy")
+    # main channel indices are the argmax of the ptp of the templates, which is the channel with
+    # the largest peak-to-peak amplitude
+    main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+    return main_channel_indices
 
 
 def _make_templates(

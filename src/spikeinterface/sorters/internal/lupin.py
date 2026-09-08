@@ -339,7 +339,7 @@ class LupinSorter(ComponentsBasedSorter):
         if verbose:
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
-        # preestimate the sparsity unsing peaks channel
+        # preestimate the sparsity using peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
         sparsity, unit_locations = compute_sparsity_from_peaks_and_label(
             kept_peaks, spike_vector["unit_index"], sorting_pre_peeler.unit_ids, recording, params["template_radius_um"]

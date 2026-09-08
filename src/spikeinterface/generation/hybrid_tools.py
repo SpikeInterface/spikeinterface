@@ -40,7 +40,7 @@ def estimate_templates_from_recording(
     Parameters
     ----------
     recording : BaseRecording
-        The recording to get temaples from.
+        The recording to get templates from.
     ms_before : float
         The time before peaks of templates.
     ms_after : float
@@ -50,7 +50,7 @@ def estimate_templates_from_recording(
     run_sorter_kwargs : dict
         The parameters to provide to the run_sorter function of spikeinterface.
     job_kwargs : dict
-        The jobe keyword arguments to be used in the estimation of the templates.
+        The job keyword arguments to be used in the estimation of the templates.
 
     Returns
     -------
@@ -245,7 +245,7 @@ def relocate_templates(
         If greater than 0, the templates are allowed to go beyond the borders of the probe.
     favor_borders : bool, default: True
         If True, the templates are always moved to the borders of the probe if this is
-        possoble based on the min_displacement and max_displacement constraints.
+        possible based on the min_displacement and max_displacement constraints.
         This avoids a bias in moving templates towards the center of the probe.
     depth_direction : "x" | "y", default: "y"
         The direction in which to move the templates. Can be "x" or "y"
@@ -375,8 +375,8 @@ def generate_hybrid_recording(
         Dict used to generated template when template not provided.
     seed : int or None
         Seed for random initialization.
-        If None a diffrent Recording is generated at every call.
-        Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
+        If None a different Recording is generated at every call.
+        Note: even with None a generated recording keep internally a seed to regenerate the same signal after dump/load.
 
     Returns
     -------
@@ -564,6 +564,7 @@ def generate_hybrid_recording(
             nbefore=nbefore,
             parent_recording=recording,
             upsample_vector=upsample_vector,
+            amplitude_factor=amplitude_factor,
         )
 
     return hybrid_recording, sorting

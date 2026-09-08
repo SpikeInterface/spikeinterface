@@ -83,6 +83,14 @@ def test_interpolate_templates():
             templates.templates_array, source_locations, dest_locations, interpolation_method=interpolation_method
         )
 
+    interpolate_templates(
+        templates.templates_array,
+        source_locations,
+        dest_locations,
+        interpolation_method="thin_plate",
+        interpolation_kwargs={"neighbors": 12},
+    )
+
 
 def test_move_dense_templates():
     templates = make_some_templates()
@@ -165,7 +173,7 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
 
     num_motion = 29
 
-    # 2 drifts signal with diffarents factor for units
+    # 2 drifts signal with different factor for units
     start = np.array([0, -15.0])
     stop = np.array([0, 12])
     mid = (start + stop) / 2
@@ -179,7 +187,7 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
     displacement_unit_factor[:, 0] = np.linspace(0.7, 0.9, num_units)
     displacement_unit_factor[:, 1] = 0.1
 
-    # precompute discplacements
+    # precompute displacements
     displacements = make_linear_displacement(start, stop, num_step=num_motion)
     drifting_templates.precompute_displacements(displacements)
 
@@ -203,7 +211,7 @@ def test_InjectDriftingTemplatesRecording(create_cache_folder):
         amplitude_factor=None,
     )
 
-    # check serialibility
+    # check serializability
     rec = BaseRecording.from_dict(rec.to_dict())
     print(rec)
 
