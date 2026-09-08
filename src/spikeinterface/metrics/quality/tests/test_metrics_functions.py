@@ -8,6 +8,7 @@ from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
     add_synchrony_to_sorting,
+    generate_recording,
     generate_ground_truth_recording,
     create_sorting_analyzer,
     synthesize_random_firings,
@@ -211,6 +212,27 @@ def test_synchrony_counts_not_all_units():
     sync_count = _get_synchrony_counts(three_spikes, np.array([2, 4, 8]), [0, 1, 2])
 
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
+
+
+def test_synchrony_metrics_do_not_cross_segments():
+    sampling_frequency = 1_000.0
+    samples_list = [[100, 200], [100, 100]]
+    labels_list = [[0, 1], [2, 3]]
+    sorting = NumpySorting.from_samples_and_labels(samples_list, labels_list, sampling_frequency, unit_ids=[0, 1, 2, 3])
+    recording = generate_recording(
+        durations=[1.0, 1.0],
+        sampling_frequency=sampling_frequency,
+        num_channels=4,
+        seed=1205,
+    )
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer)
+
+    expected_sync_spike_2 = {0: 0.0, 1: 0.0, 2: 1.0, 3: 1.0}
+    assert synchrony_metrics.sync_spike_2 == pytest.approx(expected_sync_spike_2)
+    assert np.all(np.array(list(synchrony_metrics.sync_spike_4.values())) == 0)
+    assert np.all(np.array(list(synchrony_metrics.sync_spike_8.values())) == 0)
 
 
 def test_mahalanobis_metrics():
