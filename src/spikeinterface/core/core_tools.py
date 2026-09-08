@@ -846,6 +846,51 @@ def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtract
         values = extractor.get_property(key)
         np.save(folder / f"{key}.npy", values, allow_pickle=True)
 
+def save_annotations_to_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save annotaions in json format from an extractor (recording or sorting).
+    This used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the properties will be saved as .npy files.
+    extractor : BaseExtractor
+        The extractor from which the annotations will be saved.
+    """
+    folder = Path(folder)
+    (folder / "annotations").write_text(json.dumps(extractor._annotations, indent=4), encoding="utf8")
+
+def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save annotaions in json format from an extractor (recording or sorting).
+    This used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the properties will be saved as .npy files.
+    extractor : BaseExtractor
+        The extractor from which the annotations will be saved.
+    """
+    folder = Path(folder)
+    annotations_file = folder / "annotations"
+    if annotations_file.exists():
+        with open(annotations_file, "r") as f:
+            annotations = json.load(f)
+            extractor._annotations.update(annotations)
+    else:
+        # this was before 0.105.0
+        si_folder_json = folder / "si_folder.json"
+        if si_folder_json.is_file():
+            with open(si_folder_json, "r") as f:
+                si_folder_dict = json.load(f)
+            if "annotations" in si_folder_dict:
+                annotations = si_folder_dict["annotations"]
+                extractor._annotations.update(annotations)
+
+
+
 
 def save_extractor_provenance(folder: str | Path, extractor: "BaseExtractor"):
     folder = Path(folder)

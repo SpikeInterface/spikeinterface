@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 from copy import deepcopy
+import warnings
 
 import numpy as np
 
@@ -11,6 +12,8 @@ from .core_tools import (
     make_paths_absolute,
     load_properties_from_binary_folder,
     save_properties_to_binary_folder,
+    save_annotations_to_folder,
+    load_annotations_from_folder,
     save_extractor_provenance,
 )
 
@@ -52,6 +55,7 @@ class NumpyFolderSorting(BaseSorting):
         self._cached_spike_vector = self.spikes
 
         load_properties_from_binary_folder(folder_path / "properties", self)
+        load_annotations_from_folder(folder_path, self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
@@ -74,12 +78,11 @@ class NumpyFolderSorting(BaseSorting):
 
         save_properties_to_binary_folder(save_path / "properties", sorting)
         save_extractor_provenance(save_path, sorting)
+        # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
+        save_annotations_to_folder(save_path, sorting)
 
-        # make the si_folder file to make the load() easier
+        # make the si_folder file to make the load() easier until version 0.105.0
         cached = NumpyFolderSorting(folder_path=save_path)
-        # important backward compatibility : annoations are handled (sadly) only is this file
-        # so we need to set then here (sad hack)
-        cached._annotations = deepcopy({k: sorting._annotations[k] for k in sorting._annotations.keys()})
         si_folder_path = save_path / f"si_folder.json"
         cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
 
@@ -127,12 +130,19 @@ class NpzFolderSorting(NpzSortingExtractor):
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 
         load_properties_from_binary_folder(folder_path / "properties", self)
+        load_annotations_from_folder(folder_path, self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
         self._npz_kwargs = d["kwargs"]
 
     @staticmethod
     def write_sorting(sorting, save_path):
+        warnings.warn(
+            "`NpzFolderSorting.write_sorting()` is deprecated and will be removed in 0.106.0. The NpzFolderSorting() read will stay for a while",
+            category=FutureWarning,
+            stacklevel=2,
+        )
+
         save_path = Path(save_path)
         save_path.mkdir(parents=True, exist_ok=True)
 

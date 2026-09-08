@@ -15,6 +15,8 @@ from .core_tools import (
     load_properties_from_binary_folder,
     save_properties_to_binary_folder,
     save_extractor_provenance,
+    save_annotations_to_folder,
+    load_annotations_from_folder,
 )
 
 
@@ -52,6 +54,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         # Load properties
         load_properties_from_binary_folder(folder_path / "properties", self)
+        load_annotations_from_folder(folder_path, self)
 
         # Load the probegroup
         probe_file = folder_path / "probegroup.json"
@@ -131,6 +134,9 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         save_properties_to_binary_folder(folder / "properties", recording)
         save_extractor_provenance(folder, recording)
+        # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
+        save_annotations_to_folder(folder, recording)
+
 
         if recording.has_probe():
             probegroup = recording.get_probegroup()
@@ -154,26 +160,19 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         )
         binary_rec.dump(folder / "binary.json", relative_to=folder)
 
-        # for segment_index, rs in enumerate(recording.segments):
-        #     d = rs.get_times_kwargs()
-        #     time_vector = d["time_vector"]
-        #     if time_vector is not None:
-        #         np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+        # TODO alessio : remove this, it is needed to pass tests
+        # save times
+        for segment_index, rs in enumerate(recording.segments):
+            d = rs.get_times_kwargs()
+            time_vector = d["time_vector"]
+            if time_vector is not None:
+                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
-        # make the si_folder file to make the load() easier
+
+        # make the si_folder file to make the load() easier until version 0.105.0
         cached = BinaryFolderRecording(folder_path=folder)
-        # important backward compatibility : annoations are handled (sadly) only is this file
-        # so we need to set then here (sad hack)
-        cached._annotations = deepcopy({k: recording._annotations[k] for k in recording._annotations.keys()})
         si_folder_path = folder / f"si_folder.json"
         cached.dump_to_json(file_path=si_folder_path, relative_to=folder, include_extra_metadata=False)
-
-        # # timestamps are not saved in binary, so we have to set them explicitly
-        # for segment_index in range(recording.get_num_segments()):
-        #     if recording.has_time_vector(segment_index):
-        #         # the use of get_times is preferred since timestamps are converted to array
-        #         time_vector = recording.get_times(segment_index=segment_index)
-        #         cached.set_times(time_vector, segment_index=segment_index)
 
         return cached
 
