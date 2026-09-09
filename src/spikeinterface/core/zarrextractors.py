@@ -495,6 +495,7 @@ class ZarrSortingExtractor(BaseSorting):
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
         zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrSortingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
+        return ZarrSortingExtractor(folder_path, storage_options=storage_options)
 
 
 read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")

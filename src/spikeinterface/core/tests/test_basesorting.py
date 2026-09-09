@@ -78,7 +78,7 @@ def test_BaseSorting(create_cache_folder):
     # cache new format : numpy_folder
     folder = cache_folder / "simple_sorting_numpy_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
-    sorting.save(folder=folder, format="numpy_folder")
+    sorting.save(folder=folder, format="binary")
     sorting2 = BaseExtractor.load(folder)
     assert isinstance(sorting2, NumpyFolderSorting)
 
@@ -143,7 +143,7 @@ def test_BaseSorting(create_cache_folder):
 
     # test save to zarr
     # compressor = get_default_zarr_compressor()
-    sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting")
+    sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting.zarr")
     sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
     # annotations is False because Zarr adds compression ratios
     check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
