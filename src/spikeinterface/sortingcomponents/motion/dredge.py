@@ -89,6 +89,10 @@ class DredgeApRegistration:
         These dictionaries allow setting parameters for fine control over the registration
     device : str or torch.device
         What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
+    batching_mode : Literal["full", "online"], default: "full"
+        Which batching_mode to run when computing displacement vector.
+    chunk_len_s=None,
+        If `batching_mode` is "online", how long should each batch be, in seconds.
     """
 
     @classmethod
@@ -174,6 +178,7 @@ def dredge_ap(
     progress_bar=True,
     extra_outputs=False,
     precomputed_D_C_maxdisp=None,
+    chunk_len_s=None,
     batching_mode="full",
 ):
     """Estimate motion from spikes
@@ -357,8 +362,9 @@ def dredge_ap(
 
         # T_total is number of bin_s in recording
         T_total = raster.shape[1]
+        if chunk_len_s is None:
+            chunk_len_s = max(time_horizon_s, int(np.floor(1000 / bin_s)))
 
-        T_chunk = max(time_horizon_s, int(np.floor(100 / bin_s)))
         threshold_kw = dict(
             mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
             in_place=True,
@@ -371,7 +377,7 @@ def dredge_ap(
             raster,
             windows,
             T_total,
-            T_chunk,
+            chunk_len_s,
             spatial_bin_edges_um,
             win_scale_um,
             mincorr_percentile,
