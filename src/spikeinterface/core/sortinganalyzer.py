@@ -466,14 +466,21 @@ class SortingAnalyzer:
         nchan = self.get_num_channels()
         nunits = self.get_num_units()
         txt = f"{clsname}: {nchan} channels - {nunits} units - {nseg} segments - {self.format}"
-        if self.format != "memory" and is_path_remote(self.folder):
-            txt += " (remote)"
+        if self.format != "memory":
+            if is_path_remote(self.folder):
+                if self._lazy:
+                    txt += " (remote + lazy)"
+                else:
+                    txt += " (remote)"
+            elif self._lazy:
+                txt += " (lazy)"
         if self.is_sparse():
             txt += " - sparse"
         if self.has_recording():
             txt += " - has recording"
         if self.has_temporary_recording():
             txt += " - has temporary recording"
+
         ext_txt = f"Loaded {len(self.extensions)} extensions"
         if len(self.extensions) > 0:
             ext_txt += f": {', '.join(self.extensions.keys())}"
@@ -1397,7 +1404,7 @@ class SortingAnalyzer:
             unit_ids = self.unit_ids[units_aggregation_key == key]
             channel_ids = self.channel_ids[channel_aggregation_key == key]
             analyzer_units = self.select_units(unit_ids)
-            analyzer_split = analyzer_units.select_channels(channel_ids)
+            analyzer_split = analyzer_units._select_channels(channel_ids)
             split_analyzers[key] = analyzer_split
 
         return split_analyzers
@@ -1760,7 +1767,7 @@ class SortingAnalyzer:
             folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
 
-    def select_channels(self, channel_ids) -> "SortingAnalyzer":
+    def _select_channels(self, channel_ids) -> "SortingAnalyzer":
         """
         This method is equivalent to `save_as()` but with a subset of channels.
         Filters channels by creating a new sorting analyzer object in a new folder.
@@ -1781,6 +1788,9 @@ class SortingAnalyzer:
         if not np.all(np.isin(channel_ids, self.channel_ids)):
             wrong_channel_ids = [ch for ch in channel_ids if ch not in self.channel_ids]
             raise ValueError(f"Some channel_ids are not in the current channel_ids: {wrong_channel_ids}")
+
+        select_channel_indices_in_old_recording = self.channel_ids_to_indices(channel_ids)
+
         if self.has_recording() or self.has_temporary_recording():
             new_recording = self.recording.select_channels(channel_ids)
             new_rec_attributes = None
@@ -1795,8 +1805,7 @@ class SortingAnalyzer:
                     values_arr = np.array(values)
                     if len(values_arr) == len(self.channel_ids):
                         # only slice properties that have the same length as channel_ids
-                        channel_indices = [np.where(self.channel_ids == id)[0][0] for id in channel_ids]
-                        new_properties[key] = values_arr[channel_indices]
+                        new_properties[key] = values_arr[select_channel_indices_in_old_recording]
                     else:
                         new_properties[key] = values_arr
                 new_rec_attributes["properties"] = new_properties
@@ -1804,8 +1813,9 @@ class SortingAnalyzer:
                 slice_indices = self.channel_ids_to_indices(channel_ids)
                 new_probegroup = new_rec_attributes["probegroup"].get_slice(slice_indices)
                 new_rec_attributes["probegroup"] = new_probegroup
+
         if self.sparsity is not None:
-            sparsity_mask = self.sparsity.mask[:, np.isin(self.channel_ids, channel_ids)]
+            sparsity_mask = self.sparsity.mask[:, select_channel_indices_in_old_recording]
             new_sparsity = ChannelSparsity(sparsity_mask, self.unit_ids, np.array(channel_ids))
         else:
             new_sparsity = None
@@ -2340,11 +2350,18 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             assert ok, f"Extension {extension_name} requires {dependency_name} to be computed first"
 
         extension_instance = extension_class(self)
-        extension_instance.set_params(save=save, **params)
-        if extension_class.need_job_kwargs:
-            extension_instance.run(save=save, verbose=verbose, **job_kwargs)
-        else:
-            extension_instance.run(save=save, verbose=verbose)
+        should_save = save and not self.is_read_only()
+        try:
+            extension_instance.set_params(save=save, **params)
+            if extension_class.need_job_kwargs:
+                extension_instance.run(save=save, verbose=verbose, **job_kwargs)
+            else:
+                extension_instance.run(save=save, verbose=verbose)
+        except (Exception, KeyboardInterrupt):
+            if should_save:
+                extension_instance._delete_extension_folder()
+                self.extensions.pop(extension_name, None)
+            raise
 
         self.extensions[extension_name] = extension_instance
         return extension_instance
@@ -2429,49 +2446,55 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             all_nodes = []
             result_routage = []
             extension_instances = {}
+            try:
+                for extension_name, extension_params in extensions_with_pipeline.items():
+                    extension_class = get_extension_class(extension_name)
+                    assert (
+                        self.has_recording() or self.has_temporary_recording()
+                    ), f"Extension {extension_name} requires the recording"
 
-            for extension_name, extension_params in extensions_with_pipeline.items():
-                extension_class = get_extension_class(extension_name)
-                assert (
-                    self.has_recording() or self.has_temporary_recording()
-                ), f"Extension {extension_name} requires the recording"
+                    for variable_name in extension_class.nodepipeline_variables:
+                        result_routage.append((extension_name, variable_name))
 
-                for variable_name in extension_class.nodepipeline_variables:
-                    result_routage.append((extension_name, variable_name))
+                    extension_instance = extension_class(self)
+                    extension_instance.set_params(save=save, **extension_params)
+                    extension_instances[extension_name] = extension_instance
 
-                extension_instance = extension_class(self)
-                extension_instance.set_params(save=save, **extension_params)
-                extension_instances[extension_name] = extension_instance
+                    nodes = extension_instance.get_pipeline_nodes()
+                    all_nodes.extend(nodes)
 
-                nodes = extension_instance.get_pipeline_nodes()
-                all_nodes.extend(nodes)
+                job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
-            job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
+                t_start = perf_counter()
+                results = run_node_pipeline(
+                    self.recording,
+                    all_nodes,
+                    job_kwargs=job_kwargs,
+                    job_name=job_name,
+                    gather_mode="memory",
+                    squeeze_output=False,
+                    verbose=verbose,
+                )
+                t_end = perf_counter()
+                # for pipeline node extensions we can only track the runtime of the run_node_pipeline
+                runtime_s = t_end - t_start
 
-            t_start = perf_counter()
-            results = run_node_pipeline(
-                self.recording,
-                all_nodes,
-                job_kwargs=job_kwargs,
-                job_name=job_name,
-                gather_mode="memory",
-                squeeze_output=False,
-                verbose=verbose,
-            )
-            t_end = perf_counter()
-            # for pipeline node extensions we can only track the runtime of the run_node_pipeline
-            runtime_s = t_end - t_start
+                for r, result in enumerate(results):
+                    extension_name, variable_name = result_routage[r]
+                    extension_instances[extension_name].data[variable_name] = result
+                    extension_instances[extension_name].run_info["runtime_s"] = runtime_s
+                    extension_instances[extension_name].run_info["run_completed"] = True
 
-            for r, result in enumerate(results):
-                extension_name, variable_name = result_routage[r]
-                extension_instances[extension_name].data[variable_name] = result
-                extension_instances[extension_name].run_info["runtime_s"] = runtime_s
-                extension_instances[extension_name].run_info["run_completed"] = True
-
-            for extension_name, extension_instance in extension_instances.items():
-                self.extensions[extension_name] = extension_instance
-                if save:
-                    extension_instance.save()
+                for extension_name, extension_instance in extension_instances.items():
+                    self.extensions[extension_name] = extension_instance
+                    if save:
+                        extension_instance.save()
+            except (Exception, KeyboardInterrupt):
+                for extension_name, extension_instance in extension_instances.items():
+                    self.extensions.pop(extension_name, None)
+                    if save and not self.is_read_only():
+                        extension_instance._delete_extension_folder()
+                raise
 
         for extension_name, extension_params in extensions_post_pipeline.items():
             extension_class = get_extension_class(extension_name)
@@ -2563,16 +2586,32 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         for extension_name in self.get_saved_extension_names():
             self.load_extension(extension_name)
 
+    def _delete_extension_storage(self, extension_name) -> None:
+        if self.format == "binary_folder":
+            extension_folder = Path(self.folder).joinpath("extensions", extension_name)
+            if extension_folder.is_dir():
+                shutil.rmtree(extension_folder)
+        if self.format == "zarr":
+            import zarr
+
+            zarr_root = self._get_zarr_root(mode="r+")
+            if extension_name in (root := zarr_root["extensions"]):
+                del root[extension_name]
+                zarr.consolidate_metadata(zarr_root.store)
+
     def delete_extension(self, extension_name) -> None:
         """
         Delete the extension from the dict and also in the persistent zarr or folder.
         """
 
         # delete from folder or zarr
-        if self.format != "memory" and self.has_extension(extension_name) and not self._lazy:
-            # need a reload to reset the folder
-            ext = self.load_extension(extension_name)
-            ext.delete()
+        if self.format != "memory" and not self._lazy:
+            if self.has_extension(extension_name):
+                # need a reload to reset the folder
+                ext = self.load_extension(extension_name)
+                ext.delete()
+            else:
+                self._delete_extension_storage(extension_name)
 
         # remove from dict
         self.extensions.pop(extension_name, None)

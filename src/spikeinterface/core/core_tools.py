@@ -13,6 +13,7 @@ from typing import TypeVar, ParamSpec
 
 from probeinterface import ProbeGroup
 import numpy as np
+import zarr
 
 
 def define_function_handling_dict_from_class(source_class, name):
@@ -779,3 +780,26 @@ def is_path_remote(path: str | Path) -> bool:
 def ms_to_samples(ms: float, sampling_frequency: float) -> int:
     """Convert a duration in milliseconds to the nearest number of samples."""
     return round(ms * sampling_frequency / 1000.0)
+
+
+def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -> np.ndarray:
+    """
+    Slice a 2D array to select specific rows based on provided indices.
+
+    Parameters
+    ----------
+    array : np.ndarray | zarr.Array
+        A numpy or zarr array or boolean mask from which rows will be selected.
+    row_indices : np.ndarray | list
+        A list or array of row indices to select from the array.
+
+    Returns
+    -------
+    np.ndarray
+        A new 2D numpy array containing only the selected rows.
+    """
+    if isinstance(array, zarr.Array):
+        # For zarr arrays, we need to convert the list of indices to a numpy array for advanced indexing
+        return array.oindex[row_indices]
+    else:
+        return array[row_indices, ...]

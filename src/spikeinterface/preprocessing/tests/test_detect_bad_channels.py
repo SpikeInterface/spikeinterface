@@ -101,6 +101,97 @@ def test_detect_bad_channels_std_mad():
     ), "wrong channels locations."
 
 
+@pytest.mark.parametrize("pool_engine", ["thread", "process"])
+def test_detect_bad_channels_parallel(pool_engine):
+    num_channels = 16
+    sampling_frequency = 30000.0
+    rng = np.random.default_rng(0)
+    traces_list = [rng.standard_normal((int(sampling_frequency), num_channels)).astype("float32") for _ in range(2)]
+
+    # Inject dead channels: near-zero amplitude makes xcorr_neighbors << dead_channel_threshold (-0.5)
+    dead_channel_indices = [2, 7]
+    for traces in traces_list:
+        traces[:, dead_channel_indices] *= 1e-4
+
+    recording = NumpyRecording(traces_list, sampling_frequency)
+    recording.set_channel_gains(1)
+    recording.set_channel_offsets(0)
+    probe = generate_linear_probe(num_elec=num_channels)
+    probe.set_device_channel_indices(np.arange(num_channels))
+    recording.set_probe(probe)
+    recording.annotate(is_filtered=True)
+
+    method_kwargs = dict(
+        method="coherence+psd",
+        num_random_chunks=4,
+        chunk_duration_s=0.05,
+        seed=0,
+    )
+
+    expected_bad_channel_ids, expected_channel_labels = detect_bad_channels(recording, **method_kwargs)
+    assert np.any(expected_channel_labels != "good"), "Injected dead channels were not detected; test is not meaningful"
+
+    job_kwargs = dict(n_jobs=2, pool_engine=pool_engine, max_threads_per_worker=1)
+    if pool_engine == "process":
+        job_kwargs["mp_context"] = "spawn"
+
+    bad_channel_ids, channel_labels = detect_bad_channels(
+        recording,
+        **method_kwargs,
+        job_kwargs=job_kwargs,
+    )
+
+    np.testing.assert_array_equal(bad_channel_ids, expected_bad_channel_ids)
+    np.testing.assert_array_equal(channel_labels, expected_channel_labels)
+
+
+def test_detect_bad_channels_parallel_unfiltered_spawn():
+    """
+    generate_recording() marks its output as already filtered, so the parallel test above never
+    exercises the highpass_filter() wrapper that detect_bad_channels builds internally for an
+    unfiltered recording. Use a plain NumpyRecording (is_filtered() defaults to False) with a
+    spawned process pool, so that wrapper has to survive cross-process serialization.
+    Dead channels are injected (near-zero amplitude) so that the test exercises non-good-channel
+    paths, not just an all-good result.
+    """
+    num_channels = 16
+    sampling_frequency = 30000.0
+    rng = np.random.default_rng(0)
+    traces_list = [rng.standard_normal((int(sampling_frequency), num_channels)).astype("float32") for _ in range(2)]
+
+    # Inject dead channels: near-zero amplitude makes xcorr_neighbors << dead_channel_threshold (-0.5)
+    dead_channel_indices = [3, 10]
+    for traces in traces_list:
+        traces[:, dead_channel_indices] *= 1e-4
+
+    recording = NumpyRecording(traces_list, sampling_frequency)
+    recording.set_channel_gains(1)
+    recording.set_channel_offsets(0)
+    probe = generate_linear_probe(num_elec=num_channels)
+    probe.set_device_channel_indices(np.arange(num_channels))
+    recording.set_probe(probe)
+    assert not recording.is_filtered()
+
+    method_kwargs = dict(
+        method="coherence+psd",
+        num_random_chunks=4,
+        chunk_duration_s=0.05,
+        seed=0,
+    )
+
+    expected_bad_channel_ids, expected_channel_labels = detect_bad_channels(recording, **method_kwargs)
+    assert np.any(expected_channel_labels != "good"), "Injected dead channels were not detected; test is not meaningful"
+
+    bad_channel_ids, channel_labels = detect_bad_channels(
+        recording,
+        **method_kwargs,
+        job_kwargs=dict(n_jobs=2, pool_engine="process", mp_context="spawn", max_threads_per_worker=1),
+    )
+
+    np.testing.assert_array_equal(bad_channel_ids, expected_bad_channel_ids)
+    np.testing.assert_array_equal(channel_labels, expected_channel_labels)
+
+
 @pytest.mark.parametrize("outside_channels_location", ["bottom", "top", "both"])
 def test_detect_bad_channels_extremes(outside_channels_location):
     num_channels = 64
