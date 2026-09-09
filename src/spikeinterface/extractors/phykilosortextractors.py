@@ -7,7 +7,7 @@ from spikeinterface.core import (
     BaseSorting,
     BaseSortingSegment,
     read_python,
-    generate_ground_truth_recording,
+    MockRecording,
     ChannelSparsity,
     ComputeTemplates,
     create_sorting_analyzer,
@@ -363,9 +363,10 @@ def read_kilosort_as_analyzer(
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
     recording : BaseRecording
-        A spikeinterface Recording object which will be attached to the analyzer
+        A spikeinterface Recording object which will be attached to the analyzer.
+        This should be the recording passed to Kilosort.
     unwhiten : bool, default: True
-        Unwhiten the templates computed by kilosort.
+        Unwhiten the templates computed by Kilosort.
     gain_to_uV : float | None, default: None
         The gain to apply to convert traces to uV
     offset_to_uV : float | None, default: None
@@ -407,7 +408,7 @@ def read_kilosort_as_analyzer(
         probegroup = ProbeGroup()
         probegroup.add_probe(probe)
     else:
-        AssertionError(f"Cannot read probe layout from folder {phy_path}.")
+        raise AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
     if recording is not None:
         channel_map = np.load(phy_path / "channel_map.npy")
@@ -419,18 +420,17 @@ def read_kilosort_as_analyzer(
 
         # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
         # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-        duration = sorting.segments[0]._all_spikes[-1] / sampling_frequency + 1
+        duration = sorting.segments[0]._all_spike_times[-1] / sampling_frequency + 1
 
         # to make the initial analyzer, we'll use a fake recording and set it to None later
         recordings = []
         for probe in probegroup.probes:
-            one_recording, _ = generate_ground_truth_recording(
-                probe=probe,
+            one_recording = MockRecording(
                 sampling_frequency=sampling_frequency,
                 durations=[duration],
-                num_units=1,
-                seed=1205,
+                num_channels=probe.get_contact_count(),
             )
+            one_recording.set_probe(probe)
             recordings.append(one_recording)
         recording = aggregate_channels(recordings)
 
