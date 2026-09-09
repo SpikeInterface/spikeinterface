@@ -141,9 +141,23 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         file_paths = [folder_path / f"traces_cached_seg{i}.raw" for i in range(recording.get_num_segments())]
         if dtype is None:
             dtype = recording.get_dtype()
-        t_starts = recording._get_t_starts()
+        # Check if there are any time vectors
+        t_starts = recording.get_segment_t_starts()
+        if recording.has_any_time_vector():
+            file_timestamps_paths = [
+                folder_path / f"times_cached_seg{i}.raw" for i in range(recording.get_num_segments())
+            ]
+        else:
+            file_timestamps_paths = None
 
-        write_binary(recording, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
+        write_binary(
+            recording,
+            file_paths=file_paths,
+            file_timestamps_paths=file_timestamps_paths,
+            dtype=dtype,
+            verbose=verbose,
+            **job_kwargs,
+        )
 
         save_properties_to_binary_folder(folder_path / "properties", recording)
         save_extractor_provenance(folder_path, recording)
@@ -156,9 +170,9 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
 
         # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
         # See the __init__
-
         binary_rec = BinaryRecordingExtractor(
             file_paths=file_paths,
+            file_timestamps_paths=file_timestamps_paths,
             sampling_frequency=recording.get_sampling_frequency(),
             num_channels=recording.get_num_channels(),
             dtype=dtype,
@@ -172,18 +186,18 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         )
         binary_rec.dump(folder_path / "binary.json", relative_to=folder_path)
 
-        # TODO alessio : remove this, it is needed to pass tests
-        # save times
-        for segment_index, rs in enumerate(recording.segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
-            if time_vector is not None:
-                np.save(folder_path / f"times_cached_seg{segment_index}.npy", time_vector)
-
-        # make the si_folder file to make the load() easier until version 0.105.0
+        # Create the si_folder file to make the load() easier until version 0.105.0
+        # All properties, annotations, and probe information are already saved in the folder,
+        # so we don't need to include them in the si_folder.json
         cached = BinaryFolderRecording(folder_path=folder_path)
         si_folder_path = folder_path / f"si_folder.json"
-        cached.dump_to_json(file_path=si_folder_path, relative_to=folder_path, include_extra_metadata=False)
+        cached.dump_to_json(
+            file_path=si_folder_path,
+            relative_to=folder_path,
+            include_properties=False,
+            include_annotations=False,
+            include_extra_metadata=False,
+        )
 
         return cached
 

@@ -33,6 +33,8 @@ class TimeSeries(ABC):
     """
 
     _preferred_mp_context = None
+    # Flag to indicate whether time info has been modified in-memory (e.g. by set_times or shift_times).
+    _time_info_modified = False
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -216,9 +218,7 @@ class TimeSeries(ABC):
             True if the recording has time vectors, False otherwise
         """
         segment_index = self._check_segment_index(segment_index)
-        rs = self.segments[segment_index]
-        d = rs.get_times_kwargs()
-        return d["time_vector"] is not None
+        return self.segments[segment_index].has_time_vector()
 
     def set_times(self, times, segment_index=None, with_warning=True):
         """Set times for a recording segment.
@@ -248,6 +248,7 @@ class TimeSeries(ABC):
                 "times are not always propagated across preprocessing"
                 "Use this carefully!"
             )
+        self._time_info_modified = True
 
     def reset_times(self):
         """
@@ -262,6 +263,7 @@ class TimeSeries(ABC):
                 rs._time_vector = None
             rs._t_start = None
             rs._sampling_frequency = self.sampling_frequency
+        self._time_info_modified = True
 
     def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
         """
@@ -297,6 +299,7 @@ class TimeSeries(ABC):
             else:
                 new_start_time = 0 + shift if rs._t_start is None else rs._t_start + shift
                 rs._t_start = new_start_time
+        self._time_info_modified = True
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
@@ -361,7 +364,7 @@ class TimeSeries(ABC):
         duration = sum([self.get_duration(segment_index) for segment_index in range(self.get_num_segments())])
         return duration
 
-    def _get_t_starts(self):
+    def get_segment_t_starts(self):
         # handle t_starts
         t_starts = []
         for rs in self.segments:
@@ -372,14 +375,11 @@ class TimeSeries(ABC):
             t_starts = None
         return t_starts
 
-    def _get_time_vectors(self):
-        time_vectors = []
+    def has_any_time_vector(self):
         for rs in self.segments:
-            d = rs.get_times_kwargs()
-            time_vectors.append(d["time_vector"])
-        if all(time_vector is None for time_vector in time_vectors):
-            time_vectors = None
-        return time_vectors
+            if rs.has_time_vector():
+                return True
+        return False
 
 
 def _searchsorted_right_lazy(time_vector: TimeVector, time_s: float | np.ndarray) -> np.int64 | np.ndarray:
@@ -520,6 +520,17 @@ class TimeSeriesSegment(BaseSegment):
             sample_index = _searchsorted_right_lazy(self._time_vector, time_s) - 1
 
         return sample_index
+
+    def has_time_vector(self) -> bool:
+        """
+        Returns whether the segment has a time vector.
+
+        Returns
+        -------
+        bool
+            True if the segment has a time vector, False otherwise.
+        """
+        return self._time_vector is not None
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal segment

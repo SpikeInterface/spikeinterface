@@ -9,8 +9,7 @@ import numpy as np
 from numpy.testing import assert_raises
 
 from probeinterface import Probe
-from spikeinterface.core import generate_snippets
-from spikeinterface.core import NumpySnippets, load
+from spikeinterface.core import generate_snippets, load, NumpySnippets
 from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 from spikeinterface.core.base import BaseExtractor
 
@@ -94,12 +93,12 @@ def test_BaseSnippets(create_cache_folder):
 
     # dump/load json
     snippets.dump_to_json(cache_folder / "test_BaseSnippets.json")
-    snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets.json")
+    snippets2 = load(cache_folder / "test_BaseSnippets.json")
     snippets3 = load(cache_folder / "test_BaseSnippets.json")
 
     # dump/load pickle
     snippets.dump_to_pickle(cache_folder / "test_BaseSnippets.pkl")
-    snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets.pkl")
+    snippets2 = load(cache_folder / "test_BaseSnippets.pkl")
     snippets3 = load(cache_folder / "test_BaseSnippets.pkl")
 
     # dump/load dict - relative
@@ -109,14 +108,14 @@ def test_BaseSnippets(create_cache_folder):
 
     # dump/load json
     snippets.dump_to_json(cache_folder / "test_BaseSnippets_rel.json", relative_to=cache_folder)
-    snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
+    snippets2 = load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
     snippets3 = load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
 
     # cache to npy
     folder = cache_folder / "simple_snippets"
     print(folder)
     snippets.save(format="npy", folder=folder)
-    snippets2 = BaseExtractor.load(folder)
+    snippets2 = load(folder)
     assert "quality" in snippets2.get_property_keys()
     values = snippets2.get_property("quality")
     assert values[0] == 1.0
@@ -127,7 +126,7 @@ def test_BaseSnippets(create_cache_folder):
     assert np.array_equal(groups, [0, 0, 1])
 
     # but also possible
-    snippets3 = BaseExtractor.load(cache_folder / "simple_snippets")
+    snippets3 = load(cache_folder / "simple_snippets")
 
     # cache to memory
     snippets4 = snippets3.save(format="memory")

@@ -849,34 +849,35 @@ def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtract
 
 def save_annotations_to_folder(folder: str | Path, extractor: "BaseExtractor"):
     """
-    Save annotaions in json format from an extractor (recording or sorting).
+    Save annotations in json format from an extractor (recording or sorting).
     This used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0
 
     Parameters
     ----------
     folder : str or Path
-        The folder where the properties will be saved as .npy files.
+        The folder where the annotations will be saved as a json file.
     extractor : BaseExtractor
         The extractor from which the annotations will be saved.
     """
     folder = Path(folder)
-    (folder / "annotations").write_text(json.dumps(extractor._annotations, indent=4), encoding="utf8")
+    print(f"Saving annotations to {folder / 'annotations.json'}: {extractor._annotations}")
+    (folder / "annotations.json").write_text(json.dumps(extractor._annotations, indent=4), encoding="utf8")
 
 
 def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor"):
     """
-    Save annotaions in json format from an extractor (recording or sorting).
+    Load annotations in json format from an extractor (recording or sorting).
     This used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0
 
     Parameters
     ----------
     folder : str or Path
-        The folder where the properties will be saved as .npy files.
+        The folder where the annotations will be loaded from.
     extractor : BaseExtractor
-        The extractor from which the annotations will be saved.
+        The extractor to which the annotations will be added.
     """
     folder = Path(folder)
-    annotations_file = folder / "annotations"
+    annotations_file = folder / "annotations.json"
     if annotations_file.exists():
         with open(annotations_file, "r") as f:
             annotations = json.load(f)

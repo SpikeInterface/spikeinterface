@@ -245,7 +245,7 @@ def _load_object_from_folder(folder, object_type: str, **kwargs):
                 f = folder / f"cached.{dump_ext}"
                 if f.is_file():
                     si_file = f
-        return BaseExtractor.load(si_file, base_folder=folder)
+        return load(si_file, base_folder=folder)
 
     elif object_type.startswith("Group"):
 

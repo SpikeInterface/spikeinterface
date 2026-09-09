@@ -56,14 +56,14 @@ def test_BaseSorting(create_cache_folder):
 
     # dump/load json
     sorting.dump_to_json(cache_folder / "test_BaseSorting.json")
-    sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.json")
+    sorting2 = load(cache_folder / "test_BaseSorting.json")
     sorting3 = load(cache_folder / "test_BaseSorting.json")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=False)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     sorting.dump_to_pickle(cache_folder / "test_BaseSorting.pkl")
-    sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.pkl")
+    sorting2 = load(cache_folder / "test_BaseSorting.pkl")
     sorting3 = load(cache_folder / "test_BaseSorting.pkl")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
@@ -72,18 +72,18 @@ def test_BaseSorting(create_cache_folder):
     folder = cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="npz_folder")
-    sorting2 = BaseExtractor.load(folder)
+    sorting2 = load(folder)
     assert isinstance(sorting2, NpzFolderSorting)
 
-    # cache new format : numpy_folder
-    folder = cache_folder / "simple_sorting_numpy_folder"
+    # cache new format : binary
+    folder = cache_folder / "simple_sorting_binary"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="binary")
-    sorting2 = BaseExtractor.load(folder)
+    sorting2 = load(folder)
     assert isinstance(sorting2, NumpyFolderSorting)
 
     # but also possible
-    sorting3 = BaseExtractor.load(folder)
+    sorting3 = load(folder)
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 

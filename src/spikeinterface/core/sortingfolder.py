@@ -28,7 +28,7 @@ class NumpyFolderSorting(BaseSorting):
       * a "numpysorting_info.json" containing sampling_frequency, unit_ids and num_segments
       * a metadata folder for units properties.
 
-    It is created with the function: `sorting.save(folder="/myfolder", format="numpy_folder")`
+    It is created with the function: `sorting.save(folder="/myfolder", format="binary")`
 
     """
 
@@ -85,10 +85,18 @@ class NumpyFolderSorting(BaseSorting):
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder_path, sorting)
 
-        # make the si_folder file to make the load() easier until version 0.105.0
+        # Create the si_folder file to make the load() easier until version 0.105.0
+        # All properties, annotations, and probe information are already saved in the folder,
+        # so we don't need to include them in the si_folder.json
         cached = NumpyFolderSorting(folder_path=folder_path)
         si_folder_path = folder_path / f"si_folder.json"
-        cached.dump_to_json(file_path=si_folder_path, relative_to=folder_path, include_extra_metadata=False)
+        cached.dump_to_json(
+            file_path=si_folder_path,
+            relative_to=folder_path,
+            include_extra_metadata=False,
+            include_properties=False,
+            include_annotations=False,
+        )
 
         return cached
 

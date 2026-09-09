@@ -488,7 +488,6 @@ class BaseExtractor:
         include_properties: bool = False,
         include_extra_metadata: bool = True,
         relative_to: str | Path | None = None,
-        folder_metadata=None,
         recursive: bool = False,
     ) -> dict:
         """
@@ -516,9 +515,6 @@ class BaseExtractor:
             If provided, file and folder paths will be made relative to this path,
             enabling portability in folder formats such as the waveform extractor,
             by default None.
-        folder_metadata : str | Path | None, default: None
-            Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
-            in numpy `npy` format, by default None.
         recursive : bool, default: False
             If True, recursively apply `to_dict` to dictionaries within the kwargs, by default False.
 
@@ -539,13 +535,11 @@ class BaseExtractor:
                 "relative_paths": <whether paths are relative>,
                 "annotations": <annotations dictionary, if `include_annotations` is True>,
                 "properties": <properties dictionary, if `include_properties` is True>,
-                "folder_metadata": <relative path to folder_metadata, if specified>
             }
 
         Notes
         -----
         - The `relative_to` argument only has an effect if `recursive` is set to True.
-        - The `folder_metadata` argument will be made relative to `relative_to` if both are specified.
         - The `version` field in the resulting dictionary reflects the version of the module
           from which the extractor class originates.
         - The full class attribute above is the full import of the class, e.g.
@@ -562,9 +556,8 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                # make_paths_relative() will make the recusrivity later:
+                # make_paths_relative() will make the recursivity later:
                 relative_to=None,
-                folder_metadata=folder_metadata,
                 recursive=recursive,
             )
 
@@ -588,7 +581,9 @@ class BaseExtractor:
             dump_dict["annotations"] = self._annotations
         else:
             # include only main annotations
-            dump_dict["annotations"] = {k: self._annotations.get(k, None) for k in self._main_annotations}
+            dump_dict["annotations"] = {
+                k: self._annotations.get(k) for k in self._main_annotations if self._annotations.get(k) is not None
+            }
 
         if include_properties:
             dump_dict["properties"] = self._properties
@@ -610,11 +605,6 @@ class BaseExtractor:
                 # So let's switch back to absolute path, but silently!
                 # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
                 dump_dict["relative_paths"] = False
-
-        if folder_metadata is not None:
-            if relative_to is not None:
-                folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
-            dump_dict["folder_metadata"] = str(folder_metadata)
 
         if include_extra_metadata:
             self._extra_metadata_to_dict(dump_dict)
@@ -644,13 +634,6 @@ class BaseExtractor:
             dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
 
-        # TODO sam : need to check but normally this is not usefull anymore
-        # folder_metadata = dictionary.get("folder_metadata", None)
-        # if folder_metadata is not None:
-        #     folder_metadata = Path(folder_metadata)
-        #     if dictionary.get("relative_paths", False):
-        #         folder_metadata = base_folder / folder_metadata
-        #     load_properties_from_binary_folder(folder_metadata, self)
         return extractor
 
     def clone(self) -> "BaseExtractor":
@@ -711,7 +694,7 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path: str | Path, relative_to=None, folder_metadata=None) -> None:
+    def dump(self, file_path: str | Path, relative_to=None) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -724,9 +707,9 @@ class BaseExtractor:
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         if str(file_path).endswith(".json"):
-            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_json(file_path, relative_to=relative_to)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_pickle(file_path, relative_to=relative_to)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -734,8 +717,9 @@ class BaseExtractor:
         self,
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
-        folder_metadata: str | Path | None = None,
         include_extra_metadata: bool = True,
+        include_properties: bool = False,
+        include_annotations: bool = True,
     ) -> None:
         """
         Dump recording extractor to json file.
@@ -748,8 +732,12 @@ class BaseExtractor:
         relative_to: str, Path, True or None
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
-        folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties
+        include_extra_metadata: bool
+            If True, extra metadata is included in the json file. This is useful for saving probe
+        include_properties: bool
+            If True, all properties are dumped
+        include_annotations: bool
+            If True, all annotations are dumped
         """
         assert self.check_serializability("json"), "The extractor is not json serializable"
 
@@ -759,11 +747,10 @@ class BaseExtractor:
             relative_to = relative_to.resolve().absolute()
 
         dump_dict = self.to_dict(
-            include_annotations=True,
-            include_properties=False,
+            include_annotations=include_annotations,
+            include_properties=include_properties,
             include_extra_metadata=include_extra_metadata,
             relative_to=relative_to,
-            folder_metadata=folder_metadata,
             recursive=True,
         )
         file_path = self._get_file_path(file_path, [".json"])
@@ -778,7 +765,6 @@ class BaseExtractor:
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
         include_properties: bool = True,
-        folder_metadata: str | Path | None = None,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -793,8 +779,6 @@ class BaseExtractor:
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         include_properties: bool
             If True, all properties are dumped
-        folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
         assert self.check_serializability("pickle"), "The extractor is not serializable to file with pickle"
 
@@ -810,7 +794,6 @@ class BaseExtractor:
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
-            folder_metadata=folder_metadata,
             relative_to=relative_to,
             recursive=recursive,
         )
