@@ -49,8 +49,9 @@ jobs:
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: ${{ runner.os }}-datasets
+          key: datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: datasets
+          enableCrossOsArchive: true
       - name: Install packages
         uses: ./.github/actions/build-test-environment
       - name: Pip list
