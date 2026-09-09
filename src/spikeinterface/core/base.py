@@ -855,12 +855,6 @@ class BaseExtractor:
         warnings.warn("save_to_memory() should be save(format='memory')", FutureWarning)
         return self.save(format="memory", sharedmem=sharedmem, **save_kwargs)
 
-        # save_kwargs.pop("format", None)
-
-        # cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
-        # self.copy_metadata(cached)
-        # return cached
-
     def save(self):
         # Need to be implemented in Recording and Sorting
         raise NotImplementedError()
@@ -878,63 +872,17 @@ class BaseExtractor:
 
         The 'new' way is :
           * recording.save(format='binary', folder=...)
-          * sorting.save(format='numpy_folder', folder=...)
+          * sorting.save(format='binary', folder=...)
         """
 
         warnings.warn(
             "save_to_folder() should be recording.save(format='binary') "
-            "or sorting.save(format='numpy_folder') "
+            "or sorting.save(format='binary') "
             "This ambiguous method should not be used anymore!!",
             FutureWarning,
         )
         # we keep the default format for recording and sorting like in old version
         return self.save(folder=folder, verbose=verbose, **save_kwargs)
-
-        # if folder is None:
-        #     cache_folder = get_global_tmp_folder()
-        #     if name is None:
-        #         name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-        #         folder = cache_folder / name
-        #         if verbose:
-        #             print(f"Use cache_folder={folder}")
-        #     else:
-        #         folder = cache_folder / name
-        #         if not is_set_global_tmp_folder():
-        #             if verbose:
-        #                 print(f"Use cache_folder={folder}")
-        # else:
-        #     folder = Path(folder)
-        # if overwrite and folder.is_dir():
-        #     import shutil
-
-        #     shutil.rmtree(folder)
-
-        # assert not folder.exists(), f"folder {folder} already exists, choose another name or use overwrite=True"
-        # folder.mkdir(parents=True, exist_ok=False)
-
-        # # dump provenance
-        # provenance_file_path = folder / f"provenance.json"
-        # if self.check_serializability("json"):
-        #     self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
-        # elif self.check_serializability("pickle"):
-        #     provenance_file = folder / f"provenance.pkl"
-        #     self.dump_to_pickle(provenance_file, relative_to=folder)
-        # else:
-        #     warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
-
-        # # save data (done the subclass)
-        # self.save_metadata_to_folder(folder)
-        # cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
-        # cached.load_metadata_from_folder(folder)
-
-        # # copy properties/
-        # self.copy_metadata(cached)
-
-        # # Dump the extractor to json file
-        # si_folder_path = folder / f"si_folder.json"
-        # cached.dump_to_json(file_path=si_folder_path, relative_to=folder)
-
-        # return cached
 
     def save_to_zarr(
         self,

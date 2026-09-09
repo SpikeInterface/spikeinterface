@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 from copy import deepcopy
+import shutil
 import warnings
 
 import numpy as np
@@ -60,31 +61,34 @@ class NumpyFolderSorting(BaseSorting):
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
     @staticmethod
-    def write_sorting(sorting, save_path):
+    def write_sorting(sorting, folder_path, overwrite: bool = False):
         # the folder can already exists but not contaning numpysorting_info.json
-        save_path = Path(save_path)
-        save_path.mkdir(parents=True, exist_ok=True)
+        folder_path = Path(folder_path)
+        if folder_path.is_dir():
+            if not overwrite:
+                raise ValueError("NumpyFolderSorting.write_sorting the folder already exists")
+            else:
+                shutil.rmtree(folder_path)
+        folder_path.mkdir(parents=True, exist_ok=True)
 
-        info_file = save_path / "numpysorting_info.json"
-        if info_file.exists():
-            raise ValueError("NumpyFolderSorting.write_sorting the folder already contains numpysorting_info.json")
+        info_file = folder_path / "numpysorting_info.json"
         d = {
             "sampling_frequency": float(sorting.get_sampling_frequency()),
             "unit_ids": sorting.unit_ids.tolist(),
             "num_segments": sorting.get_num_segments(),
         }
         info_file.write_text(json.dumps(d), encoding="utf8")
-        np.save(save_path / "spikes.npy", sorting.to_spike_vector())
+        np.save(folder_path / "spikes.npy", sorting.to_spike_vector())
 
-        save_properties_to_binary_folder(save_path / "properties", sorting)
-        save_extractor_provenance(save_path, sorting)
+        save_properties_to_binary_folder(folder_path / "properties", sorting)
+        save_extractor_provenance(folder_path, sorting)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
-        save_annotations_to_folder(save_path, sorting)
+        save_annotations_to_folder(folder_path, sorting)
 
         # make the si_folder file to make the load() easier until version 0.105.0
-        cached = NumpyFolderSorting(folder_path=save_path)
-        si_folder_path = save_path / f"si_folder.json"
-        cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
+        cached = NumpyFolderSorting(folder_path=folder_path)
+        si_folder_path = folder_path / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=folder_path, include_extra_metadata=False)
 
         return cached
 

@@ -1,5 +1,3 @@
-from .base import BaseSegment
-from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
 
@@ -7,9 +5,8 @@ from copy import deepcopy
 
 from pathlib import Path
 
-from .core_tools import save_properties_to_binary_folder
-
-# snippets segments?
+from .base import BaseSegment
+from .baserecordingsnippets import BaseRecordingSnippets
 
 
 class BaseSnippets(BaseRecordingSnippets):
@@ -21,6 +18,12 @@ class BaseSnippets(BaseRecordingSnippets):
     _main_features = []
 
     def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
+        warn(
+            "`BaseSnippets` is deprecated and will be removed in version 0.106.0."
+            "Only continuous recordings with `BaseRecording` will be supported.",
+            FutureWarning,
+            stacklevel=2,
+        )
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
@@ -213,9 +216,11 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def save(self, format="npy", **save_kwargs):
         """
-        At the moment only "npy" and "memory" avaiable:
-        """
+        Save a `BaseSnippets` object to a specified format:
 
+        * "npy"
+        * "memory"
+        """
         if format == "npy":
             from spikeinterface.core.npyfoldersnippets import NpyFolderSnippets
 
@@ -240,13 +245,11 @@ class BaseSnippets(BaseRecordingSnippets):
                 nbefore=self.nbefore,
                 channel_ids=self.channel_ids,
             )
-
+            if self.has_probe():
+                probegroup = self.get_probegroup()
+                cached.set_probegroup(probegroup)
         else:
             raise ValueError(f"format {format} not supported")
-
-        if self.has_probe():
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
 
         return cached
 

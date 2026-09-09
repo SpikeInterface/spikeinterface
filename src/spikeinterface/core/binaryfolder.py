@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 
 from copy import deepcopy
+import shutil
 
 import numpy as np
 
@@ -117,29 +118,41 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         return d
 
     @staticmethod
-    def write_recording(recording: BaseRecording, folder: str | Path, dtype=None, verbose=False, **job_kwargs):
+    def write_recording(
+        recording: BaseRecording,
+        folder_path: str | Path,
+        verbose: bool = False,
+        overwrite: bool = False,
+        dtype=None,
+        **job_kwargs,
+    ):
         from .time_series_tools import write_binary
         from .binaryrecordingextractor import BinaryRecordingExtractor
         from .binaryfolder import BinaryFolderRecording
 
-        folder = Path(folder)
-        folder.mkdir(exist_ok=False)
+        folder_path = Path(folder_path)
+        if folder_path.is_dir():
+            if not overwrite:
+                raise FileExistsError(f"Folder {folder_path} already exists. Use overwrite=True to overwrite it.")
+            else:
+                shutil.rmtree(folder_path)
+        folder_path.mkdir(exist_ok=False, parents=True)
 
-        file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(recording.get_num_segments())]
+        file_paths = [folder_path / f"traces_cached_seg{i}.raw" for i in range(recording.get_num_segments())]
         if dtype is None:
             dtype = recording.get_dtype()
         t_starts = recording._get_t_starts()
 
         write_binary(recording, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
 
-        save_properties_to_binary_folder(folder / "properties", recording)
-        save_extractor_provenance(folder, recording)
+        save_properties_to_binary_folder(folder_path / "properties", recording)
+        save_extractor_provenance(folder_path, recording)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
-        save_annotations_to_folder(folder, recording)
+        save_annotations_to_folder(folder_path, recording)
 
         if recording.has_probe():
             probegroup = recording.get_probegroup()
-            write_probeinterface(folder / "probegroup.json", probegroup)
+            write_probeinterface(folder_path / "probegroup.json", probegroup)
 
         # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
         # See the __init__
@@ -157,7 +170,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             gain_to_uV=recording.get_channel_gains(),
             offset_to_uV=recording.get_channel_offsets(),
         )
-        binary_rec.dump(folder / "binary.json", relative_to=folder)
+        binary_rec.dump(folder_path / "binary.json", relative_to=folder_path)
 
         # TODO alessio : remove this, it is needed to pass tests
         # save times
@@ -165,12 +178,12 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             d = rs.get_times_kwargs()
             time_vector = d["time_vector"]
             if time_vector is not None:
-                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+                np.save(folder_path / f"times_cached_seg{segment_index}.npy", time_vector)
 
         # make the si_folder file to make the load() easier until version 0.105.0
-        cached = BinaryFolderRecording(folder_path=folder)
-        si_folder_path = folder / f"si_folder.json"
-        cached.dump_to_json(file_path=si_folder_path, relative_to=folder, include_extra_metadata=False)
+        cached = BinaryFolderRecording(folder_path=folder_path)
+        si_folder_path = folder_path / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=folder_path, include_extra_metadata=False)
 
         return cached
 

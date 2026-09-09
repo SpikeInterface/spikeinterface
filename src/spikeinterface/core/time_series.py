@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 # The backing store depends on how the recording was created/loaded:
 #   - np.ndarray : set_times() (writeable, in-memory)
 #   - np.memmap  : BinaryFolderRecording load via np.load(..., mmap_mode="r")
-#                  -- *read-only* ; see BaseRecording._extra_metadata_from_folder
+#                  -- *read-only* ; see BinaryFolderRecording.__init__
 #   - zarr.Array : ZarrRecordingExtractor load
 #                  -- *read-only* ; see ZarrRecordingExtractor.__init__
 # Code reading `._time_vector` must not assume it is writeable (see `shift_times`).
