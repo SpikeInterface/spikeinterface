@@ -475,7 +475,7 @@ Drift
     .. autofunction:: generate_displacement_vector
     .. autofunction:: make_one_displacement_vector
     .. autofunction:: make_linear_displacement
-    .. autofunction:: move_dense_templates
+    .. autofunction:: move_all_dense_templates_by_displacement
     .. autofunction:: interpolate_templates
     .. autoclass:: DriftingTemplates
     .. autoclass:: InjectDriftingTemplatesRecording

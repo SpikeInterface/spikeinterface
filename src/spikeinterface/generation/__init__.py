@@ -1,5 +1,5 @@
 from .drift_tools import (
-    move_dense_templates,
+    move_all_dense_templates_by_displacement,
     interpolate_templates,
     DriftingTemplates,
     InjectDriftingTemplatesRecording,

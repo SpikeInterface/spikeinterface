@@ -5,10 +5,8 @@ import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
 from spikeinterface.core.generate import (
-    generate_templates,
     generate_unit_locations,
     generate_sorting,
-    InjectTemplatesRecording,
     _ensure_seed,
     synthesize_amplitude_factor,
 )
@@ -16,10 +14,11 @@ from spikeinterface.core.generate import (
 from spikeinterface.core.motion import Motion
 from spikeinterface.generation.drift_tools import (
     InjectDriftingTemplatesRecording,
-    DriftingTemplates,
+    check_relocation_within_source_hull,
+    generate_drifting_templates_by_interpolation,
+    generate_drifting_templates_synthetic,
     make_linear_displacement,
-    interpolate_templates,
-    move_dense_templates,
+    move_all_dense_templates_by_displacement,
 )
 
 
@@ -295,7 +294,7 @@ def relocate_templates(
                     displacement = -displacement
         displacement_vector = np.zeros(2)
         displacement_vector[depth_dimension] = displacement
-        templates_array_moved[i] = move_dense_templates(
+        templates_array_moved[i] = move_all_dense_templates_by_displacement(
             templates.templates_array[i][None],
             displacements=displacement_vector[None],
             source_probe=templates.probe,
@@ -316,12 +315,10 @@ def generate_hybrid_recording(
     recording: BaseRecording,
     sorting: BaseSorting | None = None,
     templates: Templates | None = None,
+    relocate_templates: bool = True,
     motion: Motion | None = None,
-    are_templates_scaled: bool = True,
     unit_locations: np.ndarray | None = None,
     drift_step_um: float = 1.0,
-    upsample_factor: int | None = None,
-    upsample_vector: np.ndarray | None = None,
     amplitude_std: float = 0.05,
     amplitude_factor: np.ndarray | None = None,
     generate_sorting_kwargs: dict = dict(num_units=10, firing_rates=15, refractory_period_ms=4.0, seed=2205),
@@ -352,18 +349,13 @@ def generate_hybrid_recording(
         If None they are generated.
     motion : Motion | None, default: None
         The motion object to use for the drifting templates.
-    are_templates_scaled : bool, default: True
-        If True, the templates are assumed to be in uV, otherwise in the same unit as the recording.
-        In case the recording has scaling, the templates are "unscaled" before injection.
     unit_locations : np.array, default: None
-        The locations at which the templates should be injected. If not provided, generated (see
-        generate_unit_location_kwargs).
+        The locations at which the templates should be injected. If not provided, they are randomly generated,
+        unless relocate_templates is False. (see `generate_unit_locations_kwargs`).
+    relocate_templates : bool, default: True
+        If True, the templates are relocated across the target probe of the recording.
     drift_step_um : float, default: 1.0
         The step in um to use for the drifting templates.
-    upsample_factor : None or int, default: None
-        A upsampling factor used only when templates are not provided.
-    upsample_vector : np.array or None
-        Optional the upsample_vector can given. This has the same shape as spike_vector
     amplitude_std : float, default: 0.05
         The standard deviation of the modulation to apply to the spikes when injecting them
         into the recording.
@@ -380,7 +372,7 @@ def generate_hybrid_recording(
 
     Returns
     -------
-    recording: BaseRecording
+    recording: InjectDriftingTemplatesRecording
         The generated hybrid recording extractor.
     sorting: Sorting
         The generated sorting extractor for the injected units.
@@ -393,7 +385,7 @@ def generate_hybrid_recording(
     sampling_frequency = recording.sampling_frequency
     probe = recording.get_probe()
     num_segments = recording.get_num_segments()
-    dtype = recording.dtype
+    # dtype = recording.dtype
     num_samples = np.array([recording.get_num_samples(segment_index) for segment_index in range(num_segments)])
     # since the recording can have timestamps with some small gaps, we use the number of samples to compute
     # the duration used for the sorting generation
@@ -421,57 +413,86 @@ def generate_hybrid_recording(
     else:
         generate_sorting_kwargs["num_units"] = num_units
 
-    if templates is None:
-        if unit_locations is None:
-            unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
-        else:
-            assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
-        templates_array = generate_templates(
-            channel_locations,
-            unit_locations,
-            sampling_frequency,
-            upsample_factor=upsample_factor,
-            seed=seed,
-            dtype=dtype,
-            **generate_templates_kwargs,
-        )
-        ms_before = generate_templates_kwargs["ms_before"]
-        ms_after = generate_templates_kwargs["ms_after"]
-        nbefore = ms_to_samples(ms_before, sampling_frequency)
-        nafter = ms_to_samples(ms_after, sampling_frequency)
-        templates_ = Templates(templates_array, sampling_frequency, nbefore, True, None, None, None, probe)
+    # handle units location
+    if unit_locations is not None:
+        assert len(unit_locations) == num_units, "unit_locations and num_units should have the same length"
+    elif relocate_templates:
+        # propagate the seed so that the hybrid recording is reproducible (unless a seed is
+        # explicitly provided in generate_unit_locations_kwargs)
+        generate_unit_locations_kwargs = {"seed": seed, **generate_unit_locations_kwargs}
+        unit_locations = generate_unit_locations(num_units, channel_locations, **generate_unit_locations_kwargs)
     else:
-        from spikeinterface.postprocessing.localization_tools import compute_monopolar_triangulation
+        # We use the channel locations of the main channels of the templates as source locations for interpolation
+        main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
+        unit_locations = templates.probe.contact_positions[main_channel_indices]
 
-        assert isinstance(templates, Templates), "templates should be a Templates object"
-        assert (
-            templates.num_channels == recording.get_num_channels()
-        ), "templates and recording should have the same number of channels"
-        nbefore = templates.nbefore
-        nafter = templates.nafter
-        unit_locations = compute_monopolar_triangulation(templates, peak_sign="both", peak_mode="extremum")
+    # handle motion and displacement
+    if motion is None:
+        # make a one bin motion with no displacement
+        displacements = np.zeros((1, 2))
+        motion = Motion(
+            displacement=[np.zeros((2, 1)) for _ in range(num_segments)],
+            temporal_bins_s=[np.array([0, durations[0]]) for _ in range(num_segments)],
+            spatial_bins_um=np.array([0]),
+            direction="y",
+        )
+    else:
+        assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"
+        dim = motion.dim
+        motion_array_concat = np.concatenate(motion.displacement)
+        max_motion = np.max(np.abs(motion_array_concat))
+        if dim == 0:
+            start = np.array([-max_motion, 0])
+            stop = np.array([max_motion, 0])
+        elif dim == 1:
+            start = np.array([0, -max_motion])
+            stop = np.array([0, max_motion])
+        elif dim == 2:
+            raise NotImplementedError("3D motion not implemented yet")
+        num_step = int((stop - start)[dim] / drift_step_um)
+        num_step = max(1, num_step)
+        displacements = make_linear_displacement(start, stop, num_step=num_step)
 
-        channel_locations_rel = channel_locations - channel_locations[0]
-        templates_locations = templates.get_channel_locations()
-        templates_locations_rel = templates_locations - templates_locations[0]
+    # calculate displacement vectors for each segment and unit
+    # for each unit, we interpolate the motion at its location
+    displacement_sampling_frequency = 1.0 / np.diff(motion.temporal_bins_s[0])[0]
+    displacement_vectors = []
+    for segment_index in range(motion.num_segments):
+        temporal_bins_segment = motion.temporal_bins_s[segment_index]
+        displacement_vector = np.zeros((len(temporal_bins_segment), 2, num_units))
+        for unit_index in range(num_units):
+            motion_for_unit = motion.get_displacement_at_time_and_depth(
+                times_s=temporal_bins_segment,
+                locations_um=unit_locations[unit_index],
+                segment_index=segment_index,
+                grid=True,
+            )
+            displacement_vector[:, motion.dim, unit_index] = motion_for_unit[motion.dim, :]
+        displacement_vectors.append(displacement_vector)
+    # since displacement is estimated by interpolation for each unit, the unit factor is an eye
+    displacement_unit_factor = np.eye(num_units)
 
-        if not np.allclose(channel_locations_rel, templates_locations_rel):
-            warnings.warn("Channel locations are different between recording and templates. Interpolating templates.")
-            templates_array = np.zeros(templates.templates_array.shape, dtype=dtype)
-            for i in range(len(templates_array)):
-                src_template = templates.templates_array[i][np.newaxis, :, :]
-                templates_array[i] = interpolate_templates(src_template, templates_locations_rel, channel_locations_rel)
-        else:
+    # generate synthetic drifting templates or interpolate from the input templates
+    if templates is None:
+        drifting_templates, _ = generate_drifting_templates_synthetic(
+            probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed
+        )
+    else:
+        if recording.has_scaleable_traces() and templates.is_in_uV:
+            # In this case we "unscale" the templates, so we don't need to scale the recording to uV during injection.
             templates_array = templates.templates_array
+            templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
+            # make a copy of the templates and reset templates_array (might have scaled templates)
+            templates_ = templates.select_units(templates.unit_ids)
+            templates_.templates_array = templates_array
+        else:
+            templates_ = templates
 
-        # manage scaling of templates
-        templates_ = templates
-        if recording.has_scaleable_traces():
-            if are_templates_scaled:
-                templates_array = (templates_array - recording.get_channel_offsets()) / recording.get_channel_gains()
-                # make a copy of the templates and reset templates_array (might have scaled templates)
-                templates_ = templates.select_units(templates.unit_ids)
-                templates_.templates_array = templates_array
+        check_relocation_within_source_hull(templates_, probe, unit_locations, displacements)
+
+        drifting_templates = generate_drifting_templates_by_interpolation(
+            templates_, probe, unit_locations, displacements, interpolation_method="cubic"
+        )
 
     if sorting is None:
         generate_sorting_kwargs = generate_sorting_kwargs.copy()
@@ -483,18 +504,11 @@ def generate_hybrid_recording(
         assert sorting.sampling_frequency == sampling_frequency
 
     num_spikes = sorting.to_spike_vector().size
+    distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :], axis=2)
+    main_channel_indices = np.argmin(distances, axis=1)
+    main_channel_ids = recording.channel_ids[main_channel_indices]
     sorting.set_property("gt_unit_locations", unit_locations)
-
-    assert (nbefore + nafter) == templates_array.shape[
-        1
-    ], "templates and ms_before, ms_after should have the same length"
-
-    if templates_array.ndim == 3:
-        upsample_vector = None
-    else:
-        if upsample_vector is None:
-            upsample_factor = templates_array.shape[3]
-            upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
+    sorting.set_property("main_channel_id", main_channel_ids)
 
     amplitude_factor = synthesize_amplitude_factor(
         num_spikes,
@@ -503,68 +517,15 @@ def generate_hybrid_recording(
         seed=rng,
     )
 
-    if motion is not None:
-        assert num_segments == motion.num_segments, "recording and motion should have the same number of segments"
-        dim = motion.dim
-        motion_array_concat = np.concatenate(motion.displacement)
-        if dim == 0:
-            start = np.array([np.min(motion_array_concat), 0])
-            stop = np.array([np.max(motion_array_concat), 0])
-        elif dim == 1:
-            start = np.array([0, np.min(motion_array_concat)])
-            stop = np.array([0, np.max(motion_array_concat)])
-        elif dim == 2:
-            raise NotImplementedError("3D motion not implemented yet")
-        num_step = int((stop - start)[dim] / drift_step_um)
-        num_step = max(1, num_step)
-        displacements = make_linear_displacement(start, stop, num_step=num_step)
-
-        # use templates_, because templates_array might have been scaled
-        drifting_templates = DriftingTemplates.from_static_templates(templates_)
-        drifting_templates.precompute_displacements(displacements)
-
-        # calculate displacement vectors for each segment and unit
-        # for each unit, we interpolate the motion at its location
-        displacement_sampling_frequency = 1.0 / np.diff(motion.temporal_bins_s[0])[0]
-        displacement_vectors = []
-        for segment_index in range(motion.num_segments):
-            temporal_bins_segment = motion.temporal_bins_s[segment_index]
-            displacement_vector = np.zeros((len(temporal_bins_segment), 2, num_units))
-            for unit_index in range(num_units):
-                motion_for_unit = motion.get_displacement_at_time_and_depth(
-                    times_s=temporal_bins_segment,
-                    locations_um=unit_locations[unit_index],
-                    segment_index=segment_index,
-                    grid=True,
-                )
-                displacement_vector[:, motion.dim, unit_index] = motion_for_unit[motion.dim, :]
-            displacement_vectors.append(displacement_vector)
-        # since displacement is estimated by interpolation for each unit, the unit factor is an eye
-        displacement_unit_factor = np.eye(num_units)
-
-        hybrid_recording = InjectDriftingTemplatesRecording(
-            sorting=sorting,
-            parent_recording=recording,
-            drifting_templates=drifting_templates,
-            displacement_vectors=displacement_vectors,
-            displacement_sampling_frequency=displacement_sampling_frequency,
-            displacement_unit_factor=displacement_unit_factor,
-            num_samples=num_samples.astype("int64"),
-            amplitude_factor=amplitude_factor,
-        )
-
-    else:
-        warnings.warn(
-            "No Motion is provided! Please check that your recording is drift-free, otherwise the hybrid recording "
-            "will have stationary units over a drifting recording..."
-        )
-        hybrid_recording = InjectTemplatesRecording(
-            sorting,
-            templates_array,
-            nbefore=nbefore,
-            parent_recording=recording,
-            upsample_vector=upsample_vector,
-            amplitude_factor=amplitude_factor,
-        )
+    hybrid_recording = InjectDriftingTemplatesRecording(
+        sorting=sorting,
+        parent_recording=recording,
+        drifting_templates=drifting_templates,
+        displacement_vectors=displacement_vectors,
+        displacement_sampling_frequency=displacement_sampling_frequency,
+        displacement_unit_factor=displacement_unit_factor,
+        num_samples=num_samples.astype("int64"),
+        amplitude_factor=amplitude_factor,
+    )
 
     return hybrid_recording, sorting
