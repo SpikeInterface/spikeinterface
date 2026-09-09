@@ -604,7 +604,7 @@ def dredge_online_lfp(
         bin_s=1 / lfp_recording.sampling_frequency,  # only relevant for time_horizon_s
     )
 
-    compute_displacement_output = compute_displacement_online(
+    P_online, extra = compute_displacement_online(
         lfp_recording,
         windows,
         T_total,
@@ -619,11 +619,6 @@ def dredge_online_lfp(
         full_xcorr_kw,
         threshold_kw,
     )
-
-    if extra_outputs:
-        P_online, extra = compute_displacement_output
-    else:
-        P_online = compute_displacement_output
 
     motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction=direction)
 
