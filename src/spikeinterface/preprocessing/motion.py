@@ -38,6 +38,7 @@ motion_options_preset = {
             win_step_um=400.0,
             win_scale_um=400.0,
             win_margin_um=None,
+            resolution_mode="offline",
         ),
         "interpolate_motion_kwargs": dict(
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
