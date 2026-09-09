@@ -12,6 +12,7 @@ on:
 env:
   KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SPIKEINTERFACE_DATASET_FOLDER: ${{ github.workspace }}/spikeinterface_datasets
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -113,7 +114,7 @@ jobs:
         id: cache-datasets
         uses: actions/cache/restore@v5
         with:
-          path: ~/spikeinterface_datasets
+          path: spikeinterface_datasets
           key: datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           restore-keys: datasets
           enableCrossOsArchive: true

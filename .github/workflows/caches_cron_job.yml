@@ -23,8 +23,8 @@ jobs:
           ignore-nothing-to-cache: true # some runs do not require building a cache (ie macOS) this says this is okay
       - name: Create the directory to store the data
         run: |
-          mkdir -p  ~/spikeinterface_datasets/ephy_testing_data/
-          ls -l ~/spikeinterface_datasets
+          mkdir -p  spikeinterface_datasets/ephy_testing_data/
+          ls -l spikeinterface_datasets
         shell: bash
       - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/cache@v5
         id: cache-datasets
         with:
-          path: ~/spikeinterface_datasets
+          path: spikeinterface_datasets
           key: datasets-${{ steps.repo_hash.outputs.dataset_hash }}
           enableCrossOsArchive: true # One cache for every runner OS, built here on Linux
           lookup-only: "true" # Avoids downloading the data, saving behavior is not affected.
@@ -71,11 +71,10 @@ jobs:
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mv ./ephy_testing_data ~/spikeinterface_datasets/
+          mv ./ephy_testing_data spikeinterface_datasets/
         shell: bash
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd ~
           pwd
           du -hs spikeinterface_datasets  # Should show the size of ephy_testing_data
           cd spikeinterface_datasets
