@@ -1,6 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
@@ -80,7 +81,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
 
         return_in_uV = self.sorting_analyzer.return_in_uV
 
-        all_templates = get_dense_templates_array(self.sorting_analyzer, return_in_uV=return_in_uV)
+        all_templates = np.asarray(get_dense_templates_array(self.sorting_analyzer, return_in_uV=return_in_uV))
         nbefore = _get_nbefore(self.sorting_analyzer)
         nafter = all_templates.shape[1] - nbefore
         templates_ext = self.sorting_analyzer.get_extension("templates")
@@ -179,7 +180,7 @@ class AmplitudeScalingNode(PipelineNode):
         if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
-            self._offsets = recording.get_channel_gains()
+            self._offsets = recording.get_channel_offsets()
         else:
             self._dtype = recording.get_dtype()
             self._gains = None
