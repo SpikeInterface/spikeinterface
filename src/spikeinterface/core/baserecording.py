@@ -319,7 +319,12 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         return (self.get_num_samples(segment_index=segment_index), self.get_num_channels())
 
     def save(self, format="binary", verbose: bool = False, **save_kwargs):
+        """
+        TODO: each object.save should have extensive docstring with all the options and examples
+        """
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
+
+        # TODO: add overwrite option to binary/zarr save
 
         if format == "binary":
             if "folder" not in kwargs:
