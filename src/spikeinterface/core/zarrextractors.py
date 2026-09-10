@@ -294,7 +294,7 @@ class ZarrArrayRecording(BaseRecording):
 
     Returns
     -------
-    recording : ZarrArrayExtractor
+    recording : ZarrArrayRecording
         The recording Extractor
     """
 
@@ -558,7 +558,7 @@ class ZarrSortingExtractor(BaseSorting):
 
 read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
 read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
-read_zarr_array = define_function_from_class(source_class=ZarrArrayExtractor, name="read_zarr_array")
+read_zarr_array = define_function_from_class(source_class=ZarrArrayRecording, name="read_zarr_array")
 
 
 def read_zarr(
