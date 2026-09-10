@@ -360,8 +360,9 @@ def test_resample_preserves_gaps_non_integer_ratio():
     [
         700,  # non-integer ratio (30000 / 700 ~= 42.857)
         500,  # integer ratio (30000 / 500 = 60)
+        625,  # factor 48 does not divide the default 3000-sample margin
     ],
-    ids=["non_integer_ratio", "integer_ratio"],
+    ids=["non_integer_ratio", "integer_ratio", "integer_ratio_unaligned_margin"],
 )
 def test_resample_traces_across_gap(resample_rate):
     """Section-wise resampling should match individually resampled sections.
@@ -436,11 +437,25 @@ def test_resample_traces_across_gap(resample_rate):
     assert gapped_s2.shape == ref_traces2.shape, f"Section 2 shape mismatch: {gapped_s2.shape} vs {ref_traces2.shape}"
     np.testing.assert_allclose(gapped_s2, ref_traces2, rtol=1e-5, atol=1e-5)
 
+    if sampling_frequency % resample_rate == 0:
+        # Exercise reads within a section and across the gap, including channel selection.
+        for start, end in [(123, 456), (n_out_1 - 123, n_out_1 + 456)]:
+            expected_pieces = []
+            for offset, section in [(0, resampled1), (n_out_1, resampled2)]:
+                local_start = max(0, start - offset)
+                local_end = min(section.get_num_samples(), end - offset)
+                if local_start < local_end:
+                    expected_pieces.append(
+                        section.get_traces(start_frame=local_start, end_frame=local_end, channel_ids=[1])
+                    )
+            actual = resampled.get_traces(start_frame=start, end_frame=end, channel_ids=[1])
+            np.testing.assert_allclose(actual, np.concatenate(expected_pieces), rtol=1e-5, atol=1e-5)
 
-def test_resample_gapped_chunked_consistency():
+
+@pytest.mark.parametrize("resample_rate", [700, 625])
+def test_resample_gapped_chunked_consistency(resample_rate):
     """Chunked .save() should match non-chunked for gapped recordings."""
     sampling_frequency = 30000
-    resample_rate = 700
     rec, _, _ = _make_gapped_recording(sampling_frequency=sampling_frequency, sec1_duration=2.0, sec2_duration=2.0)
 
     import warnings as _warnings

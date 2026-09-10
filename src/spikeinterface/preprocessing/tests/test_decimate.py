@@ -1,9 +1,12 @@
+import warnings
+
 import pytest
 
 
 from spikeinterface import NumpyRecording
 from spikeinterface.core import generate_recording, load
 from spikeinterface.preprocessing.decimate import DecimateRecording, decimate, get_balanced_decimation_factors
+from spikeinterface.preprocessing.resample import ResampleRecording
 from spikeinterface.preprocessing.tests.test_resample import create_sinusoidal_traces
 import numpy as np
 
@@ -79,27 +82,34 @@ def test_decimate_with_times(antialias):
 
 
 @pytest.mark.parametrize(
-    "decimation_factor, expected",
+    "decimation_factor, max_factor, expected",
     [
-        (1, [1]),
-        (7, [7]),
-        (13, [13]),
-        (48, [8, 6]),
-        (50, [10, 5]),
-        (60, [10, 6]),
-        (100, [10, 10]),
-        (17, [17]),  # prime > 13: cannot be split
-        (23, [23]),  # prime > 13: cannot be split
+        (1, 13, [1]),
+        (7, 13, [7]),
+        (13, 13, [13]),
+        (48, 13, [8, 6]),
+        (50, 13, [10, 5]),
+        (60, 13, [10, 6]),
+        (100, 13, [10, 10]),
+        (17, 13, [17]),  # prime > 13: cannot be split
+        (23, 13, [23]),
+        (48, 8, [8, 6]),
+        (48, 4, [4, 4, 3]),
+        (10, 4, [10]),  # prime > the custom limit: cannot be split
     ],
 )
-def test_balanced_decimation_factors(decimation_factor, expected):
-    factors = get_balanced_decimation_factors(decimation_factor)
+def test_balanced_decimation_factors(decimation_factor, max_factor, expected):
+    if expected == [decimation_factor] and decimation_factor > max_factor:
+        with pytest.warns(UserWarning, match=f"prime factor > {max_factor}"):
+            factors = get_balanced_decimation_factors(decimation_factor, max_factor=max_factor)
+    else:
+        factors = get_balanced_decimation_factors(decimation_factor, max_factor=max_factor)
     assert factors == expected
     # The product of the sub-factors always reconstructs the requested factor.
     assert int(np.prod(factors)) == decimation_factor
-    # Every pass is <= 13 unless the factor is an unsplittable prime > 13.
+    # Every pass respects the limit unless no valid split exists.
     if len(factors) > 1:
-        assert all(f <= 13 for f in factors)
+        assert all(f <= max_factor for f in factors)
 
 
 @pytest.mark.parametrize("decimation_factor", [6, 10, 48])
@@ -169,8 +179,8 @@ def test_decimate_antialias_multipass():
     assert dec._kwargs["decimation_factor"] == decimation_factor
 
     segment = dec.segments[0]
-    assert int(np.prod(segment._antialias_factors)) == decimation_factor
-    assert all(f <= 13 for f in segment._antialias_factors)
+    assert int(np.prod(segment._decimation_factors)) == decimation_factor
+    assert all(f <= 13 for f in segment._decimation_factors)
 
     parent_n = parent_rec.get_num_samples()
     assert dec.get_num_samples() == int(np.ceil(parent_n / decimation_factor))
@@ -181,11 +191,20 @@ def test_decimate_antialias_multipass():
 
 
 def test_decimate_antialias_large_prime_warns():
-    rec = generate_recording(durations=[2.0], num_channels=2)
-    with pytest.warns(UserWarning, match="prime factor > 13"):
-        dec = DecimateRecording(rec, 17, antialias=True)
-    # The unsplittable factor falls back to a single pass.
-    assert dec.segments[0]._antialias_factors == [17]
+    rec = generate_recording(durations=[2.0], num_channels=2, sampling_frequency=34000)
+    for preprocess in [
+        lambda: DecimateRecording(rec, 17, antialias=True),
+        lambda: ResampleRecording(rec, rec.get_sampling_frequency() / 17),
+    ]:
+        with pytest.warns(UserWarning, match="prime factor > 13") as caught:
+            dec = preprocess()
+        assert len(caught) == 1
+        assert dec.segments[0]._decimation_factors == [17]
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        DecimateRecording(rec, 17, antialias=False)
+    assert not caught
 
 
 if __name__ == "__main__":

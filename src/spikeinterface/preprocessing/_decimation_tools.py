@@ -7,12 +7,8 @@ passes. Shared by DecimateRecording and ResampleRecording.
 import math
 import warnings
 
-import numpy as np
-
-from spikeinterface.core import get_chunk_with_margin
-
 # scipy.signal.decimate uses an order-8 Chebyshev type I IIR filter by default, and its
-# documentation recommends decimating in several balanced steps rather than a single step
+# documentation recommends decimating in several steps rather than a single step
 # for downsampling factors larger than this value.
 _MAX_SINGLE_PASS_DECIMATION = 13
 
@@ -40,10 +36,10 @@ def _prime_factors(n):
     return factors
 
 
-def _greedy_pack(primes_desc, num_bins):
+def _greedy_pack(primes_desc, num_bins, max_factor=_MAX_SINGLE_PASS_DECIMATION):
     """
     Greedily pack `primes_desc` (largest first) into `num_bins` bins, keeping each bin's
-    product <= `_MAX_SINGLE_PASS_DECIMATION` and the bins as balanced as possible.
+    product <= `max_factor` and the bins as balanced as possible.
 
     Returns the list of bin products, or None if some prime cannot be placed (i.e. `num_bins`
     is too small to keep every bin <= the single-pass limit).
@@ -62,7 +58,7 @@ def _greedy_pack(primes_desc, num_bins):
     """
     bins = [1] * num_bins
     for prime in primes_desc:
-        fitting = [i for i in range(num_bins) if bins[i] * prime <= _MAX_SINGLE_PASS_DECIMATION]
+        fitting = [i for i in range(num_bins) if bins[i] * prime <= max_factor]
         if not fitting:
             return None
         # Place into the smallest fitting bin (ties broken by index, for determinism).
@@ -71,108 +67,41 @@ def _greedy_pack(primes_desc, num_bins):
     return bins
 
 
-def get_balanced_decimation_factors(decimation_factor):
+def get_balanced_decimation_factors(decimation_factor, max_factor=_MAX_SINGLE_PASS_DECIMATION):
     """
-    Split `decimation_factor` into sub-factors, each <= 13, as balanced as possible (so their
-    products are close), for stable multi-pass anti-aliased decimation.
+    Split `decimation_factor` into balanced sub-factors no greater than `max_factor`.
 
-    scipy recommends decimating in several balanced steps rather than one large step when the
-    factor exceeds 13 (e.g. 48 -> [8, 6] rather than [12, 4]). The product of the returned
-    factors always equals `decimation_factor`.
+    SciPy recommends multiple IIR decimation passes for factors above 13.
+    Balancing the factors (e.g. 48 -> [8, 6] rather than [12, 4]) further aids stability.
+    The product of the returned factors always equals `decimation_factor`.
 
     If `decimation_factor` has a prime factor greater than 13 (e.g. a large prime such as 17),
-    no valid split exists and `[decimation_factor]` is returned; it is the caller's
-    responsibility to handle this (e.g., warn that a single, potentially unstable, pass will
-    be used).
+    no valid split exists, a warning is issued, and `[decimation_factor]` is returned;
+    it is the caller's responsibility to handle this (e.g., warn that a single,
+    potentially unstable, pass will be used).
     """
-    if decimation_factor <= _MAX_SINGLE_PASS_DECIMATION:
+    if not isinstance(max_factor, int) or max_factor < 2:
+        raise ValueError("max_factor must be an integer greater than one")
+    if decimation_factor <= max_factor:
         return [decimation_factor]
 
     primes = _prime_factors(decimation_factor)
-    if max(primes) > _MAX_SINGLE_PASS_DECIMATION:
-        # If a prime factor > 13 cannot be split into sub-13 factors...
+    if max(primes) > max_factor:
+        warnings.warn(
+            f"`decimation_factor`={decimation_factor} cannot be split into anti-aliasing passes of <= {max_factor} "
+            f"(it has a prime factor > {max_factor}). A single `scipy.signal.decimate` pass will be used, "
+            f"which may be unstable. Consider a `decimation_factor` without large prime factors.",
+            stacklevel=2,
+        )
         return [decimation_factor]
 
     primes_desc = sorted(primes, reverse=True)
-    # Minimum number of passes so that, ideally, each pass decimates by <= 13.
-    num_passes = max(1, math.ceil(math.log(decimation_factor) / math.log(_MAX_SINGLE_PASS_DECIMATION)))
+    # Minimum number of passes so that, ideally, each pass decimates by <= max_factor.
+    num_passes = max(1, math.ceil(math.log(decimation_factor) / math.log(max_factor)))
     while num_passes <= len(primes_desc):
-        bins = _greedy_pack(primes_desc, num_passes)
+        bins = _greedy_pack(primes_desc, num_passes, max_factor)
         if bins is not None:
             return sorted(bins, reverse=True)
         num_passes += 1
-    # Fallback: one prime per pass (always valid since every prime is <= 13).
+    # Fallback: one prime per pass (always valid since every prime is <= max_factor).
     return primes_desc
-
-
-def get_antialiased_decimated_traces(
-    parent_segment,
-    start_frame,
-    end_frame,
-    channel_indices,
-    decimation_factor,
-    decimation_factors,
-    margin,
-    dtype,
-    decimation_offset=0,
-):
-    """
-    Fetch a margined chunk from `parent_segment` and decimate it by `decimation_factor`, applied
-    as a cascade of the balanced `decimation_factors` passes of ``scipy.signal.decimate``.
-
-    The margin is rounded up to a multiple of the total `decimation_factor` so that
-    ``left_margin // decimation_factor`` is exact; combined with scipy's default
-    ``zero_phase=True`` (output sample i maps to filtered input sample i * factor), this keeps the
-    downsampled traces aligned across chunks (a chunked read matches a full read). Exactly
-    ``end_frame - start_frame`` decimated samples are returned.
-
-    Parameters
-    ----------
-    parent_segment : BaseRecordingSegment
-        The parent segment to read (full-rate) traces from.
-    start_frame, end_frame : int
-        Output (decimated) frame range to return.
-    channel_indices : slice | list | np.ndarray | None
-        Channels to read, forwarded to the parent segment.
-    decimation_factor : int
-        The total decimation factor (the product of `decimation_factors`).
-    decimation_factors : list[int]
-        The per-pass sub-factors (each <= 13), e.g. from `get_balanced_decimation_factors`.
-    margin : int
-        Margin in parent samples used to limit anti-aliasing filter edge effects. Rounded up
-        internally to a multiple of `decimation_factor`.
-    dtype : np.dtype | str
-        Output dtype. The decimation runs in float32 and the result is cast to `dtype`.
-    decimation_offset : int, default: 0
-        Index of the first parent frame, applied to the first output sample only.
-    """
-    from scipy import signal
-
-    q = decimation_factor
-    parent_start_frame = decimation_offset + start_frame * q
-    parent_end_frame = parent_start_frame + (end_frame - start_frame) * q
-    # Round the margin up to a multiple of q so that left_margin // q is exact.
-    margin = int(np.ceil(margin / q) * q)
-    parent_traces, left_margin, right_margin = get_chunk_with_margin(
-        parent_segment,
-        parent_start_frame,
-        parent_end_frame,
-        channel_indices,
-        margin,
-        add_reflect_padding=True,
-        dtype=np.float32,
-    )
-    decimated_traces = parent_traces
-    for sub_q in decimation_factors:
-        decimated_traces = signal.decimate(decimated_traces, q=sub_q, axis=0)
-    if np.any(np.isnan(decimated_traces)):
-        warnings.warn(
-            f"`scipy.signal.decimate` produced NaNs while decimating by {q}. "
-            f"Consider a different decimation factor."
-        )
-    start_drop = left_margin // q
-    n_out = end_frame - start_frame
-    decimated_traces = decimated_traces[start_drop : start_drop + n_out]
-    if np.issubdtype(np.dtype(dtype), np.integer):
-        np.round(decimated_traces, out=decimated_traces)  # Don't truncate towards zero
-    return decimated_traces.astype(dtype, copy=False)

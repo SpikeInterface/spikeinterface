@@ -7,12 +7,8 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ._decimation_tools import (
-    _MAX_SINGLE_PASS_DECIMATION,
-    get_balanced_decimation_factors,
-    get_antialiased_decimated_traces,
-)
-from spikeinterface.core import BaseRecordingSegment
+from ._decimation_tools import get_balanced_decimation_factors
+from spikeinterface.core import BaseRecordingSegment, get_chunk_with_margin
 
 
 class DecimateRecording(BasePreprocessor):
@@ -91,13 +87,7 @@ class DecimateRecording(BasePreprocessor):
         # fix_dtype doesn't always returns the str, make sure it does
         dtype = fix_dtype(recording, dtype).str
 
-        antialias_factors = get_balanced_decimation_factors(decimation_factor)
-        if antialias and decimation_factor > _MAX_SINGLE_PASS_DECIMATION and antialias_factors == [decimation_factor]:
-            warnings.warn(
-                f"`decimation_factor`={decimation_factor} cannot be split into anti-aliasing passes of <= 13 "
-                f"(it has a prime factor > 13). A single `scipy.signal.decimate` pass will be used, which may be "
-                f"unstable. Consider a `decimation_factor` without large prime factors."
-            )
+        decimation_factors = get_balanced_decimation_factors(decimation_factor) if antialias else None
 
         # Margin (in parent samples) to limit anti-aliasing filter edge effects.
         margin = int(margin_ms * self._orig_samp_freq / 1000)
@@ -115,7 +105,7 @@ class DecimateRecording(BasePreprocessor):
                     self._dtype,
                     antialias,
                     margin,
-                    antialias_factors,
+                    decimation_factors,
                 )
             )
 
@@ -140,7 +130,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         dtype,
         antialias=False,
         margin=0,
-        antialias_factors=None,
+        decimation_factors=None,
     ):
         if parent_recording_segment._time_vector is not None:
             time_vector = parent_recording_segment._time_vector[decimation_offset::decimation_factor]
@@ -163,7 +153,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         self._dtype = dtype
         self._antialias = antialias
         self._margin = margin
-        self._antialias_factors = antialias_factors if antialias_factors is not None else [decimation_factor]
+        self._decimation_factors = decimation_factors if decimation_factors is not None else [decimation_factor]
 
     def get_num_samples(self):
         parent_n_samp = self._parent_segment.get_num_samples()
@@ -190,11 +180,84 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             end_frame,
             channel_indices,
             self._decimation_factor,
-            self._antialias_factors,
+            self._decimation_factors,
             self._margin,
             self._dtype,
             decimation_offset=self._decimation_offset,
         )
+
+
+def get_antialiased_decimated_traces(
+    parent_segment,
+    start_frame,
+    end_frame,
+    channel_indices,
+    decimation_factor,
+    decimation_factors,
+    margin,
+    dtype,
+    decimation_offset=0,
+):
+    """
+    Fetch a margined chunk from `parent_segment` and decimate it by `decimation_factor`, applied
+    as a cascade of the balanced `decimation_factors` passes of ``scipy.signal.decimate``.
+
+    The margin is rounded up to a multiple of the total `decimation_factor` so that
+    ``left_margin // decimation_factor`` is exact; combined with scipy's default
+    ``zero_phase=True`` (output sample i maps to filtered input sample i * factor), this keeps the
+    downsampled traces aligned across chunks (a chunked read matches a full read). Exactly
+    ``end_frame - start_frame`` decimated samples are returned.
+
+    Parameters
+    ----------
+    parent_segment : BaseRecordingSegment
+        The parent segment to read (full-rate) traces from.
+    start_frame, end_frame : int
+        Output (decimated) frame range to return.
+    channel_indices : slice | list | np.ndarray | None
+        Channels to read, forwarded to the parent segment.
+    decimation_factor : int
+        The total decimation factor (the product of `decimation_factors`).
+    decimation_factors : list[int]
+        The per-pass sub-factors (each <= 13), e.g. from `get_balanced_decimation_factors`.
+    margin : int
+        Margin in parent samples used to limit anti-aliasing filter edge effects. Rounded up
+        internally to a multiple of `decimation_factor`.
+    dtype : np.dtype | str
+        Output dtype. The decimation runs in float32 and the result is cast to `dtype`.
+    decimation_offset : int, default: 0
+        Index of the first parent frame, applied to the first output sample only.
+    """
+    from scipy import signal
+
+    q = decimation_factor
+    parent_start_frame = decimation_offset + start_frame * q
+    parent_end_frame = parent_start_frame + (end_frame - start_frame) * q
+    # Round the margin up to a multiple of q so that left_margin // q is exact.
+    margin = int(np.ceil(margin / q) * q)
+    parent_traces, left_margin, right_margin = get_chunk_with_margin(
+        parent_segment,
+        parent_start_frame,
+        parent_end_frame,
+        channel_indices,
+        margin,
+        add_reflect_padding=True,
+        dtype=np.float32,
+    )
+    decimated_traces = parent_traces
+    for sub_q in decimation_factors:
+        decimated_traces = signal.decimate(decimated_traces, q=sub_q, axis=0)
+    if np.any(np.isnan(decimated_traces)):
+        warnings.warn(
+            f"`scipy.signal.decimate` produced NaNs while decimating by {q}. "
+            f"Consider a different decimation factor."
+        )
+    start_drop = left_margin // q
+    n_out = end_frame - start_frame
+    decimated_traces = decimated_traces[start_drop : start_drop + n_out]
+    if np.issubdtype(np.dtype(dtype), np.integer):
+        np.round(decimated_traces, out=decimated_traces)  # Don't truncate towards zero
+    return decimated_traces.astype(dtype, copy=False)
 
 
 decimate = define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")
