@@ -5,9 +5,9 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ._decimation_tools import get_balanced_decimation_factors, get_resampling_margin
-from .decimate import get_antialiased_decimated_traces, _cast_resampled_traces
-from spikeinterface.core import get_chunk_with_margin, BaseRecordingSegment
+from ._resampling_tools import get_resampling_factors, get_polyphase_filter
+from .decimate import get_polyphase_resampled_traces
+from spikeinterface.core import BaseRecordingSegment
 from spikeinterface.core.frameslicerecording import FrameSliceRecordingSegment
 
 
@@ -15,19 +15,18 @@ class ResampleRecording(BasePreprocessor):
     """
     Resample the recording extractor traces.
 
-    If the parent sampling rate is an exact integer multiple of `resample_rate`, the
-    ``signal.decimate`` method from scipy is used (anti-aliased decimation). In other cases
-    ``signal.resample`` is used, in which case the resulting signal can have issues on the edges,
-    mainly on the rightmost. See Notes for a caveat on how the integer multiple is detected.
+    Uses ``scipy.signal.resample_poly`` with a Kaiser-windowed FIR filter for both
+    downsampling and upsampling. Detected gaps are handled section by section.
 
     Parameters
     ----------
     recording : Recording
         The recording extractor to be re-referenced
     resample_rate : int | float
-        The resampling frequency. Integer ratios (parent_rate / resample_rate) use
-        ``scipy.signal.decimate``; non-integer ratios use ``scipy.signal.resample`` (FFT-based),
-        which can have edge effects, mainly on the rightmost samples.
+        The requested sampling frequency. The closest output/input rate ratio with 
+        denominator at most `max_denominator` is selected. The output reports the 
+        achieved rate, while the requested rate is retained in serialization kwargs.
+        A relative difference exceeding 1e-12 emits a warning. 
     gap_tolerance_ms : float | None, default: None
         Maximum acceptable gap size in milliseconds for automatic segmentation.
 
@@ -51,14 +50,18 @@ class ResampleRecording(BasePreprocessor):
         - 1.0: Tolerate gaps up to 1 ms, split on larger gaps
         - 100.0: Only major pauses (>100 ms) create sections
     margin_ms : float | None, default: None
-        Margin in ms for computations, used to decrease edge effects. If None, integer-factor
-        decimation estimates the cascade's settling margin from its filter poles, with a
-        minimum of 100 ms. FFT resampling uses 100 ms. A nonnegative value overrides the
-        estimate. The estimate is a heuristic, not a bound on output error.
+        Additional context in ms on each side of a chunk. If None, use the FIR filter's
+        finite support. An explicit nonnegative value requests at least that much context;
+        filter support is always retained within each section.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
         Integer output is rounded and clipped to the dtype range. Nonfinite resampled
         output raises a ValueError before conversion.
+
+    max_denominator : int, default: 10000
+        Maximum denominator of the rational output/input rate ratio. Increasing this can
+        improve rate accuracy, but can also increase filter length and the aligned input
+        span needed for a chunk. 
 
     Returns
     -------
@@ -67,16 +70,15 @@ class ResampleRecording(BasePreprocessor):
 
     Notes
     -----
-    The (anti-aliased) decimation path is selected by an exact check,
-    ``parent_rate % resample_rate == 0``. This only detects an integer downsampling factor when
-    both rates make that modulo exactly zero. If either the parent rate or `resample_rate` is a
-    non-integer float (i.e. ``float(int(x)) != float(x)``), a conceptually integer ratio can go
-    undetected and silently fall back to the FFT-based ``scipy.signal.resample`` path. For example,
-    decimating a 625 Hz recording by a factor of 6 means a target of 104.1666... Hz, and
-    ``625 % 104.1666... != 0``, so the integer-decimation path is not taken (whereas a factor of 5,
-    i.e. a 125 Hz target, is detected since ``625 % 125 == 0``). To force anti-aliased integer
-    decimation by a known factor regardless of the rates, use
-    ``spikeinterface.preprocessing.DecimateRecording`` with ``antialias=True``.
+    Each section returns ``ceil(num_input_samples * up / down)`` samples, matching SciPy
+    and ``decimate()``. Output timestamps use the same rational grid as the traces. 
+    Explicit parent timestamps are sampled or interpolated within each section. 
+    Output positions beyond the last input sample extrapolate its timestamp by less 
+    than one nominal input period.
+
+    For example, resampling from 30000.01 Hz to a requested 2500 Hz with the default 
+    denominator limit selects up=1 and down=12. The output reports 2500.000833333333 Hz, 
+    and a warning reports the difference of approximately +0.333333 ppm.
 
     """
 
@@ -87,33 +89,29 @@ class ResampleRecording(BasePreprocessor):
         gap_tolerance_ms=None,
         margin_ms=None,
         dtype=None,
+        max_denominator=10000,
     ):
         self._orig_samp_freq = recording.get_sampling_frequency()
-        self._resample_rate = resample_rate
-        self._sampling_frequency = resample_rate
-        # Exact integer-factor downsampling uses one or more antialiased decimation passes.
-        if self._orig_samp_freq % resample_rate == 0:
-            decimation_factor = int(self._orig_samp_freq / resample_rate)
-            decimation_factors = get_balanced_decimation_factors(decimation_factor)
-        else:
-            decimation_factors = None
+        up, down, achieved_rate = get_resampling_factors(self._orig_samp_freq, resample_rate, max_denominator)
+        self._resample_rate = achieved_rate
         # fix_dtype not always returns the str, make sure it does
         dtype = fix_dtype(recording, dtype).str
 
-        # Get a margin to avoid issues later
-        margin = get_resampling_margin(self._orig_samp_freq, margin_ms, decimation_factors)
+        filter_coefficients, margin = get_polyphase_filter(self._orig_samp_freq, up, down, margin_ms)
 
-        BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
+        BasePreprocessor.__init__(self, recording, sampling_frequency=achieved_rate, dtype=dtype)
         for parent_segment in recording.segments:
             self.add_recording_segment(
                 ResampleRecordingSegment(
                     parent_segment,
-                    resample_rate,
+                    achieved_rate,
                     recording.get_sampling_frequency(),
                     margin,
                     dtype,
                     gap_tolerance_ms,
-                    decimation_factors,
+                    up,
+                    down,
+                    filter_coefficients,
                 )
             )
 
@@ -123,6 +121,7 @@ class ResampleRecording(BasePreprocessor):
             gap_tolerance_ms=gap_tolerance_ms,
             margin_ms=margin_ms,
             dtype=dtype,
+            max_denominator=max_denominator,
         )
 
 
@@ -134,8 +133,10 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         parent_rate,
         margin,
         dtype,
-        gap_tolerance_ms=None,
-        decimation_factors=None,
+        gap_tolerance_ms,
+        up,
+        down,
+        filter_coefficients,
     ):
         self._resample_rate = resample_rate
         self._parent_segment = parent_recording_segment
@@ -143,9 +144,9 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         self._margin = margin
         self._dtype = dtype
         self._has_gaps = False
-        # Per-pass integer decimation factors when the ratio is an exact integer, else None
-        # (non-integer ratio -> FFT-based scipy.signal.resample).
-        self._decimation_factors = decimation_factors
+        self._up = up
+        self._down = down
+        self._filter_coefficients = filter_coefficients
 
         # Compute time_vector or t_start, following the pattern from DecimateRecordingSegment.
         # Do not use BasePreprocessorSegment because we have to reset the sampling rate!
@@ -196,7 +197,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             K = len(sec_boundaries_parent)
             sec_n_out = np.array(
                 [
-                    int((sec_boundaries_parent[k, 1] - sec_boundaries_parent[k, 0]) / parent_rate * resample_rate)
+                    (int(sec_boundaries_parent[k, 1] - sec_boundaries_parent[k, 0]) * up + down - 1) // down
                     for k in range(K)
                 ],
                 dtype=np.int64,
@@ -209,49 +210,11 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             self._sec_boundaries_output = sec_boundaries_output
             self._sec_n_out = sec_n_out
 
-            # Compute time_vector
-            n_out = int(len(parent_tv) / parent_rate * resample_rate)
-
-            if parent_rate % resample_rate == 0:
-                q_int = int(parent_rate / resample_rate)
-                if not self._has_gaps:
-                    time_vector = parent_tv[::q_int][:n_out]
-                else:
-                    # Section-wise slicing to keep time_vector consistent
-                    # with _sec_boundaries_output
-                    tv_pieces = []
-                    for k in range(K):
-                        p_start, p_end = sec_boundaries_parent[k]
-                        n_out_k = sec_n_out[k]
-                        if n_out_k == 0:
-                            continue
-                        tv_pieces.append(parent_tv[p_start:p_end:q_int][:n_out_k])
-                    time_vector = np.concatenate(tv_pieces)
-            elif not self._has_gaps:
-                # Non-integer ratio, no gaps: existing fast path
-                warnings.warn(
-                    "Resampling with a non-integer ratio requires interpolating the time_vector. "
-                    "An integer ratio (parent_rate / resample_rate) is more performant."
-                )
-                parent_indices = np.linspace(0, len(parent_tv) - 1, n_out)
-                time_vector = np.interp(parent_indices, np.arange(len(parent_tv)), parent_tv)
-            else:
-                # Non-integer ratio with gaps: per-section interpolation
-                warnings.warn(
-                    "Resampling with a non-integer ratio requires interpolating the time_vector. "
-                    "An integer ratio (parent_rate / resample_rate) is more performant."
-                )
-                tv_pieces = []
-                for k in range(K):
-                    p_start, p_end = sec_boundaries_parent[k]
-                    n_out_k = sec_n_out[k]
-                    if n_out_k == 0:
-                        continue
-                    sec_parent_tv = parent_tv[p_start:p_end]
-                    sec_len = p_end - p_start
-                    sec_indices = np.linspace(0, sec_len - 1, n_out_k)
-                    tv_pieces.append(np.interp(sec_indices, np.arange(sec_len), sec_parent_tv))
-                time_vector = np.concatenate(tv_pieces)
+            tv_pieces = [
+                _resample_time_vector(parent_tv[p_start:p_end], up, down, parent_rate)
+                for p_start, p_end in sec_boundaries_parent
+            ]
+            time_vector = np.concatenate(tv_pieces) if self._has_gaps else tv_pieces[0]
 
             BaseRecordingSegment.__init__(self, sampling_frequency=None, t_start=None, time_vector=time_vector)
         else:
@@ -262,57 +225,29 @@ class ResampleRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self):
         if self._time_vector is not None:
             return len(self._time_vector)
-        return int(self._parent_segment.get_num_samples() / self._parent_rate * self._resample_rate)
+        n = self._parent_segment.get_num_samples()
+        return (n * self._up + self._down - 1) // self._down
 
     def get_traces(self, start_frame, end_frame, channel_indices):
+        if end_frame <= start_frame:
+            return self._parent_segment.get_traces(0, 0, channel_indices).astype(self._dtype)
         if self._has_gaps:
             return self._get_traces_gapped(start_frame, end_frame, channel_indices)
 
         return self._get_resampled_traces(self._parent_segment, start_frame, end_frame, channel_indices)
 
     def _get_resampled_traces(self, parent_segment, start_frame, end_frame, channel_indices):
-        if self._decimation_factors is not None:
-            # Integer-factor downsampling, no gaps: one or more antialiased decimation passes.
-            decimation_factor = int(self._parent_rate / self._resample_rate)
-            return get_antialiased_decimated_traces(
-                parent_segment,
-                start_frame,
-                end_frame,
-                channel_indices,
-                decimation_factor,
-                self._decimation_factors,
-                self._margin,
-                self._dtype,
-            )
-
-        # Non-integer-ratio downsampling or upsampling, no gaps: FFT with proportional margins.
-        from scipy import signal
-
-        parent_start_frame, parent_end_frame = [
-            int((frame / self._resample_rate) * self._parent_rate) for frame in [start_frame, end_frame]
-        ]
-        parent_traces, left_margin, right_margin = get_chunk_with_margin(
+        return get_polyphase_resampled_traces(
             parent_segment,
-            parent_start_frame,
-            parent_end_frame,
+            start_frame,
+            end_frame,
             channel_indices,
+            self._up,
+            self._down,
             self._margin,
-            add_reflect_padding=True,
+            self._dtype,
+            self._filter_coefficients,
         )
-        working_dtype = np.result_type(parent_traces.dtype, self._dtype, np.float32)
-        parent_traces = parent_traces.astype(working_dtype, copy=False)
-        # get left and right margins for the resampled case
-        left_margin_rs, right_margin_rs = [
-            int((margin / self._parent_rate) * self._resample_rate) for margin in [left_margin, right_margin]
-        ]
-
-        # get the size for the resampled traces
-        num = int((end_frame + right_margin_rs) - (start_frame - left_margin_rs))
-        resampled_traces = signal.resample(parent_traces, num, axis=0)
-
-        # now take care of the edges
-        resampled_traces = resampled_traces[left_margin_rs : num - right_margin_rs]
-        return _cast_resampled_traces(resampled_traces, self._dtype)
 
     def _get_traces_gapped(self, start_frame, end_frame, channel_indices):
         """Resample each section with margins bounded by its own samples."""
@@ -339,6 +274,20 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             )
 
         return result
+
+
+def _resample_time_vector(parent_times, up, down, parent_rate):
+    """Map the rational sample grid onto timestamps without crossing section boundaries."""
+    if up == 1:
+        return parent_times[::down]
+    n_out = (len(parent_times) * up + down - 1) // down
+    positions = np.arange(n_out, dtype=np.int64) * down
+    left = positions // up
+    weight = (positions % up) / up
+    right = np.minimum(left + 1, len(parent_times) - 1)
+    intervals = parent_times[right] - parent_times[left]
+    intervals[left == len(parent_times) - 1] = 1.0 / parent_rate
+    return parent_times[left] + weight * intervals
 
 
 resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")

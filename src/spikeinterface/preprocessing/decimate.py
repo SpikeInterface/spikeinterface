@@ -7,7 +7,7 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ._decimation_tools import get_balanced_decimation_factors, get_resampling_margin
+from ._resampling_tools import get_polyphase_filter
 from spikeinterface.core import BaseRecordingSegment, get_chunk_with_margin
 
 
@@ -18,7 +18,7 @@ class DecimateRecording(BasePreprocessor):
     By default this uses simple array slicing
     (``<parent_traces>[<decimation_offset>::<decimation_factor>]``), which is fast but applies no
     anti-aliasing filter and so might introduce aliasing, or skip across signal of interest. Set
-    `antialias=True` to low-pass filter before downsampling using ``scipy.signal.decimate`` (the
+    `antialias=True` to low-pass filter before downsampling using ``scipy.signal.resample_poly`` (the
     same anti-aliased decimation used by ``spikeinterface.preprocessing.ResampleRecording``).
 
     Parameters
@@ -36,19 +36,15 @@ class DecimateRecording(BasePreprocessor):
         The same decimation offset is applied to all segments from the parent recording.
     antialias : bool | None, default: None
         If True, apply an anti-aliasing low-pass filter before downsampling, using
-        ``scipy.signal.decimate``. When `decimation_factor` exceeds 13, the decimation is
-        automatically performed in several balanced sub-13 passes (e.g. a factor of 48 is applied
-        as 8 then 6), as scipy recommends, to keep the IIR anti-aliasing filter stable. If False,
+        ``scipy.signal.resample_poly`` with a Kaiser-windowed FIR filter. If False,
         traces are downsampled by plain array slicing with no filtering, and `margin_ms`
         is ignored. If omitted or None, currently behaves as False and emits a FutureWarning:
         a future release will enable antialiasing by default. Pass True or False explicitly
         to select the behavior and silence the transition warning.
     margin_ms : float | None, default: None
-        Margin in ms used on each side of every chunk to limit edge effects of the anti-aliasing
-        filter. Only used when `antialias=True`. The margin is internally rounded up to a whole
-        number of output samples so the filtered, downsampled traces stay aligned across chunks.
-        If None, a suitable margin estimate based on the filter properties is used, with
-        a minimum of 100 ms. A nonnegative value overrides the estimate.
+        Additional context in ms on each side of a chunk. Only used when `antialias=True`.
+        If None, use the FIR filter's finite support. An explicit nonnegative value requests
+        at least that much context; filter support and sample-grid alignment are always retained.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
 
@@ -102,10 +98,10 @@ class DecimateRecording(BasePreprocessor):
             )
             antialias = False
 
-        decimation_factors = get_balanced_decimation_factors(decimation_factor) if antialias else None
-
-        # Margin (in parent samples) to limit anti-aliasing filter edge effects.
-        margin = get_resampling_margin(self._orig_samp_freq, margin_ms, decimation_factors) if antialias else 0
+        if antialias:
+            filter_coefficients, margin = get_polyphase_filter(self._orig_samp_freq, 1, decimation_factor, margin_ms)
+        else:
+            filter_coefficients, margin = None, 0
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency, dtype=dtype)
 
@@ -120,7 +116,7 @@ class DecimateRecording(BasePreprocessor):
                     self._dtype,
                     antialias,
                     margin,
-                    decimation_factors,
+                    filter_coefficients,
                 )
             )
 
@@ -145,7 +141,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         dtype,
         antialias=False,
         margin=0,
-        decimation_factors=None,
+        filter_coefficients=None,
     ):
         if parent_recording_segment._time_vector is not None:
             time_vector = parent_recording_segment._time_vector[decimation_offset::decimation_factor]
@@ -153,10 +149,9 @@ class DecimateRecordingSegment(BaseRecordingSegment):
             t_start = None
         else:
             time_vector = None
-            if parent_recording_segment._t_start is None:
-                t_start = None
-            else:
-                t_start = parent_recording_segment._t_start + (decimation_offset / parent_rate)
+            t_start = parent_recording_segment._t_start
+            if decimation_offset:
+                t_start = (0.0 if t_start is None else t_start) + decimation_offset / parent_rate
 
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(
@@ -168,12 +163,12 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         self._dtype = dtype
         self._antialias = antialias
         self._margin = margin
-        self._decimation_factors = decimation_factors if decimation_factors is not None else [decimation_factor]
+        self._filter_coefficients = filter_coefficients
 
     def get_num_samples(self):
         parent_n_samp = self._parent_segment.get_num_samples()
         assert self._decimation_offset < parent_n_samp  # Sanity check (already enforced). Formula changes otherwise
-        return int(np.ceil((parent_n_samp - self._decimation_offset) / self._decimation_factor))
+        return (parent_n_samp - self._decimation_offset + self._decimation_factor - 1) // self._decimation_factor
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if not self._antialias:
@@ -188,69 +183,41 @@ class DecimateRecordingSegment(BaseRecordingSegment):
                 :: self._decimation_factor
             ].astype(self._dtype)
 
-        # Anti-aliased decimation as a cascade of balanced scipy.signal.decimate passes.
-        return get_antialiased_decimated_traces(
+        return get_polyphase_resampled_traces(
             self._parent_segment,
             start_frame,
             end_frame,
             channel_indices,
+            1,
             self._decimation_factor,
-            self._decimation_factors,
             self._margin,
             self._dtype,
+            self._filter_coefficients,
             decimation_offset=self._decimation_offset,
         )
 
 
-def get_antialiased_decimated_traces(
+def get_polyphase_resampled_traces(
     parent_segment,
     start_frame,
     end_frame,
     channel_indices,
-    decimation_factor,
-    decimation_factors,
+    up,
+    down,
     margin,
     dtype,
+    filter_coefficients,
     decimation_offset=0,
 ):
-    """
-    Fetch a margined chunk from `parent_segment` and decimate it by `decimation_factor`, applied
-    as a cascade of the balanced `decimation_factors` passes of ``scipy.signal.decimate``.
+    """Resample a chunk, with reflected boundary padding."""
+    from scipy.signal import resample_poly
 
-    The margin is rounded up to a multiple of the total `decimation_factor` so that
-    ``left_margin // decimation_factor`` is exact; combined with scipy's default
-    ``zero_phase=True`` (output sample i maps to filtered input sample i * factor), this keeps the
-    downsampled traces aligned across chunks (a chunked read matches a full read). Exactly
-    ``end_frame - start_frame`` decimated samples are returned.
+    if end_frame <= start_frame:
+        return parent_segment.get_traces(0, 0, channel_indices).astype(dtype)
 
-    Parameters
-    ----------
-    parent_segment : BaseRecordingSegment
-        The parent segment to read (full-rate) traces from.
-    start_frame, end_frame : int
-        Output (decimated) frame range to return.
-    channel_indices : slice | list | np.ndarray | None
-        Channels to read, forwarded to the parent segment.
-    decimation_factor : int
-        The total decimation factor (the product of `decimation_factors`).
-    decimation_factors : list[int]
-        The per-pass sub-factors (each <= 13), e.g. from `get_balanced_decimation_factors`.
-    margin : int
-        Margin in parent samples used to limit anti-aliasing filter edge effects. Rounded up
-        internally to a multiple of `decimation_factor`.
-    dtype : np.dtype | str
-        Output dtype. Integer output is rounded and clipped to its range.
-    decimation_offset : int, default: 0
-        Index of the first parent frame, applied to the first output sample only.
-    """
-    from scipy import signal
-
-    q = decimation_factor
-    parent_start_frame = decimation_offset + start_frame * q
-    parent_end_frame = parent_start_frame + (end_frame - start_frame) * q
-    # Round the margin up to a multiple of q so that left_margin // q is exact.
-    margin = ((margin + q - 1) // q) * q
-    parent_traces, left_margin, right_margin = get_chunk_with_margin(
+    parent_start_frame = decimation_offset + (start_frame // up) * down
+    parent_end_frame = decimation_offset + ((end_frame + up - 1) // up) * down
+    parent_traces, left_margin, _ = get_chunk_with_margin(
         parent_segment,
         parent_start_frame,
         parent_end_frame,
@@ -259,13 +226,16 @@ def get_antialiased_decimated_traces(
         add_reflect_padding=True,
     )
     working_dtype = np.result_type(parent_traces.dtype, dtype, np.float32)
-    decimated_traces = parent_traces.astype(working_dtype, copy=False)
-    for sub_q in decimation_factors:
-        decimated_traces = signal.decimate(decimated_traces, q=sub_q, axis=0)
-    start_drop = left_margin // q
-    n_out = end_frame - start_frame
-    decimated_traces = decimated_traces[start_drop : start_drop + n_out]
-    return _cast_resampled_traces(decimated_traces, dtype)
+    traces = resample_poly(
+        parent_traces.astype(working_dtype, copy=False),
+        up,
+        down,
+        axis=0,
+        window=filter_coefficients.astype(working_dtype, copy=False),
+    )
+    start_drop = start_frame % up + left_margin * up // down
+    traces = traces[start_drop : start_drop + end_frame - start_frame]
+    return _cast_resampled_traces(traces, dtype)
 
 
 def _cast_resampled_traces(traces, dtype):

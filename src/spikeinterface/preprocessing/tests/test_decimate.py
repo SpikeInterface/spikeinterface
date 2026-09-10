@@ -5,7 +5,7 @@ import pytest
 
 from spikeinterface import NumpyRecording
 from spikeinterface.core import generate_recording, load
-from spikeinterface.preprocessing.decimate import DecimateRecording, decimate, get_balanced_decimation_factors
+from spikeinterface.preprocessing.decimate import DecimateRecording, decimate
 from spikeinterface.preprocessing.resample import ResampleRecording
 from spikeinterface.preprocessing.tests.test_resample import create_sinusoidal_traces
 import numpy as np
@@ -89,46 +89,29 @@ def test_decimate_with_times(antialias):
         )
 
 
-@pytest.mark.parametrize(
-    "decimation_factor, max_factor, expected",
-    [
-        (1, 13, [1]),
-        (7, 13, [7]),
-        (13, 13, [13]),
-        (48, 13, [8, 6]),
-        (50, 13, [10, 5]),
-        (60, 13, [10, 6]),
-        (100, 13, [10, 10]),
-        (17, 13, [17]),  # prime > 13: cannot be split
-        (23, 13, [23]),
-        (48, 8, [8, 6]),
-        (48, 4, [4, 4, 3]),
-        (10, 4, [10]),  # prime > the custom limit: cannot be split
-    ],
-)
-def test_balanced_decimation_factors(decimation_factor, max_factor, expected):
-    if expected == [decimation_factor] and decimation_factor > max_factor:
-        with pytest.warns(UserWarning, match=f"prime factor > {max_factor}"):
-            factors = get_balanced_decimation_factors(decimation_factor, max_factor=max_factor)
-    else:
-        factors = get_balanced_decimation_factors(decimation_factor, max_factor=max_factor)
-    assert factors == expected
-    # The product of the sub-factors always reconstructs the requested factor.
-    assert int(np.prod(factors)) == decimation_factor
-    # Every pass respects the limit unless no valid split exists.
-    if len(factors) > 1:
-        assert all(f <= max_factor for f in factors)
+@pytest.mark.parametrize("factor", [1, 7, 17, 48, 300])
+def test_decimate_polyphase(factor):
+    from scipy.signal import resample_poly
+
+    traces = np.random.default_rng(4621).standard_normal((1001, 2))
+    rec = NumpyRecording(traces, 30000)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        decimated = decimate(rec, factor, antialias=True)
+        resampled = ResampleRecording(rec, 30000 / factor)
+    assert not caught
+    expected = resample_poly(traces, 1, factor, axis=0, padtype="reflect")
+    np.testing.assert_allclose(decimated.get_traces(), expected, rtol=1e-12, atol=1e-12)
+    np.testing.assert_array_equal(resampled.get_traces(), decimated.get_traces())
+    np.testing.assert_array_equal(resampled.get_times(), decimated.get_times())
 
 
 @pytest.mark.parametrize("decimation_factor", [6, 10, 48, 300])
 def test_decimate_antialias_by_chunks(decimation_factor):
-    # Mirror test_resample_by_chunks: chunked reads must match a full read once the
-    # anti-aliasing margins are accounted for. Factor 48 exercises the internal multi-pass.
     sampling_frequency = int(3e4)
     duration = 30
     traces, _ = create_sinusoidal_traces(sampling_frequency, duration, freqs_n=10, max_freq=1000, dtype=np.float32)
     parent_rec = NumpyRecording(traces, sampling_frequency)
-    rms = np.sqrt(np.mean(parent_rec.get_traces() ** 2))
     decimated_rate = sampling_frequency / decimation_factor
 
     for margin_ms in [None, 100, 1000]:
@@ -139,13 +122,7 @@ def test_decimate_antialias_by_chunks(decimation_factor):
         traces2 = rec2.get_traces()
         traces3 = rec3.get_traces()
 
-        # Drop the first and last chunk before comparing (as in test_resample_by_chunks).
-        sl = slice(chunk_size, -chunk_size)
-        error_mean = np.sqrt(np.mean((traces2[sl] - traces3[sl]) ** 2))
-        error_max = np.sqrt(np.max((traces2[sl] - traces3[sl]) ** 2))
-
-        assert error_mean / rms < 0.01
-        assert error_max / rms < 0.05
+        np.testing.assert_array_equal(traces2, traces3)
 
 
 @pytest.mark.parametrize("decimation_factor", [6, 10])
@@ -163,6 +140,8 @@ def test_decimate_antialias_with_offset(decimation_factor, decimation_offset):
         parent_rec, decimation_factor, decimation_offset=decimation_offset, antialias=False, dtype="float32"
     )
 
+    np.testing.assert_allclose(dec_aa.get_times(), parent_rec.get_times()[decimation_offset::decimation_factor])
+
     # The anti-aliasing path returns the same number of samples as plain slicing.
     parent_n = parent_rec.get_num_samples()
     expected_n = int(np.ceil((parent_n - decimation_offset) / decimation_factor))
@@ -174,7 +153,7 @@ def test_decimate_antialias_with_offset(decimation_factor, decimation_offset):
     assert corr > 0.95
 
 
-def test_decimate_antialias_multipass():
+def test_decimate_polyphase_serialization():
     sampling_frequency = 30000
     decimation_factor = 48
     traces, _ = create_sinusoidal_traces(sampling_frequency, duration=10, freqs_n=8, max_freq=200, dtype=np.float32)
@@ -182,13 +161,8 @@ def test_decimate_antialias_multipass():
 
     dec = decimate(parent_rec, decimation_factor, antialias=True)
 
-    # Multi-pass happens internally: a single DecimateRecording carries the full factor.
     assert isinstance(dec, DecimateRecording)
     assert dec._kwargs["decimation_factor"] == decimation_factor
-
-    segment = dec.segments[0]
-    assert int(np.prod(segment._decimation_factors)) == decimation_factor
-    assert all(f <= 13 for f in segment._decimation_factors)
 
     parent_n = parent_rec.get_num_samples()
     assert dec.get_num_samples() == int(np.ceil(parent_n / decimation_factor))
@@ -196,23 +170,6 @@ def test_decimate_antialias_multipass():
     # Provenance round-trips and reproduces the traces.
     dec_loaded = load(dec.to_dict())
     np.testing.assert_allclose(dec_loaded.get_traces(), dec.get_traces())
-
-
-def test_decimate_antialias_large_prime_warns():
-    rec = generate_recording(durations=[2.0], num_channels=2, sampling_frequency=34000)
-    for preprocess in [
-        lambda: DecimateRecording(rec, 17, antialias=True),
-        lambda: ResampleRecording(rec, rec.get_sampling_frequency() / 17),
-    ]:
-        with pytest.warns(UserWarning, match="prime factor > 13") as caught:
-            dec = preprocess()
-        assert len(caught) == 1
-        assert dec.segments[0]._decimation_factors == [17]
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        DecimateRecording(rec, 17, antialias=False)
-    assert not caught
 
 
 if __name__ == "__main__":

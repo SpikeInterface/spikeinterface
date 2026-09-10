@@ -100,7 +100,7 @@ def test_resample_freq_domain():
     parent_rec = NumpyRecording(traces, sampling_frequency)
     # Different resampling frequencies, always below Niquist
     resamp_fss = (np.linspace(0.1, 0.45, 10) * sampling_frequency).astype(int)
-    resamp_recs = [resample(parent_rec, resamp_fs) for resamp_fs in resamp_fss]
+    resamp_recs = [resample(parent_rec, resamp_fs, max_denominator=30000) for resamp_fs in resamp_fss]
     # First set of tests, we are updating frames and time duration correctly
 
     # that they all have the correct number of frames:
@@ -155,74 +155,67 @@ def test_resample_freq_domain():
 
 
 def test_resample_by_chunks():
-    # Now tests the margin effects and the chunk_sizes for sanity
-    # The same as in the phase_shift tests.
-    sampling_frequency = int(3e4)
-    duration = 30
-    freqs_n = 10
-    # ~ dtype = np.int16
-    dtype = np.float32
-    max_freq = 1000
-    traces, [freqs_vals, amps_vals, phase_shifts] = create_sinusoidal_traces(
-        sampling_frequency, duration, freqs_n, max_freq, dtype
-    )
-    parent_rec = NumpyRecording(traces, sampling_frequency)
-    rms = np.sqrt(np.mean(parent_rec.get_traces() ** 2))
-    # The chunk_size must be always at least some 1 second of the resample, else it breaks.
-    # Does this makes sense?
-    # Also, sometimes decimate might give warnings about filter designs
-    resample_rates = [1000, 2000]  # [500, 1000, 2500]
-    margins_ms = [100, 1000]  # [100, 200, 1000]
-    chunk_durations = [0.5, 1]  # [1, 2, 3]
+    traces = np.random.default_rng(4621).standard_normal((60001, 2)).astype("float32")
+    parent_rec = NumpyRecording(traces, 30000)
+    for rate in [1000, 700, 45000, 333.3]:
+        for margin_ms in [None, 0, 100]:
+            processed = resample(parent_rec, rate, margin_ms=margin_ms)
+            saved = processed.save(format="memory", chunk_size=137, n_jobs=1, progress_bar=False)
+            np.testing.assert_array_equal(saved.get_traces(), processed.get_traces())
 
-    for resample_rate in resample_rates:
-        for margin_ms in margins_ms:
-            for chunk_size in [int(resample_rate * chunk_multi) for chunk_multi in chunk_durations]:
-                # print(f'resmple_rate = {resample_rate}; margin_ms = {margin_ms}; chunk_size={chunk_size}')
-                rec2 = resample(parent_rec, resample_rate, margin_ms=margin_ms)
-                # save by chunk rec3 is the cached version
-                rec3 = rec2.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)
 
-                traces2 = rec2.get_traces()
-                traces3 = rec3.get_traces()
+def test_resample_rational_grid():
+    # "the rational sample grid" = "the positions of output samples expressed in input-sample 
+    # coordinates, using the ratio up/down"
+    from contextlib import nullcontext
+    from scipy.signal import resample_poly
+    from spikeinterface.core import load
 
-                # error between full and chunked
-                # for error first and last chunk is removed
-                sl = slice(chunk_size, -chunk_size)
-                error_mean = np.sqrt(np.mean((traces2[sl] - traces3[sl]) ** 2))
-                error_max = np.sqrt(np.max((traces2[sl] - traces3[sl]) ** 2))
+    traces = np.random.default_rng(4621).standard_normal((1001, 2))
+    for parent_rate, requested_rate, up, down, max_denominator in [
+        (1000, 333.3, 3333, 10000, 10000),
+        (1000, 333.3, 1, 3, 10),
+        (1000, 1500, 3, 2, 10000),
+        (30000.03, 1000, 1, 30, 10000),
+        (625, 625 / 6, 1, 6, 10000),
+        (1000, 1000, 1, 1, 10000),
+    ]:
+        parent = NumpyRecording(traces, parent_rate, t_starts=[10.0])
+        expected = resample_poly(traces, up, down, axis=0, padtype="reflect")
+        achieved_rate = parent_rate * up / down
+        approximate = not np.isclose(achieved_rate, requested_rate, rtol=1e-12, atol=0)
+        for explicit_times in [False, True]:
+            if explicit_times:
+                parent.set_times(parent.get_times(), with_warning=False)
+            with pytest.warns(UserWarning, match="achieves") if approximate else nullcontext():
+                processed = resample(parent, requested_rate, max_denominator=max_denominator)
+            assert processed.get_sampling_frequency() == pytest.approx(achieved_rate, rel=1e-15)
+            np.testing.assert_allclose(processed.get_traces(), expected, rtol=0, atol=1e-12)
+            np.testing.assert_allclose(
+                processed.get_times(), 10.0 + np.arange(len(expected)) / achieved_rate, rtol=0, atol=1e-12
+            )
+            assert processed._kwargs["resample_rate"] == requested_rate
+            assert processed._kwargs["max_denominator"] == max_denominator
+            with pytest.warns(UserWarning, match="achieves") if approximate else nullcontext():
+                restored = load(processed.to_dict())
+            assert restored.get_sampling_frequency() == processed.get_sampling_frequency()
+            np.testing.assert_array_equal(restored.get_traces(), processed.get_traces())
 
-                # this will never be possible:
-                # assert np.allclose(traces2, traces3)
-                # so we check that the diff between chunk processing and not chunked is small
-                # print()
-                # print(dtype, margin_ms, chunk_size)
-                # print(error_mean, rms, error_mean / rms)
-                # print(error_max, rms, error_max / rms)
-                # The original thrshold are too restrictive, but in all cases
-                # The signals look quite similar, with error that are small enough
-                # But, when using signal.resample, the last edge becomes too noisy
 
-                assert error_mean / rms < 0.01
-                assert error_max / rms < 0.05
-
-                if DEBUG:
-                    fig, axs = plt.subplots(nrows=2, sharex=True)
-                    fig.suptitle(
-                        f"Resample rate {resample_rate}\nMargin {margin_ms}\nChunk size {chunk_size}\n error mean(%) {error_mean / rms}  error max(%){error_max / rms} "
-                    )
-                    ax = axs[0]
-                    ax.plot(traces2, color="g", label="no chunk")
-                    ax.plot(traces3, color="r", label=f"chunked")
-                    for i in range(traces2.shape[0] // chunk_size):
-                        ax.axvline(chunk_size * i, color="k", alpha=0.4)
-                    ax.legend()
-                    ax = axs[1]
-                    ax.plot(traces3 - traces2)
-                    for i in range(traces2.shape[0] // chunk_size):
-                        ax.axvline(chunk_size * i, color="k", alpha=0.4)
-
-                    plt.show()
+def test_resample_short_sections():
+    for rate in [100, 1500]:
+        parent = NumpyRecording(np.array([[1.0], [9.0]]), 1000)
+        parent.set_times(np.array([10.0, 20.0]), with_warning=False)
+        processed = resample(parent, rate, gap_tolerance_ms=0)
+        sections = [resample(parent.frame_slice(i, i + 1), rate) for i in range(2)]
+        expected = np.concatenate([section.get_traces() for section in sections])
+        np.testing.assert_array_equal(processed.get_traces(), expected)
+        np.testing.assert_array_equal(processed.get_times(), np.concatenate([s.get_times() for s in sections]))
+        for i in range(len(expected)):
+            np.testing.assert_array_equal(processed.get_traces(start_frame=i, end_frame=i + 1), expected[i : i + 1])
+        assert processed.get_traces(start_frame=1, end_frame=1).shape == (0, 1)
+        empty = resample(NumpyRecording(np.empty((0, 1)), 1000), rate)
+        assert empty.get_traces().shape == (0, 1)
 
 
 def test_resample_preserves_t_start():
@@ -301,17 +294,12 @@ def test_resample_preserves_time_vector_non_integer_ratio():
     time_vector = np.arange(n_samples, dtype="float64") / sampling_frequency + 10.0
     parent_rec.set_times(time_vector)
 
-    import warnings as _warnings
-
-    with _warnings.catch_warnings(record=True) as w:
-        _warnings.simplefilter("always")
-        resampled = resample(parent_rec, resample_rate)
-        assert any("non-integer ratio" in str(warning.message).lower() for warning in w)
+    resampled = resample(parent_rec, resample_rate)
 
     assert resampled.has_time_vector()
     resampled_times = resampled.get_times()
     assert len(resampled_times) == resampled.get_num_samples()
-    assert np.isclose(resampled_times[0], 10.0, atol=1.0 / sampling_frequency)
+    np.testing.assert_allclose(resampled_times, 10.0 + np.arange(len(resampled_times)) / resample_rate, atol=1e-12)
 
 
 def test_resample_errors_on_gaps_by_default():
@@ -360,24 +348,24 @@ def test_resample_preserves_gaps_non_integer_ratio():
     [
         700,  # non-integer ratio (30000 / 700 ~= 42.857)
         500,  # integer ratio (30000 / 500 = 60)
-        625,  # factor 48 does not divide the default 3000-sample margin
+        625,  # integer-factor downsampling
+        45000,  # upsampling
     ],
-    ids=["non_integer_ratio", "integer_ratio", "integer_ratio_unaligned_margin"],
+    ids=["non_integer_ratio", "integer_ratio", "factor_48", "upsampling"],
 )
 def test_resample_traces_across_gap(resample_rate):
     """Section-wise resampling should match individually resampled sections.
 
     Build a gapped recording, resample it with gap_tolerance_ms, and verify
     that each section's output matches what you'd get by resampling that
-    section alone (without the gap).  This confirms that _get_traces_gapped
-    does not apply FFT processing (or decimate filtering) across gap boundaries.
+    section alone (without the gap). Filtering must not cross gap boundaries.
     """
     sampling_frequency = 30000
     sec_duration = 2.0
     gap_s = 5.0
 
-    n1 = int(sec_duration * sampling_frequency)
-    n2 = int(sec_duration * sampling_frequency)
+    n1 = int(sec_duration * sampling_frequency) + 7
+    n2 = int(sec_duration * sampling_frequency) + 13
 
     # Build random traces (more realistic than a sinusoid)
     rng = np.random.default_rng(42)
@@ -437,19 +425,18 @@ def test_resample_traces_across_gap(resample_rate):
     assert gapped_s2.shape == ref_traces2.shape, f"Section 2 shape mismatch: {gapped_s2.shape} vs {ref_traces2.shape}"
     np.testing.assert_allclose(gapped_s2, ref_traces2, rtol=1e-5, atol=1e-5)
 
-    if sampling_frequency % resample_rate == 0:
-        # Exercise reads within a section and across the gap, including channel selection.
-        for start, end in [(123, 456), (n_out_1 - 123, n_out_1 + 456)]:
-            expected_pieces = []
-            for offset, section in [(0, resampled1), (n_out_1, resampled2)]:
-                local_start = max(0, start - offset)
-                local_end = min(section.get_num_samples(), end - offset)
-                if local_start < local_end:
-                    expected_pieces.append(
-                        section.get_traces(start_frame=local_start, end_frame=local_end, channel_ids=[1])
-                    )
-            actual = resampled.get_traces(start_frame=start, end_frame=end, channel_ids=[1])
-            np.testing.assert_allclose(actual, np.concatenate(expected_pieces), rtol=1e-5, atol=1e-5)
+    # Exercise reads within a section and across the gap, including channel selection.
+    for start, end in [(123, 456), (n_out_1 - 123, n_out_1 + 456)]:
+        expected_pieces = []
+        for offset, section in [(0, resampled1), (n_out_1, resampled2)]:
+            local_start = max(0, start - offset)
+            local_end = min(section.get_num_samples(), end - offset)
+            if local_start < local_end:
+                expected_pieces.append(
+                    section.get_traces(start_frame=local_start, end_frame=local_end, channel_ids=[1])
+                )
+        actual = resampled.get_traces(start_frame=start, end_frame=end, channel_ids=[1])
+        np.testing.assert_allclose(actual, np.concatenate(expected_pieces), rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.parametrize("resample_rate", [700, 625])
