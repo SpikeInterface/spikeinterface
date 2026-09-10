@@ -39,6 +39,13 @@ from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
+from .zarr_tools import (
+    iterate_zarr_group,
+    get_zarr_attr_or_legacy_object,
+    is_sklearn_estimator,
+    save_sklearn_model_to_zarr_group,
+    load_sklearn_model_from_zarr_group,
+)
 from .node_pipeline import run_node_pipeline
 
 # Typing hints
@@ -1168,8 +1175,8 @@ class SortingAnalyzer:
 
         # Load recording (if available)
         if recording is None:
-            # In zarr v3, recording is stored in attributes
-            rec_dict = zarr_root.attrs.get("recording", None)
+            # In zarr v3, recording is stored in attributes (in zarr v2 it was an object array)
+            rec_dict = get_zarr_attr_or_legacy_object(zarr_root, "recording")
             if rec_dict is not None:
                 try:
                     recording = load(rec_dict, base_folder=folder)
@@ -2139,8 +2146,8 @@ class SortingAnalyzer:
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
             sorting_provenance = None
-            # In zarr v3, sorting_provenance is stored in attributes
-            sort_dict = zarr_root.attrs.get("sorting_provenance", None)
+            # In zarr v3, sorting_provenance is stored in attributes (in zarr v2 it was an object array)
+            sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "sorting_provenance")
             if sort_dict is not None:
                 # try-except here is because it's not required to be able
                 # to load the sorting provenance, as the user might have deleted
@@ -2532,8 +2539,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             except KeyError:
                 extension_group = None
             if extension_group is not None:
-                for extension_name in extension_group.keys():
-                    if "params" in extension_group[extension_name].attrs.keys():
+                for extension_name, extension in iterate_zarr_group(extension_group):
+                    if "params" in extension.attrs.keys():
                         saved_extension_names.append(extension_name)
 
         else:
@@ -3239,21 +3246,26 @@ class AnalyzerExtension:
                 self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
-            for ext_data_name in extension_group.keys():
-                ext_data_ = extension_group[ext_data_name]
+            # iterate_zarr_group is used to be compatible with both zarr v2 (saved by
+            # spikeinterface < 0.105) and zarr v3 groups
+            for ext_data_name, ext_data_ in iterate_zarr_group(extension_group):
                 # In zarr v3, check if it's a group with dict_data attribute
                 if "dict_data" in ext_data_.attrs:
                     ext_data = ext_data_.attrs["dict_data"]
+                elif "sklearn_model" in ext_data_.attrs:
+                    ext_data = load_sklearn_model_from_zarr_group(ext_data_)
                 elif "dataframe" in ext_data_.attrs:
                     import pandas as pd
 
                     index = ext_data_["index"]
                     ext_data = pd.DataFrame(index=index)
-                    for col in ext_data_.keys():
+                    for col, col_data in iterate_zarr_group(ext_data_):
                         if col != "index":
-                            ext_data.loc[:, col] = ext_data_[col][:]
+                            ext_data.loc[:, col] = col_data[:]
                     ext_data = ext_data.convert_dtypes()
-                elif "object" in ext_data_.attrs:
+                elif "object" in ext_data_.attrs or "dict" in ext_data_.attrs:
+                    # "dict" is the zarr v2 (spikeinterface < 0.105) flag for dict/list data,
+                    # which was saved as a length-1 object array
                     ext_data = ext_data_[0]
                 else:
                     ext_data = ext_data_ if lazy else np.array(ext_data_[:])
@@ -3434,15 +3446,17 @@ class AnalyzerExtension:
                             col_data = col_data.astype(str)
                         df_group.create_array(name=col, data=col_data)
                     df_group.attrs["dataframe"] = True
+                elif is_sklearn_estimator(ext_data):
+                    # sklearn models (e.g. the PCA models) are saved as arrays + attributes,
+                    # so that no pickle is needed (in zarr v2 they were pickled object arrays)
+                    try:
+                        save_sklearn_model_to_zarr_group(extension_group, ext_data_name, ext_data, **saving_options)
+                    except Exception as e:
+                        warnings.warn(f"Could not save the {ext_data_name} model to zarr, skipping: {e}")
+                        if ext_data_name in extension_group:
+                            del extension_group[ext_data_name]
                 else:
-                    # any object
-                    # try:
-                    #     extension_group.create_array(
-                    #         name=ext_data_name, data=np.array([ext_data], dtype=object), object_codec=numcodecs.Pickle()
-                    #     )
-                    # except:
-                    #     raise Exception(f"Could not save {ext_data_name} as extension data")
-                    # extension_group[ext_data_name].attrs["object"] = True
+                    # any other object
                     warnings.warn(f"Data type of {ext_data_name} not supported for zarr saving, skipping.")
 
     def _reset_extension_folder(self):

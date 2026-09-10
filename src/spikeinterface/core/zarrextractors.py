@@ -11,6 +11,7 @@ from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import define_function_from_class, check_json, is_path_remote, retrieve_importing_provenance
 from .job_tools import split_job_kwargs, fix_job_kwargs, ensure_chunk_size
+from .zarr_tools import iterate_zarr_group
 
 zarr.config.set({"default_zarr_version": 3})
 
@@ -214,16 +215,15 @@ class ZarrRecordingExtractor(BaseRecording):
         # load properties
         if "properties" in self._root:
             prop_group = self._root["properties"]
-            for key in prop_group.keys():
+            for key, values in iterate_zarr_group(prop_group):
                 # Skip contact_vector property since it is not used anymore to represent probegroup
                 if key == "contact_vector":
                     continue
-                values = self._root["properties"][key][:]
+                values = values[:]
                 # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
                 if hasattr(values.dtype, "na_object") or values.dtype.kind == "O":
                     if values.size > 0 and isinstance(values.tolist()[0], str):
                         values = np.array(values.tolist())
-                values = self._root["properties"][key]
                 self.set_property(key, values)
 
         # load annotations
@@ -467,8 +467,8 @@ class ZarrSortingExtractor(BaseSorting):
         # load properties
         if "properties" in self._root:
             prop_group = self._root["properties"]
-            for key in prop_group.keys():
-                values = self._root["properties"][key][:]
+            for key, values in iterate_zarr_group(prop_group):
+                values = values[:]
                 # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
                 if hasattr(values.dtype, "na_object") or values.dtype.kind == "O":
                     if values.size > 0 and isinstance(values.tolist()[0], str):

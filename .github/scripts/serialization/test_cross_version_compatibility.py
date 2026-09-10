@@ -9,6 +9,7 @@ it imports the shared objects directly.
 """
 
 import os
+import json
 from pathlib import Path
 
 import pytest
@@ -27,4 +28,8 @@ def test_load_old_serialized_object(entry, fmt):
     fixture = FIXTURES_DIR / f"{entry['id']}{FIXTURE_SUFFIX[fmt]}"
     assert fixture.exists(), f"missing fixture {fixture}"
     obj = load(fixture)
-    entry["check"](obj)
+    check_extra_data = None
+    if (FIXTURES_DIR / f"{entry['id']}.json").exists():
+        with open(FIXTURES_DIR / f"{entry['id']}.json", "r") as f:
+            check_extra_data = json.load(f)
+    entry["check"](obj, check_extra_data=check_extra_data)
