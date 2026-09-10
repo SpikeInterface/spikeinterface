@@ -518,8 +518,6 @@ def set_properties_after_merging(
             elif (not same_property_values) and key == "main_channel_id":
                 # Main channel id is special. For now, if there is a disagreement, we take the value of the unit
                 # with the most spikes. TODO: overwrite this for analyzer if templates exist.
-                # np.argmax() on a dict_values view always returned index 0, ignoring the counts entirely
-                # (NumPy can't iterate it, no __getitem__). Look counts up by unit id instead of by position.
                 num_spikes_per_unit = sorting_pre_merge.count_num_spikes_per_unit(unit_ids=merge_group)
                 spike_counts_in_merge_group_order = [num_spikes_per_unit[unit_id] for unit_id in merge_group]
                 max_unit_index = np.argmax(spike_counts_in_merge_group_order)
