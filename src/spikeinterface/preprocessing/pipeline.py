@@ -1,69 +1,73 @@
 from pathlib import Path
 import inspect
+import warnings
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.core_tools import is_dict_extractor, is_path_remote
 from spikeinterface.core.zarrextractors import super_zarr_open
 from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
 
 pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
-pp_names_to_classes = {pp_function.__name__: pp_class for pp_class, pp_function in _all_preprocesser_dict.items()}
 
 
-class PreprocessingPipeline:
+class BasePipeline:
     """
-    A preprocessing pipeline, containing ordered preprocessing steps.
+    Base processing pipeline to construct a processing pipeline from a list of processing steps and their params.
 
-    Parameters
-    ----------
-    preprocessor_dict : dict
-        Dictionary containing preprocessing steps and their kwargs
-
-    Examples
-    --------
-    Generate a `PreprocessingPipeline` containing a `bandpass_filter` then a
-    `common_reference` step. Then apply this to a recording
-
-    >>> from spikeinterface.preprocessing import PreprocessingPipeline
-    >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
-    >>> my_pipeline = PreprocessingPipeline(preprocessor_dict)
-    PreprocessingPipeline:  Raw Recording → bandpass_filter → common_reference → Preprocessed Recording
-    >>> my_pipeline._apply(recording)
-
+    Inherited classes should define the `function_names_to_functions` attributes,
+    which map the names of processing steps to their corresponding functions, respectively.
     """
 
-    def __init__(self, preprocessor_dict):
+    function_names_to_functions = dict()
 
+    def __init__(self, preprocessor_list_or_dict):
         non_supported_preprocessors = []
-        for preprocessor in preprocessor_dict:
-            if preprocessor not in pp_names_to_functions.keys():
-                non_supported_preprocessors.append(preprocessor)
+        # convert dicts to lists
+        preprocessor_list = []
+        if isinstance(preprocessor_list_or_dict, dict):
+            for key, value in preprocessor_list_or_dict.items():
+                step = dict(name=key, params=value)
+                preprocessor_list.append(step)
+        elif isinstance(preprocessor_list_or_dict, list):
+            preprocessor_list = preprocessor_list_or_dict
+            assert all(
+                isinstance(step, dict) and "name" in step for step in preprocessor_list
+            ), "Each step in the preprocessor list must be a dict with 'name' key."
+
+        for step in preprocessor_list:
+            if "params" not in step:
+                step["params"] = {}
+
+        for preprocessor in preprocessor_list:
+            if preprocessor["name"] not in self.function_names_to_functions.keys():
+                non_supported_preprocessors.append(preprocessor["name"])
 
         if len(non_supported_preprocessors) > 0:
             raise TypeError(
-                f"The preprocessors '{non_supported_preprocessors}' are not supported by the `PreprocessingPipeline`. \
-To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.pipeline import pp_names_to_functions \
-\n>>> print(pp_names_to_functions.keys())"
+                f"The preprocessors '{non_supported_preprocessors}' are not supported by the pipeline. "
+                f"Available preprocessors are: {list(self.function_names_to_functions.keys())}"
             )
 
-        self.preprocessor_dict = preprocessor_dict
+        self.preprocessor_list = preprocessor_list
 
     def __repr__(self):
-        txt = "PreprocessingPipeline: \tRaw Recording \u2192 "
-        for preprocessor in self.preprocessor_dict:
-            txt += str(preprocessor) + " \u2192 "
-        txt += "Preprocessed Recording"
+        txt = "Pipeline: \tinput \u2192 "
+        for preprocessor in self.preprocessor_list:
+            txt += str(preprocessor["name"]) + " \u2192 "
+        txt += "preprocessed"
         return txt
 
     def _repr_html_(self):
 
-        all_kwargs = _get_all_kwargs_and_values(self)
+        all_kwargs_list = _get_all_kwargs_and_values(self)
 
         html_text = "<div'>"
         html_text += "<strong>PreprocessingPipeline</strong>"
-        html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>Initial Recording</strong></div>"
+        html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>input</strong></div>"
         html_text += "<div style='margin: auto; text-indent: 30px;'>&#x2193;</div>"
 
-        for a, (preprocessor, kwargs) in enumerate(all_kwargs.items()):
+        for all_kwargs in all_kwargs_list:
+            preprocessor = all_kwargs["name"]
+            kwargs = all_kwargs["kwargs"]
             html_text += "<details style='border:1px solid #ddd; padding:5px;'>"
             html_text += f"<summary><strong>{preprocessor}</strong></summary>"
 
@@ -74,7 +78,7 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
             html_text += "</details>"
 
         html_text += """<div style='margin: auto; text-indent: 30px;'>&#x2193;</div>"""
-        html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>Preprocessed Recording</strong></div>"
+        html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>preprocessed</strong></div>"
         html_text += "</div>"
 
         return html_text
@@ -100,11 +104,12 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
 
         """
         instantiated_recordings = {"raw": recording}
-        for preprocessor_name, kwargs_ in self.preprocessor_dict.items():
-            kwargs = kwargs_.copy()
+        for step in self.preprocessor_list:
+            preprocessor_name = step["name"]
+            params = step["params"].copy()
             dont_apply_kwargs = ["recording", "parent_recording"]
 
-            for k, v in kwargs.items():
+            for k, v in params.items():
                 if isinstance(v, str) and "pipeline[" in v:
                     if "recording" not in k:
                         raise ValueError(
@@ -120,36 +125,64 @@ To see the list of supported steps, run:\n>>> from spikeinterface.preprocessing.
                     substituted_recording = instantiated_recordings.get(rec_name)
                     if substituted_recording is None:
                         raise ValueError(f"Cannot find recording '{rec_name}' from previous steps in the pipeline.")
-                    kwargs[k] = substituted_recording
+                    params[k] = substituted_recording
 
             if not apply_precomputed_kwargs:
-                preprocessor_class = pp_names_to_classes[preprocessor_name]
-                precomputable_kwarg_names = preprocessor_class._precomputable_kwarg_names
-                dont_apply_kwargs += precomputable_kwarg_names
+                preprocessor_function = self.function_names_to_functions[preprocessor_name]
+                if hasattr(preprocessor_function, "_precomputable_kwarg_names"):
+                    precomputable_kwarg_names = preprocessor_function._precomputable_kwarg_names
+                    dont_apply_kwargs += precomputable_kwarg_names
 
-            non_rec_kwargs = {key: value for key, value in kwargs.items() if key not in dont_apply_kwargs}
-            pp_output = pp_names_to_functions[preprocessor_name](recording, **non_rec_kwargs)
+            non_rec_params = {key: value for key, value in params.items() if key not in dont_apply_kwargs}
+            pp_output = self.function_names_to_functions[preprocessor_name](recording, **non_rec_params)
             recording = pp_output
             instantiated_recordings[preprocessor_name] = recording
 
         return recording
 
 
-def apply_preprocessing_pipeline(
-    recording: BaseRecording, pipeline_or_dict: PreprocessingPipeline | dict, apply_precomputed_kwargs=True
-):
+class PreprocessingPipeline(BasePipeline):
     """
-    Creates a preprocessed recording by applying the preprocessing steps in
-    `preprocessor_dict` to `recording`.
+    A preprocessing pipeline, containing ordered preprocessing steps.
 
     Parameters
     ----------
-    recording : BaseRecording
-        The initial recording
-    pipeline_or_dict : PreprocessingPipeline | dict
-        Dictionary containing preprocessing steps and their kwargs, or a pipeline object.
+    preprocessor_list_or_dict : dict or list
+        Dictionary or list containing preprocessing steps and their kwargs
+
+    Examples
+    --------
+    Generate a `PreprocessingPipeline` containing a `bandpass_filter` then a
+    `common_reference` step. Then apply this to a recording
+
+    >>> from spikeinterface.preprocessing import PreprocessingPipeline
+    >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
+    >>> my_pipeline = PreprocessingPipeline(preprocessor_dict)
+    PreprocessingPipeline:  Raw Recording → bandpass_filter → common_reference → Preprocessed Recording
+    >>> my_pipeline._apply(recording)
+
+    """
+
+    function_names_to_functions = pp_names_to_functions
+
+
+def apply_preprocessing_pipeline(
+    recording_or_dict: BaseRecording | dict,
+    pipeline: PreprocessingPipeline | list | dict,
+    apply_precomputed_kwargs=True,
+):
+    """
+    Creates a preprocessed recording by applying the preprocessing steps in
+    `pipeline` to `recording`.
+
+    Parameters
+    ----------
+    recording_or_dict : BaseRecording | dict
+        The initial recording or a dictionary of recordings
+    pipeline : PreprocessingPipeline | list | dict
+        A list of preprocessing steps, or a pipeline object.
         If None, the original recording is returned.
-    apply_precomputed_kwargs : Bool, default: False
+    apply_precomputed_kwargs : Bool, default: True
         Some preprocessing steps (e.g. Whitening) contain arguments which are computed
         during preprocessing. If True, we use the arguments which have already been
         computed. If False, we recompute them on application of the pipeline.
@@ -161,30 +194,38 @@ def apply_preprocessing_pipeline(
 
     Examples
     --------
-    Create a preprocessed recording from a generated recording and a preprocessor_dict
+    Create a preprocessed recording from a generated recording and a preprocessing pipeline
 
     >>> from spikeinterface.preprocessing import create_preprocessed
     >>> from spikeinterface.generation import generate_recording
     >>> recording = generate_recording()
-    >>> preprocessor_dict = {'bandpass_filter': {'freq_max': 3000}, 'common_reference': {}}
-    >>> preprocessed_recording = apply_preprocessing_pipeline(recording, preprocessor_dict)
+    >>> pipeline = [{'name': 'bandpass_filter', 'kwargs': {'freq_max': 3000}}, {'name': 'common_reference', 'kwargs': {}}]
+    >>> preprocessed_recording = apply_preprocessing_pipeline(recording, pipeline)
     """
 
-    if isinstance(pipeline_or_dict, PreprocessingPipeline):
-        pipeline = pipeline_or_dict
-    elif isinstance(pipeline_or_dict, dict):
-        pipeline = PreprocessingPipeline(pipeline_or_dict)
+    if isinstance(pipeline, PreprocessingPipeline):
+        pipeline = pipeline
+    elif isinstance(pipeline, list):
+        pipeline = PreprocessingPipeline(pipeline)
+    elif isinstance(pipeline, dict):
+        warnings.warn(
+            "Passing a dict to `apply_preprocessing_pipeline` is deprecated and will be removed in 0.106.0. "
+            "Please pass a list of preprocessing steps instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        pipeline = PreprocessingPipeline(pipeline)
     else:
-        raise TypeError("`pipeline_or_dict` must be a `PreprocessingPipeline` or a dict")
+        raise TypeError("`pipeline` must be a `PreprocessingPipeline`, a list, or a dict")
 
-    preprocessed_recording = pipeline._apply(recording, apply_precomputed_kwargs)
+    preprocessed_recording = pipeline._apply(recording_or_dict, apply_precomputed_kwargs)
     return preprocessed_recording
 
 
-def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend_options=None):
+def get_preprocessing_list_from_analyzer(analyzer_folder, format="auto", backend_options=None):
     """
-    Generates a dictionary from a saved analyzer. The dictionary can be passed to the
-    `PreprocessingPipeline` class to create a preprocessing pipeline.
+    Generates a preprocessing list from a saved analyzer. The list can be passed to the
+    `PreprocessingPipeline` class to create a preprocessing pipeline from the list.
 
     Parameters
     ----------
@@ -197,8 +238,8 @@ def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend
 
     Returns
     -------
-    preprocessing_dict : dict
-        The preprocessing dict extracted from the analyzer's recording.
+    preprocessing_list : list
+        The preprocessing list extracted from the analyzer's recording.
     """
     if not is_path_remote(analyzer_folder):
         analyzer_folder = Path(analyzer_folder)
@@ -215,7 +256,7 @@ def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend
             raise FileNotFoundError(f"Cannot find `recording.*` file in {analyzer_folder}.")
         else:
             recording_file = recording_files[0]
-            preprocessing_dict = get_preprocessing_dict_from_file(recording_file)
+            preprocessing_list = get_preprocessing_list_from_file(recording_file)
 
     elif format == "zarr":
         backend_options = {} if backend_options is None else backend_options
@@ -228,14 +269,14 @@ def get_preprocessing_dict_from_analyzer(analyzer_folder, format="auto", backend
         else:
             recording_dict = {}
 
-        preprocessing_dict = _make_pipeline_dict_from_recording_dict(recording_dict)
+        preprocessing_list = _make_pipeline_list_from_recording_dict(recording_dict)
 
-    return preprocessing_dict
+    return preprocessing_list
 
 
-def get_preprocessing_dict_from_file(recording_dictionary_path):
+def get_preprocessing_list_from_file(recording_dictionary_path):
     """
-    Generates a preprocessing dict, passable to `apply_preprocessing_pipeline` function and
+    Generates a preprocessing list, passable to `apply_preprocessing_pipeline` function and
     `PreprocessPipeline` class, from a recording dictionary.
 
     Only extracts preprocessing steps which can be applied "globally" to any recording.
@@ -248,8 +289,8 @@ def get_preprocessing_dict_from_file(recording_dictionary_path):
 
     Returns
     -------
-    preprocessor_dict : dict
-        Dictionary containing preprocessing steps and their kwargs
+    preprocessing_list : list
+        List containing preprocessing steps and their kwargs, each element is a dict with keys "name" and "kwargs".
 
     """
 
@@ -264,20 +305,20 @@ def get_preprocessing_dict_from_file(recording_dictionary_path):
         with open(recording_dictionary_path, "rb") as f:
             recording_dict = pickle.load(f)
 
-    pipeline_dict = _make_pipeline_dict_from_recording_dict(recording_dict)
-    return pipeline_dict
+    preprocessing_list = _make_pipeline_list_from_recording_dict(recording_dict)
+    return preprocessing_list
 
 
-def _make_pipeline_dict_from_recording_dict(recording_dict):
+def _make_pipeline_list_from_recording_dict(recording_dict):
     """
     Transforms a recording dict (created by the `dump` method of `BaseRecording`)
-    into a preprocessing pipeline dict.
+    into a preprocessing pipeline list.
     """
 
     pipeline_dict_from_file = {}
     _ = _load_pp_from_dict(recording_dict, pipeline_dict_from_file)
 
-    pipeline_dict = {}
+    preprocessing_list = []
     for preprocessor in pipeline_dict_from_file:
 
         preprocessor_class_name = preprocessor.split(".")[-1]
@@ -292,9 +333,9 @@ def _make_pipeline_dict_from_recording_dict(recording_dict):
             if key not in ["recording", "parent_recording"]
         }
 
-        pipeline_dict[preprocessor_function.__name__] = pp_kwargs
+        preprocessing_list.append({"name": preprocessor_function.__name__, "params": pp_kwargs})
 
-    return pipeline_dict
+    return preprocessing_list
 
 
 def _load_pp_from_dict(prov_dict, kwargs_dict):
@@ -347,14 +388,14 @@ def _get_all_kwargs_and_values(my_pipeline):
     including the default values.
     """
 
-    all_kwargs = {}
-    for preprocessor in my_pipeline.preprocessor_dict:
+    all_kwargs_list = []
+    for preprocessor in my_pipeline.preprocessor_list:
 
-        preprocessor_name = preprocessor.split(".")[-1]
-        pp_function = pp_names_to_functions[preprocessor.split(".")[-1]]
+        preprocessor_name = preprocessor["name"].split(".")[-1]
+        pp_function = my_pipeline.function_names_to_functions[preprocessor["name"].split(".")[-1]]
         signature = inspect.signature(pp_function)
 
-        all_kwargs[preprocessor_name] = {}
+        all_kwargs = {"name": preprocessor_name, "kwargs": {}}
 
         for _, value in signature.parameters.items():
             par_name = str(value).split("=")[0].split(":")[0]
@@ -368,12 +409,14 @@ def _get_all_kwargs_and_values(my_pipeline):
                 except:
                     default_value = None
 
-                pipeline_value = my_pipeline.preprocessor_dict[preprocessor].get(par_name)
+                preprocessor_index = my_pipeline.preprocessor_list.index(preprocessor)
+                pipeline_value = my_pipeline.preprocessor_list[preprocessor_index]["params"].get(par_name)
 
                 if pipeline_value is None:
                     if default_value != pipeline_value:
                         pipeline_value = default_value
 
-                all_kwargs[preprocessor_name][par_name] = pipeline_value
+                all_kwargs["kwargs"][par_name] = pipeline_value
 
-    return all_kwargs
+        all_kwargs_list.append(all_kwargs)
+    return all_kwargs_list
