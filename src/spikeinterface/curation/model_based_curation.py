@@ -70,6 +70,7 @@ class ModelBasedClassification:
         model_info: dict | None = None,
         enforce_metric_params: bool = False,
         set_predictions_as_properties: bool = True,
+        input_data=None,
     ):
         """
         Predicts the labels for the spike sorting data using the trained model.
@@ -96,6 +97,8 @@ class ModelBasedClassification:
         set_predictions_as_properties : bool, default: True
             Whether to set the predictions as properties in the sorting object.
             If True, the predicted labels and probabilities will be stored in the 'classifier_label' and 'classifier_probability' properties of the sorting object.
+        input_data : deprecated, default: None
+            Deprecated parameter. Use `metrics` instead.
 
         Returns
         -------
@@ -104,6 +107,13 @@ class ModelBasedClassification:
             indexed by their `unit_ids`.
         """
         import pandas as pd
+
+        if input_data is not None:
+            warnings.warn(
+                "`input_data` is deprecated. Use the `metrics` argument instead.", FutureWarning, stacklevel=2
+            )
+            if metrics is None:
+                metrics = input_data
 
         # Get metrics DataFrame for classification
         if metrics is None:
