@@ -1,5 +1,6 @@
 from pathlib import Path
-from packaging.version import parse
+
+import numpy as np
 
 from ..basesorter import BaseSorter
 from ...core import NumpyFolderSorting, NumpySorting
@@ -90,7 +91,7 @@ class DartsortSorter(BaseSorter):
         # Add main_channel_id property by taking mode of channels from spikes
         labels = dartsort_sorting.labels
         spike_channels = dartsort_sorting.channels
-        main_channel_indices = [mode(spike_channels[labels == unit_id])[0] for unit_id in sorting.unit_ids]
+        main_channel_indices = [np.bincount(spike_channels[labels == unit_id]).argmax() for unit_id in sorting.unit_ids]
         main_channel_ids = recording.channel_ids[main_channel_indices]
         sorting.set_property("main_channel_id", main_channel_ids)
         NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")
