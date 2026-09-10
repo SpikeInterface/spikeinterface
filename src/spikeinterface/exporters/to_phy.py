@@ -48,7 +48,7 @@ def export_to_phy(
     compute_amplitudes : bool, default: True
         If True, waveforms amplitudes are computed
     add_waveforms : bool, default: False
-        If True, a subset of spike waveforms is saved in the phy "_phy_spikes_subset.*" files, 
+        If True, a subset of spike waveforms is saved in the phy "_phy_spikes_subset.*" files,
         so that phy can display individual spike waveforms without needing the raw recording.
     sparsity : ChannelSparsity or None, default: None
         The sparsity object
