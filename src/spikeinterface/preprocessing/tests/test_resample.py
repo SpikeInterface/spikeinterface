@@ -165,7 +165,7 @@ def test_resample_by_chunks():
 
 
 def test_resample_rational_grid():
-    # "the rational sample grid" = "the positions of output samples expressed in input-sample 
+    # "the rational sample grid" = "the positions of output samples expressed in input-sample
     # coordinates, using the ratio up/down"
     from contextlib import nullcontext
     from scipy.signal import resample_poly

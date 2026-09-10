@@ -23,10 +23,10 @@ class ResampleRecording(BasePreprocessor):
     recording : Recording
         The recording extractor to be re-referenced
     resample_rate : int | float
-        The requested sampling frequency. The closest output/input rate ratio with 
-        denominator at most `max_denominator` is selected. The output reports the 
+        The requested sampling frequency. The closest output/input rate ratio with
+        denominator at most `max_denominator` is selected. The output reports the
         achieved rate, while the requested rate is retained in serialization kwargs.
-        A relative difference exceeding 1e-12 emits a warning. 
+        A relative difference exceeding 1e-12 emits a warning.
     gap_tolerance_ms : float | None, default: None
         Maximum acceptable gap size in milliseconds for automatic segmentation.
 
@@ -61,7 +61,7 @@ class ResampleRecording(BasePreprocessor):
     max_denominator : int, default: 10000
         Maximum denominator of the rational output/input rate ratio. Increasing this can
         improve rate accuracy, but can also increase filter length and the aligned input
-        span needed for a chunk. 
+        span needed for a chunk.
 
     Returns
     -------
@@ -71,13 +71,13 @@ class ResampleRecording(BasePreprocessor):
     Notes
     -----
     Each section returns ``ceil(num_input_samples * up / down)`` samples, matching SciPy
-    and ``decimate()``. Output timestamps use the same rational grid as the traces. 
-    Explicit parent timestamps are sampled or interpolated within each section. 
-    Output positions beyond the last input sample extrapolate its timestamp by less 
+    and ``decimate()``. Output timestamps use the same rational grid as the traces.
+    Explicit parent timestamps are sampled or interpolated within each section.
+    Output positions beyond the last input sample extrapolate its timestamp by less
     than one nominal input period.
 
-    For example, resampling from 30000.01 Hz to a requested 2500 Hz with the default 
-    denominator limit selects up=1 and down=12. The output reports 2500.000833333333 Hz, 
+    For example, resampling from 30000.01 Hz to a requested 2500 Hz with the default
+    denominator limit selects up=1 and down=12. The output reports 2500.000833333333 Hz,
     and a warning reports the difference of approximately +0.333333 ppm.
 
     """
