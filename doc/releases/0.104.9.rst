@@ -1,0 +1,16 @@
+.. _release0.104.9:
+
+SpikeInterface 0.104.9 release notes
+------------------------------------
+
+Sept 10th 2026
+
+Minor release with bug fixes for sortingview backend
+extractors:
+
+* Sortingview/Figpack: transpose templates (for sortingview) and cast to float32 to avoid serialization issues (#4774)
+#4774
+
+Contributors:
+
+* @alejoe91
