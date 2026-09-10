@@ -1691,7 +1691,8 @@ def slidingRP_violations(
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram.
+        Window in seconds to compute correlogram. Note that as opposed to the syntax in compute_correlogram(),
+        the window_size here is half the duration of the total window computed
     exclude_ref_period_below_ms : float, default: 0.5
         Refractory periods below this value are excluded
     max_ref_period_ms : float, default: 10
@@ -1723,21 +1724,9 @@ def slidingRP_violations(
 
     method = "numba" if HAVE_NUMBA else "numpy"
 
-    bin_size = max(int(bin_size_ms / 1000 * sorting.sampling_frequency), 1)
-    window_size = int(window_size_s * sorting.sampling_frequency)
+    from spikeinterface.postprocessing.correlograms import compute_correlograms
 
-    if method == "numpy":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
-
-        correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
-    if method == "numba":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
-
-        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode="auto")[0, 0]
-
-    ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
-    # the choice of the bin_size above, but I am not the author of the code...
-    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, method=method)[0][0, 0]
+    correlogram = compute_correlograms(sorting, 2 * window_size_s * 1000, bin_size_ms, method=method)[0][0, 0]
     correlogram_positive = correlogram[len(correlogram) // 2 :]
 
     conf_matrix = _compute_violations(
