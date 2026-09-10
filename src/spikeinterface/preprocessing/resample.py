@@ -9,8 +9,9 @@ from spikeinterface.core.core_tools import (
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
 from ._decimation_tools import get_balanced_decimation_factors
-from .decimate import get_antialiased_decimated_traces
+from .decimate import get_antialiased_decimated_traces, _cast_resampled_traces
 from spikeinterface.core import get_chunk_with_margin, BaseRecordingSegment
+from spikeinterface.core.frameslicerecording import FrameSliceRecordingSegment
 
 
 class ResampleRecording(BasePreprocessor):
@@ -56,6 +57,8 @@ class ResampleRecording(BasePreprocessor):
         Margin in ms for computations, used to decrease edge effects.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
+        Integer output is rounded and clipped to the dtype range. Nonfinite resampled
+        output raises a ValueError before conversion.
     skip_checks : bool, default: False
         If True, checks on sampling frequencies and cutoff filter frequencies are skipped
 
@@ -272,11 +275,14 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         if self._has_gaps:
             return self._get_traces_gapped(start_frame, end_frame, channel_indices)
 
+        return self._get_resampled_traces(self._parent_segment, start_frame, end_frame, channel_indices)
+
+    def _get_resampled_traces(self, parent_segment, start_frame, end_frame, channel_indices):
         if self._decimation_factors is not None:
             # Integer-factor downsampling, no gaps: one or more antialiased decimation passes.
             decimation_factor = int(self._parent_rate / self._resample_rate)
             return get_antialiased_decimated_traces(
-                self._parent_segment,
+                parent_segment,
                 start_frame,
                 end_frame,
                 channel_indices,
@@ -293,14 +299,15 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             int((frame / self._resample_rate) * self._parent_rate) for frame in [start_frame, end_frame]
         ]
         parent_traces, left_margin, right_margin = get_chunk_with_margin(
-            self._parent_segment,
+            parent_segment,
             parent_start_frame,
             parent_end_frame,
             channel_indices,
             self._margin,
             add_reflect_padding=True,
-            dtype=np.float32,
         )
+        working_dtype = np.result_type(parent_traces.dtype, self._dtype, np.float32)
+        parent_traces = parent_traces.astype(working_dtype, copy=False)
         # get left and right margins for the resampled case
         left_margin_rs, right_margin_rs = [
             int((margin / self._parent_rate) * self._resample_rate) for margin in [left_margin, right_margin]
@@ -312,123 +319,33 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # now take care of the edges
         resampled_traces = resampled_traces[left_margin_rs : num - right_margin_rs]
-        return resampled_traces.astype(self._dtype)
+        return _cast_resampled_traces(resampled_traces, self._dtype)
 
     def _get_traces_gapped(self, start_frame, end_frame, channel_indices):
-        """Resample traces section-by-section, avoiding FFT processing across gaps."""
-        from scipy.signal import decimate, resample
-
-        # Determine the post-indexing channel count via a 1-sample parent fetch.
-        # channel_indices may be a slice, list, ndarray, or None, so we cannot
-        # simply use len(channel_indices).
+        """Resample each section with margins bounded by its own samples."""
         n_channels = self._parent_segment.get_traces(0, 1, channel_indices).shape[1]
-
-        # Pre-allocate the output buffer.
         result = np.empty((end_frame - start_frame, n_channels), dtype=self._dtype)
-
         if start_frame == end_frame:
             return result
 
-        # Find which sections overlap [start_frame, end_frame) in output space.
-        # _sec_boundaries_output[k] = [out_start_k, out_end_k)
-        sec_ends = self._sec_boundaries_output[:, 1]
         sec_starts = self._sec_boundaries_output[:, 0]
+        sec_ends = self._sec_boundaries_output[:, 1]
         first_sec = int(np.searchsorted(sec_ends, start_frame, side="right"))
-        last_sec = int(np.searchsorted(sec_starts, end_frame, side="left")) - 1
-        first_sec = max(first_sec, 0)
-        last_sec = min(last_sec, len(self._sec_n_out) - 1)
+        stop_sec = int(np.searchsorted(sec_starts, end_frame, side="left"))
 
-        is_integer_ratio = self._decimation_factors is not None
-        margin = self._margin
-        if is_integer_ratio:
-            # Integer-factor decimation rounds the margin up to a multiple of the total
-            # factor, in parent samples.
-            q = int(self._parent_rate / self._resample_rate)
-            margin = ((margin + q - 1) // q) * q
-
-        pos = 0
-        for k in range(first_sec, last_sec + 1):
-            out_start_k = int(self._sec_boundaries_output[k, 0])
-            out_end_k = int(self._sec_boundaries_output[k, 1])
-            par_start_k = int(self._sec_boundaries_parent[k, 0])
-            par_end_k = int(self._sec_boundaries_parent[k, 1])
-            sec_n_parent = par_end_k - par_start_k
-            sec_n_output = int(self._sec_n_out[k])
-
-            if sec_n_output == 0:
+        for k in range(first_sec, stop_sec):
+            out_start = max(start_frame, int(sec_starts[k]))
+            out_end = min(end_frame, int(sec_ends[k]))
+            if out_start >= out_end:
                 continue
 
-            # Clip the output range to the requested [start_frame, end_frame)
-            local_out_start = max(start_frame, out_start_k) - out_start_k
-            local_out_end = min(end_frame, out_end_k) - out_start_k
-
-            if local_out_end <= local_out_start:
-                continue
-
-            # Map within-section output frames to within-section parent frames.
-            if is_integer_ratio:
-                local_par_start = local_out_start * q
-                local_par_end = local_out_end * q
-            else:
-                local_par_start = int((local_out_start / self._resample_rate) * self._parent_rate)
-                local_par_end = int((local_out_end / self._resample_rate) * self._parent_rate)
-            local_par_start = max(0, min(local_par_start, sec_n_parent))
-            local_par_end = max(0, min(local_par_end, sec_n_parent))
-
-            # Apply margin within section boundaries only (do not cross gaps)
-            left_margin = min(margin, local_par_start)
-            right_margin = min(margin, sec_n_parent - local_par_end)
-
-            par_fetch_start = par_start_k + local_par_start - left_margin
-            par_fetch_end = par_start_k + local_par_end + right_margin
-
-            # Fetch parent traces for this section's sub-chunk
-            parent_traces = self._parent_segment.get_traces(par_fetch_start, par_fetch_end, channel_indices).astype(
-                np.float32
+            par_start, par_end = self._sec_boundaries_parent[k]
+            section = FrameSliceRecordingSegment(self._parent_segment, int(par_start), int(par_end))
+            result[out_start - start_frame : out_end - start_frame] = self._get_resampled_traces(
+                section, out_start - int(sec_starts[k]), out_end - int(sec_starts[k]), channel_indices
             )
 
-            # Apply reflect padding if margin was truncated at section edge
-            pad_left = margin - left_margin
-            pad_right = margin - right_margin
-            if pad_left > 0 or pad_right > 0:
-                parent_traces = np.pad(parent_traces, [(pad_left, pad_right), (0, 0)], mode="reflect")
-                left_margin = margin
-                right_margin = margin
-
-            # Compute resampled margins on the output grid.
-            if is_integer_ratio:
-                left_margin_rs = left_margin // q
-                right_margin_rs = right_margin // q
-            else:
-                left_margin_rs = int((left_margin / self._parent_rate) * self._resample_rate)
-                right_margin_rs = int((right_margin / self._parent_rate) * self._resample_rate)
-
-            # Total output samples including margins
-            chunk_len = int(local_out_end - local_out_start)
-            num = chunk_len + left_margin_rs + right_margin_rs
-
-            # Resample this section. Integer ratios use anti-aliased multi-pass decimation
-            # (the balanced sub-13 passes computed in ResampleRecording.__init__), applied
-            # within the section only so filtering never crosses a gap.
-            if is_integer_ratio:
-                resampled = parent_traces
-                for sub_q in self._decimation_factors:
-                    resampled = decimate(resampled, q=sub_q, axis=0)
-                if np.any(np.isnan(resampled)):
-                    resampled = resample(parent_traces, num, axis=0)
-            else:
-                resampled = resample(parent_traces, num, axis=0)
-
-            # Trim margins and write directly into the pre-allocated buffer.
-            # Clamp to the remaining space in case decimate's output length
-            # differs from `num` by a rounding sample.
-            trimmed = resampled[left_margin_rs : num - right_margin_rs]
-            write_len = min(len(trimmed), result.shape[0] - pos)
-            result[pos : pos + write_len] = trimmed[:write_len]
-            pos += write_len
-
-        # Return only the filled portion (normally equals end_frame - start_frame).
-        return result[:pos]
+        return result
 
 
 resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")

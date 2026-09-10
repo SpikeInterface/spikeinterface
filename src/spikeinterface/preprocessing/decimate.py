@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 from spikeinterface.core.core_tools import (
     define_function_handling_dict_from_class,
@@ -224,7 +222,7 @@ def get_antialiased_decimated_traces(
         Margin in parent samples used to limit anti-aliasing filter edge effects. Rounded up
         internally to a multiple of `decimation_factor`.
     dtype : np.dtype | str
-        Output dtype. The decimation runs in float32 and the result is cast to `dtype`.
+        Output dtype. Integer output is rounded and clipped to its range.
     decimation_offset : int, default: 0
         Index of the first parent frame, applied to the first output sample only.
     """
@@ -234,7 +232,7 @@ def get_antialiased_decimated_traces(
     parent_start_frame = decimation_offset + start_frame * q
     parent_end_frame = parent_start_frame + (end_frame - start_frame) * q
     # Round the margin up to a multiple of q so that left_margin // q is exact.
-    margin = int(np.ceil(margin / q) * q)
+    margin = ((margin + q - 1) // q) * q
     parent_traces, left_margin, right_margin = get_chunk_with_margin(
         parent_segment,
         parent_start_frame,
@@ -242,22 +240,40 @@ def get_antialiased_decimated_traces(
         channel_indices,
         margin,
         add_reflect_padding=True,
-        dtype=np.float32,
     )
-    decimated_traces = parent_traces
+    working_dtype = np.result_type(parent_traces.dtype, dtype, np.float32)
+    decimated_traces = parent_traces.astype(working_dtype, copy=False)
     for sub_q in decimation_factors:
         decimated_traces = signal.decimate(decimated_traces, q=sub_q, axis=0)
-    if np.any(np.isnan(decimated_traces)):
-        warnings.warn(
-            f"`scipy.signal.decimate` produced NaNs while decimating by {q}. "
-            f"Consider a different decimation factor."
-        )
     start_drop = left_margin // q
     n_out = end_frame - start_frame
     decimated_traces = decimated_traces[start_drop : start_drop + n_out]
-    if np.issubdtype(np.dtype(dtype), np.integer):
-        np.round(decimated_traces, out=decimated_traces)  # Don't truncate towards zero
-    return decimated_traces.astype(dtype, copy=False)
+    return _cast_resampled_traces(decimated_traces, dtype)
+
+
+def _cast_resampled_traces(traces, dtype):
+    """Reject nonfinite output and round and saturate integer conversions."""
+    if not np.all(np.isfinite(traces)):
+        raise ValueError("Resampling produced nonfinite values. Check the input traces and resampling parameters.")
+
+    dtype = np.dtype(dtype)
+    if np.issubdtype(dtype, np.integer):
+        rounded = np.rint(traces)
+        limits = np.iinfo(dtype)
+        below = rounded <= limits.min
+        above = rounded >= limits.max
+
+        # Assign saturated endpoints after casting because apparently float64 can't 
+        # represent int64.max exactly. 
+        rounded[below | above] = 0
+        result = rounded.astype(dtype)
+        result[below] = limits.min
+        result[above] = limits.max
+        return result
+
+    if np.issubdtype(dtype, np.floating) and np.any(np.abs(traces) > np.finfo(dtype).max):
+        raise ValueError(f"Resampled values exceed the finite range of {dtype}.")
+    return traces.astype(dtype, copy=False)
 
 
 decimate = define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")
