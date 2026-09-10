@@ -274,6 +274,22 @@ def test_set_properties_after_merging():
     assert not is_merged_diff[sorting_diff_merged.id_to_index("c")]
 
 
+def test_set_properties_after_merging_main_channel_id_disagreement():
+    # unit "a" has the most spikes (4); the merged unit should therefore keep "a"'s
+    # main_channel_id, regardless of the order merge_unit_groups lists the units in.
+    times = np.array([0, 1, 2, 3, 10, 20])
+    labels = np.array(["a", "a", "a", "a", "b", "c"])
+    sorting = NumpySorting.from_samples_and_labels([times], [labels], 10_000.0, unit_ids=["a", "b", "c"])
+    sorting.set_property("main_channel_id", np.array(["chA", "chB", "chC"]))
+
+    # merge_unit_groups lists "b" before "a", the reverse of sorting.unit_ids' order
+    sorting_merged, _, _ = apply_merges_to_sorting(
+        sorting, [["b", "a"]], censor_ms=None, new_id_strategy="append", return_extra=True
+    )
+    merged_main_channel_id = sorting_merged.get_property("main_channel_id")[sorting_merged.id_to_index("merge0")]
+    assert merged_main_channel_id == "chA"
+
+
 def test_set_properties_after_splits():
     times = np.array([0, 10, 20, 30, 40])
     labels = np.array(["a", "b", "b", "c", "c"])
