@@ -22,7 +22,12 @@ from .sortingview_curation import apply_sortingview_curation
 # automated curation
 from .curation_tools import get_labeling_summary
 from .threshold_metrics_curation import threshold_metrics_label_units
-from .model_based_curation import model_based_label_units, load_model, auto_label_units
+from .model_based_curation import (
+    model_based_label_units,
+    load_model,
+    get_required_metrics_from_model,
+    check_required_metrics_are_present,
+)
 from .train_manual_curation import train_model, get_default_classifier_search_spaces
 from .unitrefine_curation import unitrefine_label_units
 from .bombcell_curation import (

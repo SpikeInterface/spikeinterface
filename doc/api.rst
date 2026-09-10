@@ -412,6 +412,8 @@ spikeinterface.curation
     .. autofunction:: bombcell_label_units
     .. autofunction:: bombcell_get_default_thresholds
     .. autofunction:: model_based_label_units
+    .. autofunction:: get_required_metrics_from_model
+    .. autofunction:: check_required_metrics_are_present
     .. autofunction:: load_model
     .. autofunction:: train_model
     .. autofunction:: unitrefine_label_units

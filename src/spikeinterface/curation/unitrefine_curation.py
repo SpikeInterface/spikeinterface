@@ -6,7 +6,7 @@ from spikeinterface.curation.model_based_curation import model_based_label_units
 
 
 def unitrefine_label_units(
-    sorting_analyzer: SortingAnalyzer,
+    sorting_analyzer: SortingAnalyzer | None = None,
     noise_neural_classifier: str | Path | None = None,
     sua_mua_classifier: str | Path | None = None,
 ):
@@ -18,7 +18,7 @@ def unitrefine_label_units(
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
+    sorting_analyzer : SortingAnalyzer or None, default: None
         The sorting analyzer object containing the spike sorting results.
     noise_neural_classifier : str or Path or None, default: None
         The path to the folder containing the model, a full path to a model (".skops")
@@ -57,6 +57,7 @@ def unitrefine_label_units(
             noise_neuron_labels = model_based_label_units(
                 sorting_analyzer=sorting_analyzer,
                 trust_model=True,
+                set_predictions_as_properties=False,
                 **get_model_based_classification_kwargs(noise_neural_classifier),
             )
         if set(noise_neuron_labels["prediction"]) != {"noise", "neural"}:
@@ -64,20 +65,21 @@ def unitrefine_label_units(
                 "The noise/neural classifier did not return the expected labels 'noise' and 'neural'. "
                 "Please check the model used for classification."
             )
-        noise_units = noise_neuron_labels[noise_neuron_labels["prediction"] == "noise"]
-        sorting_analyzer_neural = sorting_analyzer.remove_units(noise_units.index)
+        unit_ids_neural = noise_neuron_labels[noise_neuron_labels["prediction"] != "noise"].index
     else:
-        sorting_analyzer_neural = sorting_analyzer
-        noise_units = pd.DataFrame(columns=["prediction", "probability"])
+        noise_neuron_labels = pd.DataFrame(index=sorting_analyzer.unit_ids, columns=["prediction", "probability"])
+        unit_ids_neural = sorting_analyzer.unit_ids
 
     if sua_mua_classifier is not None:
         # 2. apply the sua/mua classification and aggregate results
-        if len(sorting_analyzer.unit_ids) > len(noise_units):
+        if len(unit_ids_neural) > 0:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
                 sua_mua_labels = model_based_label_units(
-                    sorting_analyzer=sorting_analyzer_neural,
+                    sorting_analyzer=sorting_analyzer,
+                    unit_ids=unit_ids_neural,
                     trust_model=True,
+                    set_predictions_as_properties=False,
                     **get_model_based_classification_kwargs(sua_mua_classifier),
                 )
             if set(sua_mua_labels["prediction"]) != {"sua", "mua"}:
@@ -85,9 +87,10 @@ def unitrefine_label_units(
                     "The sua/mua classifier did not return the expected labels 'sua' and 'mua'. "
                     "Please check the model used for classification."
                 )
-            all_labels = pd.concat([sua_mua_labels, noise_units]).sort_index()
+            noise_labels = noise_neuron_labels[noise_neuron_labels["prediction"] == "noise"]
+            all_labels = pd.concat([sua_mua_labels, noise_labels]).reindex(sorting_analyzer.unit_ids)
         else:
-            all_labels = noise_units
+            all_labels = noise_neuron_labels
     else:
         all_labels = noise_neuron_labels
 
