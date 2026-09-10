@@ -12,12 +12,12 @@ class DartsortSorter(BaseSorter):
     sorter_name = "dartsort"
     requires_locations = False
     compatible_with_parallel = {"loky": False, "multiprocessing": False, "threading": False}
-    sorter_description = """Dartsort is a Drift Aware Registration and Tracking spike sorter, developed in the Paninski lab. Read the preprint "" by Windolf et. al. on biorxiv: https://www.biorxiv.org/content/10.1101/2023.08.11.553023v1 or find the code  on the GitHub repo: https://github.com/cwindolf/dartsort ."""
+    sorter_description = """dartsort is a modular, drift-aware spike sorter developed in the Paninski lab. For installation and documentation, see https://dartsort.github.io"""
     installation_mesg = """\nTo use dartsort run:\n
        >>> pip install dartsort
 
     More information about installing dartsort at:
-      * https://github.com/cwindolf/dartsort
+      * https://dartsort.github.io
     """
 
     _default_params = {}
