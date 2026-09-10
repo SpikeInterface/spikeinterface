@@ -78,6 +78,8 @@ class CommonReferenceRecording(BasePreprocessor):
     min_local_neighbors : int, default: 5
         Use in the local CAR implementation to set a minimum number of neighbors. If the number of neighbors within the
         annulus is less than this number, then the closest neighbors are used until this number is reached.
+        If a channel has no other channel beyond the exclude radius at all, it is left unreferenced and a
+        warning is raised at init.
     dtype : None or dtype, default: None
         If None the parent dtype is kept.
 
@@ -154,20 +156,32 @@ class CommonReferenceRecording(BasePreprocessor):
             # For the median operator, the neighbors are extracted from the kernel on-the-fly via nonzero.
             local_kernel = np.zeros((num_chans, num_chans))
             not_enough_channels = []
+            no_neighbor_channels = []
             for i in range(num_chans):
                 annulus_mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 if np.sum(annulus_mask) >= min_local_neighbors:
                     neighbors_i = closest_inds[i, annulus_mask]
                 else:
-                    # Not enough channels in the annulus — take the closest ones beyond the inner radius
-                    not_enough_channels.append(str(recording.channel_ids[i]))
+                    # Not enough channels in the annulus, take the closest ones beyond the inner radius
                     beyond_inner = dist[i, :] > local_radius[0]
                     neighbors_i = closest_inds[i, beyond_inner][:min_local_neighbors]
+                    if len(neighbors_i) == 0:
+                        # No channel at all lies beyond the inner radius, so there is nothing to build a
+                        # reference from. The kernel row is left at zero, which keeps the channel unreferenced.
+                        no_neighbor_channels.append(str(recording.channel_ids[i]))
+                        continue
+                    not_enough_channels.append(str(recording.channel_ids[i]))
                 local_kernel[i, neighbors_i] = 1 / len(neighbors_i)
             if len(not_enough_channels) > 0:
                 warnings.warn(
                     f"The following channels did not have enough neighbors in the annulus and used the closest "
                     f"{min_local_neighbors} channels beyond the inner radius instead: {', '.join(not_enough_channels)}"
+                )
+            if len(no_neighbor_channels) > 0:
+                warnings.warn(
+                    f"The following channels have no channel beyond the exclude radius of "
+                    f"{local_radius[0]} and are left unreferenced: {', '.join(no_neighbor_channels)}. "
+                    f"Consider lowering the exclude radius of 'local_radius'."
                 )
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -254,6 +268,10 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     re_referenced_traces = np.zeros((traces.shape[0], len(channel_indices_array)), dtype="float32")
                     for i, channel_index in enumerate(channel_indices_array):
                         channel_neighborhood = np.nonzero(self.local_kernel[channel_index])[0]
+                        if channel_neighborhood.size == 0:
+                            # No neighbor was found at init time, the channel is left unreferenced
+                            re_referenced_traces[:, i] = traces[:, channel_index]
+                            continue
                         channel_shift = self.operator_func(traces[:, channel_neighborhood], axis=1)
                         re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
                 else:  # then it must be local average, use local_kernel

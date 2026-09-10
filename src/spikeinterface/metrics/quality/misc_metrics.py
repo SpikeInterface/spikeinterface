@@ -1741,7 +1741,7 @@ def slidingRP_violations(
     test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000.0  # (in seconds)
 
     # only test for refractory period durations greater than 'exclude_ref_period_below_ms'
-    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
+    inds_confidence90 = np.vstack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
 
     if len(inds_confidence90[0]) > 0:
         minI = np.min(inds_confidence90[0][0])

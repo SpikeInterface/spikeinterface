@@ -131,7 +131,7 @@ class BenchmarkStudy:
                         unit_ids = gt_sorting.unit_ids
                         gt_unit_locations = gt_sorting.get_property("gt_unit_locations")
                         channel_locations = rec.get_channel_locations()
-                        max_channel_indices = np.argmin(
+                        main_channel_indices = np.argmin(
                             np.linalg.norm(
                                 gt_unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :], axis=2
                             ),
@@ -142,7 +142,7 @@ class BenchmarkStudy:
                             channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2
                         )
                         for unit_ind, unit_id in enumerate(unit_ids):
-                            chan_ind = max_channel_indices[unit_ind]
+                            chan_ind = main_channel_indices[unit_ind]
                             (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
                             mask[unit_ind, chan_inds] = True
                         sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
@@ -156,6 +156,7 @@ class BenchmarkStudy:
                         rec,
                         sparse=sparse,
                         sparsity=sparsity,
+                        main_channel_indices=main_channel_indices,
                         format="binary_folder",
                         folder=local_analyzer_folder,
                     )

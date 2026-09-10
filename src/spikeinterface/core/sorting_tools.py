@@ -250,7 +250,11 @@ def random_spikes_selection(
 
             random_spikes_indices.append(selected_unit_indices)
 
-        random_spikes_indices = np.concatenate(random_spikes_indices)
+        if len(random_spikes_indices) > 0:
+            random_spikes_indices = np.concatenate(random_spikes_indices)
+        else:
+            # a sorting with no unit is valid, np.concatenate would raise on the empty list
+            random_spikes_indices = np.zeros(0, dtype="int64")
         random_spikes_indices = np.sort(random_spikes_indices)
 
     else:
@@ -487,9 +491,9 @@ def set_properties_after_merging(
     pre_unit_ids = sorting_pre_merge.unit_ids
     post_unit_ids = sorting_post_merge.unit_ids
 
-    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
-    keep_pre_inds = sorting_pre_merge.ids_to_indices(kept_unit_ids)
-    keep_post_inds = sorting_post_merge.ids_to_indices(kept_unit_ids)
+    untouched_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids) & ~np.isin(post_unit_ids, new_unit_ids)]
+    keep_pre_inds = sorting_pre_merge.ids_to_indices(untouched_unit_ids)
+    keep_post_inds = sorting_post_merge.ids_to_indices(untouched_unit_ids)
 
     default_missing_values = BaseExtractor.default_missing_property_values
 
@@ -772,9 +776,12 @@ def set_properties_after_splits(
     pre_unit_ids = sorting_pre_split.unit_ids
     post_unit_ids = sorting_post_split.unit_ids
 
-    kept_unit_ids = post_unit_ids[np.isin(post_unit_ids, pre_unit_ids)]
-    keep_pre_inds = sorting_pre_split.ids_to_indices(kept_unit_ids)
-    keep_post_inds = sorting_post_split.ids_to_indices(kept_unit_ids)
+    all_new_split_unit_ids = [uid for group in new_unit_ids for uid in group]
+    untouched_unit_ids = post_unit_ids[
+        np.isin(post_unit_ids, pre_unit_ids) & ~np.isin(post_unit_ids, all_new_split_unit_ids)
+    ]
+    keep_pre_inds = sorting_pre_split.ids_to_indices(untouched_unit_ids)
+    keep_post_inds = sorting_post_split.ids_to_indices(untouched_unit_ids)
 
     for key in prop_keys:
         parent_values = sorting_pre_split.get_property(key)

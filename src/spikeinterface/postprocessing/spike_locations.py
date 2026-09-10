@@ -20,6 +20,9 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         The localization method to use
     method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
+    seed : int or None, default: None
+        Seed for random number generator. Used by the `grid_convolution` method to
+        reproducibly subsample peaks when computing the prototype waveform.
 
     Returns
     -------
@@ -48,6 +51,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
         spike_retriever_kwargs=None,
         method="center_of_mass",
         method_kwargs={},
+        seed=None,
     ):
         if spike_retriever_kwargs is None:
             spike_retriever_kwargs = {}
@@ -57,6 +61,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
             spike_retriever_kwargs=spike_retriever_kwargs,
             method=method,
             method_kwargs=method_kwargs,
+            seed=seed,
         )
 
     def _get_pipeline_nodes(self):
@@ -77,6 +82,7 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
             method_kwargs=self.params["method_kwargs"],
             ms_before=self.params["ms_before"],
             ms_after=self.params["ms_after"],
+            seed=self.params.get("seed"),
         )
         return nodes
 

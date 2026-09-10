@@ -736,6 +736,49 @@ def test_excess_spikes(dataset):
         create_sorting_analyzer(sorting=sorting, recording=recording.time_slice(0, 1))
 
 
+@pytest.mark.parametrize("sparse", [False, True])
+def test_analyzer_with_no_unit(dataset, sparse):
+    """
+    A sorting with no unit is a valid sorting, so the core extensions should run on it and
+    return empty results rather than raising.
+    """
+    recording, sorting = dataset
+    empty_sorting = sorting.select_units([])
+    assert len(empty_sorting.unit_ids) == 0
+
+    sorting_analyzer = create_sorting_analyzer(empty_sorting, recording, format="memory", sparse=sparse)
+    sorting_analyzer.compute(["random_spikes", "noise_levels", "waveforms", "templates"])
+
+    random_spikes = sorting_analyzer.get_extension("random_spikes").get_data()
+    assert random_spikes.shape == (0,)
+
+    waveforms = sorting_analyzer.get_extension("waveforms").get_data()
+    assert waveforms.shape[0] == 0
+
+    templates = sorting_analyzer.get_extension("templates").get_data()
+    assert templates.shape[0] == 0
+
+
+def test_analyzer_with_only_empty_units(dataset):
+    """
+    Units that exist but have no spike at all should give all-zero templates instead of raising.
+    """
+    from spikeinterface.core import NumpySorting
+
+    recording, _ = dataset
+    no_spikes = np.zeros(0, dtype="int64")
+    sorting = NumpySorting.from_samples_and_labels(
+        [no_spikes], [no_spikes], sampling_frequency=recording.sampling_frequency, unit_ids=np.array([0, 1])
+    )
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    sorting_analyzer.compute(["random_spikes", "noise_levels", "templates"])
+
+    templates = sorting_analyzer.get_extension("templates").get_data()
+    assert templates.shape[0] == 2
+    assert np.all(templates == 0)
+
+
 def test_extensions_sorting():
 
     # nothing happens if all parents are on the left of the children
