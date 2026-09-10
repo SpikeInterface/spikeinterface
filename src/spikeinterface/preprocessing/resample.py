@@ -1,10 +1,7 @@
 import numpy as np
 import warnings
 
-from spikeinterface.core.core_tools import (
-    define_function_handling_dict_from_class,
-    recursive_key_finder,
-)
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
@@ -62,8 +59,6 @@ class ResampleRecording(BasePreprocessor):
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
         Integer output is rounded and clipped to the dtype range. Nonfinite resampled
         output raises a ValueError before conversion.
-    skip_checks : bool, default: False
-        If True, checks on sampling frequencies and cutoff filter frequencies are skipped
 
     Returns
     -------
@@ -92,7 +87,6 @@ class ResampleRecording(BasePreprocessor):
         gap_tolerance_ms=None,
         margin_ms=None,
         dtype=None,
-        skip_checks=False,
     ):
         self._orig_samp_freq = recording.get_sampling_frequency()
         self._resample_rate = resample_rate
@@ -105,9 +99,6 @@ class ResampleRecording(BasePreprocessor):
             decimation_factors = None
         # fix_dtype not always returns the str, make sure it does
         dtype = fix_dtype(recording, dtype).str
-        # Ensure that the requested resample rate is doable:
-        if skip_checks:
-            assert check_nyquist(recording, resample_rate), "The requested resample rate would induce errors!"
 
         # Get a margin to avoid issues later
         margin = get_resampling_margin(self._orig_samp_freq, margin_ms, decimation_factors)
@@ -132,7 +123,6 @@ class ResampleRecording(BasePreprocessor):
             gap_tolerance_ms=gap_tolerance_ms,
             margin_ms=margin_ms,
             dtype=dtype,
-            skip_checks=skip_checks,
         )
 
 
@@ -352,29 +342,3 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
 
 resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")
-
-
-# Some helpers to do checks
-def check_nyquist(recording, resample_rate):
-    # Check that the original and requested sampling rates will not induce aliasing
-    # Basic test, compare the sampling frequency with the resample rate
-    sampling_frequency_check = recording.get_sampling_frequency() / 2 > resample_rate
-    # Check that the signal, if it has been filtered, is still not violating
-    if recording.is_filtered():
-        # Check if we have access to the highcut frequency
-        freq_max = list(recursive_key_finder(recording, "freq_max"))
-        if freq_max:
-            # Given that there might be more than one filter applied, keep the lowest
-            freq_max = min(freq_max)
-            lowpass_cutoff_check = freq_max / 2 > resample_rate
-        else:
-            # If has been filterd but unknown high cutoff, give warning and asume the best
-            warnings.warn("The recording is filtered, but we can't ensure that it complies with the Nyquist limit.")
-            lowpass_cutoff_check = True
-    else:
-        # If it hasn't been filtered, we only depend on the previous test
-        warnings.warn(
-            "The recording is not filtered, so cutoff frequencies cannot be checked. " "Use resampling with caution"
-        )
-        lowpass_cutoff_check = True
-    return all([sampling_frequency_check, lowpass_cutoff_check])
