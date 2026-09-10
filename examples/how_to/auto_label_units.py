@@ -91,8 +91,15 @@ _ = sw.plot_metric_histograms(sorting_analyzer, qm_thresholds, figsize=(12, 7))
 bombcell_default_thresholds = sc.bombcell_get_default_thresholds()
 pprint(bombcell_default_thresholds)
 
+# %% [markdown]
+# Note that `isolation_distance` and `l_ratio` are computed from the principal components, so they are only
+# available if the `principal_components` extension has been computed on the analyzer beforehand. Any threshold
+# whose metric is missing is skipped, with a warning listing what was left out - which is what happens here,
+# since this analyzer has no principal components. To include them, compute the extension first with
+# `sorting_analyzer.compute("principal_components")`, or remove them from the thresholds to silence the warning.
+
 # %%
-bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, label_non_somatic=True, split_non_somatic_good_mua=True)
+bombcell_labels = sc.bombcell_label_units(sorting_analyzer, thresholds=bombcell_default_thresholds, split_non_somatic=True)
 
 # %%
 bombcell_labels["bombcell_label"].value_counts()
