@@ -250,7 +250,11 @@ def random_spikes_selection(
 
             random_spikes_indices.append(selected_unit_indices)
 
-        random_spikes_indices = np.concatenate(random_spikes_indices)
+        if len(random_spikes_indices) > 0:
+            random_spikes_indices = np.concatenate(random_spikes_indices)
+        else:
+            # a sorting with no unit is valid, np.concatenate would raise on the empty list
+            random_spikes_indices = np.zeros(0, dtype="int64")
         random_spikes_indices = np.sort(random_spikes_indices)
 
     else:

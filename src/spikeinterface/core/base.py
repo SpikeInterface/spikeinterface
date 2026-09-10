@@ -81,6 +81,10 @@ class BaseExtractor:
         # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
         self._main_ids = np.array(main_ids)
+        if self._main_ids.dtype.kind == "T":
+            # numpy's variable-width StringDType, which is what a zarr v3 store hands back for a
+            # string column. Store it as fixed-width unicode like every other source.
+            self._main_ids = np.array(self._main_ids.tolist())
         if len(self._main_ids) > 0:
             assert (
                 self._main_ids.dtype.kind in "uiSU"
@@ -1147,8 +1151,7 @@ def _load_extractor_from_dict(dic) -> "BaseExtractor":
     extractor_class = _get_class_from_string(class_name)
 
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
-    is_old_version = not _check_same_version(class_name, dic["version"])
-    if is_old_version and hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
+    if hasattr(extractor_class, "_handle_kwargs_backward_compatibility"):
         new_kwargs = extractor_class._handle_kwargs_backward_compatibility(new_kwargs, dic)
 
     # Initialize the extractor
