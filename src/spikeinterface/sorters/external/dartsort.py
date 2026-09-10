@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 
 from ..basesorter import BaseSorter
-from ...core import NumpyFolderSorting, NumpySorting
+from ...core import load
 
 
 class DartsortSorter(BaseSorter):
@@ -94,10 +94,11 @@ class DartsortSorter(BaseSorter):
         main_channel_indices = [np.bincount(spike_channels[labels == unit_id]).argmax() for unit_id in sorting.unit_ids]
         main_channel_ids = recording.channel_ids[main_channel_indices]
         sorting.set_property("main_channel_id", main_channel_ids)
-        NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")
+        # We save to the final_darsort_sorting folder to propagate the main_channel_id property
+        sorting.save(folder=sorter_output_folder / "final_darsort_sorting")
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         sorter_output_folder = Path(sorter_output_folder)
-        sorting = NumpyFolderSorting(sorter_output_folder / "final_darsort_sorting")
+        sorting = load(sorter_output_folder / "final_darsort_sorting")
         return sorting
