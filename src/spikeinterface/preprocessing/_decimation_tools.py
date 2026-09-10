@@ -13,6 +13,44 @@ import warnings
 _MAX_SINGLE_PASS_DECIMATION = 13
 
 
+def get_resampling_margin(sampling_frequency, margin_ms, decimation_factors=None):
+    """Return the margin in input samples, using an automatic estimate when margin_ms is None.
+
+    The estimate is an extension of the pole-decay heuristic illustrated in SciPy's filtfilt
+    documentation (theirs is for a single stage, extended here to the cascade).
+
+    Automatic margins are at least 100 ms and aligned to the total decimation factor.
+    FFT resampling margins remain 100 ms because this estimate only applies to IIR decimation.
+    An explicit margin_ms overrides the estimate.
+    """
+    if margin_ms is not None:
+        if not math.isfinite(margin_ms) or margin_ms < 0:
+            raise ValueError("margin_ms must be finite and nonnegative, or None")
+        return int(margin_ms * sampling_frequency / 1000)
+
+    margin = math.ceil(0.1 * sampling_frequency)
+    if decimation_factors is None:
+        return margin
+
+    from scipy.signal import cheby1
+
+    # Estimation method: for each default Chebyshev IIR stage, 
+    # estimate settling as ceil(log(1e-6) / log(r)), where r is the largest pole magnitude. 
+    # Convert each stage's estimate to input samples and sum them.
+    cascade_margin = 0
+    input_stride = 1
+    for factor in decimation_factors:
+        _, poles, _ = cheby1(8, 0.05, 0.8 / factor, output="zpk")
+        radius = max(abs(poles))
+        if not 0 < radius < 1:
+            raise ValueError("Cannot estimate a stable decimation margin. Specify margin_ms explicitly.")
+        cascade_margin += input_stride * math.ceil(math.log(1e-6) / math.log(radius))
+        input_stride *= factor
+
+    margin = max(margin, cascade_margin)
+    return ((margin + input_stride - 1) // input_stride) * input_stride
+
+
 def _prime_factors(n):
     """
     Return the prime factors of a positive integer `n` (ascending, with multiplicity).

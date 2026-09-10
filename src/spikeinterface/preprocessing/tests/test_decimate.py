@@ -112,7 +112,7 @@ def test_balanced_decimation_factors(decimation_factor, max_factor, expected):
         assert all(f <= max_factor for f in factors)
 
 
-@pytest.mark.parametrize("decimation_factor", [6, 10, 48])
+@pytest.mark.parametrize("decimation_factor", [6, 10, 48, 300])
 def test_decimate_antialias_by_chunks(decimation_factor):
     # Mirror test_resample_by_chunks: chunked reads must match a full read once the
     # anti-aliasing margins are accounted for. Factor 48 exercises the internal multi-pass.
@@ -123,7 +123,7 @@ def test_decimate_antialias_by_chunks(decimation_factor):
     rms = np.sqrt(np.mean(parent_rec.get_traces() ** 2))
     decimated_rate = sampling_frequency / decimation_factor
 
-    for margin_ms in [100, 1000]:
+    for margin_ms in [None, 100, 1000]:
         rec2 = DecimateRecording(parent_rec, decimation_factor, antialias=True, margin_ms=margin_ms)
         chunk_size = int(decimated_rate * 2)  # ~2 seconds of the decimated signal
         rec3 = rec2.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)

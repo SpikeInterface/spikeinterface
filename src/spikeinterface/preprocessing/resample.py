@@ -8,7 +8,7 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ._decimation_tools import get_balanced_decimation_factors
+from ._decimation_tools import get_balanced_decimation_factors, get_resampling_margin
 from .decimate import get_antialiased_decimated_traces, _cast_resampled_traces
 from spikeinterface.core import get_chunk_with_margin, BaseRecordingSegment
 from spikeinterface.core.frameslicerecording import FrameSliceRecordingSegment
@@ -53,8 +53,11 @@ class ResampleRecording(BasePreprocessor):
         - 0.0: Strict mode — split on any gap >= 1.5 sample periods
         - 1.0: Tolerate gaps up to 1 ms, split on larger gaps
         - 100.0: Only major pauses (>100 ms) create sections
-    margin_ms : float, default: 100.0
-        Margin in ms for computations, used to decrease edge effects.
+    margin_ms : float | None, default: None
+        Margin in ms for computations, used to decrease edge effects. If None, integer-factor
+        decimation estimates the cascade's settling margin from its filter poles, with a
+        minimum of 100 ms. FFT resampling uses 100 ms. A nonnegative value overrides the
+        estimate. The estimate is a heuristic, not a bound on output error.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
         Integer output is rounded and clipped to the dtype range. Nonfinite resampled
@@ -87,7 +90,7 @@ class ResampleRecording(BasePreprocessor):
         recording,
         resample_rate,
         gap_tolerance_ms=None,
-        margin_ms=100.0,
+        margin_ms=None,
         dtype=None,
         skip_checks=False,
     ):
@@ -107,7 +110,7 @@ class ResampleRecording(BasePreprocessor):
             assert check_nyquist(recording, resample_rate), "The requested resample rate would induce errors!"
 
         # Get a margin to avoid issues later
-        margin = int(margin_ms * recording.get_sampling_frequency() / 1000)
+        margin = get_resampling_margin(self._orig_samp_freq, margin_ms, decimation_factors)
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
         for parent_segment in recording.segments:

@@ -7,7 +7,7 @@ from spikeinterface.core.core_tools import (
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ._decimation_tools import get_balanced_decimation_factors
+from ._decimation_tools import get_balanced_decimation_factors, get_resampling_margin
 from spikeinterface.core import BaseRecordingSegment, get_chunk_with_margin
 
 
@@ -43,10 +43,12 @@ class DecimateRecording(BasePreprocessor):
         is ignored. If omitted or None, currently behaves as False and emits a FutureWarning:
         a future release will enable antialiasing by default. Pass True or False explicitly
         to select the behavior and silence the transition warning.
-    margin_ms : float, default: 100.0
+    margin_ms : float | None, default: None
         Margin in ms used on each side of every chunk to limit edge effects of the anti-aliasing
         filter. Only used when `antialias=True`. The margin is internally rounded up to a whole
         number of output samples so the filtered, downsampled traces stay aligned across chunks.
+        If None, a suitable margin estimate based on the filter properties is used, with
+        a minimum of 100 ms. A nonnegative value overrides the estimate.
     dtype : dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used.
 
@@ -65,7 +67,7 @@ class DecimateRecording(BasePreprocessor):
         decimation_factor,
         decimation_offset=0,
         antialias=None,
-        margin_ms=100.0,
+        margin_ms=None,
         dtype=None,
     ):
         # Original sampling frequency
@@ -103,7 +105,7 @@ class DecimateRecording(BasePreprocessor):
         decimation_factors = get_balanced_decimation_factors(decimation_factor) if antialias else None
 
         # Margin (in parent samples) to limit anti-aliasing filter edge effects.
-        margin = int(margin_ms * self._orig_samp_freq / 1000)
+        margin = get_resampling_margin(self._orig_samp_freq, margin_ms, decimation_factors) if antialias else 0
 
         BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency, dtype=dtype)
 
