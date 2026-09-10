@@ -11,6 +11,14 @@ from spikeinterface.preprocessing.tests.test_resample import create_sinusoidal_t
 import numpy as np
 
 
+def test_decimate_rejects_invalid_offset():
+    rec = NumpyRecording(np.zeros((24, 1), dtype="float32"), 1000)
+    for offset in [-1, -12, 0.5]:
+        for antialias in [False, True]:
+            with pytest.raises(ValueError, match="nonnegative integer.*decimation_offset"):
+                decimate(rec, 12, decimation_offset=offset, antialias=antialias)
+
+
 @pytest.mark.parametrize("num_segments", [1, 2])
 @pytest.mark.parametrize("decimation_offset", [0, 1, 5, 21, 101])
 @pytest.mark.parametrize("decimation_factor", [1, 7, 50])

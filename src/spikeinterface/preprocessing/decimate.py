@@ -75,8 +75,8 @@ class DecimateRecording(BasePreprocessor):
         if not isinstance(decimation_factor, int) or decimation_factor <= 0:
             raise ValueError(f"Expecting strictly positive integer for `decimation_factor` arg")
         self._decimation_factor = decimation_factor
-        if not isinstance(decimation_offset, int) or decimation_factor < 0:
-            raise ValueError(f"Expecting positive integer for `decimation_factor` arg")
+        if not isinstance(decimation_offset, int) or decimation_offset < 0:
+            raise ValueError("Expecting a nonnegative integer for `decimation_offset` arg")
         parent_min_n_samp = min(
             [recording.get_num_samples(segment_index) for segment_index in range(recording.get_num_segments())]
         )
