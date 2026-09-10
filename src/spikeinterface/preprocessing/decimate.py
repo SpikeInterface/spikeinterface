@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from spikeinterface.core.core_tools import (
     define_function_handling_dict_from_class,
@@ -32,13 +34,15 @@ class DecimateRecording(BasePreprocessor):
         to ensure that the decimated recording has at least one frame. Consider combining DecimateRecording
         with FrameSliceRecording for fine control on the recording start and end frames.
         The same decimation offset is applied to all segments from the parent recording.
-    antialias : bool, default: False
+    antialias : bool | None, default: None
         If True, apply an anti-aliasing low-pass filter before downsampling, using
         ``scipy.signal.decimate``. When `decimation_factor` exceeds 13, the decimation is
         automatically performed in several balanced sub-13 passes (e.g. a factor of 48 is applied
-        as 8 then 6), as scipy recommends, to keep the IIR anti-aliasing filter stable. If False
-        (the default), traces are downsampled by plain array slicing with no filtering, and
-        `margin_ms` is ignored.
+        as 8 then 6), as scipy recommends, to keep the IIR anti-aliasing filter stable. If False,
+        traces are downsampled by plain array slicing with no filtering, and `margin_ms`
+        is ignored. If omitted or None, currently behaves as False and emits a FutureWarning:
+        a future release will enable antialiasing by default. Pass True or False explicitly
+        to select the behavior and silence the transition warning.
     margin_ms : float, default: 100.0
         Margin in ms used on each side of every chunk to limit edge effects of the anti-aliasing
         filter. Only used when `antialias=True`. The margin is internally rounded up to a whole
@@ -60,7 +64,7 @@ class DecimateRecording(BasePreprocessor):
         recording,
         decimation_factor,
         decimation_offset=0,
-        antialias=False,
+        antialias=None,
         margin_ms=100.0,
         dtype=None,
     ):
@@ -84,6 +88,17 @@ class DecimateRecording(BasePreprocessor):
 
         # fix_dtype doesn't always returns the str, make sure it does
         dtype = fix_dtype(recording, dtype).str
+
+        if antialias is None:
+            warnings.warn(
+                "The default for `antialias` will change to True in a future release. "
+                "Currently, decimation uses slicing without an anti-aliasing filter. "
+                "Pass antialias=True to enable the filter, "
+                "or antialias=False to explicitly retain slicing.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            antialias = False
 
         decimation_factors = get_balanced_decimation_factors(decimation_factor) if antialias else None
 
@@ -263,8 +278,8 @@ def _cast_resampled_traces(traces, dtype):
         below = rounded <= limits.min
         above = rounded >= limits.max
 
-        # Assign saturated endpoints after casting because apparently float64 can't 
-        # represent int64.max exactly. 
+        # Assign saturated endpoints after casting because apparently float64 can't
+        # represent int64.max exactly.
         rounded[below | above] = 0
         result = rounded.astype(dtype)
         result[below] = limits.min

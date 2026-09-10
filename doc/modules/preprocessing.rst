@@ -53,6 +53,14 @@ CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :co
 
 **NOTE:** some sorters will automatically perform the saving operation internally.
 
+.. note::
+
+    ``decimate()`` currently uses slicing without antialiasing when ``antialias`` is omitted,
+    and emits a ``FutureWarning``. A future release will enable antialiasing by default.
+    Set ``antialias=True`` to filter before downsampling, or explicitly set ``antialias=False``
+    to retain slicing without the transition warning, for example when the recording has
+    already been sufficiently low-pass filtered for the output sampling rate.
+
 The Preprocessing Pipeline
 --------------------------
 
