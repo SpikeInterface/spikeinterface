@@ -272,10 +272,10 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-class ZarrArrayExtractor(BaseRecording):
+class ZarrArrayRecording(BaseRecording):
     """
-    RecordingExtractor for a plain Zarr array with shape num_samples x num_channels.
-    Mimics loading a binary array using BinaryRecordingExtractor.
+    Recording class for a plain Zarr array with shape num_samples x num_channels.
+    Mimics loading a binary array using BinaryRecording.
 
     Parameters
     ----------
