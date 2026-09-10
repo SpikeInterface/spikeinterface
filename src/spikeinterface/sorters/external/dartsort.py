@@ -92,7 +92,7 @@ class DartsortSorter(BaseSorter):
         spike_channels = dartsort_sorting.channels
         main_channel_indices = [mode(spike_channels[labels == unit_id])[0] for unit_id in sorting.unit_ids]
         main_channel_ids = recording.channel_ids[main_channel_indices]
-        sorting.set_property('main_channel_id', main_channel_ids)
+        sorting.set_property("main_channel_id", main_channel_ids)
         NumpyFolderSorting.write_sorting(sorting, sorter_output_folder / "final_darsort_sorting")
 
     @classmethod
