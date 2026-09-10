@@ -415,7 +415,7 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     )
 
     sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
-    main_channel_indices = _make_main_channel_indices_from_templates(sorting, recording, phy_path)
+    main_channel_indices = _make_main_channel_indices_from_templates(phy_path)
 
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, sparse=True, sparsity=sparsity, main_channel_indices=main_channel_indices
@@ -490,7 +490,7 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
 
 
-def _make_main_channel_indices_from_templates(sorting, recording, kilosort_output_path):
+def _make_main_channel_indices_from_templates(kilosort_output_path):
     """Constructs the `main_channel_indices` from kilosort output, by finding the
     channel containing the largest peak-to-peak value."""
 
