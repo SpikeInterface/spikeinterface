@@ -47,7 +47,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
     handle_collisions: bool, default: True
         Whether to handle collisions between spikes. If True, the amplitude scaling of colliding spikes
         (defined as spikes within `delta_collision_ms` ms and with overlapping sparsity) is computed by fitting a
-        multi-linear regression model (with `sklearn.LinearRegression`). If False, each spike is fitted independently.
+        non-negative multi-linear regression model. If False, each spike is fitted independently.
     delta_collision_ms: float, default: 2
         The maximum time difference in ms before and after a spike to gather colliding spikes.
     """
@@ -228,8 +228,6 @@ class AmplitudeScalingNode(PipelineNode):
         return self._dtype
 
     def compute(self, traces, peaks):
-        from scipy.stats import linregress
-
         gains = self._gains
         offsets = self._offsets
         all_templates = self._all_templates
@@ -293,21 +291,7 @@ class AmplitudeScalingNode(PipelineNode):
                 local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
             assert template.shape == local_waveform.shape
 
-            # here we use linregress, which is equivalent to using sklearn LinearRegression with fit_intercept=True
-            # y = local_waveform.flatten()
-            # X = template.flatten()[:, np.newaxis]
-            # reg = LinearRegression(positive=True, fit_intercept=True).fit(X, y)
-            # scalings[spike_index] = reg.coef_[0]
-
-            # closed form: W = (X' * X)^-1 X' y
-            # y = local_waveform.flatten()[:, None]
-            # X = np.ones((len(y), 2))
-            # X[:, 0] = template.flatten()
-            # W = np.linalg.inv(X.T @ X) @ X.T @ y
-            # scalings[spike_index] = W[0, 0]
-
-            linregress_res = linregress(template.flatten(), local_waveform.flatten())
-            scalings[spike_index] = linregress_res[0]
+            scalings[spike_index] = _ordinary_scaling_slope(template, local_waveform)
 
         # deal with collisions
         if len(collisions) > 0:
@@ -359,6 +343,43 @@ def _are_units_spatially_overlapping(sparsity_mask, i, j):
         return True
     else:
         return False
+
+
+def _ordinary_scaling_slope(template, local_waveform):
+    """
+    Fit the scaling factor of a single, non-colliding spike against its unit template.
+
+    Equivalent to the slope from ``scipy.stats.linregress(template, local_waveform)``,
+    without its unused statistics (intercept, r-value, p-value, standard errors).
+    The centered covariance/variance are always accumulated in float64: SciPy versions
+    before its array-API rewrite compute ``linregress`` via ``np.cov``, which promotes
+    to float64 regardless of input dtype, while newer SciPy preserves the input dtype.
+    Matching float64 here avoids losing precision relative to either supported version.
+
+    Parameters
+    ----------
+    template : np.ndarray
+        The unit template, cut out to the same window as `local_waveform`.
+    local_waveform : np.ndarray
+        The observed waveform to fit against the template.
+
+    Returns
+    -------
+    float
+        The fitted scaling factor.
+    """
+    template = template.astype(np.float64, copy=False).reshape(-1)
+    local_waveform = local_waveform.astype(np.float64, copy=False).reshape(-1)
+    template_centered = template - np.mean(template)
+    waveform_centered = local_waveform - np.mean(local_waveform)
+    num_samples = template.size
+    template_variance = np.vecdot(template_centered, template_centered) / num_samples
+    if template_variance == 0:
+        from scipy.stats import linregress
+
+        return linregress(template, local_waveform).slope
+    covariance = np.vecdot(template_centered, waveform_centered) / num_samples
+    return covariance / template_variance
 
 
 def find_collisions(spikes, spikes_within_margin, delta_collision_samples, sparsity_mask):
@@ -503,7 +524,7 @@ def fit_collision(
     np.ndarray
         The fitted scaling factors for the colliding spikes.
     """
-    from sklearn.linear_model import LinearRegression
+    from scipy.optimize import nnls
 
     # Find the first and last spike peak index
     # from the set of colliding spikes.
@@ -555,8 +576,11 @@ def fit_collision(
 
         X[:, i] = full_template.T.flatten()
 
-    reg = LinearRegression(fit_intercept=True, positive=True).fit(X, y)
-    scalings = reg.coef_
+    # Centering reproduces fit_intercept=True; NNLS reproduces positive=True.
+    y = y.astype(X.dtype, copy=False)
+    X -= np.mean(X, axis=0)
+    y -= np.mean(y)
+    scalings = nnls(X, y)[0]
     return scalings
 
 
