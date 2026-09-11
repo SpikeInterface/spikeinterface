@@ -1235,16 +1235,20 @@ class ComputeACG3D(AnalyzerExtension):
 
         new_unit_ids_indices = new_sorting.ids_to_indices(new_unit_ids)
         old_unit_ids = [unit_id for unit_id in new_sorting_analyzer.unit_ids if unit_id not in new_unit_ids]
-        old_unit_ids_indices = new_sorting.ids_to_indices(old_unit_ids)
+        # source indices are looked up in the sorting the data was computed with, not the resulting one
+        old_unit_ids_indices_in_new = new_sorting.ids_to_indices(old_unit_ids)
+        old_unit_ids_indices_in_old = self.sorting_analyzer.sorting.ids_to_indices(old_unit_ids)
 
         new_acgs_3d = np.zeros((len(new_sorting.unit_ids), acgs_3d.shape[1], acgs_3d.shape[2]))
         new_firing_quantiles = np.zeros((len(new_sorting.unit_ids), firing_rate_quantiles.shape[1]))
 
         new_acgs_3d[new_unit_ids_indices, :, :] = acgs_3d
-        new_acgs_3d[old_unit_ids_indices, :, :] = self.data["acgs_3d"][old_unit_ids_indices, :, :]
+        new_acgs_3d[old_unit_ids_indices_in_new, :, :] = self.data["acgs_3d"][old_unit_ids_indices_in_old, :, :]
 
         new_firing_quantiles[new_unit_ids_indices, :] = firing_rate_quantiles
-        new_firing_quantiles[old_unit_ids_indices, :] = self.data["firing_quantiles"][old_unit_ids_indices, :]
+        new_firing_quantiles[old_unit_ids_indices_in_new, :] = self.data["firing_quantiles"][
+            old_unit_ids_indices_in_old, :
+        ]
 
         new_data = dict(
             acgs_3d=new_acgs_3d,
