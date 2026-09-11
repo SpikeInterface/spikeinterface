@@ -31,7 +31,12 @@ def test_compute_pc_metrics_multi_processing(small_sorting_analyzer, tmp_path):
     with warnings.catch_warnings():
         warnings.filterwarnings("error", message="Falling back to n_jobs=1.")
         res2 = compute_quality_metrics(
-            sorting_analyzer_saved, metric_names=metric_names, n_jobs=2, progress_bar=True, seed=1205
+            sorting_analyzer_saved,
+            metric_names=metric_names,
+            n_jobs=2,
+            progress_bar=True,
+            seed=1205,
+            metric_params=metric_params,
         )
 
     for metric_name in res1.columns:

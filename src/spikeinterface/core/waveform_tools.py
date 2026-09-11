@@ -43,9 +43,9 @@ def extract_waveforms_to_buffers(
     Same as calling allocate_waveforms_buffers() and then distribute_waveforms_to_buffers().
 
     Important note: for the "shared_memory" mode arrays_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
     And this variable is also returned.
-    To avoid this a copy to non shared memmory can be perform at the end.
+    To avoid this a copy to non shared memory can be perform at the end.
 
     Parameters
     ----------
@@ -93,7 +93,7 @@ def extract_waveforms_to_buffers(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -150,7 +150,7 @@ def allocate_waveforms_buffers(
     Allocate memmap or shared memory buffers before snippet extraction.
 
     Important note: for the shared memory mode arrays_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
 
     Parameters
     ----------
@@ -242,7 +242,7 @@ def distribute_waveforms_to_buffers(
     Buffers must be pre-allocated with the `allocate_waveforms_buffers()` function.
 
     Important note, for "shared_memory" mode arrays_info contain reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
+    the shared memory buffer, this variable must be reference as long as arrays as used.
 
     Parameters
     ----------
@@ -446,9 +446,9 @@ def extract_waveforms_to_single_buffer(
     This ensures that spikes.shape[0] == all_waveforms.shape[0].
 
     Important note: for the "shared_memory" mode wf_array_info contains reference to
-    the shared memmory buffer, this variable must be referenced as long as arrays is used.
+    the shared memory buffer, this variable must be referenced as long as arrays is used.
     This variable must also unlink() when the array is de-referenced.
-    To avoid this complicated behavior, default: (copy=True) the shared memmory buffer is copied into a standard
+    To avoid this complicated behavior, default: (copy=True) the shared memory buffer is copied into a standard
     numpy array.
 
 
@@ -502,7 +502,7 @@ def extract_waveforms_to_single_buffer(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -523,7 +523,8 @@ def extract_waveforms_to_single_buffer(
     if sparsity_mask is None:
         num_chans = recording.get_num_channels()
     else:
-        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
+        # `initial` keeps this working for a sorting with no unit, where the mask has no row
+        num_chans = int(np.max(np.sum(sparsity_mask, axis=1), initial=0))  # This is a numpy scalar, so we cast to int
     shape = (int(num_spikes), int(n_samples), int(num_chans))
 
     if mode == "memmap":
@@ -796,7 +797,7 @@ def estimate_templates(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
@@ -902,12 +903,10 @@ def estimate_templates_with_accumulator(
     if return_scaled is not None:
         warnings.warn(
             "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=DeprecationWarning,
+            category=FutureWarning,
             stacklevel=2,
         )
         return_in_uV = return_scaled
-
-    assert spikes.size > 0, "estimate_templates() need non empty sorting"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     num_worker = job_kwargs["n_jobs"]
@@ -915,8 +914,17 @@ def estimate_templates_with_accumulator(
     if sparsity_mask is None:
         num_chans = int(recording.get_num_channels())
     else:
-        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
+        # `initial` keeps this working for a sorting with no unit, where the mask has no row
+        num_chans = int(np.max(np.sum(sparsity_mask, axis=1), initial=0))  # This is a numpy scalar, so we cast to int
     num_units = len(unit_ids)
+
+    if spikes.size == 0:
+        # A sorting with no unit (or with only empty units) is valid, there is simply nothing to
+        # accumulate. Returning zeros avoids allocating an empty shared memory buffer.
+        template_means = np.zeros((num_units, nbefore + nafter, num_chans), dtype="float32")
+        if return_std:
+            return template_means, np.zeros_like(template_means)
+        return template_means
 
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
 

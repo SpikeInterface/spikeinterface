@@ -191,7 +191,7 @@ class Templates:
 
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
-        # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
+        # Note that nothing prevent Templates to be empty after sparsification if the sparse mask have no channels for some units
         if isinstance(sparsity, np.ndarray):
             sparsity = ChannelSparsity(
                 mask=sparsity,

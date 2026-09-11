@@ -92,6 +92,7 @@ spikeinterface.core
     .. autofunction:: select_segment_sorting
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
+    .. autofunction:: read_zarr_array
     .. autofunction:: apply_merges_to_sorting
     .. autofunction:: spike_vector_to_spike_trains
     .. autofunction:: random_spikes_selection
@@ -223,6 +224,7 @@ spikeinterface.preprocessing
     .. autofunction:: detect_artifact_periods
     .. autofunction:: detect_artifact_periods_by_envelope
     .. autofunction:: detect_saturation_periods
+    .. autofunction:: detect_and_remove_artifacts
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter

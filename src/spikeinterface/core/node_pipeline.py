@@ -54,7 +54,7 @@ class PipelineNode:
         self._kwargs = dict()
 
     def get_margin(self):
-        # can optionaly be overwritten
+        # can optionally be overwritten
         return 0
 
     def get_dtype(self):
@@ -542,7 +542,7 @@ def find_parents_of_type(list_of_parents, parent_type):
 
 def check_graph(nodes, check_for_peak_source=True):
     """
-    Check that node list is orderd in a good (parents are before children)
+    Check that node list is ordered in a good (parents are before children)
     """
 
     node0 = nodes[0]
@@ -631,7 +631,7 @@ def run_node_pipeline(
         Skip the computation after n_peaks.
         This is not an exact because internally this skip is done per worker in average.
     slices : None | list[tuple]
-        Optionaly give a list of slices to run the pipeline only on some chunks of the recording.
+        Optionally give a list of slices to run the pipeline only on some chunks of the recording.
         It must be a list of (segment_index, frame_start, frame_stop).
         If None (default), the function iterates over the entire duration of the recording.
     check_for_peak_source : bool, default False

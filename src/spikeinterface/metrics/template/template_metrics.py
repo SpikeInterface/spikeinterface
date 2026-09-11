@@ -33,7 +33,7 @@ def get_template_metric_names():
     warnings.warn(
         "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
         "Please use get_template_metric_list instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_template_metric_list()
@@ -175,6 +175,18 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         # then we can't save this tmp data (important for merges/splits)
         if "peaks_data" not in self.data:
             self.tmp_data_to_save = []
+
+        # We used to use whichever `template_operator` was available in the template computation, but now the user
+        # can specify. Default to  "average" unless the only computed templates were computed with median.
+        if "template_operator" not in self.params:
+            self.params["template_operator"] = "average"
+            if self.sorting_analyzer.has_extension("templates"):
+                available_template_keys = self.sorting_analyzer.get_extension("templates").data.keys()
+                template_keys_which_are_operators = [
+                    key for key in available_template_keys if key in ["average", "median"]
+                ]
+                if len(template_keys_which_are_operators) == 1:
+                    self.params["template_operator"] = template_keys_which_are_operators[0]
 
     def _set_params(
         self,
@@ -369,7 +381,7 @@ def get_default_tm_params(metric_names=None):
     warnings.warn(
         "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
         "Please use get_default_template_metrics_params instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_default_template_metrics_params(metric_names)

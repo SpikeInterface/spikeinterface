@@ -20,7 +20,7 @@ def get_kachery():
     elif importlib.util.find_spec("kachery_cloud") is not None:
         import kachery_cloud as kcl
 
-        warnings.warn("kachery-cloud is deprecated, use kachery instead", DeprecationWarning, stacklevel=2)
+        warnings.warn("kachery-cloud is deprecated, use kachery instead", FutureWarning, stacklevel=2)
         return kcl
     else:
         raise ImportError(

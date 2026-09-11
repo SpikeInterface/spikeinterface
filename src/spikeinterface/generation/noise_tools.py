@@ -37,9 +37,9 @@ class NoiseGeneratorRecording(BaseRecording):
     strategy : "tile_pregenerated" | "on_the_fly", default: "tile_pregenerated"
         The strategy of generating noise chunk:
           * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
-                                 very fast and cusume only one noise block.
+                                 very fast and consume only one noise block.
           * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
-                          no memory preallocation but a bit more computaion (random)
+                          no memory preallocation but a bit more computation (random)
     noise_block_size : int, default: 30000
         Size in sample of noise block.
 

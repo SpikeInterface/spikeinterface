@@ -51,12 +51,12 @@ class SortingSummaryWidget(BaseWidget):
         A dict with extra units properties to display.
         The key is the property name and the value must be a numpy.array.
     curation_dict : dict or None, default: None
-        When curation is True, optionaly the viewer can get a previous 'curation_dict'
+        When curation is True, optionally the viewer can get a previous 'curation_dict'
         to continue/check  previous curations on this analyzer.
-        In this case label_definitions must be None beacuse it is already included in the curation_dict.
+        In this case label_definitions must be None because it is already included in the curation_dict.
         (spikeinterface_gui backend)
     label_definitions : dict or None, default: None
-        When curation is True, optionaly the user can provide a label_definitions dict.
+        When curation is True, optionally the user can provide a label_definitions dict.
         This replaces the label_choices in the curation_format.
         (spikeinterface_gui backend)
     """
@@ -87,7 +87,7 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids = sorting.get_unit_ids()
 
         if curation_dict is not None and label_definitions is not None:
-            raise ValueError("curation_dict and label_definitions are mutualy exclusive, they cannot be not None both")
+            raise ValueError("curation_dict and label_definitions are mutually exclusive, they cannot be not None both")
 
         if displayed_unit_properties is None:
             displayed_unit_properties = list(_default_displayed_unit_properties)

@@ -32,12 +32,12 @@ def create_graph_from_peak_features(
     This done using a binarization along the depth axis.
     Each peaks can connect to peaks of the same bin and neighbour bins.
 
-    The distances are locally computed on a local sparse set of channels that depend on thev detph.
-    So the original features sparsity must be big enougth to cover local channel (actual bin+neighbour).
+    The distances are locally computed on a local sparse set of channels that depend on the depth.
+    So the original features sparsity must be big enough to cover local channel (actual bin+neighbour).
 
     2 possible modes:
       * "full_connected_bin" : compute the distances from all peaks in a bin to all peaks in the same bin + neighbour
-      * "knn" : keep the k neareast neighbour for each peaks in bin + neighbour
+      * "knn" : keep the k nearest neighbour for each peaks in bin + neighbour
 
     Important, peak_locations can be:
       * the peak location from the channel (fast)

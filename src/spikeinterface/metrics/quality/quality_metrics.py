@@ -156,11 +156,14 @@ class ComputeQualityMetrics(BaseMetricExtension):
         if pca_ext is None:
             return tmp_data
 
-        if unit_ids is None:
-            unit_ids = sorting_analyzer.unit_ids
+        target_unit_ids = sorting_analyzer.unit_ids if unit_ids is None else unit_ids
+        context_unit_ids = sorting_analyzer.unit_ids
 
-        # Get dense PCA projections for all requested units
-        dense_projections, spike_unit_indices = pca_ext.get_some_projections(channel_ids=None, unit_ids=unit_ids)
+        # Unit-level PCA metrics require neighboring units as comparison data, even when
+        # only a subset of metric rows is being recomputed after a merge or split.
+        dense_projections, spike_unit_indices = pca_ext.get_some_projections(
+            channel_ids=None, unit_ids=context_unit_ids
+        )
         all_labels = sorting_analyzer.sorting.unit_ids[spike_unit_indices]
 
         # Get extremum channels for neighbor selection in sparse mode
@@ -170,22 +173,22 @@ class ComputeQualityMetrics(BaseMetricExtension):
         # Pre-compute spike counts and firing rates if advanced NN metrics are requested
         advanced_nn_metrics = ["nn_advanced"]  # Our grouped advanced NN metric
         if any(m in advanced_nn_metrics for m in requested_pca_metrics):
-            tmp_data["n_spikes_all_units"] = compute_num_spikes(sorting_analyzer, unit_ids=unit_ids)
-            tmp_data["fr_all_units"] = compute_firing_rates(sorting_analyzer, unit_ids=unit_ids)
+            tmp_data["n_spikes_all_units"] = compute_num_spikes(sorting_analyzer, unit_ids=context_unit_ids)
+            tmp_data["fr_all_units"] = compute_firing_rates(sorting_analyzer, unit_ids=context_unit_ids)
 
         # Pre-compute per-unit PCA data and neighbor information
         pca_data_per_unit = {}
-        for unit_id in unit_ids:
+        for unit_id in target_unit_ids:
             # Determine neighbor units based on sparsity
             if sorting_analyzer.is_sparse():
                 neighbor_channel_ids = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
                 neighbor_unit_ids = [
-                    other_unit for other_unit in unit_ids if main_channels[other_unit] in neighbor_channel_ids
+                    other_unit for other_unit in context_unit_ids if main_channels[other_unit] in neighbor_channel_ids
                 ]
                 neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
             else:
                 neighbor_channel_ids = sorting_analyzer.channel_ids
-                neighbor_unit_ids = unit_ids
+                neighbor_unit_ids = context_unit_ids
                 neighbor_channel_indices = sorting_analyzer.channel_ids_to_indices(neighbor_channel_ids)
 
             # Filter projections to neighbor units
@@ -251,7 +254,7 @@ def get_default_qm_params(metric_names=None):
     warnings.warn(
         "`get_default_qm_params` is deprecated and will be removed in a version 0.105.0. "
         "Please use `get_default_quality_metrics_params` instead.",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return get_default_quality_metrics_params(metric_names=metric_names)

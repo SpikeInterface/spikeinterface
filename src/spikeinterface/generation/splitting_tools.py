@@ -7,7 +7,7 @@ def split_sorting_by_times(
     sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
 ):
     """
-    Fonction used to split a sorting based on the times of the units. This
+    Function used to split a sorting based on the times of the units. This
     might be used for benchmarking meta merging step (see components)
 
     Parameters
@@ -79,7 +79,7 @@ def split_sorting_by_amplitudes(
     sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
 ):
     """
-    Fonction used to split a sorting based on the amplitudes of the units. This
+    Function used to split a sorting based on the amplitudes of the units. This
     might be used for benchmarking meta merging step (see components)
 
     Parameters

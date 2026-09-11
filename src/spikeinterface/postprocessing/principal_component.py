@@ -10,10 +10,9 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
-
-from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -98,6 +97,19 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+
+        old_pcs = self.data["pca_projection"]
+        new_pcs = _select_channels_sparse_data(self.sorting_analyzer, old_pcs, channel_ids)
+
+        data = {"pca_projection": new_pcs}
+
+        for key, value in self.data.items():
+            if key != "pca_projection":
+                data[key] = value
+
+        return data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -197,7 +209,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
-        projections = self.data["pca_projection"][spike_mask]
+        projections = slice_rows(self.data["pca_projection"], spike_mask)
 
         if sparsity is None:
             return projections
@@ -468,7 +480,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         p = self.params
         unit_ids = self.sorting_analyzer.unit_ids
 
-        # there is one unique PCA accross channels
+        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
@@ -497,7 +509,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         assert self.sorting_analyzer.sparsity is None, "For mode 'concatenated' waveforms need to be dense"
 
-        # there is one unique PCA accross channels
+        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
@@ -619,7 +631,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
-        # usefull only when max_spikes_per_unit is not None
+        # useful only when max_spikes_per_unit is not None
         # waveform will not be extracted and a zeros will be left in the memmap file
         while (spike_times[i0] - nbefore) < 0 and (i0 != i1):
             i0 = i0 + 1

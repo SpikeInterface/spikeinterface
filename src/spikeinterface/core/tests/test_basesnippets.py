@@ -115,7 +115,7 @@ def test_BaseSnippets(create_cache_folder):
     # cache to npy
     folder = cache_folder / "simple_snippets"
     snippets.save(format="npy", folder=folder)
-    snippets2 = BaseExtractor.load_from_folder(folder)
+    snippets2 = BaseExtractor.load(folder)
     assert "quality" in snippets2.get_property_keys()
     values = snippets2.get_property("quality")
     assert values[0] == 1.0

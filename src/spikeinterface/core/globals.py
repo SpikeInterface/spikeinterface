@@ -4,6 +4,7 @@
 It is useful when we do extractor.save(name="name").
 """
 
+import os
 import tempfile
 from pathlib import Path
 from copy import deepcopy
@@ -17,7 +18,7 @@ base = Path(tempfile.gettempdir()) / "spikeinterface_cache"
 temp_folder_set = False
 
 
-def get_global_tmp_folder():
+def get_global_tmp_folder() -> Path:
     """
     Get the global path temporary folder.
     """
@@ -30,7 +31,7 @@ def get_global_tmp_folder():
     return temp_folder
 
 
-def set_global_tmp_folder(folder):
+def set_global_tmp_folder(folder: str | Path):
     """
     Set the global path temporary folder.
     """
@@ -69,9 +70,14 @@ dataset_folder_set = False
 def get_global_dataset_folder():
     """
     Get the global dataset folder.
+
+    Unless it has been set manually with `set_global_dataset_folder`, it is read from the
+    `SPIKEINTERFACE_DATASET_FOLDER` environment variable and falls back to `~/spikeinterface_datasets`.
     """
     global dataset_folder
     global dataset_folder_set
+    if not dataset_folder_set:
+        dataset_folder = Path(os.environ.get("SPIKEINTERFACE_DATASET_FOLDER", Path.home() / "spikeinterface_datasets"))
     dataset_folder.mkdir(exist_ok=True, parents=True)
     return dataset_folder
 

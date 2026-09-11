@@ -1,5 +1,6 @@
 from pathlib import Path, WindowsPath
-from collections.abc import Generator
+from collections import namedtuple
+from collections.abc import Generator, Callable
 import os
 import sys
 import datetime
@@ -7,11 +8,12 @@ import json
 from copy import deepcopy
 import importlib
 from math import prod
-from collections import namedtuple
 import inspect
+from typing import TypeVar, ParamSpec
 
 from probeinterface import ProbeGroup
 import numpy as np
+import zarr
 
 
 def define_function_handling_dict_from_class(source_class, name):
@@ -57,7 +59,14 @@ def define_function_handling_dict_from_class(source_class, name):
     return source_class_or_dict_of_sources_classes
 
 
-def define_function_from_class(source_class, name):
+# Generic typing needed to help propagate typing
+# across multiple language servers
+# see https://github.com/SpikeInterface/spikeinterface/issues/4319
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+def define_function_from_class(source_class: Callable[P, T], name: str) -> Callable[P, T]:
     "Wrapper to change the name of a class"
 
     return source_class
@@ -199,11 +208,9 @@ def check_json(dictionary: dict) -> dict:
     return json.loads(json_string)
 
 
-def clean_zarr_folder_name(folder):
+def clean_zarr_folder_name(folder: str | Path) -> Path:
     folder = Path(folder)
-    if folder.suffix != ".zarr":
-        folder = folder.parent / f"{folder.stem}.zarr"
-    return folder
+    return folder if folder.suffix == ".zarr" else folder.with_suffix(".zarr")
 
 
 def add_suffix(file_path, possible_suffix):
@@ -412,7 +419,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
 
@@ -464,7 +471,7 @@ def make_paths_relative(input_dict: dict, relative_folder: str | Path) -> dict:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     relative_folder: str or Path
         The folder to be relative to.
 
@@ -499,7 +506,7 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
     Parameters
     ----------
     input_dict: dict
-        A dict describing an extactor obtained by BaseExtractor.to_dict()
+        A dict describing an extractor obtained by BaseExtractor.to_dict()
     base_folder: str or Path
         The folder to be relative to.
 
@@ -738,7 +745,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     Parameters
     ----------
     measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
+        Measure memory allocation in the current process only, if false then measures at the system
         level.
     """
     import psutil
@@ -764,7 +771,7 @@ def is_path_remote(path: str | Path) -> bool:
 
     Returns
     -------
-    bool
+    is_remote: bool
         Whether the path is a remote path.
     """
     return "s3://" in str(path) or "gcs://" in str(path)
@@ -778,3 +785,26 @@ def ms_to_samples(ms: float, sampling_frequency: float) -> int:
 def samples_to_ms(samples: int, sampling_frequency: float) -> float:
     """Convert a duration in samples to milliseconds."""
     return samples / sampling_frequency * 1000.0
+
+
+def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -> np.ndarray:
+    """
+    Slice a 2D array to select specific rows based on provided indices.
+
+    Parameters
+    ----------
+    array : np.ndarray | zarr.Array
+        A numpy or zarr array or boolean mask from which rows will be selected.
+    row_indices : np.ndarray | list
+        A list or array of row indices to select from the array.
+
+    Returns
+    -------
+    np.ndarray
+        A new 2D numpy array containing only the selected rows.
+    """
+    if isinstance(array, zarr.Array):
+        # For zarr arrays, we need to convert the list of indices to a numpy array for advanced indexing
+        return array.oindex[row_indices]
+    else:
+        return array[row_indices, ...]

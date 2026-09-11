@@ -299,7 +299,7 @@ class InterpolateMotionRecording(BasePreprocessor):
 
             * "kriging" : the same one used in kilosort
             * "idw" : inverse  distance weighted
-            * "nearest" : use neareast channel
+            * "nearest" : use nearest channel
 
     sigma_um : float, default: 20.0
         Used in the "kriging" formula.

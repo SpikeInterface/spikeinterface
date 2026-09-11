@@ -552,7 +552,7 @@ def compute_sliding_rp_violations(
     max_ref_period_ms : float, default: 10
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
-        The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5).
+        The contamination values to test, If None, it is set to np.arange(0.5, 35.5, 0.5).
 
     Returns
     -------
@@ -657,7 +657,7 @@ def compute_synchrony_metrics(sorting_analyzer, unit_ids=None, periods=None, syn
 
     if synchrony_sizes is not None:
         warning_message = "Custom `synchrony_sizes` is deprecated; the `synchrony_metrics` will be computed using `synchrony_sizes = [2,4,8]`"
-        warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
+        warnings.warn(warning_message, FutureWarning, stacklevel=2)
 
     synchrony_sizes = np.array([2, 4, 8])
 
@@ -958,7 +958,9 @@ def compute_amplitude_cutoffs(
     Notes
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" or "amplitude_scalings" extensions.
+    Amplitudes are extracted from the "amplitude_scalings" extension. If that is not available,
+    the amplitude cutoff is computed from the "spike_amplitudes" extension for backward compatibility,
+    but this will be removed in 0.106.0 since it's less reliable.
 
     References
     ----------
@@ -974,10 +976,17 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    available_extension = (
-        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
-    )
-    extension = sorting_analyzer.get_extension(available_extension)
+    if not sorting_analyzer.has_extension("amplitude_scalings"):
+        warnings.warn(
+            "Amplitude scalings extension not found. Falling back to spike amplitudes which is less reliable."
+            "This fallback will be removed in 0.106.0, when amplitude_scalings will be required to compute this metric",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        extension = sorting_analyzer.get_extension("spike_amplitudes")
+    else:
+        extension = sorting_analyzer.get_extension("amplitude_scalings")
+
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
@@ -1015,7 +1024,7 @@ class AmplitudeCutoff(BaseMetric):
         "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
     }
     supports_periods = True
-    depend_on = ["spike_amplitudes|amplitude_scalings"]
+    depend_on = ["amplitude_scalings|spike_amplitudes"]
 
 
 def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
@@ -1649,7 +1658,7 @@ def amplitude_cutoff(
 
         # Find number of missed spikes
         cutoff_point = pdf[0]  # >> pdf[-1] if spikes were cutoff (at lower amplitudes)
-        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurence where pdf was greater than cutoff
+        G = np.where(pdf >= cutoff_point)[0][-1]  # last occurrence where pdf was greater than cutoff
         num_missed_spikes = np.sum(pdf[G + 1 :])  # theoretically missing spikes on the left side
 
         # Compute fraction of missed spikes
@@ -1688,7 +1697,7 @@ def slidingRP_violations(
     max_ref_period_ms : float, default: 10
         Maximum refractory period to test in ms.
     contamination_values : 1d array or None, default: None
-        The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100.
+        The contamination values to test, if None it is set to np.arange(0.5, 35.5, 0.5) / 100.
     return_conf_matrix : bool, default: False
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned.
 
@@ -1701,7 +1710,9 @@ def slidingRP_violations(
         The minimum contamination with confidence > 90%.
     """
     if contamination_values is None:
-        contamination_values = np.arange(0.5, 35, 0.5) / 100  # vector of contamination values to test
+        # 0.5, 1, ..., 35 % (upper bound inclusive), matching the reference
+        # slidingRefractory implementation (previously stopped at 34.5 %).
+        contamination_values = np.arange(0.5, 35.5, 0.5) / 100  # vector of contamination values to test
     rp_bin_size = bin_size_ms / 1000
     rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)  # in s
     rp_centers = rp_edges + ((rp_edges[1] - rp_edges[0]) / 2)  # vector of refractory period durations to test
@@ -1739,7 +1750,7 @@ def slidingRP_violations(
     test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000.0  # (in seconds)
 
     # only test for refractory period durations greater than 'exclude_ref_period_below_ms'
-    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
+    inds_confidence90 = np.vstack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
 
     if len(inds_confidence90[0]) > 0:
         minI = np.min(inds_confidence90[0][0])
@@ -1793,8 +1804,16 @@ def _compute_rp_contamination_one_unit(
 
 
 def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop):
-    contamination_rate = firing_rate * contamination_prop
-    expected_viol = contamination_rate * ref_period_dur * 2 * spike_count
+    # Expected violations follow the Llobet et al. (2022) formulation, in which
+    # contaminating spikes produce violations both with base-neuron spikes and
+    # among themselves:
+    #   Ve = 2 * ref_period_dur / duration * Nc * (Nb + (Nc - 1) / 2)
+    # with Nc = C * N, Nb = (1 - C) * N and duration = N / firing_rate. The
+    # previous expression used Nc * N (i.e. Nb + Nc), overestimating Ve.
+    n_c = spike_count * contamination_prop
+    n_b = spike_count * (1 - contamination_prop)
+    duration = spike_count / firing_rate
+    expected_viol = 2 * ref_period_dur / duration * n_c * (n_b + (n_c - 1) / 2)
 
     from scipy.stats import poisson
 

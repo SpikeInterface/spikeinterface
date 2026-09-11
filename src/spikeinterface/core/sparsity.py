@@ -205,7 +205,7 @@ class ChannelSparsity:
         if not self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id):
             error_message = (
                 "Waveforms do not seem to be in the sparsity shape for this unit_id. The number of active channels is "
-                f"{num_active_channels}, but the waveform has non-zero values outsies of those active channels: \n"
+                f"{num_active_channels}, but the waveform has non-zero values outside of those active channels: \n"
                 f"{waveforms[..., num_active_channels:]}"
             )
             raise ValueError(error_message)
@@ -291,7 +291,7 @@ class ChannelSparsity:
 
         return cls.from_unit_id_to_channel_ids(**dictionary)
 
-    ## Some convinient function to compute sparsity from several strategy
+    ## Some convenient function to compute sparsity from several strategy
     @classmethod
     def from_best_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign=None, amplitude_mode="extremum"):
         """
@@ -328,7 +328,7 @@ class ChannelSparsity:
             mask[unit_ind, chan_inds] = True
         return cls(mask, templates_or_sorting_analyzer.unit_ids, templates_or_sorting_analyzer.channel_ids)
 
-    ## Some convinient function to compute sparsity from several strategy
+    ## Some convenient function to compute sparsity from several strategy
     @classmethod
     def from_closest_channels(cls, templates_or_sorting_analyzer, num_channels, peak_sign=None, peak_mode=None):
         """
@@ -814,7 +814,7 @@ def estimate_sparsity(
         Noise levels required for the "snr" and "energy" methods. You can use the
         `get_noise_levels()` function to compute them.
     main_channel_indices : np.array | None, default: None
-        Main channel indicies for the case of method="radius"
+        Main channel indices for the case of method="radius"
     {}
 
     Returns
