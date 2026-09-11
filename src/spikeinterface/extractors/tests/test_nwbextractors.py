@@ -1266,6 +1266,112 @@ def test_time_series_recording_equality_with_pynwb_and_backend(generate_nwbfile_
     check_recordings_equal(recording_backend, recording_pynwb)
 
 
+def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False):
+    """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
+
+    Pure pynwb, no external writers. The Units table has `waveform_mean` (templates), a canonical
+    quality metric (`snr`), a non-canonical numeric column (`custom_score`), a string label
+    (`ks_label`), and a per-unit `electrodes` region; the electrodes table carries `rel_x`/`rel_y`.
+    """
+    from datetime import datetime
+    from pynwb import NWBFile, NWBHDF5IO
+
+    nwbfile = NWBFile(session_description="t", identifier="id", session_start_time=datetime(2020, 1, 1).astimezone())
+    device = nwbfile.create_device(name="probe")
+    group = nwbfile.create_electrode_group(name="s0", description="d", location="loc", device=device)
+    nwbfile.add_electrode_column(name="rel_x", description="x")
+    nwbfile.add_electrode_column(name="rel_y", description="y")
+    for i in range(n_ch):
+        nwbfile.add_electrode(group=group, location="brain", rel_x=float(i % 4) * 20.0, rel_y=float(i // 4) * 20.0)
+    nwbfile.add_unit_column(name="snr", description="canonical quality metric")
+    nwbfile.add_unit_column(name="custom_score", description="non-canonical per-unit value")
+    nwbfile.add_unit_column(name="ks_label", description="curation label")
+    rng = np.random.default_rng(0)
+    for u in range(n_units):
+        kwargs = dict(
+            spike_times=np.sort(rng.uniform(0, 100, size=int(rng.integers(50, 500)))),
+            electrodes=list(range(n_ch)),
+            waveform_mean=rng.standard_normal((n_samp, n_ch)),
+            snr=float(rng.uniform(2, 10)),
+            custom_score=float(rng.uniform(0, 1)),
+            ks_label="good" if u % 2 == 0 else "mua",
+        )
+        if with_std:
+            kwargs["waveform_sd"] = np.abs(rng.standard_normal((n_samp, n_ch)))
+        nwbfile.add_unit(**kwargs)
+    with NWBHDF5IO(str(path), "w") as io:
+        io.write(nwbfile)
+    return str(path)
+
+
+def test_read_nwb_sorting_analyzer_default(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    analyzer = read_nwb_sorting_analyzer(path, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None)
+
+    # recordingless, sparse, with templates for every unit
+    assert not analyzer.has_recording()
+    assert analyzer.sparsity is not None
+    assert analyzer.has_extension("templates")
+    assert analyzer.get_extension("templates").get_data().shape[0] == analyzer.get_num_units()
+
+    # by default only canonical quality columns become quality_metrics; the rest become properties, and
+    # template_metrics is never synthesized from value columns
+    assert list(analyzer.get_extension("quality_metrics").get_data().columns) == ["snr"]
+    assert not analyzer.has_extension("template_metrics")
+    properties = set(analyzer.sorting.get_property_keys())
+    assert "custom_score" in properties and "ks_label" in properties
+    assert "snr" not in properties
+
+
+def test_read_nwb_sorting_analyzer_extension_map_override(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    analyzer = read_nwb_sorting_analyzer(
+        path,
+        use_pynwb=False,
+        sampling_frequency=30000.0,
+        compute_extra=None,
+        extension_map={"quality_metrics": [{"source": "columns", "columns": ["snr", "custom_score"]}]},
+    )
+    assert set(analyzer.get_extension("quality_metrics").get_data().columns) == {"snr", "custom_score"}
+    # custom_score is now a metric, so it is no longer a property
+    assert "custom_score" not in analyzer.sorting.get_property_keys()
+
+
+def test_read_nwb_sorting_analyzer_extension_map_disable(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    analyzer = read_nwb_sorting_analyzer(
+        path,
+        use_pynwb=False,
+        sampling_frequency=30000.0,
+        compute_extra=None,
+        extension_map={"quality_metrics": None},
+    )
+    assert not analyzer.has_extension("quality_metrics")
+    # with quality_metrics disabled, every scalar column (including snr) becomes a property
+    assert {"snr", "custom_score", "ks_label"} <= set(analyzer.sorting.get_property_keys())
+
+
+def test_read_nwb_sorting_analyzer_waveform_sd(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb", with_std=True)
+    analyzer = read_nwb_sorting_analyzer(path, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None)
+    templates = analyzer.get_extension("templates")
+    # the std operator is populated only because the file stores waveform_sd
+    assert "std" in templates.params["operators"]
+    assert "std" in templates.data
+
+
 if __name__ == "__main__":
     tmp_path = Path("tmp")
     if tmp_path.is_dir():

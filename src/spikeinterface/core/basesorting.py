@@ -471,6 +471,23 @@ class BaseSorting(BaseExtractor):
             return 0
         return int(np.max(spikes_in_segment["sample_index"]))
 
+    def get_last_spike_time(self, segment_index: int | None = None) -> float:
+        """Get the time of the last spike in a segment across all units.
+
+        Parameters
+        ----------
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+
+        Returns
+        -------
+        float
+            The time of the last spike in seconds, or 0.0 if no spikes exist.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        last_spike_frame = self.get_last_spike_frame(segment_index=segment_index)
+        return self.sample_index_to_time(last_spike_frame, segment_index=segment_index)
+
     def get_times(
         self,
         segment_index: int | None = None,
