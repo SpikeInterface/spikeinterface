@@ -782,6 +782,11 @@ def ms_to_samples(ms: float, sampling_frequency: float) -> int:
     return round(ms * sampling_frequency / 1000.0)
 
 
+def samples_to_ms(samples: int, sampling_frequency: float) -> float:
+    """Convert a duration in samples to milliseconds."""
+    return samples / sampling_frequency * 1000.0
+
+
 def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -> np.ndarray:
     """
     Slice a 2D array to select specific rows based on provided indices.
