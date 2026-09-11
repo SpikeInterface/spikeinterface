@@ -8,7 +8,9 @@ name: Cross-version serialization
 # run in an isolated uv environment (nothing committed). The version list is computed
 # from PyPI (latest patch of each minor at or above MIN_VERSION_TO_TEST): on a pull
 # request only the latest released minor is tested; the full matrix runs weekly and on
-# manual dispatch.
+# manual dispatch. The pseudo-version "dev" is always included: it generates the fixtures
+# with the branch under test, so a round-trip break (write and read with the same code)
+# is caught independently of any release.
 
 on:
   pull_request:
@@ -23,8 +25,6 @@ on:
       - "src/spikeinterface/core/**"
       - ".github/scripts/serialization/**"
       - ".github/workflows/cross_version_serialization.yml"
-  schedule:
-    - cron: "0 4 * * 0" # weekly, Sunday 04:00 UTC
   workflow_dispatch:
 
 concurrency:
@@ -43,10 +43,9 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.11"
       - id: set
         env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
           # Support floor: oldest minor to test. Below this, installs fail on the CI
           # Python (numcodecs dependency rot in 0.100/0.101). Raise when 0.102 rots.
           MIN_VERSION_TO_TEST: "0.102" # We will change this when making breaking changes (hopefully not too often)
@@ -67,11 +66,8 @@ jobs:
           candidates = [v for v in available if not v.is_prerelease and (v.major, v.minor) >= (floor.major, floor.minor)]
           minor_releases = [max(group) for _, group in groupby(candidates, key=lambda v: (v.major, v.minor))]
 
-          # on a pull request, test only the latest minor
-          if os.environ.get('GITHUB_EVENT_NAME') == 'pull_request':
-              minor_releases = minor_releases[-1:]
-
-          print(json.dumps([str(v) for v in minor_releases]))
+          # always round-trip against the branch itself as well
+          print(json.dumps([str(v) for v in minor_releases] + ['dev']))
           ")
 
           echo "list=$versions_to_test" >> "$GITHUB_OUTPUT"
@@ -93,21 +89,33 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.10"
+          python-version: "3.11"
           enable-cache: false
 
       - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
+        env:
+          SI_VERSION: ${{ matrix.si-version }}
         run: |
-          uv run --isolated --no-project --python 3.10 \
-            --with "spikeinterface[core]==${{ matrix.si-version }}" \
+          # "dev" means the checked-out branch; anything else is a release from PyPI.
+          # [full] is needed because the SortingAnalyzer fixture computes every
+          # extension (scikit-learn, numba, ...).
+          if [ "$SI_VERSION" = "dev" ]; then
+            spec=".[full]"
+          else
+            spec="spikeinterface[full]==$SI_VERSION"
+          fi
+          uv run --isolated --no-project --python 3.11 \
+            --with "$spec" \
             python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
       - name: Load fixtures with the branch
         run: |
-          uv pip install --system -e . --group test-core
+          # [full] here too: loading the analyzer extensions unpickles e.g. the
+          # scikit-learn PCA models written at generation time
+          uv pip install --system -e ".[full]" --group test-core
           pytest .github/scripts/serialization/test_cross_version_compatibility.py -v

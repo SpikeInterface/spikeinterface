@@ -204,6 +204,8 @@ def test_loading_from_analyzer(create_cache_folder):
 
     cache_folder = create_cache_folder
     recording, sorting = generate_ground_truth_recording()
+    # Make it JSON-serializable by saving it to a folder and reloading it
+    recording = recording.save(folder=cache_folder / "recording")
 
     preprocessing_dict = {"common_reference": {}, "highpass_filter": {"freq_min": 301.0}}
     pp_recording = apply_preprocessing_pipeline(recording, preprocessing_dict)
