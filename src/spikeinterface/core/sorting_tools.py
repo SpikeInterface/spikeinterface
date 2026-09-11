@@ -250,7 +250,11 @@ def random_spikes_selection(
 
             random_spikes_indices.append(selected_unit_indices)
 
-        random_spikes_indices = np.concatenate(random_spikes_indices)
+        if len(random_spikes_indices) > 0:
+            random_spikes_indices = np.concatenate(random_spikes_indices)
+        else:
+            # a sorting with no unit is valid, np.concatenate would raise on the empty list
+            random_spikes_indices = np.zeros(0, dtype="int64")
         random_spikes_indices = np.sort(random_spikes_indices)
 
     else:
@@ -515,7 +519,8 @@ def set_properties_after_merging(
                 # Main channel id is special. For now, if there is a disagreement, we take the value of the unit
                 # with the most spikes. TODO: overwrite this for analyzer if templates exist.
                 num_spikes_per_unit = sorting_pre_merge.count_num_spikes_per_unit(unit_ids=merge_group)
-                max_unit_index = np.argmax(num_spikes_per_unit.values())
+                spike_counts_in_merge_group_order = [num_spikes_per_unit[unit_id] for unit_id in merge_group]
+                max_unit_index = np.argmax(spike_counts_in_merge_group_order)
                 new_values[new_index] = merge_values[max_unit_index]
             else:
                 if parent_values.dtype.kind not in default_missing_values:

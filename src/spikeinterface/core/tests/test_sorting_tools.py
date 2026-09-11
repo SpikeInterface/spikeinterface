@@ -83,6 +83,25 @@ def test_random_spikes_selection():
     assert random_spikes_indices.size == spikes.size
 
 
+@pytest.mark.parametrize("method", ["uniform", "percentage", "maximum_rate", "all"])
+def test_random_spikes_selection_no_unit(method):
+    # a sorting with no unit is valid and should give an empty selection, not raise
+    recording, sorting = generate_ground_truth_recording(
+        durations=[5.0],
+        sampling_frequency=16000.0,
+        num_channels=4,
+        num_units=3,
+        seed=2205,
+    )
+    empty_sorting = sorting.select_units([])
+    num_samples = [recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())]
+
+    random_spikes_indices = random_spikes_selection(
+        empty_sorting, num_samples, method=method, percentage=0.5, maximum_rate=10.0, seed=2205
+    )
+    assert random_spikes_indices.size == 0
+
+
 def test_apply_merges_to_sorting():
 
     times = np.array([0, 0, 10, 20, 300])
@@ -253,6 +272,22 @@ def test_set_properties_after_merging():
     is_merged_diff = sorting_diff_merged.get_property("is_merged")
     assert is_merged_diff[sorting_diff_merged.id_to_index("a")]
     assert not is_merged_diff[sorting_diff_merged.id_to_index("c")]
+
+
+def test_set_properties_after_merging_main_channel_id_disagreement():
+    # unit "a" has the most spikes (4); the merged unit should therefore keep "a"'s
+    # main_channel_id, regardless of the order merge_unit_groups lists the units in.
+    times = np.array([0, 1, 2, 3, 10, 20])
+    labels = np.array(["a", "a", "a", "a", "b", "c"])
+    sorting = NumpySorting.from_samples_and_labels([times], [labels], 10_000.0, unit_ids=["a", "b", "c"])
+    sorting.set_property("main_channel_id", np.array(["chA", "chB", "chC"]))
+
+    # merge_unit_groups lists "b" before "a", the reverse of sorting.unit_ids' order
+    sorting_merged, _, _ = apply_merges_to_sorting(
+        sorting, [["b", "a"]], censor_ms=None, new_id_strategy="append", return_extra=True
+    )
+    merged_main_channel_id = sorting_merged.get_property("main_channel_id")[sorting_merged.id_to_index("merge0")]
+    assert merged_main_channel_id == "chA"
 
 
 def test_set_properties_after_splits():

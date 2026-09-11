@@ -793,6 +793,7 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         "noise_levels": {"random_slices_kwargs": {"seed": 1205}},
         "waveforms": {},
         "templates": {},
+        "amplitude_scalings": {},
         "spike_amplitudes": {},
         "spike_locations": {},
         "principal_components": {},
