@@ -6,6 +6,8 @@ import shutil
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
+    generate_recording,
+    NumpySorting,
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
@@ -736,6 +738,49 @@ def test_excess_spikes(dataset):
         create_sorting_analyzer(sorting=sorting, recording=recording.time_slice(0, 1))
 
 
+@pytest.mark.parametrize("sparse", [False, True])
+def test_analyzer_with_no_unit(dataset, sparse):
+    """
+    A sorting with no unit is a valid sorting, so the core extensions should run on it and
+    return empty results rather than raising.
+    """
+    recording, sorting = dataset
+    empty_sorting = sorting.select_units([])
+    assert len(empty_sorting.unit_ids) == 0
+
+    sorting_analyzer = create_sorting_analyzer(empty_sorting, recording, format="memory", sparse=sparse)
+    sorting_analyzer.compute(["random_spikes", "noise_levels", "waveforms", "templates"])
+
+    random_spikes = sorting_analyzer.get_extension("random_spikes").get_data()
+    assert random_spikes.shape == (0,)
+
+    waveforms = sorting_analyzer.get_extension("waveforms").get_data()
+    assert waveforms.shape[0] == 0
+
+    templates = sorting_analyzer.get_extension("templates").get_data()
+    assert templates.shape[0] == 0
+
+
+def test_analyzer_with_only_empty_units(dataset):
+    """
+    Units that exist but have no spike at all should give all-zero templates instead of raising.
+    """
+    from spikeinterface.core import NumpySorting
+
+    recording, _ = dataset
+    no_spikes = np.zeros(0, dtype="int64")
+    sorting = NumpySorting.from_samples_and_labels(
+        [no_spikes], [no_spikes], sampling_frequency=recording.sampling_frequency, unit_ids=np.array([0, 1])
+    )
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    sorting_analyzer.compute(["random_spikes", "noise_levels", "templates"])
+
+    templates = sorting_analyzer.get_extension("templates").get_data()
+    assert templates.shape[0] == 2
+    assert np.all(templates == 0)
+
+
 def test_extensions_sorting():
 
     # nothing happens if all parents are on the left of the children
@@ -938,7 +983,7 @@ def test_select_channels(dataset):
     sorting_analyzer.compute(["random_spikes", "templates", "noise_levels"])
     # select channels
     keep_channel_ids = recording.channel_ids[::2]
-    sorting_analyzer2 = sorting_analyzer.select_channels(channel_ids=keep_channel_ids)
+    sorting_analyzer2 = sorting_analyzer._select_channels(channel_ids=keep_channel_ids)
 
     assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
     assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
@@ -955,6 +1000,92 @@ def test_select_channels(dataset):
     assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
     for p in sorting_analyzer2.rec_attributes["properties"].values():
         assert len(p) == len(keep_channel_ids)
+
+
+def test_select_channels_sparse_waveforms_templates(dataset):
+    """
+    Test that `_select_channels` selects the correct waveforms and templates when the analyzer
+    is sparse.
+
+    The actual code uses fancy indexing etc, so this test is designed to _not_ do this, and instead
+    just loop over all units and channels to check consistency.
+    """
+
+    recording, sorting = dataset
+    # Make a sparse analyzer
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs={"method": "radius", "radius_um": 30}
+    )
+    sorting_analyzer.compute(["random_spikes", "waveforms", "templates"])
+
+    # Select channels, in a non-monotonic way
+    select_channel_ids = np.array(["3", "8", "7"])
+    analyzer_selected = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+
+    # Prepare the data
+    original_id_index_map = dict(
+        zip(sorting_analyzer.channel_ids, sorting_analyzer.channel_ids_to_indices(sorting_analyzer.channel_ids))
+    )
+    selected_id_index_map = dict(
+        zip(analyzer_selected.channel_ids, analyzer_selected.channel_ids_to_indices(analyzer_selected.channel_ids))
+    )
+
+    original_templates = sorting_analyzer.get_extension("templates").get_data()
+    selected_templates = analyzer_selected.get_extension("templates").get_data()
+
+    original_waveforms = sorting_analyzer.get_extension("waveforms")
+    selected_waveforms = analyzer_selected.get_extension("waveforms")
+
+    for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+
+        original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
+        selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
+
+        original_waveforms_one_unit = original_waveforms.get_waveforms_one_unit(unit_id)
+        selected_waveforms_one_unit = selected_waveforms.get_waveforms_one_unit(unit_id)
+
+        for channel_id in select_channel_ids:
+            if channel_id in original_units_to_channels:
+
+                # Check templates, which are dense
+                original_channel_index = original_id_index_map[channel_id]
+                selected_channel_index = selected_id_index_map[channel_id]
+
+                original_channel = original_templates[unit_index, :, original_channel_index]
+                selected_channel = selected_templates[unit_index, :, selected_channel_index]
+
+                assert np.all(original_channel == selected_channel)
+
+                # Now check waveforms and PCs, which are sparse
+                channel_index_in_original = np.where(original_units_to_channels == channel_id)[0][0]
+                original_unit_waveform = original_waveforms_one_unit[:, :, channel_index_in_original]
+
+                channel_index_in_selected = np.where(selected_units_to_channels == channel_id)[0][0]
+                selected_unit_waveform = selected_waveforms_one_unit[:, :, channel_index_in_selected]
+
+                assert np.all(original_unit_waveform == selected_unit_waveform)
+
+
+def test_select_channels_independent(dataset):
+    """
+    Test that `_select_channels` is independent of channel id order.
+    """
+    recording, sorting = dataset
+    # Make a sparse analyzer
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs={"method": "radius", "radius_um": 30}
+    )
+
+    select_channel_ids = np.array(["3", "7", "8"])
+    sa_one = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+
+    # Make another analyzer with select_channel_ids ['7', '3', '8']
+    shuffle_order = np.array([1, 0, 2])
+    second_channel = select_channel_ids[shuffle_order]
+    sa_two = sorting_analyzer._select_channels(channel_ids=second_channel)
+
+    assert np.all(sa_one.sparsity.mask == sa_two.sparsity.mask[:, shuffle_order])
+    assert np.all(sa_one.get_channel_locations() == sa_two.get_channel_locations()[shuffle_order])
 
 
 def test_main_channel_from_templates_dense_recordingless(tmp_path):
@@ -1077,6 +1208,36 @@ def test_main_channel_from_templates_sparse_recordingless():
     recovered_main_channel_ids = np.asarray(analyzer.get_main_channels(outputs="id"))
     assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
     assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
+
+
+def test_merge_units_main_channel_id_disagreement():
+    """`SortingAnalyzer.merge_units()` must keep the donor unit's `main_channel_id` on disagreement,
+    matching `apply_merges_to_sorting` (see test_sorting_tools.py), even when `merge_unit_groups`
+    lists the units in the same relative order as `sorting.unit_ids` (not just the reversed order):
+    a defect that only manifests for out-of-order groups would still pass this case.
+    """
+    recording = generate_recording(num_channels=3, durations=[2.0], set_probe=True, seed=0)
+    recording = recording.rename_channels(new_channel_ids=["chA", "chB", "chC"])
+
+    # unit "b" has more spikes (5) than unit "a" (2); "a" is listed first in both `sorting.unit_ids`
+    # and `merge_unit_groups` below, so a positional (rather than spike-count) donor choice would
+    # silently pick "a" and still pass an order-reversed-only regression test.
+    times = np.array([0, 1, 100, 110, 120, 130, 140])
+    labels = np.array(["a", "a", "b", "b", "b", "b", "b"])
+    sorting = NumpySorting.from_samples_and_labels(
+        [times], [labels], recording.sampling_frequency, unit_ids=["a", "b", "c"]
+    )
+    sorting.set_property("main_channel_id", np.array(["chA", "chB", "chC"]))
+    sorting.register_recording(recording)
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    merged_analyzer, new_unit_ids = analyzer.merge_units(
+        merge_unit_groups=[["a", "b"]], new_id_strategy="append", return_new_unit_ids=True
+    )
+    merged_main_channel_id = merged_analyzer.sorting.get_property("main_channel_id")[
+        merged_analyzer.sorting.id_to_index(new_unit_ids[0])
+    ]
+    assert merged_main_channel_id == "chB"
 
 
 if __name__ == "__main__":

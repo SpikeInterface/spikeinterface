@@ -495,7 +495,10 @@ def create_sorting_analyzer_with_existing_templates(
 
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
+    main_channel_indices = templates.get_main_channels()
+    sa = create_sorting_analyzer(
+        non_empty_sorting, recording, format="memory", sparsity=sparsity, main_channel_indices=main_channel_indices
+    )
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
     sa.extensions["templates"].params = {

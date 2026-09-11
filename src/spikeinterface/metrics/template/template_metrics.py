@@ -176,6 +176,18 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         if "peaks_data" not in self.data:
             self.tmp_data_to_save = []
 
+        # We used to use whichever `template_operator` was available in the template computation, but now the user
+        # can specify. Default to  "average" unless the only computed templates were computed with median.
+        if "template_operator" not in self.params:
+            self.params["template_operator"] = "average"
+            if self.sorting_analyzer.has_extension("templates"):
+                available_template_keys = self.sorting_analyzer.get_extension("templates").data.keys()
+                template_keys_which_are_operators = [
+                    key for key in available_template_keys if key in ["average", "median"]
+                ]
+                if len(template_keys_which_are_operators) == 1:
+                    self.params["template_operator"] = template_keys_which_are_operators[0]
+
     def _set_params(
         self,
         metric_names: list[str] | None = None,

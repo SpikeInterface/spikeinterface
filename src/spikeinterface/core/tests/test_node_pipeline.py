@@ -305,7 +305,7 @@ def test_gather_to_zarr_chunking(tmp_path):
     assert waveforms.chunks[0] > 1
     assert waveforms.chunks[1:] == waveforms.shape[1:]
 
-    # explicit override is respected
+    # explicit byte target is respected
     waveforms2 = run_node_pipeline(
         recording,
         nodes,
@@ -313,10 +313,81 @@ def test_gather_to_zarr_chunking(tmp_path):
         gather_mode="zarr",
         folder=tmp_path / "wfs2.zarr",
         names=["waveforms"],
-        gather_kwargs={"zarr_chunk_size": 1234},
+        gather_kwargs={"zarr_target_chunk_bytes": 1234 * row_nbytes},
     )
     assert waveforms2.chunks[0] == 1234
     assert np.array_equal(waveforms[:], waveforms2[:])
+
+
+def test_gather_to_zarr_chunk_bytes_per_name(tmp_path):
+    # `zarr_target_chunk_bytes` can also be a dict to use a different byte target per array
+    recording, sorting = generate_ground_truth_recording(num_channels=8, num_units=5, durations=[20.0], seed=7)
+
+    job_kwargs = dict(chunk_duration="0.1s", n_jobs=2, progress_bar=False)
+
+    spikes = sorting.to_spike_vector()
+    peaks = np.zeros(spikes.size, dtype=spike_peak_dtype)
+    peaks["sample_index"] = spikes["sample_index"]
+    peaks["segment_index"] = spikes["segment_index"]
+
+    peak_retriever = PeakRetriever(recording, peaks)
+    dense_waveforms = ExtractDenseWaveforms(
+        recording, parents=[peak_retriever], ms_before=0.5, ms_after=1.0, return_output=True
+    )
+    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[peak_retriever, dense_waveforms], return_output=True)
+    nodes = [peak_retriever, dense_waveforms, waveforms_rms]
+
+    # waveforms rows are (num_samples * num_channels) wide, rms rows only num_channels wide
+    num_channels = recording.get_num_channels()
+    itemsize = np.dtype("float32").itemsize
+    waveforms_row_nbytes = (dense_waveforms.nbefore + dense_waveforms.nafter) * num_channels * itemsize
+    rms_row_nbytes = num_channels * itemsize
+
+    target_bytes = {"waveforms": 4 * 1024 * 1024, "waveforms_rms": 1 * 1024 * 1024}
+    waveforms_z, waveforms_rms_z = run_node_pipeline(
+        recording,
+        nodes,
+        job_kwargs,
+        gather_mode="zarr",
+        folder=tmp_path / "per_name.zarr",
+        names=["waveforms", "waveforms_rms"],
+        gather_kwargs={"zarr_target_chunk_bytes": target_bytes},
+    )
+
+    assert waveforms_z.chunks[0] == target_bytes["waveforms"] // waveforms_row_nbytes
+    assert waveforms_rms_z.chunks[0] == target_bytes["waveforms_rms"] // rms_row_nbytes
+    # the two arrays must really end up with different chunking
+    assert waveforms_z.chunks[0] != waveforms_rms_z.chunks[0]
+    # trailing chunk shape is always the full trailing shape
+    assert waveforms_z.chunks[1:] == waveforms_z.shape[1:]
+    assert waveforms_rms_z.chunks[1:] == waveforms_rms_z.shape[1:]
+
+    # an int applies the same byte target to every array
+    waveforms_i, waveforms_rms_i = run_node_pipeline(
+        recording,
+        nodes,
+        job_kwargs,
+        gather_mode="zarr",
+        folder=tmp_path / "single_int.zarr",
+        names=["waveforms", "waveforms_rms"],
+        gather_kwargs={"zarr_target_chunk_bytes": 1 * 1024 * 1024},
+    )
+    assert waveforms_i.chunks[0] == 1024 * 1024 // waveforms_row_nbytes
+    assert waveforms_rms_i.chunks[0] == 1024 * 1024 // rms_row_nbytes
+    assert np.array_equal(waveforms_z[:], waveforms_i[:])
+    assert np.array_equal(waveforms_rms_z[:], waveforms_rms_i[:])
+
+    # a dict missing one of the names is an error
+    with pytest.raises(ValueError):
+        run_node_pipeline(
+            recording,
+            nodes,
+            job_kwargs,
+            gather_mode="zarr",
+            folder=tmp_path / "missing_name.zarr",
+            names=["waveforms", "waveforms_rms"],
+            gather_kwargs={"zarr_target_chunk_bytes": {"waveforms": 1 * 1024 * 1024}},
+        )
 
 
 def test_skip_after_n_peaks_and_recording_slices():

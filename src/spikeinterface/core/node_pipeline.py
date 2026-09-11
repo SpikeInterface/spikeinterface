@@ -975,15 +975,11 @@ class GatherToZarr:
         The compressor used for every array. If "default", the SpikeInterface default
         zarr compressor is used (Blosc-zstd, level 5, bitshuffle). If None, no compression.
         Ignored for destinations that are already a ``zarr.Array`` (they keep their own compressor).
-    zarr_chunk_size : int | None, default: None
-        Number of rows (first axis) per zarr chunk. If None, it is computed automatically
-        so that each chunk is about `zarr_target_chunk_bytes` (see below), which gives a
-        sensible chunk size regardless of the dtype and trailing shape. Ignored for
-        destinations that are already a ``zarr.Array``.
-    zarr_target_chunk_bytes : int, default: 10485760 (10 MiB)
+    zarr_target_chunk_bytes : int | dict[str, int], default: 10485760 (10 MiB)
         Target (uncompressed) size in bytes of one zarr chunk, used to compute the number of
-        rows per chunk when `zarr_chunk_size` is None. Ignored for destinations that are
-        already a ``zarr.Array``.
+        rows per chunk. An int applies the same target to every array, a dict sets it per array
+        name (all names must have an entry).
+        Ignored for destinations that are already a ``zarr.Array``.
     """
 
     def __init__(
@@ -991,15 +987,11 @@ class GatherToZarr:
         folder=None,
         names=None,
         compressor="default",
-        zarr_chunk_size=None,
         zarr_target_chunk_bytes=10 * 1024 * 1024,
     ):
         import zarr
 
         from spikeinterface.core.zarrextractors import get_default_zarr_compressor
-
-        self.zarr_chunk_size = zarr_chunk_size
-        self.zarr_target_chunk_bytes = zarr_target_chunk_bytes
 
         if compressor == "default":
             compressor = get_default_zarr_compressor()
@@ -1047,6 +1039,15 @@ class GatherToZarr:
             self._owns_store = True
 
         self.tuple_mode = None
+        if isinstance(zarr_target_chunk_bytes, (int, np.integer)):
+            self.zarr_target_chunk_bytes = {name: int(zarr_target_chunk_bytes) for name in self.names}
+        elif isinstance(zarr_target_chunk_bytes, dict):
+            missing = [name for name in self.names if name not in zarr_target_chunk_bytes]
+            if len(missing) > 0:
+                raise ValueError(f"`zarr_target_chunk_bytes` is missing an entry for: {missing}")
+            self.zarr_target_chunk_bytes = {name: int(zarr_target_chunk_bytes[name]) for name in self.names}
+        else:
+            raise ValueError("`zarr_target_chunk_bytes` must be an int or a dict[str, int]")
 
     def __call__(self, res):
         if res is None:
@@ -1064,19 +1065,16 @@ class GatherToZarr:
             res = (res,)
 
         # distribute buffers to zarr arrays
-        for i, name in enumerate(self.names):
-            buf = np.require(res[i], requirements="C")
-            if self.arrays[i] is None:
+        for i_name, name in enumerate(self.names):
+            buf = np.require(res[i_name], requirements="C")
+            if self.arrays[i_name] is None:
                 # first loop only : create the array with the right dtype and trailing shape
-                root, internal_path = self._create_specs[i]
+                root, internal_path = self._create_specs[i_name]
                 trailing_shape = buf.shape[1:]
-                if self.zarr_chunk_size is not None:
-                    chunk0 = self.zarr_chunk_size
-                else:
-                    # pick the number of rows per chunk to target ~zarr_target_chunk_bytes per chunk
-                    row_nbytes = int(np.prod(trailing_shape, dtype="int64")) * buf.dtype.itemsize
-                    chunk0 = max(1, self.zarr_target_chunk_bytes // max(1, row_nbytes))
-                self.arrays[i] = root.create_dataset(
+                # pick the number of rows per chunk to target ~zarr_target_chunk_bytes per chunk
+                row_nbytes = int(np.prod(trailing_shape, dtype="int64")) * buf.dtype.itemsize
+                chunk0 = max(1, self.zarr_target_chunk_bytes[name] // max(1, row_nbytes))
+                self.arrays[i_name] = root.create_dataset(
                     name=internal_path,
                     shape=(0,) + trailing_shape,
                     chunks=(chunk0,) + trailing_shape,
@@ -1084,7 +1082,7 @@ class GatherToZarr:
                     compressor=self.compressor,
                     overwrite=True,
                 )
-            self.arrays[i].append(buf, axis=0)
+            self.arrays[i_name].append(buf, axis=0)
 
     def finalize_buffers(self, squeeze_output=False):
         import zarr

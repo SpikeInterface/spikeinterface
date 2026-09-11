@@ -257,6 +257,15 @@ class ComputeWaveforms(AnalyzerExtension):
 
         return new_data
 
+    def _select_channels_extension_data(self, channel_ids):
+
+        old_waveforms = self.data["waveforms"]
+
+        new_waveforms = _select_channels_sparse_data(self.sorting_analyzer, old_waveforms, channel_ids)
+        data = {"waveforms": new_waveforms}
+
+        return data
+
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
@@ -562,7 +571,7 @@ class ComputeTemplates(AnalyzerExtension):
         return new_data
 
     def _select_channels_extension_data(self, channel_ids):
-        keep_channel_indices = np.flatnonzero(np.isin(self.sorting_analyzer.channel_ids, channel_ids))
+        keep_channel_indices = [np.where(self.sorting_analyzer.channel_ids == id)[0][0] for id in channel_ids]
 
         new_data = {}
         for key, arr in self.data.items():
@@ -1748,3 +1757,43 @@ def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_s
         raise NotImplementedError(
             "Only pandas DataFrame and numpy array are supported for merging and splitting extension data."
         )
+
+
+def _select_channels_sparse_data(old_sorting_analyzer, old_data, new_channel_ids):
+    """
+    When selecting channels from extensions which are sparse (waveforms, pcs),
+    this function remaps the sparsity for the underlying data.
+    """
+
+    unit_ids = old_sorting_analyzer.unit_ids
+    old_unit_id_to_channel_ids = old_sorting_analyzer.sparsity.unit_id_to_channel_ids
+
+    # Compute how to slice the original sparsity to get the new sparsity
+    unit_sparsity_slices = {}
+    for unit_index, unit_id in enumerate(unit_ids):
+        unit_sparsity_channel_indices = []
+        unit_channel_ids = old_unit_id_to_channel_ids[unit_id]
+
+        for channel_id in new_channel_ids:
+            if channel_id in unit_channel_ids:
+                idx = np.where(old_unit_id_to_channel_ids[unit_id] == channel_id)[0][0]
+                unit_sparsity_channel_indices.append(idx)
+        unit_sparsity_slices[unit_id] = np.array(unit_sparsity_channel_indices)
+
+    random_spikes = old_sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+    new_data = np.zeros_like(old_data)
+    max_num_active_channels = 0
+    for data_index, (one_old_data, unit_index) in enumerate(zip(old_data, random_spikes["unit_index"])):
+
+        unit_id = unit_ids[unit_index]
+        channel_slice = unit_sparsity_slices[unit_id]
+
+        if len(channel_slice) > 0:
+
+            size_of_new_mask = len(channel_slice)
+            new_data[data_index, :, :size_of_new_mask] = one_old_data[:, channel_slice]
+
+            max_num_active_channels = max(max_num_active_channels, size_of_new_mask)
+
+    return new_data[:, :, :max_num_active_channels]

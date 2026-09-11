@@ -69,7 +69,7 @@ class SpikeAmplitudeNode(PipelineNode):
         if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
-            self._offsets = recording.get_channel_gains()
+            self._offsets = recording.get_channel_offsets()
         else:
             self._dtype = recording.get_dtype()
             self._gains = None
@@ -102,7 +102,6 @@ class SpikeAmplitudeNode(PipelineNode):
 
         # and scale
         if self._gains is not None:
-            traces = traces.astype("float32") * self._gains + self._offsets
             amplitudes = amplitudes.astype("float32", copy=True)
             amplitudes *= self._gains[chan_inds]
             amplitudes += self._offsets[chan_inds]
