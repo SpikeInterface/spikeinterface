@@ -1,11 +1,22 @@
 from pathlib import Path
 import json
+from copy import deepcopy
+import shutil
+import warnings
 
 import numpy as np
 
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .npzsortingextractor import NpzSortingExtractor
-from .core_tools import define_function_from_class, make_paths_absolute
+from .core_tools import (
+    define_function_from_class,
+    make_paths_absolute,
+    load_properties_from_binary_folder,
+    save_properties_to_binary_folder,
+    save_annotations_to_folder,
+    load_annotations_from_folder,
+    save_extractor_provenance,
+)
 
 
 class NumpyFolderSorting(BaseSorting):
@@ -17,7 +28,7 @@ class NumpyFolderSorting(BaseSorting):
       * a "numpysorting_info.json" containing sampling_frequency, unit_ids and num_segments
       * a metadata folder for units properties.
 
-    It is created with the function: `sorting.save(folder="/myfolder", format="numpy_folder")`
+    It is created with the function: `sorting.save(folder="/myfolder", format="binary")`
 
     """
 
@@ -44,27 +55,50 @@ class NumpyFolderSorting(BaseSorting):
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes
 
-        # Load metadata
-        self.load_metadata_from_folder(folder_path)
+        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_annotations_from_folder(folder_path, self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
     @staticmethod
-    def write_sorting(sorting, save_path):
+    def write_sorting(sorting, folder_path, overwrite: bool = False):
         # the folder can already exists but not contaning numpysorting_info.json
-        save_path = Path(save_path)
-        save_path.mkdir(parents=True, exist_ok=True)
+        folder_path = Path(folder_path)
+        if folder_path.is_dir():
+            if not overwrite:
+                raise ValueError("NumpyFolderSorting.write_sorting the folder already exists")
+            else:
+                shutil.rmtree(folder_path)
+        folder_path.mkdir(parents=True, exist_ok=True)
 
-        info_file = save_path / "numpysorting_info.json"
-        if info_file.exists():
-            raise ValueError("NumpyFolderSorting.write_sorting the folder already contains numpysorting_info.json")
+        info_file = folder_path / "numpysorting_info.json"
         d = {
             "sampling_frequency": float(sorting.get_sampling_frequency()),
             "unit_ids": sorting.unit_ids.tolist(),
             "num_segments": sorting.get_num_segments(),
         }
         info_file.write_text(json.dumps(d), encoding="utf8")
-        np.save(save_path / "spikes.npy", sorting.to_spike_vector())
+        np.save(folder_path / "spikes.npy", sorting.to_spike_vector())
+
+        save_properties_to_binary_folder(folder_path / "properties", sorting)
+        save_extractor_provenance(folder_path, sorting)
+        # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
+        save_annotations_to_folder(folder_path, sorting)
+
+        # Create the si_folder file to make the load() easier until version 0.105.0
+        # All properties, annotations, and probe information are already saved in the folder,
+        # so we don't need to include them in the si_folder.json
+        cached = NumpyFolderSorting(folder_path=folder_path)
+        si_folder_path = folder_path / f"si_folder.json"
+        cached.dump_to_json(
+            file_path=si_folder_path,
+            relative_to=folder_path,
+            include_extra_metadata=False,
+            include_properties=False,
+            include_annotations=False,
+        )
+
+        return cached
 
 
 class NpzFolderSorting(NpzSortingExtractor):
@@ -107,14 +141,20 @@ class NpzFolderSorting(NpzSortingExtractor):
 
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 
-        folder_metadata = folder_path
-        self.load_metadata_from_folder(folder_metadata)
+        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_annotations_from_folder(folder_path, self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
         self._npz_kwargs = d["kwargs"]
 
     @staticmethod
     def write_sorting(sorting, save_path):
+        warnings.warn(
+            "`NpzFolderSorting.write_sorting()` is deprecated and will be removed in 0.106.0. The NpzFolderSorting() read will stay for a while",
+            category=FutureWarning,
+            stacklevel=2,
+        )
+
         save_path = Path(save_path)
         save_path.mkdir(parents=True, exist_ok=True)
 
@@ -122,8 +162,17 @@ class NpzFolderSorting(NpzSortingExtractor):
         if npz_file.exists():
             raise ValueError("NpzFolderSorting.write_sorting the folder already contains sorting_cached.npz")
         NpzSortingExtractor.write_sorting(sorting, npz_file)
+        save_properties_to_binary_folder(save_path / "properties", sorting)
         cached = NpzSortingExtractor(npz_file)
         cached.dump(save_path / "npz.json", relative_to=save_path)
+
+        # make the si_folder file to make the load() easier
+        cached = NpzFolderSorting(folder_path=save_path)
+        cached._annotations = deepcopy({k: sorting._annotations[k] for k in sorting._annotations.keys()})
+        si_folder_path = save_path / f"si_folder.json"
+        cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
+
+        return cached
 
 
 read_numpy_sorting_folder = define_function_from_class(

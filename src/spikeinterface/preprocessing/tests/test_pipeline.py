@@ -176,7 +176,7 @@ def test_loading_provenance(create_cache_folder):
         # when several run
         seed=2205,
     )
-    pp_rec.save_to_folder(folder=cache_folder)
+    pp_rec.save(folder=cache_folder)
 
     loaded_pp_dict = get_preprocessing_dict_from_file(cache_folder / "provenance.pkl")
 

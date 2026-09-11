@@ -102,7 +102,7 @@ def test_load_binary_recording(generate_recording_sorting, tmp_path, output_form
     check_recordings_equal(rec, rec_loaded)
 
 
-@pytest.mark.parametrize("output_format", ["numpy_folder", "zarr"])
+@pytest.mark.parametrize("output_format", ["binary", "zarr"])
 def test_load_binary_sorting(generate_recording_sorting, tmp_path, output_format):
     _, sort = generate_recording_sorting
     _ = sort.save(folder=tmp_path / "test_sorting", format=output_format, overwrite=True)
@@ -196,7 +196,7 @@ def test_load_aggregate_recording_from_json(generate_recording_sorting, tmp_path
     aggregated_rec = aggregate_channels(list_of_recs)
 
     recording_path = tmp_path / "aggregated_recording"
-    aggregated_rec.save_to_folder(folder=recording_path)
+    aggregated_rec.save(folder=recording_path)
     loaded_rec = load(recording_path / "provenance.json", base_folder=recording_path)
 
     assert np.all(loaded_rec.get_property("group") == recording.get_property("group"))

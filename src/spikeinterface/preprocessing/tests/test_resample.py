@@ -438,7 +438,7 @@ def test_resample_traces_across_gap(resample_rate):
 
 
 def test_resample_gapped_chunked_consistency():
-    """Chunked .save() should match non-chunked for gapped recordings."""
+    """Chunked .save( ) should match non-chunked for gapped recordings."""
     sampling_frequency = 30000
     resample_rate = 700
     rec, _, _ = _make_gapped_recording(sampling_frequency=sampling_frequency, sec1_duration=2.0, sec2_duration=2.0)

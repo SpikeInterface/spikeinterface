@@ -150,7 +150,7 @@ class BaseSorter:
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
             raise RuntimeError(
-                "This recording is not serializable and so can not be sorted. Consider `recording.save()` to save a "
+                "This recording is not serializable and so can not be sorted. Consider `recording.save(folder=...)` to save a "
                 "compatible binary file."
             )
 
