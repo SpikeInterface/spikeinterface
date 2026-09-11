@@ -2501,7 +2501,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                     nodes = extension_instance.get_pipeline_nodes()
                     all_nodes.extend(nodes)
 
-                job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
                 # reset and save params before running so the pipeline can gather directly into the
                 # (freshly created) extension folders/groups (mirrors AnalyzerExtension.run())
