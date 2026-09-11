@@ -1914,6 +1914,9 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     ----------
     spikes : np.array
         Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
+        Must be ordered by segment_index and then by sample_index within each segment, as
+        returned by `BaseSorting.to_spike_vector()`; a spike sharing (segment_index,
+        sample_index) with a matching-event neighbor it is not adjacent to will not be counted as synchronous.
     all_unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. Expecting all units.
     synchrony_sizes : None or np.array, default: None
@@ -1931,29 +1934,38 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     """
 
     synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+    if spikes.size == 0:
+        return synchrony_counts
 
-    # compute the occurrence of each sample_index. Count >2 means there's synchrony
-    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
+    sample_indices = spikes["sample_index"]
+    segment_indices = spikes["segment_index"]
+    same_segment_and_sample = (sample_indices[1:] == sample_indices[:-1]) & (
+        segment_indices[1:] == segment_indices[:-1]
+    )
+    synchronous_spike_mask = np.zeros(spikes.size, dtype=bool)
+    synchronous_spike_mask[:-1] |= same_segment_and_sample
+    synchronous_spike_mask[1:] |= same_segment_and_sample
+    if not np.any(synchronous_spike_mask):
+        return synchrony_counts
 
-    min_synchrony = 2
-    mask = counts >= min_synchrony
-    sync_indices = unique_spike_index[mask]
-    sync_counts = counts[mask]
+    synchronous_sample_indices = sample_indices[synchronous_spike_mask]
+    synchronous_segment_indices = segment_indices[synchronous_spike_mask]
+    synchronous_units = spikes["unit_index"][synchronous_spike_mask]
+    synchronous_group_starts = np.empty(synchronous_units.size, dtype=bool)
+    synchronous_group_starts[0] = True
+    synchronous_group_starts[1:] = (synchronous_sample_indices[1:] != synchronous_sample_indices[:-1]) | (
+        synchronous_segment_indices[1:] != synchronous_segment_indices[:-1]
+    )
+    synchronous_group_indices = np.cumsum(synchronous_group_starts, dtype=np.int64) - 1
+    synchronous_group_counts = np.bincount(synchronous_group_indices)
 
-    all_syncs = np.unique(sync_counts)
-    num_bins = [np.size(synchrony_sizes[synchrony_sizes <= i]) for i in all_syncs]
-
-    indices = {}
-    for num_of_syncs in all_syncs:
-        indices[num_of_syncs] = np.flatnonzero(all_syncs == num_of_syncs)[0]
-
-    for i, sync_index in enumerate(sync_indices):
-
-        num_of_syncs = sync_counts[i]
-        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
-        # to the 2 simultaneous spike bins.
-        units_with_sync = spikes[sync_index : sync_index + num_of_syncs]["unit_index"]
-        synchrony_counts[: num_bins[indices[num_of_syncs]], units_with_sync] += 1
+    group_unit_keys = synchronous_group_indices * len(all_unit_ids) + synchronous_units
+    unique_group_unit_keys = np.unique(group_unit_keys)
+    unique_group_indices, unique_unit_indices = np.divmod(unique_group_unit_keys, len(all_unit_ids))
+    num_bins = np.searchsorted(synchrony_sizes, synchronous_group_counts[unique_group_indices], side="right")
+    for synchrony_index in range(synchrony_sizes.size):
+        units = unique_unit_indices[num_bins > synchrony_index]
+        synchrony_counts[synchrony_index] = np.bincount(units, minlength=len(all_unit_ids))
 
     return synchrony_counts
 
