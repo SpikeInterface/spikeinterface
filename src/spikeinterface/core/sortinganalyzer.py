@@ -2491,8 +2491,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                         elif gather_mode == "zarr":
                             gather_folder.append(extension_folder / variable_name)
                             gather_names.append(variable_name)
-                    for variable_name in extension_class.nodepipeline_variables:
-                        result_routage.append((extension_name, variable_name))
 
                     extension_instance = extension_class(self)
                     extension_instance.set_params(save=save, **extension_params)
