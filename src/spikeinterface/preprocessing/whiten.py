@@ -288,4 +288,4 @@ def compute_sklearn_covariance_matrix(data, regularize_kwargs):
 
 
 # function for API
-whiten = define_function_handling_dict_from_class(source_class=WhitenRecording, name="whiten")
+define_function_handling_dict_from_class(source_class=WhitenRecording, name="whiten")

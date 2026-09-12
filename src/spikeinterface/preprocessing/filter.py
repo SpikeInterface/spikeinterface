@@ -414,10 +414,10 @@ class NotchFilterRecording(FilterRecording):
 
 
 # functions for API
-filter = define_function_handling_dict_from_class(source_class=FilterRecording, name="filter")
-bandpass_filter = define_function_handling_dict_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
-notch_filter = define_function_handling_dict_from_class(source_class=NotchFilterRecording, name="notch_filter")
-highpass_filter = define_function_handling_dict_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
+define_function_handling_dict_from_class(source_class=FilterRecording, name="filter")
+define_function_handling_dict_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
+define_function_handling_dict_from_class(source_class=NotchFilterRecording, name="notch_filter")
+define_function_handling_dict_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
 
 def causal_filter(

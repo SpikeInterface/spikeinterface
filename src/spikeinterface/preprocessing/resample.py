@@ -389,7 +389,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         return result[:pos]
 
 
-resample = define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")
+define_function_handling_dict_from_class(source_class=ResampleRecording, name="resample")
 
 
 # Some helpers to do checks

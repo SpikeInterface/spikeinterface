@@ -137,7 +137,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-average_across_direction = define_function_handling_dict_from_class(
+define_function_handling_dict_from_class(
     source_class=AverageAcrossDirectionRecording,
     name="average_across_direction",
 )

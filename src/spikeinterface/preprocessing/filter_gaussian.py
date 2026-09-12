@@ -143,4 +143,4 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         return gaussian
 
 
-gaussian_filter = define_function_handling_dict_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
+define_function_handling_dict_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")

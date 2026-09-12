@@ -25,4 +25,4 @@ class RectifyRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-rectify = define_function_handling_dict_from_class(source_class=RectifyRecording, name="rectify")
+define_function_handling_dict_from_class(source_class=RectifyRecording, name="rectify")

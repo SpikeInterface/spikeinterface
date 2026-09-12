@@ -785,7 +785,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
 
 
 # function for API
-detect_and_remove_artifacts = define_function_handling_dict_from_class(
+define_function_handling_dict_from_class(
     source_class=DetectAndRemoveArtifactsRecording, name="detect_and_remove_artifacts"
 )
 

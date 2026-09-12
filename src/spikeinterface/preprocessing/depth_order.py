@@ -41,4 +41,4 @@ class DepthOrderRecording(ChannelSliceRecording):
         )
 
 
-depth_order = define_function_handling_dict_from_class(source_class=DepthOrderRecording, name="depth_order")
+define_function_handling_dict_from_class(source_class=DepthOrderRecording, name="depth_order")
