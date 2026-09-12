@@ -53,6 +53,7 @@ CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :co
 
 **NOTE:** some sorters will automatically perform the saving operation internally.
 
+
 The Preprocessing Pipeline
 --------------------------
 
