@@ -521,14 +521,14 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
+        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units=num_units)
 
         correlograms += c0
 
     return correlograms
 
 
-def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
+def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units):
     """
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -545,6 +545,8 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
+    num_units : int
+        Number of units in the complete sorting.
 
     Returns
     -------
@@ -572,8 +574,6 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_unit_indices))
-
     correlograms = np.zeros((num_units, num_units, num_bins), dtype="int64")
 
     # At a given shift, the mask precises which spikes have matching spikes
@@ -963,14 +963,16 @@ def _compute_auto_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
+        c0 = auto_correlogram_for_one_segment(
+            spike_times, spike_unit_indices, window_size, bin_size, num_units=num_units
+        )
 
         correlograms += c0
 
     return correlograms
 
 
-def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
+def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units):
     """
     A very well optimized algorithm for the auto-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -987,6 +989,8 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
+    num_units : int
+        Number of units in the complete sorting.
 
     Returns
     -------
@@ -1014,8 +1018,6 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_unit_indices))
-
     correlograms = np.zeros((num_units, num_bins), dtype="int64")
 
     for unit_ind in range(num_units):
