@@ -110,7 +110,9 @@ class ModelBasedClassification:
 
         if input_data is not None:
             warnings.warn(
-                "`input_data` is deprecated. Use the `metrics` argument instead.", FutureWarning, stacklevel=2
+                "`input_data` is deprecated and will be removed in 0.106.0. Use the `metrics` argument instead.",
+                FutureWarning,
+                stacklevel=2,
             )
             if metrics is None:
                 metrics = input_data
