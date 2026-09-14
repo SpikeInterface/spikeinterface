@@ -92,6 +92,7 @@ spikeinterface.core
     .. autofunction:: select_segment_sorting
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
+    .. autofunction:: read_zarr_array
     .. autofunction:: apply_merges_to_sorting
     .. autofunction:: spike_vector_to_spike_trains
     .. autofunction:: random_spikes_selection

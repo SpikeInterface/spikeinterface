@@ -10,10 +10,9 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
-
-from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -98,6 +97,19 @@ class ComputePrincipalComponents(AnalyzerExtension):
             if "model" in k:
                 new_data[k] = v
         return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+
+        old_pcs = self.data["pca_projection"]
+        new_pcs = _select_channels_sparse_data(self.sorting_analyzer, old_pcs, channel_ids)
+
+        data = {"pca_projection": new_pcs}
+
+        for key, value in self.data.items():
+            if key != "pca_projection":
+                data[key] = value
+
+        return data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -197,7 +209,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
-        projections = self.data["pca_projection"][spike_mask]
+        projections = slice_rows(self.data["pca_projection"], spike_mask)
 
         if sparsity is None:
             return projections

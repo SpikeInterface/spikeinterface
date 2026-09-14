@@ -6,7 +6,7 @@ on:
     branches:
       - main
 
-concurrency:  # Cancel previous workflows on the same pull request
+concurrency: # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -22,10 +22,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: "3.10"
       - uses: astral-sh/setup-uv@v7
         with:
-          python-version: '3.11'
+          python-version: "3.10"
           enable-cache: true
       - name: Install dependencies
         run: |
@@ -35,7 +35,7 @@ jobs:
       - name: Test core with pytest
         run: |
           pytest -m "core" -vv -ra --durations=0 --durations-min=0.001 | tee report.txt; test $? -eq 0 || exit 1
-        shell: bash  # Necessary for pipeline to work on windows
+        shell: bash # Necessary for pipeline to work on windows
       - name: Build test summary
         run: |
           uv pip install --system pandas
@@ -45,4 +45,4 @@ jobs:
           python ./.github/scripts/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY
           rm report.txt
-        shell: bash  # Necessary for pipeline to work on windows
+        shell: bash # Necessary for pipeline to work on windows

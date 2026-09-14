@@ -36,7 +36,15 @@ def import_figpack_or_sortingview(use_sortingview: bool):
 
 
 def make_serializable(*args):
-    dict_to_serialize = {int(i): a for i, a in enumerate(args)}
+    def _to_native(a):
+        # Under pandas >= 3, string Index/columns return Arrow-backed ExtensionArrays
+        # (e.g. ArrowStringArray) from `.values`, which are not JSON serializable.
+        # Convert any pandas array/Index to a plain numpy array before serialization.
+        if not isinstance(a, np.ndarray) and hasattr(a, "to_numpy"):
+            a = a.to_numpy()
+        return a
+
+    dict_to_serialize = {int(i): _to_native(a) for i, a in enumerate(args)}
     serializable_dict = check_json(dict_to_serialize)
     returns = ()
     for i in range(len(args)):

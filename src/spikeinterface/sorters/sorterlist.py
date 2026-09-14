@@ -1,4 +1,5 @@
 from .external.combinato import CombinatoSorter
+from .external.dartsort import DartsortSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
 from .external.ironclust import IronClustSorter
@@ -6,7 +7,7 @@ from .external.kilosort import KilosortSorter
 from .external.kilosort2 import Kilosort2Sorter
 from .external.kilosort2_5 import Kilosort2_5Sorter
 from .external.kilosort3 import Kilosort3Sorter
-from .external.kilosort4 import Kilosort4Sorter
+from .external.kilosort4 import Kilosort4Sorter, read_kilosort4_motion
 from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
@@ -27,6 +28,7 @@ from .internal.lupin import LupinSorter
 sorter_full_list = [
     # external
     CombinatoSorter,
+    DartsortSorter,
     HDSortSorter,
     HerdingspikesSorter,
     IronClustSorter,

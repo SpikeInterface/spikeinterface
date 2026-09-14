@@ -2,7 +2,7 @@ import warnings
 
 warnings.warn(
     "The 'testing_tools' submodule is deprecated. " "Use spikeinterface.core.generate instead",
-    DeprecationWarning,
+    FutureWarning,
     stacklevel=2,
 )
 

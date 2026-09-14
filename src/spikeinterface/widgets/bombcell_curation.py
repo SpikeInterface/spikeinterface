@@ -153,6 +153,12 @@ class BombcellUpsetPlotWidget(BaseWidget):
                 if len(upset_data) == 0:
                     continue
 
+                if upset_data.index.nlevels == 1:
+                    warnings.warn(
+                        f"Skipping UpSet plot: only one metric, {memberships[0][0]}, was responsible for all failures."
+                    )
+                    continue
+
                 fig = plt.figure(figsize=(12, 6))
                 UpSet(
                     upset_data,

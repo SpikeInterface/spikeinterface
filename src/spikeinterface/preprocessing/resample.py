@@ -129,8 +129,8 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # Compute time_vector or t_start, following the pattern from DecimateRecordingSegment.
         # Do not use BasePreprocessorSegment because we have to reset the sampling rate!
-        if parent_recording_segment.time_vector is not None:
-            parent_tv = np.asarray(parent_recording_segment.time_vector)
+        if parent_recording_segment._time_vector is not None:
+            parent_tv = np.asarray(parent_recording_segment._time_vector)
 
             # Detect gaps in the parent time vector.
             # A true gap means at least one dropped sample, so dt >= 2 * expected_dt.
@@ -236,12 +236,12 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             BaseRecordingSegment.__init__(self, sampling_frequency=None, t_start=None, time_vector=time_vector)
         else:
             BaseRecordingSegment.__init__(
-                self, sampling_frequency=resample_rate, t_start=parent_recording_segment.t_start
+                self, sampling_frequency=resample_rate, t_start=parent_recording_segment._t_start
             )
 
     def get_num_samples(self):
-        if self.time_vector is not None:
-            return len(self.time_vector)
+        if self._time_vector is not None:
+            return len(self._time_vector)
         return int(self._parent_segment.get_num_samples() / self._parent_rate * self._resample_rate)
 
     def get_traces(self, start_frame, end_frame, channel_indices):

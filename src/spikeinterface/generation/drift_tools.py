@@ -555,7 +555,7 @@ class InjectDriftingTemplatesRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(
             self,
             drifting_templates.sampling_frequency,
-            t_start=0 if parent_recording_segment is None else parent_recording_segment.t_start,
+            t_start=0 if parent_recording_segment is None else parent_recording_segment._t_start,
         )
         assert not (parent_recording_segment is None and num_samples is None)
 

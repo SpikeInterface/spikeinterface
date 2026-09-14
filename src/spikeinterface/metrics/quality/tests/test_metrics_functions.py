@@ -30,6 +30,7 @@ from spikeinterface.metrics.quality.misc_metrics import (
     compute_sd_ratio,
     _noise_cutoff,
     _get_synchrony_counts,
+    _compute_violations,
     amplitude_cutoff,
 )
 from spikeinterface.metrics.quality.pca_metrics import (
@@ -435,6 +436,30 @@ def test_calculate_sliding_rp_violations(sorting_analyzer_violations, periods_vi
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 
+def test_compute_violations_llobet():
+    # Expected violations must follow the Llobet et al. (2022) formulation, where
+    # contaminating spikes produce violations both with base spikes and among
+    # themselves: Ve = 2 * ref_dur / D * Nc * (Nb + (Nc - 1) / 2), with
+    # Nc = C * N, Nb = (1 - C) * N and duration D = N / firing_rate.
+    # See https://github.com/SteinmetzLab/slidingRefractory (metrics.computeViol).
+    from scipy.stats import poisson
+
+    spike_count = 1000
+    firing_rate = 10.0  # Hz  -> duration D = 100 s
+    ref_period_dur = 0.002  # s
+    contamination_prop = 0.1
+    obs_viol = 5
+
+    duration = spike_count / firing_rate
+    n_c = spike_count * contamination_prop
+    n_b = spike_count * (1 - contamination_prop)
+    expected_viol = 2 * ref_period_dur / duration * n_c * (n_b + (n_c - 1) / 2)
+    expected_confidence = 1 - poisson.cdf(obs_viol, expected_viol)
+
+    confidence = _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop)
+    assert np.isclose(confidence, expected_confidence)
+
+
 def test_calculate_rp_violations(sorting_analyzer_violations, periods_violations):
     sorting_analyzer = sorting_analyzer_violations
     rp_contamination, counts = compute_refrac_period_violations(
@@ -768,6 +793,7 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         "noise_levels": {"seed": 1205},
         "waveforms": {},
         "templates": {},
+        "amplitude_scalings": {},
         "spike_amplitudes": {},
         "spike_locations": {},
         "principal_components": {},
