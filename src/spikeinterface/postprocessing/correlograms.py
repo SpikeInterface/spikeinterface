@@ -522,14 +522,14 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
+        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units=num_units)
 
         correlograms += c0
 
     return correlograms
 
 
-def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
+def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units):
     """
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -546,6 +546,8 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
+    num_units : int
+        Number of units in the complete sorting.
 
     Returns
     -------
@@ -573,8 +575,6 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_unit_indices))
-
     correlograms = np.zeros((num_units, num_units, num_bins), dtype="int64")
 
     # At a given shift, the mask precises which spikes have matching spikes
@@ -964,14 +964,16 @@ def _compute_auto_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
+        c0 = auto_correlogram_for_one_segment(
+            spike_times, spike_unit_indices, window_size, bin_size, num_units=num_units
+        )
 
         correlograms += c0
 
     return correlograms
 
 
-def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
+def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units):
     """
     A very well optimized algorithm for the auto-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -988,6 +990,8 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
+    num_units : int
+        Number of units in the complete sorting.
 
     Returns
     -------
@@ -1015,8 +1019,6 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_unit_indices))
-
     correlograms = np.zeros((num_units, num_bins), dtype="int64")
 
     for unit_ind in range(num_units):
@@ -1236,16 +1238,20 @@ class ComputeACG3D(AnalyzerExtension):
 
         new_unit_ids_indices = new_sorting.ids_to_indices(new_unit_ids)
         old_unit_ids = [unit_id for unit_id in new_sorting_analyzer.unit_ids if unit_id not in new_unit_ids]
-        old_unit_ids_indices = new_sorting.ids_to_indices(old_unit_ids)
+        # source indices are looked up in the sorting the data was computed with, not the resulting one
+        old_unit_ids_indices_in_new = new_sorting.ids_to_indices(old_unit_ids)
+        old_unit_ids_indices_in_old = self.sorting_analyzer.sorting.ids_to_indices(old_unit_ids)
 
         new_acgs_3d = np.zeros((len(new_sorting.unit_ids), acgs_3d.shape[1], acgs_3d.shape[2]))
         new_firing_quantiles = np.zeros((len(new_sorting.unit_ids), firing_rate_quantiles.shape[1]))
 
         new_acgs_3d[new_unit_ids_indices, :, :] = acgs_3d
-        new_acgs_3d[old_unit_ids_indices, :, :] = slice_rows(self.data["acgs_3d"], old_unit_ids_indices)
+        new_acgs_3d[old_unit_ids_indices_in_new, :, :] = slice_rows(self.data["acgs_3d"], old_unit_ids_indices_in_old)
 
         new_firing_quantiles[new_unit_ids_indices, :] = firing_rate_quantiles
-        new_firing_quantiles[old_unit_ids_indices, :] = slice_rows(self.data["firing_quantiles"], old_unit_ids_indices)
+        new_firing_quantiles[old_unit_ids_indices_in_new, :] = slice_rows(
+            self.data["firing_quantiles"], old_unit_ids_indices_in_old
+        )
 
         new_data = dict(
             acgs_3d=new_acgs_3d,
