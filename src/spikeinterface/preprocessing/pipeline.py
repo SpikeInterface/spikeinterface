@@ -61,7 +61,7 @@ class BasePipeline:
         all_kwargs_list = _get_all_kwargs_and_values(self)
 
         html_text = "<div'>"
-        html_text += "<strong>PreprocessingPipeline</strong>"
+        html_text += "<strong>Pipeline</strong>"
         html_text += "<div style='border:1px solid #ccc; padding:10px;'><strong>input</strong></div>"
         html_text += "<div style='margin: auto; text-indent: 30px;'>&#x2193;</div>"
 
@@ -209,7 +209,7 @@ def apply_preprocessing_pipeline(
         pipeline = PreprocessingPipeline(pipeline)
     elif isinstance(pipeline, dict):
         warnings.warn(
-            "Passing a dict to `apply_preprocessing_pipeline` is deprecated and will be removed in 0.106.0. "
+            "Passing a dict to `apply_preprocessing_pipeline` is deprecated and will be removed in 0.107.0. "
             "Please pass a list of preprocessing steps instead.",
             DeprecationWarning,
             stacklevel=2,
@@ -290,7 +290,7 @@ def get_preprocessing_list_from_file(recording_dictionary_path):
     Returns
     -------
     preprocessing_list : list
-        List containing preprocessing steps and their kwargs, each element is a dict with keys "name" and "kwargs".
+        List containing preprocessing steps and their kwargs, each element is a dict with keys "name" and "params".
 
     """
 

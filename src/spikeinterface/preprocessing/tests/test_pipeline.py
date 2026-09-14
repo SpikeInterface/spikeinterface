@@ -196,7 +196,7 @@ def test_loading_provenance(create_cache_folder):
 def test_loading_from_analyzer(create_cache_folder):
     """
     Tests the `get_preprocessing_list_from_analyzer` function, which constructs a preprocessing pipeline
-    dict from a saved sorting analyzer (either binary folder or zarr). This test creates a preprocessed recording,
+    list from a saved sorting analyzer (either binary folder or zarr). This test creates a preprocessed recording,
     uses this to create a sorting analyzer and saves binary and zarr versions of the analyzer. Then we generate
     the preprocessing dict from the analyzer, and apply it to the original recording to check that it's the same
     as the preprocessed recording made earlier.
