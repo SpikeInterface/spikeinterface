@@ -34,7 +34,7 @@ def get_resampling_factors(parent_rate, resample_rate, max_denominator):
 
 def get_num_resampled_samples(num_samples, up, down):
     """Number of output samples that resampling `num_samples` input samples by ``up / down`` yields,
-       matching ``scipy.signal.resample_poly``.
+    matching ``scipy.signal.resample_poly``.
     """
     return (num_samples * up + down - 1) // down
 
