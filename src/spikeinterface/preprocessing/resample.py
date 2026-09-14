@@ -5,7 +5,7 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
-from ._resampling_tools import get_resampling_factors, get_polyphase_filter
+from ._resampling_tools import get_resampling_factors, get_polyphase_filter, get_num_resampled_samples
 from spikeinterface.core import BaseRecordingSegment, get_chunk_with_margin
 from spikeinterface.core.frameslicerecording import FrameSliceRecordingSegment
 
@@ -196,7 +196,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             K = len(sec_boundaries_parent)
             sec_n_out = np.array(
                 [
-                    (int(sec_boundaries_parent[k, 1] - sec_boundaries_parent[k, 0]) * up + down - 1) // down
+                    get_num_resampled_samples(int(sec_boundaries_parent[k, 1] - sec_boundaries_parent[k, 0]), up, down)
                     for k in range(K)
                 ],
                 dtype=np.int64,
@@ -225,7 +225,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         if self._time_vector is not None:
             return len(self._time_vector)
         n = self._parent_segment.get_num_samples()
-        return (n * self._up + self._down - 1) // self._down
+        return get_num_resampled_samples(n, self._up, self._down)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if end_frame <= start_frame:
@@ -381,7 +381,7 @@ def _resample_time_vector(parent_times, up, down, parent_rate):
     """Map the rational sample grid onto timestamps without crossing section boundaries."""
     if up == 1:
         return parent_times[::down]
-    n_out = (len(parent_times) * up + down - 1) // down
+    n_out = get_num_resampled_samples(len(parent_times), up, down)
     positions = np.arange(n_out, dtype=np.int64) * down
     left = positions // up
     weight = (positions % up) / up

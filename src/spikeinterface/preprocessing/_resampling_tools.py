@@ -32,6 +32,13 @@ def get_resampling_factors(parent_rate, resample_rate, max_denominator):
     return up, down, achieved_rate
 
 
+def get_num_resampled_samples(num_samples, up, down):
+    """Number of output samples that resampling `num_samples` input samples by ``up / down`` yields,
+       matching ``scipy.signal.resample_poly``.
+    """
+    return (num_samples * up + down - 1) // down
+
+
 def get_polyphase_filter(sampling_frequency, up, down, margin_ms):
     """Design the anti-aliasing FIR for ``scipy.signal.resample_poly`` and the chunk margin it needs.
 
