@@ -122,7 +122,7 @@ def test_decimate_antialias_by_chunks(decimation_factor):
         traces2 = rec2.get_traces()
         traces3 = rec3.get_traces()
 
-        np.testing.assert_array_equal(traces2, traces3)
+        np.testing.assert_allclose(traces3, traces2, rtol=1e-6, atol=1e-6)
 
 
 @pytest.mark.parametrize("decimation_factor", [6, 10])

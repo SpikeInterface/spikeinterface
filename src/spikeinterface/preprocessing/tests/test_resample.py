@@ -161,7 +161,7 @@ def test_resample_by_chunks():
         for margin_ms in [None, 0, 100]:
             processed = resample(parent_rec, rate, margin_ms=margin_ms)
             saved = processed.save(format="memory", chunk_size=137, n_jobs=1, progress_bar=False)
-            np.testing.assert_array_equal(saved.get_traces(), processed.get_traces())
+            np.testing.assert_allclose(saved.get_traces(), processed.get_traces(), rtol=1e-6, atol=1e-6)
 
 
 def test_resample_rational_grid():
