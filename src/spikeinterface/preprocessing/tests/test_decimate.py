@@ -120,13 +120,13 @@ def test_decimate_antialias_by_chunks(decimation_factor):
 
     for margin_ms in [None, 100, 1000]:
         rec2 = DecimateRecording(parent_rec, decimation_factor, antialias=True, margin_ms=margin_ms)
-        chunk_size = int(decimated_rate * 2)  # ~2 seconds of the decimated signal
-        rec3 = rec2.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)
-
         traces2 = rec2.get_traces()
-        traces3 = rec3.get_traces()
-
-        np.testing.assert_allclose(traces3, traces2, rtol=1e-6, atol=1e-6)
+        # Test with ~2s of the decimated signal, and with a small odd chunk size
+        # (picked 137 just to match test_resample.test_resample_by_chunks).
+        for chunk_size in [137, int(decimated_rate * 2)]:
+            rec3 = rec2.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)
+            traces3 = rec3.get_traces()
+            np.testing.assert_allclose(traces3, traces2, rtol=1e-6, atol=1e-6)
 
 
 @pytest.mark.parametrize("decimation_factor", [6, 10])
