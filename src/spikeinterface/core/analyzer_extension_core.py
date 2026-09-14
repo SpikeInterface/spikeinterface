@@ -96,8 +96,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data = dict()
         random_spikes_indices = self.data["random_spikes_indices"]
         if keep_mask is None:
-            # no filtering: sharing the reference is fine, materialization happens on save
-            new_data["random_spikes_indices"] = random_spikes_indices
+            new_data["random_spikes_indices"] = materialize_array(random_spikes_indices)
         else:
             spikes = self.sorting_analyzer.sorting.to_spike_vector()
             selected_mask = np.zeros(spikes.size, dtype=bool)
@@ -107,8 +106,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
-        # no filtering: sharing the reference is fine, materialization happens on save
-        new_data["random_spikes_indices"] = self.data["random_spikes_indices"]
+        new_data["random_spikes_indices"] = materialize_array(self.data["random_spikes_indices"])
         return new_data
 
     def _get_data(self):
@@ -305,9 +303,8 @@ class ComputeWaveforms(AnalyzerExtension):
         return dict(waveforms=waveforms)
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        # splitting only affects random spikes, not waveforms: sharing the reference is fine,
-        # materialization happens on save
-        new_data = dict(waveforms=self.data["waveforms"])
+        # splitting only affects random spikes, not waveforms
+        new_data = dict(waveforms=materialize_array(self.data["waveforms"]))
         return new_data
 
     def get_waveforms_one_unit(self, unit_id, force_dense: bool = False):
@@ -826,7 +823,7 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     def _select_units_extension_data(self, unit_ids):
         # this does not depend on units
-        return self.data
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _select_channels_extension_data(self, channel_ids):
         # this does not depend on channels
@@ -836,12 +833,11 @@ class ComputeNoiseLevels(AnalyzerExtension):
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        # this does not depend on units
-        return self.data.copy()
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # this does not depend on units
-        return self.data.copy()
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
@@ -1694,8 +1690,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for data_name in self.nodepipeline_variables:
             if self.data.get(data_name) is not None:
                 if keep_mask is None:
-                    # no filtering: sharing the reference is fine, materialization happens on save
-                    new_data[data_name] = self.data[data_name]
+                    new_data[data_name] = materialize_array(self.data[data_name])
                 else:
                     new_data[data_name] = slice_rows(self.data[data_name], keep_mask)
 
@@ -1703,7 +1698,11 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only changes random spikes assignments
-        return self.data.copy()
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                new_data[data_name] = materialize_array(self.data[data_name])
+        return new_data
 
 
 def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):

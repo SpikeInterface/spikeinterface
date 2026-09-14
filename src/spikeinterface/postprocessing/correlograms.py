@@ -100,7 +100,7 @@ class ComputeCorrelograms(AnalyzerExtension):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_ccgs = slice_rows(self.data["ccgs"], unit_indices)[:, unit_indices]
-        new_bins = self.data["bins"]
+        new_bins = materialize_array(self.data["bins"])
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
@@ -167,7 +167,7 @@ class ComputeCorrelograms(AnalyzerExtension):
                     old_to_new_unit_index_map[old_unit_index] = new_sorting_analyzer.sorting.id_to_index(old_unit)
 
             correlograms = materialize_array(self.data["ccgs"])
-            new_bins = self.data["bins"]
+            new_bins = materialize_array(self.data["bins"])
 
             for new_unit_id, merge_unit_group in zip(new_unit_ids, merge_unit_groups):
                 merge_unit_group_indices = self.sorting_analyzer.sorting.ids_to_indices(merge_unit_group)
@@ -276,8 +276,8 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_acgs = slice_rows(self.data["acgs"], unit_indices)
-        new_bins = self.data["bins"]
-        new_data = dict(ccgs=new_acgs, bins=new_bins)
+        new_bins = materialize_array(self.data["bins"])
+        new_data = dict(acgs=new_acgs, bins=new_bins)
         return new_data
 
     def _merge_extension_data(
@@ -1256,9 +1256,36 @@ class ComputeACG3D(AnalyzerExtension):
         new_data = dict(
             acgs_3d=new_acgs_3d,
             firing_quantiles=new_firing_quantiles,
-            bins=self.data["bins"],
+            bins=materialize_array(self.data["bins"]),
         )
         return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        arr = self.data["acgs_3d"]
+        fq = self.data["firing_quantiles"]
+        all_new_units = new_sorting_analyzer.unit_ids
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        new_acgs_3d = np.zeros((len(all_new_units), arr.shape[1], arr.shape[2]))
+        new_firing_quantiles = np.zeros((len(all_new_units), fq.shape[1]))
+
+        new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids_f)
+        only_new_acgs_3d, only_new_firing_quantiles, _ = _compute_acgs_3d(new_sorting, **self.params, **job_kwargs)
+
+        for unit_ind, unit_id in enumerate(all_new_units):
+            if unit_id not in new_unit_ids_f:
+                keep_unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
+                new_acgs_3d[unit_ind, :, :] = arr[keep_unit_index]
+                new_firing_quantiles[unit_ind, :] = fq[keep_unit_index]
+            else:
+                new_unit_index = new_sorting.id_to_index(unit_id)
+                new_acgs_3d[unit_ind, :, :] = only_new_acgs_3d[new_unit_index, :, :]
+                new_firing_quantiles[unit_ind, :] = only_new_firing_quantiles[new_unit_index, :]
+
+        return dict(
+            acgs_3d=new_acgs_3d,
+            firing_quantiles=new_firing_quantiles,
+            bins=materialize_array(self.data["bins"]),
+        )
 
     def _run(self, verbose=False, **job_kwargs):
         acgs_3d, firing_quantiles, bins = _compute_acgs_3d(self.sorting_analyzer.sorting, **self.params, **job_kwargs)
