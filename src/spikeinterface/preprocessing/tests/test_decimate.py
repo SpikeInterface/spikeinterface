@@ -7,6 +7,7 @@ from spikeinterface import NumpyRecording
 from spikeinterface.core import generate_recording, load
 from spikeinterface.preprocessing.decimate import DecimateRecording, decimate
 from spikeinterface.preprocessing.resample import ResampleRecording
+from spikeinterface.preprocessing._resampling_tools import get_polyphase_filter
 from spikeinterface.preprocessing.tests.test_resample import create_sinusoidal_traces
 import numpy as np
 
@@ -89,21 +90,24 @@ def test_decimate_with_times(antialias):
         )
 
 
+@pytest.mark.parametrize("num_segments", [1, 2])
 @pytest.mark.parametrize("factor", [1, 7, 17, 48, 300])
-def test_decimate_polyphase(factor):
+def test_decimate_polyphase(factor, num_segments):
     from scipy.signal import resample_poly
 
-    traces = np.random.default_rng(4621).standard_normal((1001, 2))
-    rec = NumpyRecording(traces, 30000)
+    rng = np.random.default_rng(4621)
+    traces_list = [rng.standard_normal((num_samples, 2)) for num_samples in [1001, 1499][:num_segments]]
+    rec = NumpyRecording(traces_list, 30000)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         decimated = decimate(rec, factor, antialias=True)
         resampled = ResampleRecording(rec, 30000 / factor)
     assert not caught
-    expected = resample_poly(traces, 1, factor, axis=0, padtype="reflect")
-    np.testing.assert_allclose(decimated.get_traces(), expected, rtol=1e-12, atol=1e-12)
-    np.testing.assert_array_equal(resampled.get_traces(), decimated.get_traces())
-    np.testing.assert_array_equal(resampled.get_times(), decimated.get_times())
+    for segment_index, traces in enumerate(traces_list):
+        expected = resample_poly(traces, 1, factor, axis=0, padtype="reflect")
+        np.testing.assert_allclose(decimated.get_traces(segment_index), expected, rtol=1e-12, atol=1e-12)
+        np.testing.assert_array_equal(resampled.get_traces(segment_index), decimated.get_traces(segment_index))
+        np.testing.assert_array_equal(resampled.get_times(segment_index), decimated.get_times(segment_index))
 
 
 @pytest.mark.parametrize("decimation_factor", [6, 10, 48, 300])
@@ -128,17 +132,14 @@ def test_decimate_antialias_by_chunks(decimation_factor):
 @pytest.mark.parametrize("decimation_factor", [6, 10])
 @pytest.mark.parametrize("decimation_offset", [0, 1, 5])
 def test_decimate_antialias_with_offset(decimation_factor, decimation_offset):
+    from scipy.signal import resample_poly
+
     sampling_frequency = 30000
-    # max_freq below every tested Nyquist, so anti-aliasing barely changes the signal.
-    traces, _ = create_sinusoidal_traces(sampling_frequency, duration=5, freqs_n=6, max_freq=500, dtype=np.float32)
+    traces = np.random.default_rng(4621).standard_normal((30011, 2))
     parent_rec = NumpyRecording(traces, sampling_frequency)
 
-    dec_aa = DecimateRecording(
-        parent_rec, decimation_factor, decimation_offset=decimation_offset, antialias=True, dtype="float32"
-    )
-    dec_plain = DecimateRecording(
-        parent_rec, decimation_factor, decimation_offset=decimation_offset, antialias=False, dtype="float32"
-    )
+    dec_aa = DecimateRecording(parent_rec, decimation_factor, decimation_offset=decimation_offset, antialias=True)
+    dec_plain = DecimateRecording(parent_rec, decimation_factor, decimation_offset=decimation_offset, antialias=False)
 
     np.testing.assert_allclose(dec_aa.get_times(), parent_rec.get_times()[decimation_offset::decimation_factor])
 
@@ -148,9 +149,13 @@ def test_decimate_antialias_with_offset(decimation_factor, decimation_offset):
     assert dec_aa.get_num_samples() == expected_n
     assert dec_aa.get_num_samples() == dec_plain.get_num_samples()
 
-    # With only sub-Nyquist content, anti-aliased and plain-sliced traces stay aligned.
-    corr = np.corrcoef(dec_aa.get_traces().ravel(), dec_plain.get_traces().ravel())[0, 1]
-    assert corr > 0.95
+    expected = resample_poly(traces[decimation_offset:], 1, decimation_factor, axis=0, padtype="reflect")
+    coefficients, _ = get_polyphase_filter(sampling_frequency, 1, decimation_factor, None)
+    half_length = (len(coefficients) - 1) // 2
+    # With an offset, there are real parent samples before the offset to filter over.
+    # Without, there is reflect-padding.
+    n_edge = -(-half_length // decimation_factor) if decimation_offset else 0
+    np.testing.assert_allclose(dec_aa.get_traces()[n_edge:], expected[n_edge:], rtol=1e-12, atol=1e-12)
 
 
 def test_decimate_polyphase_serialization():
