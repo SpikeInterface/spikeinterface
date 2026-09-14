@@ -1,9 +1,10 @@
-from spikeinterface.preprocessing import resample
-from spikeinterface.core import NumpyRecording
-
+from contextlib import nullcontext
 
 import numpy as np
 import pytest
+
+from spikeinterface.core import NumpyRecording
+from spikeinterface.preprocessing import resample
 
 DEBUG = False
 # DEBUG = True
@@ -159,7 +160,9 @@ def test_resample_by_chunks():
     parent_rec = NumpyRecording(traces, 30000)
     for rate in [1000, 700, 45000, 333.3]:
         for margin_ms in [None, 0, 100]:
-            processed = resample(parent_rec, rate, margin_ms=margin_ms)
+            # margin_ms=0 is below the filter support and warns that it was increased.
+            with pytest.warns(UserWarning, match="filter support") if margin_ms == 0 else nullcontext():
+                processed = resample(parent_rec, rate, margin_ms=margin_ms)
             saved = processed.save(format="memory", chunk_size=137, n_jobs=1, progress_bar=False)
             np.testing.assert_allclose(saved.get_traces(), processed.get_traces(), rtol=1e-6, atol=1e-6)
 
@@ -167,7 +170,6 @@ def test_resample_by_chunks():
 def test_resample_rational_grid():
     # "the rational sample grid" = "the positions of output samples expressed in input-sample
     # coordinates, using the ratio up/down"
-    from contextlib import nullcontext
     from scipy.signal import resample_poly
     from spikeinterface.core import load
 
