@@ -6,8 +6,7 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
 from ._resampling_tools import get_resampling_factors, get_polyphase_filter
-from .decimate import get_polyphase_resampled_traces
-from spikeinterface.core import BaseRecordingSegment
+from spikeinterface.core import BaseRecordingSegment, get_chunk_with_margin
 from spikeinterface.core.frameslicerecording import FrameSliceRecordingSegment
 
 
@@ -274,6 +273,108 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             )
 
         return result
+
+
+def get_polyphase_resampled_traces(
+    parent_segment,
+    start_frame,
+    end_frame,
+    channel_indices,
+    up,
+    down,
+    margin,
+    dtype,
+    filter_coefficients,
+    decimation_offset=0,
+):
+    """Resample a chunk of a parent segment with ``scipy.signal.resample_poly``.
+
+    The chunk is read with a margin of parent samples on each side.
+    Reflected boundary-padding is used at the beginning and end of the segment.
+
+    Parameters
+    ----------
+    parent_segment : BaseRecordingSegment
+        Segment to read parent traces from.
+    start_frame : int
+        First frame to return, in output (resampled) samples.
+    end_frame : int
+        End frame (exclusive) to return, in output samples.
+    channel_indices : array-like | slice | None
+        Channel selection passed through to the parent segment.
+    up : int
+        Upsampling factor. Use ``up=1`` for decimation.
+    down : int
+        Downsampling factor.
+    margin : int
+        Extra parent samples to read on each side of the chunk, as returned by
+        `get_polyphase_filter`. It must be a multiple of `down` so that the padded chunk
+        starts on the polyphase grid; the resulting margin is ``margin * up // down``
+        output samples.
+    dtype : dtype
+        Output dtype. See `_cast_resampled_traces`.
+    filter_coefficients : np.ndarray
+        FIR filter from `get_polyphase_filter`, passed to ``resample_poly`` as ``window``.
+    decimation_offset : int, default: 0
+        Index of the first parent sample on the output (resampled) grid, in parent samples.
+        Used by `DecimateRecording`; leave at 0 for resampling.
+
+    Returns
+    -------
+    traces : np.ndarray
+        Array of shape ``(end_frame - start_frame, num_channels)`` and dtype `dtype`.
+    """
+    from scipy.signal import resample_poly
+
+    if end_frame <= start_frame:
+        return parent_segment.get_traces(0, 0, channel_indices).astype(dtype)
+
+    parent_start_frame = decimation_offset + (start_frame // up) * down
+    parent_end_frame = decimation_offset + ((end_frame + up - 1) // up) * down
+    parent_traces, left_margin, _ = get_chunk_with_margin(
+        parent_segment,
+        parent_start_frame,
+        parent_end_frame,
+        channel_indices,
+        margin,
+        add_reflect_padding=True,
+    )
+    working_dtype = np.result_type(parent_traces.dtype, dtype, np.float32)
+    traces = resample_poly(
+        parent_traces.astype(working_dtype, copy=False),
+        up,
+        down,
+        axis=0,
+        window=filter_coefficients.astype(working_dtype, copy=False),
+    )
+    start_drop = start_frame % up + left_margin * up // down
+    traces = traces[start_drop : start_drop + end_frame - start_frame]
+    return _cast_resampled_traces(traces, dtype)
+
+
+def _cast_resampled_traces(traces, dtype):
+    """Reject nonfinite output and round and saturate integer conversions."""
+    if not np.all(np.isfinite(traces)):
+        raise ValueError("Resampling produced nonfinite values. Check the input traces and resampling parameters.")
+
+    dtype = np.dtype(dtype)
+    if np.issubdtype(dtype, np.integer):
+        rounded = np.rint(traces)
+        limits = np.iinfo(dtype)
+        below = rounded <= limits.min
+        above = rounded >= limits.max
+
+        # Assign saturated endpoints after casting because apparently float64 can't
+        # represent int64.max exactly.
+        rounded[below | above] = 0
+        result = rounded.astype(dtype)
+        result[below] = limits.min
+        result[above] = limits.max
+        return result
+
+    if np.issubdtype(dtype, np.floating) and np.any(np.abs(traces) > np.finfo(dtype).max):
+        raise ValueError(f"Resampled values exceed the finite range of {dtype}.")
+    return traces.astype(dtype, copy=False)
 
 
 def _resample_time_vector(parent_times, up, down, parent_rate):
