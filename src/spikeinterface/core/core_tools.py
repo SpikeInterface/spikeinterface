@@ -16,6 +16,22 @@ import numpy as np
 import zarr
 
 
+def _resolve_recording_kwarg(recording, parent_recording, class_name):
+    """
+    A few preprocessing classes serialize their wrapped recording under the `parent_recording`
+    key (inherited from `ChannelSliceRecording`, or set directly), so `__init__` must keep
+    accepting `parent_recording` for `from_dict`/multiprocessing round-trips even though
+    `recording` is the documented and consistently-used argument name everywhere else.
+    """
+    if parent_recording is not None:
+        if recording is not None:
+            raise TypeError(f"{class_name}() got values for both `recording` and `parent_recording`; pass only one.")
+        recording = parent_recording
+    if recording is None:
+        raise TypeError(f"{class_name}() missing required argument: 'recording'")
+    return recording
+
+
 def define_function_handling_dict_from_class(source_class, name):
     """
     Depending on whether `source_class` is passed a `Recording` object or a dict of

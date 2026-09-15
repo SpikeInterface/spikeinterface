@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 from typing import Literal
 
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class, _resolve_recording_kwarg
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs
 from spikeinterface.core.time_series_tools import get_random_sample_slices
 from .filter import highpass_filter
@@ -93,6 +93,9 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
     channel_labels : np.ndarray | list | None, default: None
         If given, these are labels given to the channels by the
         detection process. Only intended for use when loading.
+    parent_recording : BaseRecording | None, default: None
+        Legacy alias for `recording`, kept for `from_dict`/pickle reconstruction and
+        backward-compatible direct construction. New code should use `recording`.
 
     Returns
     -------
@@ -104,25 +107,25 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 
     def __init__(
         self,
-        parent_recording: BaseRecording,
+        recording: BaseRecording | None = None,
         bad_channel_ids=None,
         channel_labels=None,
+        parent_recording: BaseRecording | None = None,
         **detect_bad_channels_kwargs,
     ):
+        recording = _resolve_recording_kwarg(recording, parent_recording, type(self).__name__)
 
         if bad_channel_ids is None:
-            bad_channel_ids, channel_labels = detect_bad_channels(
-                recording=parent_recording, **detect_bad_channels_kwargs
-            )
+            bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
         else:
             channel_labels = None
 
-        self._main_ids = parent_recording.get_channel_ids()
+        self._main_ids = recording.get_channel_ids()
         new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, bad_channel_ids)]
 
         ChannelSliceRecording.__init__(
             self,
-            parent_recording=parent_recording,
+            parent_recording=recording,
             channel_ids=new_channel_ids,
         )
 
