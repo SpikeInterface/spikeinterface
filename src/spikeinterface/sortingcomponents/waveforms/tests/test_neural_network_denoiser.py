@@ -1,3 +1,5 @@
+import pytest
+
 from spikeinterface.core.node_pipeline import run_node_pipeline, PeakRetriever, ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import SingleChannelDenoiser
 
@@ -50,3 +52,48 @@ def test_single_channel_yass_denoiser(generated_recording_30khz, detected_peaks,
     waveforms, denoised_waveforms = run_node_pipeline(recording, nodes=nodes, job_kwargs=chunk_executor_kwargs)
 
     assert waveforms.shape == denoised_waveforms.shape
+
+    # Pre-instantiate the model instead of loading at init
+    model, _ = SingleChannelDenoiser.load_model(
+        repo_id="spikeinterface/waveform_denoiser",
+        model_name="yass_ibl",
+    )
+    yass_denoiser_with_model = SingleChannelDenoiser(
+        recording, parents=[peak_retriever, waveform_extraction], model=model
+    )
+    waveforms, denoised_waveforms = run_node_pipeline(
+        recording,
+        nodes=[peak_retriever, waveform_extraction, yass_denoiser_with_model],
+        job_kwargs=chunk_executor_kwargs,
+    )
+
+    assert waveforms.shape == denoised_waveforms.shape
+
+
+def test_single_channel_yass_denoiser_wrong_shape(generated_recording_30khz, detected_peaks, chunk_executor_kwargs):
+    recording = generated_recording_30khz
+    peaks = detected_peaks
+
+    nbefore = 41
+    nafter = 78
+
+    # Build nodes for computation
+    peak_retriever = PeakRetriever(recording, peaks)
+    waveform_extraction = ExtractDenseWaveforms(
+        recording, parents=[peak_retriever], nbefore=nbefore, nafter=nafter, return_output=True
+    )
+    with pytest.raises(ValueError):
+        yass_denoiser = SingleChannelDenoiser(
+            recording,
+            parents=[peak_retriever, waveform_extraction],
+            repo_id="spikeinterface/waveform_denoiser",
+            model_name="yass_ibl",
+        )
+
+    # It should raise also if model is loaded externally
+    model, _ = SingleChannelDenoiser.load_model(
+        repo_id="spikeinterface/waveform_denoiser",
+        model_name="yass_ibl",
+    )
+    with pytest.raises(ValueError):
+        yass_denoiser = SingleChannelDenoiser(recording, parents=[peak_retriever, waveform_extraction], model=model)
