@@ -200,9 +200,7 @@ def _make_random_spikes(dtype, num_units, num_segments, num_spikes, seed=0):
 @pytest.mark.parametrize("unit_major", [True, False], ids=["unit_major", "segment_major"])
 @pytest.mark.parametrize("dtype", list(NARROW_INDEX_DTYPES.values()), ids=list(NARROW_INDEX_DTYPES.keys()))
 def test_reorder_spike_vector_by_unit_and_segment_narrow_index_dtypes(force_numba, dtype, unit_major):
-    """Make sure that narrow unit_index / segment_index fields use numba.
-
-    """
+    """Make sure that narrow unit_index / segment_index fields use numba."""
     # 200 units x 2 segments puts the bucket index outside int8 range,
     # so the kernel has to widen the fields before the bucket math.
     num_units, num_segments = 200, 2
