@@ -50,13 +50,6 @@ an example:
 
 .. parsed-literal::
 
-    /var/folders/98/9_70qwmd3gjg4zqh8r9yrw6m0000gn/T/ipykernel_21502/556394975.py:28: DeprecationWarning: Passing a dict to `apply_preprocessing_pipeline` is deprecated and will be removed in 0.107.0. Please pass a list of preprocessing steps instead.
-      preprocessed_rec = si.apply_preprocessing_pipeline(rec, my_protocol['preprocessing'])
-
-
-
-.. parsed-literal::
-
     detect_bad_channels (no parallelization):   0%|          | 0/100 [00:00<?, ?it/s]
 
 
@@ -191,21 +184,6 @@ Once you have an analyzer, you can then do things with it:
     si.plot_unit_summary(analyzer, unit_id=1)
 
 
-.. parsed-literal::
-
-    /Users/christopherhalcrow/Work/fromgit/spikeinterface/src/spikeinterface/widgets/unit_waveforms.py:184: UserWarning: templates_percentile_shading can only be used if the 'waveforms' extension is available. Setting templates_percentile_shading to None.
-      warn(
-
-
-
-
-.. parsed-literal::
-
-    <spikeinterface.widgets.unit_summary.UnitSummaryWidget at 0x142782a50>
-
-
-
-
 .. image:: build_pipeline_with_dicts_files/build_pipeline_with_dicts_6_2.png
 
 
@@ -228,7 +206,7 @@ Get all preprocessing steps:
 
 
 You can then check the arguments of each preprocessing step using
-e.g. their docstrings (in Jupyter you can run ``si.bandpass_filter?``
+e.g. their docstrings (in Jupyter you can run ``si.bandpass_filter?``
 and in the terminal ``help(si.bandpass_fitler)``)
 
 .. code::
