@@ -29,6 +29,7 @@ import importlib.util
 import numpy as np
 from tqdm.auto import trange
 
+from spikeinterface.core import BaseRecording
 from spikeinterface.core.motion import Motion
 from .motion_utils import (
     get_spatial_bin_edges,
@@ -88,6 +89,10 @@ class DredgeApRegistration:
         These dictionaries allow setting parameters for fine control over the registration
     device : str or torch.device
         What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
+    batching_mode : Literal["full", "online"], default: "full"
+        Which batching_mode to run when computing displacement vector.
+    chunk_len_s=None,
+        If `batching_mode` is "online", how long should each batch be, in seconds.
     """
 
     @classmethod
@@ -173,6 +178,8 @@ def dredge_ap(
     progress_bar=True,
     extra_outputs=False,
     precomputed_D_C_maxdisp=None,
+    chunk_len_s=None,
+    batching_mode="full",
 ):
     """Estimate motion from spikes
 
@@ -248,14 +255,6 @@ def dredge_ap(
     #     count_bin_min=count_bin_min,
     # )
 
-    weights_kw = dict(
-        mincorr=mincorr,
-        time_horizon_s=time_horizon_s,
-        do_window_weights=do_window_weights,
-        weights_threshold_low=weights_threshold_low,
-        weights_threshold_high=weights_threshold_high,
-    )
-
     # this will store return values other than the MotionEstimate
     extra = {}
 
@@ -322,59 +321,75 @@ def dredge_ap(
     # if extra_outputs and count_masked_correlation:
     #     extra["counts"] = counts
 
-    # cross-correlate to get D and C
-    if precomputed_D_C_maxdisp is None:
-        Ds, Cs, max_disp_um = xcorr_windows(
+    weights_kw = dict(
+        mincorr=mincorr,
+        time_horizon_s=time_horizon_s,
+        do_window_weights=do_window_weights,
+        weights_threshold_low=weights_threshold_low,
+        weights_threshold_high=weights_threshold_high,
+    )
+
+    full_xcorr_kw = dict(
+        rigid=rigid,
+        bin_um=bin_um,
+        max_disp_um=max_disp_um,
+        progress_bar=False,
+        device=device,
+        **xcorr_kw,
+    )
+
+    if batching_mode == "full":
+
+        threshold_kw = dict(bin_s=bin_s)
+
+        displacement, extra = compute_displacement_full(
             raster,
             windows,
             spatial_bin_edges_um,
             win_scale_um,
-            rigid=rigid,
-            bin_um=bin_um,
-            max_disp_um=max_disp_um,
-            progress_bar=progress_bar,
-            device=device,
-            # TODO charlie : put back the count for the mask
-            # masks=(counts > 0) if count_masked_correlation else None,
-            **xcorr_kw,
+            mincorr_percentile,
+            extra,
+            extra_outputs,
+            thomas_kw,
+            weights_kw,
+            full_xcorr_kw,
+            threshold_kw,
+            precomputed_D_C_maxdisp,
+            post_transform,
+        )
+
+    elif batching_mode == "online":
+
+        # T_total is number of bin_s in recording
+        T_total = raster.shape[1]
+        if chunk_len_s is None:
+            chunk_len_s = max(time_horizon_s, int(np.floor(1000 / bin_s)))
+
+        threshold_kw = dict(
+            mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
+            in_place=True,
+            soft=False,
+            time_horizon_s=time_horizon_s,
+            bin_s=bin_s,
+        )
+
+        displacement, extra = compute_displacement_online(
+            raster,
+            windows,
+            T_total,
+            chunk_len_s,
+            spatial_bin_edges_um,
+            win_scale_um,
+            mincorr_percentile,
+            extra,
+            extra_outputs,
+            thomas_kw,
+            weights_kw,
+            full_xcorr_kw,
+            threshold_kw,
         )
     else:
-        Ds, Cs, max_disp_um = precomputed_D_C_maxdisp
-
-    # turn Cs into weights
-    Us, wextra = weight_correlation_matrix(
-        Ds,
-        Cs,
-        windows,
-        raster,
-        spatial_bin_edges_um,
-        time_bin_edges_s,
-        # raster_kw, #@charlie this is removed
-        post_transform=post_transform,  # @charlie this isnew
-        lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
-        eps=thomas_kw.get("eps", DEFAULT_EPS),
-        progress_bar=progress_bar,
-        in_place=not extra_outputs,
-        **weights_kw,
-    )
-    extra.update({k: wextra[k] for k in wextra if k not in ("S", "U")})
-    if extra_outputs:
-        extra.update({k: wextra[k] for k in wextra if k in ("S", "U")})
-    del wextra
-    if extra_outputs:
-        extra["D"] = Ds
-        extra["C"] = Cs
-    del Cs
-
-    # @charlie : is this needed ?
-    gc.collect()
-
-    # solve for P
-    # now we can do our tridiag solve
-    displacement, textra = thomas_solve(Ds, Us, progress_bar=progress_bar, **thomas_kw)
-    if extra_outputs:
-        extra.update(textra)
-    del textra
+        raise ValueError(f"No `batching_mode` called {batching_mode}. Available modes are ['batch', 'offline'].")
 
     if extra_outputs:
         extra["windows"] = windows
@@ -382,6 +397,7 @@ def dredge_ap(
         extra["max_disp_um"] = max_disp_um
 
     time_bin_centers = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
+
     motion = Motion([displacement.T], [time_bin_centers], window_centers, direction=direction)
 
     if extra_outputs:
@@ -541,22 +557,6 @@ def dredge_online_lfp(
     # need lfp-specific defaults
     xcorr_kw = xcorr_kw if xcorr_kw is not None else {}
     thomas_kw = thomas_kw if thomas_kw is not None else {}
-    full_xcorr_kw = dict(
-        rigid=rigid,
-        bin_um=np.median(np.diff(contact_depths)),
-        max_disp_um=max_disp_um,
-        progress_bar=False,
-        device=device,
-        **xcorr_kw,
-    )
-    threshold_kw = dict(
-        mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
-        in_place=True,
-        soft=soft,
-        # time_horizon_s=weights_kw["time_horizon_s"],  # max_dt not implemented for lfp at this point
-        time_horizon_s=time_horizon_s,
-        bin_s=1 / fs,  # only relevant for time_horizon_s
-    )
 
     # here we check that contact positons are unique on the direction
     if contact_depths.size != np.unique(contact_depths).size:
@@ -583,18 +583,93 @@ def dredge_online_lfp(
         zero_threshold=1e-5,
     )
 
-    B = len(windows)
-
     if extra_outputs:
         extra = dict(window_centers=window_centers, windows=windows)
+    else:
+        extra = dict()
+
+    weights_kw = dict(
+        mincorr=mincorr,
+        time_horizon_s=time_horizon_s,
+    )
+
+    full_xcorr_kw = dict(
+        rigid=rigid,
+        bin_um=np.median(np.diff(contact_depths)),
+        max_disp_um=max_disp_um,
+        progress_bar=False,
+        device=device,
+        **xcorr_kw,
+    )
+
+    threshold_kw = dict(
+        mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
+        in_place=True,
+        soft=soft,
+        time_horizon_s=time_horizon_s,
+        bin_s=1 / lfp_recording.sampling_frequency,  # only relevant for time_horizon_s
+    )
+
+    P_online, extra = compute_displacement_online(
+        lfp_recording,
+        windows,
+        T_total,
+        T_chunk,
+        contact_depths,
+        win_scale_um,
+        mincorr_percentile,
+        extra,
+        extra_outputs,
+        thomas_kw,
+        weights_kw,
+        full_xcorr_kw,
+        threshold_kw,
+    )
+
+    motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction=direction)
+
+    if extra_outputs:
+        return motion, extra
+    else:
+        return motion
+
+
+def compute_displacement_online(
+    lfp_recording,
+    windows,
+    T_total,
+    T_chunk,
+    spatial_bin_edges_um,
+    win_scale_um,
+    mincorr_percentile,
+    extra,
+    extra_outputs,
+    thomas_kw,
+    weights_kw,
+    full_xcorr_kw,
+    threshold_kw,
+):
+
+    B = len(windows)
 
     # -- allocate output and initialize first chunk
     P_online = np.empty((B, T_total), dtype=np.float32)
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
     t0, t1 = 0, T_chunk
-    traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
-    Ds0, Cs0, max_disp_um = xcorr_windows(traces0.T, windows, contact_depths, win_scale_um, **full_xcorr_kw)
-    full_xcorr_kw["max_disp_um"] = max_disp_um
+
+    if isinstance(lfp_recording, BaseRecording):
+        traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
+    else:
+        traces0 = lfp_recording[:, t0:t1].T
+
+    Ds0, Cs0, max_disp_um = xcorr_windows(
+        traces0.T,
+        windows,
+        spatial_bin_edges_um,
+        win_scale_um,
+        **full_xcorr_kw,
+    )
+    mincorr = weights_kw["mincorr"]
     Ss0, mincorr0 = threshold_correlation_matrix(
         Cs0,
         mincorr=mincorr,
@@ -615,30 +690,35 @@ def dredge_online_lfp(
 
     # -- loop through chunks
     chunk_starts = range(T_chunk, T_total, T_chunk)
+    progress_bar = full_xcorr_kw["progress_bar"]
     if progress_bar:
         chunk_starts = trange(
             T_chunk,
             T_total,
             T_chunk,
-            desc=f"Online chunks [{chunk_len_s}s each]",
+            desc=f"Online chunks [{T_chunk}s each]",
         )
     for t1 in chunk_starts:
         t2 = min(T_total, t1 + T_chunk)
-        traces1 = lfp_recording.get_traces(start_frame=t1, end_frame=t2)
+
+        if isinstance(lfp_recording, BaseRecording):
+            traces1 = lfp_recording.get_traces(start_frame=t1, end_frame=t2)
+        else:
+            traces1 = lfp_recording[:, t1:t2].T
 
         # cross-correlations between prev/cur chunks
         # these are T1, T0 shaped
         Ds10, Cs10, _ = xcorr_windows(
             traces1.T,
             windows,
-            contact_depths,
+            spatial_bin_edges_um,
             win_scale_um,
             raster_b=traces0.T,
             **full_xcorr_kw,
         )
 
         # cross-correlation in current chunk
-        Ds1, Cs1, _ = xcorr_windows(traces1.T, windows, contact_depths, win_scale_um, **full_xcorr_kw)
+        Ds1, Cs1, _ = xcorr_windows(traces1.T, windows, spatial_bin_edges_um, win_scale_um, **full_xcorr_kw)
         Ss1, mincorr1 = threshold_correlation_matrix(
             Cs1,
             mincorr_percentile=mincorr_percentile,
@@ -672,12 +752,77 @@ def dredge_online_lfp(
         t0, t1 = t1, t2
         traces0 = traces1
 
-    motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction=direction)
+    return P_online, extra
 
-    if extra_outputs:
-        return motion, extra
+
+def compute_displacement_full(
+    raster,
+    windows,
+    spatial_bin_edges_um,
+    win_scale_um,
+    mincorr_percentile,
+    extra,
+    extra_outputs,
+    thomas_kw,
+    weights_kw,
+    full_xcorr_kw,
+    threshold_kw,
+    precomputed_D_C_maxdisp,
+    post_transform,
+):
+
+    # cross-correlate to get D and C
+    if precomputed_D_C_maxdisp is None:
+        Ds, Cs, max_disp_um = xcorr_windows(
+            raster,
+            windows,
+            spatial_bin_edges_um,
+            win_scale_um,
+            # TODO charlie : put back the count for the mask
+            # masks=(counts > 0) if count_masked_correlation else None,
+            **full_xcorr_kw,
+        )
     else:
-        return motion
+        Ds, Cs, max_disp_um = precomputed_D_C_maxdisp
+
+    # turn Cs into weights
+    progress_bar = full_xcorr_kw["progress_bar"]
+    Us, wextra = weight_correlation_matrix(
+        Ds,
+        Cs,
+        windows,
+        raster,
+        spatial_bin_edges_um,
+        threshold_kw,
+        # raster_kw, #@charlie this is removed
+        post_transform=post_transform,  # @charlie this isnew
+        lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
+        eps=thomas_kw.get("eps", DEFAULT_EPS),
+        progress_bar=progress_bar,
+        in_place=not extra_outputs,
+        mincorr_percentile=mincorr_percentile,
+        **weights_kw,
+    )
+    extra.update({k: wextra[k] for k in wextra if k not in ("S", "U")})
+    if extra_outputs:
+        extra.update({k: wextra[k] for k in wextra if k in ("S", "U")})
+    del wextra
+    if extra_outputs:
+        extra["D"] = Ds
+        extra["C"] = Cs
+    del Cs
+
+    # @charlie : is this needed ?
+    gc.collect()
+
+    # solve for P
+    # now we can do our tridiag solve
+    displacement, textra = thomas_solve(Ds, Us, progress_bar=progress_bar, **thomas_kw)
+    if extra_outputs:
+        extra.update(textra)
+    del textra
+
+    return displacement, extra
 
 
 dredge_online_lfp.__doc__ = dredge_online_lfp.__doc__.format(DredgeLfpRegistration.params_doc)
@@ -1289,7 +1434,6 @@ def get_weights(
     windows,
     raster,
     dbe,
-    tbe,
     # @charlie raster_kw is removed in favor of post_transform only is this OK ???
     # raster_kw,
     post_transform=np.log1p,
@@ -1335,7 +1479,7 @@ def weight_correlation_matrix(
     windows,
     raster,
     depth_bin_edges,
-    time_bin_edges,
+    threshold_kw,
     # @charlie raster_kw is remove in favor of post_transform only
     # raster_kw,
     post_transform=np.log1p,
@@ -1370,9 +1514,9 @@ def weight_correlation_matrix(
         mincorr_percentile=mincorr_percentile,
         mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
         time_horizon_s=time_horizon_s,
-        bin_s=time_bin_edges[1] - time_bin_edges[0],
         T=T,
         in_place=in_place,
+        **threshold_kw,
     )
     extra["S"] = Ss
     extra["mincorr"] = mincorr
@@ -1389,7 +1533,6 @@ def weight_correlation_matrix(
         windows,
         raster,
         depth_bin_edges,
-        time_bin_edges,
         # raster_kw,
         post_transform=post_transform,
         weights_threshold_low=weights_threshold_low,
