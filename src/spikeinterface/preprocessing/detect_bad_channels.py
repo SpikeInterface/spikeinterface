@@ -134,19 +134,6 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
         all_bad_channels_kwargs = _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs)
         self._kwargs.update(all_bad_channels_kwargs)
 
-    @classmethod
-    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
-        """
-        Fix backward compatibility issues with `parent_recording' argument,
-        which is renamed to `recording'.
-        """
-        if "parent_recording" in old_kwargs:
-            new_kwargs = old_kwargs.copy()
-            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
-        else:
-            new_kwargs = old_kwargs
-        return new_kwargs
-
 
 DetectAndRemoveBadChannelsRecording.__doc__ = DetectAndRemoveBadChannelsRecording.__doc__.format(
     _bad_channel_detection_kwargs_doc
