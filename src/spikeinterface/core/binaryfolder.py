@@ -1,12 +1,24 @@
 from pathlib import Path
 import json
 
+from copy import deepcopy
+import shutil
+
 import numpy as np
 
-from probeinterface import read_probeinterface
+from probeinterface import read_probeinterface, write_probeinterface
 
+from spikeinterface.core import BaseRecording
 from .binaryrecordingextractor import BinaryRecordingExtractor
-from .core_tools import define_function_from_class, make_paths_absolute
+from .core_tools import (
+    define_function_from_class,
+    make_paths_absolute,
+    load_properties_from_binary_folder,
+    save_properties_to_binary_folder,
+    save_extractor_provenance,
+    save_annotations_to_folder,
+    load_annotations_from_folder,
+)
 
 
 class BinaryFolderRecording(BinaryRecordingExtractor):
@@ -42,15 +54,8 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         BinaryRecordingExtractor.__init__(self, **d["kwargs"])
 
         # Load properties
-        prop_folder = folder_path / "properties"
-        if prop_folder.is_dir():
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == ".npy":
-                    values = np.load(prop_file, allow_pickle=True)
-                    key = prop_file.stem
-                    if key == "contact_vector":
-                        continue
-                    self.set_property(key, values)
+        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_annotations_from_folder(folder_path, self)
 
         # Load the probegroup
         probe_file = folder_path / "probegroup.json"
@@ -111,6 +116,90 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             file_offset=self._bin_kwargs["file_offset"],
         )
         return d
+
+    @staticmethod
+    def write_recording(
+        recording: BaseRecording,
+        folder_path: str | Path,
+        verbose: bool = False,
+        overwrite: bool = False,
+        dtype=None,
+        **job_kwargs,
+    ):
+        from .time_series_tools import write_binary
+        from .binaryrecordingextractor import BinaryRecordingExtractor
+        from .binaryfolder import BinaryFolderRecording
+
+        folder_path = Path(folder_path)
+        if folder_path.is_dir():
+            if not overwrite:
+                raise FileExistsError(f"Folder {folder_path} already exists. Use overwrite=True to overwrite it.")
+            else:
+                shutil.rmtree(folder_path)
+        folder_path.mkdir(exist_ok=False, parents=True)
+
+        file_paths = [folder_path / f"traces_cached_seg{i}.raw" for i in range(recording.get_num_segments())]
+        if dtype is None:
+            dtype = recording.get_dtype()
+        # Check if there are any time vectors
+        t_starts = recording.get_segment_t_starts()
+        if recording.has_any_time_vector():
+            file_timestamps_paths = [
+                folder_path / f"times_cached_seg{i}.raw" for i in range(recording.get_num_segments())
+            ]
+        else:
+            file_timestamps_paths = None
+
+        write_binary(
+            recording,
+            file_paths=file_paths,
+            file_timestamps_paths=file_timestamps_paths,
+            dtype=dtype,
+            verbose=verbose,
+            **job_kwargs,
+        )
+
+        save_properties_to_binary_folder(folder_path / "properties", recording)
+        save_extractor_provenance(folder_path, recording)
+        # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
+        save_annotations_to_folder(folder_path, recording)
+
+        if recording.has_probe():
+            probegroup = recording.get_probegroup()
+            write_probeinterface(folder_path / "probegroup.json", probegroup)
+
+        # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
+        # See the __init__
+        binary_rec = BinaryRecordingExtractor(
+            file_paths=file_paths,
+            file_timestamps_paths=file_timestamps_paths,
+            sampling_frequency=recording.get_sampling_frequency(),
+            num_channels=recording.get_num_channels(),
+            dtype=dtype,
+            t_starts=t_starts,
+            channel_ids=recording.get_channel_ids(),
+            time_axis=0,
+            file_offset=0,
+            is_filtered=recording.is_filtered(),
+            gain_to_uV=recording.get_channel_gains(),
+            offset_to_uV=recording.get_channel_offsets(),
+        )
+        binary_rec.dump(folder_path / "binary.json", relative_to=folder_path)
+
+        # Create the si_folder file to make the load() easier until version 0.105.0
+        # All properties, annotations, and probe information are already saved in the folder,
+        # so we don't need to include them in the si_folder.json
+        cached = BinaryFolderRecording(folder_path=folder_path)
+        si_folder_path = folder_path / f"si_folder.json"
+        cached.dump_to_json(
+            file_path=si_folder_path,
+            relative_to=folder_path,
+            include_properties=False,
+            include_annotations=False,
+            include_extra_metadata=False,
+        )
+
+        return cached
 
 
 read_binary_folder = define_function_from_class(source_class=BinaryFolderRecording, name="read_binary_folder")

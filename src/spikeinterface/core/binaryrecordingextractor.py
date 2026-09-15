@@ -38,6 +38,8 @@ class BinaryRecordingExtractor(BaseRecording):
         The offset to apply to the traces
     is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    file_timestamps_paths : str or Path or list, default: None
+        Path to the binary file containing timestamps for each segment. If None, timestamps are not loaded
 
     Notes
     -----
@@ -51,17 +53,18 @@ class BinaryRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_paths,
-        sampling_frequency,
-        dtype,
+        file_paths: str | Path | list[str | Path],
+        sampling_frequency: float,
+        dtype: str | np.dtype,
         num_channels: int | None = None,
-        t_starts=None,
-        channel_ids=None,
-        time_axis=0,
-        file_offset=0,
-        gain_to_uV=None,
-        offset_to_uV=None,
-        is_filtered=None,
+        t_starts: list[float] | None = None,
+        channel_ids: list[str | int] | None = None,
+        time_axis: int = 0,
+        file_offset: int = 0,
+        gain_to_uV: float | np.ndarray | None = None,
+        offset_to_uV: float | np.ndarray | None = None,
+        is_filtered: bool | None = None,
+        file_timestamps_paths: str | Path | list[str | Path] | None = None,
     ):
 
         if channel_ids is None:
@@ -82,6 +85,12 @@ class BinaryRecordingExtractor(BaseRecording):
             assert len(t_starts) == len(file_path_list), "t_starts must be a list of the same size as file_paths"
             t_starts = [float(t_start) for t_start in t_starts]
 
+        if file_timestamps_paths is not None:
+            if isinstance(file_timestamps_paths, list):
+                file_timestamps_paths = [Path(p) for p in file_timestamps_paths]
+            else:
+                file_timestamps_paths = [Path(file_timestamps_paths)]
+
         dtype = np.dtype(dtype)
 
         for i, file_path in enumerate(file_path_list):
@@ -89,8 +98,20 @@ class BinaryRecordingExtractor(BaseRecording):
                 t_start = None
             else:
                 t_start = t_starts[i]
+            if file_timestamps_paths is None:
+                file_timestamps_path = None
+            else:
+                file_timestamps_path = file_timestamps_paths[i]
+
             rec_segment = BinaryRecordingSegment(
-                file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
+                file_path,
+                sampling_frequency,
+                t_start,
+                num_channels,
+                dtype,
+                time_axis,
+                file_offset,
+                file_timestamps_path,
             )
             self.add_recording_segment(rec_segment)
 
@@ -115,6 +136,9 @@ class BinaryRecordingExtractor(BaseRecording):
             "gain_to_uV": gain_to_uV,
             "offset_to_uV": offset_to_uV,
             "is_filtered": is_filtered,
+            "file_timestamps_paths": (
+                [str(Path(e).absolute()) for e in file_timestamps_paths] if file_timestamps_paths is not None else None
+            ),
         }
 
     @classmethod
@@ -163,7 +187,17 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
-    def __init__(self, file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset):
+    def __init__(
+        self,
+        file_path,
+        sampling_frequency,
+        t_start,
+        num_channels,
+        dtype,
+        time_axis,
+        file_offset,
+        file_timestamps_path=None,
+    ):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self.num_channels = num_channels
         self.dtype = np.dtype(dtype)
@@ -174,6 +208,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.bytes_per_sample = self.num_channels * self.dtype.itemsize
         self.data_size_in_bytes = Path(file_path).stat().st_size - file_offset
         self.num_samples = self.data_size_in_bytes // self.bytes_per_sample
+        self.file_timestamps_path = file_timestamps_path
+        if file_timestamps_path is not None:
+            self._time_vector = np.memmap(file_timestamps_path, dtype="float64", mode="r", shape=(self.num_samples,))
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -239,6 +276,13 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         except Exception as e:
             warnings.warn(f"Error closing file handle in BinaryRecordingSegment: {e}")
             pass
+
+        if self._time_vector is not None:
+            try:
+                self._time_vector._mmap.close()  # Close the underlying mmap object
+                del self._time_vector
+            except Exception as e:
+                pass
 
 
 # For backward compatibility (old good time)

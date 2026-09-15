@@ -190,7 +190,7 @@ class BenchmarkStudy:
 
             # sortings are pickled + saved as NumpyFolderSorting
             # gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
-            # gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
+            # gt_sorting.save(format="binary", folder=study_folder / f"datasets/gt_sortings/{key}")
 
         # analyzer path (local or external)
         (study_folder / "analyzers_path.json").write_text(json.dumps(analyzers_path, indent=4), encoding="utf8")
@@ -651,7 +651,7 @@ class Benchmark:
                 with open(folder / f"{k}.pickle", mode="wb") as f:
                     pickle.dump(self.result[k], f)
             elif format == "sorting":
-                self.result[k].save(folder=folder / k, format="numpy_folder", overwrite=True)
+                self.result[k].save(folder=folder / k, format="binary", overwrite=True)
             elif format == "Motion":
                 self.result[k].save(folder=folder / k)
             elif format == "zarr_templates":

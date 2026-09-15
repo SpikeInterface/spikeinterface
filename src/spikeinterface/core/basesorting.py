@@ -4,6 +4,8 @@ from copy import deepcopy
 
 import numpy as np
 
+from pathlib import Path
+
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
 
@@ -500,48 +502,98 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-    def _save(self, format: str = "numpy_folder", **save_kwargs):
-        """Save a sorting object to disk in a specified format.
+    def save(self, format="binary", **save_kwargs):
+        """
+        Save a `BaseSorting` object to a specified format:
 
-        Note
-        ----
-        This function replaces the old CacheSortingExtractor, but enables more engines
-        for caching a results.
+        * "binary" - old "numpy_folder"
+        * "zarr"
+        * "memory"
+        * "npz_folder" - deprecated
 
-        Since v0.98.0 "numpy_folder" is used by defult.
-        From v0.96.0 to 0.97.0 "npz_folder" was the default.
+        Parameters
+        ----------
+        format : str, default: "binary"
+            The format to save the sorting in. Options are:
+            - "binary"/"numpy_folder": Saves the sorting in a binary numpy folder format.
+            - "zarr": Saves the sorting in Zarr format.
+            - "memory": Saves the sorting in memory (shared memory or numpy array).
+            - "npz_folder": Saves the sorting in a deprecated npz folder format.
+        verbose : bool, default: False
+            If True, prints additional information during the save process.
+        **save_kwargs : dict
+            Additional keyword arguments specific to the chosen format.
+
+            * "binary" format:
+                - folder : str or Path
+                    The folder where the binary files will be saved.
+                - overwrite : bool, default: False
+                    If True, existing files in the folder will be overwritten.
+            * "zarr" format:
+                - folder : str or Path
+                    The folder where the Zarr files will be saved.
+                - overwrite: bool, default: False
+                    If True, the folder is removed if it already exists
+                - storage_options: dict or None, default: None
+                    Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+                    For cloud storage locations, this should not be None (in case of default values, use an empty dict)
+                - compressor: numcodecs.Codec or None, default: None
+                    Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+            * "memory" format:
+                - sharedmem : bool, default: True
+                    If True, the recording is saved in shared memory. If False, it is saved as
+                    a numpy array in memory.
+
+        Returns
+        -------
+        BaseSorting
+            The saved sorting object in the specified format.
         """
         if format == "numpy_folder":
+            warnings.warn(
+                "The 'numpy_folder' is renamed to 'binary' and will be removed in 0.106.0. "
+                "Please use 'binary' instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            format = "binary"
+
+        if format == "binary":
             from .sortingfolder import NumpyFolderSorting
 
+            if "folder" not in save_kwargs:
+                raise ValueError("For 'binary' format, 'folder' must be specified in save_kwargs.")
             folder = save_kwargs.pop("folder")
-            NumpyFolderSorting.write_sorting(self, folder)
-            cached = NumpyFolderSorting(folder)
+            cached = NumpyFolderSorting.write_sorting(self, folder_path=folder, **save_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrSortingExtractor
 
-            zarr_path = save_kwargs.pop("zarr_path")
-            storage_options = save_kwargs.pop("storage_options")
-            ZarrSortingExtractor.write_sorting(self, zarr_path, storage_options, **save_kwargs)
-            cached = ZarrSortingExtractor(zarr_path, storage_options)
+            if "folder" not in save_kwargs:
+                raise ValueError("For 'zarr' format, 'folder' must be specified in save_kwargs.")
+            folder = save_kwargs.pop("folder")
+            cached = ZarrSortingExtractor.write_sorting(self, folder, **save_kwargs)
+        elif format == "memory":
+            if save_kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemorySorting
 
+                cached = SharedMemorySorting.from_sorting(self, with_metadata=True)
+            else:
+                from .numpyextractors import NumpySorting
+
+                cached = NumpySorting.from_sorting(self, with_metadata=True)
         elif format == "npz_folder":
+            warnings.warn(
+                "The 'npz_folder' format is deprecated and will be removed in 0.106.0. "
+                "Please use 'numpy_folder' instead.",
+                FutureWarning,
+                stacklevel=True,
+            )
             from .sortingfolder import NpzFolderSorting
 
             folder = save_kwargs.pop("folder")
             NpzFolderSorting.write_sorting(self, folder)
             cached = NpzFolderSorting(folder_path=folder)
-
-        elif format == "memory":
-            if save_kwargs.get("sharedmem", True):
-                from .numpyextractors import SharedMemorySorting
-
-                cached = SharedMemorySorting.from_sorting(self)
-            else:
-                from .numpyextractors import NumpySorting
-
-                cached = NumpySorting.from_sorting(self)
         else:
             raise ValueError(f"Format {format} not supported")
 

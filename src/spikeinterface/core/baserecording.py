@@ -318,104 +318,132 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
     def get_shape(self, segment_index: int | None = None) -> tuple[int, ...]:
         return (self.get_num_samples(segment_index=segment_index), self.get_num_channels())
 
-    def _save(self, format="binary", verbose: bool = False, **save_kwargs):
+    def save(self, format="binary", verbose: bool = False, **save_kwargs):
+        """
+        Save a `BaseRecording` object to a specified format:
+
+        * "binary"
+        * "zarr"
+        * "memory"
+
+        Parameters
+        ----------
+        format : str, default: "binary"
+            The format to save the recording in. Options are:
+            - "binary": Saves the recording in binary format.
+            - "zarr": Saves the recording in Zarr format.
+            - "memory": Saves the recording in memory (shared memory or numpy array).
+        verbose : bool, default: False
+            If True, prints additional information during the save process.
+        **save_kwargs : dict
+            Additional keyword arguments specific to the chosen format.
+            All formats support job_kwargs for parallel processing
+            (see `si.get_global_job_kwargs()` for default values).
+
+            * "binary" format:
+                - folder : str or Path
+                    The folder where the binary files will be saved.
+                - overwrite : bool, default: False
+                    If True, existing files in the folder will be overwritten.
+                - dtype : str, optional
+                    The data type to use for saving the recording. If not provided, the recording's dtype
+                    will be used.
+            * "zarr" format:
+                - folder : str or Path
+                    The folder where the Zarr files will be saved.
+                - overwrite: bool, default: False
+                    If True, the folder is removed if it already exists
+                - storage_options: dict or None, default: None
+                    Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+                    For cloud storage locations, this should not be None (in case of default values, use an empty dict)
+                - channel_chunk_size: int or None, default: None
+                    Channels per chunk (only for BaseRecording)
+                - compressor: numcodecs.Codec or None, default: None
+                    Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+                - filters: list[numcodecs.Codec] or None, default: None
+                    Global filters for zarr (global)
+                - compressor_by_dataset: dict or None, default: None
+                    Optional compressor per dataset:
+                        - traces
+                        - times
+                    If None, the global compressor is used
+                - filters_by_dataset: dict or None, default: None
+                    Optional filters per dataset:
+                        - traces
+                        - times
+                    If None, the global filters are used
+            * "memory" format:
+                - sharedmem : bool, default: True
+                    If True, the recording is saved in shared memory. If False, it is saved as
+                    a numpy array in memory.
+
+        Returns
+        -------
+        BaseRecording
+            The saved recording object in the specified format.
+        """
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
         if format == "binary":
-            from .time_series_tools import write_binary
-            from .binaryrecordingextractor import BinaryRecordingExtractor
+            if "folder" not in kwargs:
+                raise ValueError("Missing folder in recording.save(folder='...')")
+
             from .binaryfolder import BinaryFolderRecording
 
-            folder = kwargs["folder"]
-            file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
-            dtype = kwargs.get("dtype", None) or self.get_dtype()
-            t_starts = self._get_t_starts()
-
-            write_binary(self, file_paths=file_paths, dtype=dtype, verbose=verbose, **job_kwargs)
-
-            # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
-            # See the __init__ of `BinaryFolderRecording`
-
-            binary_rec = BinaryRecordingExtractor(
-                file_paths=file_paths,
-                sampling_frequency=self.get_sampling_frequency(),
-                num_channels=self.get_num_channels(),
-                dtype=dtype,
-                t_starts=t_starts,
-                channel_ids=self.get_channel_ids(),
-                time_axis=0,
-                file_offset=0,
-                is_filtered=self.is_filtered(),
-                gain_to_uV=self.get_channel_gains(),
-                offset_to_uV=self.get_channel_offsets(),
+            folder = kwargs.pop("folder")
+            cached = BinaryFolderRecording.write_recording(
+                self, folder_path=folder, verbose=verbose, **kwargs, **job_kwargs
             )
-            binary_rec.dump(folder / "binary.json", relative_to=folder)
-            cached = BinaryFolderRecording(folder_path=folder)
-
-            # timestamps are not saved in binary, so we have to set them explicitly
-            for segment_index in range(self.get_num_segments()):
-                if self.has_time_vector(segment_index):
-                    # the use of get_times is preferred since timestamps are converted to array
-                    time_vector = self.get_times(segment_index=segment_index)
-                    cached.set_times(time_vector, segment_index=segment_index)
 
         elif format == "memory":
             if kwargs.get("sharedmem", True):
                 from .numpyextractors import SharedMemoryRecording
 
-                cached = SharedMemoryRecording.from_recording(self, **job_kwargs)
+                cached = SharedMemoryRecording.from_recording(
+                    self, with_metadata=True, with_time_vector=True, **job_kwargs
+                )
             else:
                 from spikeinterface.core import NumpyRecording
 
-                cached = NumpyRecording.from_recording(self, **job_kwargs)
-
-            # timestamps are not saved in memory, so we have to set them explicitly
-            for segment_index in range(self.get_num_segments()):
-                if self.has_time_vector(segment_index):
-                    # the use of get_times is preferred since timestamps are converted to array
-                    time_vector = self.get_times(segment_index=segment_index)
-                    cached.set_times(time_vector, segment_index=segment_index)
+                cached = NumpyRecording.from_recording(self, with_metadata=True, with_time_vector=True, **job_kwargs)
 
         elif format == "zarr":
+            if "folder" not in kwargs:
+                raise ValueError("Missing folder in recording.save(folder='...')")
+            folder_path = kwargs.pop("folder")
+
             from .zarrextractors import ZarrRecordingExtractor
 
-            zarr_path = kwargs.pop("zarr_path")
-            storage_options = kwargs.pop("storage_options")
-            ZarrRecordingExtractor.write_recording(
-                self, zarr_path, storage_options, verbose=verbose, **kwargs, **job_kwargs
+            cached = ZarrRecordingExtractor.write_recording(
+                self, folder_path=folder_path, verbose=verbose, **kwargs, **job_kwargs
             )
-            cached = ZarrRecordingExtractor(zarr_path, storage_options)
-            # timestamps are saved and restored in zarr, so no need to set them explicitly
-
-        elif format == "nwb":
-            # TODO implement a format based on zarr
-            raise NotImplementedError
 
         else:
             raise ValueError(f"format {format} not supported")
 
         return cached
 
-    def _extra_metadata_from_folder(self, folder):
-        # load probe
-        super()._extra_metadata_from_folder(folder)
+    def _extra_metadata_to_dict(self, dump_dict):
+        super()._extra_metadata_to_dict(dump_dict)
 
-        # load time vector if any
-        for segment_index, rs in enumerate(self.segments):
-            time_file = folder / f"times_cached_seg{segment_index}.npy"
-            if time_file.is_file():
-                time_vector = np.load(time_file, mmap_mode="r")
-                rs._time_vector = time_vector
+        # Add times_kwargs if the recording has been modified in memory (e.g. by set_times / shift_times / reset_times)
+        if self._time_info_modified:
+            dump_dict["times_kwargs"] = []
+            for segment_index in range(self.get_num_segments()):
+                times_kwargs = self.segments[segment_index].get_times_kwargs()
+                dump_dict["times_kwargs"].append(times_kwargs)
 
-    def _extra_metadata_to_folder(self, folder):
-        super()._extra_metadata_to_folder(folder)
+    def _extra_metadata_from_dict(self, dump_dict):
+        super()._extra_metadata_from_dict(dump_dict)
 
-        # save time vector if any
-        for segment_index, rs in enumerate(self.segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
-            if time_vector is not None:
-                np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
+        if "times_kwargs" in dump_dict:
+            # When serializing, dump timestamps information because this could have been
+            # set in memory
+            times_kwargs_list = dump_dict["times_kwargs"]
+            for segment_index, times_kwargs in enumerate(times_kwargs_list):
+                self.segments[segment_index]._sampling_frequency = times_kwargs["sampling_frequency"]
+                self.segments[segment_index]._t_start = times_kwargs["t_start"]
+                self.segments[segment_index]._time_vector = times_kwargs["time_vector"]
 
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseRecording":
         """

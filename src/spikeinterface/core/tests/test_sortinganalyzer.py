@@ -324,7 +324,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
 
 def test_SortingAnalyzer_tmp_recording(dataset):
     recording, sorting = dataset
-    recording_cached = recording.save(mode="memory")
+    recording_cached = recording.save(format="memory")
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     sorting_analyzer.set_temporary_recording(recording_cached)
@@ -1101,12 +1101,16 @@ def test_merge_units_main_channel_id_disagreement():
 
 
 if __name__ == "__main__":
-    tmp_path = Path("test_SortingAnalyzer")
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp()) / "test_SortingAnalyzer"
+
     dataset = get_dataset()
-    test_SortingAnalyzer_memory(tmp_path, dataset)
-    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    # test_SortingAnalyzer_memory(tmp_path, dataset)
+    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    # test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
-    test_extension()
-    test_extension_params()
-    test_runtime_dependencies(dataset)
+    # test_extension()
+    # test_extension_params()
+    # test_runtime_dependencies(dataset)

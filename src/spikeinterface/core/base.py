@@ -24,6 +24,7 @@ from .core_tools import (
     make_paths_absolute,
     check_paths_relative,
     retrieve_importing_provenance,
+    load_properties_from_binary_folder,
 )
 from .job_tools import _shared_job_kwargs_doc
 
@@ -485,8 +486,8 @@ class BaseExtractor:
         self,
         include_annotations: bool = False,
         include_properties: bool = False,
+        include_extra_metadata: bool = True,
         relative_to: str | Path | None = None,
-        folder_metadata=None,
         recursive: bool = False,
     ) -> dict:
         """
@@ -514,9 +515,6 @@ class BaseExtractor:
             If provided, file and folder paths will be made relative to this path,
             enabling portability in folder formats such as the waveform extractor,
             by default None.
-        folder_metadata : str | Path | None, default: None
-            Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
-            in numpy `npy` format, by default None.
         recursive : bool, default: False
             If True, recursively apply `to_dict` to dictionaries within the kwargs, by default False.
 
@@ -537,13 +535,11 @@ class BaseExtractor:
                 "relative_paths": <whether paths are relative>,
                 "annotations": <annotations dictionary, if `include_annotations` is True>,
                 "properties": <properties dictionary, if `include_properties` is True>,
-                "folder_metadata": <relative path to folder_metadata, if specified>
             }
 
         Notes
         -----
         - The `relative_to` argument only has an effect if `recursive` is set to True.
-        - The `folder_metadata` argument will be made relative to `relative_to` if both are specified.
         - The `version` field in the resulting dictionary reflects the version of the module
           from which the extractor class originates.
         - The full class attribute above is the full import of the class, e.g.
@@ -560,9 +556,8 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                # make_paths_relative() will make the recusrivity later:
+                # make_paths_relative() will make the recursivity later:
                 relative_to=None,
-                folder_metadata=folder_metadata,
                 recursive=recursive,
             )
 
@@ -586,7 +581,9 @@ class BaseExtractor:
             dump_dict["annotations"] = self._annotations
         else:
             # include only main annotations
-            dump_dict["annotations"] = {k: self._annotations.get(k, None) for k in self._main_annotations}
+            dump_dict["annotations"] = {
+                k: self._annotations.get(k) for k in self._main_annotations if self._annotations.get(k) is not None
+            }
 
         if include_properties:
             dump_dict["properties"] = self._properties
@@ -609,12 +606,8 @@ class BaseExtractor:
                 # warnings.warn("Try to BaseExtractor.to_dict() using relative_to but there is no common folder")
                 dump_dict["relative_paths"] = False
 
-        if folder_metadata is not None:
-            if relative_to is not None:
-                folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
-            dump_dict["folder_metadata"] = str(folder_metadata)
-
-        self._extra_metadata_to_dict(dump_dict)
+        if include_extra_metadata:
+            self._extra_metadata_to_dict(dump_dict)
 
         return dump_dict
 
@@ -640,38 +633,8 @@ class BaseExtractor:
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
             dictionary = make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
-        folder_metadata = dictionary.get("folder_metadata", None)
-        if folder_metadata is not None:
-            folder_metadata = Path(folder_metadata)
-            if dictionary.get("relative_paths", False):
-                folder_metadata = base_folder / folder_metadata
-            extractor.load_metadata_from_folder(folder_metadata)
+
         return extractor
-
-    def load_metadata_from_folder(self, folder_metadata: str | Path):
-        # hack to load probe for recording
-        folder_metadata = Path(folder_metadata)
-
-        # load properties
-        prop_folder = folder_metadata / "properties"
-        if prop_folder.is_dir():
-            for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == ".npy":
-                    values = np.load(prop_file, allow_pickle=True)
-                    key = prop_file.stem
-                    self.set_property(key, values)
-
-        self._extra_metadata_from_folder(folder_metadata)
-
-    def save_metadata_to_folder(self, folder_metadata: str | Path):
-        self._extra_metadata_to_folder(folder_metadata)
-
-        # save properties
-        prop_folder = Path(folder_metadata) / "properties"
-        prop_folder.mkdir(parents=True, exist_ok=False)
-        for key in self.get_property_keys():
-            values = self.get_property(key)
-            np.save(prop_folder / (key + ".npy"), values)
 
     def clone(self) -> "BaseExtractor":
         """
@@ -731,7 +694,7 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path: str | Path, relative_to=None, folder_metadata=None) -> None:
+    def dump(self, file_path: str | Path, relative_to=None) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -744,9 +707,9 @@ class BaseExtractor:
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         if str(file_path).endswith(".json"):
-            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_json(file_path, relative_to=relative_to)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_pickle(file_path, relative_to=relative_to)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -754,7 +717,9 @@ class BaseExtractor:
         self,
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
-        folder_metadata: str | Path | None = None,
+        include_extra_metadata: bool = True,
+        include_properties: bool = False,
+        include_annotations: bool = True,
     ) -> None:
         """
         Dump recording extractor to json file.
@@ -767,8 +732,12 @@ class BaseExtractor:
         relative_to: str, Path, True or None
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
-        folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties
+        include_extra_metadata: bool
+            If True, extra metadata is included in the json file. This is useful for saving probe
+        include_properties: bool
+            If True, all properties are dumped
+        include_annotations: bool
+            If True, all annotations are dumped
         """
         assert self.check_serializability("json"), "The extractor is not json serializable"
 
@@ -778,10 +747,10 @@ class BaseExtractor:
             relative_to = relative_to.resolve().absolute()
 
         dump_dict = self.to_dict(
-            include_annotations=True,
-            include_properties=False,
+            include_annotations=include_annotations,
+            include_properties=include_properties,
+            include_extra_metadata=include_extra_metadata,
             relative_to=relative_to,
-            folder_metadata=folder_metadata,
             recursive=True,
         )
         file_path = self._get_file_path(file_path, [".json"])
@@ -796,7 +765,6 @@ class BaseExtractor:
         file_path: str | Path | None = None,
         relative_to: str | Path | bool | None = None,
         include_properties: bool = True,
-        folder_metadata: str | Path | None = None,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -811,8 +779,6 @@ class BaseExtractor:
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         include_properties: bool
             If True, all properties are dumped
-        folder_metadata: str, Path, or None
-            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
         assert self.check_serializability("pickle"), "The extractor is not serializable to file with pickle"
 
@@ -828,7 +794,6 @@ class BaseExtractor:
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
-            folder_metadata=folder_metadata,
             relative_to=relative_to,
             recursive=recursive,
         )
@@ -859,71 +824,24 @@ class BaseExtractor:
         intialization_args = (self.to_dict(),)
         return (instance_constructor, intialization_args)
 
-    def _save(self, folder, **save_kwargs):
-        # This implemented in BaseRecording or baseSorting
-        # this is internally call by cache(...) main function
-        raise NotImplementedError
-
-    def _extra_metadata_from_folder(self, folder):
-        # This implemented in BaseRecording for probe
-        pass
-
-    def _extra_metadata_to_folder(self, folder):
-        # This implemented in BaseRecording for probe
-        pass
-
     def _extra_metadata_from_dict(self, dump_dict):
+        # Hook for subclass (quite bad design)
         # This implemented in BaseRecording for probe
         pass
 
     def _extra_metadata_to_dict(self, dump_dict):
+        # Hook for subclass (quite bad design)
         # This implemented in BaseRecording for probe
         pass
 
-    def save(self, **kwargs) -> "BaseExtractor":
-        """
-        Save a SpikeInterface object.
-
-        Parameters
-        ----------
-        kwargs: Keyword arguments for saving.
-            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "numpy_folder" or "npz_folder" for sorting.
-                In case format is not memory, the recording is saved to a folder. See format specific functions for
-                more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
-            * folder: if provided, the folder path where the object is saved
-            * name: if provided and folder is not given, the name of the folder in the global temporary
-                    folder (use set_global_tmp_folder() to change this folder) where the object is saved.
-              If folder and name are not given, the object is saved in the global temporary folder with
-              a random string
-            * dump_ext: "json" or "pkl", default "json" (if format is "folder")
-            * verbose: if True output is verbose
-            * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
-            {}
-
-        Returns
-        -------
-        loaded_extractor: BaseRecording or BaseSorting
-            The reference to the saved object after it is loaded back
-        """
-        format = kwargs.get("format", None)
-        if format == "memory":
-            loaded_extractor = self.save_to_memory(**kwargs)
-        elif format == "zarr":
-            loaded_extractor = self.save_to_zarr(**kwargs)
-        else:
-            loaded_extractor = self.save_to_folder(**kwargs)
-        return loaded_extractor
-
-    save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
-
     def save_to_memory(self, sharedmem=True, **save_kwargs) -> "BaseExtractor":
-        save_kwargs.pop("format", None)
+        warnings.warn("save_to_memory() should be save(format='memory')", FutureWarning)
+        return self.save(format="memory", sharedmem=sharedmem, **save_kwargs)
 
-        cached = self._save(format="memory", sharedmem=sharedmem, **save_kwargs)
-        self.copy_metadata(cached)
-        return cached
+    def save(self):
+        # Need to be implemented in Recording and Sorting
+        raise NotImplementedError()
 
-    # TODO rename to saveto_binary_folder
     def save_to_folder(
         self,
         name: str | None = None,
@@ -933,101 +851,21 @@ class BaseExtractor:
         **save_kwargs,
     ):
         """
-        Save the extractor and its data to a folder.
+        Legacy method.
 
-        This method extracts trace data, saves it to a file (using a memory-mapped approach),
-        and stores both the original extractor's provenance
-        and the extractor's metadata in JSON format.
-
-        The folder's final location and name can be specified in a couple of ways ways:
-
-        1. Explicitly providing the full path:
-        ```
-        extractor.save_to_folder(folder="/path/to/save/")
-        ```
-
-        2. Providing a subfolder name, with the base folder being determined automatically:
-        ```
-        extractor.save_to_folder(name="my_extractor_data")
-        ```
-        In this case, the data is saved in a subfolder named "my_extractor_data"
-        within the global temporary folder (set using `set_global_tmp_folder`). If no
-        global temporary folder is set, one will be generated automatically.
-
-        3. If neither `name` nor `folder` is provided, a random name will be generated
-        for the subfolder within the global temporary folder.
-
-        Parameters
-        ----------
-        name : str or Path, optional
-            The name of the subfolder within the global temporary folder. If `folder`
-            is provided, this argument must be None.
-        folder : str or Path, optional
-            The full path of the folder where the data should be saved. If `name` is
-            provided, this argument must be None.
-        overwrite : bool, default: False
-            If True, an existing folder at the specified path will be deleted before saving.
-        verbose : bool, default: True
-            If True, print information about the cache folder being used.
-        **save_kwargs
-            Additional keyword arguments to be passed to the underlying save method.
-
-        Returns
-        -------
-        cached_extractor
-            A saved copy of the extractor in the specified format.
-
-        Raises
-        ------
-        AssertionError
-            If the folder already exists and `overwrite` is False.
+        The 'new' way is :
+          * recording.save(format='binary', folder=...)
+          * sorting.save(format='binary', folder=...)
         """
 
-        if folder is None:
-            cache_folder = get_global_tmp_folder()
-            if name is None:
-                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                folder = cache_folder / name
-                if verbose:
-                    print(f"Use cache_folder={folder}")
-            else:
-                folder = cache_folder / name
-                if not is_set_global_tmp_folder():
-                    if verbose:
-                        print(f"Use cache_folder={folder}")
-        else:
-            folder = Path(folder)
-        if overwrite and folder.is_dir():
-            import shutil
-
-            shutil.rmtree(folder)
-
-        assert not folder.exists(), f"folder {folder} already exists, choose another name or use overwrite=True"
-        folder.mkdir(parents=True, exist_ok=False)
-
-        # dump provenance
-        provenance_file_path = folder / f"provenance.json"
-        if self.check_serializability("json"):
-            self.dump_to_json(file_path=provenance_file_path, relative_to=folder)
-        elif self.check_serializability("pickle"):
-            provenance_file = folder / f"provenance.pkl"
-            self.dump_to_pickle(provenance_file, relative_to=folder)
-        else:
-            warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
-
-        # save data (done the subclass)
-        self.save_metadata_to_folder(folder)
-        cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
-        cached.load_metadata_from_folder(folder)
-
-        # copy properties/
-        self.copy_metadata(cached)
-
-        # Dump the extractor to json file
-        si_folder_path = folder / f"si_folder.json"
-        cached.dump_to_json(file_path=si_folder_path, relative_to=folder)
-
-        return cached
+        warnings.warn(
+            "save_to_folder() should be recording.save(format='binary') "
+            "or sorting.save(format='binary') "
+            "This ambiguous method should not be used anymore!!",
+            FutureWarning,
+        )
+        # we keep the default format for recording and sorting like in old version
+        return self.save(folder=folder, verbose=verbose, **save_kwargs)
 
     def save_to_zarr(
         self,
@@ -1040,74 +878,91 @@ class BaseExtractor:
         **save_kwargs,
     ):
         """
-        Save extractor to zarr.
+        Legacy method.
 
-        Parameters
-        ----------
-        name: str or None, default: None
-            Name of the subfolder in get_global_tmp_folder()
-            If "name" is given, "folder" must be None
-        folder: str, Path, or None, default: None
-            The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
-            it will be automatically appended
-        overwrite: bool, default: False
-            If True, the folder is removed if it already exists
-        storage_options: dict or None, default: None
-            Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-            For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-        channel_chunk_size: int or None, default: None
-            Channels per chunk (only for BaseRecording)
-        compressor: numcodecs.Codec or None, default: None
-            Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
-        filters: list[numcodecs.Codec] or None, default: None
-            Global filters for zarr (global)
-        compressor_by_dataset: dict or None, default: None
-            Optional compressor per dataset:
-                - traces
-                - times
-            If None, the global compressor is used
-        filters_by_dataset: dict or None, default: None
-            Optional filters per dataset:
-                - traces
-                - times
-            If None, the global filters are used
-        verbose: bool, default: True
-            If True, the output is verbose
-        auto_cast_uint: bool, default: True
-            If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
-
-        Returns
-        -------
-        cached: ZarrExtractor
-            Saved copy of the extractor.
+        The 'new' way is :
+            * recording.save(format='zarr', folder=...)
+            * sorting.save(format='zarr', folder=...)
         """
-        from .zarrextractors import read_zarr
 
-        save_kwargs.pop("format", None)
+        warnings.warn(
+            "save_to_zarr() should be recording.save(format='zarr') "
+            "or sorting.save(format='zarr') "
+            "This ambiguous method should not be used anymore!!",
+            FutureWarning,
+        )
+        # we keep the default format for recording and sorting like in old version
+        return self.save(folder=folder, format="zarr", verbose=verbose, **save_kwargs)
 
-        if folder is None:
-            cache_folder = get_global_tmp_folder()
-            if name is None:
-                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            zarr_path = (cache_folder / name).with_suffix(".zarr")
-            if verbose:
-                print(f"Saving to zarr_path={zarr_path}")
-        else:
-            if storage_options is None:  # save locally (not cloud storage)
-                folder = clean_zarr_folder_name(folder)
-                if folder.is_dir() and overwrite:
-                    shutil.rmtree(folder)
-            zarr_path = folder
+        # """
+        # Save extractor to zarr.
 
-        if not is_path_remote(zarr_path):
-            assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
-        save_kwargs["zarr_path"] = zarr_path
-        save_kwargs["storage_options"] = storage_options
-        save_kwargs["channel_chunk_size"] = channel_chunk_size
-        cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
-        cached = read_zarr(zarr_path)
+        # Parameters
+        # ----------
+        # name: str or None, default: None
+        #     Name of the subfolder in get_global_tmp_folder()
+        #     If "name" is given, "folder" must be None
+        # folder: str, Path, or None, default: None
+        #     The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
+        #     it will be automatically appended
+        # overwrite: bool, default: False
+        #     If True, the folder is removed if it already exists
+        # storage_options: dict or None, default: None
+        #     Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+        #     For cloud storage locations, this should not be None (in case of default values, use an empty dict)
+        # channel_chunk_size: int or None, default: None
+        #     Channels per chunk (only for BaseRecording)
+        # compressor: numcodecs.Codec or None, default: None
+        #     Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+        # filters: list[numcodecs.Codec] or None, default: None
+        #     Global filters for zarr (global)
+        # compressor_by_dataset: dict or None, default: None
+        #     Optional compressor per dataset:
+        #         - traces
+        #         - times
+        #     If None, the global compressor is used
+        # filters_by_dataset: dict or None, default: None
+        #     Optional filters per dataset:
+        #         - traces
+        #         - times
+        #     If None, the global filters are used
+        # verbose: bool, default: True
+        #     If True, the output is verbose
+        # auto_cast_uint: bool, default: True
+        #     If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
 
-        return cached
+        # Returns
+        # -------
+        # cached: ZarrExtractor
+        #     Saved copy of the extractor.
+        # """
+        # from .zarrextractors import read_zarr
+
+        # save_kwargs.pop("format", None)
+
+        # if folder is None:
+        #     cache_folder = get_global_tmp_folder()
+        #     if name is None:
+        #         name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        #     zarr_path = (cache_folder / name).with_suffix(".zarr")
+        #     if verbose:
+        #         print(f"Saving to zarr_path={zarr_path}")
+        # else:
+        #     if storage_options is None:  # save locally (not cloud storage)
+        #         folder = clean_zarr_folder_name(folder)
+        #         if folder.is_dir() and overwrite:
+        #             shutil.rmtree(folder)
+        #     zarr_path = folder
+
+        # if not is_path_remote(zarr_path):
+        #     assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
+        # save_kwargs["zarr_path"] = zarr_path
+        # save_kwargs["storage_options"] = storage_options
+        # save_kwargs["channel_chunk_size"] = channel_chunk_size
+        # cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
+        # cached = read_zarr(zarr_path)
+
+        # return cached
 
 
 def _load_extractor_from_dict(dic) -> "BaseExtractor":
