@@ -55,6 +55,8 @@ def define_function_handling_dict_from_class(source_class, name):
     source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
     source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
     source_class_or_dict_of_sources_classes.__name__ = name
+    # propagate the _precomputable_kwarg_names attribute from the source class to the wrapper function
+    source_class_or_dict_of_sources_classes._precomputable_kwarg_names = source_class._precomputable_kwarg_names
 
     return source_class_or_dict_of_sources_classes
 
