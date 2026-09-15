@@ -483,6 +483,8 @@ def create_sorting_analyzer_with_existing_templates(
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
+    all_main_channel_indices = templates.get_main_channels()
+
     if remove_empty:
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         non_empty_sorting = sorting.remove_empty_units()
@@ -490,12 +492,13 @@ def create_sorting_analyzer_with_existing_templates(
         templates_array = templates_array[non_empty_unit_indices]
         sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
         sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
+        main_channel_indices = all_main_channel_indices[non_empty_unit_indices]
     else:
         non_empty_sorting = sorting
+        main_channel_indices = all_main_channel_indices
 
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-    main_channel_indices = templates.get_main_channels()
     sa = create_sorting_analyzer(
         non_empty_sorting, recording, format="memory", sparsity=sparsity, main_channel_indices=main_channel_indices
     )
