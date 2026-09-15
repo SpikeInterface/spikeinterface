@@ -1,4 +1,5 @@
 import warnings
+import csv
 from pathlib import Path
 from packaging import version
 
@@ -7,7 +8,6 @@ import numpy as np
 from spikeinterface.core import write_binary_recording, Motion, BaseRecording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
-from spikeinterface.sorters.basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
 
 
@@ -456,6 +456,19 @@ class Kilosort4Sorter(BaseSorter):
             save_extra_vars=save_extra_vars,
             save_preprocessed_copy=save_preprocessed_copy,
         )
+
+        if (results_dir / "templates.npy").is_file():
+            # Note: these are the whitened templates
+            templates = np.load(results_dir / "templates.npy")
+            # main channel indices are the argmax of the ptp of the templates
+            main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+            main_channel_ids = recording.channel_ids[main_channel_indices]
+            # save main_channel_ids
+            with open(results_dir / "cluster_main_channel_id.tsv", "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f, delimiter="\t")
+                writer.writerow(["cluster_id", "main_channel_id"])
+                for unit_index, item in enumerate(main_channel_ids):
+                    writer.writerow([unit_index, item])
 
         if params["delete_recording_dat"]:
             # only delete dat file if it was created by the wrapper
