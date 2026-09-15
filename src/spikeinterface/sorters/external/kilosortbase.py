@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 from warnings import warn
 import json
@@ -153,7 +151,7 @@ class KilosortBase:
             else:
                 padded_recording = recording
             write_binary_recording(
-                recording=padded_recording,
+                padded_recording,
                 file_paths=[binary_file_path],
                 dtype="int16",
                 **get_job_kwargs(params, verbose),

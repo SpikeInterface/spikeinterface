@@ -127,15 +127,6 @@ def load(
         return loaded_object
 
 
-def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
-    warnings.warn(
-        "load_extractor() is deprecated and will be removed in version 0.104.0. Please use load() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return load(file_or_folder_or_dict, base_folder=base_folder)
-
-
 def _guess_object_from_dict(d):
     """
     When an object is read from json or pickle or zarr attr we can guess which object it is
@@ -291,11 +282,7 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
     if object_type == "SortingAnalyzer":
         from .sortinganalyzer import load_sorting_analyzer
 
-        backend_options = kwargs.get("backend_options", None)
-        load_extensions = kwargs.get("load_extensions", True)
-        analyzer = load_sorting_analyzer(
-            folder_or_url, backend_options=backend_options, load_extensions=load_extensions
-        )
+        analyzer = load_sorting_analyzer(folder_or_url, **kwargs)
         return analyzer
     elif object_type == "Templates":
         from .template import Templates

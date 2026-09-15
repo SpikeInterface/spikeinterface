@@ -1,8 +1,11 @@
-import os
 import warnings
-import numpy as np
 import json
-import spikeinterface
+from pathlib import Path
+import importlib.metadata
+import importlib.util
+
+import numpy as np
+
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 # TODO fix with new metrics
@@ -13,7 +16,6 @@ from spikeinterface.metrics import (
     get_quality_pca_metric_list,
     get_template_metric_list,
 )
-from pathlib import Path
 
 
 def get_default_classifier_search_spaces():
@@ -79,7 +81,7 @@ def get_default_classifier_search_spaces():
     return default_classifier_search_spaces
 
 
-class CurationModelTrainer:
+class CurationTrainer:
     """
     Used to train and evaluate machine learning models for spike sorting curation.
 
@@ -222,7 +224,7 @@ class CurationModelTrainer:
         self.X = None
         self.testing_metrics = None
 
-        self.requirements = {"spikeinterface": spikeinterface.__version__}
+        self.requirements = {"spikeinterface": importlib.metadata.version("spikeinterface")}
 
         self.y = pd.concat([pd.DataFrame(one_labels)[0] for one_labels in labels])
 
@@ -245,7 +247,7 @@ class CurationModelTrainer:
         """
         import pandas as pd
 
-        metrics_for_each_analyzer = [_get_computed_metrics(an) for an in analyzers]
+        metrics_for_each_analyzer = [analyzer.get_metrics_extension_data() for analyzer in analyzers]
         check_metric_names_are_the_same(metrics_for_each_analyzer)
 
         self.testing_metrics = pd.concat(metrics_for_each_analyzer, axis=0)
@@ -448,32 +450,32 @@ class CurationModelTrainer:
 
         # Check lightgbm package install
         if classifier_name == "LGBMClassifier":
-            try:
+            if importlib.util.find_spec("lightgmb") is not None:
                 import lightgbm
 
                 self.requirements["lightgbm"] = lightgbm.__version__
                 classifier_mapping["LGBMClassifier"] = lightgbm.LGBMClassifier(random_state=self.seed, verbose=-1)
-            except ImportError:
+            else:
                 raise ImportError("Please install lightgbm package to use LGBMClassifier")
         elif classifier_name == "CatBoostClassifier":
-            try:
+            if importlib.util.find_spec("catboost") is not None:
                 import catboost
 
                 self.requirements["catboost"] = catboost.__version__
                 classifier_mapping["CatBoostClassifier"] = catboost.CatBoostClassifier(
                     silent=True, random_state=self.seed
                 )
-            except ImportError:
+            else:
                 raise ImportError("Please install catboost package to use CatBoostClassifier")
         elif classifier_name == "XGBClassifier":
-            try:
+            if importlib.util.find_spec("xgboost") is not None:
                 import xgboost
 
                 self.requirements["xgboost"] = xgboost.__version__
                 classifier_mapping["XGBClassifier"] = xgboost.XGBClassifier(
                     use_label_encoder=False, random_state=self.seed
                 )
-            except ImportError:
+            else:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
 
         if classifier_name not in classifier_mapping:
@@ -672,7 +674,7 @@ def train_model(
     """
     Trains and evaluates machine learning models for spike sorting curation.
 
-    This function initializes a ``CurationModelTrainer`` object, loads and preprocesses the data,
+    This function initializes a ``CurationTrainer`` object, loads and preprocesses the data,
     and evaluates the specified combinations of imputation strategies, scaling techniques, and classifiers.
     The evaluation results, including the best model and its parameters, are saved to the output folder.
 
@@ -719,8 +721,8 @@ def train_model(
 
     Returns
     -------
-    CurationModelTrainer
-        The ``CurationModelTrainer`` object used for training and evaluation.
+    CurationTrainer
+        The ``CurationTrainer`` object used for training and evaluation.
 
     Notes
     -----
@@ -743,7 +745,7 @@ def train_model(
     if (test_size > 1.0) or (0.0 > test_size):
         raise Exception("`test_size` must be between 0.0 and 1.0")
 
-    trainer = CurationModelTrainer(
+    trainer = CurationTrainer(
         labels=labels,
         folder=folder,
         metric_names=metric_names,
@@ -768,22 +770,6 @@ def train_model(
 
     trainer.evaluate_model_config()
     return trainer
-
-
-def _get_computed_metrics(sorting_analyzer):
-    """Loads and organises the computed metrics from a sorting_analyzer into a single dataframe"""
-
-    import pandas as pd
-
-    quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(sorting_analyzer)
-    calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
-
-    # Remove any metrics for non-existent units, raise error if no units are present
-    calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(sorting_analyzer.sorting.get_unit_ids())]
-    if calculated_metrics.shape[0] == 0:
-        raise ValueError("No units present in sorting data")
-
-    return calculated_metrics
 
 
 def try_to_get_metrics_from_analyzer(sorting_analyzer):

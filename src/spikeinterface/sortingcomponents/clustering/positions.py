@@ -1,15 +1,13 @@
-from __future__ import annotations
-
 # """Sorting components: clustering"""
 from pathlib import Path
+import importlib.util
 
 import numpy as np
 
-try:
-    import hdbscan
-
+if importlib.util.find_spec("hdbscan") is not None:
     HAVE_HDBSCAN = True
-except:
+    import hdbscan
+else:
     HAVE_HDBSCAN = False
 
 

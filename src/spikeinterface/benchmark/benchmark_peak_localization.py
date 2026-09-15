@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.postprocessing.localization_tools import (
     compute_center_of_mass,
     compute_monopolar_triangulation,
@@ -25,7 +23,7 @@ class PeakLocalizationBenchmark(Benchmark):
             self.templates_params[key] = self.params[key]
 
         if not self.channel_from_template:
-            self.params["spike_retriver_kwargs"] = {"channel_from_template": False}
+            self.params["spike_retriever_kwargs"] = {"channel_from_template": False}
         else:
             ## TODO
             pass

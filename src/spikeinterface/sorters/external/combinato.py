@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from pathlib import Path
 import os
-from typing import Union
 import sys
 import json
 
@@ -11,10 +8,8 @@ from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.extractors.extractor_classes import CombinatoSortingExtractor
 
-PathType = Union[str, Path]
 
-
-def check_if_installed(combinato_path: Union[str, None]):
+def check_if_installed(combinato_path: str | None):
     if combinato_path is None:
         return False
     assert isinstance(combinato_path, str)
@@ -33,7 +28,7 @@ class CombinatoSorter(BaseSorter):
     """Combinato Sorter object."""
 
     sorter_name: str = "combinato"
-    combinato_path: Union[str, None] = os.getenv("COMBINATO_PATH", None)
+    combinato_path: str | None = os.getenv("COMBINATO_PATH", None)
     requires_locations = False
     _default_params = {
         "detect_sign": -1,  # -1 - 1 - 0
@@ -105,7 +100,7 @@ class CombinatoSorter(BaseSorter):
         return "unknown"
 
     @staticmethod
-    def set_combinato_path(combinato_path: PathType):
+    def set_combinato_path(combinato_path: str | Path):
         combinato_path = str(Path(combinato_path).absolute())
         CombinatoSorter.combinato_path = combinato_path
         try:
@@ -161,7 +156,7 @@ class CombinatoSorter(BaseSorter):
             print(f"Running combinato in {tmpdir}...")
 
         with open(tmpdir / "local_options.py", "w") as outFile:
-            outFile.writelines("options = {}".format(p))
+            outFile.writelines(f"options = {p}")
 
         shell_cmd = """
             {extra_cmd}

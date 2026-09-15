@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.template_tools import get_template_extremum_channel, get_dense_templates_array, _get_nbefore
+from spikeinterface.core.core_tools import ms_to_samples
+from spikeinterface.core.template_tools import get_dense_templates_array, _get_nbefore
 from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
@@ -48,7 +47,7 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
     handle_collisions: bool, default: True
         Whether to handle collisions between spikes. If True, the amplitude scaling of colliding spikes
         (defined as spikes within `delta_collision_ms` ms and with overlapping sparsity) is computed by fitting a
-        multi-linear regression model (with `sklearn.LinearRegression`). If False, each spike is fitted independently.
+        non-negative multi-linear regression model. If False, each spike is fitted independently.
     delta_collision_ms: float, default: 2
         The maximum time difference in ms before and after a spike to gather colliding spikes.
     """
@@ -82,14 +81,14 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
 
         return_in_uV = self.sorting_analyzer.return_in_uV
 
-        all_templates = get_dense_templates_array(self.sorting_analyzer, return_in_uV=return_in_uV)
+        all_templates = np.asarray(get_dense_templates_array(self.sorting_analyzer, return_in_uV=return_in_uV))
         nbefore = _get_nbefore(self.sorting_analyzer)
         nafter = all_templates.shape[1] - nbefore
         templates_ext = self.sorting_analyzer.get_extension("templates")
 
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
-            cut_out_before = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_before = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_before <= nbefore
             ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
@@ -97,17 +96,14 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             cut_out_before = nbefore
 
         if self.params["ms_after"] is not None:
-            cut_out_after = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+            cut_out_after = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
             assert (
                 cut_out_after <= nafter
             ), f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
         else:
             cut_out_after = nafter
 
-        peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
-        extremum_channels_indices = get_template_extremum_channel(
-            self.sorting_analyzer, peak_sign=peak_sign, outputs="index"
-        )
+        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
 
         # collisions
         handle_collisions = self.params["handle_collisions"]
@@ -139,7 +135,6 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             sorting,
             recording,
             channel_from_template=True,
-            extremum_channel_inds=extremum_channels_indices,
             include_spikes_in_margin=True,
         )
         amplitude_scalings_node = AmplitudeScalingNode(
@@ -185,7 +180,7 @@ class AmplitudeScalingNode(PipelineNode):
         if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
-            self._offsets = recording.get_channel_gains()
+            self._offsets = recording.get_channel_offsets()
         else:
             self._dtype = recording.get_dtype()
             self._gains = None
@@ -203,6 +198,9 @@ class AmplitudeScalingNode(PipelineNode):
             max_margin_collisions = delta_collision_samples + margin_waveforms
             self._margin = max_margin_collisions
 
+        # for some edge cases a template can be zero, leading to problems later
+        template_is_zero = [np.all(template == 0) for template in all_templates]
+
         self._all_templates = all_templates
         self._sparsity_mask = sparsity_mask
         self._nbefore = nbefore
@@ -211,6 +209,7 @@ class AmplitudeScalingNode(PipelineNode):
         self._cut_out_after = cut_out_after
         self._handle_collisions = handle_collisions
         self._delta_collision_samples = delta_collision_samples
+        self._template_is_zero = template_is_zero
 
         self._kwargs.update(
             all_templates=all_templates,
@@ -222,18 +221,15 @@ class AmplitudeScalingNode(PipelineNode):
             return_in_uV=return_in_uV,
             handle_collisions=handle_collisions,
             delta_collision_samples=delta_collision_samples,
+            template_is_zero=template_is_zero,
         )
 
     def get_dtype(self):
         return self._dtype
 
     def compute(self, traces, peaks):
-        from scipy.stats import linregress
-
-        # scale traces with margin to match scaling of templates
-        if self._gains is not None:
-            traces = traces.astype("float32") * self._gains + self._offsets
-
+        gains = self._gains
+        offsets = self._offsets
         all_templates = self._all_templates
         sparsity_mask = self._sparsity_mask
         nbefore = self._nbefore
@@ -241,6 +237,7 @@ class AmplitudeScalingNode(PipelineNode):
         cut_out_after = self._cut_out_after
         handle_collisions = self._handle_collisions
         delta_collision_samples = self._delta_collision_samples
+        template_is_zero = self._template_is_zero
 
         # local_spikes_within_margin = peaks
         # i0 = np.searchsorted(local_spikes_within_margin["sample_index"], left_margin)
@@ -267,7 +264,14 @@ class AmplitudeScalingNode(PipelineNode):
             if spike_index in collisions.keys():
                 # we deal with overlapping spikes later
                 continue
+
             unit_index = spike["unit_index"]
+
+            if template_is_zero[unit_index]:
+                # if template is zero, linregress will fail so we intervene
+                scalings[spike_index] = 0
+                continue
+
             sample_centered = spike["sample_index"]
             (sparse_indices,) = np.nonzero(sparsity_mask[unit_index])
             template = all_templates[unit_index][:, sparse_indices]
@@ -282,23 +286,12 @@ class AmplitudeScalingNode(PipelineNode):
                 template = template[: -(sample_centered + cut_out_after - (traces.shape[0]))]
             else:
                 local_waveform = traces[cut_out_start:cut_out_end, sparse_indices]
+            # scale the waveform to match the scaling of the templates
+            if gains is not None:
+                local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
             assert template.shape == local_waveform.shape
 
-            # here we use linregress, which is equivalent to using sklearn LinearRegression with fit_intercept=True
-            # y = local_waveform.flatten()
-            # X = template.flatten()[:, np.newaxis]
-            # reg = LinearRegression(positive=True, fit_intercept=True).fit(X, y)
-            # scalings[spike_index] = reg.coef_[0]
-
-            # closed form: W = (X' * X)^-1 X' y
-            # y = local_waveform.flatten()[:, None]
-            # X = np.ones((len(y), 2))
-            # X[:, 0] = template.flatten()
-            # W = np.linalg.inv(X.T @ X) @ X.T @ y
-            # scalings[spike_index] = W[0, 0]
-
-            linregress_res = linregress(template.flatten(), local_waveform.flatten())
-            scalings[spike_index] = linregress_res[0]
+            scalings[spike_index] = _ordinary_scaling_slope(template, local_waveform)
 
         # deal with collisions
         if len(collisions) > 0:
@@ -311,6 +304,8 @@ class AmplitudeScalingNode(PipelineNode):
                     sparsity_mask,
                     cut_out_before,
                     cut_out_after,
+                    gains,
+                    offsets,
                 )
                 # the scaling for the current spike is at index 0
                 scalings[spike_index] = scaled_amps[0]
@@ -319,7 +314,7 @@ class AmplitudeScalingNode(PipelineNode):
         # TODO: switch to collision mask and return that (to use concatenation)
         return (scalings, spike_collision_mask)
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self._margin
 
 
@@ -348,6 +343,43 @@ def _are_units_spatially_overlapping(sparsity_mask, i, j):
         return True
     else:
         return False
+
+
+def _ordinary_scaling_slope(template, local_waveform):
+    """
+    Fit the scaling factor of a single, non-colliding spike against its unit template.
+
+    Equivalent to the slope from ``scipy.stats.linregress(template, local_waveform)``,
+    without its unused statistics (intercept, r-value, p-value, standard errors).
+    The centered covariance/variance are always accumulated in float64: SciPy versions
+    before its array-API rewrite compute ``linregress`` via ``np.cov``, which promotes
+    to float64 regardless of input dtype, while newer SciPy preserves the input dtype.
+    Matching float64 here avoids losing precision relative to either supported version.
+
+    Parameters
+    ----------
+    template : np.ndarray
+        The unit template, cut out to the same window as `local_waveform`.
+    local_waveform : np.ndarray
+        The observed waveform to fit against the template.
+
+    Returns
+    -------
+    float
+        The fitted scaling factor.
+    """
+    template = template.astype(np.float64, copy=False).reshape(-1)
+    local_waveform = local_waveform.astype(np.float64, copy=False).reshape(-1)
+    template_centered = template - np.mean(template)
+    waveform_centered = local_waveform - np.mean(local_waveform)
+    num_samples = template.size
+    template_variance = np.vecdot(template_centered, template_centered) / num_samples
+    if template_variance == 0:
+        from scipy.stats import linregress
+
+        return linregress(template, local_waveform).slope
+    covariance = np.vecdot(template_centered, waveform_centered) / num_samples
+    return covariance / template_variance
 
 
 def find_collisions(spikes, spikes_within_margin, delta_collision_samples, sparsity_mask):
@@ -440,6 +472,8 @@ def fit_collision(
     sparsity_mask,
     cut_out_before,
     cut_out_after,
+    gains=None,
+    offsets=None,
 ):
     """
     Compute the best fit for a collision between a spike and its overlapping spikes.
@@ -478,13 +512,19 @@ def fit_collision(
         The number of samples to cut out before the spike.
     cut_out_after: int
         The number of samples to cut out after the spike.
+    gains : np.ndarray or None, default: None
+        The channel gains used to scale the local waveform to uV. If None, the
+        traces are used as they are.
+    offsets : np.ndarray or None, default: None
+        The channel offsets used to scale the local waveform to uV. If None, the
+        traces are used as they are.
 
     Returns
     -------
     np.ndarray
         The fitted scaling factors for the colliding spikes.
     """
-    from sklearn.linear_model import LinearRegression
+    from scipy.optimize import nnls
 
     # Find the first and last spike peak index
     # from the set of colliding spikes.
@@ -506,6 +546,9 @@ def fit_collision(
     local_waveform_start = max(0, sample_first_centered - cut_out_before)
     local_waveform_end = min(traces_with_margin.shape[0], sample_last_centered + cut_out_after)
     local_waveform = traces_with_margin[local_waveform_start:local_waveform_end, sparse_indices]
+    # scale the waveform to match the scaling of the templates
+    if gains is not None:
+        local_waveform = local_waveform.astype("float32") * gains[sparse_indices] + offsets[sparse_indices]
     num_samples_local_waveform = local_waveform.shape[0]
 
     y = local_waveform.T.flatten()
@@ -515,7 +558,7 @@ def fit_collision(
         full_template = np.zeros_like(local_waveform)
 
         # For the collision spike, take its unit template and insert
-        # it into `full_template` at the time the collision spike occured.
+        # it into `full_template` at the time the collision spike occurred.
         sample_centered = spike["sample_index"] - local_waveform_start
         template = all_templates[spike["unit_index"]][:, sparse_indices]
         template_cut = template[nbefore - cut_out_before : nbefore + cut_out_after]
@@ -533,8 +576,11 @@ def fit_collision(
 
         X[:, i] = full_template.T.flatten()
 
-    reg = LinearRegression(fit_intercept=True, positive=True).fit(X, y)
-    scalings = reg.coef_
+    # Centering reproduces fit_intercept=True; NNLS reproduces positive=True.
+    y = y.astype(X.dtype, copy=False)
+    X -= np.mean(X, axis=0)
+    y -= np.mean(y)
+    scalings = nnls(X, y)[0]
     return scalings
 
 

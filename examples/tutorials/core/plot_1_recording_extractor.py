@@ -70,7 +70,7 @@ probe = generate_linear_probe(num_elec=7, ypitch=20, contact_shapes="circle", co
 probe.set_device_channel_indices(np.arange(7))
 
 # then we need to actually set the probe to the recording object
-recording = recording.set_probe(probe)
+recording.set_probe(probe)
 plot_probe(probe)
 
 ##############################################################################
@@ -151,13 +151,13 @@ print(recordings[2].get_channel_ids())
 # The "dump" operation is lazy, i.e., the traces are not exported.
 # Only the information about how to reconstruct the recording are dumped:
 
-from spikeinterface import load_extractor
+from spikeinterface import load
 from pprint import pprint
 
 d = recording2.to_dict()
 pprint(d)
 
-recording2_loaded = load_extractor(d)
+recording2_loaded = load(d)
 print(recording2_loaded)
 
 ###############################################################################
@@ -165,7 +165,7 @@ print(recording2_loaded)
 
 recording2.dump("my_recording.json")
 
-recording2_loaded = load_extractor("my_recording.json")
+recording2_loaded = load("my_recording.json")
 print(recording2_loaded)
 
 ###############################################################################
@@ -181,5 +181,5 @@ import os
 
 pprint(os.listdir("./my_recording"))
 
-recording2_cached = load_extractor("my_recording.json")
+recording2_cached = load("my_recording.json")
 print(recording2_cached)

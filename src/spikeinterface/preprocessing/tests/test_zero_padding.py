@@ -161,7 +161,7 @@ def test_trace_padded_recording_retrieve_start_padding_and_partial_original_trac
     end_frame = padding_start + end_frame_original_traces
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
-    # Check the the beginning of the trace is is padded with zeros
+    # Check the beginning of the trace is padded with zeros
     start_padding = padded_traces[:start_padding_to_retrieve, :]
     expected_padding = np.zeros((start_padding_to_retrieve, num_channels))
     assert np.allclose(start_padding, expected_padding)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
@@ -55,7 +53,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
         self.extra_requirements.append("h5py")
 
 
-# alias for backward compatiblity
+# alias for backward compatibility
 HS2SortingExtractor = HerdingspikesSortingExtractor
 
 

@@ -38,6 +38,7 @@ If you use one of the following spike sorting algorithms (i.e. you use the :code
 please include the appropriate citation for the :code:`sorter_name` parameter you use:
 *Note: unless otherwise stated, the reference given is to be used for all versions of the sorter*
 
+- :code:`dartsort` [Boussard2023]_
 - :code:`combinato` [Niediek]_
 - :code:`hdsort` [Diggelmann]_
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
@@ -57,7 +58,7 @@ methods:
  - :code:`acgs_3d` [Beau]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`monopolar_triangulation` based on work from [Boussard]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`grid_convolution` based on work from [Pachitariu]_
-
+ - :code:`compute_valid_unit_periods` based on work from [npyx]_ and [Fabre]_
 
 Metrics Module
 --------------
@@ -94,6 +95,8 @@ If you use the "slay" preset in the :code:`compute_merge_unit_groups` method, pl
 
 If you use :code:`unitrefine_label_units`, :code:`model_based_label_units` or :code:`train_model`, please cite [Jain]_
 
+If you use :code:`bombcell_label_units`, please cite [Fabre]_
+
 Benchmark
 ---------
 
@@ -108,6 +111,8 @@ References
 
 .. [Boussard] `Three-dimensional spike localization and imporved motion correction for Neuropixels recordings. 2021 <https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1>`_
 
+.. [Boussard2023] `DARTsort: A modular drift tracking spike sorter for high-density multi-electrode probes. 2023 <https://www.biorxiv.org/content/10.1101/2023.08.11.553023v1>`_
+
 .. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 
 .. [Buzsáki] `The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations. 2014. <https://pubmed.ncbi.nlm.nih.gov/24569488/>`_
@@ -118,7 +123,7 @@ References
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
 
-.. [Fabre] `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. 2023. <https://doi.org/10.5281/zenodo.8172822>`
+.. [Fabre] `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. 2023. <https://doi.org/10.5281/zenodo.8172822>`_
 
 .. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
 

@@ -1,8 +1,7 @@
-from __future__ import annotations
-from typing import Union
+from copy import deepcopy
 
 import numpy as np
-from copy import deepcopy
+
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -81,7 +80,7 @@ class SplitUnitSorting(BaseSorting):
             np.isin(unchanged_units, self.unit_ids)
         ), "new_unit_ids should have a compatible format with the parent ids"
 
-        for si, parent_segment in enumerate(self._parent_sorting._sorting_segments):
+        for si, parent_segment in enumerate(self._parent_sorting.segments):
             sub_segment = SplitSortingUnitSegment(parent_segment, split_unit_id, indices_zero_based[si], new_unit_ids)
             self.add_sorting_segment(sub_segment)
 
@@ -134,8 +133,8 @@ class SplitSortingUnitSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         if unit_id in self._new_unit_ids:
             if start_frame is None:

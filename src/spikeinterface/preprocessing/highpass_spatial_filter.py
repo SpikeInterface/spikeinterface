@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
@@ -90,7 +88,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     ):
         BasePreprocessor.__init__(self, recording)
 
-        import scipy.signal
+        from scipy.signal import butter
 
         # Check single group
         channel_groups = recording.get_channel_groups()
@@ -133,15 +131,15 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 rms_values = recording.get_property("noise_level_rms_raw")
             else:
                 random_slice_kwargs = {} if random_slice_kwargs is None else random_slice_kwargs
-                rms_values = get_noise_levels(recording, method="rms", return_scaled=False, **random_slice_kwargs)
+                rms_values = get_noise_levels(recording, method="rms", return_in_uV=False, **random_slice_kwargs)
 
         # Pre-compute spatial filtering parameters
         butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
-        sos_filter = scipy.signal.butter(**butter_kwargs, output="sos")
+        sos_filter = butter(**butter_kwargs, output="sos")
 
         dtype = fix_dtype(recording, dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = HighPassSpatialFilterSegment(
                 parent_segment,
                 n_channel_pad,
@@ -248,9 +246,9 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces * self.taper[np.newaxis, :]
 
         # apply actual HP filter
-        import scipy.signal
+        from scipy.signal import sosfiltfilt
 
-        traces = scipy.signal.sosfiltfilt(self.sos_filter, traces, axis=1)
+        traces = sosfiltfilt(self.sos_filter, traces, axis=1)
 
         # remove padding
         if self.n_channel_pad > 0:
@@ -268,6 +266,8 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces[left_margin:-right_margin, channel_indices]
         else:
             traces = traces[left_margin:, channel_indices]
+        if np.issubdtype(self.dtype, np.integer):
+            np.round(traces, out=traces)
         return traces.astype(self.dtype, copy=False)
 
 
@@ -304,13 +304,15 @@ def agc(traces, window, epsilons):
     gain : np.ndarray
         Gain applied to the traces
     """
-    import scipy.signal
+    from scipy.signal import fftconvolve
 
-    gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
+    gain = fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
 
     dead_channels = np.sum(gain, axis=0) == 0
 
-    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(epsilons, gain[:, ~dead_channels])
+    traces[:, ~dead_channels] = traces[:, ~dead_channels] / np.maximum(
+        epsilons[~dead_channels], gain[:, ~dead_channels]
+    )
 
     return traces, gain
 

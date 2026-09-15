@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import numpy as np
-from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer
 from .base import BaseWidget, to_attr

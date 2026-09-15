@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 # """Sorting components: clustering"""
 from pathlib import Path
 
@@ -14,6 +12,7 @@ else:
     HAVE_HDBSCAN = False
 
 from spikeinterface.core.base import minimum_spike_dtype
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
@@ -62,8 +61,8 @@ class RandomProjectionClustering:
         radius_um = params.get("radius_um", 30)
         ms_before = params["waveforms"].get("ms_before", 0.5)
         ms_after = params["waveforms"].get("ms_before", 1.5)
-        nbefore = int(ms_before * fs / 1000.0)
-        nafter = int(ms_after * fs / 1000.0)
+        nbefore = ms_to_samples(ms_before, fs)
+        nafter = ms_to_samples(ms_after, fs)
         verbose = params.get("verbose", True)
         num_chans = recording.get_num_channels()
         debug_folder = params.get("debug_folder", None)
@@ -134,13 +133,15 @@ class RandomProjectionClustering:
             print("Kept %d raw clusters" % len(labels))
 
         if params["merge_from_templates"] is not None:
-            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids = merge_peak_labels_from_templates(
-                peaks,
-                peak_labels,
-                unit_ids,
-                templates_array,
-                np.ones((len(unit_ids), num_chans), dtype=bool),
-                **params["merge_from_templates"],
+            peak_labels, merge_template_array, new_sparse_mask, new_unit_ids, time_shifts = (
+                merge_peak_labels_from_templates(
+                    peaks,
+                    peak_labels,
+                    unit_ids,
+                    templates_array,
+                    np.ones((len(unit_ids), num_chans), dtype=bool),
+                    **params["merge_from_templates"],
+                )
             )
 
             templates = Templates(
@@ -153,6 +154,8 @@ class RandomProjectionClustering:
                 probe=recording.get_probe(),
                 is_in_uV=False,
             )
+        else:
+            time_shifts = None
 
         labels = templates.unit_ids
 
@@ -162,4 +165,4 @@ class RandomProjectionClustering:
         if verbose:
             print("Kept %d non-duplicated clusters" % len(labels))
 
-        return labels, peak_labels, dict()
+        return labels, peak_labels, dict(time_shifts=time_shifts, templates=templates)

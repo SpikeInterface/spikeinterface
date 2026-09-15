@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 
@@ -52,7 +50,7 @@ def get_spatial_interpolation_kernel(
     -------
     interpolation_kernel: array (m, n)
     """
-    import scipy.spatial
+    from scipy.spatial import distance
 
     target_is_inside = np.ones(target_location.shape[0], dtype=bool)
     for dim in range(source_location.shape[1]):
@@ -79,7 +77,7 @@ def get_spatial_interpolation_kernel(
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == "idw":
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        distances = distance.cdist(source_location, target_location, metric="euclidean")
         interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[:, c])
@@ -96,7 +94,7 @@ def get_spatial_interpolation_kernel(
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == "nearest":
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        distances = distance.cdist(source_location, target_location, metric="euclidean")
         interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype=dtype)
         for c in range(target_location.shape[0]):
             ind_closest = np.argmin(distances[:, c])
@@ -137,18 +135,18 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
     """
 
     if np.isscalar(sigma_um):
-        import scipy
+        from scipy.spatial import distance
 
-        dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric=distance_metric)
-        kernal_dist = np.exp(-((dist / sigma_um) ** p))
+        dist = distance.cdist(locations_1, locations_2, metric=distance_metric)
+        kernel_dist = np.exp(-((dist / sigma_um) ** p))
     else:
         # this mimic the kilosort case where a sigma on x and y are diffrents.
         # note that in that case the distance metric become a cityblock
         sigma_x, sigma_y = sigma_um
         distx = np.abs(locations_1[:, 0][:, np.newaxis] - locations_2[:, 0][np.newaxis, :])
         disty = np.abs(locations_1[:, 1][:, np.newaxis] - locations_2[:, 1][np.newaxis, :])
-        kernal_dist = np.exp(-((distx / sigma_x) ** p) - (disty / sigma_y) ** p)
-    return kernal_dist
+        kernel_dist = np.exp(-((distx / sigma_x) ** p) - (disty / sigma_y) ** p)
+    return kernel_dist
 
 
 def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p, weight_threshold=0.005):

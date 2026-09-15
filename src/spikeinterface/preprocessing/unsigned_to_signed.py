@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
@@ -33,7 +31,7 @@ class UnsignedToSignedRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_signed)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = UnsignedToSignedRecordingSegment(parent_segment, dtype_signed, bit_depth)
             self.add_recording_segment(rec_segment)
 

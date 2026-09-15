@@ -2,7 +2,6 @@ name: Test sorter images in singularity
 
 on: workflow_dispatch
 
-
 jobs:
   test-images:
     name: Test on (${{ matrix.os }})
@@ -11,27 +10,28 @@ jobs:
       fail-fast: false
       matrix:
         # "macos-latest", "windows-latest"
-        os: ["ubuntu-latest", ]
+        os: ["ubuntu-latest"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: "3.10"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.10"
+          enable-cache: true
       - uses: eWaterCycle/setup-singularity@v7
         with:
           singularity-version: 3.8.7
       - name: Python version
-        run:
-          python --version
+        run: python --version
       - name: Singularity version
-        run:
-          singularity --version
+        run: singularity --version
       - name: Install dependencies
         run: |
-          python -m pip install -U pip  # Official recommended way
-          pip install pytest
-          pip install -e .[full]
-          pip install spython
+          uv pip install --system pytest
+          uv pip install --system -e .[full]
+          uv pip install --system spython
       - name: Run test singularity containers
         run: |
           pytest -vv --capture=tee-sys -rA src/spikeinterface/sorters/external/tests/test_singularity_containers.py

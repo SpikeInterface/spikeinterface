@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import copy
 import warnings
 import json
@@ -7,8 +5,9 @@ import shutil
 import time
 import inspect
 from pathlib import Path
-import numpy as np
 from typing import Literal
+
+import numpy as np
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
@@ -81,7 +80,7 @@ motion_options_preset = {
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
         ),
     },
-    # This preset is the encestor of dredge
+    # This preset is the ancestor of dredge
     "nonrigid_accurate": {
         "doc": "method by Paninski lab (monopolar_triangulation + decentralized)",
         "detect_kwargs": dict(

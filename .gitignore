@@ -141,7 +141,9 @@ examples/modules_gallery/**/*.zarr
 
 # Files and folders generated during tests
 test_folder/
+*trained_pipeline/
 
 # Mac OS
 .DS_Store
 test_data.json
+uv.lock

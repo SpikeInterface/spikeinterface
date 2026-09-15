@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from spikeinterface.core import generate_ground_truth_recording
@@ -17,6 +15,18 @@ def generated_recording():
     recording, sorting = generate_ground_truth_recording(
         durations=[10.0],
         sampling_frequency=32000.0,
+        num_channels=32,
+        num_units=10,
+        seed=2205,
+    )
+    return recording
+
+
+@pytest.fixture(scope="module")
+def generated_recording_30khz():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[10.0],
+        sampling_frequency=30000.0,
         num_channels=32,
         num_units=10,
         seed=2205,

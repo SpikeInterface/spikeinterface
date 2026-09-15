@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import importlib.util
 
@@ -84,7 +82,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # load probe file
         probegroup = probeinterface.read_prb(params["probe"])
-        self.set_probegroup(probegroup, in_place=True)
+        self.set_probegroup(probegroup)
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
         self.extra_requirements.extend(["hybridizer", "pyyaml"])
 

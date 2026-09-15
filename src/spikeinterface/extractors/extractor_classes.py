@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 # most important extractor are in spikeinterface.core
 from spikeinterface.core import (
     BinaryFolderRecording,
@@ -15,6 +13,8 @@ from spikeinterface.core import (
     read_npz_sorting,
     read_npy_snippets,
 )
+
+from spikeinterface.core.zarrextractors import read_zarr_array
 
 # sorting/recording/event from neo
 from .neoextractors import *
@@ -46,6 +46,7 @@ from .cellexplorersortingextractor import CellExplorerSortingExtractor, read_cel
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .mclustextractors import MClustSortingExtractor, read_mclust
+from .xclustextractors import XClustSortingExtractor, read_xclust
 from .waveclustextractors import WaveClusSortingExtractor, read_waveclus
 from .yassextractors import YassSortingExtractor, read_yass
 from .combinatoextractors import CombinatoSortingExtractor, read_combinato
@@ -133,6 +134,7 @@ _sorting_extractor_full_dict = {
     KlustaSortingExtractor: dict(wrapper_string="read_klusta", wrapper_class=read_klusta),
     HDSortSortingExtractor: dict(wrapper_string="read_hdsort", wrapper_class=read_hdsort),
     MClustSortingExtractor: dict(wrapper_string="read_mclust", wrapper_class=read_mclust),
+    XClustSortingExtractor: dict(wrapper_string="read_xclust", wrapper_class=read_xclust),
     WaveClusSortingExtractor: dict(wrapper_string="read_waveclus", wrapper_class=read_waveclus),
     YassSortingExtractor: dict(wrapper_string="read_yass", wrapper_class=read_yass),
     CombinatoSortingExtractor: dict(wrapper_string="read_combinato", wrapper_class=read_combinato),
@@ -159,7 +161,7 @@ _snippets_extractor_full_dict = {
 # Organize the possible extractors into a user facing format with keys being extractor names
 # (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class returned as its wrapper
 # (e.g. IntanRecordingExtractor, KiloSortSortingExtractor)
-# An important note is the the formats are returned after performing `.lower()` so a format like
+# An important note is that the formats are returned after performing `.lower()` so a format like
 # SpikeGLX will have a key of 'spikeglx'
 # for example if we wanted to create a recording from an intan file we could do the following:
 # >>> recording = se.recording_extractor_full_dict['intan'](file_path='path/to/data.rhd')
@@ -199,5 +201,6 @@ __all__.extend(
         "read_zarr",
         "read_neuroscope",  # convenience function for neuroscope
         "read_split_intan_files",  # convenience function for segmented intan files
+        "read_zarr_array",
     ]
 )

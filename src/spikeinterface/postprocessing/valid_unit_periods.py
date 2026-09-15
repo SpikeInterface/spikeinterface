@@ -1,11 +1,7 @@
-from __future__ import annotations
-
 import importlib.util
 import warnings
 
 import numpy as np
-from typing import Optional
-from copy import deepcopy
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
@@ -13,6 +9,7 @@ from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
 from spikeinterface.core.base import unit_period_dtype
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype, remap_unit_indices_in_vector
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -115,7 +112,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         minimum_n_spikes: int = 100,
         minimum_valid_period_duration: float = 180,
         min_num_periods_relative: int = 5,
-        user_defined_periods: Optional[object] = None,
+        user_defined_periods: object | None = None,
         refractory_period_ms: float = 0.8,
         censored_period_ms: float = 0.0,
         num_histogram_bins: int = 50,
@@ -190,7 +187,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         new_extension_data = {}
         new_valid_periods, _ = remap_unit_indices_in_vector(
             self.data["valid_unit_periods"], self.sorting_analyzer.unit_ids, unit_ids
@@ -543,7 +540,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             (start_sample_index, end_sample_index) tuples.
         """
         if outputs == "numpy":
-            good_periods = self.data["valid_unit_periods"].copy()
+            good_periods = np.asarray(self.data["valid_unit_periods"]).copy()
         else:
             # by_unit
             unit_ids = self.sorting_analyzer.unit_ids
@@ -552,12 +549,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             for segment_index in range(self.sorting_analyzer.get_num_segments()):
                 segment_mask = good_periods_array["segment_index"] == segment_index
                 periods_dict = {}
-                for unit_index in unit_ids:
-                    periods_dict[unit_index] = []
+                for unit_index, unit_id in enumerate(unit_ids):
+                    periods_dict[unit_id] = []
                     unit_mask = good_periods_array["unit_index"] == unit_index
-                    good_periods_unit_segment = good_periods_array[segment_mask & unit_mask]
+                    good_periods_unit_segment = slice_rows(good_periods_array, segment_mask & unit_mask)
                     for start, end in good_periods_unit_segment[["start_sample_index", "end_sample_index"]]:
-                        periods_dict[unit_index].append((start, end))
+                        periods_dict[unit_id].append((start, end))
                 good_periods.append(periods_dict)
 
         return good_periods
@@ -575,7 +572,7 @@ def compute_subperiods(
     period_mode: str = "absolute",
     relative_margin_size: float = 1.0,
     min_num_periods_relative: int = 5,
-    unit_ids: Optional[list] = None,
+    unit_ids: list | None = None,
 ) -> dict:
     """
     Computes subperiods per unit based on specified size mode.

@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from pathlib import Path
 import os
-from typing import Union
 import shutil
 import sys
 import json
@@ -16,8 +13,6 @@ from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.extractors.extractor_classes import WaveClusSortingExtractor
 from spikeinterface.core.channelslice import ChannelSliceRecording
 
-PathType = Union[str, Path]
-
 h5py_spec = importlib.util.find_spec("h5py")
 if h5py_spec is not None:
     import h5py
@@ -27,7 +22,7 @@ else:
     HAVE_H5PY = False
 
 
-def check_if_installed(waveclus_path: Union[str, None]):
+def check_if_installed(waveclus_path: str | None):
     if waveclus_path is None:
         return False
     assert isinstance(waveclus_path, str)
@@ -47,7 +42,7 @@ class WaveClusSorter(BaseSorter):
 
     sorter_name: str = "waveclus"
     compiled_name: str = "waveclus_compiled"
-    waveclus_path: Union[str, None] = os.getenv("WAVECLUS_PATH", None)
+    waveclus_path: str | None = os.getenv("WAVECLUS_PATH", None)
     requires_locations = False
 
     _default_params = {
@@ -136,12 +131,12 @@ class WaveClusSorter(BaseSorter):
         if p is None:
             return "unknown"
         else:
-            with open(str(Path(p) / "version.txt"), mode="r", encoding="utf8") as f:
+            with open(str(Path(p) / "version.txt"), encoding="utf8") as f:
                 version = f.readline()
         return version
 
     @classmethod
-    def set_waveclus_path(cls, waveclus_path: PathType):
+    def set_waveclus_path(cls, waveclus_path: str | Path):
         waveclus_path = str(Path(waveclus_path).absolute())
         WaveClusSorter.waveclus_path = waveclus_path
         try:
@@ -296,7 +291,7 @@ class WaveClusSorter(BaseSorter):
         par_input = {}
         for key, value in p.items():
             if type(value) == bool:
-                value = "{}".format(value).lower()
+                value = f"{value}".lower()
             if key in par_renames:
                 key = par_renames[key]
             par_input[key] = value

@@ -6,7 +6,7 @@ Internal sorters
 :py:mod:`spikeinterface.sortingcomponents` implement algorithms to break a sorting pipeline
 into individual components. With this components it is easy to develop a new sorter.
 
-These components and sorters havs been benchmarked [here](https://github.com/samuelgarcia/sorting_components_benchmark_paper).
+These components and sorters have been benchmarked `here <https://github.com/samuelgarcia/sorting_components_benchmark_paper>`_.
 
 
 At the moment, there are 4 internal sorters implemented in ``spikeinterface``:
@@ -20,8 +20,8 @@ At the moment, there are 4 internal sorters implemented in ``spikeinterface``:
 Lupin
 -----
 
-Lupin is components-based sorters, it combine components that give the best reults on benchmarks
-for each steps. It is theorically the "best" sorter that ``spikeinterface`` can offer internally.
+Lupin is a components-based sorter, it combines components that give the best results on benchmarks
+for each step. It is theoretically the "best" sorter that ``spikeinterface`` can offer internally.
 
 Lupin components are:
   * preprocessing (filtering, CMR, whitening)
