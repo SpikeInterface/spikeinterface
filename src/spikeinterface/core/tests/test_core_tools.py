@@ -12,26 +12,7 @@ from spikeinterface.core.core_tools import (
     normal_pdf,
     convert_string_to_bytes,
     add_suffix,
-    _resolve_recording_kwarg,
 )
-
-
-def test_resolve_recording_kwarg():
-    sentinel = object()
-
-    # only `recording` given: passes through unchanged
-    assert _resolve_recording_kwarg(sentinel, None, "SomeClass") is sentinel
-
-    # only the legacy `parent_recording` given: resolves to it
-    assert _resolve_recording_kwarg(None, sentinel, "SomeClass") is sentinel
-
-    # neither given: raises, naming the missing argument
-    with pytest.raises(TypeError, match="missing required argument: 'recording'"):
-        _resolve_recording_kwarg(None, None, "SomeClass")
-
-    # both given: raises rather than silently picking one
-    with pytest.raises(TypeError, match="got values for both"):
-        _resolve_recording_kwarg(sentinel, sentinel, "SomeClass")
 
 
 def test_add_suffix():

@@ -36,22 +36,10 @@ def test_depth_order():
     rec = NumpyRecording(orig_traces, 10)
     rec.set_dummy_probe_from_locations(geom)
     print(rec.get_channel_locations())
-    rec_sorted = depth_order(rec)
+    rec_sorted = depth_order(recording=rec)
     print(rec_sorted.get_channel_locations())
     assert np.array_equal(rec_sorted.get_channel_ids(), [4, 3, 2, 0, 1])
     assert np.array_equal(rec_sorted.get_traces(), orig_traces[:, [4, 3, 2, 0, 1]])
-
-
-def test_depth_order_recording_kwarg():
-    """Regression test: `depth_order(recording=recording)` used to raise a TypeError."""
-    orig_traces = np.arange(5, dtype="float32")[None, :] * np.ones((100, 1))
-    geom = np.zeros((5, 2), dtype="float32")
-    geom[:, 1] = [2, 3, 1, 0, -1]
-    recording = NumpyRecording(orig_traces, 10)
-    recording.set_dummy_probe_from_locations(geom)
-
-    recording_sorted = depth_order(recording=recording)
-    assert np.array_equal(recording_sorted.get_channel_ids(), [4, 3, 2, 0, 1])
 
 
 def test_depth_order_parent_recording_from_dict():
@@ -67,7 +55,9 @@ def test_depth_order_parent_recording_from_dict():
     recording = NumpyRecording(orig_traces, 10)
     recording.set_dummy_probe_from_locations(geom)
 
-    recording_sorted = DepthOrderRecording(parent_recording=recording)
+    recording_sorted = DepthOrderRecording(recording=recording)
+    # We artificially rename 'recording' to 'parent_recording' in the kwargs to simulate legacy behavior
+    recording_sorted._kwargs["parent_recording"] = recording_sorted._kwargs.pop("recording")
     reloaded = BaseExtractor.from_dict(recording_sorted.to_dict())
     check_recordings_equal(recording_sorted, reloaded)
 

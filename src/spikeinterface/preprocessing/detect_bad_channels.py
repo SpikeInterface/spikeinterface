@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 from typing import Literal
 
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class, _resolve_recording_kwarg
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs
 from spikeinterface.core.time_series_tools import get_random_sample_slices
 from .filter import highpass_filter
@@ -93,9 +93,6 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
     channel_labels : np.ndarray | list | None, default: None
         If given, these are labels given to the channels by the
         detection process. Only intended for use when loading.
-    parent_recording : BaseRecording | None, default: None
-        Legacy alias for `recording`, kept for `from_dict`/pickle reconstruction and
-        backward-compatible direct construction. New code should use `recording`.
 
     Returns
     -------
@@ -107,14 +104,11 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 
     def __init__(
         self,
-        recording: BaseRecording | None = None,
+        recording: BaseRecording,
         bad_channel_ids=None,
         channel_labels=None,
-        parent_recording: BaseRecording | None = None,
         **detect_bad_channels_kwargs,
     ):
-        recording = _resolve_recording_kwarg(recording, parent_recording, type(self).__name__)
-
         if bad_channel_ids is None:
             bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
         else:
@@ -125,7 +119,7 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 
         ChannelSliceRecording.__init__(
             self,
-            parent_recording=recording,
+            recording=recording,
             channel_ids=new_channel_ids,
         )
 
@@ -139,6 +133,19 @@ class DetectAndRemoveBadChannelsRecording(ChannelSliceRecording):
 
         all_bad_channels_kwargs = _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs)
         self._kwargs.update(all_bad_channels_kwargs)
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `parent_recording' argument,
+        which is renamed to `recording'.
+        """
+        if "parent_recording" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 DetectAndRemoveBadChannelsRecording.__doc__ = DetectAndRemoveBadChannelsRecording.__doc__.format(

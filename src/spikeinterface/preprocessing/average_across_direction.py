@@ -1,17 +1,16 @@
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class, _resolve_recording_kwarg
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class AverageAcrossDirectionRecording(BaseRecording):
 
     def __init__(
         self,
-        recording: BaseRecording | None = None,
+        recording: BaseRecording,
         direction: str = "y",
         dtype="float32",
-        parent_recording: BaseRecording | None = None,
     ):
         """Averages channels at the same position along `direction
 
@@ -29,11 +28,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         dtype : numpy dtype or None,  default: float32
             If None, parent dtype is preserved, but the average will
             lose accuracy
-        parent_recording : BaseRecording | None, default: None
-            Legacy alias for `recording`, kept for `from_dict`/pickle reconstruction and
-            backward-compatible direct construction. New code should use `recording`.
         """
-        recording = _resolve_recording_kwarg(recording, parent_recording, type(self).__name__)
         parent_channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         if dim > parent_channel_locations.shape[1]:
@@ -77,7 +72,6 @@ class AverageAcrossDirectionRecording(BaseRecording):
         channel_locations[:, dim] = dim_unique_pos
         self.set_channel_locations(channel_locations)
 
-        self.parent_recording = recording
         self.num_channels = n_pos_unique
         for segment in recording.segments:
             recording_segment = AverageAcrossDirectionRecordingSegment(
@@ -90,10 +84,23 @@ class AverageAcrossDirectionRecording(BaseRecording):
             self.add_recording_segment(recording_segment)
 
         self._kwargs = dict(
-            parent_recording=recording,
+            recording=recording,
             direction=direction,
             dtype=dtype,
         )
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `parent_recording' argument,
+        which is renamed to `recording'.
+        """
+        if "parent_recording" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):

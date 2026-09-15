@@ -19,7 +19,7 @@ def test_average_across_direction():
     rec.set_dummy_probe_from_locations(geom)
 
     # test averaging across y
-    rec_avgy = average_across_direction(rec)
+    rec_avgy = average_across_direction(recording=rec)
     traces = rec_avgy.get_traces()
     assert traces.shape == (100, 3)
     # correct averages
@@ -62,17 +62,6 @@ def test_average_across_direction():
         pass
 
 
-def test_average_across_direction_recording_kwarg():
-    """Regression test: `average_across_direction(recording=recording)` used to raise a TypeError."""
-    recording_arr = np.arange(6, dtype="float32")[None, :] * np.ones((100, 1))
-    geom = np.array([[0, 1], [1, 1], [0, 2], [1, 2], [0, 3], [1, 3]])
-    recording = NumpyRecording(recording_arr, 10)
-    recording.set_dummy_probe_from_locations(geom)
-
-    recording_avgy = average_across_direction(recording=recording)
-    assert recording_avgy.get_traces().shape == (100, 3)
-
-
 def test_average_across_direction_parent_recording_from_dict():
     """
     `AverageAcrossDirectionRecording` always serializes its wrapped recording under the legacy
@@ -84,7 +73,9 @@ def test_average_across_direction_parent_recording_from_dict():
     recording = NumpyRecording(recording_arr, 10)
     recording.set_dummy_probe_from_locations(geom)
 
-    recording_avgy = AverageAcrossDirectionRecording(parent_recording=recording)
+    recording_avgy = AverageAcrossDirectionRecording(recording=recording)
+    # We artificially rename 'recording' to 'parent_recording' in the kwargs to simulate legacy behavior
+    recording_avgy._kwargs["parent_recording"] = recording_avgy._kwargs.pop("recording")
     reloaded = BaseExtractor.from_dict(recording_avgy.to_dict())
     check_recordings_equal(recording_avgy, reloaded)
 
