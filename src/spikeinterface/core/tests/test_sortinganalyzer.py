@@ -20,6 +20,7 @@ from spikeinterface.core.sortinganalyzer import (
     _sort_extensions_by_dependency,
 )
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
+from spikeinterface.core.base import minimum_spike_dtype
 
 # to test basespikevectorextension with node pipeline
 from spikeinterface.core.node_pipeline import SpikeRetriever
@@ -726,6 +727,31 @@ def test_extension():
     # other extension with same name should trigger an error
     with pytest.raises(AssertionError):
         register_result_extension(DummyAnalyzerExtension2)
+
+
+def test_select_units_reordered_keeps_extension_alignment():
+    """Extensions slice per-spike data with a mask on the old spike vector, which keeps the old
+    order. The selected sorting's spike vector must keep that same order, even for cotemporal
+    spikes and even when the selection reorders the units."""
+    register_result_extension(DummyAnalyzerExtension)
+
+    rng = np.random.default_rng(0)
+    num_spikes, num_units = 2000, 5
+    spikes = np.empty(num_spikes, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = np.sort(rng.integers(0, 200, size=num_spikes))
+    spikes["unit_index"] = rng.integers(0, num_units, size=num_spikes)
+    spikes["segment_index"] = 0
+    unit_ids = np.array(["u0", "u1", "u2", "u3", "u4"])
+    sorting = NumpySorting(spikes, 30_000.0, unit_ids)
+    recording = generate_recording(num_channels=4, durations=[1.0], sampling_frequency=30_000.0, seed=0)
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    analyzer.compute("dummy")
+
+    selected = analyzer.select_units(unit_ids[::-1])
+    old_unit_id_per_spike = unit_ids[selected.get_extension("dummy").data["result_two"]]
+    new_unit_id_per_spike = selected.unit_ids[selected.sorting.to_spike_vector()["unit_index"]]
+    assert np.array_equal(old_unit_id_per_spike, new_unit_id_per_spike)
 
 
 def test_excess_spikes(dataset):
