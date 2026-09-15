@@ -1637,8 +1637,6 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
         if outputs == "numpy":
             if copy and not self.sorting_analyzer._lazy:
-                # return a copy to avoid modification. `all_data` may be a zarr.Array even though this
-                # analyzer isn't itself lazy (e.g. shared by reference from a lazy source during merge/split)
                 return materialize_array(all_data)
             else:
                 return all_data
