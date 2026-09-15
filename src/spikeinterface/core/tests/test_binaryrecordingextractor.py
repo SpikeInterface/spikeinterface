@@ -2,7 +2,9 @@ import pytest
 import numpy as np
 from pathlib import Path
 
+import spikeinterface
 from spikeinterface.core import BinaryRecordingExtractor, MockRecording
+from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.core.core_tools import measure_memory_allocation
 
@@ -121,6 +123,32 @@ def test_sequential_reading_of_small_traces(folder_with_binary_files):
     small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     expected_traces = full_traces[start_frame:end_frame, :]
     assert np.allclose(small_traces, expected_traces)
+
+
+def test_num_chan_backward_compatibility_within_same_version(tmp_path):
+    # A dict written by the same major.minor can still carry a kwarg that the current
+    # constructor no longer accepts, so the repair hook must run whatever version it records.
+    num_channels = 3
+    num_samples = 30
+    sampling_frequency = 10_000.0
+    dtype = "int16"
+
+    file_path = tmp_path / "test_num_chan_backward_compatibility.raw"
+    np.memmap(file_path, dtype=dtype, mode="w+", shape=(num_samples, num_channels))
+
+    recording = BinaryRecordingExtractor(
+        file_paths=file_path,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+    )
+
+    dictionary = recording.to_dict()
+    assert dictionary["version"] == spikeinterface.__version__
+    dictionary["kwargs"]["num_chan"] = dictionary["kwargs"].pop("num_channels")
+
+    loaded_recording = BaseExtractor.from_dict(dictionary)
+    assert loaded_recording.get_num_channels() == num_channels
 
 
 if __name__ == "__main__":

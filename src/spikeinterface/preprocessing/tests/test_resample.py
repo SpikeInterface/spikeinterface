@@ -231,10 +231,10 @@ def test_resample_preserves_t_start():
     t_start = 100.5
     traces = np.random.randn(sampling_frequency * 2, 2).astype(np.float32)
     parent_rec = NumpyRecording(traces, sampling_frequency)
-    parent_rec.segments[0].t_start = t_start
+    parent_rec.segments[0]._t_start = t_start
 
     resampled = resample(parent_rec, 500)
-    assert resampled.segments[0].t_start == t_start
+    assert resampled.segments[0]._t_start == t_start
     assert not resampled.has_time_vector()
     assert np.isclose(resampled.get_times()[0], t_start)
 

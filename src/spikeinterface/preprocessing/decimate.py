@@ -94,16 +94,16 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         decimation_offset,
         dtype,
     ):
-        if parent_recording_segment.time_vector is not None:
-            time_vector = parent_recording_segment.time_vector[decimation_offset::decimation_factor]
+        if parent_recording_segment._time_vector is not None:
+            time_vector = parent_recording_segment._time_vector[decimation_offset::decimation_factor]
             decimated_sampling_frequency = None
             t_start = None
         else:
             time_vector = None
-            if parent_recording_segment.t_start is None:
+            if parent_recording_segment._t_start is None:
                 t_start = None
             else:
-                t_start = parent_recording_segment.t_start + (decimation_offset / parent_rate)
+                t_start = parent_recording_segment._t_start + (decimation_offset / parent_rate)
 
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(

@@ -25,6 +25,7 @@ def get_localization_pipeline_nodes(
     ms_before=0.5,
     ms_after=0.5,
     job_kwargs=None,
+    seed=None,
 ):
 
     assert (
@@ -52,7 +53,7 @@ def get_localization_pipeline_nodes(
 
         method_kwargs = method_kwargs.copy()
         method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
-            recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
+            recording, peaks=peak_source.peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs, seed=seed
         )
 
     localization_nodes = method_class(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs)
@@ -72,6 +73,7 @@ def localize_peaks(
     pipeline_kwargs=None,
     verbose=False,
     job_kwargs=None,
+    seed=None,
     **old_kwargs,
 ) -> np.ndarray:
     """Localize peak (spike) in 2D or 3D depending the method.
@@ -102,6 +104,9 @@ def localize_peaks(
         If True, output is verbose
     job_kwargs : dict | None, default None
         A job kwargs dict. If None or empty dict, then the global one is used.
+    seed : int or None, default: None
+        Seed for random number generator. Used by `grid_convolution` to reproducibly
+        subsample peaks when computing the prototype waveform.
 
     {method_doc}
 
@@ -150,6 +155,7 @@ def localize_peaks(
         ms_before=ms_before,
         ms_after=ms_after,
         job_kwargs=job_kwargs,
+        seed=seed,
     )
 
     if pipeline_kwargs is None:

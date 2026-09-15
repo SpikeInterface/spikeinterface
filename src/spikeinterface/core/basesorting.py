@@ -980,11 +980,12 @@ class BaseSorting(BaseExtractor):
 
         if main_channel_indices is None:
             spikes = self._cached_spike_vector
+        elif "channel_index" in self._cached_spike_vector.dtype.names:
+            spikes = self._cached_spike_vector
         else:
             spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
             spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
             spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
-
             spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
 
         if not concatenated:

@@ -2,7 +2,6 @@ import json
 import warnings
 import importlib.util
 from pathlib import Path
-from typing import List, Optional
 import numpy as np
 
 if importlib.util.find_spec("torch") is not None:
@@ -49,10 +48,10 @@ class SingleChannelDenoiser(WaveformsNode):
         self,
         recording: BaseRecording,
         return_output: bool = True,
-        parents: Optional[List[PipelineNode]] = None,
-        model_folder: Optional[str] = None,
-        repo_id: Optional[str] = None,
-        model_name: Optional[str] = None,
+        parents: list[PipelineNode] | None = None,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+        model_name: str | None = None,
     ):
         assert HAVE_TORCH, "To use the SingleChannelDenoiser you need to install torch"
         waveform_node = find_parent_of_type(parents, WaveformsNode)
@@ -84,8 +83,8 @@ class SingleChannelDenoiser(WaveformsNode):
         self,
         waveform_node: WaveformsNode,
         model_relative_path: str,
-        model_folder: Optional[str] = None,
-        repo_id: Optional[str] = None,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
     ):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
@@ -147,9 +146,9 @@ class SingleChannelDenoiser(WaveformsNode):
 
     def load_model(
         self,
-        model_folder: Optional[str] = None,
-        repo_id: Optional[str] = None,
-        model_name: Optional[str] = None,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+        model_name: str | None = None,
         spike_size: int = 121,
     ):
         if model_folder is not None:

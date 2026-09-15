@@ -523,7 +523,8 @@ def extract_waveforms_to_single_buffer(
     if sparsity_mask is None:
         num_chans = recording.get_num_channels()
     else:
-        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
+        # `initial` keeps this working for a sorting with no unit, where the mask has no row
+        num_chans = int(np.max(np.sum(sparsity_mask, axis=1), initial=0))  # This is a numpy scalar, so we cast to int
     shape = (int(num_spikes), int(n_samples), int(num_chans))
 
     if mode == "memmap":
@@ -907,16 +908,23 @@ def estimate_templates_with_accumulator(
         )
         return_in_uV = return_scaled
 
-    assert spikes.size > 0, "estimate_templates() need non empty sorting"
-
     job_kwargs = fix_job_kwargs(job_kwargs)
     num_worker = job_kwargs["n_jobs"]
 
     if sparsity_mask is None:
         num_chans = int(recording.get_num_channels())
     else:
-        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
+        # `initial` keeps this working for a sorting with no unit, where the mask has no row
+        num_chans = int(np.max(np.sum(sparsity_mask, axis=1), initial=0))  # This is a numpy scalar, so we cast to int
     num_units = len(unit_ids)
+
+    if spikes.size == 0:
+        # A sorting with no unit (or with only empty units) is valid, there is simply nothing to
+        # accumulate. Returning zeros avoids allocating an empty shared memory buffer.
+        template_means = np.zeros((num_units, nbefore + nafter, num_chans), dtype="float32")
+        if return_std:
+            return template_means, np.zeros_like(template_means)
+        return template_means
 
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
 

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 #                  -- *read-only* ; see BaseRecording._extra_metadata_from_folder
 #   - zarr.Array : ZarrRecordingExtractor load
 #                  -- *read-only* ; see ZarrRecordingExtractor.__init__
-# Code reading `.time_vector` must not assume it is writeable (see `shift_times`).
+# Code reading `._time_vector` must not assume it is writeable (see `shift_times`).
 TimeVector: TypeAlias = "np.ndarray | zarr.Array"  # np.memmap is an np.ndarray subclass
 
 
@@ -239,8 +239,8 @@ class TimeSeries(ABC):
         assert times.ndim == 1, "Time must have ndim=1"
         assert rs.get_num_samples() == times.shape[0], "times have wrong shape"
 
-        rs.t_start = None
-        rs.time_vector = times.astype("float64", copy=False)
+        rs._t_start = None
+        rs._time_vector = times.astype("float64", copy=False)
 
         if with_warning:
             warnings.warn(
@@ -259,9 +259,9 @@ class TimeSeries(ABC):
         for segment_index in range(self.get_num_segments()):
             rs = self.segments[segment_index]
             if self.has_time_vector(segment_index):
-                rs.time_vector = None
-            rs.t_start = None
-            rs.sampling_frequency = self.sampling_frequency
+                rs._time_vector = None
+            rs._t_start = None
+            rs._sampling_frequency = self.sampling_frequency
 
     def shift_times(self, shift: int | float, segment_index: int | None = None) -> None:
         """
@@ -288,15 +288,15 @@ class TimeSeries(ABC):
             rs = self.segments[segment_index]
 
             if self.has_time_vector(segment_index=segment_index):
-                if isinstance(rs.time_vector, np.ndarray) and rs.time_vector.flags.writeable:
+                if isinstance(rs._time_vector, np.ndarray) and rs._time_vector.flags.writeable:
                     # If this is an in-memory numpy array
-                    rs.time_vector += shift  # in-place, no copy
+                    rs._time_vector += shift  # in-place, no copy
                 else:
                     # If this is a read-only memmap or zarr.Array
-                    rs.time_vector = np.asarray(rs.time_vector) + shift
+                    rs._time_vector = np.asarray(rs._time_vector) + shift
             else:
-                new_start_time = 0 + shift if rs.t_start is None else rs.t_start + shift
-                rs.t_start = new_start_time
+                new_start_time = 0 + shift if rs._t_start is None else rs._t_start + shift
+                rs._t_start = new_start_time
 
     def sample_index_to_time(self, sample_ind, segment_index=None):
         """
@@ -426,46 +426,46 @@ class TimeSeriesSegment(BaseSegment):
         if time_vector is None:
             assert sampling_frequency is not None, "Pass either 'sampling_frequency' or 'time_vector'"
 
-        self.sampling_frequency = sampling_frequency
-        self.t_start = t_start
-        self.time_vector: "TimeVector | None" = time_vector
+        self._sampling_frequency = sampling_frequency
+        self._t_start = t_start
+        self._time_vector: "TimeVector | None" = time_vector
 
         BaseSegment.__init__(self)
 
     def get_times(self, start_frame: int | None = None, end_frame: int | None = None) -> np.ndarray:
-        if self.time_vector is not None:
+        if self._time_vector is not None:
             # Cache full times as numpy if start_frame and end_frame are None. If the user passes start_frame and
             # end_frame, we slice the time vector and return the sliced version as numpy array.
             # This is useful for very long recordings, where the full time vector might be too large to fit in memory.
             if start_frame is None and end_frame is None:
-                self.time_vector = np.asarray(self.time_vector)
-                return self.time_vector
+                self._time_vector = np.asarray(self._time_vector)
+                return self._time_vector
             else:
                 start_frame = int(start_frame) if start_frame is not None else 0
                 end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
-                return np.asarray(self.time_vector[start_frame:end_frame])
+                return np.asarray(self._time_vector[start_frame:end_frame])
         else:
             start_frame = int(start_frame) if start_frame is not None else 0
             end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
             time_vector = np.arange(start_frame, end_frame, dtype="float64")
-            time_vector /= self.sampling_frequency
-            if self.t_start is not None:
-                time_vector += self.t_start
+            time_vector /= self._sampling_frequency
+            if self._t_start is not None:
+                time_vector += self._t_start
             return time_vector
 
     def get_start_time(self) -> float:
-        if self.time_vector is not None:
-            return self.time_vector[0]
+        if self._time_vector is not None:
+            return self._time_vector[0]
         else:
-            return self.t_start if self.t_start is not None else 0.0
+            return self._t_start if self._t_start is not None else 0.0
 
     def get_end_time(self) -> float:
-        if self.time_vector is not None:
-            return self.time_vector[-1]
+        if self._time_vector is not None:
+            return self._time_vector[-1]
         else:
-            t_stop = (self.get_num_samples() - 1) / self.sampling_frequency
-            if self.t_start is not None:
-                t_stop += self.t_start
+            t_stop = (self.get_num_samples() - 1) / self._sampling_frequency
+            if self._t_start is not None:
+                t_stop += self._t_start
             return t_stop
 
     def get_times_kwargs(self) -> dict:
@@ -486,7 +486,7 @@ class TimeSeriesSegment(BaseSegment):
         The keys are always present, but the values may be None.
         """
         time_kwargs = dict(
-            sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector
+            sampling_frequency=self._sampling_frequency, t_start=self._t_start, time_vector=self._time_vector
         )
         return time_kwargs
 
@@ -494,30 +494,30 @@ class TimeSeriesSegment(BaseSegment):
         """
         Transform sample index into time in seconds
         """
-        if self.time_vector is None:
-            time_s = sample_ind / self.sampling_frequency
-            if self.t_start is not None:
-                time_s += self.t_start
+        if self._time_vector is None:
+            time_s = sample_ind / self._sampling_frequency
+            if self._t_start is not None:
+                time_s += self._t_start
         else:
-            time_s = self.time_vector[sample_ind]
+            time_s = self._time_vector[sample_ind]
         return time_s
 
     def time_to_sample_index(self, time_s):
         """
         Transform time in seconds into sample index
         """
-        if self.time_vector is None:
-            if self.t_start is None:
-                sample_index = time_s * self.sampling_frequency
+        if self._time_vector is None:
+            if self._t_start is None:
+                sample_index = time_s * self._sampling_frequency
             else:
-                sample_index = (time_s - self.t_start) * self.sampling_frequency
+                sample_index = (time_s - self._t_start) * self._sampling_frequency
             sample_index = np.round(sample_index).astype(np.int64)
-        elif isinstance(self.time_vector, np.ndarray):
+        elif isinstance(self._time_vector, np.ndarray):
             # in-memory or memmap: np.searchsorted reads elements lazily for a memmap
-            sample_index = np.searchsorted(self.time_vector, time_s, side="right") - 1
+            sample_index = np.searchsorted(self._time_vector, time_s, side="right") - 1
         else:
             # out-of-core (zarr): bisect so the whole vector isn't loaded into RAM
-            sample_index = _searchsorted_right_lazy(self.time_vector, time_s) - 1
+            sample_index = _searchsorted_right_lazy(self._time_vector, time_s) - 1
 
         return sample_index
 
