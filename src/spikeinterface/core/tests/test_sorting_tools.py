@@ -94,6 +94,9 @@ def test_reorder_spike_vector_by_unit_and_segment_raises(force_numba):
         reorder_spike_vector_by_unit_and_segment(spikes, 1, 1)  # unit_index 1 >= num_units
     with pytest.raises(ValueError, match="outside"):
         reorder_spike_vector_by_unit_and_segment(_make_spike_vector([0], [0], [5]), 1, 1)
+    # numba wraps a negative index, so check the lower bound
+    with pytest.raises(ValueError, match="outside"):
+        reorder_spike_vector_by_unit_and_segment(_make_spike_vector([0], [-1], [0]), 1, 1)
 
 
 @pytest.mark.parametrize("num_units", [2, 300, 70_000], ids=["uint8", "uint16", "uint32"])
@@ -173,6 +176,81 @@ def test_reorder_spike_vector_by_unit_and_segment_non_uniform_dtype(force_numba,
     assert np.array_equal(ordered_spikes, spikes[order])
     assert np.array_equal(ordered_spikes["amplitude"], [-2.25, 5.125, 6.0, 3.75, 1.5, -4.5])
     assert np.array_equal(ordered_spikes, _legacy_reorder(spikes))
+
+
+NARROW_INDEX_DTYPES = {
+    "int64/int32/int8": np.dtype([("sample_index", "int64"), ("unit_index", "int32"), ("segment_index", "int8")]),
+    "uint16/int8": np.dtype([("sample_index", "int64"), ("unit_index", "uint16"), ("segment_index", "int8")]),
+}
+
+
+def _make_random_spikes(dtype, num_units, num_segments, num_spikes, seed=0):
+    """Spikes in valid spike-vector order (segment-blocked, sample-ascending) with random units."""
+    rng = np.random.default_rng(seed)
+    spikes = np.empty(num_spikes, dtype=dtype)
+    segment_indices = np.sort(rng.integers(0, num_segments, size=num_spikes))
+    spikes["segment_index"] = segment_indices
+    for segment_index in range(num_segments):
+        in_segment = segment_indices == segment_index
+        spikes["sample_index"][in_segment] = np.sort(rng.integers(0, 1_000, size=in_segment.sum()))
+    spikes["unit_index"] = rng.integers(0, num_units, size=num_spikes)
+    return spikes
+
+
+@pytest.mark.parametrize("unit_major", [True, False], ids=["unit_major", "segment_major"])
+@pytest.mark.parametrize("dtype", list(NARROW_INDEX_DTYPES.values()), ids=list(NARROW_INDEX_DTYPES.keys()))
+def test_reorder_spike_vector_by_unit_and_segment_narrow_index_dtypes(force_numba, dtype, unit_major):
+    """Make sure that narrow unit_index / segment_index fields use numba.
+
+    """
+    # 200 units x 2 segments puts the bucket index outside int8 range,
+    # so the kernel has to widen the fields before the bucket math.
+    num_units, num_segments = 200, 2
+
+    spikes = _make_random_spikes(dtype, num_units, num_segments, num_spikes=2_000)
+    if force_numba:
+        from spikeinterface.core.sorting_tools import _numba_can_reorder
+
+        assert _numba_can_reorder(spikes.dtype)
+
+    ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(
+        spikes, num_units, num_segments, unit_major=unit_major
+    )
+
+    assert ordered_spikes.dtype == spikes.dtype
+    assert np.array_equal(ordered_spikes, spikes[order])
+    assert np.array_equal(ordered_spikes, _legacy_reorder(spikes, unit_major=unit_major))
+    assert counts.sum() == spikes.size
+
+
+def test_reorder_spike_vector_by_unit_and_segment_object_field_falls_back():
+    """Make sure spike vectors with object fields use numpy"""
+    dtype = minimum_spike_dtype + [("label", "O")]
+    spikes = np.empty(6, dtype=dtype)
+    spikes["sample_index"] = [10, 10, 11, 12, 12, 13]
+    spikes["unit_index"] = [2, 0, 1, 2, 0, 0]
+    spikes["segment_index"] = 0
+    spikes["label"] = list("abcdef")
+
+    ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(spikes, 3, 1)
+
+    assert np.array_equal(counts, [3, 1, 2])
+    assert np.array_equal(ordered_spikes, spikes[order])
+    assert list(ordered_spikes["label"]) == ["b", "e", "f", "c", "a", "d"]
+
+
+def test_numba_can_reorder():
+    from spikeinterface.core.sorting_tools import _numba_can_reorder
+
+    assert _numba_can_reorder(np.dtype(minimum_spike_dtype))
+    assert _numba_can_reorder(np.dtype([("sample_index", "int64"), ("unit_index", "int32"), ("segment_index", "int8")]))
+
+    assert not _numba_can_reorder(np.dtype(minimum_spike_dtype + [("label", "O")]))
+    assert not _numba_can_reorder(np.dtype([("sample_index", "int64"), ("unit_index", "int64")]))
+    assert not _numba_can_reorder(
+        np.dtype([("sample_index", "int64"), ("unit_index", "float64"), ("segment_index", "int64")])
+    )
+    assert not _numba_can_reorder(np.dtype("int64"))
 
 
 def test_random_spikes_selection():
