@@ -2167,19 +2167,205 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     return channel_locations
 
 
+def _multimodal_density(values, num_modes, lim0, lim1):
+    """
+    Unnormalized density of the "multimodal" ("by layer") distribution, evaluated at `values`.
+    """
+    values = np.asarray(values, dtype="float64")
+    density = np.zeros(values.shape, dtype="float64")
+    mode_step = (lim1 - lim0) / (num_modes + 1)
+    sigma = mode_step / 5.0
+    for i in range(num_modes):
+        center = mode_step * (i + 1)
+        density += np.exp(-((values - center) ** 2) / (2 * sigma**2))
+    return density
+
+
 def _generate_multimodal(rng, size, num_modes, lim0, lim1):
     bins = np.linspace(lim0, lim1, 10000)
     bin_step = bins[1] - bins[0]
-    prob = np.zeros(bins.size)
-    mode_step = (lim1 - lim0) / (num_modes + 1)
-    for i in range(num_modes):
-        center = mode_step * (i + 1)
-        sigma = mode_step / 5.0
-        prob += np.exp(-((bins - center) ** 2) / (2 * sigma**2))
+    prob = _multimodal_density(bins, num_modes, lim0, lim1)
     prob /= np.sum(prob)
     choices = rng.choice(np.arange(bins.size), size, p=prob)
     values = bins[choices] + rng.uniform(low=-bin_step / 2, high=bin_step / 2, size=size)
     return values
+
+
+def _indices_closer_than(points, minimum_distance):
+    """
+    Return the sorted indices of the points that lie within `minimum_distance` of another point.
+
+    This answers the same question as taking the full pairwise distance matrix and collecting the
+    rows that contain a violation, but it only ever compares points that share a grid cell or one
+    of its neighbours. Cells are `minimum_distance` wide, so a violating pair can never be more
+    than one cell apart on any axis and nothing outside that block has to be looked at. The cost
+    then follows the number of points rather than its square.
+
+    Parameters
+    ----------
+    points : numpy.ndarray
+        A (num_points, 3) array of positions.
+    minimum_distance : float
+        Positions strictly closer together than this are reported.
+
+    Returns
+    -------
+    indices : numpy.ndarray
+        The sorted, unique indices of the offending points.
+    """
+    num_points = points.shape[0]
+    if num_points < 2:
+        return np.zeros(0, dtype="int64")
+
+    coordinates = np.asarray(points, dtype="float64")
+    origin = coordinates.min(axis=0)
+    cells = np.floor((coordinates - origin) / minimum_distance).astype("int64")
+
+    # group the point indices by cell, so a cell can be looked up without scanning every point
+    buckets = {}
+    for index, cell in enumerate(map(tuple, cells)):
+        buckets.setdefault(cell, []).append(index)
+
+    offsets = [(dx, dy, dz) for dx in (-1, 0, 1) for dy in (-1, 0, 1) for dz in (-1, 0, 1)]
+    squared_minimum = minimum_distance * minimum_distance
+    offending = set()
+    for cell, members in buckets.items():
+        neighbourhood = []
+        for dx, dy, dz in offsets:
+            neighbourhood.extend(buckets.get((cell[0] + dx, cell[1] + dy, cell[2] + dz), ()))
+        neighbour_indices = np.asarray(neighbourhood, dtype="int64")
+        deltas = coordinates[members][:, np.newaxis, :] - coordinates[neighbour_indices][np.newaxis, :, :]
+        squared = np.sum(deltas * deltas, axis=2)
+        # a point always finds itself at distance zero, so drop the self pairing before testing
+        squared[np.asarray(members)[:, np.newaxis] == neighbour_indices[np.newaxis, :]] = np.inf
+        offending.update(np.asarray(members)[np.any(squared < squared_minimum, axis=1)].tolist())
+
+    return np.array(sorted(offending), dtype="int64")
+
+
+def _poisson_disk_sampling_3d(rng, lower, upper, radius, min_points=0, num_candidates=30, max_sweeps=20):
+    """
+    Fill an axis aligned 3D box with points that are all at least `radius` apart, using Bridson's
+    algorithm.
+
+    Accepted points are bucketed into a uniform grid whose cell size is `radius / sqrt(3)`, so the
+    diagonal of a cell is exactly `radius` and a cell can therefore hold at most one point. Nothing
+    further than `radius` from a candidate can rule it out, and a candidate is never further than
+    `2 * radius` from the point it was drawn around, so only a small fixed block of cells around
+    that point has to be looked at instead of every point accepted so far. That is what keeps the
+    whole fill linear in the number of points rather than quadratic.
+
+    Parameters
+    ----------
+    rng : numpy.random.Generator
+        The random generator to draw from.
+    lower : array-like
+        The (x, y, z) corner of the box with the smallest coordinates.
+    upper : array-like
+        The (x, y, z) corner of the box with the largest coordinates.
+    radius : float
+        The minimum distance between any two returned points. Must be strictly positive.
+    min_points : int, default: 0
+        Stop as soon as this many points have been placed. Only whole sweeps of the box are ever
+        run, so the points returned always cover the whole box rather than one corner of it.
+    num_candidates : int, default: 30
+        How many candidates are drawn around an active point before it is retired. This is the
+        "k" of Bridson's algorithm, higher values pack the box tighter at a linear extra cost.
+    max_sweeps : int, default: 20
+        How many times every placed point is given another go at spawning neighbours. Sweeping
+        stops early as soon as a sweep adds nothing, so this is only an upper bound.
+
+    Returns
+    -------
+    points : numpy.ndarray
+        A (num_points, 3) float32 array of points inside the box, pairwise further apart than
+        `radius`. The number of points depends on the box and on the radius, it is not chosen.
+    """
+    lower = np.asarray(lower, dtype="float64")
+    upper = np.asarray(upper, dtype="float64")
+    extent = np.maximum(upper - lower, 0.0)
+
+    # a flat box is still usable, but candidates must not be pushed off the box along a flat axis
+    flat_axes = extent <= 0.0
+    if np.all(flat_axes):
+        return lower.astype("float32").reshape(1, 3)
+
+    cell_size = radius / np.sqrt(3.0)
+    grid_shape = np.maximum(np.ceil(extent / cell_size), 1.0).astype("int64")
+    # each cell holds the index of the single point that falls in it, -1 means the cell is empty
+    grid = np.full(tuple(grid_shape), -1, dtype="int64")
+
+    points = np.empty((256, 3), dtype="float32")
+    num_points = 0
+
+    def store(point):
+        nonlocal points, num_points
+        if num_points == points.shape[0]:
+            points = np.concatenate((points, np.empty_like(points)))
+        points[num_points] = point
+        cell = np.clip(((np.asarray(point, dtype="float64") - lower) / cell_size).astype("int64"), 0, grid_shape - 1)
+        grid[cell[0], cell[1], cell[2]] = num_points
+        num_points += 1
+        return num_points - 1
+
+    # points are stored as float32, so the check is done on the float32 values with a hair of head
+    # room, that way the constraint still holds for the array that is handed back to the caller
+    squared_radius = (radius * (1.0 + 1e-6)) ** 2
+    # a candidate sits within 2 * radius of its parent and can only clash with a point within
+    # radius of itself, so nothing outside this many cells around the parent can matter
+    block_halfwidth = int(np.ceil(3.0 * np.sqrt(3.0)))
+
+    # in a box that is thin compared to the radius, most of the shell around a point lands outside
+    # the box, so draw proportionally more candidates to keep about num_candidates of them usable
+    thinness = np.prod(np.clip(extent[~flat_axes] / (2.0 * radius), 0.0, 1.0))
+    num_draws = num_candidates * int(np.clip(round(1.0 / max(thinness, 1e-3)), 1, 32))
+
+    store((lower + rng.random(3) * extent).astype("float32"))
+
+    # One Bridson pass leaves gaps, because a point is retired as soon as num_candidates tries in a
+    # row miss. Sweeping again over every point already placed fills most of those gaps, which is
+    # what brings the packing up to what the old rejection sampler reached at high iteration
+    # counts. Extra sweeps are only worth their cost when the caller still needs more points, so
+    # stop as soon as there are enough or a sweep stops adding any.
+    for _ in range(max_sweeps):
+        before_sweep = num_points
+        active = list(range(num_points))
+
+        while len(active) > 0:
+            # Bridson picks a random active point, which grows the front in every direction at once
+            which = int(rng.integers(len(active)))
+            parent = points[active[which]].astype("float64")
+
+            directions = rng.normal(size=(num_draws, 3))
+            directions[:, flat_axes] = 0.0
+            directions /= np.linalg.norm(directions, axis=1, keepdims=True)
+            # uniform over the volume of the spherical shell [radius, 2 * radius)
+            offsets = radius * np.cbrt(1.0 + 7.0 * rng.random((num_draws, 1)))
+            candidates = (parent + directions * offsets).astype("float32")
+
+            parent_cell = np.clip(((parent - lower) / cell_size).astype("int64"), 0, grid_shape - 1)
+            low = np.maximum(parent_cell - block_halfwidth, 0)
+            high = np.minimum(parent_cell + block_halfwidth + 1, grid_shape)
+            block = grid[low[0] : high[0], low[1] : high[1], low[2] : high[2]]
+            neighbours = points[block[block >= 0]].astype("float64")
+
+            candidates_64 = candidates.astype("float64")
+            inside = np.all((candidates_64 >= lower) & (candidates_64 <= upper), axis=1)
+            deltas = candidates_64[:, np.newaxis, :] - neighbours[np.newaxis, :, :]
+            clear = np.all(np.sum(deltas * deltas, axis=2) > squared_radius, axis=1)
+            valid = np.flatnonzero(inside & clear)
+
+            if valid.size > 0:
+                active.append(store(candidates[valid[0]]))
+            else:
+                # nothing else fits around this parent, retire it
+                active[which] = active[-1]
+                active.pop()
+
+        if num_points >= min_points or num_points == before_sweep:
+            break
+
+    return points[:num_points]
 
 
 def generate_unit_locations(
@@ -2207,8 +2393,11 @@ def generate_unit_locations(
         * z coordinates are within a specified range `(minimum_z, maximum_z)`
     2) the distance between any two units is greater than a specified minimum value
 
-    If the minimum distance constraint cannot be met within the allowed number of iterations,
-    the function can either raise an exception or issue a warning based on the `distance_strict` flag.
+    The locations are drawn with Bridson's Poisson disk sampling, accelerated by a uniform grid, so
+    the cost grows with the number of units rather than with its square.
+
+    If the box is too small to hold `num_units` locations that far apart, the function can either
+    raise an exception or issue a warning based on the `distance_strict` flag.
 
     Parameters
     ----------
@@ -2227,18 +2416,18 @@ def generate_unit_locations(
     minimum_distance : float, default: 20.0
         The minimum allowable distance in micrometers between any two units
     max_iteration : int, default: 100
-        The maximum number of iterations to attempt generating unit locations that meet
-        the minimum distance constraint.
+        The maximum number of times the sampling radius is reduced while looking for enough
+        locations. The sampler no longer needs many attempts, so this is mostly kept for backward
+        compatibility and the default is far above what is used in practice.
     distance_strict : bool, default: False
         If True, the function will raise an exception if a solution meeting the distance
-        constraint cannot be found within the maximum number of iterations. If False, a warning
-        will be issued.
+        constraint cannot be found. If False, a warning will be issued.
     distribution : "uniform" | "multimodal", default: "uniform"
         How units are spread.
         "uniform" is units everywhere
         "multimodal" mimic the distribution of units 'by layer'  on the 'y' axis (dim=1)
         Important note, when using multimodal in conjonction of minimum_distance not None, there is not garanty
-        of a true multimodal because units that do not respect the distance of move again and are most chance to be in between layers.
+        of a true multimodal because the distance constraint caps how many units a layer can hold.
     num_modes : int, default 2
         In case of distribution="multimodal", this is the number of modes (layers)
     seed : int or None, optional
@@ -2250,61 +2439,83 @@ def generate_unit_locations(
         A 2D array of shape (num_units, 3), where each row represents the (x, y, z) coordinates
         of a generated unit location.
     """
+    if distribution not in ("uniform", "multimodal"):
+        raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or 'multimodal'")
+
     rng = np.random.default_rng(seed=seed)
-    units_locations = np.zeros((num_units, 3), dtype="float32")
 
     minimum_x, maximum_x = np.min(channel_locations[:, 0]) - margin_um, np.max(channel_locations[:, 0]) + margin_um
     minimum_y, maximum_y = np.min(channel_locations[:, 1]) - margin_um, np.max(channel_locations[:, 1]) + margin_um
 
-    units_locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=num_units)
-    if distribution == "uniform":
-        units_locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=num_units)
-    elif distribution == "multimodal":
-        units_locations[:, 1] = _generate_multimodal(rng, num_units, num_modes, minimum_y, maximum_y)
-    else:
-        raise ValueError("generate_unit_locations has wrong distribution must be 'uniform' or ")
-    units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
+    def draw_unconstrained(size):
+        locations = np.zeros((size, 3), dtype="float32")
+        locations[:, 0] = rng.uniform(minimum_x, maximum_x, size=size)
+        if distribution == "uniform":
+            locations[:, 1] = rng.uniform(minimum_y, maximum_y, size=size)
+        else:
+            locations[:, 1] = _generate_multimodal(rng, size, num_modes, minimum_y, maximum_y)
+        locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=size)
+        return locations
 
-    if minimum_distance is not None:
-        solution_found = False
-        renew_inds = None
-        for i in range(max_iteration):
-            distances = np.linalg.norm(units_locations[:, np.newaxis] - units_locations[np.newaxis, :], axis=2)
-            inds0, inds1 = np.nonzero(distances < minimum_distance)
-            mask = inds0 != inds1
-            inds0 = inds0[mask]
-            inds1 = inds1[mask]
+    if minimum_distance is None or minimum_distance <= 0 or num_units == 0:
+        return draw_unconstrained(num_units)
 
-            if inds0.size > 0:
-                if renew_inds is None:
-                    renew_inds = np.unique(inds0)
-                else:
-                    # random only bad ones in the previous set
-                    renew_inds = renew_inds[np.isin(renew_inds, np.unique(inds0))]
+    # First keep drawing positions uniformly and redrawing the ones that sit too close, which is
+    # what this function has always done. That leaves the units spread the way callers already
+    # depend on: they are only ever pushed apart as far as minimum_distance actually requires,
+    # rather than as far as the box would allow. The one thing that changes is how the offending
+    # units are found, a uniform grid instead of the full pairwise distance matrix, which is what
+    # made the old loop cost grow with the square of num_units.
+    units_locations = draw_unconstrained(num_units)
+    renew_inds = None
+    for _ in range(max_iteration):
+        too_close = _indices_closer_than(units_locations, minimum_distance)
+        if too_close.size == 0:
+            return units_locations
+        # narrow to the ones that were already bad last round, matching the previous behaviour
+        renew_inds = too_close if renew_inds is None else renew_inds[np.isin(renew_inds, too_close)]
+        units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
+        if distribution == "uniform":
+            units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+        else:
+            units_locations[:, 1][renew_inds] = _generate_multimodal(
+                rng, renew_inds.size, num_modes, minimum_y, maximum_y
+            )
+        units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
 
-                units_locations[:, 0][renew_inds] = rng.uniform(minimum_x, maximum_x, size=renew_inds.size)
-                if distribution == "uniform":
-                    units_locations[:, 1][renew_inds] = rng.uniform(minimum_y, maximum_y, size=renew_inds.size)
+    # Redrawing never converged. That is the case the old implementation gave up on, warning and
+    # handing back locations that still broke the constraint it promises. A box packed close to
+    # what minimum_distance allows is exactly where independent redraws keep colliding, so fall
+    # back to placing the units directly with Poisson disk sampling, which fills such a box in one
+    # pass instead of hoping a redraw happens to land clear.
+    lower = np.array([minimum_x, minimum_y, minimum_z], dtype="float64")
+    upper = np.array([maximum_x, maximum_y, maximum_z], dtype="float64")
+    points = _poisson_disk_sampling_3d(rng, lower, upper, minimum_distance, min_points=num_units)
 
-                elif distribution == "multimodal":
-                    units_locations[:, 1][renew_inds] = _generate_multimodal(
-                        rng, renew_inds.size, num_modes, minimum_y, maximum_y
-                    )
-                units_locations[:, 2][renew_inds] = rng.uniform(minimum_z, maximum_z, size=renew_inds.size)
+    if points.shape[0] >= num_units:
+        if distribution == "uniform":
+            keep = rng.choice(points.shape[0], size=num_units, replace=False)
+        else:
+            # every point already respects the distance, so the layering is applied by picking
+            # which of them to keep rather than by moving any of them
+            weights = _multimodal_density(points[:, 1], num_modes, minimum_y, maximum_y)
+            # drawing without replacement needs at least num_units strictly positive weights, and a
+            # far away enough point can have its density underflow to zero
+            weights = np.maximum(weights, np.finfo("float64").tiny)
+            keep = rng.choice(points.shape[0], size=num_units, replace=False, p=weights / np.sum(weights))
+        return points[keep]
 
-            else:
-                solution_found = True
-                break
+    # the box cannot hold num_units points that far apart, report it the way the previous sampler
+    # did and pad the shortfall with unconstrained draws so the returned shape is still honoured
+    if distance_strict:
+        raise ValueError(
+            f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
+            "You can use distance_strict=False or reduce minimum distance"
+        )
+    warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
 
-        if not solution_found:
-            if distance_strict:
-                raise ValueError(
-                    f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=} "
-                    "You can use distance_strict=False or reduce minimum distance"
-                )
-            else:
-                warnings.warn(f"generate_unit_locations(): no solution for {minimum_distance=} and {max_iteration=}")
-
+    units_locations = draw_unconstrained(num_units)
+    units_locations[: points.shape[0]] = points
     return units_locations
 
 
