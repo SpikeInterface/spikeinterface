@@ -33,6 +33,11 @@ class UnitsSelectionSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, self._renamed_unit_ids)
 
+        self._is_identity_selection = bool(np.array_equal(self._unit_ids, parents_unit_ids))
+        if self._is_identity_selection:
+            # Same units (possibly renamed), same order => we can use the parent's cached spike vector
+            self._cached_lexsorted_spike_vector = parent_sorting._cached_lexsorted_spike_vector
+
         for parent_segment in self._parent_sorting.segments:
             sub_segment = UnitsSelectionSortingSegment(parent_segment, ids_conversion)
             self.add_sorting_segment(sub_segment)
@@ -53,6 +58,11 @@ class UnitsSelectionSorting(BaseSorting):
 
             if self._parent_sorting._cached_spike_vector is None:
                 return
+
+        if self._is_identity_selection:
+            self._cached_spike_vector = self._parent_sorting._cached_spike_vector
+            self._cached_spike_vector_segment_slices = self._parent_sorting._get_spike_vector_segment_slices()
+            return
 
         spike_vector, _ = remap_unit_indices_in_vector(
             vector=self._parent_sorting._cached_spike_vector,

@@ -3,6 +3,7 @@ import numpy as np
 
 from spikeinterface.core import NumpySorting, UnitsSelectionSorting
 from spikeinterface.core.base import minimum_spike_dtype
+from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sortings_equal
 
 from spikeinterface.core.generate import generate_sorting
@@ -171,6 +172,100 @@ def test_zero_units_and_zero_spikes():
     child = empty_parent.select_units([3, 1])
     assert child.to_spike_vector().size == 0
     assert np.array_equal(child._get_spike_vector_segment_slices(), [[0, 0]])
+
+
+NEW_UNIT_IDS = ["a", "b", "c", "d", "e"]
+
+IDENTITY_SELECTIONS = {
+    "select_all": lambda parent: parent.select_units(parent.unit_ids),
+    "rename_units": lambda parent: parent.rename_units(NEW_UNIT_IDS),
+    "remove_none": lambda parent: parent.remove_units([]),
+    "default_args": lambda parent: UnitsSelectionSorting(parent),
+}
+
+
+def _assert_shares_parent_caches(child, parent):
+    assert child._is_identity_selection is True
+    assert child.to_spike_vector() is parent.to_spike_vector()
+    assert child._get_spike_vector_segment_slices() is parent._get_spike_vector_segment_slices()
+    assert child._cached_lexsorted_spike_vector is parent._cached_lexsorted_spike_vector
+
+
+@pytest.mark.parametrize("make_child", IDENTITY_SELECTIONS.values(), ids=IDENTITY_SELECTIONS.keys())
+def test_identity_selection_shares_parent_cache(make_child):
+    """Same units in the same order, renamed or not: the parent's spike vector, segment slices and
+    reorderings are exactly the child's, so they are shared by reference rather than recomputed."""
+    parent = _make_parent_with_shuffled_ties()
+    child = make_child(parent)
+    _assert_shares_parent_caches(child, parent)
+
+    # The parent computes the reordered spike vector first; the child must find it in the shared cache.
+    parent_reordered = parent.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
+    child_reordered = child.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
+    assert child_reordered is parent_reordered
+    assert len(parent._cached_lexsorted_spike_vector) == 1
+
+    # The child computes the reordered spike vector first (via get_unit_spike_train); the parent must find it.
+    parent = _make_parent_with_shuffled_ties()
+    child = make_child(parent)
+    child.get_unit_spike_train(child.unit_ids[0], segment_index=0)
+    assert len(parent._cached_lexsorted_spike_vector) == 1
+    parent_reordered = parent.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
+    child_reordered = child.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
+    assert child_reordered is parent_reordered
+
+    # The shared vector and reorder cache are indexed by unit position, not id. Trains and counts
+    # the child serves from them under its (possibly renamed) ids must match what the parent serves
+    # for the same positions (without using the cache).
+    parent_counts = parent.count_num_spikes_per_unit()
+    child_counts = child.count_num_spikes_per_unit()
+    for new_id, parent_id in zip(child.unit_ids, parent.unit_ids):
+        assert child_counts[new_id] == parent_counts[parent_id]
+        for segment_index in range(parent.get_num_segments()):
+            assert np.array_equal(
+                child.get_unit_spike_train(new_id, segment_index=segment_index),
+                parent.get_unit_spike_train(parent_id, segment_index=segment_index, use_cache=False),
+            )
+
+    empty_parent = NumpySorting(np.zeros(0, dtype=minimum_spike_dtype), 30_000.0, np.asarray(PARENT_UNIT_IDS))
+    _assert_shares_parent_caches(make_child(empty_parent), empty_parent)
+
+
+@pytest.mark.parametrize(
+    "unit_ids",
+    [PARENT_UNIT_IDS[::-1], PARENT_UNIT_IDS[:2]],
+    ids=["reversed", "subset"],
+)
+def test_non_identity_selection_does_not_share(unit_ids):
+    parent = _make_parent_with_shuffled_ties()
+    child = parent.select_units(unit_ids)
+    assert child._is_identity_selection is False
+    assert child.to_spike_vector() is not parent.to_spike_vector()
+    assert child._cached_lexsorted_spike_vector is not parent._cached_lexsorted_spike_vector
+
+    child.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT)
+    assert len(child._cached_lexsorted_spike_vector) == 1
+    assert len(parent._cached_lexsorted_spike_vector) == 0
+
+
+def test_identity_selection_keeps_lazy_zarr_vector(tmp_path):
+    """A lazy parent spike vector should stay lazy through an identity selection."""
+    from spikeinterface.core import ZarrSortingExtractor
+    from spikeinterface.core.zarrextractors import ZarrSpikeVector
+
+    folder = tmp_path / "sorting.zarr"
+    ZarrSortingExtractor.write_sorting(_make_parent_with_shuffled_ties(), folder)
+    lazy_parent = ZarrSortingExtractor(folder, lazy_spike_vector=True)
+    assert isinstance(lazy_parent.to_spike_vector(), ZarrSpikeVector)
+
+    renamed = lazy_parent.rename_units(NEW_UNIT_IDS)
+    assert renamed.to_spike_vector() is lazy_parent.to_spike_vector()
+    assert renamed._get_spike_vector_segment_slices() is lazy_parent._get_spike_vector_segment_slices()
+
+    eager_parent = ZarrSortingExtractor(folder)
+    subset = lazy_parent.select_units(["29", "22"])
+    assert isinstance(subset.to_spike_vector(), np.ndarray)
+    assert np.array_equal(subset.to_spike_vector(), _mask_and_remap(eager_parent, ["29", "22"]))
 
 
 if __name__ == "__main__":
