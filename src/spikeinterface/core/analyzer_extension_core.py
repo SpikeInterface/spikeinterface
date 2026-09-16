@@ -277,6 +277,8 @@ class ComputeWaveforms(AnalyzerExtension):
             some_spikes = some_spikes[valid]
             # slice_rows already returns an independent, materialized array
             waveforms = slice_rows(waveforms, valid)
+        else:
+            waveforms = materialize_array(waveforms)
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
