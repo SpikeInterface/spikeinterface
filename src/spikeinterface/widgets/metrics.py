@@ -95,7 +95,7 @@ class MetricsBaseWidget(BaseWidget):
         backend_kwargs["num_axes"] = num_metrics**2
         backend_kwargs["ncols"] = num_metrics
 
-        all_unit_ids = metrics.index.values
+        all_unit_ids = metrics.index.to_numpy()
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
@@ -277,7 +277,7 @@ class MetricsBaseWidget(BaseWidget):
         metric_names = list(metrics.columns)
 
         if dp.unit_ids is None:
-            unit_ids = metrics.index.values
+            unit_ids = metrics.index.to_numpy()
         else:
             unit_ids = dp.unit_ids
         unit_ids = make_serializable(unit_ids)
@@ -293,7 +293,7 @@ class MetricsBaseWidget(BaseWidget):
             values = check_json(metrics.loc[unit_id].to_dict())
             values_skip_nans = {}
             for k, v in values.items():
-                # convert_dypes returns NaN as None or np.nan (for float)
+                # convert_dtypes returns NaN as None or np.nan (for float)
                 if v is None:
                     continue
                 if np.isnan(v):

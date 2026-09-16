@@ -482,7 +482,7 @@ class Curation(BaseModel):
 def CurationModel(*args, **kwargs):
     warnings.warn(
         "`CurationModel` is deprecated and will be removed in 0.105.0. Use `Curation` instead",
-        DeprecationWarning,
+        FutureWarning,
         stacklevel=2,
     )
     return Curation(*args, **kwargs)

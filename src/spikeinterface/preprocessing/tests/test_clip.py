@@ -41,7 +41,7 @@ def test_blank_saturation():
     traces1 = rec1.get_traces(segment_index=0, channel_ids=["0"])
     assert traces1.shape[1] == 1
     # use a smaller value to be sure
-    a_min = rec1._recording_segments[0].a_min
+    a_min = rec1.segments[0].a_min
     assert np.all(traces1 >= a_min)
 
 

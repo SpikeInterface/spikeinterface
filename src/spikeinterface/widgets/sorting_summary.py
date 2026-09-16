@@ -1,5 +1,3 @@
-import numpy as np
-
 from .base import BaseWidget, to_attr
 
 from .amplitudes import AmplitudesWidget
@@ -53,12 +51,12 @@ class SortingSummaryWidget(BaseWidget):
         A dict with extra units properties to display.
         The key is the property name and the value must be a numpy.array.
     curation_dict : dict or None, default: None
-        When curation is True, optionaly the viewer can get a previous 'curation_dict'
+        When curation is True, optionally the viewer can get a previous 'curation_dict'
         to continue/check  previous curations on this analyzer.
-        In this case label_definitions must be None beacuse it is already included in the curation_dict.
+        In this case label_definitions must be None because it is already included in the curation_dict.
         (spikeinterface_gui backend)
     label_definitions : dict or None, default: None
-        When curation is True, optionaly the user can provide a label_definitions dict.
+        When curation is True, optionally the user can provide a label_definitions dict.
         This replaces the label_choices in the curation_format.
         (spikeinterface_gui backend)
     """
@@ -89,7 +87,7 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids = sorting.get_unit_ids()
 
         if curation_dict is not None and label_definitions is not None:
-            raise ValueError("curation_dict and label_definitions are mutualy exclusive, they cannot be not None both")
+            raise ValueError("curation_dict and label_definitions are mutually exclusive, they cannot be not None both")
 
         if displayed_unit_properties is None:
             displayed_unit_properties = list(_default_displayed_unit_properties)
@@ -125,6 +123,7 @@ class SortingSummaryWidget(BaseWidget):
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)
         vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
+        backend = "sortingview" if use_sortingview else "figpack"
 
         dp = to_attr(data_plot)
         sorting_analyzer = dp.sorting_analyzer
@@ -139,45 +138,40 @@ class SortingSummaryWidget(BaseWidget):
             unit_ids=unit_ids,
             max_spikes_per_unit=dp.max_amplitudes_per_unit,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
         v_average_waveforms = UnitTemplatesWidget(
             sorting_analyzer,
             unit_ids=unit_ids,
             sparsity=sparsity,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
         v_cross_correlograms = CrossCorrelogramsWidget(
             sorting_analyzer,
             unit_ids=unit_ids,
             min_similarity_for_correlograms=min_similarity_for_correlograms,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
 
         v_unit_locations = UnitLocationsWidget(
             sorting_analyzer,
             unit_ids=unit_ids,
             hide_unit_selector=True,
-            generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         ).view
 
         w = TemplateSimilarityWidget(
             sorting_analyzer,
             unit_ids=unit_ids,
             immediate_plot=False,
-            generate_url=False,
             display=False,
-            backend="figpack",
+            backend=backend,
         )
         similarity = w.data_plot["similarity"]
 
@@ -201,11 +195,13 @@ class SortingSummaryWidget(BaseWidget):
         if dp.curation:
             if use_sortingview:
                 curation_class = vv_views.SortingCuration2
+                curation_kwargs = {"label_choices": dp.label_choices}
             else:
                 curation_class = vv_views.SortingCuration
-            v_curation = curation_class(label_choices=dp.label_choices)
+                curation_kwargs = {"default_label_options": dp.label_choices}
+            v_curation = curation_class(**curation_kwargs)
             v1 = vv_base.Splitter(
-                direction="vertical", item1=vv_views.LayoutItem(v_units_table), item2=vv_views.LayoutItem(v_curation)
+                direction="vertical", item1=vv_base.LayoutItem(v_units_table), item2=vv_base.LayoutItem(v_curation)
             )
         else:
             v1 = v_units_table

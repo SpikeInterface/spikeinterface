@@ -2,8 +2,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from spikeinterface import get_noise_levels
-from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline, PipelineNode
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
 from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass

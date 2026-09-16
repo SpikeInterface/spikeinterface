@@ -13,7 +13,7 @@ from .hybrid_tools import (
     scale_template_to_range,
     relocate_templates,
 )
-from .noise_tools import generate_noise
+from .noise_tools import generate_noise, NoiseGeneratorRecording, noise_generator_recording
 
 from .splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
 
@@ -43,8 +43,7 @@ from spikeinterface.core.generate import (
     inject_some_duplicate_units,
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
-    NoiseGeneratorRecording,
-    noise_generator_recording,
+    MockRecording,
     InjectTemplatesRecording,
     inject_templates,
 )

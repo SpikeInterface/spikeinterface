@@ -47,6 +47,7 @@ class ComputeCorrelograms(AnalyzerExtension):
     fast_mode : "auto" | "on" | "off", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -88,14 +89,14 @@ class ComputeCorrelograms(AnalyzerExtension):
     depend_on = []
     need_recording = False
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_ccgs = self.data["ccgs"][unit_indices][:, unit_indices]
@@ -139,7 +140,9 @@ class ComputeCorrelograms(AnalyzerExtension):
                         break
 
         if can_apply_soft_method is False:
-            new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
+            new_ccgs, new_bins = _compute_correlograms_on_sorting(
+                new_sorting_analyzer.sorting, **self.params, **job_kwargs
+            )
             new_data = dict(ccgs=new_ccgs, bins=new_bins)
         else:
             # Make a transformation dict, which tells us how unit_indices from the
@@ -195,12 +198,12 @@ class ComputeCorrelograms(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # for splits, we need to recompute correlograms
-        new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params)
+        new_ccgs, new_bins = _compute_correlograms_on_sorting(new_sorting_analyzer.sorting, **self.params, **job_kwargs)
         new_data = dict(ccgs=new_ccgs, bins=new_bins)
         return new_data
 
-    def _run(self, verbose=False):
-        ccgs, bins = _compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
+    def _run(self, verbose=False, **job_kwargs):
+        ccgs, bins = _compute_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params, **job_kwargs)
         self.data["ccgs"] = ccgs
         self.data["bins"] = bins
 
@@ -226,6 +229,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     fast_mode : "auto" | "off" | "on", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -261,13 +265,13 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
     depend_on = []
     need_recording = False
     use_nodepipeline = False
-    need_job_kwargs = False
+    need_job_kwargs = True
 
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode)
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_acgs = self.data["acgs"][unit_indices]
@@ -284,7 +288,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
 
         # compute all new acgs at once
         new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids)
-        only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
+        only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params, **job_kwargs)
         new_acgs = np.zeros((len(all_new_units), only_new_acgs.shape[1]), dtype=np.int64)
 
         for unit_ind, unit_id in enumerate(all_new_units):
@@ -308,7 +312,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         # compute all new isi at once
         new_unit_ids_f = list(chain(*new_unit_ids))
         new_sorting = new_sorting_analyzer.sorting.select_units(new_unit_ids_f)
-        only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params)
+        only_new_acgs, new_bins = _compute_auto_correlograms_on_sorting(new_sorting, **self.params, **job_kwargs)
 
         for unit_ind, unit_id in enumerate(all_new_units):
             if unit_id not in new_unit_ids_f:
@@ -321,8 +325,8 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         new_extension_data = dict(acgs=new_acgs, bins=new_bins)
         return new_extension_data
 
-    def _run(self, verbose=False):
-        acgs, bins = _compute_auto_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params)
+    def _run(self, verbose=False, **job_kwargs):
+        acgs, bins = _compute_auto_correlograms_on_sorting(self.sorting_analyzer.sorting, **self.params, **job_kwargs)
         self.data["acgs"] = acgs
         self.data["bins"] = bins
 
@@ -342,6 +346,7 @@ def compute_correlograms(
     bin_ms: float = 1.0,
     method: str = "auto",
     fast_mode: str = "auto",
+    **job_kwargs,
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -352,11 +357,21 @@ def compute_correlograms(
 
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_correlograms_sorting_analyzer(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
     else:
         return _compute_correlograms_on_sorting(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
 
 
@@ -422,7 +437,7 @@ def _compute_num_bins(window_size, bin_size):
     return num_bins, num_half_bins
 
 
-def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode="auto"):
+def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode="auto", **job_kwargs):
     """
     Computes cross-correlograms from multiple units.
 
@@ -435,7 +450,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     sorting : Sorting
         A SpikeInterface Sorting object
     window_ms : float
-            The window size over which to perform the cross-correlation, in ms
+        The window size over which to perform the cross-correlation, in ms
     bin_ms : float
         The size of which to bin lags, in ms.
     method : str
@@ -444,6 +459,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     fast_mode : "auto" | "on" | "off", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -472,7 +488,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     if method == "numpy":
         correlograms = _compute_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
-        correlograms = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode=fast_mode)
+        correlograms = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode=fast_mode, **job_kwargs)
 
     return correlograms, bins
 
@@ -505,14 +521,14 @@ def _compute_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
+        c0 = correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units=num_units)
 
         correlograms += c0
 
     return correlograms
 
 
-def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
+def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units):
     """
     A very well optimized algorithm for the cross-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -529,6 +545,8 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
+    num_units : int
+        Number of units in the complete sorting.
 
     Returns
     -------
@@ -556,8 +574,6 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_unit_indices))
-
     correlograms = np.zeros((num_units, num_units, num_bins), dtype="int64")
 
     # At a given shift, the mask precises which spikes have matching spikes
@@ -617,7 +633,7 @@ def correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bi
     return correlograms
 
 
-def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
+def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode, **job_kwargs):
     """
     Computes cross-correlograms between all units in `sorting`.
 
@@ -654,7 +670,8 @@ def _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode):
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
 
     if fast_mode:
-        num_threads = mp.cpu_count()
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        num_threads = job_kwargs["n_jobs"]
     else:
         num_threads = 1
 
@@ -829,7 +846,12 @@ if HAVE_NUMBA:
 
 
 def compute_auto_correlograms(
-    sorting_analyzer_or_sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto", fast_mode="auto"
+    sorting_analyzer_or_sorting,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
+    method: str = "auto",
+    fast_mode="auto",
+    **job_kwargs,
 ):
     """
     Compute correlograms using Numba or Numpy.
@@ -840,15 +862,25 @@ def compute_auto_correlograms(
 
     if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
         return compute_auto_correlograms_sorting_analyzer(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
     else:
         return _compute_auto_correlograms_on_sorting(
-            sorting_analyzer_or_sorting, window_ms=window_ms, bin_ms=bin_ms, method=method, fast_mode=fast_mode
+            sorting_analyzer_or_sorting,
+            window_ms=window_ms,
+            bin_ms=bin_ms,
+            method=method,
+            fast_mode=fast_mode,
+            **job_kwargs,
         )
 
 
-def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode=False):
+def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", fast_mode=False, **job_kwargs):
     """
     Computes auto-correlograms from multiple units.
 
@@ -870,6 +902,7 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
     fast_mode : "auto" | "off" | "on", default: "auto"
         If "auto", a faster multithreaded implementations is used if method is "numba" and
         if the number of units is greater than 300.
+        This uses job_kwargs to determine the number of threads to use.
 
     Returns
     -------
@@ -897,7 +930,7 @@ def _compute_auto_correlograms_on_sorting(sorting, window_ms, bin_ms, method="au
     if method == "numpy":
         correlograms = _compute_auto_correlograms_numpy(sorting, window_size, bin_size)
     if method == "numba":
-        correlograms = _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode)
+        correlograms = _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode, **job_kwargs)
 
     return correlograms, bins
 
@@ -930,14 +963,16 @@ def _compute_auto_correlograms_numpy(sorting, window_size, bin_size):
         spike_times = spikes[seg_index]["sample_index"]
         spike_unit_indices = spikes[seg_index]["unit_index"]
 
-        c0 = auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size)
+        c0 = auto_correlogram_for_one_segment(
+            spike_times, spike_unit_indices, window_size, bin_size, num_units=num_units
+        )
 
         correlograms += c0
 
     return correlograms
 
 
-def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size):
+def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_size, bin_size, num_units):
     """
     A very well optimized algorithm for the auto-correlation of
     spike trains, copied from the Phy package, written by Cyrille Rossant.
@@ -954,6 +989,8 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
         The window size over which to perform the cross-correlation, in samples
     bin_size : int
         The size of which to bin lags, in samples.
+    num_units : int
+        Number of units in the complete sorting.
 
     Returns
     -------
@@ -981,8 +1018,6 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     match within the window size.
     """
     num_bins, num_half_bins = _compute_num_bins(window_size, bin_size)
-    num_units = len(np.unique(spike_unit_indices))
-
     correlograms = np.zeros((num_units, num_bins), dtype="int64")
 
     for unit_ind in range(num_units):
@@ -1036,7 +1071,7 @@ def auto_correlogram_for_one_segment(spike_times, spike_unit_indices, window_siz
     return correlograms
 
 
-def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=False):
+def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=False, **job_kwargs):
     """
     Computes auto-correlograms between all units in `sorting`.
 
@@ -1055,6 +1090,8 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
     fast_mode : bool
         If True, use faster implementations (currently only if method is 'numba'),
         at the cost of possible minor numerical differences.
+        This uses job_kwargs to determine the number of threads to use.
+
 
     Returns
     -------
@@ -1073,7 +1110,8 @@ def _compute_auto_correlograms_numba(sorting, window_size, bin_size, fast_mode=F
     correlograms = np.zeros((num_units, num_bins), dtype=np.int64)
 
     if fast_mode:
-        num_threads = mp.cpu_count()
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        num_threads = job_kwargs["n_jobs"]
     else:
         num_threads = 1
 
@@ -1173,7 +1211,7 @@ class ComputeACG3D(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_acgs_3d = self.data["acgs_3d"][unit_indices]
@@ -1199,16 +1237,20 @@ class ComputeACG3D(AnalyzerExtension):
 
         new_unit_ids_indices = new_sorting.ids_to_indices(new_unit_ids)
         old_unit_ids = [unit_id for unit_id in new_sorting_analyzer.unit_ids if unit_id not in new_unit_ids]
-        old_unit_ids_indices = new_sorting.ids_to_indices(old_unit_ids)
+        # source indices are looked up in the sorting the data was computed with, not the resulting one
+        old_unit_ids_indices_in_new = new_sorting.ids_to_indices(old_unit_ids)
+        old_unit_ids_indices_in_old = self.sorting_analyzer.sorting.ids_to_indices(old_unit_ids)
 
         new_acgs_3d = np.zeros((len(new_sorting.unit_ids), acgs_3d.shape[1], acgs_3d.shape[2]))
         new_firing_quantiles = np.zeros((len(new_sorting.unit_ids), firing_rate_quantiles.shape[1]))
 
         new_acgs_3d[new_unit_ids_indices, :, :] = acgs_3d
-        new_acgs_3d[old_unit_ids_indices, :, :] = self.data["acgs_3d"][old_unit_ids_indices, :, :]
+        new_acgs_3d[old_unit_ids_indices_in_new, :, :] = self.data["acgs_3d"][old_unit_ids_indices_in_old, :, :]
 
         new_firing_quantiles[new_unit_ids_indices, :] = firing_rate_quantiles
-        new_firing_quantiles[old_unit_ids_indices, :] = self.data["firing_quantiles"][old_unit_ids_indices, :]
+        new_firing_quantiles[old_unit_ids_indices_in_new, :] = self.data["firing_quantiles"][
+            old_unit_ids_indices_in_old, :
+        ]
 
         new_data = dict(
             acgs_3d=new_acgs_3d,
@@ -1381,8 +1423,8 @@ def _compute_3d_acg_one_unit(
         num_firing_rate_quantiles = len(firing_rate_quantiles)
     spike_counts = np.zeros(
         (num_firing_rate_quantiles, len(bin_times_ms))
-    )  # Counts number of occurences of spikes in a given bin in time axis
-    firing_rate_bin_occurence = np.zeros(num_firing_rate_quantiles, dtype=np.int64)  # total occurence
+    )  # Counts number of occurrences of spikes in a given bin in time axis
+    firing_rate_bin_occurence = np.zeros(num_firing_rate_quantiles, dtype=np.int64)  # total occurrence
 
     # Samples per bin
     samples_per_bin = int(np.ceil(fs / (1000 / bin_size)))

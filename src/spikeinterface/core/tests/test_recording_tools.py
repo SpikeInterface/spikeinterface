@@ -2,16 +2,14 @@ from pathlib import Path
 import platform
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, generate_recording
+from spikeinterface.core import NumpyRecording, generate_recording, MockRecording
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 from spikeinterface.core.recording_tools import (
     write_binary_recording,
     write_memory_recording,
-    get_random_recording_slices,
     get_random_data_chunks,
     get_chunk_with_margin,
     get_closest_channels,
@@ -31,7 +29,7 @@ def test_write_binary_recording(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -58,7 +56,7 @@ def test_write_binary_recording_offset(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -92,7 +90,7 @@ def test_write_binary_recording_parallel(tmp_path):
     num_channels = 2
     dtype = "float32"
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -123,7 +121,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     dtype = "float32"
 
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -148,7 +146,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
     recording = recording.save()
@@ -166,17 +164,6 @@ def test_write_memory_recording():
     del traces_list
     for shm in shms:
         shm.unlink()
-
-
-def test_get_random_recording_slices():
-    rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0, 20.0])
-    rec_slices = get_random_recording_slices(
-        rec, method="full_random", num_chunks_per_segment=20, chunk_duration="500ms", margin_frames=0, seed=0
-    )
-    assert len(rec_slices) == 40
-    for seg_ind, start, stop in rec_slices:
-        assert stop - start == 500
-        assert seg_ind in (0, 1)
 
 
 def test_get_random_data_chunks():
@@ -251,7 +238,7 @@ def test_get_noise_levels_output():
 
 def test_get_chunk_with_margin():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0])
-    rec_seg = rec._recording_segments[0]
+    rec_seg = rec.segments[0]
     length = rec_seg.get_num_samples()
 
     #  rec_segment, start_frame, end_frame, channel_indices, sample_margin
@@ -329,7 +316,7 @@ def test_order_channels_by_depth():
 
 
 def test_do_recording_attributes_match():
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
     rec_attributes = get_rec_attributes(recording)
@@ -366,9 +353,8 @@ if __name__ == "__main__":
     #     test_write_binary_recording(tmp_path)
     # test_write_memory_recording()
 
-    test_get_random_recording_slices()
     # test_get_random_data_chunks()
     # test_get_closest_channels()
     # test_get_noise_levels()
     # test_get_noise_levels_output()
-    # test_order_channels_by_depth()
+    test_order_channels_by_depth()

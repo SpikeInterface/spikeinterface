@@ -5,7 +5,6 @@ import numpy as np
 from .base import BaseWidget, to_attr
 
 # from .utils import get_unit_colors
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 from spikeinterface.core.template_tools import get_dense_templates_array
 
 

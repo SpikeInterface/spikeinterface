@@ -120,9 +120,9 @@ def get_optimized_compute_matching_matrix():
     if hasattr(get_optimized_compute_matching_matrix, "_cached_function"):
         return get_optimized_compute_matching_matrix._cached_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True)
+    @jit(nopython=True, nogil=True)
     def compute_matching_matrix(
         spike_frames_train1,
         spike_frames_train2,
@@ -459,7 +459,7 @@ def make_possible_match(agreement_scores, min_score):
 
 
 def _empty_match_series(unit1_ids, unit2_ids):
-    # construct empty series of match with the correct dtype for best match and hugarian match
+    # construct empty series of match with the correct dtype for best match and hungarian match
     import pandas as pd
 
     match_12 = pd.Series(data=np.zeros(unit1_ids.size, dtype=unit2_ids.dtype), index=unit1_ids)
@@ -470,7 +470,7 @@ def _empty_match_series(unit1_ids, unit2_ids):
     elif unit2_ids.dtype.kind == "O":
         match_12[:] = ""
     else:
-        raise ValueError("make_best_match or make_hungarian_match has unit_ids dtype wich are not  'i' or 'U'")
+        raise ValueError("make_best_match or make_hungarian_match has unit_ids dtype which are not  'i' or 'U'")
     return match_12
 
 
@@ -1002,9 +1002,9 @@ def get_compute_dot_product_function():
     if hasattr(get_compute_dot_product_function, "_cached_function"):
         return get_compute_dot_product_function._cached_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True)
+    @jit(nopython=True, nogil=True)
     def compute_dot_product(
         spike_frames1,
         spike_frames2,
@@ -1096,9 +1096,9 @@ def get_compute_square_norm_function():
     if hasattr(get_compute_square_norm_function, "_cached_function"):
         return get_compute_square_norm_function._cached_function
 
-    import numba
+    from numba import jit
 
-    @numba.jit(nopython=True, nogil=True)
+    @jit(nopython=True, nogil=True)
     def compute_square_norm(sample_frames, unit_indices, num_units, delta_frames):
         """
         Computes the squared norm of spike train from a given sorting.

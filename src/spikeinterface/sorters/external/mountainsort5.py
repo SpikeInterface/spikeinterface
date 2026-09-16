@@ -43,6 +43,7 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": 6000,
         "filter": True,
         "whiten": True,  # Important to do whitening
+        "whitening_seed": None,  # seed for whitening's random chunk selection (None = nondeterministic)
         "delete_temporary_recording": True,
     }
 
@@ -67,6 +68,7 @@ class Mountainsort5Sorter(BaseSorter):
         "freq_max": "Low-pass filter cutoff frequency",
         "filter": "Enable or disable filter",
         "whiten": "Enable or disable whitening",
+        "whitening_seed": "Seed for the random data chunks used to estimate the whitening matrix. Set an int for reproducible (deterministic) whitening; None (default) uses fresh randomness each run.",
         "delete_temporary_recording": "If True, the temporary recording file is deleted after sorting (this may fail on Windows requiring the end-user to delete the file themselves later)",
     }
 
@@ -142,7 +144,7 @@ class Mountainsort5Sorter(BaseSorter):
         if p["whiten"]:
             if verbose:
                 print("whitening")
-            recording = whiten(recording=recording, dtype="float32")
+            recording = whiten(recording=recording, dtype="float32", seed=p["whitening_seed"])
         else:
             warn("Not whitening (MountainSort5 expects whitened data)")
 

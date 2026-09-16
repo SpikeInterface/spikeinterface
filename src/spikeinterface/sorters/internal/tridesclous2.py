@@ -11,6 +11,7 @@ from spikeinterface.core import (
     estimate_templates_with_accumulator,
     Templates,
     compute_sparsity,
+    ms_to_samples,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -95,6 +96,20 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     }
 
     handle_multi_segment = True
+
+    installation_mesg = "\tpip install 'spikeinterface[tridesclous2]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[tridesclous2]'"
+
+    @classmethod
+    def is_installed(cls):
+        import importlib.util
+
+        tridesclous2_deps = ["scipy", "numba", "hdbscan"]
+
+        for package_name in tridesclous2_deps:
+            if not importlib.util.find_spec(package_name):
+                return False
+
+        return True
 
     @classmethod
     def get_sorter_version(cls):
@@ -276,13 +291,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             print(f"find_clusters_from_peaks(): {unit_ids.size} cluster found")
 
         # here the idea was to be able to use other preprocessing for peeler
-        # but at teh moment it is the same for clustering and peeling
+        # but at the moment it is the same for clustering and peeling
         recording_for_peeler = recording
         noise_levels = get_noise_levels(
             recording_for_peeler, return_in_uV=False, random_slices_kwargs=dict(seed=seed), **job_kwargs
         )
 
-        # preestimate the sparsity unsing peaks channel
+        # preestimate the sparsity using peaks channel
         spike_vector = sorting_pre_peeler.to_spike_vector(concatenated=True)
         sparsity, unit_locations = compute_sparsity_from_peaks_and_label(
             kept_peaks, spike_vector["unit_index"], sorting_pre_peeler.unit_ids, recording, params["template_radius_um"]
@@ -291,8 +306,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # we recompute the template even if the clustering give it already because we use different ms_before/ms_after
         ms_before = params["ms_before"]
         ms_after = params["ms_after"]
-        nbefore = int(ms_before * sampling_frequency / 1000.0)
-        nafter = int(ms_after * sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
+        nafter = ms_to_samples(ms_after, sampling_frequency)
 
         templates_array = estimate_templates_with_accumulator(
             recording_for_peeler,
@@ -348,6 +363,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
         auto_merge = True
+
         analyzer_final = None
         if auto_merge:
             from spikeinterface.sorters.internal.spyking_circus2 import final_cleaning_circus

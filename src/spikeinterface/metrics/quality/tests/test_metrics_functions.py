@@ -1,18 +1,19 @@
-import pytest
-import numpy as np
 from copy import deepcopy
 import csv
+
+import pytest
+import numpy as np
+
 from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
     add_synchrony_to_sorting,
+    generate_recording,
     generate_ground_truth_recording,
     create_sorting_analyzer,
     synthesize_random_firings,
 )
-
 from spikeinterface.metrics.utils import create_ground_truth_pc_distributions, create_regular_periods
-
 from spikeinterface.metrics.quality import get_quality_metric_list, compute_quality_metrics, ComputeQualityMetrics
 from spikeinterface.metrics.quality.misc_metrics import (
     misc_metrics_list,
@@ -30,9 +31,9 @@ from spikeinterface.metrics.quality.misc_metrics import (
     compute_sd_ratio,
     _noise_cutoff,
     _get_synchrony_counts,
+    _compute_violations,
     amplitude_cutoff,
 )
-
 from spikeinterface.metrics.quality.pca_metrics import (
     mahalanobis_metrics,
     d_prime_metric,
@@ -40,8 +41,6 @@ from spikeinterface.metrics.quality.pca_metrics import (
     silhouette_score,
     simplified_silhouette_score,
 )
-
-
 from spikeinterface.core.base import minimum_spike_dtype, unit_period_dtype
 
 
@@ -60,7 +59,7 @@ def _sorting_violation():
     spike_times = np.concatenate(trains)
     spike_labels = np.concatenate(labels)
 
-    order = np.argsort(spike_times)
+    order = np.argsort(spike_times, stable=True)
     max_num_samples = np.floor(max_time * sampling_frequency) - 1
     indexes = np.arange(0, max_time + 1, 1 / sampling_frequency)
     spike_times = np.searchsorted(indexes, spike_times[order], side="left")
@@ -213,6 +212,27 @@ def test_synchrony_counts_not_all_units():
     sync_count = _get_synchrony_counts(three_spikes, np.array([2, 4, 8]), [0, 1, 2])
 
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
+
+
+def test_synchrony_metrics_do_not_cross_segments():
+    sampling_frequency = 1_000.0
+    samples_list = [[100, 200], [100, 100]]
+    labels_list = [[0, 1], [2, 3]]
+    sorting = NumpySorting.from_samples_and_labels(samples_list, labels_list, sampling_frequency, unit_ids=[0, 1, 2, 3])
+    recording = generate_recording(
+        durations=[1.0, 1.0],
+        sampling_frequency=sampling_frequency,
+        num_channels=4,
+        seed=1205,
+    )
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer)
+
+    expected_sync_spike_2 = {0: 0.0, 1: 0.0, 2: 1.0, 3: 1.0}
+    assert synchrony_metrics.sync_spike_2 == pytest.approx(expected_sync_spike_2)
+    assert np.all(np.array(list(synchrony_metrics.sync_spike_4.values())) == 0)
+    assert np.all(np.array(list(synchrony_metrics.sync_spike_8.values())) == 0)
 
 
 def test_mahalanobis_metrics():
@@ -438,6 +458,30 @@ def test_calculate_sliding_rp_violations(sorting_analyzer_violations, periods_vi
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 
+def test_compute_violations_llobet():
+    # Expected violations must follow the Llobet et al. (2022) formulation, where
+    # contaminating spikes produce violations both with base spikes and among
+    # themselves: Ve = 2 * ref_dur / D * Nc * (Nb + (Nc - 1) / 2), with
+    # Nc = C * N, Nb = (1 - C) * N and duration D = N / firing_rate.
+    # See https://github.com/SteinmetzLab/slidingRefractory (metrics.computeViol).
+    from scipy.stats import poisson
+
+    spike_count = 1000
+    firing_rate = 10.0  # Hz  -> duration D = 100 s
+    ref_period_dur = 0.002  # s
+    contamination_prop = 0.1
+    obs_viol = 5
+
+    duration = spike_count / firing_rate
+    n_c = spike_count * contamination_prop
+    n_b = spike_count * (1 - contamination_prop)
+    expected_viol = 2 * ref_period_dur / duration * n_c * (n_b + (n_c - 1) / 2)
+    expected_confidence = 1 - poisson.cdf(obs_viol, expected_viol)
+
+    confidence = _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop)
+    assert np.isclose(confidence, expected_confidence)
+
+
 def test_calculate_rp_violations(sorting_analyzer_violations, periods_violations):
     sorting_analyzer = sorting_analyzer_violations
     rp_contamination, counts = compute_refrac_period_violations(
@@ -525,13 +569,13 @@ def test_synchrony_metrics(sorting_analyzer_simple, periods_simple):
 
 def test_synchrony_metrics_unit_id_subset(sorting_analyzer_simple):
 
-    unit_ids_subset = [3, 7]
+    unit_ids_subset = ["3", "7"]
 
     synchrony_metrics = compute_synchrony_metrics(sorting_analyzer_simple, unit_ids=unit_ids_subset)
 
-    assert list(synchrony_metrics.sync_spike_2.keys()) == [3, 7]
-    assert list(synchrony_metrics.sync_spike_4.keys()) == [3, 7]
-    assert list(synchrony_metrics.sync_spike_8.keys()) == [3, 7]
+    assert list(synchrony_metrics.sync_spike_2.keys()) == ["3", "7"]
+    assert list(synchrony_metrics.sync_spike_4.keys()) == ["3", "7"]
+    assert list(synchrony_metrics.sync_spike_8.keys()) == ["3", "7"]
 
 
 def test_synchrony_metrics_no_unit_ids(sorting_analyzer_simple):
@@ -639,15 +683,20 @@ def test_compute_new_quality_metrics(small_sorting_analyzer):
     )
 
     # check that, when parameters are changed, the data and metadata are updated
-    old_snr_data = deepcopy(quality_metric_extension.get_data()["snr"].values)
+    old_presence_ratio_data = deepcopy(quality_metric_extension.get_data()["presence_ratio"].values)
     small_sorting_analyzer.compute(
-        {"quality_metrics": {"metric_names": ["snr"], "metric_params": {"snr": {"peak_mode": "peak_to_peak"}}}}
+        {
+            "quality_metrics": {
+                "metric_names": ["presence_ratio"],
+                "metric_params": {"presence_ratio": {"bin_duration_s": "10"}},
+            }
+        }
     )
     new_quality_metric_extension = small_sorting_analyzer.get_extension("quality_metrics")
-    new_snr_data = new_quality_metric_extension.get_data()["snr"].values
+    new_presence_ratio_data = new_quality_metric_extension.get_data()["presence_ratio"].values
 
-    assert np.all(old_snr_data != new_snr_data)
-    assert new_quality_metric_extension.params["metric_params"]["snr"]["peak_mode"] == "peak_to_peak"
+    assert np.all(old_presence_ratio_data != new_presence_ratio_data)
+    assert new_quality_metric_extension.params["metric_params"]["presence_ratio"]["bin_duration_s"] == "10"
 
 
 def test_metric_names_in_same_order(small_sorting_analyzer):
@@ -766,6 +815,7 @@ def test_unit_id_order_independence(small_sorting_analyzer):
         "noise_levels": {"seed": 1205},
         "waveforms": {},
         "templates": {},
+        "amplitude_scalings": {},
         "spike_amplitudes": {},
         "spike_locations": {},
         "principal_components": {},

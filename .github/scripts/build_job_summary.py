@@ -3,6 +3,7 @@ This function builds a summary from the pytest output in markdown to be used by 
 The input file is the output of the following command:
 pytest -vv --durations=0 --durations-min=0.001 > report.txt
 """
+import re
 from pathlib import Path
 import pandas as pd
 import sys
@@ -20,9 +21,12 @@ start_line = next(line for line in all_lines if "slowest" in line)
 start_index = all_lines.index(start_line) + 1
 
 last_index = next(index for index, line in enumerate(all_lines[start_index:]) if "===" in line) + start_index
-#last_index = all_lines.index(last_line)
 
-timing_info = all_lines[start_index:last_index]
+# Pytest 8.4+ appends a blank line and a "(N durations < Xs hidden.)" footer
+# inside the slowest-durations block. Keep only true duration rows shaped like
+# "0.123s call test_x.py::test_name".
+duration_line_re = re.compile(r"^\d+\.\d+s\s+(call|setup|teardown)\s")
+timing_info = [line for line in all_lines[start_index:last_index] if duration_line_re.match(line)]
 timing_column = [float(line.split("s")[0].rstrip()) for line in timing_info]
 type = [line.split("s")[1].rstrip() for line in timing_info]
 short_name = [line.rpartition('::')[2] for line in timing_info]

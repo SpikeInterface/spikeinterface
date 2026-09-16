@@ -6,6 +6,7 @@ from packaging import version
 import importlib.util
 
 import pytest
+import numpy as np
 
 from spikeinterface import get_global_dataset_folder
 from spikeinterface.extractors.extractor_classes import (
@@ -69,7 +70,7 @@ def has_plexon2_dependencies():
         return True
 
     elif os_type == "Linux" or os_type == "Darwin":
-        # Check for 'wine' using which. "which" works for both mac and linux
+        # Check for 'wine' using "which" that works for both mac and linux
         # if package exists it returns a 0. Anything else is an error code.
 
         result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
@@ -90,7 +91,7 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ["mearec"]
     entities = ["mearec/mearec_test_10s.h5"]
-    neo_funcs = dict()
+    neo_funcs = {}
 
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
@@ -121,9 +122,6 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("openephysbinary/v0.5.x_two_nodes", {"stream_id": "0"}),
         ("openephysbinary/v0.5.x_two_nodes", {"stream_id": "1"}),
         ("openephysbinary/v0.6.x_neuropixels_multiexp_multistream", {"stream_id": "0", "block_index": 0}),
-        # TODO: block_indices 1/2 of v0.6.x_neuropixels_multiexp_multistream have a mismatch in the channel names between
-        # the settings files (starting with CH0) and structure.oebin (starting at CH1).
-        # Currently, the extractor will skip remapping to match order in oebin and settings file, raising a warning
         ("openephysbinary/v0.6.x_neuropixels_multiexp_multistream", {"stream_id": "1", "block_index": 1}),
         (
             "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
@@ -134,7 +132,61 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
             "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
             {"stream_id": "2", "block_index": 2, "load_sync_timestamps": True},
         ),
+        (
+            "openephysbinary/v0.6.x_onebox_neuropixels",
+            {"stream_name": "Record Node 101#OneBox-100.ProbeA-AP", "block_index": 0},
+        ),
+        (
+            "openephysbinary/v0.6.x_onebox_neuropixels_nontrivial_wiring",
+            {"stream_name": "Record Node 101#OneBox-111.ProbeA", "block_index": 0},
+        ),
     ]
+
+    def test_non_trivial_wiring(self):
+        """
+        Test that we can load the probe information and sample shifts for a one box neuropixels recording with
+        non trivial wiring.
+        """
+        folder_path = local_folder / "openephysbinary/v0.6.x_onebox_neuropixels_nontrivial_wiring"
+        stream_name = "Record Node 101#OneBox-111.ProbeA"
+        block_index = 0
+
+        recording = self.ExtractorClass(folder_path, stream_name=stream_name, block_index=block_index)
+        # check that channel_ids and settings_channel_key contact annotations are correctly loaded
+        probe = recording.get_probe()
+        np.testing.assert_array_equal(recording.channel_ids, probe.contact_annotations["settings_channel_key"])
+
+    def test_timestamp_loading_multi_level(self):
+        """
+        Test that we can load the sync timestamps from different levels of the folder structure and
+        that they are the same.
+        """
+        recording_folder = (
+            local_folder / "openephysbinary/v0.6.x_neuropixels_with_sync/Record Node 104/experiment1/recording1"
+        )
+        stream_name = "Record Node 104#Neuropix-PXI-100.ProbeA-AP"
+        block_index = 0
+
+        recording_from_recording_folder = self.ExtractorClass(
+            recording_folder,
+            stream_name=stream_name,
+            block_index=block_index,
+            load_sync_timestamps=True,
+        )
+        assert recording_from_recording_folder.has_time_vector()
+        timestamps_recording = recording_from_recording_folder.get_times()
+        parent_folder = recording_folder
+        for _ in range(3):
+            parent_folder = parent_folder.parent
+            recording_from_parent = self.ExtractorClass(
+                parent_folder,
+                stream_name=stream_name,
+                block_index=block_index,
+                load_sync_timestamps=True,
+            )
+            assert recording_from_parent.has_time_vector()
+            timestamps_parent = recording_from_parent.get_times()
+            np.testing.assert_array_equal(timestamps_recording, timestamps_parent)
 
 
 class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
@@ -340,20 +392,20 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(
-    version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
-    reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
-)
-class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = CedRecordingExtractor
-    downloads = [
-        "spike2/130322-1LY.smr",
-        "spike2/m365_1sec.smrx",
-    ]
-    entities = [
-        ("spike2/130322-1LY.smr", {"stream_id": "1"}),
-        "spike2/m365_1sec.smrx",
-    ]
+# @pytest.mark.skipif(
+#     version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
+#     reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
+# )
+# class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+#     ExtractorClass = CedRecordingExtractor
+#     downloads = [
+#         "spike2/130322-1LY.smr",
+#         "spike2/m365_1sec.smrx",
+#     ]
+#     entities = [
+#         ("spike2/130322-1LY.smr", {"stream_id": "1"}),
+#         "spike2/m365_1sec.smrx",
+#     ]
 
 
 @pytest.mark.skipif(platform.system() == "Darwin", reason="Maxwell plugin not supported on macOS")

@@ -5,6 +5,7 @@ import pytest
 import numpy as np
 
 import probeinterface
+from probeinterface import ProbeGroup, generate_linear_probe
 
 from spikeinterface.core import ChannelSliceRecording, BinaryRecordingExtractor
 from spikeinterface.core.generate import generate_recording
@@ -59,8 +60,8 @@ def test_ChannelSliceRecording(create_cache_folder):
     # with probe and after save()
     probe = probeinterface.generate_linear_probe(num_elec=num_chan)
     probe.set_device_channel_indices(np.arange(num_chan))
-    rec_p = rec.set_probe(probe)
-    rec_sliced3 = ChannelSliceRecording(rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
+    rec.set_probe(probe)
+    rec_sliced3 = ChannelSliceRecording(rec, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
     probe3 = rec_sliced3.get_probe()
     locations3 = probe3.contact_positions
     folder = cache_folder / "sliced_recording"
@@ -97,6 +98,35 @@ def test_remove_channels():
 
     with pytest.raises(ValueError):
         rec_sliced = rec.remove_channels(remove_channel_ids=[0, "1"])
+
+
+def test_select_channels_preserves_probe_metadata():
+    """Regression test for #4547: select_channels must not mis-label surviving probes."""
+    probe_A = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe_A.annotate(name="probe_A", manufacturer="vendor_X")
+    probe_A.move([0.0, 0.0])
+    probe_A.set_device_channel_indices(np.arange(8))
+
+    probe_B = generate_linear_probe(num_elec=8, ypitch=20.0)
+    probe_B.annotate(name="probe_B", manufacturer="vendor_Y")
+    probe_B.move([1000.0, 0.0])
+    probe_B.set_device_channel_indices(np.arange(8, 16))
+
+    probegroup = ProbeGroup()
+    probegroup.add_probe(probe_A)
+    probegroup.add_probe(probe_B)
+
+    recording = generate_recording(durations=[1.0], num_channels=16, set_probe=False)
+    recording.set_probegroup(probegroup)
+
+    # Drop all of probe A, keep only probe B
+    sub = recording.select_channels(recording.channel_ids[8:])
+
+    assert sub.has_probe()
+    probes = sub.get_probes()
+    assert len(probes) == 1, "Only probe B should survive channel selection"
+    assert probes[0].annotations.get("name") == "probe_B"
+    assert probes[0].annotations.get("manufacturer") == "vendor_Y"
 
 
 if __name__ == "__main__":

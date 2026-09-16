@@ -9,7 +9,7 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
-from copy import copy
+from copy import copy, deepcopy
 import warnings
 import numpy as np
 from collections import namedtuple
@@ -21,11 +21,12 @@ from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection, select_sorting_periods_mask, spike_vector_to_indices
 from .job_tools import fix_job_kwargs, split_job_kwargs
+from .core_tools import ms_to_samples
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
     """
-    AnalyzerExtension that select somes random spikes.
+    AnalyzerExtension that select some random spikes.
     This allows for a subsampling of spikes for further calculations and is important
     for managing that amount of memory and speed of computation in the analyzer.
 
@@ -74,7 +75,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         random_spikes_indices = self.data["random_spikes_indices"]
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -170,11 +171,11 @@ class ComputeWaveforms(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        return int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
 
     @property
     def nafter(self):
-        return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
 
     def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
@@ -242,7 +243,7 @@ class ComputeWaveforms(AnalyzerExtension):
         )
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
@@ -255,6 +256,15 @@ class ComputeWaveforms(AnalyzerExtension):
         new_data["waveforms"] = self.data["waveforms"][keep_spike_mask, :, :]
 
         return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+
+        old_waveforms = self.data["waveforms"]
+
+        new_waveforms = _select_channels_sparse_data(self.sorting_analyzer, old_waveforms, channel_ids)
+        data = {"waveforms": new_waveforms}
+
+        return data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -380,7 +390,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     extension_name = "templates"
     depend_on = ["random_spikes|waveforms"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
@@ -436,6 +446,9 @@ class ComputeTemplates(AnalyzerExtension):
             self._compute_and_append_from_waveforms(self.params["operators"])
 
         else:
+            if not self.sorting_analyzer.has_recording():
+                raise ValueError("Extension Templates requires the recording if Waveforms are not computed.")
+
             bad_operator_list = [
                 operator for operator in self.params["operators"] if operator not in ("average", "std")
             ]
@@ -540,20 +553,29 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
         return nbefore
 
     @property
     def nafter(self):
-        nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        nafter = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
         return nafter
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         new_data = dict()
         for key, arr in self.data.items():
             new_data[key] = arr[keep_unit_indices, :, :]
+
+        return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+        keep_channel_indices = [np.where(self.sorting_analyzer.channel_ids == id)[0][0] for id in channel_ids]
+
+        new_data = {}
+        for key, arr in self.data.items():
+            new_data[key] = arr[:, :, keep_channel_indices]
 
         return new_data
 
@@ -789,9 +811,14 @@ class ComputeNoiseLevels(AnalyzerExtension):
         params = noise_level_params.copy()
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # this does not depend on units
         return self.data
+
+    def _select_channels_extension_data(self, channel_ids):
+        # this does not depend on channels
+        channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
+        return dict(noise_levels=self.data["noise_levels"][channel_indices])
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -940,7 +967,7 @@ class BaseMetricExtension(AnalyzerExtension):
         default_metric_params : dict
             Dictionary of default metric parameters for each metric.
         """
-        default_metric_params = {m.metric_name: m.metric_params for m in cls.metric_list}
+        default_metric_params = {m.metric_name: deepcopy(m.metric_params) for m in cls.metric_list}
         return default_metric_params
 
     @classmethod
@@ -1346,7 +1373,7 @@ class BaseMetricExtension(AnalyzerExtension):
         # convert to correct dtype
         return self.data["metrics"]
 
-    def _select_extension_data(self, unit_ids: list[int | str]):
+    def _select_units_extension_data(self, unit_ids: list[int | str]):
         """
         Select data for a subset of unit ids.
 
@@ -1360,8 +1387,22 @@ class BaseMetricExtension(AnalyzerExtension):
         dict
             Dictionary containing the selected metrics DataFrame.
         """
+        import pandas as pd
+
+        new_data = dict()
         new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
-        return dict(metrics=new_metrics)
+        new_data["metrics"] = new_metrics
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                old_data = self.data[k]
+                if isinstance(old_data, pd.DataFrame):
+                    new_df = old_data.loc[np.array(unit_ids)]
+                    new_data[k] = new_df
+                elif isinstance(old_data, np.ndarray):
+                    old_arr = self.data[k]
+                    new_arr = old_arr[self.sorting_analyzer.sorting.ids_to_indices(unit_ids), ...]
+                    new_data[k] = new_arr
+        return new_data
 
     def _merge_extension_data(
         self,
@@ -1586,7 +1627,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             sorting = self.sorting_analyzer.sorting
 
         if outputs == "numpy":
-            if copy:
+            if copy and not self.sorting_analyzer._lazy:
                 return all_data.copy()  # return a copy to avoid modification
             else:
                 return all_data
@@ -1618,7 +1659,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         else:
             raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
@@ -1695,3 +1736,43 @@ def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_s
         raise NotImplementedError(
             "Only pandas DataFrame and numpy array are supported for merging and splitting extension data."
         )
+
+
+def _select_channels_sparse_data(old_sorting_analyzer, old_data, new_channel_ids):
+    """
+    When selecting channels from extensions which are sparse (waveforms, pcs),
+    this function remaps the sparsity for the underlying data.
+    """
+
+    unit_ids = old_sorting_analyzer.unit_ids
+    old_unit_id_to_channel_ids = old_sorting_analyzer.sparsity.unit_id_to_channel_ids
+
+    # Compute how to slice the original sparsity to get the new sparsity
+    unit_sparsity_slices = {}
+    for unit_index, unit_id in enumerate(unit_ids):
+        unit_sparsity_channel_indices = []
+        unit_channel_ids = old_unit_id_to_channel_ids[unit_id]
+
+        for channel_id in new_channel_ids:
+            if channel_id in unit_channel_ids:
+                idx = np.where(old_unit_id_to_channel_ids[unit_id] == channel_id)[0][0]
+                unit_sparsity_channel_indices.append(idx)
+        unit_sparsity_slices[unit_id] = np.array(unit_sparsity_channel_indices)
+
+    random_spikes = old_sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+    new_data = np.zeros_like(old_data)
+    max_num_active_channels = 0
+    for data_index, (one_old_data, unit_index) in enumerate(zip(old_data, random_spikes["unit_index"])):
+
+        unit_id = unit_ids[unit_index]
+        channel_slice = unit_sparsity_slices[unit_id]
+
+        if len(channel_slice) > 0:
+
+            size_of_new_mask = len(channel_slice)
+            new_data[data_index, :, :size_of_new_mask] = one_old_data[:, channel_slice]
+
+            max_num_active_channels = max(max_num_active_channels, size_of_new_mask)
+
+    return new_data[:, :, :max_num_active_channels]

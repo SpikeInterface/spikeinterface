@@ -2,11 +2,10 @@ import numpy as np
 from warnings import warn
 
 from .rasters import BaseRasterWidget
-from .base import BaseWidget, to_attr
-from .utils import get_some_colors, validate_segment_indices, get_segment_durations
+from .base import to_attr
+from .utils import validate_segment_indices, get_segment_durations
 
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-
 from spikeinterface.core import SortingAnalyzer
 
 

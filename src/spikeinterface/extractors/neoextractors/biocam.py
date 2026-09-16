@@ -70,9 +70,11 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         if electrode_width is not None:
             probe_kwargs["electrode_width"] = electrode_width
         probe = probeinterface.read_3brain(file_path, **probe_kwargs)
-        self.set_probe(probe, in_place=True)
-        self.set_property("row", self.get_property("contact_vector")["row"])
-        self.set_property("col", self.get_property("contact_vector")["col"])
+        rows = probe.contact_annotations["row"]
+        cols = probe.contact_annotations["col"]
+        self.set_probe(probe)
+        self.set_property("row", rows)
+        self.set_property("col", cols)
 
         self._kwargs.update(
             {
@@ -83,7 +85,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path, fill_gaps_strategy):
+    def map_to_neo_kwargs(cls, file_path, fill_gaps_strategy=None):
         neo_kwargs = {
             "filename": str(file_path),
             "fill_gaps_strategy": fill_gaps_strategy,

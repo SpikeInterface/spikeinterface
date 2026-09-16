@@ -9,6 +9,7 @@ from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
 from spikeinterface.core.base import unit_period_dtype
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype, remap_unit_indices_in_vector
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -186,7 +187,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         new_extension_data = {}
         new_valid_periods, _ = remap_unit_indices_in_vector(
             self.data["valid_unit_periods"], self.sorting_analyzer.unit_ids, unit_ids
@@ -539,7 +540,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             (start_sample_index, end_sample_index) tuples.
         """
         if outputs == "numpy":
-            good_periods = self.data["valid_unit_periods"].copy()
+            good_periods = np.asarray(self.data["valid_unit_periods"]).copy()
         else:
             # by_unit
             unit_ids = self.sorting_analyzer.unit_ids
@@ -548,12 +549,12 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
             for segment_index in range(self.sorting_analyzer.get_num_segments()):
                 segment_mask = good_periods_array["segment_index"] == segment_index
                 periods_dict = {}
-                for unit_index in unit_ids:
-                    periods_dict[unit_index] = []
+                for unit_index, unit_id in enumerate(unit_ids):
+                    periods_dict[unit_id] = []
                     unit_mask = good_periods_array["unit_index"] == unit_index
-                    good_periods_unit_segment = good_periods_array[segment_mask & unit_mask]
+                    good_periods_unit_segment = slice_rows(good_periods_array, segment_mask & unit_mask)
                     for start, end in good_periods_unit_segment[["start_sample_index", "end_sample_index"]]:
-                        periods_dict[unit_index].append((start, end))
+                        periods_dict[unit_id].append((start, end))
                 good_periods.append(periods_dict)
 
         return good_periods

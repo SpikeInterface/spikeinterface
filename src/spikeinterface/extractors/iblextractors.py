@@ -221,9 +221,9 @@ class IblRecordingExtractor(BaseRecording):
             probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
-                self.set_probe(probe, in_place=True, group_mode="by_shank")
+                self.set_probe(probe, group_mode="by_shank")
             else:
-                self.set_probe(probe, in_place=True)
+                self.set_probe(probe)
 
         # set channel properties
         # sometimes there are missing metadata files on the IBL side

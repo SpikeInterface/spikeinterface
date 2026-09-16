@@ -1,5 +1,5 @@
-import pytest
 from pathlib import Path
+
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.extractors.extractor_classes import MdaRecordingExtractor, MdaSortingExtractor
@@ -42,4 +42,7 @@ def test_mda_extractors(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_mda_extractors()
+    import tempfile
+
+    cache_folder = Path(tempfile.mkdtemp())
+    test_mda_extractors(cache_folder)

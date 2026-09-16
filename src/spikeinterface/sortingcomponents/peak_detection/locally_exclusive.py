@@ -64,6 +64,7 @@ class LocallyExclusivePeakDetector(PeakDetector):
 
         assert peak_sign in ("both", "neg", "pos")
         assert noise_levels is not None
+        self.recording = recording
         self.noise_levels = noise_levels
 
         self.abs_thresholds = self.noise_levels * detect_threshold
@@ -83,13 +84,12 @@ class LocallyExclusivePeakDetector(PeakDetector):
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance <= radius_um
 
-    def get_trace_margin(self):
+    def get_margin(self):
         # the +1 in the border is important because we need peak in the border
         return self.exclude_sweep_size + 1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         assert HAVE_NUMBA, "You need to install numba"
-
         peak_sample_ind, peak_chan_ind = detect_peaks_numba_locally_exclusive_on_chunk(
             traces, self.peak_sign, self.abs_thresholds, self.exclude_sweep_size, self.neighbours_mask
         )
@@ -238,7 +238,7 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
         for i, neigh in enumerate(self.neighbour_indices_by_chan):
             self.neighbours_idxs[i, : len(neigh)] = neigh
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.exclude_sweep_size
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
@@ -292,6 +292,7 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
         )
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+
         peak_sample_ind, peak_chan_ind = self.executor.detect_peak(traces)
         peak_sample_ind += self.exclude_sweep_size
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]

@@ -1,10 +1,9 @@
 from pathlib import Path
-import pickle
-import json
 
 import numpy as np
 
 from spikeinterface.core import get_channel_distances, fix_job_kwargs
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.sortingcomponents.tools import extract_waveform_at_max_channel
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import (
@@ -37,7 +36,7 @@ def extract_peaks_svd(
 
     This is done in 2 steps:
       * fit a TruncatedSVD model on a few peaks on max channel
-      * tranform each peaks in parralel on a sparse channel set with this model
+      * transform each peaks in parallel on a sparse channel set with this model
 
     The recording have a drift, hen, optionally, the motion object can be given.
     In that case all the svd features are moved back using cubi interpolation.
@@ -48,8 +47,8 @@ def extract_peaks_svd(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     # Step 1 : select a few peaks to fit the SVD
     if svd_model is None:

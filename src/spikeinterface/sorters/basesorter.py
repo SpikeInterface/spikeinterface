@@ -105,12 +105,20 @@ class BaseSorter:
             raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
-            locations = recording.get_channel_locations()
-            if locations is None:
+            if not recording.has_probe():
                 raise RuntimeError(
                     "Channel locations are required for this spike sorter. "
                     "Locations can be added to the RecordingExtractor by loading a probe file "
                     "(.prb or .csv) or by setting them manually."
+                )
+            # check uniqueness of locations
+            locations = recording.get_channel_locations()
+            if len(locations) != len(set(map(tuple, locations))):
+                raise RuntimeError(
+                    "Channel locations are not unique! "
+                    "Please ensure that each channel has a unique location before running spike sorting. "
+                    "If you have multiple groups with overlapping channel locations, you can use the "
+                    "``run_sorter_by_property`` function to sort each group separately"
                 )
 
         if output_folder is None:

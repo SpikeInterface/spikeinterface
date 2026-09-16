@@ -10,6 +10,11 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
     Estimates the LSB of the recording and divide traces by LSB
     to ensure LSB = 1. Medians are also subtracted to avoid rounding errors.
 
+    Since the LSB is set at the acquisition level, it is shared across channels. The global
+    LSB is therefore estimated as the mode (most frequent value) of the per-channel LSBs,
+    which is robust both to undersampled channels (that overestimate the LSB) and to
+    spuriously small per-channel values arising from rounding errors.
+
     Parameters
     ----------
     recording : RecordingExtractor
@@ -64,7 +69,12 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
 
 def _estimate_lsb_from_data(data):
     """
-    Estimate LSB by taking the minimum LSB found across channels.
+    Estimate the global LSB as the mode of the per-channel LSBs.
+
+    For each channel the LSB is the smallest difference between consecutive unique values.
+    Since the LSB is shared across channels, the global estimate is the most frequent
+    per-channel value, which is robust to undersampled channels (that overestimate the LSB)
+    and to spuriously small values from rounding errors.
 
     Parameters
     ----------
@@ -76,20 +86,23 @@ def _estimate_lsb_from_data(data):
     lsb_value : int
         The estimated LSB value. -1 indicates that lsb could not be estimated
     """
-    lsb_value = None
     num_channels = data.shape[1]
+    per_channel_lsb = []
     for ch in np.arange(num_channels):
-        unique_values = np.unique(data[:, ch])
+        # cast to int64 to avoid integer overflow in np.diff when consecutive
+        # unique values are farther apart than the dtype range (e.g. int16)
+        unique_values = np.unique(data[:, ch]).astype(np.int64)
         # It might happen that there is a single unique value (e.g. a channel is broken, or all zeros)
         if len(unique_values) > 1:
-            chan_lsb_val = np.min(np.diff(unique_values))
+            per_channel_lsb.append(np.min(np.diff(unique_values)))
         else:
             # in this case we can't estimate the LSB for the channel
             continue
 
-        if lsb_value is None:
-            lsb_value = chan_lsb_val
-        lsb_value = min(lsb_value, chan_lsb_val)
-    if lsb_value is None:
-        lsb_value = -1
+    if len(per_channel_lsb) == 0:
+        return -1
+
+    # mode: most frequent per-channel LSB (ties broken towards the smaller value)
+    values, counts = np.unique(per_channel_lsb, return_counts=True)
+    lsb_value = int(values[np.argmax(counts)])
     return lsb_value

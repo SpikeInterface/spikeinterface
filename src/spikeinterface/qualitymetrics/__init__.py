@@ -3,7 +3,7 @@ import warnings
 warnings.warn(
     "The module 'spikeinterface.qualitymetrics' is deprecated and will be removed in 0.105.0."
     "Please use 'spikeinterface.metrics.quality' instead.",
-    DeprecationWarning,
+    FutureWarning,
     stacklevel=2,
 )
 

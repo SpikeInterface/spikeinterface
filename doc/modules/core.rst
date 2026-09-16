@@ -175,8 +175,9 @@ the spiketrain, which are optimally organized for specific types of calculation.
 
 Computations involving combined recording-sorting information, such as fetching recording chunks and
 spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
-this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
-a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+this use case, we use an internal representation called the `spike_vector`, obtained by calling
+`sorting.to_spike_vector()`. This is a unique buffer: a numpy.array with dtype
+`[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
 
 For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
 spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
@@ -185,8 +186,8 @@ spikes from a single unit are concurrent in memory. For these other cases, we ca
 * order by unit, then segment, then sample
 * order by segment, then unit, then sample
 
-This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
-reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done,
+the reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
 details, but developers should keep memory layout in mind when implementing new features.
 
 
@@ -522,12 +523,18 @@ The probe has 4 shanks, which can be loaded as separate groups (and spike sorted
     # add wiring
     probe.wiring_to_device('ASSY-156>RHD2164')
 
-    # set probe
-    recording_w_probe = recording.set_probe(probe)
-    # set probe with group info and return a new recording object
-    recording_w_probe = recording.set_probe(probe, group_mode="by_shank")
-    # set probe in place, ie, modify the current recording
-    recording.set_probe(probe, group_mode="by_shank", in_place=True)
+    # set probe (modifies the recording in place)
+    recording.set_probe(probe)
+    # set probe with group info derived from shank ids (in place)
+    recording.set_probe(probe, group_mode="by_shank")
+
+    # to get a *new* recording without modifying the original, use select_channels_with_probe
+    recording_w_probe = recording.select_channels_with_probe(probe)
+    recording_w_probe = recording.select_channels_with_probe(probe, group_mode="by_shank")
+
+    # multi-probe recordings use set_probegroup / select_channels_with_probegroup
+    recording.set_probegroup(probegroup)
+    recording_w_probegroup = recording.select_channels_with_probegroup(probegroup)
 
     # retrieve probe
     probe_from_recording = recording.get_probe()
