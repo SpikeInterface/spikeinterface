@@ -86,7 +86,9 @@ class BaseRasterWidget(BaseWidget):
         **backend_kwargs,
     ):
         if durations is not None and segment_start_stop_times is not None:
-            raise ValueError("`durations` should not be passed with `segment_start_stop_times`. Use `segment_start_stop_times` only.")
+            raise ValueError(
+                "`durations` should not be passed with `segment_start_stop_times`. Use `segment_start_stop_times` only."
+            )
 
         if durations is not None and segment_start_stop_times is None:
             # this is not correct!
@@ -126,9 +128,7 @@ class BaseRasterWidget(BaseWidget):
 
         segment_start_stop_times_array = []
         for seg in segments_to_use:
-            segment_start_stop_times_array.append(
-                segment_start_stop_times.index(seg)
-            )
+            segment_start_stop_times_array.append(segment_start_stop_times.index(seg))
 
         # Calculate cumulative durations for segment boundaries
         # segment_boundaries = np.array(np.r_[seg[0], seg[1]] for seg in segment_start_stop_times) # np.cumsum(durations)
@@ -154,9 +154,7 @@ class BaseRasterWidget(BaseWidget):
                 # adjusted_times = spike_times + offset
 
                 # Add to concatenated data
-                concatenated_spike_trains[unit_id] = np.concatenate(
-                    [concatenated_spike_trains[unit_id], spike_times]
-                )
+                concatenated_spike_trains[unit_id] = np.concatenate([concatenated_spike_trains[unit_id], spike_times])
                 concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
 
         plot_data = dict(
@@ -274,7 +272,7 @@ class BaseRasterWidget(BaseWidget):
         if dp.y_lim is not None:
             scatter_ax.set_ylim(*dp.y_lim)
         x_lim = dp.x_lim
-        
+
         if x_lim is None and dp.segment_start_stop_times_array is not None:
             x_lim = (dp.segment_start_stop_times_array[0], dp.segment_start_stop_times_array[-1])
             scatter_ax.set_xlim(x_lim)
@@ -488,16 +486,12 @@ class RasterWidget(BaseRasterWidget):
         for seg_idx in segment_indices:
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
-                spike_times = (
-                    sorting.get_unit_spike_train_in_seconds(unit_id=unit_id, segment_index=seg_idx)
-                )
+                spike_times = sorting.get_unit_spike_train_in_seconds(unit_id=unit_id, segment_index=seg_idx)
                 # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times
                 y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))
 
-            segment_start_stop_times.append(
-                (np.min(spike_times), np.max(spike_times))
-            )
+            segment_start_stop_times.append((np.min(spike_times), np.max(spike_times)))
 
         # Apply time range filtering if specified
         if time_range is not None:
@@ -529,6 +523,7 @@ class RasterWidget(BaseRasterWidget):
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
+
 
 # segments do not have times
 # no segment start_stop times passed to base raster
