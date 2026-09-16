@@ -9,7 +9,7 @@ import numpy as np
 from spikeinterface.sorters.utils import ShellScript, get_matlab_shell_name, get_bash_path
 from spikeinterface.sorters.basesorter import get_job_kwargs
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
-from spikeinterface.core import write_binary_recording
+from spikeinterface.core import write_binary_recording, load
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
 
@@ -254,6 +254,20 @@ class KilosortBase:
             params_file = sorter_output_folder / "spikeinterface_params.json"
         with params_file.open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
+
+        recording_file = sorter_output_folder.parent / "spikeinterface_recording.json"
+        if recording_file.is_file():
+            try:
+                # TODO: load the channel ids without loading the recording
+                recording = load(recording_file)
+                channel_ids = recording.channel_ids
+            except:
+                channel_ids = None
+        else:
+            channel_ids = None
+
         keep_good_only = sorter_params.get("keep_good_only", False)
-        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder, keep_good_only=keep_good_only)
+        sorting = KiloSortSortingExtractor(
+            folder_path=sorter_output_folder, keep_good_only=keep_good_only, channel_ids=channel_ids
+        )
         return sorting

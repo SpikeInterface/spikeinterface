@@ -66,6 +66,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         keep_good_only: bool = False,
         remove_empty_units: bool = False,
         load_all_cluster_properties: bool = True,
+        channel_ids: list | np.ndarray | None = None,
     ):
         try:
             import pandas as pd
@@ -228,6 +229,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                         values_ = cluster_info[prop_name].values
                     self.set_property(key=prop_name, values=values_)
 
+        if channel_ids is not None:
+            main_channel_indices = _make_main_channel_indices_from_templates(phy_folder)
+            if main_channel_indices is not None:
+                main_channel_ids = channel_ids[main_channel_indices]
+                self.set_property(key="main_channel_id", values=main_channel_ids)
+
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
@@ -333,13 +340,20 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         The loaded Sorting object.
     """
 
-    def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):
+    def __init__(
+        self,
+        folder_path: Path | str,
+        keep_good_only: bool = False,
+        remove_empty_units: bool = True,
+        channel_ids: list | np.ndarray | None = None,
+    ):
         BasePhyKilosortSortingExtractor.__init__(
             self,
             folder_path,
             exclude_cluster_groups=None,
             keep_good_only=keep_good_only,
             remove_empty_units=remove_empty_units,
+            channel_ids=channel_ids,
         )
 
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "keep_good_only": keep_good_only}
@@ -494,10 +508,16 @@ def _make_main_channel_indices_from_templates(kilosort_output_path):
     """Constructs the `main_channel_indices` from kilosort output, by finding the
     channel containing the largest peak-to-peak value."""
 
-    templates = np.load(kilosort_output_path / "templates.npy")
-    # main channel indices are the argmax of the ptp of the templates, which is the channel with
-    # the largest peak-to-peak amplitude
-    main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+    templates_filepath = kilosort_output_path / "templates.npy"
+
+    if templates_filepath.is_file():
+        templates = np.load(kilosort_output_path / "templates.npy")
+        # main channel indices are the argmax of the ptp of the templates, which is the channel with
+        # the largest peak-to-peak amplitude
+        main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+    else:
+        main_channel_indices = None
+
     return main_channel_indices
 
 
