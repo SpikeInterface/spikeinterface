@@ -1973,6 +1973,8 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
 if HAVE_NUMBA:
     import numba
 
+    _get_synchrony_counts = numba.jit(nopython=True, nogil=True, cache=False)(_get_synchrony_counts)
+
     @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):
         n_v = 0
