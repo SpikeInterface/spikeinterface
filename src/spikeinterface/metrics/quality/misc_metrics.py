@@ -16,6 +16,7 @@ import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import SortingAnalyzer, NumpySorting
+from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.template_tools import (
     get_template_amplitude_on_main_channel,
     get_dense_templates_array,
@@ -576,9 +577,7 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes, slices = sorting.to_reordered_spike_vector(
-        ["sample_index", "segment_index", "unit_index"], return_order=False
-    )
+    spikes, slices = sorting.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False)
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
@@ -958,7 +957,9 @@ def compute_amplitude_cutoffs(
     Notes
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" or "amplitude_scalings" extensions.
+    Amplitudes are extracted from the "amplitude_scalings" extension. If that is not available,
+    the amplitude cutoff is computed from the "spike_amplitudes" extension for backward compatibility,
+    but this will be removed in 0.106.0 since it's less reliable.
 
     References
     ----------
@@ -974,10 +975,17 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    available_extension = (
-        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
-    )
-    extension = sorting_analyzer.get_extension(available_extension)
+    if not sorting_analyzer.has_extension("amplitude_scalings"):
+        warnings.warn(
+            "Amplitude scalings extension not found. Falling back to spike amplitudes which is less reliable."
+            "This fallback will be removed in 0.106.0, when amplitude_scalings will be required to compute this metric",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        extension = sorting_analyzer.get_extension("spike_amplitudes")
+    else:
+        extension = sorting_analyzer.get_extension("amplitude_scalings")
+
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
@@ -1015,7 +1023,7 @@ class AmplitudeCutoff(BaseMetric):
         "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
     }
     supports_periods = True
-    depend_on = ["spike_amplitudes|amplitude_scalings"]
+    depend_on = ["amplitude_scalings|spike_amplitudes"]
 
 
 def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):

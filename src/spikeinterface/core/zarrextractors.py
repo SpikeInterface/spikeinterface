@@ -37,7 +37,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     Returns
     -------
-    root: zarr.hierarchy.Group
+    root: zarr.Group
         The zarr root group object
 
     Raises
@@ -246,7 +246,11 @@ class ZarrRecordingExtractor(BaseRecording):
 class ZarrRecordingSegment(BaseRecordingSegment):
     def __init__(self, root, dataset_name, **time_kwargs):
         BaseRecordingSegment.__init__(self, **time_kwargs)
-        self._timeseries = root[dataset_name]
+        if dataset_name is None:
+            # In this case, root is a simple array
+            self._timeseries = root
+        else:
+            self._timeseries = root[dataset_name]
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -266,6 +270,75 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         if channel_indices is not None:
             traces = traces[:, channel_indices]
         return traces
+
+
+class ZarrArrayRecording(BaseRecording):
+    """
+    Recording class for a plain Zarr array with shape num_samples x num_channels.
+    Mimics loading a binary array using BinaryRecording.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the directory where the zarr array is stored
+    sampling_frequency : float
+        The sampling frequency
+    gain_to_uV : float or array-like, default: None
+        The gain to apply to the traces
+    offset_to_uV : float or array-like, default: None
+        The offset to apply to the traces
+    is_filtered : bool or None, default: None
+        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    storage_options : dict or None: None
+        Storage options passed to the `zarr.open` function
+
+    Returns
+    -------
+    recording : ZarrArrayRecording
+        The recording Extractor
+    """
+
+    def __init__(
+        self,
+        file_path: str | Path,
+        sampling_frequency: float,
+        gain_to_uV: float | np.ndarray | None = None,
+        offset_to_uV: float | np.ndarray | None = None,
+        is_filtered: bool | None = None,
+        storage_options: dict | None = None,
+    ):
+
+        folder_path, _ = resolve_zarr_path(file_path)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
+
+        dtype = self._root.dtype
+        num_channels = self._root.shape[1]
+        channel_ids = list(range(num_channels))
+
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        rec_segment = ZarrRecordingSegment(self._root, None, sampling_frequency=sampling_frequency)
+        self.add_recording_segment(rec_segment)
+
+        if is_filtered is not None:
+            self.annotate(is_filtered=is_filtered)
+
+        if gain_to_uV is not None:
+            self.set_channel_gains(gain_to_uV)
+
+        if offset_to_uV is not None:
+            self.set_channel_offsets(offset_to_uV)
+
+        self._kwargs = {
+            "file_path": str(Path(file_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+            "num_channels": num_channels,
+            "dtype": dtype.str,
+            "channel_ids": channel_ids,
+            "gain_to_uV": gain_to_uV,
+            "offset_to_uV": offset_to_uV,
+            "is_filtered": is_filtered,
+        }
 
 
 class _ZarrSegmentIndex:
@@ -313,7 +386,7 @@ class ZarrSpikeVector:
         self._sample_index = spikes_group["sample_index"]
         self._unit_index = spikes_group["unit_index"]
         self._segment_slices = np.asarray(segment_slices, dtype="int64")
-        self._n = len(self._sample_index)
+        self._n = self._sample_index.shape[0]
         self.dtype = np.dtype(minimum_spike_dtype)
 
     @property
@@ -436,7 +509,7 @@ class ZarrSortingExtractor(BaseSorting):
             spikes = ZarrSpikeVector(spikes_group, segment_slices_list)
         else:
             # Materialize the spike vector in memory and sort it by (segment_index, sample_index, unit_index)
-            spikes = np.zeros(len(spikes_group["sample_index"]), dtype=minimum_spike_dtype)
+            spikes = np.zeros(spikes_group["sample_index"].shape[0], dtype=minimum_spike_dtype)
             spikes["sample_index"] = spikes_group["sample_index"][:]
             spikes["unit_index"] = spikes_group["unit_index"][:]
             for i, (start, end) in enumerate(segment_slices_list):
@@ -485,6 +558,7 @@ class ZarrSortingExtractor(BaseSorting):
 
 read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
 read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
+read_zarr_array = define_function_from_class(source_class=ZarrArrayRecording, name="read_zarr_array")
 
 
 def read_zarr(
@@ -610,7 +684,7 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
+def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
@@ -624,7 +698,7 @@ def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_o
     zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
 
 
-def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.Group, **kwargs):
+def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kwargs):
     """
     Add a sorting extractor to a zarr group.
 
@@ -632,7 +706,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     ----------
     sorting : BaseSorting
         The sorting extractor object to be added to the zarr group
-    zarr_group : zarr.hierarchy.Group
+    zarr_group : zarr.Group
         The zarr group
     kwargs : dict
         Other arguments passed to the zarr compressor
@@ -668,9 +742,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
 
 
 # Recording
-def add_recording_to_zarr_group(
-    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, dtype=None, **kwargs
-):
+def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group, verbose=False, dtype=None, **kwargs):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if recording.check_serializability("json"):

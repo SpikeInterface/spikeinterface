@@ -10,7 +10,7 @@ class FrameSliceRecording(BaseRecording):
 
     Parameters
     ----------
-    parent_recording: BaseRecording
+    recording: BaseRecording
     start_frame: None or int, default: None
         Earliest included frame in the parent recording.
         Times are re-referenced to start_frame in the
@@ -22,13 +22,13 @@ class FrameSliceRecording(BaseRecording):
         default
     """
 
-    def __init__(self, parent_recording, start_frame=None, end_frame=None):
-        channel_ids = parent_recording.get_channel_ids()
+    def __init__(self, recording, start_frame=None, end_frame=None):
+        channel_ids = recording.get_channel_ids()
 
-        num_segments = parent_recording.get_num_segments()
+        num_segments = recording.get_num_segments()
         assert num_segments == 1, f"FrameSliceRecording only works with one segment but found {num_segments}"
 
-        samples_in_recording = parent_recording.get_num_samples(segment_index=0)
+        samples_in_recording = recording.get_num_samples(segment_index=0)
         start_frame = start_frame or 0
         end_frame = end_frame or samples_in_recording
 
@@ -40,26 +40,39 @@ class FrameSliceRecording(BaseRecording):
 
         BaseRecording.__init__(
             self,
-            sampling_frequency=parent_recording.get_sampling_frequency(),
+            sampling_frequency=recording.get_sampling_frequency(),
             channel_ids=channel_ids,
-            dtype=parent_recording.get_dtype(),
+            dtype=recording.get_dtype(),
         )
 
         # link recording segment
-        parent_segment = parent_recording.segments[0]
+        parent_segment = recording.segments[0]
         sub_segment = FrameSliceRecordingSegment(parent_segment, start_frame=int(start_frame), end_frame=int(end_frame))
         self.add_recording_segment(sub_segment)
 
         # copy properties and annotations
-        parent_recording.copy_metadata(self)
-        self._parent = parent_recording
+        recording.copy_metadata(self)
+        self._parent = recording
 
         # update dump dict
         self._kwargs = {
-            "parent_recording": parent_recording,
+            "recording": recording,
             "start_frame": int(start_frame),
             "end_frame": int(end_frame),
         }
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `parent_recording' argument,
+        which is renamed to `recording'.
+        """
+        if "parent_recording" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class FrameSliceRecordingSegment(BaseRecordingSegment):
