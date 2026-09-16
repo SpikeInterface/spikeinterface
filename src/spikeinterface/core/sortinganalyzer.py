@@ -2471,7 +2471,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
             # for disk gather modes we build one destination per output variable
             gather_dest = [] if gather_mode in ("npy", "zarr") else None
-            gather_names = [] if gather_mode in ("npy", "zarr") else None
 
             try:
                 for extension_name, extension_params in extensions_with_pipeline.items():
@@ -2480,9 +2479,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                         self.has_recording() or self.has_temporary_recording()
                     ), f"Extension {extension_name} requires the recording"
 
-                    extension_folder = (
-                        self.folder / "extensions" / extension_name if gather_folder is not None else None
-                    )
+                    extension_folder = self.folder / "extensions" / extension_name if gather_dest is not None else None
                     for variable_name in extension_class.nodepipeline_variables:
                         result_routage.append((extension_name, variable_name))
                         if gather_mode == "npy":
