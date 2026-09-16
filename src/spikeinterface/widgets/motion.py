@@ -232,9 +232,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             if recording is None:
                 spike_times = segment_peaks["sample_index"] / sampling_frequency
             else:
-                spike_times = recording.sample_index_to_time(
-                    segment_peaks["sample_index"], segment_index=seg_idx
-                )
+                spike_times = recording.sample_index_to_time(segment_peaks["sample_index"], segment_index=seg_idx)
 
             # Store in dict of dicts format (using 0 as the "unit" id)
             spike_train_data[seg_idx] = {0: spike_times}

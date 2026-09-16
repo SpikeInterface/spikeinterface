@@ -143,7 +143,6 @@ class BaseRasterWidget(BaseWidget):
                 # Get y-axis values for this unit
                 y_values = y_axis_segment[unit_id]
 
-
                 # Add to concatenated data
                 concatenated_spike_trains[unit_id] = np.concatenate([concatenated_spike_trains[unit_id], spike_times])
                 concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
