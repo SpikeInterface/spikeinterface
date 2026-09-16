@@ -260,9 +260,8 @@ class DriftRasterMapWidget(BaseRasterWidget):
         else:
             color_kwargs = dict(color=color, c=None, alpha=alpha)
 
-        # Calculate segment durations for x-axis limits
+        # Calculate segment start/stop times for x-axis limits
         if recording is not None:
-            durations = None
             segment_start_stop_times = [
                 (recording.get_start_time(seg_idx), recording.get_end_time(seg_idx)) for seg_idx in segment_indices
             ]
@@ -272,13 +271,12 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 np.searchsorted(filtered_peaks["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
             ]
 
-            # Calculate durations from max sample in each segment
-            durations = [
+            # Calculate cumulative segment end times from the last sample in each segment
+            segment_end_times = [
                 (filtered_peaks["sample_index"][end - 1] + 1) / sampling_frequency for (_, end) in segment_boundaries
             ]
-            segment_edges = np.concatenate([[0], np.cumsum(durations)])
-            segment_start_stop_times = list(zip(segment_edges[:-1], segment_edges[1:]))
-            durations = None
+            segment_start_times = np.concatenate([[0], segment_end_times[:-1]])
+            segment_start_stop_times = list(zip(segment_start_times, segment_end_times))
 
         plot_data = dict(
             spike_train_data=spike_train_data,
@@ -289,7 +287,6 @@ class DriftRasterMapWidget(BaseRasterWidget):
             scatter_decimate=scatter_decimate,
             title="Peak depth",
             y_label="Depth [um]",
-            durations=durations,
             segment_start_stop_times=segment_start_stop_times,
         )
 
