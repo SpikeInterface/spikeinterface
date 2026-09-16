@@ -1956,7 +1956,7 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     synchronous_group_starts[1:] = (synchronous_sample_indices[1:] != synchronous_sample_indices[:-1]) | (
         synchronous_segment_indices[1:] != synchronous_segment_indices[:-1]
     )
-    synchronous_group_indices = np.cumsum(synchronous_group_starts, dtype=np.int64) - 1
+    synchronous_group_indices = np.cumsum(synchronous_group_starts) - 1
     synchronous_group_counts = np.bincount(synchronous_group_indices)
 
     group_unit_keys = synchronous_group_indices * len(all_unit_ids) + synchronous_units
