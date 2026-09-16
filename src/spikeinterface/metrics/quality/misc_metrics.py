@@ -16,6 +16,7 @@ import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import SortingAnalyzer, NumpySorting
+from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.template_tools import (
     get_template_amplitude_on_main_channel,
     get_dense_templates_array,
@@ -576,9 +577,7 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes, slices = sorting.to_reordered_spike_vector(
-        ["sample_index", "segment_index", "unit_index"], return_order=False
-    )
+    spikes, slices = sorting.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False)
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
@@ -1686,12 +1685,13 @@ def slidingRP_violations(
 
     Parameters
     ----------
-    spike_samples : ndarray_like or list (for multi-segment)
-        The spike times in samples.
-    bin_size_ms : float
+    sorting : Sorting
+        A SpikeInterface Sorting object containing the spike times.
+    bin_size_ms : float, default: 0.25
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram.
+        Window in seconds to compute correlogram. Note that as opposed to the syntax in compute_correlogram(),
+        the window_size here is half the duration of the total window computed
     exclude_ref_period_below_ms : float, default: 0.5
         Refractory periods below this value are excluded
     max_ref_period_ms : float, default: 10
@@ -1713,9 +1713,6 @@ def slidingRP_violations(
         # 0.5, 1, ..., 35 % (upper bound inclusive), matching the reference
         # slidingRefractory implementation (previously stopped at 34.5 %).
         contamination_values = np.arange(0.5, 35.5, 0.5) / 100  # vector of contamination values to test
-    rp_bin_size = bin_size_ms / 1000
-    rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)  # in s
-    rp_centers = rp_edges + ((rp_edges[1] - rp_edges[0]) / 2)  # vector of refractory period durations to test
 
     # compute firing rate and spike count (concatenate for multi-segments)
     n_spikes = len(sorting.to_spike_vector())
@@ -1723,28 +1720,26 @@ def slidingRP_violations(
 
     method = "numba" if HAVE_NUMBA else "numpy"
 
-    bin_size = max(int(bin_size_ms / 1000 * sorting.sampling_frequency), 1)
-    window_size = int(window_size_s * sorting.sampling_frequency)
+    from spikeinterface.postprocessing.correlograms import compute_correlograms
 
-    if method == "numpy":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
+    correlograms, bins = compute_correlograms(sorting, 2 * window_size_s * 1000, bin_size_ms, method=method)
+    correlogram = correlograms[0, 0]
+    num_half_bins = len(correlogram) // 2
+    correlogram_positive = correlogram[num_half_bins:]
 
-        correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
-    if method == "numba":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
-
-        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode="auto")[0, 0]
-
-    ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
-    # the choice of the bin_size above, but I am not the author of the code...
-    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, method=method)[0][0, 0]
-    correlogram_positive = correlogram[len(correlogram) // 2 :]
+    # Derive RP bin edges from the actual correlogram bins (ms → s) to avoid
+    # float-to-sample rounding mismatch between bin_size_ms and the real bin width.
+    positive_bin_edges_s = bins[num_half_bins:] / 1000
+    actual_bin_size_s = positive_bin_edges_s[1] - positive_bin_edges_s[0]
+    n_rp_bins = int(max_ref_period_ms / 1000 / actual_bin_size_s)
+    rp_bin_edges = positive_bin_edges_s[: n_rp_bins + 1]
+    rp_centers = (rp_bin_edges[:-1] + rp_bin_edges[1:]) / 2
 
     conf_matrix = _compute_violations(
         np.cumsum(correlogram_positive[0 : rp_centers.size])[np.newaxis, :],
         firing_rate,
         n_spikes,
-        rp_centers[np.newaxis, :] + rp_bin_size / 2,
+        rp_bin_edges[1:][np.newaxis, :],
         contamination_values[:, np.newaxis],
     )
     test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000.0  # (in seconds)
