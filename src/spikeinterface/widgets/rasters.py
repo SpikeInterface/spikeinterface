@@ -128,7 +128,7 @@ class BaseRasterWidget(BaseWidget):
 
         segment_start_stop_times_array = []
         for seg in segments_to_use:
-            segment_start_stop_times_array.append(segment_start_stop_times.index(seg))
+            segment_start_stop_times_array.extend(segment_start_stop_times[seg])
 
         # Calculate cumulative durations for segment boundaries
         # segment_boundaries = np.array(np.r_[seg[0], seg[1]] for seg in segment_start_stop_times) # np.cumsum(durations)
