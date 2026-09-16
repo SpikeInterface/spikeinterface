@@ -33,8 +33,10 @@ class TimeSeries(ABC):
     """
 
     _preferred_mp_context = None
-    # Flag to indicate whether time info has been modified in-memory (e.g. by set_times or shift_times).
-    _time_info_modified = False
+
+    def __init__(self):
+        # Flag to indicate whether time info has been modified in-memory (e.g. by set_times or shift_times).
+        self._time_info_modified = False
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

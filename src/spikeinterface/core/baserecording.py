@@ -41,6 +41,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
+        TimeSeries.__init__(self)
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
