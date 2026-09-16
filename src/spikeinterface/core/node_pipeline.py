@@ -1,11 +1,11 @@
 from typing import Type, Literal
-import copy
 import struct
 import warnings
 
 from pathlib import Path
 
 import numpy as np
+import zarr
 
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core.time_series import TimeSeries
@@ -537,12 +537,13 @@ def run_node_pipeline(
     gather_mode: Literal["memory", "npy", "zarr"] = "memory",
     gather_kwargs: dict = {},
     squeeze_output: bool = True,
-    folder: str | Path | list | None = None,
+    dest: str | Path | list | None = None,
     names: list[str] | None = None,
     verbose: bool = False,
     skip_after_n_peaks: int | None = None,
     slices: list[tuple] | None = None,
     check_for_peak_source: bool = False,
+    folder=None,
 ):
     """
     Machinery to compute in parallel operations on peaks and traces.
@@ -586,10 +587,10 @@ def run_node_pipeline(
         Options to control the "gather engine". See GatherToMemory, GatherToNpy or GatherToZarr.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
-    folder : str | Path | list | None
+    dest : str | Path | list[str | Path] | None
         Used for gather_mode="npy" or gather_mode="zarr". Either a single folder (one file/array
         per name is created inside it) or a list of explicit per-output destinations
-        (see GatherToNpy and GatherToZarr).
+        (see GatherToNpy and GatherToZarr). For "zarr" the `dest` must contain a ".zarr" suffix.
     names : list of str
         Names of outputs.
     verbose : bool, default False
@@ -603,6 +604,7 @@ def run_node_pipeline(
         If None (default), the function iterates over the entire duration of the recording.
     check_for_peak_source : bool, default False
         Whether to check the graph of PeakSource nodes.
+    folder: deprecated, use `dest` instead.
 
     Returns
     -------
@@ -620,12 +622,19 @@ def run_node_pipeline(
     else:
         skip_after_n_peaks_per_worker = None
 
+    if folder is not None:
+        warnings.warn(
+            "`folder` is deprecated and will be removed in 0.106.0. Use `dest` instead.", FutureWarning, stacklevel=2
+        )
+        if dest is None:
+            dest = folder
+
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names, **gather_kwargs)
+        gather_func = GatherToNpy(dest, names, **gather_kwargs)
     elif gather_mode == "zarr":
-        gather_func = GatherToZarr(folder, names, **gather_kwargs)
+        gather_func = GatherToZarr(dest, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -814,7 +823,7 @@ class GatherToNpy:
 
     Parameters
     ----------
-    folder : str | Path | list of (str | Path) | None
+    dest : str | Path | list of (str | Path) | None
         Where to write the npy files. Two modes:
 
         * a single folder (str | Path) : one ``<name>.npy`` file is created per name inside it.
@@ -822,31 +831,37 @@ class GatherToNpy:
           to gather directly to a final location (e.g. an extension folder). When `names` is
           None, they are derived from the file stems.
     names : list of str | None
-        Names of the outputs. Can be None when `folder` is a list of file paths.
+        Names of the outputs. Can be None when `dest` is a list of file paths.
     npy_header_size : int, default: 1024
         The reserved header size for the npy files.
     exist_ok : bool, default: False
         Whether the `folder` is allowed to already exist. Only used when `folder` is a single folder.
     """
 
-    def __init__(self, folder=None, names=None, npy_header_size=1024, exist_ok=False):
+    def __init__(
+        self,
+        dest: str | Path | list[str | Path] | None = None,
+        names: list[str] | None = None,
+        npy_header_size: int = 1024,
+        exist_ok: bool = False,
+    ):
         self.npy_header_size = npy_header_size
 
-        if isinstance(folder, (list, tuple)):
+        if isinstance(dest, (list, tuple)):
             # explicit destination file per output
-            self.file_paths = [Path(p) for p in folder]
+            self.file_paths = [Path(p) for p in dest]
             if names is None:
                 names = [file_path.stem for file_path in self.file_paths]
-            assert len(self.file_paths) == len(names), "`folder` (list of files) must have the same length as `names`"
+            assert len(self.file_paths) == len(names), "`dest` (list of files) must have the same length as `names`"
             self.names = names
             self.folder = None
             # make sure parent folders exist
             for file_path in self.file_paths:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
         else:
-            assert folder is not None, "`folder` must be given"
-            assert names is not None, "`names` must be given when `folder` is a single folder"
-            self.folder = Path(folder)
+            assert dest is not None, "`dest` must be given"
+            assert names is not None, "`names` must be given when `dest` is a single folder"
+            self.folder = Path(dest)
             self.folder.mkdir(parents=True, exist_ok=exist_ok)
             self.names = names
             self.file_paths = [self.folder / (name + ".npy") for name in names]
@@ -952,10 +967,10 @@ class GatherToZarr:
 
     Parameters
     ----------
-    folder : str | Path | list of (str | Path | zarr.Array) | None
+    dest : str | Path | list of (str | Path | zarr.Array) | None
         Where to write the zarr arrays. Two modes:
 
-        * a single folder (str | Path) : a fresh zarr store is created there and one zarr
+        * a single destination (str | Path) : a fresh zarr store is created there and one zarr
           array is created per name in its root.
         * a list of explicit destinations : buffers are appended directly to these datasets
           instead of creating a fresh store. This is useful to gather directly to a final
@@ -969,8 +984,9 @@ class GatherToZarr:
             (shape ``(0, *trailing)``) with the correct trailing shape and dtype.
 
           When `names` is None, they are derived from the datasets' basenames.
+          Note that in both modes the `dest` must contain a ".zarr" suffix.
     names : list of str | None
-        Names of the outputs. Can be None when `folder` is a list of explicit destinations.
+        Names of the outputs. Can be None when `dest` is a list of explicit destinations.
     compressor : numcodecs codec | "default" | None, default: "default"
         The compressor used for every array. If "default", the SpikeInterface default
         zarr compressor is used (Blosc-zstd, level 5, bitshuffle). If None, no compression.
@@ -984,10 +1000,10 @@ class GatherToZarr:
 
     def __init__(
         self,
-        folder=None,
-        names=None,
-        compressor="default",
-        zarr_target_chunk_bytes=10 * 1024 * 1024,
+        dest: str | Path | list[str | Path | zarr.Array] | None = None,
+        names: list[str] | None = None,
+        compressor: "numcodecs.abc.Codec | str | None" = "default",
+        zarr_target_chunk_bytes: int | dict[str, int] = 10 * 1024 * 1024,
     ):
         import zarr
 
@@ -997,17 +1013,19 @@ class GatherToZarr:
             compressor = get_default_zarr_compressor()
         self.compressor = compressor
 
-        if isinstance(folder, (list, tuple)):
+        if isinstance(dest, (list, tuple)):
             # append to explicit destinations (paths inside a store or pre-created zarr.Arrays)
-            num_datasets = len(folder)
+            num_datasets = len(dest)
             self.arrays = [None] * num_datasets
             # per output : (root_group, internal_path) used to lazily create the dataset,
             # or None when the dataset is already a zarr.Array
             self._create_specs = [None] * num_datasets
             derived_names = []
             root_cache = {}
-            for i, dataset in enumerate(folder):
+            for i, dataset in enumerate(dest):
                 if isinstance(dataset, (str, Path)):
+                    if ".zarr" not in str(dataset):
+                        raise ValueError("When `dest` is a list of paths, each path must contain a '.zarr' suffix")
                     store_path, internal_path = _split_zarr_store_path(dataset)
                     store_path = str(store_path)
                     if store_path not in root_cache:
@@ -1028,10 +1046,11 @@ class GatherToZarr:
             # we do not own the store so we must not consolidate/close it
             self._owns_store = False
         else:
-            assert folder is not None, "`folder` must be given"
-            assert names is not None, "`names` must be given when `folder` is a single folder"
+            assert dest is not None, "`dest` must be given"
+            assert names is not None, "`names` must be given when `dest` is a single folder"
+            assert str(dest).endswith(".zarr"), "`dest` must contain a '.zarr' suffix"
             self.names = names
-            self.folder = Path(folder)
+            self.folder = Path(dest)
             self.zarr_root = zarr.open(str(self.folder), mode="w")
             # arrays are created lazily on the first buffer so we know dtype and trailing shape
             self.arrays = [None] * len(names)

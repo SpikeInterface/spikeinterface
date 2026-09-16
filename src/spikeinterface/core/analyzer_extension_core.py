@@ -1550,13 +1550,13 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             names = self.nodepipeline_variables
             if self.format == "binary_folder":
                 gather_mode = "npy"
-                folder = [extension_folder / f"{name}.npy" for name in names]
+                dest = [extension_folder / f"{name}.npy" for name in names]
             else:
                 gather_mode = "zarr"
-                folder = [extension_folder / name for name in names]
+                dest = [extension_folder / name for name in names]
         else:
             gather_mode = "memory"
-            folder = None
+            dest = None
             names = None
 
         job_kwargs = fix_job_kwargs(job_kwargs)
@@ -1567,7 +1567,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name=self.extension_name,
             gather_mode=gather_mode,
-            folder=folder,
+            dest=dest,
             names=names,
             verbose=False,
         )

@@ -2470,7 +2470,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 gather_kwargs = {}
 
             # for disk gather modes we build one destination per output variable
-            gather_folder = [] if gather_mode in ("npy", "zarr") else None
+            gather_dest = [] if gather_mode in ("npy", "zarr") else None
             gather_names = [] if gather_mode in ("npy", "zarr") else None
 
             try:
@@ -2486,11 +2486,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                     for variable_name in extension_class.nodepipeline_variables:
                         result_routage.append((extension_name, variable_name))
                         if gather_mode == "npy":
-                            gather_folder.append(extension_folder / f"{variable_name}.npy")
-                            gather_names.append(variable_name)
+                            gather_dest.append(extension_folder / f"{variable_name}.npy")
                         elif gather_mode == "zarr":
-                            gather_folder.append(extension_folder / variable_name)
-                            gather_names.append(variable_name)
+                            gather_dest.append(extension_folder / variable_name)
 
                     extension_instance = extension_class(self)
                     extension_instance.set_params(save=save, **extension_params)
@@ -2515,8 +2513,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                     job_kwargs=job_kwargs,
                     job_name=job_name,
                     gather_mode=gather_mode,
-                    folder=gather_folder,
-                    names=gather_names,
+                    dest=gather_dest,
                     gather_kwargs=gather_kwargs,
                     squeeze_output=False,
                     verbose=verbose,

@@ -157,7 +157,7 @@ def test_run_node_pipeline(cache_folder_creation):
             nodes,
             job_kwargs,
             gather_mode="npy",
-            folder=folder,
+            dest=folder,
             names=["amplitudes", "waveforms_rms", "denoised_waveforms_rms"],
         )
         amplitudes2, waveforms_rms2, denoised_waveforms_rms2 = output
@@ -191,7 +191,7 @@ def test_run_node_pipeline(cache_folder_creation):
             nodes,
             job_kwargs,
             gather_mode="zarr",
-            folder=zarr_folder,
+            dest=zarr_folder,
             names=["amplitudes", "waveforms_rms", "denoised_waveforms_rms"],
         )
         amplitudes_z, waveforms_rms_z, denoised_waveforms_rms_z = output
@@ -223,7 +223,7 @@ def test_run_node_pipeline(cache_folder_creation):
             nodes,
             job_kwargs,
             gather_mode="npy",
-            folder=npy_files,
+            dest=npy_files,
         )
         amplitudes_f, waveforms_rms_f, denoised_waveforms_rms_f = output
         for npy_file in npy_files:
@@ -250,7 +250,7 @@ def test_run_node_pipeline(cache_folder_creation):
             nodes,
             job_kwargs,
             gather_mode="zarr",
-            folder=dataset_paths,
+            dest=dataset_paths,
         )
         amplitudes_d, waveforms_rms_d, denoised_waveforms_rms_d = output
         assert np.array_equal(amplitudes, amplitudes_d[:])
@@ -296,7 +296,7 @@ def test_gather_to_zarr_chunking(tmp_path):
     # default byte target (10 MiB)
     target_bytes = 10 * 1024 * 1024
     waveforms = run_node_pipeline(
-        recording, nodes, job_kwargs, gather_mode="zarr", folder=tmp_path / "wfs.zarr", names=["waveforms"]
+        recording, nodes, job_kwargs, gather_mode="zarr", dest=tmp_path / "wfs.zarr", names=["waveforms"]
     )
     nbefore_after = dense_waveforms.nbefore + dense_waveforms.nafter
     row_nbytes = nbefore_after * recording.get_num_channels() * np.dtype("float32").itemsize
@@ -311,7 +311,7 @@ def test_gather_to_zarr_chunking(tmp_path):
         nodes,
         job_kwargs,
         gather_mode="zarr",
-        folder=tmp_path / "wfs2.zarr",
+        dest=tmp_path / "wfs2.zarr",
         names=["waveforms"],
         gather_kwargs={"zarr_target_chunk_bytes": 1234 * row_nbytes},
     )
@@ -349,7 +349,7 @@ def test_gather_to_zarr_chunk_bytes_per_name(tmp_path):
         nodes,
         job_kwargs,
         gather_mode="zarr",
-        folder=tmp_path / "per_name.zarr",
+        dest=tmp_path / "per_name.zarr",
         names=["waveforms", "waveforms_rms"],
         gather_kwargs={"zarr_target_chunk_bytes": target_bytes},
     )
@@ -368,7 +368,7 @@ def test_gather_to_zarr_chunk_bytes_per_name(tmp_path):
         nodes,
         job_kwargs,
         gather_mode="zarr",
-        folder=tmp_path / "single_int.zarr",
+        dest=tmp_path / "single_int.zarr",
         names=["waveforms", "waveforms_rms"],
         gather_kwargs={"zarr_target_chunk_bytes": 1 * 1024 * 1024},
     )
@@ -384,7 +384,7 @@ def test_gather_to_zarr_chunk_bytes_per_name(tmp_path):
             nodes,
             job_kwargs,
             gather_mode="zarr",
-            folder=tmp_path / "missing_name.zarr",
+            dest=tmp_path / "missing_name.zarr",
             names=["waveforms", "waveforms_rms"],
             gather_kwargs={"zarr_target_chunk_bytes": {"waveforms": 1 * 1024 * 1024}},
         )
