@@ -1942,7 +1942,7 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     same_segment_and_sample = (sample_indices[1:] == sample_indices[:-1]) & (
         segment_indices[1:] == segment_indices[:-1]
     )
-    synchronous_spike_mask = np.zeros(spikes.size, dtype=bool)
+    synchronous_spike_mask = np.zeros(spikes.size, dtype=np.bool_)
     synchronous_spike_mask[:-1] |= same_segment_and_sample
     synchronous_spike_mask[1:] |= same_segment_and_sample
     if not np.any(synchronous_spike_mask):
