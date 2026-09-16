@@ -278,7 +278,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
             durations = [
                 (filtered_peaks["sample_index"][end - 1] + 1) / sampling_frequency for (_, end) in segment_boundaries
             ]
-            segment_start_stop_times = None
+            segment_edges = np.concatenate([[0], np.cumsum(durations)])
+            segment_start_stop_times = list(zip(segment_edges[:-1], segment_edges[1:]))
+            durations = None
 
         plot_data = dict(
             spike_train_data=spike_train_data,

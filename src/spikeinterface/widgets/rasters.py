@@ -91,9 +91,9 @@ class BaseRasterWidget(BaseWidget):
             )
 
         if durations is not None and segment_start_stop_times is None:
-            # this is not correct!
-            raise NotImplementedError()
-            segment_start_stop_times = np.r_[np.cumsum(durations)]
+            # This path assumes t_start are zero, which is not a good assumption. This is not really use facing, maybe we remove durations here?
+            edges = np.r_[0, np.cumsum(durations)]
+            segment_start_stop_times = list(zip(edges[:-1], edges[1:]))
 
         # Set default segment boundary kwargs if not provided
         if segment_boundary_kwargs is None:
@@ -116,9 +116,6 @@ class BaseRasterWidget(BaseWidget):
         else:
             raise ValueError("segment_index must be `list` or `None`")
 
-        # have as list of tuples up to here so can drop from segments to use.
-        # now convert to np.array
-
         # Get all unit IDs present in any segment if not specified
         if unit_ids is None:
             all_units = set()
@@ -129,10 +126,6 @@ class BaseRasterWidget(BaseWidget):
         segment_start_stop_times_array = []
         for seg in segments_to_use:
             segment_start_stop_times_array.extend(segment_start_stop_times[seg])
-
-        # Calculate cumulative durations for segment boundaries
-        # segment_boundaries = np.array(np.r_[seg[0], seg[1]] for seg in segment_start_stop_times) # np.cumsum(durations)
-        # cumulative_durations = np.concatenate([[0], segment_boundaries])
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
@@ -150,8 +143,6 @@ class BaseRasterWidget(BaseWidget):
                 # Get y-axis values for this unit
                 y_values = y_axis_segment[unit_id]
 
-                # Apply offset to spike times
-                # adjusted_times = spike_times + offset
 
                 # Add to concatenated data
                 concatenated_spike_trains[unit_id] = np.concatenate([concatenated_spike_trains[unit_id], spike_times])
@@ -172,12 +163,10 @@ class BaseRasterWidget(BaseWidget):
             y_label=y_label,
             title=title,
             segment_start_stop_times_array=segment_start_stop_times_array,
-            # durations=durations,
             plot_legend=plot_legend,
             bins=bins,
             y_ticks=y_ticks,
             hide_unit_selector=hide_unit_selector,
-            # segment_boundaries=segment_boundaries,
             segment_boundary_kwargs=segment_boundary_kwargs,
         )
 
@@ -250,9 +239,7 @@ class BaseRasterWidget(BaseWidget):
 
         # Add segment boundary lines if provided
         if dp.segment_start_stop_times_array is not None:
-            # When segments do not have times, the start/stop
-            # times are all about the same (estimated from spike times).
-            # Ignore this case so we only plot boundaries for sequential segments.
+            # We only plot boundaries for sequential segments.
             if np.all(np.diff(dp.segment_start_stop_times_array) > 0):
                 for boundary in dp.segment_start_stop_times_array:
                     scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
@@ -475,9 +462,6 @@ class RasterWidget(BaseRasterWidget):
         # Create a lookup dictionary for unit indices
         unit_indices_map = {unit_id: i for i, unit_id in enumerate(unit_ids)}
 
-        # Estimate segment duration from max spike time in each segment
-        # durations = get_segment_durations(sorting, segment_indices)
-
         # Extract spike data for all segments and units at once
         spike_train_data = {seg_idx: {} for seg_idx in segment_indices}
         y_axis_data = {seg_idx: {} for seg_idx in segment_indices}
@@ -519,7 +503,6 @@ class RasterWidget(BaseRasterWidget):
             plot_histograms=None,
             y_ticks=y_ticks,
             segment_start_stop_times=segment_start_stop_times,
-            # durations=durations,
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
