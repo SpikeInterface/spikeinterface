@@ -649,16 +649,14 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     nsamples = nbefore + nafter
 
-    # Extract all waveforms in the chunk at once
+    # Prepare waveform sample offsets for all spikes in the chunk
     spike_times_in_chunk = spike_times[i0:i1]
     # Offset spike times to be relative to the start of the traces buffer
     spike_times_offset = spike_times_in_chunk - start - nbefore
     spike_indices = np.arange(i0, i1)
 
-    # Build waveform array: (n_spikes, nsamples, n_channels)
-    # Use fancy indexing to extract all snippets at once
-    sample_indices = spike_times_offset[:, None] + np.arange(nsamples)[None, :]  # (n_spikes, nsamples)
-    all_wfs = traces[sample_indices]  # (n_spikes, nsamples, n_channels)
+    # This adds a sample axis using strides and does not allocate waveform data.
+    waveform_view = np.lib.stride_tricks.sliding_window_view(traces, nsamples, axis=0)
 
     # Vectorized PCA: batch by channel across all spikes in the chunk.
     # For each unique channel, find all spikes that use it (via their unit's
@@ -683,7 +681,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
         global_idxs = spike_indices[all_local_idxs]
 
         # Batch waveforms for this channel: (n_spikes, nsamples)
-        wfs_batch = all_wfs[all_local_idxs, :, chan_ind]
+        wfs_batch = waveform_view[spike_times_offset[all_local_idxs], chan_ind]
 
         if wfs_batch.size == 0:
             continue
