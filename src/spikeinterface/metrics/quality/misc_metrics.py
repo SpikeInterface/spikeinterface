@@ -1951,7 +1951,7 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     synchronous_sample_indices = sample_indices[synchronous_spike_mask]
     synchronous_segment_indices = segment_indices[synchronous_spike_mask]
     synchronous_units = spikes["unit_index"][synchronous_spike_mask]
-    synchronous_group_starts = np.empty(synchronous_units.size, dtype=bool)
+    synchronous_group_starts = np.empty(synchronous_units.size, dtype=np.bool_)
     synchronous_group_starts[0] = True
     synchronous_group_starts[1:] = (synchronous_sample_indices[1:] != synchronous_sample_indices[:-1]) | (
         synchronous_segment_indices[1:] != synchronous_segment_indices[:-1]
