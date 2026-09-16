@@ -11,8 +11,8 @@ from .npzsortingextractor import NpzSortingExtractor
 from .core_tools import (
     define_function_from_class,
     make_paths_absolute,
-    load_properties_from_binary_folder,
-    save_properties_to_binary_folder,
+    load_properties_from_folder,
+    save_properties_to_folder,
     save_annotations_to_folder,
     load_annotations_from_folder,
     save_extractor_provenance,
@@ -55,7 +55,7 @@ class NumpyFolderSorting(BaseSorting):
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.spikes
 
-        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_properties_from_folder(folder_path / "properties", self)
         load_annotations_from_folder(folder_path, self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
@@ -80,7 +80,7 @@ class NumpyFolderSorting(BaseSorting):
         info_file.write_text(json.dumps(d), encoding="utf8")
         np.save(folder_path / "spikes.npy", sorting.to_spike_vector())
 
-        save_properties_to_binary_folder(folder_path / "properties", sorting)
+        save_properties_to_folder(folder_path / "properties", sorting)
         save_extractor_provenance(folder_path, sorting)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder_path, sorting)
@@ -141,7 +141,7 @@ class NpzFolderSorting(NpzSortingExtractor):
 
         NpzSortingExtractor.__init__(self, **d["kwargs"])
 
-        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_properties_from_folder(folder_path / "properties", self)
         load_annotations_from_folder(folder_path, self)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
@@ -162,7 +162,7 @@ class NpzFolderSorting(NpzSortingExtractor):
         if npz_file.exists():
             raise ValueError("NpzFolderSorting.write_sorting the folder already contains sorting_cached.npz")
         NpzSortingExtractor.write_sorting(sorting, npz_file)
-        save_properties_to_binary_folder(save_path / "properties", sorting)
+        save_properties_to_folder(save_path / "properties", sorting)
         cached = NpzSortingExtractor(npz_file)
         cached.dump(save_path / "npz.json", relative_to=save_path)
 

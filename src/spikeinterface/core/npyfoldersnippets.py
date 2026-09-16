@@ -9,8 +9,8 @@ from .npysnippetsextractor import NpySnippetsExtractor
 from .core_tools import (
     define_function_from_class,
     make_paths_absolute,
-    load_properties_from_binary_folder,
-    save_properties_to_binary_folder,
+    load_properties_from_folder,
+    save_properties_to_folder,
 )
 
 
@@ -54,7 +54,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         if probe_file.is_file():
             self._probegroup = read_probeinterface(probe_file)
 
-        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_properties_from_folder(folder_path / "properties", self)
 
         self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
@@ -85,7 +85,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         )
         cached.dump(folder / "npy.json", relative_to=folder)
 
-        save_properties_to_binary_folder(folder / "properties", snippets)
+        save_properties_to_folder(folder / "properties", snippets)
 
         if snippets.has_probe():
             probegroup = snippets.get_probegroup()

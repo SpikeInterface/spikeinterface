@@ -24,7 +24,7 @@ from .core_tools import (
     make_paths_absolute,
     check_paths_relative,
     retrieve_importing_provenance,
-    load_properties_from_binary_folder,
+    load_properties_from_folder,
 )
 from .job_tools import _shared_job_kwargs_doc
 

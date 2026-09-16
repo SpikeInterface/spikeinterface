@@ -813,7 +813,7 @@ def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -
         return array[row_indices, ...]
 
 
-def load_properties_from_binary_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
+def load_properties_from_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
     """
     Load properties from a folder properties as .npy files and return sets them
     as properties to the extractor.
@@ -836,7 +836,7 @@ def load_properties_from_binary_folder(folder: str | Path, extractor: "BaseExtra
                 extractor.set_property(key, values)
 
 
-def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtractor"):
+def save_properties_to_folder(folder: str | Path, extractor: "BaseExtractor"):
     """
     Save properties from an extractor to a folder as .npy files.
 
@@ -856,8 +856,8 @@ def save_properties_to_binary_folder(folder: str | Path, extractor: "BaseExtract
 
 def save_annotations_to_folder(folder: str | Path, extractor: "BaseExtractor"):
     """
-    Save annotations in json format from an extractor (recording or sorting).
-    This used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0
+    Save BaseExtractor annotations to annotations.json in the provided folder.
+    This is used for `BinaryFolderRecording` and `NumpyFolderSorting` since version 0.105.0.
 
     Parameters
     ----------
@@ -867,14 +867,14 @@ def save_annotations_to_folder(folder: str | Path, extractor: "BaseExtractor"):
         The extractor from which the annotations will be saved.
     """
     folder = Path(folder)
-    print(f"Saving annotations to {folder / 'annotations.json'}: {extractor._annotations}")
     (folder / "annotations.json").write_text(json.dumps(extractor._annotations, indent=4), encoding="utf8")
 
 
 def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor"):
     """
-    Load annotations in json format from an extractor (recording or sorting).
-    This used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0
+    Load annotations from annotations.json in the provided folder.
+    This is used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0.
+    If the file doesn't exist, it will try to load annotations from the si_folder.json "annotations" field.
 
     Parameters
     ----------

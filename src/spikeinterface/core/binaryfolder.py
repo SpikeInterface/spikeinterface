@@ -13,8 +13,8 @@ from .binaryrecordingextractor import BinaryRecordingExtractor
 from .core_tools import (
     define_function_from_class,
     make_paths_absolute,
-    load_properties_from_binary_folder,
-    save_properties_to_binary_folder,
+    load_properties_from_folder,
+    save_properties_to_folder,
     save_extractor_provenance,
     save_annotations_to_folder,
     load_annotations_from_folder,
@@ -54,7 +54,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         BinaryRecordingExtractor.__init__(self, **d["kwargs"])
 
         # Load properties
-        load_properties_from_binary_folder(folder_path / "properties", self)
+        load_properties_from_folder(folder_path / "properties", self)
         load_annotations_from_folder(folder_path, self)
 
         # Load the probegroup
@@ -159,7 +159,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
             **job_kwargs,
         )
 
-        save_properties_to_binary_folder(folder_path / "properties", recording)
+        save_properties_to_folder(folder_path / "properties", recording)
         save_extractor_provenance(folder_path, recording)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder_path, recording)
