@@ -92,7 +92,8 @@ class DredgeApRegistration:
     batching_mode : Literal["full", "online"], default: "full"
         Which batching_mode to run when computing displacement vector.
     chunk_len_s=None,
-        If `batching_mode` is "online", how long should each batch be, in seconds.
+        If `batching_mode` is "online", how long should each batch be, in seconds. In general,
+        longer is better but will use more RAM.
     """
 
     @classmethod
@@ -226,13 +227,14 @@ def dredge_ap(
         and correlation matrices.
     """
 
+    if batching_mode == "online" and chunk_len_s is None:
+        raise ValueError(
+            'When using batching_mode = "online" you specify a `chunk_len_s`. In general, '
+            "you should make `chunk_len_s as large as possible. Note that larger values of `chunk_len_s`"
+            "require more RAM."
+        )
+
     dim = ["x", "y", "z"].index(direction)
-    # @charlie: I removed amps/depths_um/times_s from the signature
-    # preaks and peak_locations are more SI compatible
-    # the way to get then
-    amps = peak_amplitudes = peaks["amplitude"]
-    depths_um = peak_depths = peak_locations[direction]
-    times_s = peak_times = recording.sample_index_to_time(peaks["sample_index"])
 
     thomas_kw = thomas_kw if thomas_kw is not None else {}
     xcorr_kw = xcorr_kw if xcorr_kw is not None else {}
@@ -635,7 +637,7 @@ def dredge_online_lfp(
 
 
 def compute_displacement_online(
-    lfp_recording,
+    rasters,
     windows,
     T_total,
     T_chunk,
@@ -657,10 +659,10 @@ def compute_displacement_online(
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
     t0, t1 = 0, T_chunk
 
-    if isinstance(lfp_recording, BaseRecording):
-        traces0 = lfp_recording.get_traces(start_frame=t0, end_frame=t1)
+    if isinstance(rasters, BaseRecording):
+        traces0 = rasters.get_traces(start_frame=t0, end_frame=t1)
     else:
-        traces0 = lfp_recording[:, t0:t1].T
+        traces0 = rasters[:, t0:t1].T
 
     Ds0, Cs0, max_disp_um = xcorr_windows(
         traces0.T,
@@ -701,10 +703,10 @@ def compute_displacement_online(
     for t1 in chunk_starts:
         t2 = min(T_total, t1 + T_chunk)
 
-        if isinstance(lfp_recording, BaseRecording):
-            traces1 = lfp_recording.get_traces(start_frame=t1, end_frame=t2)
+        if isinstance(rasters, BaseRecording):
+            traces1 = rasters.get_traces(start_frame=t1, end_frame=t2)
         else:
-            traces1 = lfp_recording[:, t1:t2].T
+            traces1 = rasters[:, t1:t2].T
 
         # cross-correlations between prev/cur chunks
         # these are T1, T0 shaped
