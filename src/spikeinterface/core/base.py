@@ -855,12 +855,12 @@ class BaseExtractor:
 
         The 'new' way is :
           * recording.save(format='binary', folder=...)
-          * sorting.save(format='binary', folder=...)
+          * sorting.save(format='numpy_folder', folder=...)
         """
 
         warnings.warn(
             "save_to_folder() should be recording.save(format='binary') "
-            "or sorting.save(format='binary') "
+            "or sorting.save(format='numpy_folder') "
             "This ambiguous method should not be used anymore!!",
             FutureWarning,
         )

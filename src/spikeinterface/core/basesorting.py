@@ -502,20 +502,20 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-    def save(self, format="binary", **save_kwargs):
+    def save(self, format="numpy_folder", **save_kwargs):
         """
         Save a `BaseSorting` object to a specified format:
 
-        * "binary" - old "numpy_folder"
+        * "numpy_folder"
         * "zarr"
         * "memory"
         * "npz_folder" - deprecated
 
         Parameters
         ----------
-        format : str, default: "binary"
+        format : str, default: "numpy_folder"
             The format to save the sorting in. Options are:
-            - "binary"/"numpy_folder": Saves the sorting in a binary numpy folder format.
+            - "numpy_folder": Saves the sorting in a binary numpy folder format.
             - "zarr": Saves the sorting in Zarr format.
             - "memory": Saves the sorting in memory (shared memory or numpy array).
             - "npz_folder": Saves the sorting in a deprecated npz folder format.
@@ -524,9 +524,9 @@ class BaseSorting(BaseExtractor):
         **save_kwargs : dict
             Additional keyword arguments specific to the chosen format.
 
-            * "binary" format:
+            * "numpy_folder" format:
                 - folder : str or Path
-                    The folder where the binary files will be saved.
+                    The folder where the files will be saved.
                 - overwrite : bool, default: False
                     If True, existing files in the folder will be overwritten.
             * "zarr" format:
@@ -550,19 +550,10 @@ class BaseSorting(BaseExtractor):
             The saved sorting object in the specified format.
         """
         if format == "numpy_folder":
-            warnings.warn(
-                "The 'numpy_folder' is renamed to 'binary' and will be removed in 0.106.0. "
-                "Please use 'binary' instead.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            format = "binary"
-
-        if format == "binary":
             from .sortingfolder import NumpyFolderSorting
 
             if "folder" not in save_kwargs:
-                raise ValueError("For 'binary' format, 'folder' must be specified in save_kwargs.")
+                raise ValueError("For 'numpy_folder' format, 'folder' must be specified in save_kwargs.")
             folder = save_kwargs.pop("folder")
             cached = NumpyFolderSorting.write_sorting(self, folder_path=folder, **save_kwargs)
 

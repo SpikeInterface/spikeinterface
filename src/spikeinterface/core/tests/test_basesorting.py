@@ -78,7 +78,7 @@ def test_BaseSorting(create_cache_folder):
     # cache new format : binary
     folder = cache_folder / "simple_sorting_binary"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
-    sorting.save(folder=folder, format="binary")
+    sorting.save(folder=folder, format="numpy_folder")
     sorting2 = load(folder)
     assert isinstance(sorting2, NumpyFolderSorting)
 
