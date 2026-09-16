@@ -4,7 +4,8 @@ import pytest
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 from spikeinterface.postprocessing import ComputeAmplitudeScalings
-from spikeinterface.postprocessing.amplitude_scalings import _ordinary_scaling_slope, fit_collision
+from spikeinterface.core.base import spike_peak_dtype
+from spikeinterface.postprocessing.amplitude_scalings import _ordinary_scaling_slope, find_collisions, fit_collision
 
 
 def test_ordinary_scaling_slope_float32_precision():
@@ -61,6 +62,50 @@ def test_fit_collision_recovers_positive_coefficients():
 
     assert np.all(recovered >= 0)  # positive=True
     np.testing.assert_allclose(recovered, true_scalings, atol=0.05)
+
+
+def test_find_collisions_with_margin_indices(monkeypatch):
+    dtype = spike_peak_dtype + [("in_margin", "bool")]
+    spikes_within_margin = np.array(
+        [
+            (8, 0, -1.0, 0, 1, True),
+            (10, 0, -1.0, 0, 0, False),
+            (10, 1, -1.0, 0, 1, False),
+            (13, 2, -1.0, 0, 2, False),
+            (30, 1, -1.0, 0, 1, True),
+        ],
+        dtype=dtype,
+    )
+    spike_indices = np.flatnonzero(~spikes_within_margin["in_margin"])
+    spikes = spikes_within_margin[spike_indices]
+    sparsity_mask = np.array([[True, False], [True, True], [False, True]])
+
+    with monkeypatch.context() as patch_context:
+        patch_context.setattr(np, "where", lambda *_: pytest.fail("spike indices were searched again"))
+        collisions = find_collisions(
+            spikes,
+            spikes_within_margin,
+            delta_collision_samples=4,
+            sparsity_mask=sparsity_mask,
+            spike_indices=spike_indices,
+        )
+
+    assert set(collisions) == {0, 1, 2}
+    np.testing.assert_array_equal(collisions[0], spikes_within_margin[[1, 0, 2]])
+    np.testing.assert_array_equal(collisions[1], spikes_within_margin[[2, 0, 1, 3]])
+    np.testing.assert_array_equal(collisions[2], spikes_within_margin[[3, 2]])
+
+    collisions_without_indices = find_collisions(
+        spikes,
+        spikes_within_margin,
+        delta_collision_samples=4,
+        sparsity_mask=sparsity_mask,
+    )
+    for spike_index in collisions:
+        np.testing.assert_array_equal(collisions_without_indices[spike_index], collisions[spike_index])
+
+    with pytest.raises(ValueError, match="shorter"):
+        find_collisions(spikes, spikes_within_margin, 4, sparsity_mask, spike_indices=spike_indices[:-1])
 
 
 class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
