@@ -227,15 +227,6 @@ class BaseRasterWidget(BaseWidget):
                 count, bins = np.histogram(unit_y_data, bins=bins)
                 ax_hist.plot(count, bins[:-1], color=unit_colors[unit_id], alpha=0.8)
 
-        # Add segment boundary lines if provided
-        if dp.segment_start_stop_times is not None:
-            # We only plot boundaries for sequential segments.
-            segment_boundaries = segment_start_stop_times_to_boundaries(dp.segment_start_stop_times)
-
-            if np.all(np.diff(segment_boundaries) > 0):
-                for boundary in segment_boundaries:
-                    scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
-
         if dp.plot_histograms:
             ax_hist = self.axes.flatten()[1]
             ax_hist.set_ylim(scatter_ax.get_ylim())
@@ -252,9 +243,19 @@ class BaseRasterWidget(BaseWidget):
             scatter_ax.set_ylim(*dp.y_lim)
         x_lim = dp.x_lim
 
-        if x_lim is None and dp.segment_start_stop_times is not None:
-            x_lim = (segment_boundaries.min(), segment_boundaries.max())
-            scatter_ax.set_xlim(x_lim)
+        # Add segment boundary lines if provided and handle x limits
+        if  dp.segment_start_stop_times is not None:
+
+            # We only plot boundaries for sequential segments.
+            segment_boundaries = segment_start_stop_times_to_boundaries(dp.segment_start_stop_times)
+
+            if np.all(np.diff(segment_boundaries) > 0):
+                for boundary in segment_boundaries:
+                    scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
+
+            if x_lim is None:
+                x_lim = (segment_boundaries.min(), segment_boundaries.max())
+                scatter_ax.set_xlim(x_lim)
 
         if dp.sort_by_depth and dp.depth_dict is not None:
             scatter_ax.set_yticks(ticks=list(range(len(dp.depth_dict))), labels=list(dp.depth_dict.keys()))
