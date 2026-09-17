@@ -815,7 +815,36 @@ def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list, a
         selection = (slice(None),) * axis + (row_indices,)
         return array.oindex[selection]
     else:
-        return array[row_indices, ...]
+        selection = (slice(None),) * axis + (row_indices, ...)
+        return array[selection]
+
+
+def materialize_array(array: np.ndarray | zarr.Array) -> np.ndarray:
+    """
+    Return an independent, writable in-memory numpy array, ready for in-place mutation.
+
+    Extension data is often shared by reference across analyzers (e.g. during merge/split) to
+    avoid unnecessary copies, since sharing is safe as long as nothing mutates the array in
+    place. A few operations (e.g. summing correlogram rows/columns into a merged unit, sparse
+    channel realignment of waveforms/PCA projections) do need to mutate in place, and for those
+    a real copy is required: zarr.Array has no `.copy()` method and is read-only from a
+    previously-saved store, while `copy.deepcopy()` does not actually clone a zarr array's
+    underlying data. Use this right before the in-place mutation, not as a default habit.
+
+    Parameters
+    ----------
+    array : np.ndarray | zarr.Array
+        A numpy or zarr array about to be mutated in place.
+
+    Returns
+    -------
+    np.ndarray
+        A new, independent, writable numpy array with the same data.
+    """
+    if isinstance(array, zarr.Array):
+        return array[:]
+    else:
+        return array.copy()
 
 
 def load_properties_from_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
@@ -915,36 +944,6 @@ def save_extractor_provenance(folder: str | Path, extractor: "BaseExtractor"):
         extractor.dump_to_pickle(provenance_file, relative_to=folder)
     else:
         warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
-        selection = (slice(None),) * axis + (row_indices, ...)
-        return array[selection]
-
-
-def materialize_array(array: np.ndarray | zarr.Array) -> np.ndarray:
-    """
-    Return an independent, writable in-memory numpy array, ready for in-place mutation.
-
-    Extension data is often shared by reference across analyzers (e.g. during merge/split) to
-    avoid unnecessary copies, since sharing is safe as long as nothing mutates the array in
-    place. A few operations (e.g. summing correlogram rows/columns into a merged unit, sparse
-    channel realignment of waveforms/PCA projections) do need to mutate in place, and for those
-    a real copy is required: zarr.Array has no `.copy()` method and is read-only from a
-    previously-saved store, while `copy.deepcopy()` does not actually clone a zarr array's
-    underlying data. Use this right before the in-place mutation, not as a default habit.
-
-    Parameters
-    ----------
-    array : np.ndarray | zarr.Array
-        A numpy or zarr array about to be mutated in place.
-
-    Returns
-    -------
-    np.ndarray
-        A new, independent, writable numpy array with the same data.
-    """
-    if isinstance(array, zarr.Array):
-        return array[:]
-    else:
-        return array.copy()
 
 
 def _ensure_seed(seed):
