@@ -36,6 +36,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         If True, empty units are removed from the sorting extractor.
     load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
+    channel_ids : list | np.ndarray | None, default None
+        The channel_ids of the recording passed to `run_sorter`
 
     Notes
     -----
@@ -134,6 +136,17 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             cluster_info = pd.DataFrame({"cluster_id": unique_unit_ids})
             cluster_info["group"] = ["unsorted"] * len(unique_unit_ids)
 
+        # we need to add main_channel_ids before selecting good units etc.
+        if channel_ids is not None:
+            # if the user has a non-trivial channel_map (from passing bad channel ids or otherwise)
+            # we need to remap the channel_ids
+            channel_map = np.load(phy_folder / "channel_map.npy").reshape(-1).astype("int64", copy=False)
+            channel_ids = np.asarray(channel_ids)[channel_map]
+            main_channel_indices = _make_main_channel_indices_from_templates(phy_folder)
+            if main_channel_indices is not None:
+                main_channel_ids = channel_ids[main_channel_indices]
+                cluster_info["main_channel_id"] = main_channel_ids
+
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):
                 cluster_info = cluster_info.query(f"group != '{exclude_cluster_groups}'")
@@ -229,12 +242,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                     else:
                         values_ = cluster_info[prop_name].values
                     self.set_property(key=prop_name, values=values_)
-
-        if channel_ids is not None:
-            main_channel_indices = _make_main_channel_indices_from_templates(phy_folder)
-            if main_channel_indices is not None:
-                main_channel_ids = channel_ids[main_channel_indices]
-                self.set_property(key="main_channel_id", values=main_channel_ids)
 
         self.annotate(phy_folder=str(phy_folder.resolve()))
 
