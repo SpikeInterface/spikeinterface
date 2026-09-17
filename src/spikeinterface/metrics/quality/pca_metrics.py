@@ -140,9 +140,9 @@ class NearestNeighbor(BaseMetric):
 
 
 def _nn_advanced_one_unit(args):
-    unit_id, sorting_analyzer_or_folder, n_spikes_all_units, fr_all_units, metric_params, seed = args
+    unit_id, sorting_analyzer_or_folder, n_spikes_all_units, fr_all_units, metric_params, seed, lazy = args
     if isinstance(sorting_analyzer_or_folder, (str, Path)):
-        sorting_analyzer = load(sorting_analyzer_or_folder)
+        sorting_analyzer = load(sorting_analyzer_or_folder, lazy=lazy)
     else:
         sorting_analyzer = sorting_analyzer_or_folder
 
@@ -229,7 +229,15 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
 
         for unit_id in units_loop:
             _, nn_isolation, nn_unit_id, nn_noise_overlap = _nn_advanced_one_unit(
-                (unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed)
+                (
+                    unit_id,
+                    sorting_analyzer,
+                    n_spikes_all_units,
+                    fr_all_units,
+                    metric_params,
+                    seed,
+                    sorting_analyzer._lazy,
+                )
             )
             nn_isolation_dict[unit_id] = nn_isolation
             nn_noise_overlap_dict[unit_id] = nn_noise_overlap
@@ -243,7 +251,17 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
         # If we got here, we are sure the sorting_analyzer is saved on disk
         args_list = []
         for unit_id in unit_ids:
-            args_list.append((unit_id, sorting_analyzer.folder, n_spikes_all_units, fr_all_units, metric_params, seed))
+            args_list.append(
+                (
+                    unit_id,
+                    sorting_analyzer.folder,
+                    n_spikes_all_units,
+                    fr_all_units,
+                    metric_params,
+                    seed,
+                    sorting_analyzer._lazy,
+                )
+            )
 
         with ProcessPoolExecutor(
             max_workers=n_jobs,
