@@ -412,7 +412,7 @@ def cache_preprocessing(
         if total_memory is None:
             mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
             if mem_ok:
-                recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+                recording = recording.save(format="memory", sharedmem=True, **job_kwargs)
             else:
                 import warnings
 
@@ -421,11 +421,11 @@ def cache_preprocessing(
 
     elif mode == "folder":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_folder(folder=folder, **job_kwargs)
+        recording = recording.save(folder=folder, format="binary", **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "zarr":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_zarr(folder=folder, **job_kwargs)
+        recording = recording.save(folder=folder, format="zarr", **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "no-cache":
         recording = recording
@@ -433,11 +433,11 @@ def cache_preprocessing(
         mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
         if mem_ok:
             # first try memory first
-            recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+            recording = recording.save(format="memory", sharedmem=True, **job_kwargs)
             cache_info["mode"] = "memory"
         elif folder is not None:
             # then try folder
-            recording = recording.save_to_folder(folder=folder, **job_kwargs)
+            recording = recording.save(folder=folder, format="binary", **job_kwargs)
             cache_info["mode"] = "folder"
             cache_info["folder"] = folder
         else:

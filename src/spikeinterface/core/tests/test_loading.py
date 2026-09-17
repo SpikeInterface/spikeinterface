@@ -196,7 +196,7 @@ def test_load_aggregate_recording_from_json(generate_recording_sorting, tmp_path
     aggregated_rec = aggregate_channels(list_of_recs)
 
     recording_path = tmp_path / "aggregated_recording"
-    aggregated_rec.save_to_folder(folder=recording_path)
+    aggregated_rec.save(folder=recording_path)
     loaded_rec = load(recording_path / "provenance.json", base_folder=recording_path)
 
     assert np.all(loaded_rec.get_property("group") == recording.get_property("group"))

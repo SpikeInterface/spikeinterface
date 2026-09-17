@@ -210,6 +210,8 @@ jobs:
       - name: Test curation
         shell: bash
         if: env.RUN_CURATION_TESTS == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           uv pip install --system -e .[curation] --group test-curation
           uv pip list --system
@@ -236,6 +238,8 @@ jobs:
       - name: Test sortingcomponents
         shell: bash
         if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           uv pip install --system -e .[sortingcomponents] --group test-sortingcomponents
           uv pip list --system

@@ -3,8 +3,7 @@ from typing import Literal
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
-from spikeinterface.core.generate import _ensure_seed
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_from_class, _ensure_seed
 
 
 class NoiseGeneratorRecording(BaseRecording):

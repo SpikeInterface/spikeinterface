@@ -324,7 +324,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
 
 def test_SortingAnalyzer_tmp_recording(dataset):
     recording, sorting = dataset
-    recording_cached = recording.save(mode="memory")
+    recording_cached = recording.save(format="memory")
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     sorting_analyzer.set_temporary_recording(recording_cached)
@@ -402,12 +402,18 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
         if isinstance(value, np.ndarray):
             assert isinstance(value, array_class)
 
-    # check that the lazy mode does not overwrite existing extensions
+    # a lazy (but not read-only) analyzer is allowed to overwrite existing extensions
     sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
-    # reload the analyzer to check that the original extension is not overwritten
     sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
     random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
-    assert random_spikes_ext.params["max_spikes_per_unit"] != 10
+    assert random_spikes_ext.params["max_spikes_per_unit"] == 10
+
+    # check that a lazy+read-only analyzer does not overwrite existing extensions
+    sorting_analyzer_lazy_ro = load_sorting_analyzer(folder, format="auto", lazy=True, read_only=True)
+    sorting_analyzer_lazy_ro.compute("random_spikes", max_spikes_per_unit=20)
+    sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
+    random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
+    assert random_spikes_ext.params["max_spikes_per_unit"] != 20
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
@@ -1100,13 +1106,36 @@ def test_merge_units_main_channel_id_disagreement():
     assert merged_main_channel_id == "chB"
 
 
+@pytest.mark.parametrize("unit_indices", [[4, 3, 2, 1, 0], [3, 1]])
+def test_select_units_reordered_sparsity(dataset, unit_indices):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs=dict(method="best_channels", num_channels=3)
+    )
+    mask = sorting_analyzer.sparsity.mask
+    assert len({tuple(row) for row in mask}) == sorting.unit_ids.size
+
+    sub = sorting_analyzer.select_units(sorting_analyzer.unit_ids[unit_indices])
+
+    assert np.array_equal(sub.sparsity.unit_ids, sub.unit_ids)
+    for k, unit_id in enumerate(sub.unit_ids):
+        assert np.array_equal(sub.sparsity.mask[k], mask[sorting.id_to_index(unit_id)])
+
+
 if __name__ == "__main__":
-    tmp_path = Path("test_SortingAnalyzer")
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp()) / "test_SortingAnalyzer"
+
     dataset = get_dataset()
-    test_SortingAnalyzer_memory(tmp_path, dataset)
-    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    # test_SortingAnalyzer_memory(tmp_path, dataset)
+    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    # test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
+    # test_extension()
+    # test_extension_params()
+    # test_runtime_dependencies(dataset)
     test_extension()
     test_extension_params()
     test_runtime_dependencies(dataset)
