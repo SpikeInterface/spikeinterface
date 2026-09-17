@@ -14,6 +14,7 @@ from packaging.version import parse
 from time import perf_counter
 
 import numpy as np
+import zarr
 
 import probeinterface
 import spikeinterface
@@ -1069,7 +1070,7 @@ class SortingAnalyzer:
         lazy: bool = False,
     ) -> "SortingAnalyzer":
         # used by create and save_as
-        import zarr
+
         from .zarrextractors import add_sorting_to_zarr_group
 
         is_remote = is_path_remote(folder)
@@ -1179,7 +1180,7 @@ class SortingAnalyzer:
         lazy: bool = False,
         read_only: bool = False,
     ) -> "SortingAnalyzer":
-        import zarr
+
         from .loading import load
 
         backend_options = {} if backend_options is None else backend_options
@@ -1344,7 +1345,6 @@ class SortingAnalyzer:
             if self.format == "binary_folder":
                 np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
             elif self.format == "zarr":
-                import zarr
 
                 zarr_root = self._get_zarr_root(mode="r+")
                 prop_values = self.sorting.get_property(key)
@@ -2444,6 +2444,12 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 extension_instance.run(save=save, verbose=verbose, **job_kwargs)
             else:
                 extension_instance.run(save=save, verbose=verbose)
+            if not self._lazy:
+
+                for variable_name in extension_instance.data.keys():
+                    # Materialize the data if not in lazy mode
+                    if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):
+                        extension_instance.data[variable_name] = np.array(extension_instance.data[variable_name])
         except (Exception, KeyboardInterrupt):
             if should_save:
                 extension_instance._delete_extension_folder()
@@ -2612,15 +2618,11 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
                 for r, result in enumerate(results):
                     extension_name, variable_name = result_routage[r]
-                    if not self._lazy:
-                        # If the SortingAnalyzer is not lazy, we materialize the result to a numpy array.
-                        result = np.array(result)
                     extension_instances[extension_name].data[variable_name] = result
                     extension_instances[extension_name].run_info["runtime_s"] = runtime_s
                     extension_instances[extension_name].run_info["run_completed"] = True
 
                 for extension_name, extension_instance in extension_instances.items():
-                    self.extensions[extension_name] = extension_instance
                     if save_to_disk:
                         # params/provenance already saved above (before the run). Here we only persist
                         # the run info and the data. For disk gather modes the data is already written
@@ -2628,9 +2630,17 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                         extension_instance._save_run_info()
                         extension_instance._save_data()
                         if self.format == "zarr":
-                            import zarr
 
                             zarr.consolidate_metadata(self._get_zarr_root().store)
+                    if not self._lazy and gather_mode != "memory":
+                        # Materialize the data if not in lazy mode
+                        for variable_name in list(extension_instance.data.keys()):
+                            if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):
+                                extension_instance.data[variable_name] = np.array(
+                                    extension_instance.data[variable_name]
+                                )
+                    self.extensions[extension_name] = extension_instance
+
             except (Exception, KeyboardInterrupt):
                 for extension_name, extension_instance in extension_instances.items():
                     self.extensions.pop(extension_name, None)
@@ -2734,7 +2744,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             if extension_folder.is_dir():
                 shutil.rmtree(extension_folder)
         if self.format == "zarr":
-            import zarr
 
             zarr_root = self._get_zarr_root(mode="r+")
             if extension_name in (root := zarr_root["extensions"]):
@@ -3518,7 +3527,6 @@ class AnalyzerExtension:
             self._save_run_info()
             self._save_data()
             if self.format == "zarr":
-                import zarr
 
                 zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
@@ -3529,7 +3537,6 @@ class AnalyzerExtension:
         self._save_data()
 
         if self.format == "zarr":
-            import zarr
 
             zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
 
@@ -3573,7 +3580,6 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-            import zarr
 
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
@@ -3640,7 +3646,6 @@ class AnalyzerExtension:
             extension_folder.mkdir(exist_ok=False, parents=True)
 
         elif self.format == "zarr":
-            import zarr
 
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
@@ -3656,7 +3661,6 @@ class AnalyzerExtension:
                 shutil.rmtree(extension_folder)
 
         elif self.format == "zarr":
-            import zarr
 
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             if self.extension_name in zarr_root["extensions"]:

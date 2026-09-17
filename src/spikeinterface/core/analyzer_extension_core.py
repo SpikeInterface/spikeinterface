@@ -1592,10 +1592,6 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         else:
             data_names = self.nodepipeline_variables
         for d, name in zip(data, data_names):
-            # GatherToNpy/Zarr can return memmaps/zarr.Array
-            # If the SortingAnalyzer is not lazy, we materialize the data to a numpy array.
-            if not self.sorting_analyzer._lazy:
-                d = np.array(d)
             self.data[name] = d
 
     def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, periods=None, copy=True):

@@ -402,11 +402,6 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
         if isinstance(value, np.ndarray):
             assert isinstance(value, array_class)
 
-    # Windows: the non-lazy SA holds gather_to_disk memmaps (e.g. spike_amplitudes/amplitudes.npy).
-    # Drop it before the lazy SA recomputes random_spikes, which deletes spike_amplitudes as a
-    # dependent — otherwise the non-lazy SA's open handle causes a PermissionError on rmtree.
-    del sorting_analyzer
-
     # a lazy (but not read-only) analyzer is allowed to overwrite existing extensions
     sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
     sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
