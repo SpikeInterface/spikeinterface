@@ -435,9 +435,6 @@ class SortingAnalyzer:
         self.peak_sign = peak_sign
         self.peak_mode = peak_mode
         self._main_channel_indices = None
-
-        # For backward compatibility
-        self.return_scaled = return_in_uV
         self.folder: str | Path | None = None
 
         # this is used to store temporary recording

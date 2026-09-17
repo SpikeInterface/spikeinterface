@@ -37,8 +37,6 @@ class SpikesOnTracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV

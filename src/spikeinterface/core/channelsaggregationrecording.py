@@ -147,7 +147,20 @@ class ChannelsAggregationRecording(BaseRecording):
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
-        self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
+        self._kwargs = {"recording_list_or_dict": recording_list, "renamed_channel_ids": renamed_channel_ids}
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `recording_list' argument,
+        which is renamed to `recording_list_or_dict'.
+        """
+        if "recording_list" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording_list_or_dict"] = new_kwargs.pop("recording_list")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
     @property
     def recordings(self):
@@ -256,7 +269,6 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
 def aggregate_channels(
     recording_list_or_dict=None,
     renamed_channel_ids=None,
-    recording_list=None,
 ):
     """
     Aggregates channels of multiple recording into a single recording object
@@ -280,4 +292,4 @@ def aggregate_channels(
     values, are dropped.
     """
 
-    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)

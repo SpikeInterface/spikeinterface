@@ -43,11 +43,6 @@ from .alignsorting import align_sorting, AlignSortingExtractor
 
 from .noise_level import compute_noise_levels, ComputeNoiseLevels
 
-from .template_metrics import (
-    ComputeTemplateMetrics,
-    compute_template_metrics,
-)
-
 from .valid_unit_periods import (
     ComputeValidUnitPeriods,
     compute_valid_unit_periods,
