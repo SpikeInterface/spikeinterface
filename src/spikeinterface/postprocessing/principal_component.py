@@ -86,7 +86,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     def _select_units_extension_data(self, unit_ids):
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
