@@ -90,6 +90,7 @@ def test_NumpySorting(setup_NumpyRecording):
     sorting = NumpySorting.from_sorting(other_sorting)
     # print(sorting)
 
+    # Verify recording segment offsets and shifted sorting times survive conversion to NumpySorting.
     recording = generate_recording(num_channels=2, durations=[1.0, 1.0])
     recording.shift_times(shift=5.0, segment_index=0)
     recording.shift_times(shift=120.0, segment_index=1)
