@@ -77,7 +77,7 @@ def main():
         estimate_motion_kwargs=dict(method="decentralized", conv_engine="numpy"),
         n_jobs=-1,
         progress_bar=True,
-        output_motion_info=True, 
+        output_motion_info=True,
     )
     print(motion)
     motion_widget = sw.plot_motion_info(motion_info, recording=motion_recording)

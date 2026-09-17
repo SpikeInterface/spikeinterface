@@ -423,11 +423,16 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
 
     segment_t_starts = [sorting.get_start_time(seg_idx) for seg_idx in segment_indices]
 
-    return compute_segment_durations_from_spike_vector(spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts)
+    return compute_segment_durations_from_spike_vector(
+        spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts
+    )
 
 
 def compute_segment_durations_from_spike_vector(
-        spike_vector: np.ndarray, segment_indices: list[int], sampling_frequency: float, segment_t_starts: list[float] | None
+    spike_vector: np.ndarray,
+    segment_indices: list[int],
+    sampling_frequency: float,
+    segment_t_starts: list[float] | None,
 ):
     """
     If segment_t_starts is `None` then assume 0
@@ -442,11 +447,11 @@ def compute_segment_durations_from_spike_vector(
     segment_start_stop_times = [
         (
             (spike_vector["sample_index"][start]) / sampling_frequency + segment_t_starts[idx],
-            (spike_vector["sample_index"][end - 1] + 1) / sampling_frequency + segment_t_starts[idx]
-        ) for idx, (start, end) in enumerate(segment_boundaries)
+            (spike_vector["sample_index"][end - 1] + 1) / sampling_frequency + segment_t_starts[idx],
+        )
+        for idx, (start, end) in enumerate(segment_boundaries)
     ]
 
-    durations = np.array([end-start for (end, start) in segment_start_stop_times])
+    durations = np.array([end - start for (end, start) in segment_start_stop_times])
 
     return durations, segment_start_stop_times
-
