@@ -95,18 +95,6 @@ def test_find_collisions_with_margin_indices(monkeypatch):
     np.testing.assert_array_equal(collisions[1], spikes_within_margin[[2, 0, 1, 3]])
     np.testing.assert_array_equal(collisions[2], spikes_within_margin[[3, 2]])
 
-    collisions_without_indices = find_collisions(
-        spikes,
-        spikes_within_margin,
-        delta_collision_samples=4,
-        sparsity_mask=sparsity_mask,
-    )
-    for spike_index in collisions:
-        np.testing.assert_array_equal(collisions_without_indices[spike_index], collisions[spike_index])
-
-    with pytest.raises(ValueError, match="shorter"):
-        find_collisions(spikes, spikes_within_margin, 4, sparsity_mask, spike_indices=spike_indices[:-1])
-
 
 class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
 

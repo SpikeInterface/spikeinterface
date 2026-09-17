@@ -256,7 +256,7 @@ class AmplitudeScalingNode(PipelineNode):
                 local_spikes_within_margin,
                 delta_collision_samples,
                 sparsity_mask,
-                spike_indices=local_spike_indices,
+                local_spike_indices,
             )
         else:
             collisions = {}
@@ -387,7 +387,7 @@ def _ordinary_scaling_slope(template, local_waveform):
     return covariance / template_variance
 
 
-def find_collisions(spikes, spikes_within_margin, delta_collision_samples, sparsity_mask, spike_indices=None):
+def find_collisions(spikes, spikes_within_margin, delta_collision_samples, sparsity_mask, spike_indices):
     """
     Finds the collisions between spikes.
 
@@ -418,7 +418,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     sparsity_mask: boolean mask
         A num_units x num_channels boolean array indicating whether
         the unit is represented on the channel.
-    spike_indices : np.ndarray or None, default: None
+    spike_indices : np.ndarray
         The indices of `spikes` in `spikes_within_margin`. Providing these indices avoids
         searching `spikes_within_margin` once for every spike.
 
@@ -430,10 +430,7 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
     """
     # TODO: refactor to speed-up
     collision_spikes_dict = {}
-    if spike_indices is None:
-        spike_indices = (np.where(spikes_within_margin == spike)[0][0] for spike in spikes)
     for spike_index, (spike, spike_index_within_margin) in enumerate(zip(spikes, spike_indices, strict=True)):
-
         # find the spikes that fall within a temporal window around the spike peak
         spike_collision_window = [
             spike["sample_index"] - delta_collision_samples,
