@@ -576,7 +576,6 @@ class BaseExtractor:
 
         dump_dict = retrieve_importing_provenance(self.__class__)
         dump_dict["kwargs"] = kwargs
-        dump_dict["main_ids"] = self._main_ids
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
