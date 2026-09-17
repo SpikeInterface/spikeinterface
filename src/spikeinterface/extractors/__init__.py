@@ -13,8 +13,7 @@ from warnings import warn
 # this __getattr__ is only triggered if the normal lookup fails so import
 # any of our functions is fine but if someone tries to import a class this raises
 # the warning and then returns the "function" version which will look the same
-# to the end-user
-# to be removed after version 0.105.0
+# to the end-user to be removed after version 0.105.0
 def __getattr__(extractor_name):
     # we need this trick to allow us to use import * for spikeinterface.full
     if extractor_name == "__all__":

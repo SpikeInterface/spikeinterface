@@ -74,7 +74,6 @@ class SpikesOnTracesWidget(BaseWidget):
         unit_colors=None,
         sparsity=None,
         mode="auto",
-        return_scaled=None,
         return_in_uV=False,
         cmap="RdBu",
         show_channel_ids=False,
@@ -90,16 +89,6 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FurtureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
-
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(sorting_analyzer, "unit_locations")
 

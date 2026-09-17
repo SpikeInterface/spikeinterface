@@ -15,18 +15,16 @@ class ChannelsAggregationRecording(BaseRecording):
 
     Do not use this class directly but use `si.aggregate_channels(...)`
 
+    Parameters
+    ----------
+    recording_list_or_dict : list or dict
+        The list or dictionary of recordings to aggregate.
+    renamed_channel_ids : list, optional
+        The new channel ids for the aggregated recording. If None, default unique consecutive ids are used.
+
     """
 
-    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None, recording_list=None):
-
-        if recording_list is not None:
-            warnings.warn(
-                "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            recording_list_or_dict = recording_list
-
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None):
         if isinstance(recording_list_or_dict, dict):
             recording_list = list(recording_list_or_dict.values())
             recording_ids = list(recording_list_or_dict.keys())

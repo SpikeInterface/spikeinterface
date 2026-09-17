@@ -73,7 +73,6 @@ class TracesWidget(BaseWidget):
         order_channel_by_depth=False,
         time_range=None,
         mode="auto",
-        return_scaled=None,
         return_in_uV=False,
         cmap="RdBu_r",
         show_channel_ids=False,
@@ -92,16 +91,6 @@ class TracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
-
         if isinstance(recording, BaseRecording):
             recordings = {"rec": recording}
             rec0 = recording

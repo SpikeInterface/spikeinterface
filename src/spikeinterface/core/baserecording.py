@@ -236,7 +236,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         end_frame: int | None = None,
         channel_ids: list | np.ndarray | tuple | None = None,
         order: Literal["C", "F"] | None = None,
-        return_scaled: bool | None = None,
         return_in_uV: bool = False,
     ) -> np.ndarray:
         """Returns traces from recording.
@@ -253,10 +252,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
             The channel ids. If None, all channels are used, default: None
         order : "C" | "F" | None, default: None
             The order of the traces ("C" | "F"). If None, traces are returned as they are
-        return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
-            If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-            traces are scaled to uV
         return_in_uV : bool, default: False
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
             traces are scaled to uV
@@ -281,15 +276,6 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         if order is not None:
             assert order in ["C", "F"]
             traces = np.asanyarray(traces, order=order)
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
 
         if return_in_uV:
             if not self.has_scaleable_traces():

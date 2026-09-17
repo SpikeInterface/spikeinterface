@@ -74,7 +74,6 @@ def localize_peaks(
     verbose=False,
     job_kwargs=None,
     seed=None,
-    **old_kwargs,
 ) -> np.ndarray:
     """Localize peak (spike) in 2D or 3D depending the method.
 
@@ -116,18 +115,10 @@ def localize_peaks(
         Array with estimated location for each spike.
         The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
     """
-    if len(old_kwargs) > 0:
-        # This is the old behavior and will be remove in 0.105.0
-        warnings.warn(
-            "The signature of localize_peaks() has changed, now method_kwargs and job_kwargs are dinstinct params."
-            "This warning will raise an error in version 0.105.0"
-        )
-        assert job_kwargs is None
-        assert method_kwargs is None
-        method_kwargs, job_kwargs = split_job_kwargs(old_kwargs)
-    else:
-        if method_kwargs is None:
-            method_kwargs = dict()
+    if method_kwargs is None:
+        method_kwargs = dict()
+    if job_kwargs is None:
+        job_kwargs = dict()
 
     if "method" in method_kwargs:
         # for flexibility the caller can put method inside method_kwargs

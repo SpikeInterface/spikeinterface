@@ -1024,7 +1024,7 @@ class BaseSorting(BaseExtractor):
             warnings.warn(
                 "Sorting.to_spike_vector() with extremum_channel_inds is deprecated. "
                 "Use main_channel_indices instead"
-                "This will be removed in 0.016.0"
+                "This will be removed in 0.106.0"
             )
             main_channel_indices = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
 

@@ -439,7 +439,6 @@ Deprecated
     :noindex:
 
     .. autofunction:: apply_sortingview_curation
-    .. autofunction:: get_potential_auto_merge
     .. autoclass:: CurationSorting
     .. autoclass:: MergeUnitsSorting
     .. autoclass:: SplitUnitSorting
