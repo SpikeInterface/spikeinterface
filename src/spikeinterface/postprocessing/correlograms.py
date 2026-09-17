@@ -451,7 +451,7 @@ def _compute_correlograms_on_sorting(sorting, window_ms, bin_ms, method="auto", 
     sorting : Sorting
         A SpikeInterface Sorting object
     window_ms : float
-            The window size over which to perform the cross-correlation, in ms
+        The window size over which to perform the cross-correlation, in ms
     bin_ms : float
         The size of which to bin lags, in ms.
     method : str
