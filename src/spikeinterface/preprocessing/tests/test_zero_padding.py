@@ -8,13 +8,13 @@ from spikeinterface.preprocessing import zero_channel_pad, bandpass_filter, phas
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
 
-def test_zero_padding_channel():
+def test_zero_padding_channel(create_cache_folder):
     num_original_channels = 4
     num_padded_channels = num_original_channels + 8
     rec = generate_recording(num_channels=num_original_channels, durations=[10])
 
     rec2 = zero_channel_pad(rec, num_channels=num_padded_channels)
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2", verbose=False)
 
     print(rec2)
 

@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path, WindowsPath
 from collections import namedtuple
 from collections.abc import Generator, Callable
@@ -844,6 +845,105 @@ def materialize_array(array: np.ndarray | zarr.Array) -> np.ndarray:
         return array[:]
     else:
         return array.copy()
+
+
+def load_properties_from_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
+    """
+    Load properties from a folder properties as .npy files and return sets them
+    as properties to the extractor.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder containing the properties as .npy files.
+    extractor : BaseExtractor
+        The extractor to which the properties will be set.
+    """
+    folder = Path(folder)
+    if folder.is_dir():
+        for prop_file in folder.iterdir():
+            if prop_file.suffix == ".npy":
+                values = np.load(prop_file, allow_pickle=True)
+                key = prop_file.stem
+                if key == "contact_vector":
+                    continue
+                extractor.set_property(key, values)
+
+
+def save_properties_to_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save properties from an extractor to a folder as .npy files.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the properties will be saved as .npy files.
+    extractor : BaseExtractor
+        The extractor from which the properties will be saved.
+    """
+    folder = Path(folder)
+    folder.mkdir(exist_ok=True)
+    for key in extractor.get_property_keys():
+        values = extractor.get_property(key)
+        np.save(folder / f"{key}.npy", values, allow_pickle=True)
+
+
+def save_annotations_to_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save BaseExtractor annotations to annotations.json in the provided folder.
+    This is used for `BinaryFolderRecording` and `NumpyFolderSorting` since version 0.105.0.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the annotations will be saved as a json file.
+    extractor : BaseExtractor
+        The extractor from which the annotations will be saved.
+    """
+    folder = Path(folder)
+    (folder / "annotations.json").write_text(json.dumps(extractor._annotations, indent=4), encoding="utf8")
+
+
+def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Load annotations from annotations.json in the provided folder.
+    This is used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0.
+    If the file doesn't exist, it will try to load annotations from the si_folder.json "annotations" field.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the annotations will be loaded from.
+    extractor : BaseExtractor
+        The extractor to which the annotations will be added.
+    """
+    folder = Path(folder)
+    annotations_file = folder / "annotations.json"
+    if annotations_file.exists():
+        with open(annotations_file, "r") as f:
+            annotations = json.load(f)
+            extractor._annotations.update(annotations)
+    else:
+        # this was before 0.105.0
+        si_folder_json = folder / "si_folder.json"
+        if si_folder_json.is_file():
+            with open(si_folder_json, "r") as f:
+                si_folder_dict = json.load(f)
+            if "annotations" in si_folder_dict:
+                annotations = si_folder_dict["annotations"]
+                extractor._annotations.update(annotations)
+
+
+def save_extractor_provenance(folder: str | Path, extractor: "BaseExtractor"):
+    folder = Path(folder)
+    if extractor.check_serializability("json"):
+        provenance_file_path = folder / f"provenance.json"
+        extractor.dump_to_json(file_path=provenance_file_path, relative_to=folder)
+    elif extractor.check_serializability("pickle"):
+        provenance_file = folder / f"provenance.pkl"
+        extractor.dump_to_pickle(provenance_file, relative_to=folder)
+    else:
+        warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
 
 
 def _ensure_seed(seed):

@@ -324,7 +324,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
 
 def test_SortingAnalyzer_tmp_recording(dataset):
     recording, sorting = dataset
-    recording_cached = recording.save(mode="memory")
+    recording_cached = recording.save(format="memory")
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     sorting_analyzer.set_temporary_recording(recording_cached)
@@ -1106,18 +1106,6 @@ def test_merge_units_main_channel_id_disagreement():
     assert merged_main_channel_id == "chB"
 
 
-if __name__ == "__main__":
-    tmp_path = Path("test_SortingAnalyzer")
-    dataset = get_dataset()
-    test_SortingAnalyzer_memory(tmp_path, dataset)
-    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    test_SortingAnalyzer_zarr(tmp_path, dataset)
-    test_SortingAnalyzer_tmp_recording(dataset)
-    test_extension()
-    test_extension_params()
-    test_runtime_dependencies(dataset)
-
-
 @pytest.mark.parametrize("unit_indices", [[4, 3, 2, 1, 0], [3, 1]])
 def test_select_units_reordered_sparsity(dataset, unit_indices):
     recording, sorting = dataset
@@ -1132,3 +1120,22 @@ def test_select_units_reordered_sparsity(dataset, unit_indices):
     assert np.array_equal(sub.sparsity.unit_ids, sub.unit_ids)
     for k, unit_id in enumerate(sub.unit_ids):
         assert np.array_equal(sub.sparsity.mask[k], mask[sorting.id_to_index(unit_id)])
+
+
+if __name__ == "__main__":
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp()) / "test_SortingAnalyzer"
+
+    dataset = get_dataset()
+    # test_SortingAnalyzer_memory(tmp_path, dataset)
+    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    # test_SortingAnalyzer_zarr(tmp_path, dataset)
+    test_SortingAnalyzer_tmp_recording(dataset)
+    # test_extension()
+    # test_extension_params()
+    # test_runtime_dependencies(dataset)
+    test_extension()
+    test_extension_params()
+    test_runtime_dependencies(dataset)
