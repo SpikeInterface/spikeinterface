@@ -283,9 +283,6 @@ class NumpySorting(BaseSorting):
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
         if source_sorting.has_recording():
             sorting._recording = source_sorting._recording
-        for source_segment, target_segment in zip(source_sorting._sorting_segments, sorting._sorting_segments):
-            target_segment._t_start = source_segment._t_start
-            target_segment._native_t_start = source_segment._native_t_start
         if with_metadata:
             source_sorting.copy_metadata(sorting)
         return sorting
