@@ -2747,15 +2747,13 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
         # Delete from folder or zarr
         if self.format != "memory" and not self._read_only:
-            if self.has_extension(extension_name):
-                # If in memory, close any memmap handles already held (e.g. by a previous lazy load), possibly shared
-                # with an external reference, before touching disk (ext.delete() below closes its own)
-                in_mem_extension = self.extensions.get(extension_name)
-                if in_mem_extension is not None:
-                    in_mem_extension._close_memmaps()
-                # Now we need a reload to reset the folder
-                ext = self.load_extension(extension_name)
-                ext.delete()
+            in_mem_extension = self.extensions.get(extension_name)
+            if in_mem_extension is not None:
+                # Call delete() on the already-loaded instance so it closes any open memmap handles
+                # before removing the on-disk files.  The original code reloaded the extension first
+                # (opening new memmaps) and then called delete() on the fresh copy — on Windows that
+                # left the new memmaps open long enough to cause a PermissionError during rmtree.
+                in_mem_extension.delete()
             else:
                 self._delete_extension_storage(extension_name)
 
