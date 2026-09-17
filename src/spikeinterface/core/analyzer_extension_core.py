@@ -80,7 +80,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
 
         selected_mask = np.zeros(spikes.size, dtype=bool)
@@ -247,7 +247,7 @@ class ComputeWaveforms(AnalyzerExtension):
         # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[random_spikes_indices]
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
@@ -567,7 +567,7 @@ class ComputeTemplates(AnalyzerExtension):
         return nafter
 
     def _select_units_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
 
         new_data = dict()
         for key, arr in self.data.items():
@@ -1671,7 +1671,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
 
     def _select_units_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)

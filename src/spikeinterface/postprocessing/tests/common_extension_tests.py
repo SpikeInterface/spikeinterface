@@ -11,6 +11,41 @@ from spikeinterface.core import (
 from spikeinterface.core.sortinganalyzer import get_extension_class
 
 extensions_which_allow_unit_ids = ["unit_locations"]
+extensions_with_unit_by_unit_data = ["correlograms", "template_similarity"]
+
+
+def _assert_reordered_select_matches(extension_name, sliced_data, reversed_data, sliced_unit_ids, reversed_unit_ids):
+    """`select_units` in reversed order must equal the canonical selection reindexed by unit id."""
+    import pandas as pd
+
+    if isinstance(sliced_data, (tuple, list)):
+        assert len(sliced_data) == len(reversed_data)
+        for a, b in zip(sliced_data, reversed_data):
+            _assert_reordered_select_matches(extension_name, a, b, sliced_unit_ids, reversed_unit_ids)
+    elif isinstance(sliced_data, dict):
+        assert set(sliced_data) == set(reversed_data)
+        for key in sliced_data:
+            _assert_reordered_select_matches(
+                extension_name, sliced_data[key], reversed_data[key], sliced_unit_ids, reversed_unit_ids
+            )
+    elif isinstance(sliced_data, pd.DataFrame):
+        pd.testing.assert_frame_equal(sliced_data.loc[np.asarray(reversed_unit_ids)], reversed_data)
+    elif isinstance(sliced_data, np.ndarray) and sliced_data.dtype.names and "unit_index" in sliced_data.dtype.names:
+        for name in sliced_data.dtype.names:
+            if name != "unit_index":
+                np.testing.assert_array_equal(sliced_data[name], reversed_data[name])
+        np.testing.assert_array_equal(
+            np.asarray(sliced_unit_ids)[sliced_data["unit_index"]],
+            np.asarray(reversed_unit_ids)[reversed_data["unit_index"]],
+        )
+    elif isinstance(sliced_data, np.ndarray) and sliced_data.ndim > 0 and sliced_data.shape[0] == len(sliced_unit_ids):
+        perm = [list(sliced_unit_ids).index(unit_id) for unit_id in reversed_unit_ids]
+        expected = sliced_data[perm]
+        if extension_name in extensions_with_unit_by_unit_data:
+            expected = expected[:, perm]
+        np.testing.assert_array_equal(expected, reversed_data)
+    else:
+        np.testing.assert_array_equal(sliced_data, reversed_data)
 
 
 def get_dataset():
@@ -152,15 +187,23 @@ class AnalyzerExtensionCommonTestSuite:
         sliced = sorting_analyzer.select_units(some_unit_ids, format="memory")
         assert np.array_equal(sliced.unit_ids, sorting_analyzer.unit_ids[::2])
 
+        reversed_unit_ids = some_unit_ids[::-1]
+        sliced_reversed = sorting_analyzer.select_units(reversed_unit_ids, format="memory")
+        _assert_reordered_select_matches(
+            extension_class.extension_name,
+            sliced.get_extension(extension_class.extension_name).get_data(),
+            sliced_reversed.get_extension(extension_class.extension_name).get_data(),
+            some_unit_ids,
+            reversed_unit_ids,
+        )
+
         some_merges = [sorting_analyzer.unit_ids[:2].tolist()]
         num_units_after_merge = len(sorting_analyzer.unit_ids) - 1
         merged = sorting_analyzer.merge_units(some_merges, format="memory", merging_mode="soft", sparsity_overlap=0.0)
         assert len(merged.unit_ids) == num_units_after_merge
 
-        # Test that order of units doesn't change things
+        # Test that compute(unit_ids=...) respects the order of unit ids
         if extension_class.extension_name in extensions_which_allow_unit_ids:
-            reversed_unit_ids = some_unit_ids[::-1]
-            sliced_reversed = sorting_analyzer.select_units(reversed_unit_ids, format="memory")
             ext = sorting_analyzer.compute(
                 extension_class.extension_name, unit_ids=reversed_unit_ids, **params, **job_kwargs
             )
