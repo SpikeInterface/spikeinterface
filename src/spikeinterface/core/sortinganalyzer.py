@@ -1573,7 +1573,7 @@ class SortingAnalyzer:
                 sparsity = self.sparsity
             elif has_removed and not has_merges and not has_splits:
                 # remove units
-                sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
+                sparsity_mask = self.sparsity.mask[self.sorting.ids_to_indices(unit_ids), :]
                 sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
             elif has_merges:
                 # merge units
@@ -1628,7 +1628,6 @@ class SortingAnalyzer:
 
         if merge_unit_groups is None and split_units is None:
             # when only some unit_ids then the sorting must be sliced
-            # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
         elif merge_unit_groups is not None:
             assert split_units is None, "split_units must be None when merge_unit_groups is None"
@@ -1786,7 +1785,6 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
-        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
@@ -1880,7 +1878,6 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
-        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)

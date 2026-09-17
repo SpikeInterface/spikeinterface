@@ -562,7 +562,7 @@ class ComputeTemplates(AnalyzerExtension):
         return nafter
 
     def _select_units_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
 
         new_data = dict()
         for key, arr in self.data.items():
