@@ -43,7 +43,7 @@ def test_failure_with_non_unique_unit_ids():
         sorting2 = UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
 
 
-def test_custom_cache_spike_vector():
+def test_compute_and_cache_spike_vector():
     sorting = generate_sorting(num_units=3, durations=[0.100, 0.100], sampling_frequency=30000.0)
 
     sub_sorting = UnitsSelectionSorting(sorting, unit_ids=["2", "0"], renamed_unit_ids=["b", "a"])

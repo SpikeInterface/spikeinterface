@@ -2,13 +2,13 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from spikeinterface import get_noise_levels
-from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline, PipelineNode
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
 from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
-
 
 DEBUG = False
 
@@ -31,7 +31,7 @@ def setup_dataset_and_peaks(cache_folder):
         noise_levels=get_noise_levels(recording, return_in_uV=False),
         peak_sign="neg",
         detect_threshold=5,
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=1.0,
         return_output=True,
     )
     extract_dense_waveforms = ExtractDenseWaveforms(

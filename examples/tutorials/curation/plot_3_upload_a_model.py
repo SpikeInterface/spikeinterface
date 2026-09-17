@@ -112,8 +112,8 @@ Upload a pipeline to Hugging Face Hub
 #
 #     ` ` ` python (NOTE: you should remove the spaces between each backtick. This is just formatting for the notebook you are reading)
 #
-#         from spikeinterface.curation import auto_label_units
-#         labels = auto_label_units(
+#         from spikeinterface.curation import model_based_label_units
+#         labels = model_based_label_units(
 #             sorting_analyzer = sorting_analyzer,
 #             repo_id = "SpikeInterface/toy_tetrode_model",
 #             trust_model=True
@@ -123,9 +123,9 @@ Upload a pipeline to Hugging Face Hub
 #     or you can download the entire repositry to `a_folder_for_a_model`, and use
 #
 #     ` ` ` python
-#         from spikeinterface.curation import auto_label_units
+#         from spikeinterface.curation import model_based_label_units
 #
-#         labels = auto_label_units(
+#         labels = model_based_label_units(
 #             sorting_analyzer = sorting_analyzer,
 #             model_folder = "path/to/a_folder_for_a_model",
 #             trusted = ['numpy.dtype']

@@ -38,13 +38,14 @@ If you use one of the following spike sorting algorithms (i.e. you use the :code
 please include the appropriate citation for the :code:`sorter_name` parameter you use:
 *Note: unless otherwise stated, the reference given is to be used for all versions of the sorter*
 
+- :code:`dartsort` [Boussard2023]_
 - :code:`combinato` [Niediek]_
 - :code:`hdsort` [Diggelmann]_
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
 - :code:`kilosort`  [Pachitariu]_
 - :code:`mountainsort` [Chung]_
 - :code:`rtsort` [van_der_Molen]_
-- :code:`spykingcircus` [Yger]_
+- :code:`spykingcircus` [Yger2018]_
 - :code:`wavclus` [Chaure]_
 - :code:`yass` [Lee]_
 
@@ -57,13 +58,12 @@ methods:
  - :code:`acgs_3d` [Beau]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`monopolar_triangulation` based on work from [Boussard]_
  - :code:`unit_locations` or :code:`spike_locations` with :code:`grid_convolution` based on work from [Pachitariu]_
- - :code:`template_metrics` [Jia]_
+ - :code:`compute_valid_unit_periods` based on work from [npyx]_ and [Fabre]_
 
-
-Qualitymetrics Module
----------------------
-If you use the :code:`qualitymetrics` module, i.e. you use the :code:`analyzer.compute()`
-or :code:`compute_quality_metrics()` methods, please include the citations for the :code:`metric_names` that were particularly
+Metrics Module
+--------------
+If you use the :code:`metrics.quality` module, i.e. you use the :code:`analyzer.compute("quality_metrics")`
+method, please include the citations for the :code:`metric_names` that were particularly
 important for your research:
 
 - :code:`amplitude_cutoff` [Hill]_
@@ -75,22 +75,27 @@ important for your research:
 - :code:`sd_ratio` [Pouzat]_
 - :code:`snr` [Lemon]_ [Jackson]_
 - :code:`synchrony` [Grün]_
-
-If you use the :code:`qualitymetrics.pca_metrics` module, i.e. you use the
-:code:`compute_pc_metrics()` method, please include the citations for the :code:`metric_names` that were particularly
-important for your research:
-
 - :code:`d_prime` [Hill]_
 - :code:`isolation_distance` or :code:`l_ratio` [Schmitzer-Torbert]_
 - :code:`nearest_neighbor` or :code:`nn_isolation` or :code:`nn_noise_overlap` [Chung]_ [Siegle]_
 - :code:`silhouette`  [Rousseeuw]_ [Hruschka]_
 
+If you use the :code:`metrics.template` module, i.e. you use the :code:`analyzer.compute("template_metrics")` method,
+please following citations:
+
+- [Jia]_
+
 
 Curation Module
 ---------------
-If you use the :code:`get_potential_auto_merge` method from the curation module, please cite [Llobet]_
 
-If you use :code:`auto_label_units` or :code:`train_model`, please cite [Jain]_
+If you use the default "similarity_correlograms" preset in the :code:`compute_merge_unit_groups` method from the curation module, please cite [Llobet]_
+
+If you use the "slay" preset in the :code:`compute_merge_unit_groups` method, please cite [Koukuntla]_
+
+If you use :code:`unitrefine_label_units`, :code:`model_based_label_units` or :code:`train_model`, please cite [Jain]_
+
+If you use :code:`bombcell_label_units`, please cite [Fabre]_
 
 Benchmark
 ---------
@@ -106,6 +111,8 @@ References
 
 .. [Boussard] `Three-dimensional spike localization and imporved motion correction for Neuropixels recordings. 2021 <https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1>`_
 
+.. [Boussard2023] `DARTsort: A modular drift tracking spike sorter for high-density multi-electrode probes. 2023 <https://www.biorxiv.org/content/10.1101/2023.08.11.553023v1>`_
+
 .. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 
 .. [Buzsáki] `The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations. 2014. <https://pubmed.ncbi.nlm.nih.gov/24569488/>`_
@@ -115,6 +122,8 @@ References
 .. [Chung] `A Fully Automated Approach to Spike Sorting. 2017. <https://pubmed.ncbi.nlm.nih.gov/28910621/>`_
 
 .. [Diggelmann] `Automatic spike sorting for high-density microelectrode arrays. 2018. <https://pubmed.ncbi.nlm.nih.gov/30207864/>`_
+
+.. [Fabre] `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. 2023. <https://doi.org/10.5281/zenodo.8172822>`_
 
 .. [Garcia2024] `A Modular Implementation to Handle and Benchmark Drift Correction for High-Density Extracellular Recordings. 2024. <https://pubmed.ncbi.nlm.nih.gov/38238082/>`_
 
@@ -139,6 +148,8 @@ References
 .. [Jain] `UnitRefine: A Community Toolbox for Automated Spike Sorting Curation. 2025 <https://www.biorxiv.org/content/10.1101/2025.03.30.645770v1>`_
 
 .. [Jia] `High-density extracellular probes reveal dendritic backpropagation and facilitate neuron classification. 2019 <https://journals.physiology.org/doi/full/10.1152/jn.00680.2018>`_
+
+.. [Koukuntla] `SLAy-ing oversplitting errors in high-density electrophysiology spike sorting. 2025. <https://www.biorxiv.org/content/10.1101/2025.06.20.660590v1>`_
 
 .. [Lee] `YASS: Yet another spike sorter. 2017. <https://www.biorxiv.org/content/10.1101/151928v1>`_
 
@@ -174,6 +185,6 @@ References
 
 .. [Windolf_b] `DREDge: robust motion correction for high-density extracellular recordings across species. 2023 <https://www.biorxiv.org/content/10.1101/2023.10.24.563768v1>`_
 
-.. [Yger] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
+.. [Yger2018] `A spike sorting toolbox for up to thousands of electrodes validated with ground truth recordings in vitro and in vivo. 2018. <https://pubmed.ncbi.nlm.nih.gov/29557782/>`_
 
 .. [Scopin2024] `Localization of neurons from extracellular footprints <https://doi.org/10.1016/j.jneumeth.2024.110297>`_

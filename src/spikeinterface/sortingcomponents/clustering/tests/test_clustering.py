@@ -15,7 +15,7 @@ from spikeinterface.sortingcomponents.tests.common import make_dataset
 
 import time
 
-import importlib
+import importlib.util
 
 
 def job_kwargs():
@@ -42,7 +42,7 @@ def run_peaks(recording, job_kwargs):
         method_kwargs=dict(
             peak_sign="neg",
             detect_threshold=5,
-            exclude_sweep_ms=0.1,
+            exclude_sweep_ms=0.8,
             noise_levels=noise_levels,
         ),
         job_kwargs=job_kwargs,

@@ -36,6 +36,14 @@ def test_filter_gaussian(tmp_path):
         assert np.allclose(original_trace[60:-60], saved1_trace[60:-60], rtol=1e-3, atol=1e-3)
         assert np.allclose(original_trace[60:-60], saved2_trace[60:-60], rtol=1e-3, atol=1e-3)
 
+    # test filter gaussian with time_Vector
+    for segment_index in range(recording.get_num_segments()):
+        times = recording.get_times(segment_index) + (segment_index + 1) * 10.0
+        recording.set_times(times, segment_index=segment_index)
+
+    rec_filtered_tv = gaussian_filter(recording)
+    assert rec_filtered_tv.get_traces(segment_index=0, end_frame=100).shape == (100, 3)
+
 
 @pytest.mark.parametrize("freq_min", [None, 10, 50, 100])
 @pytest.mark.parametrize("freq_max", [None, 10, 50, 100])
@@ -59,10 +67,10 @@ def test_bandpower(freq_min, freq_max, debug=False):
     # Welch power density
     trace = rec.get_traces()[:, 0]
     trace_filt = rec_filt.get_traces(0)[:, 0]
-    import scipy
+    from scipy.signal import welch
 
-    f, Pxx = scipy.signal.welch(trace, fs=fs)
-    _, Pxx_filt = scipy.signal.welch(trace_filt, fs=fs)
+    f, Pxx = welch(trace, fs=fs)
+    _, Pxx_filt = welch(trace_filt, fs=fs)
 
     if debug:
         import matplotlib.pyplot as plt

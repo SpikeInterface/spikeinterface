@@ -26,10 +26,10 @@ to import the :code:`core` module followed by:
     import spikeinterface.extractors as se
     import spikeinterface.preprocessing as spre
     import spikeinterface.sorters as ss
-    import spikinterface.postprocessing as spost
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.postprocessing as spost
+    import spikeinterface.metrics as sm
     import spikeinterface.exporters as sexp
-    import spikeinterface.comparsion as scmp
+    import spikeinterface.comparison as scmp
     import spikeinterface.curation as scur
     import spikeinterface.sortingcomponents as sc
     import spikeinterface.widgets as sw

@@ -333,7 +333,6 @@ looks slightly different. Let's calculate these extensions, and also add a param
             )
             compute_spike_amplitudes(
                 waveform_extractor=wvf_extractor,
-                peak_sign="pos"
             )
 
     .. grid-item::
@@ -345,7 +344,6 @@ looks slightly different. Let's calculate these extensions, and also add a param
             analyzer.compute("templates")
             analyzer.compute(
                 "spike_amplitudes",
-                peak_sign="pos"
             )
 
 Note that if a parent is recomputed, all its children are deleted to maintain data consistency.

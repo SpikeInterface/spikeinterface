@@ -12,26 +12,40 @@ Current core team
 
 * `Alessio Paolo Buccino <https://github.com/alejoe91>`_ [1]
 * `Samuel Garcia <https://github.com/samuelgarcia>`_ [2]
+* `Chris Halcrow <https://github.com/chrishalcrow>`_ [3]
 
-For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com) or Samuel Garcia
-(samuel.garcie.die@gmail.com), or just write an issue (preferred)!
+For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com), Samuel Garcia
+(samuel.garcie.die@gmail.com) or Chris Halcrow (chalcrow@ed.ac.uk), or just write an issue (preferred)!
 
+Core maintainers
+----------------
+
+The following people have made significant ongoing contributions towards SpikeInterface:
+
+* `Zach McKenzie <https://github.com/zm711>`_ [4]
+* `Heberto Mayorquin <https://github.com/h-mayorquin>`_ [5]
+* `Pierre Yger <https://github.com/yger>`_ [6]
+* `Joe Ziminski <https://github.com/JoeZiminski>`_ [7]
 
 Founding core team
 ------------------
 
 * `Alessio Paolo Buccino <https://github.com/alejoe91>`_ [1]
-* `Cole Hurwitz <https://github.com/colehurwitz>`_ [3]
-* `Jeremy Magland <https://github.com/magland>`_ [4]
-* `Matthias Hennig <https://github.com/mhhennig>`_ [3]
+* `Cole Hurwitz <https://github.com/colehurwitz>`_ [8]
+* `Jeremy Magland <https://github.com/magland>`_ [9]
+* `Matthias Hennig <https://github.com/mhhennig>`_ [8]
 * `Samuel Garcia <https://github.com/samuelgarcia>`_ [2]
 
 
 1. Allen Institute for Neural Dynamics (AIND), Seattle, USA.
 2. Centre de Recherche en Neuroscience de Lyon (CRNL), Lyon, France.
-3. The Institute for Adaptive and Neural Computation (ANC), University of Edinburgh, Edinburgh, Scotland.
-4. Center for Computational Biology (CCB), Flatiron Institute, New York, United States.
-
+3. Centre for Discovery Brain Sciences, University of Edinburgh, Edinburgh, UK.
+4. Harvard Medical School, Harvard University, USA.
+5. CatalystNeuro, Wyoming, USA.
+6. Lille Neurosciences and Cognition, Université de Lille, Lille, France.
+7. Sainsbury Wellcome Centre, London, UK.
+8. The Institute for Adaptive and Neural Computation (ANC), University of Edinburgh, Edinburgh, UK.
+9. Center for Computational Biology (CCB), Flatiron Institute, New York, USA.
 
 Contributors to current API (>0.90)
 -----------------------------------

@@ -1,17 +1,18 @@
-from __future__ import annotations
-
+import shutil
 import warnings
 from pathlib import Path
+
 import numpy as np
 import zarr
 
 from probeinterface import ProbeGroup
 
+from .base import minimum_spike_dtype, _get_class_from_string
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesorting import BaseSorting, SpikeVectorSortingSegment, minimum_spike_dtype
-from .core_tools import define_function_from_class, check_json
+from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .job_tools import split_job_kwargs
-from .core_tools import is_path_remote
+from .core_tools import define_function_from_class, check_json, retrieve_importing_provenance, is_path_remote
+from .time_series_tools import _write_time_series_to_zarr
 
 
 def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
@@ -37,7 +38,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     Returns
     -------
-    root: zarr.hierarchy.Group
+    root: zarr.Group
         The zarr root group object
 
     Raises
@@ -63,7 +64,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
 
     root = None
     exception = None
-    if is_path_remote(str(folder_path)):
+    if is_path_remote(folder_path):
         for open_func in open_funcs:
             if root is not None:
                 break
@@ -161,7 +162,7 @@ class ZarrRecordingExtractor(BaseRecording):
                     if np.isnan(t_start):
                         t_start = None
                 time_kwargs["t_start"] = t_start
-                time_kwargs["sampling_frequency"] = sampling_frequency
+            time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
             self.add_recording_segment(rec_segment)
@@ -178,15 +179,41 @@ class ZarrRecordingExtractor(BaseRecording):
                 total_nbytes_stored += nbytes_stored_segment
 
         # load probe
-        probe_dict = self._root.attrs.get("probe", None)
+        probe_dict = self._root.attrs.get("probegroup", None)
+        probe_dict_legacy = self._root.attrs.get("probe", None)
+        probegroup = None
         if probe_dict is not None:
             probegroup = ProbeGroup.from_dict(probe_dict)
-            self.set_probegroup(probegroup, in_place=True)
+            self._probegroup = probegroup
+        elif probe_dict_legacy is not None:
+            probegroup = ProbeGroup.from_dict(probe_dict_legacy)
+            order = np.argsort(probegroup.to_numpy(complete=True)["device_channel_indices"])
+            if not np.array_equal(order, np.arange(len(order))):
+                # In spikeinterface version < 0.105.0, the order was saved in the contact vector, but not
+                # in the probegroup. We need to check if the order is correct and if not, we need to reorder
+                # the probegroup to match the channel ids.
+                probegroup = probegroup.get_slice(order)
+
+            # In some older SI versions, before #4300, the probe annotations were
+            # saved to the recording annotations as `probes_info`. If this is the
+            # case, we can copy the annotations to the probegroup and delete the
+            # `probes_info` from the recording annotations.
+            si_annotations = self._root.attrs.get("annotations", {})
+            if "probes_info" in si_annotations:
+                probes_info = si_annotations.pop("probes_info")
+                for probe, probe_info in zip(probegroup.probes, probes_info):
+                    probe.annotations.update(probe_info)
+
+        if probegroup is not None:
+            self._probegroup = probegroup
 
         # load properties
         if "properties" in self._root:
             prop_group = self._root["properties"]
             for key in prop_group.keys():
+                # Skip contact_vector property since it is not used anymore to represent probegroup
+                if key == "contact_vector":
+                    continue
                 values = self._root["properties"][key]
                 self.set_property(key, values)
 
@@ -210,16 +237,27 @@ class ZarrRecordingExtractor(BaseRecording):
 
     @staticmethod
     def write_recording(
-        recording: BaseRecording, folder_path: str | Path, storage_options: dict | None = None, **kwargs
+        recording: BaseRecording,
+        folder_path: str | Path,
+        overwrite: bool = False,
+        storage_options: dict | None = None,
+        **kwargs,
     ):
+        folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_recording_to_zarr_group(recording, zarr_root, **kwargs)
+        return ZarrRecordingExtractor(folder_path, storage_options=storage_options)
 
 
 class ZarrRecordingSegment(BaseRecordingSegment):
     def __init__(self, root, dataset_name, **time_kwargs):
         BaseRecordingSegment.__init__(self, **time_kwargs)
-        self._timeseries = root[dataset_name]
+        if dataset_name is None:
+            # In this case, root is a simple array
+            self._timeseries = root
+        else:
+            self._timeseries = root[dataset_name]
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -241,6 +279,181 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         return traces
 
 
+class ZarrArrayRecording(BaseRecording):
+    """
+    Recording class for a plain Zarr array with shape num_samples x num_channels.
+    Mimics loading a binary array using BinaryRecording.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the directory where the zarr array is stored
+    sampling_frequency : float
+        The sampling frequency
+    gain_to_uV : float or array-like, default: None
+        The gain to apply to the traces
+    offset_to_uV : float or array-like, default: None
+        The offset to apply to the traces
+    is_filtered : bool or None, default: None
+        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    storage_options : dict or None: None
+        Storage options passed to the `zarr.open` function
+
+    Returns
+    -------
+    recording : ZarrArrayRecording
+        The recording Extractor
+    """
+
+    def __init__(
+        self,
+        file_path: str | Path,
+        sampling_frequency: float,
+        gain_to_uV: float | np.ndarray | None = None,
+        offset_to_uV: float | np.ndarray | None = None,
+        is_filtered: bool | None = None,
+        storage_options: dict | None = None,
+    ):
+
+        folder_path, _ = resolve_zarr_path(file_path)
+        self._root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
+
+        dtype = self._root.dtype
+        num_channels = self._root.shape[1]
+        channel_ids = list(range(num_channels))
+
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        rec_segment = ZarrRecordingSegment(self._root, None, sampling_frequency=sampling_frequency)
+        self.add_recording_segment(rec_segment)
+
+        if is_filtered is not None:
+            self.annotate(is_filtered=is_filtered)
+
+        if gain_to_uV is not None:
+            self.set_channel_gains(gain_to_uV)
+
+        if offset_to_uV is not None:
+            self.set_channel_offsets(offset_to_uV)
+
+        self._kwargs = {
+            "file_path": str(Path(file_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+            "num_channels": num_channels,
+            "dtype": dtype.str,
+            "channel_ids": channel_ids,
+            "gain_to_uV": gain_to_uV,
+            "offset_to_uV": offset_to_uV,
+            "is_filtered": is_filtered,
+        }
+
+
+class _ZarrSegmentIndex:
+    """Lazy segment_index array derived from segment_slices stored in zarr."""
+
+    def __init__(self, segment_slices: np.ndarray, n: int):
+        self._segment_slices = segment_slices
+        self._n = n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def __array__(self, dtype=None):
+        arr = np.empty(self._n, dtype="int64")
+        for seg_idx, (s0, s1) in enumerate(self._segment_slices):
+            arr[s0:s1] = seg_idx
+        return arr if dtype is None else arr.astype(dtype)
+
+    def __getitem__(self, key):
+        return np.asarray(self)[key]
+
+    def __eq__(self, other):
+        return np.asarray(self) == other
+
+
+class ZarrSpikeVector:
+    """
+    Virtual structured spike vector backed by zarr arrays.
+
+    Mimics a memmap-backed numpy structured array with fields
+    (sample_index, unit_index, segment_index) without loading any data
+    at construction time.  Data is read from zarr lazily:
+
+    * Field access (``spikes["sample_index"]``) returns the zarr array
+      (or a lazy segment-index object).
+    * Slice access (``spikes[s0:s1]``) materialises only that slice.
+    * ``np.asarray(spikes)`` materialises the full array.
+
+    The zarr arrays are assumed to be stored in sorted order
+    (segment_index ASC, sample_index ASC, unit_index ASC), which is the
+    ordering guaranteed by :func:`add_sorting_to_zarr_group`.
+    """
+
+    def __init__(self, spikes_group, segment_slices: np.ndarray):
+        self._sample_index = spikes_group["sample_index"]
+        self._unit_index = spikes_group["unit_index"]
+        self._segment_slices = np.asarray(segment_slices, dtype="int64")
+        self._n = self._sample_index.shape[0]
+        self.dtype = np.dtype(minimum_spike_dtype)
+
+    @property
+    def size(self) -> int:
+        return self._n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            if key == "sample_index":
+                return self._sample_index
+            elif key == "unit_index":
+                return self._unit_index
+            elif key == "segment_index":
+                return _ZarrSegmentIndex(self._segment_slices, self._n)
+            else:
+                raise KeyError(f"ZarrSpikeVector has no field {key!r}")
+
+        if isinstance(key, (int, np.integer)):
+            idx = int(key)
+            if idx < 0:
+                idx += self._n
+            result = np.empty(1, dtype=self.dtype)
+            result["sample_index"][0] = self._sample_index[idx]
+            result["unit_index"][0] = self._unit_index[idx]
+            result["segment_index"][0] = int(np.searchsorted(self._segment_slices[:, 0], idx, side="right")) - 1
+            return result[0]
+
+        if isinstance(key, slice):
+            start, stop, step = key.indices(self._n)
+            n = len(range(start, stop, step))
+            result = np.empty(n, dtype=self.dtype)
+            result["sample_index"] = self._sample_index[start:stop:step]
+            result["unit_index"] = self._unit_index[start:stop:step]
+            if step == 1:
+                seg_index = np.empty(n, dtype="int64")
+                for seg_idx, (s0, s1) in enumerate(self._segment_slices):
+                    lo = max(start, int(s0)) - start
+                    hi = min(stop, int(s1)) - start
+                    if hi > lo:
+                        seg_index[lo:hi] = seg_idx
+                result["segment_index"] = seg_index
+            else:
+                result["segment_index"] = _ZarrSegmentIndex(self._segment_slices, self._n)[start:stop:step]
+            return result
+
+        # fallback for fancy/boolean indexing: materialise then index
+        return np.asarray(self)[key]
+
+    def __array__(self, dtype=None):
+        arr = np.empty(self._n, dtype=self.dtype)
+        arr["sample_index"] = self._sample_index[:]
+        arr["unit_index"] = self._unit_index[:]
+        for seg_idx, (s0, s1) in enumerate(self._segment_slices):
+            arr["segment_index"][s0:s1] = seg_idx
+        return arr if dtype is None else arr.astype(dtype)
+
+
 class ZarrSortingExtractor(BaseSorting):
     """
     SortingExtractor for a zarr format
@@ -257,13 +470,23 @@ class ZarrSortingExtractor(BaseSorting):
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
     zarr_group : str or None, default: None
         Optional zarr group path to load the sorting from. This can be used when the sorting is not stored at the root, but in sub group.
+    lazy_spike_vector : bool, default: False
+        If True, the spike vector is loaded lazily. This can be useful for large sortings with many spikes.
+        If False, the spike vector is loaded in memory. Default: False
+
     Returns
     -------
     sorting : ZarrSortingExtractor
         The sorting Extractor
     """
 
-    def __init__(self, folder_path: Path | str, storage_options: dict | None = None, zarr_group: str | None = None):
+    def __init__(
+        self,
+        folder_path: Path | str,
+        storage_options: dict | None = None,
+        zarr_group: str | None = None,
+        lazy_spike_vector: bool = False,
+    ):
 
         folder_path, folder_path_kwarg = resolve_zarr_path(folder_path)
 
@@ -289,11 +512,23 @@ class ZarrSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        spikes = np.zeros(len(spikes_group["sample_index"]), dtype=minimum_spike_dtype)
-        spikes["sample_index"] = spikes_group["sample_index"][:]
-        spikes["unit_index"] = spikes_group["unit_index"][:]
-        for i, (start, end) in enumerate(segment_slices_list):
-            spikes["segment_index"][start:end] = i
+        if lazy_spike_vector:
+            spikes = ZarrSpikeVector(spikes_group, segment_slices_list)
+        else:
+            # Materialize the spike vector in memory and sort it by (segment_index, sample_index, unit_index)
+            spikes = np.zeros(spikes_group["sample_index"].shape[0], dtype=minimum_spike_dtype)
+            spikes["sample_index"] = spikes_group["sample_index"][:]
+            spikes["unit_index"] = spikes_group["unit_index"][:]
+            for i, (start, end) in enumerate(segment_slices_list):
+                spikes["segment_index"][start:end] = i
+            # we do not need to lexsort at init (very high cost) because there already sorted by frame before to be saved.
+            # In version 0.104.X this was fully lexsorted, but we don't need it anymore because it's only important in the context of SpikeVectorBased extensions in the SortingAnalyzer, which stores its own copy of the Sorting object. This makes the extension data and the spike vector always matching their order.
+            # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+
+        self._cached_spike_vector = spikes
+        # pre-populate segment slices so _get_spike_vector_segment_slices() never
+        # needs to materialise the full segment_index array
+        self._cached_spike_vector_segment_slices = np.asarray(segment_slices_list, dtype="int64")
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
@@ -311,19 +546,34 @@ class ZarrSortingExtractor(BaseSorting):
         if annotations is not None:
             self.annotate(**annotations)
 
-        self._kwargs = {"folder_path": folder_path_kwarg, "storage_options": storage_options, "zarr_group": zarr_group}
+        self._kwargs = {
+            "folder_path": folder_path_kwarg,
+            "storage_options": storage_options,
+            "zarr_group": zarr_group,
+            "lazy_spike_vector": lazy_spike_vector,
+        }
 
     @staticmethod
-    def write_sorting(sorting: BaseSorting, folder_path: str | Path, storage_options: dict | None = None, **kwargs):
+    def write_sorting(
+        sorting: BaseSorting,
+        folder_path: str | Path,
+        overwrite: bool = False,
+        storage_options: dict | None = None,
+        **kwargs,
+    ):
         """
         Write a sorting extractor to zarr format.
         """
+        folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrSortingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
+        return ZarrSortingExtractor(folder_path, storage_options=storage_options)
 
 
 read_zarr_recording = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr_recording")
 read_zarr_sorting = define_function_from_class(source_class=ZarrSortingExtractor, name="read_zarr_sorting")
+read_zarr_array = define_function_from_class(source_class=ZarrArrayRecording, name="read_zarr_array")
 
 
 def read_zarr(
@@ -344,15 +594,22 @@ def read_zarr(
     extractor : ZarrExtractor
         The loaded extractor
     """
-    # TODO @alessio : we should have something more explicit in our zarr format to tell which object it is.
-    # for the futur SortingAnalyzer we will have this 2 fields!!!
     root = super_zarr_open(folder_path, mode="r", storage_options=storage_options)
-    if "channel_ids" in root.keys():
-        return read_zarr_recording(folder_path, storage_options=storage_options)
-    elif "unit_ids" in root.keys():
-        return read_zarr_sorting(folder_path, storage_options=storage_options)
+    zarr_class_info = root.attrs.get("zarr_class_info", None)
+    if zarr_class_info is not None:
+        class_name = zarr_class_info["class"]
+        extractor_class = _get_class_from_string(class_name)
+        return extractor_class(folder_path, storage_options=storage_options)
     else:
-        raise ValueError("Cannot find 'channel_ids' or 'unit_ids' in zarr root. Not a valid SpikeInterface zarr format")
+        # For version<0.105.0 zarr files, revert to old way of loading based on the presence of "channel_ids"/"unit_ids"
+        if "channel_ids" in root.keys():
+            return read_zarr_recording(folder_path, storage_options=storage_options)
+        elif "unit_ids" in root.keys():
+            return read_zarr_sorting(folder_path, storage_options=storage_options)
+        else:
+            raise ValueError(
+                "Cannot find 'channel_ids' or 'unit_ids' in zarr root. Not a valid SpikeInterface zarr format"
+            )
 
 
 ### UTILITY FUNCTIONS ###
@@ -363,13 +620,79 @@ def resolve_zarr_path(folder_path: str | Path):
     Parameters
     ----------
     """
-    if str(folder_path).startswith("s3:") or str(folder_path).startswith("gcs:"):
+    if is_path_remote(folder_path):
         # cloud location, no need to resolve
         return folder_path, folder_path
     else:
         folder_path = Path(folder_path)
         folder_path_kwarg = str(Path(folder_path).resolve())
         return folder_path, folder_path_kwarg
+
+
+def create_zarr_path_for_write(folder_path: str | Path, overwrite: bool = False):
+    """
+    Resolve a path to a zarr folder for writing.
+
+    Parameters
+    ----------
+    folder_path : str or Path
+        Path to the zarr root file
+    """
+    if not is_path_remote(folder_path):
+        folder_path = Path(folder_path)
+        folder_path = folder_path.with_suffix(".zarr")
+        if folder_path.is_dir():
+            if not overwrite:
+                raise FileExistsError(f"Folder {folder_path} already exists. Use overwrite=True to overwrite it.")
+            else:
+                shutil.rmtree(folder_path)
+        folder_path.mkdir(exist_ok=False, parents=True)
+    return folder_path
+
+
+def _write_object_array(
+    group,
+    name: str,
+    data,
+    codec: str = "json",
+    overwrite: bool = True,
+):
+    """
+    Write a length-1 object-dtype array holding a Python dict/list/object.
+
+    Centralizes the v2/v3 codec-placement difference for object blobs: under zarr-v2
+    the object codec goes in ``object_codec=``; under zarr-v3 it goes in ``filters=``
+    (wrapped via ``numcodecs.zarr3.*``). The helper picks the right path automatically.
+
+    Parameters
+    ----------
+    group : zarr.Group
+        The zarr group to write into.
+    name : str
+        Name of the array inside ``group``.
+    data : Any
+        The Python object to store. Wrapped into ``np.array([data], dtype=object)``.
+    codec : {"json", "pickle"}, default: "json"
+        Which object codec to use.
+    overwrite : bool, default: True
+        Whether to overwrite an existing array with the same name.
+    """
+    import numcodecs
+
+    if codec == "json":
+        codec_instance = numcodecs.JSON()
+    elif codec == "pickle":
+        codec_instance = numcodecs.Pickle()
+    else:
+        raise ValueError(f"codec must be 'json' or 'pickle', got {codec!r}")
+
+    arr = np.array([data], dtype=object)
+    return group.create_dataset(
+        name=name,
+        data=arr,
+        object_codec=codec_instance,
+        overwrite=overwrite,
+    )
 
 
 def get_default_zarr_compressor(clevel: int = 5):
@@ -397,7 +720,7 @@ def get_default_zarr_compressor(clevel: int = 5):
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
 
 
-def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_or_sorting: BaseRecording | BaseSorting):
+def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting: BaseRecording | BaseSorting):
     # save properties
     prop_group = zarr_group.create_group("properties")
     for key in recording_or_sorting.get_property_keys():
@@ -411,7 +734,7 @@ def add_properties_and_annotations(zarr_group: zarr.hierarchy.Group, recording_o
     zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
 
 
-def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.Group, **kwargs):
+def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kwargs):
     """
     Add a sorting extractor to a zarr group.
 
@@ -419,7 +742,7 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     ----------
     sorting : BaseSorting
         The sorting extractor object to be added to the zarr group
-    zarr_group : zarr.hierarchy.Group
+    zarr_group : zarr.Group
         The zarr group
     kwargs : dict
         Other arguments passed to the zarr compressor
@@ -454,13 +777,10 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.hierarchy.G
     add_properties_and_annotations(zarr_group, sorting)
 
 
-# Recording
-def add_recording_to_zarr_group(
-    recording: BaseRecording, zarr_group: zarr.hierarchy.Group, verbose=False, dtype=None, **kwargs
-):
+def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group, verbose=False, dtype=None, **kwargs):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
-    if recording.check_if_json_serializable():
+    if recording.check_serializability("json"):
         zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True))
     else:
         zarr_group.attrs["provenance"] = None
@@ -470,6 +790,14 @@ def add_recording_to_zarr_group(
     zarr_group.attrs["num_segments"] = int(recording.get_num_segments())
     zarr_group.create_dataset(name="channel_ids", data=recording.get_channel_ids(), compressor=None)
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
+    dataset_timestamps_paths: list | None = None
+    if any(recording.has_time_vector(i) for i in range(recording.get_num_segments())):
+        dataset_timestamps_paths = []
+        for i in range(recording.get_num_segments()):
+            if recording.has_time_vector(i):
+                dataset_timestamps_paths.append(f"times_seg{i}")
+            else:
+                dataset_timestamps_paths.append(None)
 
     dtype = recording.get_dtype() if dtype is None else dtype
     channel_chunk_size = zarr_kwargs.get("channel_chunk_size", None)
@@ -480,159 +808,27 @@ def add_recording_to_zarr_group(
 
     compressor_traces = compressor_by_dataset.get("traces", global_compressor)
     filters_traces = filters_by_dataset.get("traces", global_filters)
-    add_traces_to_zarr(
-        recording=recording,
+    compressor_times = compressor_by_dataset.get("times", global_compressor)
+    filters_times = filters_by_dataset.get("times", global_filters)
+
+    _write_time_series_to_zarr(
+        time_series=recording,
         zarr_group=zarr_group,
         dataset_paths=dataset_paths,
-        compressor=compressor_traces,
-        filters=filters_traces,
+        dataset_timestamps_paths=dataset_timestamps_paths,
+        compressor_data=compressor_traces,
+        filters_data=filters_traces,
         dtype=dtype,
-        channel_chunk_size=channel_chunk_size,
-        verbose=verbose,
+        extra_chunks=(channel_chunk_size,),
+        compressor_times=compressor_times,
+        filters_times=filters_times,
+        verbose=False,
         **job_kwargs,
     )
 
-    # save probe
-    if recording.get_property("contact_vector") is not None:
+    # Save probegroup
+    if recording.has_probe():
         probegroup = recording.get_probegroup()
-        zarr_group.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
-
-    # save time vector if any
-    t_starts = np.zeros(recording.get_num_segments(), dtype="float64") * np.nan
-    for segment_index, rs in enumerate(recording._recording_segments):
-        d = rs.get_times_kwargs()
-        time_vector = d["time_vector"]
-
-        compressor_times = compressor_by_dataset.get("times", global_compressor)
-        filters_times = filters_by_dataset.get("times", global_filters)
-
-        if time_vector is not None:
-            _ = zarr_group.create_dataset(
-                name=f"times_seg{segment_index}",
-                data=time_vector,
-                filters=filters_times,
-                compressor=compressor_times,
-            )
-        elif d["t_start"] is not None:
-            t_starts[segment_index] = d["t_start"]
-
-    if np.any(~np.isnan(t_starts)):
-        zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
-
+        zarr_group.attrs["probegroup"] = check_json(probegroup.to_dict(array_as_list=True))
+    # Add properties and annotations
     add_properties_and_annotations(zarr_group, recording)
-
-
-def add_traces_to_zarr(
-    recording,
-    zarr_group,
-    dataset_paths,
-    channel_chunk_size=None,
-    dtype=None,
-    compressor=None,
-    filters=None,
-    verbose=False,
-    **job_kwargs,
-):
-    """
-    Save the trace of a recording extractor in several zarr format.
-
-    Parameters
-    ----------
-    recording : RecordingExtractor
-        The recording extractor object to be saved in .dat format
-    zarr_group : zarr.Group
-        The zarr group to add traces to
-    dataset_paths : list
-        List of paths to traces datasets in the zarr group
-    channel_chunk_size : int or None, default: None (chunking in time only)
-        Channels per chunk
-    dtype : dtype, default: None
-        Type of the saved data
-    compressor : zarr compressor or None, default: None
-        Zarr compressor
-    filters : list, default: None
-        List of zarr filters
-    verbose : bool, default: False
-        If True, output is verbose (when chunks are used)
-    {}
-    """
-    from .job_tools import (
-        ensure_chunk_size,
-        fix_job_kwargs,
-        ChunkRecordingExecutor,
-    )
-
-    assert dataset_paths is not None, "Provide 'file_path'"
-
-    if not isinstance(dataset_paths, list):
-        dataset_paths = [dataset_paths]
-    assert len(dataset_paths) == recording.get_num_segments()
-
-    if dtype is None:
-        dtype = recording.get_dtype()
-
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-
-    # create zarr datasets files
-    zarr_datasets = []
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
-        dset_name = dataset_paths[segment_index]
-        shape = (num_frames, num_channels)
-        dset = zarr_group.create_dataset(
-            name=dset_name,
-            shape=shape,
-            chunks=(chunk_size, channel_chunk_size),
-            dtype=dtype,
-            filters=filters,
-            compressor=compressor,
-        )
-        zarr_datasets.append(dset)
-        # synchronizer=zarr.ThreadSynchronizer())
-
-    # use executor (loop or workers)
-    func = _write_zarr_chunk
-    init_func = _init_zarr_worker
-    init_args = (recording, zarr_datasets, dtype)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
-    )
-    executor.run()
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(recording, zarr_datasets, dtype):
-    import zarr
-
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx["recording"] = recording
-    worker_ctx["zarr_datasets"] = zarr_datasets
-    worker_ctx["dtype"] = np.dtype(dtype)
-
-    return worker_ctx
-
-
-# used by write_zarr_recording + ChunkRecordingExecutor
-def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    import gc
-
-    # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-
-    # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame,
-        end_frame=end_frame,
-        segment_index=segment_index,
-    )
-    traces = traces.astype(dtype)
-    zarr_dataset[start_frame:end_frame, :] = traces
-
-    # fix memory leak by forcing garbage collection
-    del traces
-    gc.collect()

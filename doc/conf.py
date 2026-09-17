@@ -11,9 +11,9 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
 import shutil
-from pathlib import Path
+import datetime
+import importlib.util
 # sys.path.insert(0, os.path.abspath('.'))
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
@@ -35,9 +35,10 @@ folders =  [
     '../examples/tutorials/core/analyzer_some_units',
     '../examples/tutorials/core/analyzer.zarr',
     '../examples/tutorials/curation/my_folder',
-    '../examples/tutorials/qualitymetrics/curated_sorting',
-    '../examples/tutorials/qualitymetrics/clean_analyzer.zarr',
+    '../examples/tutorials/metrics/curated_sorting',
+    '../examples/tutorials/metrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
+    '../examples/forhowto/cached'
 
 ]
 
@@ -49,7 +50,7 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022-2025, SpikeInterface Team'
+copyright = f'2022-{datetime.date.today().year}, SpikeInterface Team'
 author = 'SpikeInterface Team'
 
 
@@ -98,13 +99,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-try:
-    import sphinx_rtd_theme
 
+if importlib.util.find_spec("sphinx_rtd_theme") is not None:
     html_theme = "sphinx_rtd_theme"
-except ImportError:
-    print("RTD theme not installed, using default")
-    html_theme = 'alabaster'
+else:
+    html_theme = "alabaster"
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -123,16 +123,16 @@ sphinx_gallery_conf = {
     # This is the default but including here explicitly. Should build all docs and fail on gallery failures only.
     # other option would be abort_on_example_error, but this fails on first failure. So we decided against this.
     'only_warn_on_example_error': False,
-    'examples_dirs': ['../examples/tutorials'],
-    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
+    'examples_dirs': ['../examples/tutorials', '../examples/forhowto'],
+    'gallery_dirs': ['tutorials', 'forhowto'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
                                        '../examples/tutorials/curation',
-                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/metrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
-                                       '../examples/tutorials/forhowto',
+                                       '../examples/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_*',

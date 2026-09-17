@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import shutil
 import json
@@ -51,6 +49,29 @@ class BenchmarkStudy:
         self.scan_folder()
 
     @classmethod
+    def _check_cases(cls, cases, levels=None, reference=None):
+        if reference is None:
+            reference = list(cases.keys())[0]
+        for key in cases.keys():
+            if isinstance(reference, str):
+                assert isinstance(key, str), f"Case key {key} for cases is not homogeneous"
+                if levels is None:
+                    levels = "level0"
+                else:
+                    assert isinstance(levels, str)
+            elif isinstance(reference, tuple):
+                assert isinstance(key, tuple), f"Case key {key} for cases is not homogeneous"
+                num_levels = len(reference)
+                assert len(key) == num_levels, f"Case key {key} for cases is not homogeneous, tuple negth differ"
+                if levels is None:
+                    levels = [f"level{i}" for i in range(num_levels)]
+                else:
+                    levels = list(levels)
+            else:
+                raise ValueError("Keys for cases must str or tuple")
+        return levels
+
+    @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
         """
         Create a BenchmarkStudy from a dict of datasets and cases.
@@ -76,27 +97,7 @@ class BenchmarkStudy:
         study : BenchmarkStudy
             The created study.
         """
-        # check that cases keys are homogeneous
-        key0 = list(cases.keys())[0]
-        if isinstance(key0, str):
-            assert all(isinstance(key, str) for key in cases.keys()), "Keys for cases are not homogeneous"
-            if levels is None:
-                levels = "level0"
-            else:
-                assert isinstance(levels, str)
-        elif isinstance(key0, tuple):
-            assert all(isinstance(key, tuple) for key in cases.keys()), "Keys for cases are not homogeneous"
-            num_levels = len(key0)
-            assert all(
-                len(key) == num_levels for key in cases.keys()
-            ), "Keys for cases are not homogeneous, tuple negth differ"
-            if levels is None:
-                levels = [f"level{i}" for i in range(num_levels)]
-            else:
-                levels = list(levels)
-                assert len(levels) == num_levels
-        else:
-            raise ValueError("Keys for cases must str or tuple")
+        levels = cls._check_cases(cases, levels)
 
         study_folder = Path(study_folder)
         study_folder.mkdir(exist_ok=False, parents=True)
@@ -130,7 +131,7 @@ class BenchmarkStudy:
                         unit_ids = gt_sorting.unit_ids
                         gt_unit_locations = gt_sorting.get_property("gt_unit_locations")
                         channel_locations = rec.get_channel_locations()
-                        max_channel_indices = np.argmin(
+                        main_channel_indices = np.argmin(
                             np.linalg.norm(
                                 gt_unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :], axis=2
                             ),
@@ -141,7 +142,7 @@ class BenchmarkStudy:
                             channel_locations[:, np.newaxis] - channel_locations[np.newaxis, :], axis=2
                         )
                         for unit_ind, unit_id in enumerate(unit_ids):
-                            chan_ind = max_channel_indices[unit_ind]
+                            chan_ind = main_channel_indices[unit_ind]
                             (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
                             mask[unit_ind, chan_inds] = True
                         sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
@@ -155,6 +156,7 @@ class BenchmarkStudy:
                         rec,
                         sparse=sparse,
                         sparsity=sparsity,
+                        main_channel_indices=main_channel_indices,
                         format="binary_folder",
                         folder=local_analyzer_folder,
                     )
@@ -172,7 +174,7 @@ class BenchmarkStudy:
                     )
 
             else:
-                # new case : analzyer
+                # new case : analyzer
                 assert isinstance(data, SortingAnalyzer)
                 analyzer = data
                 if data.format == "memory":
@@ -272,6 +274,58 @@ class BenchmarkStudy:
                 f.unlink()
         self.benchmarks[key] = None
 
+    def add_cases(self, cases):
+
+        _ = self._check_cases(cases, reference=list(self.cases.keys())[0])
+        for case in cases.values():
+            dataset = case["dataset"]
+            assert dataset in list(self.datasets.keys()), f"Unknown dataset {dataset} for the Study"
+        self.cases.update(cases)
+        for key in cases.keys():
+            benchmark = self.create_benchmark(key=key)
+            self.benchmarks[key] = benchmark
+        (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
+
+    def remove_cases(self, case_keys):
+        for key in case_keys:
+            assert key in list(self.cases.keys()), f"Case {key} is not in the cases of the Study"
+            self.cases.pop(key)
+            self.remove_benchmark(key)
+        (self.folder / "cases.pickle").write_bytes(pickle.dumps(self.cases))
+
+    def set_precomputed_results(self, precomputed_results, verbose=False):
+        """Set precomputed results for some cases. This is useful when you want to compute results outside of the benchmark and
+        then set them in the benchmark.
+
+        Parameters
+        ----------
+        precomputed_results : dict
+            A dict with the same keys as cases and values are dict with the results to set for each case.
+            The keys of the inner dict must be the same as the keys of the benchmark result.
+            'run_time' is a special key that will be set to 0.0 if not present in the precomputed results.
+        verbose : bool, default: False
+             Whether to print the keys of the precomputed results when setting them.
+        """
+
+        for key in precomputed_results.keys():
+            assert key in self.cases, f"Key {key} in precomputed_results is not in cases"
+            benchmark = self.create_benchmark(key)
+            if verbose:
+                print("### Set benchmark", key, "###")
+
+            for k, v in precomputed_results[key].items():
+                benchmark.result[k] = v
+            if "run_time" not in benchmark.result:
+                benchmark.result["run_time"] = 0.0
+                if verbose:
+                    print(f"Warning: 'run_time' is not in the precomputed results for key {key}, setting it to 0.0")
+
+            self.benchmarks[key] = benchmark
+            bench_folder = self.folder / "results" / self.key_to_str(key)
+            bench_folder.mkdir(exist_ok=True)
+            benchmark.save_run(bench_folder)
+            benchmark.save_main(bench_folder)
+
     def run(self, case_keys=None, keep=True, verbose=False, **job_kwargs):
         if case_keys is None:
             case_keys = list(self.cases.keys())
@@ -306,7 +360,7 @@ class BenchmarkStudy:
         """
         Set colors for the study cases or for a given levels_to_group_by.
 
-        Parmeters
+        Parameters
         ---------
         colors : dict | None, default: None
             A user-defined dictionary with the case keys as keys and the colors as values.
@@ -371,7 +425,7 @@ class BenchmarkStudy:
         levels_to_group_by : list
             A list of levels to group by.
         case_keys : list
-            Optionaly a sub list of case_keys to consider
+            Optionally a sub list of case_keys to consider
 
         Returns
         -------
@@ -434,27 +488,6 @@ class BenchmarkStudy:
             assert benchmark is not None, f"Benchmkark for key {key} has not been run yet!"
             benchmark.compute_result(**result_params)
             benchmark.save_result(self.folder / "results" / self.key_to_str(key))
-
-    def create_sorting_analyzer_gt(self, case_keys=None, return_in_uV=True, random_params={}, **job_kwargs):
-        print("###### Study.create_sorting_analyzer_gt() is not used anymore!!!!!!")
-        # if case_keys is None:
-        #     case_keys = self.cases.keys()
-
-        # base_folder = self.folder / "sorting_analyzer"
-        # base_folder.mkdir(exist_ok=True)
-
-        # dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
-        # dataset_keys = set(dataset_keys)
-        # for dataset_key in dataset_keys:
-        #     # the waveforms depend on the dataset key
-        #     folder = base_folder / self.key_to_str(dataset_key)
-        #     recording, gt_sorting = self.datasets[dataset_key]
-        #     sorting_analyzer = create_sorting_analyzer(
-        #         gt_sorting, recording, format="binary_folder", folder=folder, return_in_uV=return_in_uV
-        #     )
-        #     sorting_analyzer.compute("random_spikes", **random_params)
-        #     sorting_analyzer.compute("templates", **job_kwargs)
-        #     sorting_analyzer.compute("noise_levels")
 
     def get_sorting_analyzer(self, case_key=None, dataset_key=None):
         if case_key is not None:
@@ -531,7 +564,7 @@ class BenchmarkStudy:
 
     def get_all_metrics(self, case_keys=None):
         """
-        Return a DataFrame with concatented metrics for multiple cases.
+        Return a DataFrame with concatenated metrics for multiple cases.
         """
         import pandas as pd
 
@@ -560,7 +593,7 @@ class BenchmarkStudy:
 
     def get_pairs_by_level(self, level):
         """
-        usefull for function like plot_performance_losses() where you need to plot one pair of results
+        useful for function like plot_performance_losses() where you need to plot one pair of results
         This generate list of pairs for a given level.
         """
 
@@ -655,8 +688,6 @@ class Benchmark:
                     with open(file, mode="rb") as f:
                         result[k] = pickle.load(f)
             elif format == "sorting":
-                from spikeinterface.core import load_extractor
-
                 sorting_folder = folder / k
                 if sorting_folder.exists():
                     result[k] = load(sorting_folder)

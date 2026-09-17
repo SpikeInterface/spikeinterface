@@ -16,9 +16,9 @@ repo's URL after huggingface.co/) and that we trust the model.
 
 .. code::
 
-    from spikeinterface.curation import auto_label_units
+    from spikeinterface.curation import model_based_label_units
 
-    labels_and_probabilities = auto_label_units(
+    labels_and_probabilities = model_based_label_units(
         sorting_analyzer = sorting_analyzer,
         repo_id = "SpikeInterface/toy_tetrode_model",
         trust_model = True
@@ -29,7 +29,7 @@ create the labels:
 
 .. code::
 
-    labels_and_probabilities = si.auto_label_units(
+    labels_and_probabilities = si.model_based_label_units(
         sorting_analyzer = sorting_analyzer,
         model_folder = "my_folder_with_a_model_in_it",
     )
@@ -39,5 +39,5 @@ are also saved as a property of your ``sorting_analyzer`` and can be accessed li
 
 .. code::
 
-    labels = sorting_analyzer.sorting.get_property("classifier_label")
-    probabilities = sorting_analyzer.sorting.get_property("classifier_probability")
+    labels = sorting_analyzer.get_sorting_property("classifier_label")
+    probabilities = sorting_analyzer.get_sorting_property("classifier_probability")

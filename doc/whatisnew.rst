@@ -8,6 +8,17 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.105.0.rst
+  releases/0.104.9.rst
+  releases/0.104.8.rst
+  releases/0.104.7.rst
+  releases/0.104.6.rst
+  releases/0.104.5.rst
+  releases/0.104.4.rst
+  releases/0.104.3.rst
+  releases/0.104.2.rst
+  releases/0.104.1.rst
+  releases/0.104.0.rst
   releases/0.103.2.rst
   releases/0.103.1.rst
   releases/0.103.0.rst
@@ -52,16 +63,44 @@ Release notes
   releases/0.9.1.rst
 
 
-Version 0.103.2
+Version 0.105.0
 ===============
 
-* Minor release with bug fixes
+...
 
+Versions 0.104.1/9
+==================
 
-Version 0.103.1
+* Minor releases with bug fixes
+
+Version 0.104.0
 ===============
 
-* Minor release with bug fixes
+* Added support for ``Bombcell`` [Fabre]_, for unit curation, including new and updated template metrics (#4306)
+* Added ``LUPIN`` [Garcia2024]_ as an internal sorter (#4192)
+* Added support for ``SLAy`` [Koukuntla]_, for automated unit merges (#4190)
+* Added ``valid_unit_periods`` postprocessing extension, based on NeuroPyxles [npyx]_ (#4299, #4302)
+* Added ``AutoCorrelograms`` postprocessing extension (#4307)
+* Added support for double-sided probes (#4272)
+* Added ``SequentialCuration``, allowing for chains of curations to be applied to analyzers (#4298)
+* Added support for FigPack, to eventually superseed SortingView (#4364)
+* Added ``detect_saturation_periods`` and ``detect_artifact_periods_by_envelope`` preprocessing steps (#3715, #4297)
+* Major refactor and debugging of the ``Metrics`` postprocessing module (#4183, #4362, #4355, #4353, #4342, #4292) (see: :doc:`/modules/metrics`)
+* Significant speedups in ``Metrics`` (#4308, #4363) and ``SortingComponents`` (#4402, #4341) modules, and in correlograms (#4305) and template similarity (#4343) computations.
+
+* API and breaking changes:
+
+    * Specific metrics functions now imported from different sub module (see: :doc:`/modules/metrics/`)
+    * ``snr`` quality metric calculation now uses median rather than mean (see: :doc:`/modules/metrics/quality_metrics`)
+    * Metric name "peak_to_valley" has been renamed to "peak_to_trough_duration" for clarity. This name change will be applied automatically on load of older analzyers. (see: :doc:`/modules/metrics/template_metrics`)
+    * The function to do UnitRefine curation has been renamed from ``auto_label_units`` to ``unitrefine_label_units`` (see :py:func:`~spikeinterface.curation.unitrefine_label_units`)
+    * Remove support for Python 3.9
+
+Versions 0.103.1/2
+==================
+
+* Minor releases with bug fixes
+
 
 Version 0.103.0
 ===============
@@ -79,20 +118,10 @@ Version 0.103.0
     * Unsigned integers not automatically cast to signed integers anymore in preprocessing (#3982) (see :ref:`unsigned_to_signed`)
 
 
-Version 0.102.3
-===============
+Versions 0.102.1/3
+==================
 
-* Minor release with bug fixes
-
-Version 0.102.2
-===============
-
-* Minor release with bug fixes
-
-Version 0.102.1
-===============
-
-* Minor release with bug fixes
+* Minor releases with bug fixes
 
 Version 0.102.0
 ===============
@@ -104,10 +133,10 @@ Version 0.102.0
 * Multi-segment handling of motion interpolation (#3659)
 * Support for Numpy 2.0 and Zarr<3.0 (#3481,#3598)
 
-Version 0.101.2
-===============
+Versions 0.101.1/2
+==================
 
-* Minor release with bug fixes
+* Minor releases with bug fixes
 
 Version 0.101.1
 ===============

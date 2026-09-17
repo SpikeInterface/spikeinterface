@@ -8,8 +8,9 @@ Modules documentation
     extractors
     preprocessing
     sorters
+    sorters_internal
     postprocessing
-    qualitymetrics
+    metrics
     comparison
     exporters
     widgets

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -7,7 +5,7 @@ from .base import BaseWidget, to_attr
 
 class ComparisonCollisionBySimilarityWidget(BaseWidget):
     """
-    Plots CollisionGTComparison pair by pair orderer by cosine_similarity
+    Plots CollisionGTComparison pair by pair ordered by cosine_similarity
 
     Parameters
     ----------
@@ -186,7 +184,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
 class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
     """
-    Plots CollisionGTComparison pair by pair orderer by cosine_similarity for all
+    Plots CollisionGTComparison pair by pair ordered by cosine_similarity for all
     cases in a study.
 
     Parameters

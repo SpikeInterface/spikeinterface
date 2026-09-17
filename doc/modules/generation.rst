@@ -17,7 +17,7 @@ Brain Laboratory - Brain Wide Map (available on
 You can check out this collection of over 600 templates from this `web app <https://spikeinterface.github.io/hybrid_template_library/>`_.
 
 The :py:mod:`spikeinterface.generation` module offers tools to interact with this database to select and download templates,
-manupulating (e.g. rescaling and relocating them), and construct hybrid recordings with them.
+manipulating (e.g. rescaling and relocating them), and construct hybrid recordings with them.
 Importantly, recordings from long-shank probes, such as Neuropixels, usually experience drifts.
 Such drifts can be taken into account in order to smoothly inject spikes into the recording.
 

@@ -43,7 +43,7 @@ import spikeinterface
 # - `preprocessing` : preprocessing
 # - `sorters` : Python wrappers of spike sorters
 # - `postprocessing` : postprocessing
-# - `qualitymetrics` : quality metrics on units found by sorters
+# - `metrics` : quality, template, and spiketrain metrics on units found by sorters
 # - `curation` : automatic curation of spike sorting output
 # - `comparison` : comparison of spike sorting outputs
 # - `widgets` : visualization
@@ -53,7 +53,7 @@ import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
 import spikeinterface.postprocessing as spost
-import spikeinterface.qualitymetrics as sqm
+import spikeinterface.metrics as sm
 import spikeinterface.comparison as sc
 import spikeinterface.exporters as sexp
 import spikeinterface.curation as scur
@@ -61,7 +61,7 @@ import spikeinterface.widgets as sw
 
 # Alternatively, we can import all submodules at once with `import spikeinterface.full as si` which
 # internally imports core+extractors+preprocessing+sorters+postprocessing+
-# qualitymetrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
+# metrics+comparison+widgets+exporters. In this case all aliases in the following tutorial
 # would be `si`.
 
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
@@ -137,8 +137,8 @@ _ = plot_probe(probe)
 # -
 
 # If your recording does not have a `Probe`, you can set it using `set_probe`.
-# Note: `set_probe` creates a copy of the recording with the new probe,
-# rather than modifying the existing recording in place.
+# Note: `set_probe` modifies the recording in place. To get a new recording
+# object with a subset of channels attached to a probe, use `select_channels_with_probe`.
 # There is more information [here](https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html).
 
 # Using the `spikeinterface.preprocessing` module, you can perform preprocessing on the recordings.
@@ -159,7 +159,7 @@ recording_preprocessed = recording_cmr.save(format="binary")
 print(recording_preprocessed)
 # -
 
-# To reload a preprocessed recording that was saved to disk, you can use `load_extractor()` function from the `core` module.
+# To reload a preprocessed recording that was saved to disk, you can use `load()` function from the `core` module.
 #
 # Now you are ready to spike sort using the `spikeinterface.sorters` module!
 # Let's first check which sorters are implemented and which are installed
@@ -329,7 +329,7 @@ analyzer_TDC.compute("spike_amplitudes")
 # Once we have computed all of the postprocessing information, we can compute quality
 # metrics (some quality metrics require certain extensions - e.g., drift metrics require `spike_locations`):
 
-qm_params = sqm.get_default_qm_params()
+qm_params = sm.get_default_quality_metrics_params()
 pprint(qm_params)
 
 # Since the recording is very short, let's change some parameters to accommodate the duration:

@@ -13,7 +13,7 @@ from spikeinterface.core import (
     generate_recording,
 )
 
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.testing import check_sortings_equal
 
 
@@ -160,7 +160,7 @@ def test_NumpyEvent():
 
 if __name__ == "__main__":
     # test_NumpyRecording()
-    test_SharedMemoryRecording()
-    # test_NumpySorting()
+    # test_SharedMemoryRecording()
+    test_NumpySorting()
     # test_SharedMemorySorting()
     # test_NumpyEvent()

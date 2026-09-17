@@ -5,17 +5,17 @@ from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import normalize_by_quantile, scale, center, zscore
 
 
-def test_normalize_by_quantile():
+def test_normalize_by_quantile(create_cache_folder):
     rec = generate_recording()
 
     rec2 = normalize_by_quantile(rec, mode="by_channel")
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2", verbose=False)
 
     traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1
 
     rec2 = normalize_by_quantile(rec, mode="pool_channel")
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2_pool", verbose=False)
 
     # import matplotlib.pyplot as plt
     # from spikeinterface.widgets import plot_traces
@@ -39,6 +39,21 @@ def test_scale():
 
     rec2 = scale(rec, gain=gain, offset=-10.0)
     rec2.get_traces(segment_index=0)
+
+
+def test_scale_offset_precision_with_integer_dtype():
+    # ScaleRecording must apply a fractional offset at float precision even when
+    # the output dtype is integer, instead of truncating the offset itself first.
+    from spikeinterface.core import NumpyRecording
+
+    traces = np.array([[2.0], [1.0], [1.5]], dtype="float32")
+    rec = NumpyRecording([traces], sampling_frequency=1.0)
+
+    rec2 = scale(rec, gain=1.0, offset=-0.75, dtype="int16")
+    result = rec2.get_traces(segment_index=0)
+
+    expected = np.round(traces - 0.75).astype("int16")
+    np.testing.assert_array_equal(result, expected)
 
 
 def test_center():

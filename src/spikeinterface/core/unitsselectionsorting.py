@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from .basesorting import BaseSorting, BaseSortingSegment
@@ -35,7 +33,7 @@ class UnitsSelectionSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, self._renamed_unit_ids)
 
-        for parent_segment in self._parent_sorting._sorting_segments:
+        for parent_segment in self._parent_sorting.segments:
             sub_segment = UnitsSelectionSortingSegment(parent_segment, ids_conversion)
             self.add_sorting_segment(sub_segment)
 
@@ -47,25 +45,36 @@ class UnitsSelectionSorting(BaseSorting):
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
-    def _custom_cache_spike_vector(self) -> None:
+    def _compute_and_cache_spike_vector(self) -> None:
+        from spikeinterface.core.sorting_tools import remap_unit_indices_in_vector
+
         if self._parent_sorting._cached_spike_vector is None:
-            self._parent_sorting._custom_cache_spike_vector()
+            self._parent_sorting._compute_and_cache_spike_vector()
 
             if self._parent_sorting._cached_spike_vector is None:
                 return
 
-        parent_spike_vector = self._parent_sorting._cached_spike_vector
-        parent_unit_indices = self._parent_sorting.ids_to_indices(self._unit_ids)
-        sort_indices = np.argsort(parent_unit_indices)
-        mask = np.isin(parent_spike_vector["unit_index"], parent_unit_indices)
-        spike_vector = np.array(
-            parent_spike_vector[mask]
-        )  # np.array() necessary to fix 'read-only' crash with memmaps.
-        indices = np.searchsorted(
-            parent_unit_indices, spike_vector["unit_index"], sorter=sort_indices
-        )  # Trick to make sure that the new indices are correct.
-        spike_vector["unit_index"] = np.arange(len(parent_unit_indices))[sort_indices][indices]
+        spike_vector, _ = remap_unit_indices_in_vector(
+            vector=self._parent_sorting._cached_spike_vector,
+            all_old_unit_ids=self._parent_sorting.unit_ids,
+            all_new_unit_ids=self._unit_ids,
+        )
 
+        # check if order is preserved
+        pos = np.searchsorted(self._parent_sorting.unit_ids, self.unit_ids)
+        order_is_preserved = np.all(np.diff(pos) > 0)
+
+        if not order_is_preserved:
+            # Note: this can be a very high cost and make big dataset very slow
+            # the only goal of this is to ensure the unit_index order when the sample is the same
+            # TODO: maybe we can remove it, if we don't guarantee the order of unit_index
+            # when sample_index is the same, but it can be a problem for some downstream analysis
+
+            # lexsort by segment_index, sample_index, unit_index
+            sort_indices = np.lexsort(
+                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
+            )
+            spike_vector = spike_vector[sort_indices]
         self._cached_spike_vector = spike_vector
 
 

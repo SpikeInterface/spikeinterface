@@ -130,7 +130,7 @@ class IterativeTemplateRegistration:
         # convert to um
         motion_array = -(shift_indices * bin_um)
 
-        if extra:
+        if extra is not None:
             extra["non_rigid_windows"] = non_rigid_windows
             extra["motion_histograms"] = motion_histograms
             extra["target_histogram"] = target_histogram

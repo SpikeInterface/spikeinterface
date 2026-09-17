@@ -31,7 +31,7 @@ def test_run_sorter_local(generate_recording, create_cache_folder):
     recording = generate_recording
     cache_folder = create_cache_folder
 
-    sorter_params = {"detection": {"detect_threshold": 4.9}}
+    sorter_params = {"detect_threshold": 4.9}
 
     sorting = run_sorter(
         "tridesclous2",
@@ -56,7 +56,7 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     recording.set_property(key="split_property", values=[4, 4, "g", "g", 4, 4, 4, "g"])
     dict_of_recordings = recording.split_by("split_property")
 
-    sorter_params = {"detection": {"detect_threshold": 4.9}}
+    sorter_params = {"detect_threshold": 4.9}
 
     folder = cache_folder / "sorting_tdc_local_dict"
 
@@ -163,8 +163,8 @@ def test_run_sorter_singularity(generate_recording, create_cache_folder):
 
 
 if __name__ == "__main__":
-    rec = _generate_recording
+    rec = _generate_recording()
     cache_folder = Path("tmp")
-    # test_run_sorter_local(rec, cache_folder)
+    test_run_sorter_local(rec, cache_folder)
     # test_run_sorter_docker(rec, cache_folder)
-    test_run_sorter_singularity(rec, cache_folder)
+    # test_run_sorter_singularity(rec, cache_folder)

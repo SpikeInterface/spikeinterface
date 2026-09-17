@@ -160,7 +160,7 @@ def test_ComputeTemplates(format, sparse, create_cache_folder):
 
     # they all should be in data
     data = sorting_analyzer.get_extension("templates").data
-    for k in ["average", "std", "median", "pencentile_5.0", "pencentile_95.0"]:
+    for k in ["average", "std", "median", "percentile_5.0", "percentile_95.0"]:
         assert k in data.keys()
         assert data[k].shape[0] == sorting_analyzer.unit_ids.size
         assert data[k].shape[2] == sorting_analyzer.channel_ids.size
@@ -179,6 +179,16 @@ def test_ComputeTemplates(format, sparse, create_cache_folder):
 
     templates = temp_ext.get_templates(outputs="Templates")
     assert isinstance(templates, Templates)
+
+    for unit_ids in (sorting_analyzer.unit_ids[::-1], sorting_analyzer.unit_ids[[3, 1]]):
+        sub = sorting_analyzer.select_units(unit_ids)
+        sub_ext = sub.get_extension("templates")
+        for unit_id in unit_ids:
+            for operator in ("average", "std"):
+                np.testing.assert_array_equal(
+                    sub_ext.get_unit_template(unit_id, operator=operator),
+                    temp_ext.get_unit_template(unit_id, operator=operator),
+                )
 
     # import matplotlib.pyplot as plt
     # for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):

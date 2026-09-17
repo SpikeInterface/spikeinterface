@@ -65,6 +65,39 @@ def _create_simple_study(study_folder):
     # print(study)
 
 
+def _create_very_simple_study(study_folder):
+    rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
+
+    datasets = {
+        "toy_tetrode": (rec0, gt_sorting0),
+    }
+
+    # cases can also be generated via simple loops
+    cases = {
+        #
+        ("tdc2", "no-preprocess", "tetrode"): {
+            "label": "tridesclous2 without preprocessing and standard params",
+            "dataset": "toy_tetrode",
+            "params": {
+                "sorter_name": "tridesclous2",
+            },
+        },
+        #
+        ("tdc2", "with-preprocess", "probe32"): {
+            "label": "tridesclous2 with preprocessing standar params",
+            "dataset": "toy_tetrode",
+            "params": {
+                "sorter_name": "tridesclous2",
+            },
+        },
+    }
+
+    study = SorterStudy.create(
+        study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
+    )
+    # print(study)
+
+
 def _create_complex_study(study_folder):
     rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
     rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=91)
@@ -258,12 +291,39 @@ def test_get_grouped_keys_mapping(create_complex_study):
     assert len(keys) == 16
 
 
+def test_add_remove_cases(create_simple_study):
+    # job_kwargs = dict(n_jobs=2, chunk_duration="1s")
+
+    study_folder = create_simple_study
+    study = SorterStudy(study_folder)
+
+    # # this run the sorters
+    # study.run()
+    # this is from the base class
+    # rt = study.get_run_times()
+
+    case_key = list(study.cases.keys())[0]
+    case = study.cases[case_key].copy()
+    study.remove_cases([case_key])
+    study.add_cases({case_key: case})
+    # study.run()
+
+
 if __name__ == "__main__":
     study_folder_simple = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy"
     if study_folder_simple.exists():
         shutil.rmtree(study_folder_simple)
-    _create_simple_study(study_folder_simple)
+    _create_simple_study(_create_very_simple_study)
     test_SorterStudy(study_folder_simple)
+
+    study_folder_very_simple = (
+        Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_AddRemoveCases"
+    )
+    if study_folder_very_simple.exists():
+        shutil.rmtree(study_folder_very_simple)
+    _create_very_simple_study(_create_very_simple_study)
+    test_add_remove_cases(_create_very_simple_study)
+
     study_folder_complex = (
         Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy_complex"
     )
@@ -271,6 +331,7 @@ if __name__ == "__main__":
         shutil.rmtree(study_folder_complex)
     _create_complex_study(study_folder_complex)
     test_get_grouped_keys_mapping(study_folder_complex)
+    test_add_remove_cases(create_simple_study)
 
 # # test out all plots and levels
 # import matplotlib.pyplot as plt

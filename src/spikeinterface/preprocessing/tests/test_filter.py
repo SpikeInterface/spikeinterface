@@ -50,7 +50,7 @@ class TestCausalFilter:
 
         # Then, change all kwargs to ensure they are propagated
         # and check the backwards version.
-        options["band"] = [671]
+        options["band"] = 671
         options["btype"] = "highpass"
         options["filter_order"] = 8
         options["ftype"] = "bessel"
@@ -105,7 +105,7 @@ class TestCausalFilter:
     def test_causal_kwarg_error_raised(self, recording_and_data):
         """
         Test that passing the "forward-backward" direction results in
-        an error. It is is critical this error is raised,
+        an error. It is critical this error is raised,
         otherwise the filter will no longer be causal.
         """
         recording, raw_data = recording_and_data
@@ -140,26 +140,28 @@ class TestCausalFilter:
         }
 
 
-def test_filter():
+def test_filter(create_cache_folder):
     rec = generate_recording()
-    rec = rec.save()
+    rec = rec.save(folder=create_cache_folder / "test_filter_recording")
 
     rec2 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
 
     # compute by chunk
-    rec2_cached0 = rec2.save(chunk_size=100000, verbose=False, progress_bar=True)
+    rec2_cached0 = rec2.save(
+        folder=create_cache_folder / "rec2_cached0", chunk_size=100000, verbose=False, progress_bar=True
+    )
 
     # compute by chunkf with joblib
-    rec2_cached1 = rec2.save(total_memory="10k", n_jobs=4, verbose=True)
+    rec2_cached1 = rec2.save(folder=create_cache_folder / "rec2_cached1", total_memory="10k", n_jobs=4, verbose=True)
 
     # compute once
-    rec2_cached2 = rec2.save(verbose=False)
+    rec2_cached2 = rec2.save(folder=create_cache_folder / "rec2_cached2", verbose=False)
 
     trace0 = rec2.get_traces(segment_index=0)
     trace1 = rec2_cached1.get_traces(segment_index=0)
 
     # other filtering types
-    rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2)
+    rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2, margin_ms=5.0)
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
     rec5 = causal_filter(rec, direction="forward")
     rec6 = causal_filter(rec, direction="backward")
@@ -168,10 +170,12 @@ def test_filter():
     from scipy.signal import iirfilter
 
     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
-    rec5 = filter(rec, coeff=coeff, filter_mode="sos")
+    rec5 = filter(rec, coeff=coeff, filter_mode="sos", margin_ms=5.0)
 
     # compute by chunk
-    rec5_cached0 = rec5.save(chunk_size=100000, verbose=False, progress_bar=True)
+    rec5_cached0 = rec5.save(
+        folder=create_cache_folder / "rec5_cached0", chunk_size=100000, verbose=False, progress_bar=True
+    )
 
     trace50 = rec5.get_traces(segment_index=0)
     trace51 = rec5_cached0.get_traces(segment_index=0)
@@ -180,7 +184,9 @@ def test_filter():
 
     # reflect padding test
     rec6 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0, add_reflect_padding=True)
-    rec6_cached = rec6.save(chunk_size=150000, verbose=False, progress_bar=True)
+    rec6_cached = rec6.save(
+        folder=create_cache_folder / "rec6_cached", chunk_size=150000, verbose=False, progress_bar=True
+    )
     trace0 = rec6.get_traces(segment_index=0)
     trace1 = rec6_cached.get_traces(segment_index=0)
 
@@ -221,4 +227,9 @@ def test_filter_opencl():
 
 
 if __name__ == "__main__":
-    test_filter()
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp())
+
+    test_filter(tmp_path)

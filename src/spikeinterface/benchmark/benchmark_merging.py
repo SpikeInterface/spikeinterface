@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.curation.auto_merge import auto_merge_units
 from spikeinterface.comparison import compare_sorter_to_ground_truth
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer

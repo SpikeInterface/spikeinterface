@@ -9,19 +9,24 @@ It also implements:
   * ComputeNoiseLevels which is very convenient to have
 """
 
+from copy import copy, deepcopy
 import warnings
 import numpy as np
+from collections import namedtuple
 
-from .sortinganalyzer import AnalyzerExtension, register_result_extension
+from .numpyextractors import NumpySorting
+from .sortinganalyzer import SortingAnalyzer, AnalyzerExtension, register_result_extension
 from .waveform_tools import extract_waveforms_to_single_buffer, estimate_templates_with_accumulator
 from .recording_tools import get_noise_levels
 from .template import Templates
-from .sorting_tools import random_spikes_selection
+from .sorting_tools import random_spikes_selection, select_sorting_periods_mask, spike_vector_to_indices
+from .job_tools import fix_job_kwargs, split_job_kwargs
+from .core_tools import ms_to_samples, slice_rows, materialize_array
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
     """
-    AnalyzerExtension that select somes random spikes.
+    AnalyzerExtension that select some random spikes.
     This allows for a subsampling of spikes for further calculations and is important
     for managing that amount of memory and speed of computation in the analyzer.
 
@@ -31,14 +36,18 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     Parameters
     ----------
-    method : "uniform" | "all", default: "uniform"
-        The method to select the spikes
+    method: "uniform" | "percentage" | "maximum_rate" | "all" , default: "uniform"
+        Method to select spikes: "uniform" randomly up to max_spikes_per_unit, "percentage" selects a fraction of spikes, and "maximum_rate" limits selection by spike rate over time.
     max_spikes_per_unit : int, default: 500
         The maximum number of spikes per unit, ignored if method="all"
     margin_size : int, default: None
         A margin on each border of segments to avoid border spikes, ignored if method="all"
     seed : int or None, default: None
         A seed for the random generator, ignored if method="all"
+    percentage: float | None, default: None
+        In case of `percentage` method. The proportion of spikes per units.
+    maximum_rate: float | None, default: None
+        In case of `maximum_rate` method. The cap rate per units.
 
     Returns
     -------
@@ -60,16 +69,18 @@ class ComputeRandomSpikes(AnalyzerExtension):
             **self.params,
         )
 
-    def _set_params(self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None):
+    def _set_params(
+        self, method="uniform", max_spikes_per_unit=500, margin_size=None, seed=None, percentage=None, maximum_rate=None
+    ):
         params = dict(method=method, max_spikes_per_unit=max_spikes_per_unit, margin_size=margin_size, seed=seed)
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         random_spikes_indices = self.data["random_spikes_indices"]
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
 
         selected_mask = np.zeros(spikes.size, dtype=bool)
@@ -85,7 +96,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data = dict()
         random_spikes_indices = self.data["random_spikes_indices"]
         if keep_mask is None:
-            new_data["random_spikes_indices"] = random_spikes_indices.copy()
+            new_data["random_spikes_indices"] = materialize_array(random_spikes_indices)
         else:
             spikes = self.sorting_analyzer.sorting.to_spike_vector()
             selected_mask = np.zeros(spikes.size, dtype=bool)
@@ -95,7 +106,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
-        new_data["random_spikes_indices"] = self.data["random_spikes_indices"].copy()
+        new_data["random_spikes_indices"] = materialize_array(self.data["random_spikes_indices"])
         return new_data
 
     def _get_data(self):
@@ -160,11 +171,11 @@ class ComputeWaveforms(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        return int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
 
     @property
     def nafter(self):
-        return int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        return ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
 
     def _run(self, verbose=False, **job_kwargs):
         self.data.clear()
@@ -232,19 +243,28 @@ class ComputeWaveforms(AnalyzerExtension):
         )
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[random_spikes_indices]
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
-        new_data["waveforms"] = self.data["waveforms"][keep_spike_mask, :, :]
+        new_data["waveforms"] = slice_rows(self.data["waveforms"], keep_spike_mask)
 
         return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+
+        old_waveforms = self.data["waveforms"]
+
+        new_waveforms = _select_channels_sparse_data(self.sorting_analyzer, old_waveforms, channel_ids)
+        data = {"waveforms": new_waveforms}
+
+        return data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
@@ -255,12 +275,17 @@ class ComputeWaveforms(AnalyzerExtension):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
-            waveforms = waveforms[valid]
+            # slice_rows already returns an independent, materialized array
+            waveforms = slice_rows(waveforms, valid)
         else:
-            waveforms = waveforms.copy()
+            waveforms = materialize_array(waveforms)
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
+            if keep_mask is None:
+                # about to mutate waveforms in place below (sparse realignment): we need a genuinely
+                # independent, writable buffer rather than sharing the original reference/zarr handle
+                waveforms = materialize_array(waveforms)
             # we need a realignement inside each group because we take the channel intersection sparsity
             for group_ids in merge_unit_groups:
                 group_indices = self.sorting_analyzer.sorting.ids_to_indices(group_ids)
@@ -281,7 +306,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only affects random spikes, not waveforms
-        new_data = dict(waveforms=self.data["waveforms"].copy())
+        new_data = dict(waveforms=materialize_array(self.data["waveforms"]))
         return new_data
 
     def get_waveforms_one_unit(self, unit_id, force_dense: bool = False):
@@ -308,7 +333,7 @@ class ComputeWaveforms(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         spike_mask = some_spikes["unit_index"] == unit_index
-        wfs = waveforms[spike_mask, :, :]
+        wfs = slice_rows(waveforms, spike_mask)
 
         if self.sorting_analyzer.sparsity is not None:
             chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
@@ -370,7 +395,7 @@ class ComputeTemplates(AnalyzerExtension):
 
     extension_name = "templates"
     depend_on = ["random_spikes|waveforms"]
-    need_recording = True
+    need_recording = False
     use_nodepipeline = False
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
@@ -383,6 +408,13 @@ class ComputeTemplates(AnalyzerExtension):
         if "ms_after" not in self.params:
             # compatibility february 2024 > july 2024
             self.params["ms_after"] = self.params["nafter"] * 1000.0 / self.sorting_analyzer.sampling_frequency
+
+        old_keys = copy(list(self.data.keys()))
+        for operator in old_keys:
+            if "pencentile" in operator:
+                fixed_operator = operator.replace("pencentile", "percentile")
+                self.data[fixed_operator] = self.data[operator]
+                del self.data[operator]
 
     def _set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, operators=None):
         operators = operators or ["average", "std"]
@@ -419,6 +451,9 @@ class ComputeTemplates(AnalyzerExtension):
             self._compute_and_append_from_waveforms(self.params["operators"])
 
         else:
+            if not self.sorting_analyzer.has_recording():
+                raise ValueError("Extension Templates requires the recording if Waveforms are not computed.")
+
             bad_operator_list = [
                 operator for operator in self.params["operators"] if operator not in ("average", "std")
             ]
@@ -437,6 +472,7 @@ class ComputeTemplates(AnalyzerExtension):
             return_in_uV = self.sorting_analyzer.return_in_uV
 
             return_std = "std" in self.params["operators"]
+            sparsity_mask = None if self.sparsity is None else self.sparsity.mask
             output = estimate_templates_with_accumulator(
                 recording,
                 some_spikes,
@@ -445,17 +481,24 @@ class ComputeTemplates(AnalyzerExtension):
                 self.nafter,
                 return_in_uV=return_in_uV,
                 return_std=return_std,
+                sparsity_mask=sparsity_mask,
                 verbose=verbose,
                 **job_kwargs,
             )
 
-            # Output of estimate_templates_with_accumulator is either (templates,) or (templates, stds)
             if return_std:
                 templates, stds = output
-                self.data["average"] = templates
-                self.data["std"] = stds
+                data = dict(average=templates, std=stds)
             else:
-                self.data["average"] = output
+                templates = output
+                data = dict(average=templates)
+
+            if self.sparsity is not None:
+                # make average and std dense again
+                for k, arr in data.items():
+                    dense_arr = self.sparsity.densify_templates(arr)
+                    data[k] = dense_arr
+            self.data.update(data)
 
     def _compute_and_append_from_waveforms(self, operators):
         if not self.sorting_analyzer.has_extension("waveforms"):
@@ -474,7 +517,7 @@ class ComputeTemplates(AnalyzerExtension):
             elif isinstance(operator, (list, tuple)):
                 operator, percentile = operator
                 assert operator == "percentile"
-                key = f"pencentile_{percentile}"
+                key = f"percentile_{percentile}"
             else:
                 raise ValueError(f"ComputeTemplates: wrong operator {operator}")
             self.data[key] = np.zeros((unit_ids.size, num_samples, channel_ids.size))
@@ -488,7 +531,7 @@ class ComputeTemplates(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
-            wfs = waveforms[spike_mask, :, :]
+            wfs = slice_rows(waveforms, spike_mask)
             if wfs.shape[0] == 0:
                 continue
 
@@ -505,7 +548,7 @@ class ComputeTemplates(AnalyzerExtension):
                 elif isinstance(operator, (list, tuple)):
                     operator, percentile = operator
                     arr = np.percentile(wfs, percentile, axis=0)
-                    key = f"pencentile_{percentile}"
+                    key = f"percentile_{percentile}"
 
                 if self.sparsity is None:
                     self.data[key][unit_index, :, :] = arr
@@ -515,20 +558,29 @@ class ComputeTemplates(AnalyzerExtension):
 
     @property
     def nbefore(self):
-        nbefore = int(self.params["ms_before"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        nbefore = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
         return nbefore
 
     @property
     def nafter(self):
-        nafter = int(self.params["ms_after"] * self.sorting_analyzer.sampling_frequency / 1000.0)
+        nafter = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
         return nafter
 
-    def _select_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+    def _select_units_extension_data(self, unit_ids):
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
 
         new_data = dict()
         for key, arr in self.data.items():
-            new_data[key] = arr[keep_unit_indices, :, :]
+            new_data[key] = slice_rows(arr, keep_unit_indices)
+
+        return new_data
+
+    def _select_channels_extension_data(self, channel_ids):
+        keep_channel_indices = [np.where(self.sorting_analyzer.channel_ids == id)[0][0] for id in channel_ids]
+
+        new_data = {}
+        for key, arr in self.data.items():
+            new_data[key] = slice_rows(arr, keep_channel_indices, axis=2)
 
         return new_data
 
@@ -553,9 +605,9 @@ class ComputeTemplates(AnalyzerExtension):
                     for count, merge_unit_id in enumerate(merge_group):
                         weights[count] = counts[merge_unit_id]
                     weights /= weights.sum()
-                    new_data[key][unit_index] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(
-                        0
-                    )
+                    new_data[key][unit_index] = (
+                        slice_rows(arr, keep_unit_indices) * weights[:, np.newaxis, np.newaxis]
+                    ).sum(0)
                     if new_sorting_analyzer.sparsity is not None:
                         chan_ids = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
                         mask = ~np.isin(np.arange(arr.shape[2]), chan_ids)
@@ -578,7 +630,7 @@ class ComputeTemplates(AnalyzerExtension):
             unsplit_unit_ids = [unit_id for unit_id in self.sorting_analyzer.unit_ids if unit_id not in split_units]
             new_indices = np.array([new_analyzer_unit_ids.index(unit_id) for unit_id in unsplit_unit_ids])
             old_indices = self.sorting_analyzer.sorting.ids_to_indices(unsplit_unit_ids)
-            new_array[new_indices, ...] = arr[old_indices, ...]
+            new_array[new_indices, ...] = slice_rows(arr, old_indices)
 
             for split_unit_id, new_splits in zip(split_units, new_unit_ids):
                 if new_sorting_analyzer.has_extension("waveforms"):
@@ -595,7 +647,7 @@ class ComputeTemplates(AnalyzerExtension):
                         elif operator == "median":
                             arr = np.median(wfs, axis=0)
                         elif "percentile" in operator:
-                            _, percentile = operator.splot("_")
+                            _, percentile = operator.split("_")
                             arr = np.percentile(wfs, float(percentile), axis=0)
                         new_array[split_unit_index, ...] = arr
                 else:
@@ -658,14 +710,14 @@ class ComputeTemplates(AnalyzerExtension):
 
         Returns
         -------
-        templates : np.array | Templates
+        templates :np.ndarray | Templates
             The returned templates (num_units, num_samples, num_channels)
         """
         if operator != "percentile":
             key = operator
         else:
             assert percentile is not None, "You must provide percentile=... if `operator='percentile'`"
-            key = f"pencentile_{percentile}"
+            key = f"percentile_{percentile}"
 
         if key in self.data:
             templates_array = self.data[key]
@@ -744,8 +796,6 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     **kwargs : dict
         Additional parameters for the `spikeinterface.get_noise_levels()` function
 
@@ -762,26 +812,34 @@ class ComputeNoiseLevels(AnalyzerExtension):
     need_job_kwargs = True
     need_backward_compatibility_on_load = True
 
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
-
     def _set_params(self, **noise_level_params):
         params = noise_level_params.copy()
+        # ensure that random_slices_kwargs is always present and has a seed for reproducibility
+        if "random_slices_kwargs" not in params:
+            params["random_slices_kwargs"] = dict()
+        if params["random_slices_kwargs"].get("seed") is None:
+            from spikeinterface.core.core_tools import _ensure_seed
+
+            params["random_slices_kwargs"]["seed"] = _ensure_seed(params["random_slices_kwargs"].get("seed"))
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # this does not depend on units
-        return self.data
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
+
+    def _select_channels_extension_data(self, channel_ids):
+        # this does not depend on channels
+        channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
+        return dict(noise_levels=slice_rows(self.data["noise_levels"], channel_indices))
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        # this does not depend on units
-        return self.data.copy()
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # this does not depend on units
-        return self.data.copy()
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
@@ -806,3 +864,930 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
 register_result_extension(ComputeNoiseLevels)
 compute_noise_levels = ComputeNoiseLevels.function_factory()
+
+
+class BaseMetric:
+    """
+    Base class for metric-based extension
+    """
+
+    metric_name = None  # to be defined in subclass
+    metric_params = {}  # to be defined in subclass
+    metric_columns = {}  # column names and their dtypes of the dataframe
+    metric_descriptions = {}  # descriptions of each metric column
+    needs_recording = False  # whether the metric needs recording
+    needs_tmp_data = False  # whether the metric needs temporary data computed with MetricExtension._prepare_data
+    needs_job_kwargs = False  # whether the metric needs job_kwargs
+    supports_periods = False  # whether the metric function supports periods
+    depend_on = []  # extensions the metric depends on
+    deprecated_names = []  # list of metric names used by previous versions of spikeinterface
+
+    # the metric function must have the signature:
+    # def metric_function(sorting_analyzer, unit_ids, **metric_params)
+    # or if needs_tmp_data=True
+    # def metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_params)
+    # or if needs_job_kwargs=True
+    # def metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwargs, **metric_params)
+    # and must return a dict ({unit_id: values}) or namedtuple with fields matching metric_columns keys
+    metric_function = None  # to be defined in subclass
+
+    @classmethod
+    def compute(cls, sorting_analyzer, unit_ids, metric_params, tmp_data, job_kwargs, periods=None):
+        """Compute the metric.
+
+        Parameters
+        ----------
+        sorting_analyzer :  SortingAnalyzer
+            The input sorting analyzer
+        unit_ids : list
+            List of unit ids to compute the metric for
+        metric_params : dict
+            Parameters to override the default metric parameters
+        tmp_data : dict
+            Temporary data to pass to the metric function
+        job_kwargs : dict
+            Job keyword arguments to control parallelization
+        periods : np.ndarray | None
+            Numpy array of unit periods of unit_period_dtype if supports_periods is True
+
+        Returns
+        -------
+        results: namedtuple
+            The results of the metric function
+        """
+        args = (sorting_analyzer, unit_ids)
+        if cls.needs_tmp_data:
+            args += (tmp_data,)
+        if cls.needs_job_kwargs:
+            args += (job_kwargs,)
+        if cls.supports_periods:
+            args += (periods,)
+
+        results = cls.metric_function(*args, **metric_params)
+
+        # if namedtuple, check that columns are correct
+        if isinstance(results, tuple) and hasattr(results, "_fields"):
+            assert set(results._fields) == set(list(cls.metric_columns.keys())), (
+                f"Metric {cls.metric_name} returned columns {results._fields} "
+                f"but expected columns are {cls.metric_columns.keys()}"
+            )
+        return results
+
+
+class BaseMetricExtension(AnalyzerExtension):
+    """
+    AnalyzerExtension that computes a metric and store the results in a dataframe.
+
+    This depends on one or more extensions (see `depend_on` attribute of the `BaseMetric` subclass).
+
+    Returns
+    -------
+    metric_dataframe : pd.DataFrame
+        The computed metric dataframe.
+    """
+
+    extension_name = None  # to be defined in subclass
+    metric_class = None  # to be defined in subclass
+    need_recording = False
+    use_nodepipeline = False
+    need_job_kwargs = True
+    need_backward_compatibility_on_load = False
+    metric_list: list[BaseMetric] = None  # list of BaseMetric
+    tmp_data_to_save = None
+
+    def __init__(self, sorting_analyzer):
+        super().__init__(sorting_analyzer)
+
+    @classmethod
+    def get_available_metric_names(cls):
+        """Get the available metric names.
+
+        Returns
+        -------
+        available_metric_names : list[str]
+            List of available metric names.
+        """
+        return [m.metric_name for m in cls.metric_list]
+
+    @classmethod
+    def get_default_metric_params(cls):
+        """Get the default metric parameters.
+
+        Returns
+        -------
+        default_metric_params : dict
+            Dictionary of default metric parameters for each metric.
+        """
+        default_metric_params = {m.metric_name: deepcopy(m.metric_params) for m in cls.metric_list}
+        return default_metric_params
+
+    @classmethod
+    def get_metric_columns(cls, metric_names=None):
+        """Get the default metric columns.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to get columns for. If None, all metrics are considered.
+
+        Returns
+        -------
+        default_metric_columns : dict
+            Dictionary of default metric columns and their dtypes for each metric.
+        """
+        default_metric_columns = []
+        if metric_names is None:
+            metric_names = cls.get_available_metric_names()
+        else:
+            for metric_name in metric_names:
+                if metric_name not in [m.metric_name for m in cls.metric_list]:
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {cls.get_available_metric_names()}"
+                    )
+        for metric_name in metric_names:
+            metric_class = cls.get_metric_by_name(metric_name)
+            default_metric_columns.extend(metric_class.metric_columns)
+        return default_metric_columns
+
+    @classmethod
+    def get_metric_column_descriptions(cls, metric_names=None):
+        """Get the default metric columns.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to get columns for. If None, all metrics are considered.
+
+        Returns
+        -------
+        metric_column_descriptions : dict
+            Dictionary of metric columns and their descriptions for each metric.
+        """
+        metric_column_descriptions = {}
+        if metric_names is None:
+            metric_names = cls.get_available_metric_names()
+        else:
+            for metric_name in metric_names:
+                if metric_name not in cls.get_available_metric_names():
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {cls.get_available_metric_names()}"
+                    )
+        for metric_name in metric_names:
+            m = cls.get_metric_by_name(metric_name)
+            if m.metric_descriptions is None:
+                metric_column_descriptions.update({col: "no description" for col in m.metric_columns.keys()})
+            else:
+                if set(m.metric_descriptions.keys()) == set(m.metric_columns.keys()):
+                    metric_column_descriptions.update(m.metric_descriptions)
+                else:
+                    warnings.warn(
+                        f"Metric {m.metric_name} has inconsistent metric_descriptions and metric_columns keys."
+                    )
+        return metric_column_descriptions
+
+    @classmethod
+    def get_optional_dependencies(cls, **params):
+        metric_names = params.get("metric_names", None)
+        if metric_names is None:
+            metric_names = [m.metric_name for m in cls.metric_list]
+        else:
+            for metric_name in metric_names:
+                if metric_name not in cls.get_available_metric_names():
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {cls.get_available_metric_names()}"
+                    )
+        metric_depend_on = set()
+        for metric_name in metric_names:
+            metric_class = cls.get_metric_by_name(metric_name)
+            for dep in metric_class.depend_on:
+                if "|" in dep:
+                    dep_options = dep.split("|")
+                    metric_depend_on.update(dep_options)
+                else:
+                    metric_depend_on.add(dep)
+        depend_on = list(cls.depend_on) + list(metric_depend_on)
+        return depend_on
+
+    def get_computed_metric_names(self):
+        """
+        Get the list of already computed metric names.
+
+        Returns
+        -------
+        computed_metric_names : list[str]
+            List of computed metric names.
+        """
+        if self.data is None or len(self.data) == 0:
+            return []
+        else:
+            computed_metric_columns = self.data["metrics"].columns.tolist()
+            computed_metric_names = []
+            for m in self.metric_list:
+                if all(col in computed_metric_columns for col in m.metric_columns.keys()):
+                    computed_metric_names.append(m.metric_name)
+            return computed_metric_names
+
+    @classmethod
+    def get_metric_by_name(cls, metric_name):
+        """
+        Get the metric class by name.
+
+        Parameters
+        ----------
+        metric_name : str
+            The name of the metric.
+
+        Returns
+        -------
+        metric_class : BaseMetric
+            The metric class.
+        """
+        for m in cls.metric_list:
+            if m.metric_name == metric_name:
+                return m
+        raise ValueError(f"Metric {metric_name} not found in available metrics {cls.get_available_metric_names()}")
+
+    def _cast_metrics(self, metrics_df):
+        metric_dtypes = {}
+        for m in self.metric_list:
+            metric_dtypes.update(m.metric_columns)
+
+        for col in metrics_df.columns:
+            if col in metric_dtypes:
+                try:
+                    metrics_df[col] = metrics_df[col].astype(metric_dtypes[col])
+                except Exception as e:
+                    print(f"Error casting column {col}: {e}")
+        return metrics_df
+
+    def _set_params(
+        self,
+        metric_names: list[str] | None = None,
+        metric_params: dict | None = None,
+        delete_existing_metrics: bool = False,
+        metrics_to_compute: list[str] | None = None,
+        periods: np.ndarray | None = None,
+        **other_params,
+    ):
+        """
+        Sets parameters for metric computation.
+
+        Parameters
+        ----------
+        metric_names : list[str] | None
+            List of metric names to compute. If None, all available metrics are computed.
+        metric_params : dict | None
+            Dictionary of metric parameters to override default parameters for specific metrics.
+            If None, default parameters for all metrics are used.
+        delete_existing_metrics : bool, default: False
+            If True, existing metrics in the extension will be deleted before computing new ones.
+        metrics_to_compute : list[str] | None
+            List of metric names to compute. If None, all metrics in `metric_names` are computed.
+        periods : np.ndarray | None
+            Numpy array of unit_period_dtype defining periods to compute metrics over.
+        other_params : dict
+            Additional parameters for metric computation.
+
+        Returns
+        -------
+        params : dict
+            Dictionary of parameters for metric computation.
+
+        Raises
+        ------
+        ValueError
+            If any of the metric names are not in the available metrics.
+        """
+        if metric_names is None:
+            metric_names = self.get_available_metric_names()
+        else:
+            # check if any given names are from previous versions of spikeinterface
+            deprecated_name_error_message = ""
+            for metric in self.metric_list:
+                for deprecated_name in metric.deprecated_names:
+                    if deprecated_name in metric_names:
+                        deprecated_name_error_message += f"The metric '{deprecated_name}' has been re-named or re-organized. You can now compute it using the metric name '{metric.metric_name}'.\n"
+            if len(deprecated_name_error_message) > 0:
+                raise ValueError(deprecated_name_error_message)
+
+            # check metric names
+            for metric_name in metric_names:
+                if metric_name not in self.get_available_metric_names():
+                    raise ValueError(
+                        f"Metric {metric_name} not in available metrics {self.get_available_metric_names()}"
+                    )
+
+        # check dependencies
+        metrics_to_remove = []
+        for metric_name in metric_names:
+            metric = self.get_metric_by_name(metric_name)
+            depend_on = metric.depend_on
+            for dep in depend_on:
+                if "|" in dep:
+                    # at least one of the dependencies must be present
+                    dep_options = dep.split("|")
+                    if not any([self.sorting_analyzer.has_extension(d) for d in dep_options]):
+                        metrics_to_remove.append(metric_name)
+                else:
+                    if not self.sorting_analyzer.has_extension(dep):
+                        metrics_to_remove.append(metric_name)
+            if metric.needs_recording and not self.sorting_analyzer.has_recording():
+                warnings.warn(
+                    f"Metric {metric_name} requires a recording. "
+                    f"Since the SortingAnalyzer has no recording, the metric will not be computed."
+                )
+                metrics_to_remove.append(metric_name)
+
+        metrics_to_remove = list(set(metrics_to_remove))
+        if len(metrics_to_remove) > 0:
+            warnings.warn(
+                f"The following metrics will not be computed due to missing dependencies: {metrics_to_remove}"
+            )
+
+        for metric_name in metrics_to_remove:
+            metric_names.remove(metric_name)
+
+        default_metric_params = self.get_default_metric_params()
+        if metric_params is None:
+            metric_params = default_metric_params
+        else:
+            for metric, params in metric_params.items():
+                default_metric_params[metric].update(params)
+            metric_params = default_metric_params
+
+        if metrics_to_compute is None:
+            metrics_to_compute = metric_names
+        extension = self.sorting_analyzer.get_extension(self.extension_name)
+        if delete_existing_metrics is False and extension is not None:
+            existing_metric_names = extension.params["metric_names"]
+            existing_metric_names_propagated = [
+                metric_name for metric_name in existing_metric_names if metric_name not in metrics_to_compute
+            ]
+            metric_names = metrics_to_compute + existing_metric_names_propagated
+
+        params = dict(
+            metric_names=metric_names,
+            metrics_to_compute=metrics_to_compute,
+            delete_existing_metrics=delete_existing_metrics,
+            metric_params=metric_params,
+            periods=periods,
+            **other_params,
+        )
+        return params
+
+    def _prepare_data(self, sorting_analyzer, unit_ids=None):
+        """
+        Optional function to prepare shared data for metric computation.
+
+        This function should return a dictionary containing any data that is shared across multiple metrics.
+        The returned dictionary will be passed to each metric's compute function as `tmp_data` (if the metric
+        requires it with the class attribute `needs_tmp_data=True`).
+        """
+        return {}
+
+    def _compute_metrics(
+        self,
+        sorting_analyzer: SortingAnalyzer,
+        unit_ids: list[int | str] | None = None,
+        metric_names: list[str] | None = None,
+        **job_kwargs,
+    ):
+        """
+        Compute metrics.
+
+        Parameters
+        ----------
+        sorting_analyzer : SortingAnalyzer
+            The SortingAnalyzer object.
+        unit_ids : list[int | str] | None, default: None
+            List of unit ids to compute metrics for. If None, all units are used.
+        metric_names : list[str] | None, default: None
+            List of metric names to compute. If None, all metrics in params["metric_names"]
+            are used.
+
+        Returns
+        -------
+        metrics : pd.DataFrame
+            DataFrame containing the computed metrics for each unit.
+        run_times : dict
+            Dictionary containing the computation time for each metric.
+
+        """
+        import pandas as pd
+
+        if unit_ids is None:
+            unit_ids = sorting_analyzer.unit_ids
+        tmp_data = self._prepare_data(sorting_analyzer=sorting_analyzer, unit_ids=unit_ids)
+        if metric_names is None:
+            metric_names = self.params["metric_names"]
+
+        periods = self.params.get("periods", None)
+
+        column_names_dtypes = {}
+        for metric_name in metric_names:
+            metric = self.get_metric_by_name(metric_name)
+            column_names_dtypes.update(metric.metric_columns)
+
+        # drop metric that don't map to any metric names
+        possible_metric_names = [m.metric_name for m in self.metric_list]
+        wrong_metric_names = [m for m in metric_names if m not in possible_metric_names]
+        if len(wrong_metric_names) > 0:
+            warnings.warn(f"The following metric names are not recognized and will be ignored: {wrong_metric_names}")
+            metric_names = [m for m in metric_names if m in possible_metric_names]
+
+        metrics = pd.DataFrame(index=unit_ids, columns=list(column_names_dtypes.keys()))
+
+        run_times = {}
+
+        for metric_name in metric_names:
+            metric = self.get_metric_by_name(metric_name)
+            column_names = list(metric.metric_columns.keys())
+            import time
+
+            t_start = time.perf_counter()
+            try:
+                metric_params = self.params["metric_params"].get(metric_name, {})
+
+                res = metric.compute(
+                    sorting_analyzer,
+                    unit_ids=unit_ids,
+                    metric_params=metric_params,
+                    tmp_data=tmp_data,
+                    job_kwargs=job_kwargs,
+                    periods=periods,
+                )
+            except Exception as e:
+                warnings.warn(f"Error computing metric {metric_name}: {e}")
+                if len(column_names) == 1:
+                    res = {unit_id: np.nan for unit_id in unit_ids}
+                else:
+                    res = namedtuple("MetricResult", column_names)(*([np.nan] * len(column_names)))
+            t_end = time.perf_counter()
+            run_times[metric_name] = t_end - t_start
+
+            # res is a namedtuple with several dictionary entries (one per column)
+            if isinstance(res, dict):
+                column_name = column_names[0]
+                metrics.loc[unit_ids, column_name] = pd.Series(res)
+            else:
+                for i, col in enumerate(res._fields):
+                    metrics.loc[unit_ids, col] = pd.Series(res[i])
+
+        metrics = self._cast_metrics(metrics)
+
+        return metrics, run_times, tmp_data
+
+    def _run(self, **job_kwargs):
+
+        metrics_to_compute = self.params["metrics_to_compute"]
+        delete_existing_metrics = self.params["delete_existing_metrics"]
+
+        _, job_kwargs = split_job_kwargs(job_kwargs)
+        job_kwargs = fix_job_kwargs(job_kwargs)
+
+        # compute the metrics which have been specified by the user
+        computed_metrics, run_times, tmp_data = self._compute_metrics(
+            sorting_analyzer=self.sorting_analyzer, unit_ids=None, metric_names=metrics_to_compute, **job_kwargs
+        )
+
+        existing_metrics = []
+
+        # Check if we need to propagate any old metrics. If so, we'll do that.
+        # Otherwise, we'll avoid attempting to load an empty metrics.
+        if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
+
+            extension = self.sorting_analyzer.get_extension(self.extension_name)
+            if delete_existing_metrics is False and extension is not None and extension.data.get("metrics") is not None:
+                existing_metrics = extension.params["metric_names"]
+
+        existing_metrics = []
+        # here we get in the loaded via the dict only (to avoid full loading from disk after params reset)
+        extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
+        if delete_existing_metrics is False and extension is not None and extension.data.get("metrics") is not None:
+            existing_metrics = extension.params["metric_names"]
+
+        # append the metrics which were previously computed
+        for metric_name in set(existing_metrics).difference(metrics_to_compute):
+            metric = self.get_metric_by_name(metric_name)
+            # some metrics names produce data columns with other names. This deals with that.
+            for column_name in metric.metric_columns:
+                computed_metrics[column_name] = extension.data["metrics"][column_name]
+
+        self.data["metrics"] = computed_metrics
+        self.data["runtime_s"] = run_times
+
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                self.data[k] = tmp_data[k]
+
+    def _get_data(self):
+        # convert to correct dtype
+        return self.data["metrics"]
+
+    def _select_units_extension_data(self, unit_ids: list[int | str]):
+        """
+        Select data for a subset of unit ids.
+
+        Parameters
+        ----------
+        unit_ids : list[int | str]
+            List of unit ids to select data for.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the selected metrics DataFrame.
+        """
+        import pandas as pd
+
+        new_data = dict()
+        new_metrics = self.data["metrics"].loc[np.array(unit_ids)]
+        new_data["metrics"] = new_metrics
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                old_data = self.data[k]
+                if isinstance(old_data, pd.DataFrame):
+                    new_df = old_data.loc[np.array(unit_ids)]
+                    new_data[k] = new_df
+                elif isinstance(old_data, np.ndarray):
+                    old_arr = self.data[k]
+                    new_arr = old_arr[self.sorting_analyzer.sorting.ids_to_indices(unit_ids), ...]
+                    new_data[k] = new_arr
+        return new_data
+
+    def _merge_extension_data(
+        self,
+        merge_unit_groups: list[list[int | str]],
+        new_unit_ids: list[int | str],
+        new_sorting_analyzer: SortingAnalyzer,
+        keep_mask: np.ndarray | None = None,
+        verbose: bool = False,
+        **job_kwargs,
+    ):
+        """
+        Merge extension data from the old metrics DataFrame into the new one.
+
+        Parameters
+        ----------
+        merge_unit_groups : list[list[int | str]]
+            List of lists of unit ids to merge.
+        new_unit_ids : list[int | str]
+            List of new unit ids after merging.
+        new_sorting_analyzer : SortingAnalyzer
+            The new SortingAnalyzer object after merging.
+        keep_mask : np.ndarray | None, default: None
+            Mask to keep certain spikes (not used here).
+        verbose : bool, default: False
+            Whether to print verbose output.
+        job_kwargs : dict
+            Additional job keyword arguments.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the merged metrics DataFrame.
+        """
+        import pandas as pd
+
+        available_metric_names = self.get_available_metric_names()
+        metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
+
+        new_metrics, _, new_tmp_data = self._compute_metrics(
+            sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids, metric_names=metric_names, **job_kwargs
+        )
+
+        metrics = _update_data_after_merge_or_split(
+            self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids
+        )
+        new_data = dict()
+        new_data["metrics"] = self._cast_metrics(metrics)
+
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                new_arr = _update_data_after_merge_or_split(
+                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids
+                )
+                new_data[k] = new_arr
+
+        return new_data
+
+    def _split_extension_data(
+        self,
+        split_units: dict[int | str, list[list[int]]],
+        new_unit_ids: list[list[int | str]],
+        new_sorting_analyzer: SortingAnalyzer,
+        verbose: bool = False,
+        **job_kwargs,
+    ):
+        """
+        Split extension data from the old metrics DataFrame into the new one.
+
+        Parameters
+        ----------
+        split_units : dict[int | str, list[list[int]]]
+            List of unit ids to split.
+        new_unit_ids : list[list[int | str]]
+            List of lists of new unit ids after splitting.
+        new_sorting_analyzer : SortingAnalyzer
+            The new SortingAnalyzer object after splitting.
+        verbose : bool, default: False
+            Whether to print verbose output.
+        """
+        import pandas as pd
+        from itertools import chain
+
+        available_metric_names = [m.metric_name for m in self.metric_list]
+        metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
+
+        new_unit_ids_f = list(chain(*new_unit_ids))
+        new_metrics, _, new_tmp_data = self._compute_metrics(
+            sorting_analyzer=new_sorting_analyzer, unit_ids=new_unit_ids_f, metric_names=metric_names, **job_kwargs
+        )
+
+        metrics = _update_data_after_merge_or_split(
+            self.sorting_analyzer, new_sorting_analyzer, self.data["metrics"], new_metrics, new_unit_ids_f
+        )
+        new_data = dict()
+        new_data["metrics"] = self._cast_metrics(metrics)
+
+        if self.tmp_data_to_save is not None:
+            for k in self.tmp_data_to_save:
+                new_arr = _update_data_after_merge_or_split(
+                    self.sorting_analyzer, new_sorting_analyzer, self.data[k], new_tmp_data[k], new_unit_ids_f
+                )
+                new_data[k] = new_arr
+
+        return new_data
+
+    def set_data(self, ext_data_name, data):
+        import pandas as pd
+
+        if ext_data_name == "metrics":
+            metrics = self._cast_metrics(data)
+            self.data[ext_data_name] = metrics
+        else:
+            self.data[ext_data_name] = data
+
+
+class BaseSpikeVectorExtension(AnalyzerExtension):
+    """
+    Base class for spikevector-based extension, where the data is a numpy array with the same
+    length as the spike vector.
+    """
+
+    extension_name = None  # to be defined in subclass
+    need_recording = True
+    use_nodepipeline = True
+    need_job_kwargs = True
+    need_backward_compatibility_on_load = False
+    nodepipeline_variables = []  # to be defined in subclass
+
+    def __init__(self, sorting_analyzer):
+        super().__init__(sorting_analyzer)
+
+    def _set_params(self, **kwargs):
+        params = kwargs.copy()
+        return params
+
+    def _run(self, verbose=False, **job_kwargs):
+        from spikeinterface.core.node_pipeline import run_node_pipeline
+
+        # TODO: should we save directly to npy in binary_folder format / or to zarr?
+        # if self.sorting_analyzer.format == "binary_folder":
+        #     gather_mode = "npy"
+        #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
+        #     gather_kwargs = {"folder": extension_folder}
+        gather_mode = "memory"
+        gather_kwargs = {}
+
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        nodes = self.get_pipeline_nodes()
+        data = run_node_pipeline(
+            self.sorting_analyzer.recording,
+            nodes,
+            job_kwargs=job_kwargs,
+            job_name=self.extension_name,
+            gather_mode=gather_mode,
+            gather_kwargs=gather_kwargs,
+            verbose=False,
+        )
+        if isinstance(data, tuple):
+            # this logic enables extensions to optionally compute additional data based on params
+            assert len(data) <= len(self.nodepipeline_variables), "Pipeline produced more outputs than expected"
+        else:
+            data = (data,)
+        if len(self.nodepipeline_variables) > len(data):
+            data_names = self.nodepipeline_variables[: len(data)]
+        else:
+            data_names = self.nodepipeline_variables
+        for d, name in zip(data, data_names):
+            self.data[name] = d
+
+    def _get_data(self, outputs="numpy", concatenated=False, return_data_name=None, periods=None, copy=True):
+        """
+        Return extension data. If the extension computes more than one `nodepipeline_variables`,
+        the `return_data_name` is used to specify which one to return.
+
+        Parameters
+        ----------
+        outputs : "numpy" | "by_unit", default: "numpy"
+            How to return the data, by default "numpy"
+        concatenated : bool, default: False
+            Whether to concatenate the data across segments.
+        return_data_name : str | None, default: None
+            The name of the data to return. If None and multiple `nodepipeline_variables` are computed,
+            the first one is returned.
+        periods : array of unit_period dtype, default: None
+            Optional periods (segment_index, start_sample_index, end_sample_index, unit_index) to slice output data
+        copy : bool, default: True
+            Whether to return a copy of the data (only for outputs="numpy")
+
+        Returns
+        -------
+        numpy.ndarray | dict
+            The requested data in numpy or by unit format.
+        """
+
+        if len(self.nodepipeline_variables) == 1:
+            return_data_name = self.nodepipeline_variables[0]
+        else:
+            if return_data_name is None:
+                return_data_name = self.nodepipeline_variables[0]
+            else:
+                assert (
+                    return_data_name in self.nodepipeline_variables
+                ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
+
+        all_data = self.data[return_data_name]
+        keep_mask = None
+        if periods is not None:
+            keep_mask = select_sorting_periods_mask(
+                self.sorting_analyzer.sorting,
+                periods,
+            )
+            all_data = slice_rows(all_data, keep_mask)
+            # since we have the mask already, we can use it directly to avoid double computation
+            spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=True)
+            sliced_spike_vector = spike_vector[keep_mask]
+            sorting = NumpySorting(
+                sliced_spike_vector,
+                sampling_frequency=self.sorting_analyzer.sampling_frequency,
+                unit_ids=self.sorting_analyzer.unit_ids,
+            )
+        else:
+            sorting = self.sorting_analyzer.sorting
+
+        if outputs == "numpy":
+            if copy and not self.sorting_analyzer._lazy:
+                return materialize_array(all_data)
+            else:
+                return all_data
+        elif outputs == "by_unit":
+            unit_ids = self.sorting_analyzer.unit_ids
+
+            if keep_mask is not None:
+                # since we are filtering spikes, we need to recompute the spike indices
+                spike_vector = sorting.to_spike_vector(concatenated=False)
+                spike_indices = spike_vector_to_indices(spike_vector, unit_ids, absolute_index=True)
+            else:
+                # use the cache of indices
+                spike_indices = self.sorting_analyzer.sorting.get_spike_vector_to_indices()
+            data_by_units = {}
+            for segment_index in range(self.sorting_analyzer.sorting.get_num_segments()):
+                data_by_units[segment_index] = {}
+                for unit_id in unit_ids:
+                    inds = spike_indices[segment_index][unit_id]
+                    data_by_units[segment_index][unit_id] = slice_rows(all_data, inds)
+
+            if concatenated:
+                data_by_units_concatenated = {
+                    unit_id: np.concatenate([data_in_segment[unit_id] for data_in_segment in data_by_units.values()])
+                    for unit_id in unit_ids
+                }
+                return data_by_units_concatenated
+
+            return data_by_units
+        else:
+            raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
+
+    def _select_units_extension_data(self, unit_ids):
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
+
+        spikes = self.sorting_analyzer.sorting.to_spike_vector()
+        keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
+
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                new_data[data_name] = slice_rows(self.data[data_name], keep_spike_mask)
+
+        return new_data
+
+    def _merge_extension_data(
+        self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
+    ):
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                if keep_mask is None:
+                    new_data[data_name] = materialize_array(self.data[data_name])
+                else:
+                    new_data[data_name] = slice_rows(self.data[data_name], keep_mask)
+
+        return new_data
+
+    def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
+        # splitting only changes random spikes assignments
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                new_data[data_name] = materialize_array(self.data[data_name])
+        return new_data
+
+
+def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):
+    """Updates a DataFrame or np.ndarray after a merge or split.
+
+    Parameters
+    ----------
+    old_analyzer : SortingAnalyzer
+        The old SortingAnalyzer object before merging or splitting.
+    new_analyzer : SortingAnalyzer
+        The new SortingAnalyzer object after merging or splitting.
+    old_arr : Union[pd.DataFrame, np.ndarray]
+        The old array or DataFrame before merging or splitting.
+    new_sub_arr : Union[pd.DataFrame, np.ndarray]
+        The new array or DataFrame after merging or splitting only for the new units ids.
+    new_unit_ids : np.ndarray
+        The new unit IDs after merging or splitting.
+
+    Returns
+    -------
+    Union[pd.DataFrame, np.ndarray]
+        The updated array or DataFrame after merging or splitting.
+    """
+    # this construct new array or dataframe after a merge and a split
+    import pandas as pd
+
+    all_unit_ids = new_analyzer.unit_ids
+    not_new_ids = all_unit_ids[~np.isin(all_unit_ids, new_unit_ids)]
+
+    if isinstance(new_sub_arr, pd.DataFrame):
+        new_df = pd.DataFrame(index=all_unit_ids, columns=old_arr.columns)
+        new_df.loc[not_new_ids, :] = old_arr.loc[not_new_ids, :]
+        new_df.loc[new_unit_ids, :] = new_sub_arr
+        return new_df
+
+    elif isinstance(new_sub_arr, np.ndarray):
+        new_shape = (len(all_unit_ids),) + old_arr.shape[1:]
+        new_arr = np.zeros(new_shape, dtype=old_arr.dtype)
+        new_inds = new_analyzer.sorting.ids_to_indices(not_new_ids)
+        old_inds = old_analyzer.sorting.ids_to_indices(not_new_ids)
+        new_arr[new_inds] = old_arr[old_inds]
+        new_inds = new_analyzer.sorting.ids_to_indices(new_unit_ids)
+        new_arr[new_inds] = new_sub_arr
+        return new_arr
+    else:
+        raise NotImplementedError(
+            "Only pandas DataFrame and numpy array are supported for merging and splitting extension data."
+        )
+
+
+def _select_channels_sparse_data(old_sorting_analyzer, old_data, new_channel_ids):
+    """
+    When selecting channels from extensions which are sparse (waveforms, pcs),
+    this function remaps the sparsity for the underlying data.
+    """
+
+    unit_ids = old_sorting_analyzer.unit_ids
+    old_unit_id_to_channel_ids = old_sorting_analyzer.sparsity.unit_id_to_channel_ids
+
+    # Compute how to slice the original sparsity to get the new sparsity
+    unit_sparsity_slices = {}
+    for unit_index, unit_id in enumerate(unit_ids):
+        unit_sparsity_channel_indices = []
+        unit_channel_ids = old_unit_id_to_channel_ids[unit_id]
+
+        for channel_id in new_channel_ids:
+            if channel_id in unit_channel_ids:
+                idx = np.where(old_unit_id_to_channel_ids[unit_id] == channel_id)[0][0]
+                unit_sparsity_channel_indices.append(idx)
+        unit_sparsity_slices[unit_id] = np.array(unit_sparsity_channel_indices)
+
+    random_spikes = old_sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+
+    new_data = np.zeros_like(old_data)
+    max_num_active_channels = 0
+    for data_index, (one_old_data, unit_index) in enumerate(zip(old_data, random_spikes["unit_index"])):
+
+        unit_id = unit_ids[unit_index]
+        channel_slice = unit_sparsity_slices[unit_id]
+
+        if len(channel_slice) > 0:
+
+            size_of_new_mask = len(channel_slice)
+            new_data[data_index, :, :size_of_new_mask] = one_old_data[:, channel_slice]
+
+            max_num_active_channels = max(max_num_active_channels, size_of_new_mask)
+
+    return new_data[:, :, :max_num_active_channels]

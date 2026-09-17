@@ -15,10 +15,12 @@ from .correct_lsb import correct_lsb
 
 from .pipeline import (
     apply_preprocessing_pipeline,
-    get_preprocessing_dict_from_analyzer,
-    get_preprocessing_dict_from_file,
+    get_preprocessing_list_from_analyzer,
+    get_preprocessing_list_from_file,
     PreprocessingPipeline,
 )
+
+from .detect_artifacts import detect_artifact_periods, detect_artifact_periods_by_envelope, detect_saturation_periods
 
 # for snippets
 from .align_snippets import AlignSnippets

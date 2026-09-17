@@ -1,11 +1,7 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
 import importlib.util
-
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -70,7 +66,7 @@ def compress_templates(
 
 
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
-    import scipy
+    from scipy.sparse import hstack, csr_matrix
 
     num_templates = len(templates)
 
@@ -88,7 +84,7 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
         source = dense_templates[:, :delay, :].reshape(num_templates, -1)
         target = dense_templates[:, num_samples - delay :, :].reshape(num_templates, -1)
 
-        overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+        overlaps[delay] = csr_matrix(source.dot(target.T))
 
         if delay < num_samples:
             overlaps[size - delay + 1] = overlaps[delay].T.tocsr()
@@ -97,7 +93,7 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
 
     for i in range(num_templates):
         data = [overlaps[j][i, :].T for j in range(size)]
-        data = scipy.sparse.hstack(data)
+        data = hstack(data)
         new_overlaps += [data]
 
     return new_overlaps
@@ -326,19 +322,18 @@ class CircusOMPPeeler(BaseTemplateMatching):
                 output[key] = getattr(self, key)
         return output
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
-        import scipy.spatial
-        import scipy
+        from scipy.linalg import get_lapack_funcs, get_blas_funcs, solve_triangular
         from scipy import ndimage
 
         if not self.is_pushed:
             self._push_to_torch()
 
-        (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
-        (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
+        (potrs,) = get_lapack_funcs(("potrs",), dtype=np.float32)
+        (nrm2,) = get_blas_funcs(("nrm2",), dtype=np.float32)
 
         omp_tol = np.finfo(np.float32).eps
         neighbor_window = self.num_samples - 1
@@ -369,9 +364,9 @@ class CircusOMPPeeler(BaseTemplateMatching):
             # Filter using overlap-and-add convolution
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
-            from scipy import signal
+            from scipy.signal import oaconvolve
 
-            objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
+            objective_by_rank = oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
             scalar_products += np.sum(objective_by_rank, axis=0)
 
         num_peaks = scalar_products.shape[1]
@@ -452,7 +447,7 @@ class CircusOMPPeeler(BaseTemplateMatching):
                     M[num_selection, idx[mask]] = local_overlaps[table[a], b]
 
                     if self.vicinity == 0:
-                        scipy.linalg.solve_triangular(
+                        solve_triangular(
                             M[:num_selection, :num_selection],
                             M[num_selection, :num_selection],
                             trans=0,
@@ -472,7 +467,7 @@ class CircusOMPPeeler(BaseTemplateMatching):
                         if len(is_in_vicinity) > 0:
                             L = M[is_in_vicinity, :][:, is_in_vicinity]
 
-                            M[num_selection, is_in_vicinity] = scipy.linalg.solve_triangular(
+                            M[num_selection, is_in_vicinity] = solve_triangular(
                                 L,
                                 M[num_selection, is_in_vicinity],
                                 trans=0,
@@ -627,7 +622,7 @@ class CircusPeeler(BaseTemplateMatching):
         return_output=True,
         templates=None,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         jitter_ms=0.1,
         detect_threshold=5,
         noise_levels=None,
@@ -637,12 +632,10 @@ class CircusPeeler(BaseTemplateMatching):
     ):
 
         BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
-
-        try:
-            from sklearn.feature_extraction.image import extract_patches_2d
-
+        sklearn_spec = importlib.util.find_spec("sklearn") is not None
+        if sklearn_spec is not None:
             HAVE_SKLEARN = True
-        except ImportError:
+        else:
             HAVE_SKLEARN = False
 
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
@@ -682,8 +675,8 @@ class CircusPeeler(BaseTemplateMatching):
         self.peak_sign = peak_sign
 
     def _prepare_templates(self):
-        import scipy.spatial
-        import scipy
+
+        from scipy.sparse import csr_matrix
 
         self.norms = np.zeros(self.num_templates, dtype=np.float32)
 
@@ -705,7 +698,7 @@ class CircusPeeler(BaseTemplateMatching):
 
         nnz = np.sum(templates_array != 0) / (self.num_templates * self.num_samples * self.num_channels)
         if nnz <= self.use_sparse_matrix_threshold:
-            templates_array = scipy.sparse.csr_matrix(templates_array)
+            templates_array = csr_matrix(templates_array)
             print(f"Templates are automatically sparsified (sparsity level is {nnz})")
             self.is_dense = False
         else:
@@ -713,7 +706,7 @@ class CircusPeeler(BaseTemplateMatching):
 
         self.circus_templates = templates_array
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

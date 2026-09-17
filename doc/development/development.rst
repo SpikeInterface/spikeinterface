@@ -10,7 +10,7 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 * Creating a new spike sorter.
 * Designing a new post-processing algorithm.
 * Enhancing documentation, including docstrings, tutorials, and examples.
-* Crafting tutorials for common workflows (e.g., spike sorting, post-processing, etc.).
+* Crafting tutorials for common workflows (e.g., spike sorting, postprocessing, etc.).
 * Writing unit tests to expand code coverage and use case scenarios.
 * Reporting bugs and issues.
 
@@ -65,9 +65,30 @@ Note that you should install spikeinterface before running the tests. You can do
 
 .. code-block:: bash
 
-    pip install -e .[test,extractors,full]
+    pip install -e .[extractors,full] --group test-all
 
-You can change the :code:`[test,extractors,full]` to install only the dependencies you need. The dependencies are specified in the :code:`pyproject.toml` file in the root of the repository.
+You can change the :code:`[extractors,full]` extras to install only the runtime dependencies you need, and swap :code:`--group test-all` for a per-module test group (for example :code:`--group test-postprocessing`). Both lists are defined in :code:`pyproject.toml`: feature extras live under :code:`[project.optional-dependencies]` and test groups under :code:`[dependency-groups]` (PEP 735). Note that :code:`--group` requires pip 25.1+ or uv.
+
+With :code:`uv`, you can run the tests for a single module without creating and activating a virtual environment explicitly. :code:`uv run` resolves the project, extras, and dependency groups on the fly. The general pattern is:
+
+.. code-block:: bash
+
+    uv run --extra <module> --group test-<module> pytest src/spikeinterface/<module>/tests
+
+For example:
+
+.. code-block:: bash
+
+    uv run --extra postprocessing --group test-postprocessing pytest src/spikeinterface/postprocessing/tests
+    uv run --extra sortingcomponents --group test-sortingcomponents pytest src/spikeinterface/sortingcomponents/tests
+
+To replicate the nightly CI environment and run the whole suite at once:
+
+.. code-block:: bash
+
+    uv run --extra extractors --extra streaming_extractors --extra full --group test-all pytest
+
+Both :code:`--extra` and :code:`--group` lists are enumerated in :code:`pyproject.toml`. Some modules' tests happen to work with just :code:`--group test-<module>` because the group pulls the runtime deps transitively (preprocessing is one such case), but declaring the matching :code:`--extra` explicitly is the reliable pattern.
 
 The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can
 find the full tests in the :code:`.github/workflows/full_test.yml` file.
@@ -248,6 +269,74 @@ Note, however, that the running time of the command above will be quite long. If
 
     pytest src/spikeinterface/core/ --cov=spikeinterface/core --cov-report html
 
+
+Integrate your software with SpikeInterface
+-------------------------------------------
+
+You've made a great analysis tool for ephys data - congrats! It's popular and people are using it.
+Why would you integrate it into SpikeInterface? And how can do you do that?
+
+Why integrate it
+^^^^^^^^^^^^^^^^
+
+SpikeInterface is designed to allow users to 1) read in any recording format 2) apply a wide variety
+of preprocessing steps to the recording 3) run any sorter on the data 4) compute standard
+postprocessing data about the sorting (and more!!). We work hard to be general and allow users to do
+anything they'd like with their data. Hence if your tool works with SpikeInterface, it works with an
+enormous array of possible analysis pipelines.
+
+When they're first written, analysis tools are usually designed in a specific lab and are tested
+with a small number of collaborators and datasets. It's technically difficult to design a tool
+which can be applied to data from a wide variety of devices, set-ups and sorters. There are many
+edge cases and "gotcha"s to consider. But the SpikeInterface team have extensive experience with
+exactly this problem. We know how to write code so that it doesn't depend on data-specific or
+sorter-specific quirks. Hence we can help generalize the tool and widen its potential userbase.
+
+Often, the first step when using an analysis tool is to wrangle the data into a specific format:
+"please save your recording to a binary file which is preprocessed in a certain way" or "ensure your
+sorting output is in this format". SpikeInterface deals with this painful data wrangling for you: we
+load many formats and internally represent them in a consistent way. We also apply all preprocessing
+steps lazily, meaning that users never need to save a copy of a preprocessed recording: they can work
+directly from the raw recording. We believe this reduces the barrier to entry for the end user, which
+makes your tool more likely to be used by many researchers.
+
+How to integrate it
+^^^^^^^^^^^^^^^^^^^
+
+If you'd like to integrate your tool into SpikeInterface: amazing! Just
+`raise an issue <https://github.com/SpikeInterface/spikeinterface/issues>`_. There are two main ways
+to integrate your software into SpikeInterface.
+
+1) Wrapping
+
+You keep your code in your own codebase, and write a thin wrapper in SpikeInterface which interacts
+with your library. Most external sorters that SpikeInterface can call are organized in this way. To
+use the tool, the user will have to install your package and the maintenance of the software is primarily
+on your shoulders.
+
+2) Integration
+
+You re-implement your code and add it to the SpikeInterface package. Many preprocessing steps, motion
+correction algorithms and postprocessing steps are implemented like this. Your method and code become
+part of the SpikeInterface package and we take on the maintenance burden (with your help, we hope!).
+
+In this case, we don't expect the re-implementation to be a perfect copy of the code, since we may need
+to change the code to work for a more general set of data.
+
+
+Credit and Citation
+^^^^^^^^^^^^^^^^^^^
+
+We want to ensure the tools that SpikeInterface wrap and integrate are properly cited. We'll ensure that
+credit is given when the tool is mentioned in the docs, in the docstring of the function, and we will
+add it to the :doc:`../references` page. When added, we will include your software on the front-page of
+the SpikeInterface GitHub for at least 1 year. If we fail to cite you properly, this is certainly a mistake.
+Please `raise an issue <https://github.com/SpikeInterface/spikeinterface/issues>`_.
+
+See all the packages and projects which have been wrapped or integrated into SpikeInterface in our
+:doc:`../references` page.
+
+
 Implement a new extractor
 -------------------------
 
@@ -295,12 +384,11 @@ In order to check if your spike sorter is installed, a :code:`try` - :code:`exce
 sorter is implemented in Python (installed with the package :code:`myspikesorter`), this block will look as follows:
 
 .. code-block:: python
-
-    try:
-        import myspikesorter
-        HAVE_MSS = True
-    except ImportError:
-        HAVE_MSS = False
+    import importlib.util
+    if importlib.util.find_spec("myspikesorter"):
+        HAVE_MYSORTER = True
+    else:
+        HAVE_MYSORTER = False
 
 Then, you can start creating a new class:
 
@@ -313,7 +401,7 @@ Then, you can start creating a new class:
     """
 
     sorter_name = 'myspikesorter'
-    installed = HAVE_MSS
+    installed = HAVE_MYSORTER
 
     _default_params = {
         'param1': None,
@@ -347,7 +435,7 @@ Now you can start filling out the required methods:
     def is_installed(cls):
 
         # Fill code to check sorter installation. It returns a boolean
-        return HAVE_MSS
+        return HAVE_MYSORTER
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
@@ -409,7 +497,7 @@ Checklist
 * In the top level ``__init__`` (located at ``src/spikeinterface/__init__.py``) set ``DEV_MODE`` to ``False`` (this is used for the docker installations)
 * Create a new release note for the appropriate version on doc/releases/new_version_tag.
 
-There can be large releases like:
+It can be a large release like:
 
 ``doc/releases/0.101.0.rst``
 
@@ -417,7 +505,7 @@ Which contain a section called "Main Changes" and minor releases which include o
 
 ``doc/releases/0.101.2.rst``
 
-To collect all the PRs and bug fixes we have a script in:
+To collect all the PRs and bug fixes we have a bash script in:
 ``doc/scripts/``
 called ``auto-release-notes.sh``. Run it with ``bash auto-release-notes.sh`` and it will create the release notes for the module specific changes.
 

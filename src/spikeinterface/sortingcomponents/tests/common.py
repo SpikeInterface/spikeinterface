@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.core import generate_ground_truth_recording
 
 
@@ -21,10 +19,5 @@ def make_dataset():
         noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
-
-    channel_ids_as_integers = [id for id in range(recording.get_num_channels())]
-    unit_ids_as_integers = [id for id in range(sorting.get_num_units())]
-    recording = recording.rename_channels(new_channel_ids=channel_ids_as_integers)
-    sorting = sorting.rename_units(new_unit_ids=unit_ids_as_integers)
 
     return recording, sorting

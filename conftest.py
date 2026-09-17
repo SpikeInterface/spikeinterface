@@ -8,6 +8,21 @@ def create_cache_folder(tmp_path_factory):
     return cache_folder
 
 
+@pytest.fixture(scope="module")
+def debug_plots(request):
+    """Return True if debug plots should be shown."""
+    return request.config.getoption("--debug-plots")
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--debug-plots",
+        action="store_true",
+        default=False,
+        help="Enable debug plots during tests",
+    )
+
+
 def pytest_collection_modifyitems(config, items):
     """
     This function marks (in the pytest sense) the tests according to their name and file_path location

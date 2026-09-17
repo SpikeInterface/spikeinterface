@@ -1,20 +1,16 @@
-from __future__ import annotations
-
-from pathlib import Path
-import os
 import importlib.util
-from importlib.metadata import version
 import sys
+from importlib.metadata import version
+from pathlib import Path
 
 import numpy as np
 from numpy.lib.format import open_memmap
+from probeinterface import write_prb
 
-
+from spikeinterface.core.job_tools import get_usable_cpu_count
 from spikeinterface.extractors.extractor_classes import SpykingCircusSortingExtractor
 from spikeinterface.sorters.basesorter import BaseSorter
 from spikeinterface.sorters.utils import ShellScript
-
-from probeinterface import write_prb
 
 
 class SpykingcircusSorter(BaseSorter):
@@ -84,7 +80,7 @@ class SpykingcircusSorter(BaseSorter):
         # check and re dump params
         p = params
         if p["num_workers"] is None:
-            p["num_workers"] = np.maximum(1, int(os.cpu_count() / 2))
+            p["num_workers"] = np.maximum(1, int(get_usable_cpu_count() / 2))
         return p
 
     @classmethod
@@ -158,16 +154,12 @@ class SpykingcircusSorter(BaseSorter):
         if "win" in sys.platform and sys.platform != "darwin":
             shell_cmd = """
                         spyking-circus {recording} -c {num_workers}
-                    """.format(
-                recording=sorter_output_folder / "recording.npy", num_workers=num_workers
-            )
+                    """.format(recording=sorter_output_folder / "recording.npy", num_workers=num_workers)
         else:
             shell_cmd = """
                         #!/bin/bash
                         spyking-circus {recording} -c {num_workers}
-                    """.format(
-                recording=sorter_output_folder / "recording.npy", num_workers=num_workers
-            )
+                    """.format(recording=sorter_output_folder / "recording.npy", num_workers=num_workers)
 
         shell_script = ShellScript(
             shell_cmd,

@@ -60,13 +60,13 @@ def test_ZarrSortingExtractor(tmp_path):
     np_sorting = generate_sorting()
 
     # store in root standard normal way
-    folder = tmp_path / "zarr_sorting"
+    folder = tmp_path / "zarr_sorting.zarr"
     ZarrSortingExtractor.write_sorting(np_sorting, folder)
     sorting = ZarrSortingExtractor(folder)
     sorting = load(sorting.to_dict())
 
     # store the sorting in a sub group (for instance SortingResult)
-    folder = tmp_path / "zarr_sorting_sub_group"
+    folder = tmp_path / "zarr_sorting_sub_group.zarr"
     zarr_root = zarr.open(folder, mode="w")
     zarr_sorting_group = zarr_root.create_group("sorting")
     add_sorting_to_zarr_group(sorting, zarr_sorting_group)

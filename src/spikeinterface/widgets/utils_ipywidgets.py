@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ipywidgets.widgets as W
 import traitlets
 
@@ -18,29 +16,25 @@ def check_ipywidget_backend():
 class TimeSlider(W.HBox):
     value = traitlets.Tuple(traitlets.Int(), traitlets.Int(), traitlets.Int())
 
-    def __init__(self, durations, sampling_frequency, time_range, times=None, t_starts=None, **kwargs):
+    def __init__(self, durations, sampling_frequency, frame_range, rec0=None, t_starts=None, **kwargs):
         self.num_segments = len(durations)
         self.frame_limits = [int(sampling_frequency * d) for d in durations]
         self.sampling_frequency = sampling_frequency
         self.segment_index = 0
 
-        if times is not None:
-            assert len(times) == len(durations), "times should be a list of arrays with one array per segment"
-            times_segment = times[self.segment_index]
-            start_frame, end_frame = np.searchsorted(times_segment, time_range)
-            self.times = times
+        start_frame, end_frame = int(frame_range[0]), int(frame_range[1])
+
+        if rec0 is not None:
+            self.rec0 = rec0
             self.t_starts = None
         else:
             assert t_starts is not None
-            t_start_segment = t_starts[self.segment_index]
-            start_frame = int((time_range[0] - t_start_segment) * sampling_frequency)
-            end_frame = int((time_range[1] - t_start_segment) * sampling_frequency)
-            self.times = None
+            self.rec0 = None
             self.t_starts = t_starts
 
         self.frame_range = (start_frame, end_frame)
 
-        self.value = (int(start_frame), int(end_frame), self.segment_index)
+        self.value = (start_frame, end_frame, self.segment_index)
 
         layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
         but_left = W.Button(description="", disabled=False, button_style="", icon="arrow-left", layout=layout)
@@ -65,8 +59,16 @@ class TimeSlider(W.HBox):
         )
 
         # DatetimePicker is only for ipywidget v8 (which is not working in vscode 2023-03)
+        if self.rec0 is not None:
+            initial_time = float(
+                self.rec0.get_times(
+                    segment_index=self.segment_index, start_frame=start_frame, end_frame=start_frame + 1
+                )[0]
+            )
+        else:
+            initial_time = start_frame / sampling_frequency + self.t_starts[self.segment_index]
         self.time_label = W.Text(
-            value=f"{time_range[0]}", description="", disabled=False, layout=W.Layout(width="2.5cm")
+            value=f"{initial_time}", description="", disabled=False, layout=W.Layout(width="2.5cm")
         )
         self.time_label.observe(self.time_label_changed, names="value", type="change")
 
@@ -83,20 +85,19 @@ class TimeSlider(W.HBox):
 
         self.slider.observe(self.slider_moved, names="value", type="change")
 
-        delta_s = np.diff(self.frame_range) / sampling_frequency
-
+        delta_s = (self.frame_range[1] - self.frame_range[0]) / sampling_frequency
         self.window_sizer = W.BoundedFloatText(
             value=delta_s,
             step=1,
             min=0.01,
             max=30.0,
-            description="win (s)",
+            description="Window (s)",
             layout=W.Layout(width="auto"),
             # layout=W.Layout(width=f'10%')
         )
         self.window_sizer.observe(self.win_size_changed, names="value", type="change")
 
-        self.segment_selector = W.Dropdown(description="segment", options=list(range(self.num_segments)))
+        self.segment_selector = W.Dropdown(description="Segment", options=list(range(self.num_segments)))
         self.segment_selector.observe(self.segment_changed, names="value", type="change")
 
         super(W.HBox, self).__init__(
@@ -140,8 +141,10 @@ class TimeSlider(W.HBox):
         if new_frame is None and new_time is None:
             start_frame = self.slider.value
         elif new_frame is None:
-            if self.times is not None:
-                start_frame = int(np.searchsorted(self.times[self.segment_index], [new_time])[0])
+            if self.rec0 is not None:
+                # approximate via sampling frequency to avoid loading the full time vector
+                t_start = float(self.rec0.get_start_time(segment_index=self.segment_index))
+                start_frame = int((new_time - t_start) * self.sampling_frequency)
             else:
                 start_frame = int((new_time - self.t_starts[self.segment_index]) * self.sampling_frequency)
         else:
@@ -156,8 +159,12 @@ class TimeSlider(W.HBox):
 
         end_frame = min(self.frame_limits[self.segment_index], end_frame)
 
-        if self.times is not None:
-            start_time = self.times[self.segment_index][start_frame]
+        if self.rec0 is not None:
+            start_time = float(
+                self.rec0.get_times(
+                    segment_index=self.segment_index, start_frame=start_frame, end_frame=start_frame + 1
+                )[0]
+            )
         else:
             start_time = start_frame / self.sampling_frequency + self.t_starts[self.segment_index]
 
@@ -244,7 +251,7 @@ class ChannelSelector(W.VBox):
             value=self.channel_ids[::-1],
             disabled=False,
             # layout=W.Layout(width=f"{width_cm}cm", height=f"{height_cm}cm"),
-            layout=W.Layout(height="100%", width="2cm"),
+            layout=W.Layout(height="100%", width="2.8cm"),
         )
         hbox = W.HBox(children=[self.slider, self.selector])
 

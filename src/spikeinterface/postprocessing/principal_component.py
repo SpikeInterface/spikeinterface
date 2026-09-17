@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 import platform
 from pathlib import Path
@@ -12,10 +10,9 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, fix_job_kwargs
-
-from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms
+from spikeinterface.core.core_tools import slice_rows, materialize_array
+from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
+from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
@@ -27,8 +24,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     n_components : int, default: 5
         Number of components fo PCA
     mode : "by_channel_local" | "by_channel_global" | "concatenated", default: "by_channel_local"
@@ -71,9 +66,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = True
 
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
-
     def _set_params(
         self,
         n_components=5,
@@ -92,38 +84,49 @@ class ComputePrincipalComponents(AnalyzerExtension):
         )
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
-        new_data["pca_projection"] = self.data["pca_projection"][keep_spike_mask, :, :]
+        new_data["pca_projection"] = slice_rows(self.data["pca_projection"], keep_spike_mask)
         # one or several model
         for k, v in self.data.items():
             if "model" in k:
                 new_data[k] = v
         return new_data
 
+    def _select_channels_extension_data(self, channel_ids):
+
+        old_pcs = self.data["pca_projection"]
+        new_pcs = _select_channels_sparse_data(self.sorting_analyzer, old_pcs, channel_ids)
+
+        data = {"pca_projection": new_pcs}
+
+        for key, value in self.data.items():
+            if key != "pca_projection":
+                data[key] = value
+
+        return data
+
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
 
-        pca_projections = self.data["pca_projection"]
+        pca_projections = materialize_array(self.data["pca_projection"])
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         if keep_mask is not None:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
-            pca_projections = pca_projections[valid]
-        else:
-            pca_projections = pca_projections.copy()
+            # slice_rows already returns an independent, materialized array
+            pca_projections = slice_rows(pca_projections, valid)
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
-
             # we need a realignement inside each group because we take the channel intersection sparsity
             # the story is same as in "waveforms" extension
             for group_ids in merge_unit_groups:
@@ -152,7 +155,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only changes random spikes assignments
-        return self.data.copy()
+        new_data = dict(pca_projection=materialize_array(self.data["pca_projection"]))
+        for k, v in self.data.items():
+            if "model" in k:
+                new_data[k] = v
+        return new_data
 
     def get_pca_model(self):
         """
@@ -204,7 +211,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_index = sorting.id_to_index(unit_id)
         spike_mask = some_spikes["unit_index"] == unit_index
-        projections = self.data["pca_projection"][spike_mask]
+        projections = slice_rows(self.data["pca_projection"], spike_mask)
 
         if sparsity is None:
             return projections
@@ -419,7 +426,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             unit_channels,
             pca_model,
         )
-        processor = ChunkRecordingExecutor(
+        processor = TimeSeriesChunkExecutor(
             recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
         )
         processor.run()
@@ -475,7 +482,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
         p = self.params
         unit_ids = self.sorting_analyzer.unit_ids
 
-        # there is one unique PCA accross channels
+        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
@@ -504,7 +511,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         assert self.sorting_analyzer.sparsity is None, "For mode 'concatenated' waveforms need to be dense"
 
-        # there is one unique PCA accross channels
+        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
@@ -589,7 +596,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
         spike_mask = spikes["unit_index"] == unit_index
-        wfs = waveforms[spike_mask, :, :]
+        wfs = slice_rows(waveforms, spike_mask)
 
         sparsity = self.sorting_analyzer.sparsity
         if sparsity is not None:
@@ -626,7 +633,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
-        # usefull only when max_spikes_per_unit is not None
+        # useful only when max_spikes_per_unit is not None
         # waveform will not be extracted and a zeros will be left in the memmap file
         while (spike_times[i0] - nbefore) < 0 and (i0 != i1):
             i0 = i0 + 1
@@ -636,31 +643,63 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     if i0 == i1:
         return
 
+    # Since `get_traces` accounts for nbefore and nafter, all spikes in the chunk are valid and we can extract
+    # all waveforms in one go without worrying about borders.
     start = int(spike_times[i0] - nbefore)
     end = int(spike_times[i1 - 1] + nafter)
     traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
 
-    for i in range(i0, i1):
-        st = spike_times[i]
-        if st - start - nbefore < 0:
-            continue
-        if st - start + nafter > traces.shape[0]:
-            continue
+    nsamples = nbefore + nafter
 
-        wf = traces[st - start - nbefore : st - start + nafter, :]
+    # Extract all waveforms in the chunk at once
+    spike_times_in_chunk = spike_times[i0:i1]
+    # Offset spike times to be relative to the start of the traces buffer
+    spike_times_offset = spike_times_in_chunk - start - nbefore
+    spike_indices = np.arange(i0, i1)
 
-        unit_index = spike_labels[i]
+    # Build waveform array: (n_spikes, nsamples, n_channels)
+    # Use fancy indexing to extract all snippets at once
+    sample_indices = spike_times_offset[:, None] + np.arange(nsamples)[None, :]  # (n_spikes, nsamples)
+    all_wfs = traces[sample_indices]  # (n_spikes, nsamples, n_channels)
+
+    # Vectorized PCA: batch by channel across all spikes in the chunk.
+    # For each unique channel, find all spikes that use it (via their unit's
+    # sparsity), extract waveforms, and call transform once.
+    labels_in_chunk = spike_labels[spike_indices]
+
+    # Build a set of all channels used by spikes in this chunk
+    unique_unit_indices = np.unique(labels_in_chunk)
+    chan_info: dict[int, list[tuple[np.ndarray, int]]] = {}
+    for unit_index in unique_unit_indices:
         chan_inds = unit_channels[unit_index]
-
+        unit_mask = labels_in_chunk == unit_index
+        unit_local_idxs = np.nonzero(unit_mask)[0]
         for c, chan_ind in enumerate(chan_inds):
-            w = wf[:, chan_ind]
-            if w.size > 0:
-                w = w[None, :]
-                try:
-                    all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
-                except:
-                    # this could happen if len(wfs) is less then n_comp for a channel
-                    pass
+            if chan_ind not in chan_info:
+                chan_info[chan_ind] = []
+            chan_info[chan_ind].append((unit_local_idxs, c))
+
+    for chan_ind, unit_groups in chan_info.items():
+        # Concatenate all spike indices for this channel across units
+        all_local_idxs = np.concatenate([g[0] for g in unit_groups])
+        global_idxs = spike_indices[all_local_idxs]
+
+        # Batch waveforms for this channel: (n_spikes, nsamples)
+        wfs_batch = all_wfs[all_local_idxs, :, chan_ind]
+
+        if wfs_batch.size == 0:
+            continue
+        try:
+            pcs_batch = pca_model[chan_ind].transform(wfs_batch)
+            # Write results back — each unit group has a fixed channel position
+            offset = 0
+            for unit_local_idxs, c_pos in unit_groups:
+                n = len(unit_local_idxs)
+                all_pcs[global_idxs[offset : offset + n], :, c_pos] = pcs_batch[offset : offset + n]
+                offset += n
+        except Exception:
+            # this could happen if len(wfs) is less than n_comp for a channel
+            pass
 
 
 def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
