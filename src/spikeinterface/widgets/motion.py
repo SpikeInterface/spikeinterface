@@ -155,7 +155,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
         color: str = "Gray",
         clim: tuple[float, float] | None = None,
         alpha: float = 1,
-        segment_index: int | list[int] | None = None,
+        segment_index: int | list[int] | None = None,  # TODO: this is no longer used, need to re-insert
         backend: str | None = None,
         **backend_kwargs,
     ):
@@ -267,16 +267,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
             ]
         else:
             # Find boundaries between segments using searchsorted
-            segment_boundaries = [
-                np.searchsorted(filtered_peaks["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
-            ]
-
-            # Calculate cumulative segment end times from the last sample in each segment
-            segment_end_times = [
-                (filtered_peaks["sample_index"][end - 1] + 1) / sampling_frequency for (_, end) in segment_boundaries
-            ]
-            segment_start_times = np.concatenate([[0], segment_end_times[:-1]])
-            segment_start_stop_times = list(zip(segment_start_times, segment_end_times))
+            _, segment_start_stop_times = compute_segment_durations_from_spike_vector(
+                filtered_peaks, segment_indices, sampling_frequency
+            )
 
         plot_data = dict(
             spike_train_data=spike_train_data,

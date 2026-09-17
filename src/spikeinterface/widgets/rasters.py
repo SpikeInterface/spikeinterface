@@ -68,7 +68,6 @@ class BaseRasterWidget(BaseWidget):
         unit_ids: list | None = None,
         segment_indices: list | None = None,
         segment_start_stop_times: list[tuple] | None = None,
-        durations: list | None = None,
         plot_histograms: bool = False,
         bins: int | None = None,
         scatter_decimate: int = 1,
@@ -85,16 +84,6 @@ class BaseRasterWidget(BaseWidget):
         backend: str | None = None,
         **backend_kwargs,
     ):
-        if durations is not None and segment_start_stop_times is not None:
-            raise ValueError(
-                "`durations` should not be passed with `segment_start_stop_times`. Use `segment_start_stop_times` only."
-            )
-
-        if durations is not None and segment_start_stop_times is None:
-            # This path assumes t_start are zero, which is not a good assumption. This is not really use facing, maybe we remove durations here?
-            edges = np.r_[0, np.cumsum(durations)]
-            segment_start_stop_times = list(zip(edges[:-1], edges[1:]))
-
         # Set default segment boundary kwargs if not provided
         if segment_boundary_kwargs is None:
             segment_boundary_kwargs = {"color": "gray", "linestyle": "--", "alpha": 0.7}

@@ -421,10 +421,32 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
 
     spikes = sorting.to_spike_vector()
 
+    segment_t_starts = [sorting.get_start_time(seg_idx) for seg_idx in segment_indices]
+
+    return compute_segment_durations_from_spike_vector(spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts)
+
+
+def compute_segment_durations_from_spike_vector(
+        spike_vector: np.ndarray, segment_indices: list[int], sampling_frequency: float, segment_t_starts: list[float] | None
+):
+    """
+    If segment_t_starts is `None` then assume 0
+    """
+    if segment_t_starts is None:
+        segment_t_starts = [0] * len(segment_indices)
+
     segment_boundaries = [
-        np.searchsorted(spikes["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
+        np.searchsorted(spike_vector["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
+    ]
+    # TODO: fix this horrible loop
+    segment_start_stop_times = [
+        (
+            (spike_vector["sample_index"][start]) / sampling_frequency + segment_t_starts[idx],
+            (spike_vector["sample_index"][end - 1] + 1) / sampling_frequency + segment_t_starts[idx]
+        ) for idx, (start, end) in enumerate(segment_boundaries)
     ]
 
-    durations = [(spikes["sample_index"][end - 1] + 1) / sorting.sampling_frequency for (_, end) in segment_boundaries]
+    durations = np.array([end-start for (end, start) in segment_start_stop_times])
 
-    return durations
+    return durations, segment_start_stop_times
+

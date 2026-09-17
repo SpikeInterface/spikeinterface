@@ -66,7 +66,7 @@ def test_get_segment_durations():
     segment_indices = list(range(sorting.get_num_segments()))
 
     # Calculate durations
-    calculated_durations = get_segment_durations(sorting, segment_indices)
+    calculated_durations, _ = get_segment_durations(sorting, segment_indices)
 
     # Check results
     assert len(calculated_durations) == len(durations)
@@ -84,7 +84,7 @@ def test_get_segment_durations():
         firing_rates=15.0,
     )
 
-    single_duration = get_segment_durations(sorting_single, [0])[0]
+    single_duration, _ = get_segment_durations(sorting_single, [0])[0]
 
     # Test that the calculated duration is reasonable
     assert single_duration <= 7.0
