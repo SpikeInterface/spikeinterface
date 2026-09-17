@@ -56,6 +56,7 @@ def test_validate_segment_indices():
     with pytest.raises(ValueError):
         validate_segment_indices([5], sorting_multiple)
 
+
 def test_get_segment_durations():
     from spikeinterface import generate_sorting
 
@@ -98,7 +99,7 @@ def test_get_segment_durations():
         t_starts=[4],
     )
 
-    single_duration, segment_start_stop_times  = get_segment_durations(sorting_single, [0])
+    single_duration, segment_start_stop_times = get_segment_durations(sorting_single, [0])
 
     expected_start_stop_times = [(4, 11)]
     assert list(segment_start_stop_times) == [0]

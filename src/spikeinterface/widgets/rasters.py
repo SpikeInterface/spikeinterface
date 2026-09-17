@@ -3,7 +3,12 @@ from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from .utils import get_some_colors, validate_segment_indices, get_segment_durations, segment_start_stop_times_to_boundaries
+from .utils import (
+    get_some_colors,
+    validate_segment_indices,
+    get_segment_durations,
+    segment_start_stop_times_to_boundaries,
+)
 
 
 class BaseRasterWidget(BaseWidget):
@@ -114,9 +119,7 @@ class BaseRasterWidget(BaseWidget):
 
         # Drop segment times we don't want to use
         if segment_start_stop_times is not None:
-            segment_start_stop_times = {
-                seg: segment_start_stop_times[seg] for seg in segments_to_use
-            }
+            segment_start_stop_times = {seg: segment_start_stop_times[seg] for seg in segments_to_use}
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
@@ -244,7 +247,7 @@ class BaseRasterWidget(BaseWidget):
         x_lim = dp.x_lim
 
         # Add segment boundary lines if provided and handle x limits
-        if  dp.segment_start_stop_times is not None:
+        if dp.segment_start_stop_times is not None:
 
             # We only plot boundaries for sequential segments.
             segment_boundaries = segment_start_stop_times_to_boundaries(dp.segment_start_stop_times)
