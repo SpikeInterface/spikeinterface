@@ -276,7 +276,7 @@ class ComputeAutoCorrelograms(AnalyzerExtension):
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         new_acgs = self.data["acgs"][unit_indices]
         new_bins = self.data["bins"]
-        new_data = dict(ccgs=new_acgs, bins=new_bins)
+        new_data = dict(acgs=new_acgs, bins=new_bins)
         return new_data
 
     def _merge_extension_data(
