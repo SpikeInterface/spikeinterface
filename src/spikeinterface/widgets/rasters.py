@@ -455,7 +455,15 @@ class RasterWidget(BaseRasterWidget):
         y_axis_data = {seg_idx: {} for seg_idx in segment_indices}
 
         segment_start_stop_times = []
+
+        # Get the spikes for this segment. Also, if the sorting does not have a recording,
+        # build the segment start / stop times from the spike times. This is not done
+        # with get_segment_durations to avoid the conversion to spike_vector.
         for seg_idx in segment_indices:
+
+            min_spiketime = np.inf
+            max_spiketime = -np.inf
+
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
                 spike_times = sorting.get_unit_spike_train_in_seconds(unit_id=unit_id, segment_index=seg_idx)
@@ -463,7 +471,19 @@ class RasterWidget(BaseRasterWidget):
                 spike_train_data[seg_idx][unit_id] = spike_times
                 y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))
 
-            segment_start_stop_times.append((np.min(spike_times), np.max(spike_times)))
+                if not sorting.has_recording():
+                    min_spiketime = np.min(min_spiketime, spike_times.min())
+                    max_spiketime = np.max(max_spiketime, spike_times.max())
+
+            if sorting.has_recording():
+                segment_start_stop_times.append(
+                    sorting.sorting.recording.get_start_time(seg_idx),
+                    sorting.recording.get_end_time(seg_idx),
+                )
+            else:
+                segment_start_stop_times.append(
+                    (min_spiketime, max(spike_times)),
+                )
 
         # Apply time range filtering if specified
         if time_range is not None:

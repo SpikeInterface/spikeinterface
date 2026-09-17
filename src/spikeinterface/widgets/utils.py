@@ -423,6 +423,8 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
 
     segment_t_starts = [sorting.get_start_time(seg_idx) for seg_idx in segment_indices]
 
+    # TODO: if the sorting has a recording, shouldn't we use sorting.recording.get_start/end_times()
+
     return compute_segment_durations_from_spike_vector(
         spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts
     )
@@ -443,14 +445,13 @@ def compute_segment_durations_from_spike_vector(
     segment_boundaries = [
         np.searchsorted(spike_vector["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
     ]
-    # TODO: fix this horrible loop
-    segment_start_stop_times = [
-        (
-            (spike_vector["sample_index"][start]) / sampling_frequency + segment_t_starts[idx],
-            (spike_vector["sample_index"][end - 1] + 1) / sampling_frequency + segment_t_starts[idx],
-        )
-        for idx, (start, end) in enumerate(segment_boundaries)
-    ]
+
+    for segment_t_start, (start, end) in zip(segment_t_starts, segment_boundaries):
+
+        segment_start = spike_vector["sample_index"][start] / sampling_frequency + segment_t_start
+        segment_end = (spike_vector["sample_index"][end - 1] + 1) / sampling_frequency + segment_t_start
+
+        segment_start_stop_times.append((segment_start, segment_end))
 
     durations = np.array([end - start for (start, end) in segment_start_stop_times])
 
