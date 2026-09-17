@@ -1592,12 +1592,9 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         else:
             data_names = self.nodepipeline_variables
         for d, name in zip(data, data_names):
-            # GatherToNpy returns memmaps (mmap_mode="r") for memory efficiency during computation.
-            # For non-lazy SAs the expected contract is that data lives in memory, not on disk, so
-            # we materialise the array here.  This releases the file handle immediately, which on
-            # Windows prevents PermissionError when a sibling SA later deletes the same folder.
-            # Lazy SAs keep the memmap so that data is only paged in on access.
-            if isinstance(d, np.memmap) and not self.sorting_analyzer._lazy:
+            # GatherToNpy/Zarr can return memmaps/zarr.Array
+            # If the SortingAnalyzer is not lazy, we materialize the data to a numpy array.
+            if not self.sorting_analyzer._lazy:
                 d = np.array(d)
             self.data[name] = d
 

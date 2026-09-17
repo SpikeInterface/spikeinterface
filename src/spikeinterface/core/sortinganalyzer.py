@@ -2612,6 +2612,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
                 for r, result in enumerate(results):
                     extension_name, variable_name = result_routage[r]
+                    if not self._lazy:
+                        # If the SortingAnalyzer is not lazy, we materialize the result to a numpy array.
+                        result = np.array(result)
                     extension_instances[extension_name].data[variable_name] = result
                     extension_instances[extension_name].run_info["runtime_s"] = runtime_s
                     extension_instances[extension_name].run_info["run_completed"] = True
@@ -2628,9 +2631,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                             import zarr
 
                             zarr.consolidate_metadata(self._get_zarr_root().store)
-                    elif save:
-                        # memory format or read-only : keep the previous behavior
-                        extension_instance.save()
             except (Exception, KeyboardInterrupt):
                 for extension_name, extension_instance in extension_instances.items():
                     self.extensions.pop(extension_name, None)

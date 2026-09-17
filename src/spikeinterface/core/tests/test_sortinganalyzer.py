@@ -402,6 +402,11 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
         if isinstance(value, np.ndarray):
             assert isinstance(value, array_class)
 
+    # Windows: the non-lazy SA holds gather_to_disk memmaps (e.g. spike_amplitudes/amplitudes.npy).
+    # Drop it before the lazy SA recomputes random_spikes, which deletes spike_amplitudes as a
+    # dependent — otherwise the non-lazy SA's open handle causes a PermissionError on rmtree.
+    del sorting_analyzer
+
     # a lazy (but not read-only) analyzer is allowed to overwrite existing extensions
     sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
     sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
@@ -415,8 +420,8 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
     random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
     assert random_spikes_ext.params["max_spikes_per_unit"] != 20
 
-    # Windows: drop all SA objects so __del__ fires and closes all memmap handles before tmp_path cleanup.
-    del sorting_analyzer, sorting_analyzer_lazy, sorting_analyzer_reloaded, sorting_analyzer_lazy_ro
+    # Drop lazy SAs so their memmaps are released before tmp_path cleanup.
+    del sorting_analyzer_lazy, sorting_analyzer_reloaded, sorting_analyzer_lazy_ro
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
@@ -856,11 +861,13 @@ def _compute_reference_pipeline_data(dataset):
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
+@pytest.mark.parametrize("lazy", [True, False])
+def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
-    When computing node-pipeline extensions on a disk-backed analyzer, the results are gathered
+    When computing node-pipeline extensions on a disk-backed analyzer in lazy mode, the results are gathered
     directly to their final location (npy files for binary_folder, zarr datasets for zarr) instead
-    of being accumulated in memory and copied afterwards. This test checks that:
+    of being accumulated in memory and copied afterwards.
+    This test checks that:
       * the auto gather_mode selection matches the analyzer format
       * the data is written in place and kept as a memmap / zarr.Array (no extra copy)
       * the values match a plain in-memory computation and survive a reload
@@ -880,7 +887,9 @@ def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
     else:
         folder = tmp_path / "analyzer.zarr"
 
-    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=None, lazy=lazy
+    )
     analyzer.compute(["random_spikes", "templates"])
     analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
 
@@ -892,12 +901,20 @@ def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
         # written directly to the final npy file and kept as a memmap (not re-copied by _save_data)
         amp_file = folder / "extensions" / "dummy_pipeline" / "amp.npy"
         assert amp_file.is_file()
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        if not lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
     elif format == "zarr":
         # written directly as a zarr dataset in the extension group
         root = analyzer._get_zarr_root(mode="r")
         assert "amp" in root["extensions"]["dummy_pipeline"]
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        if not lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
 
     if format != "memory":
         # data must survive a reload from disk
@@ -931,7 +948,8 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
+@pytest.mark.parametrize("lazy", [True, False])
+def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """
     Same as test_compute_pipeline_extension_gather_to_disk but through compute_one_extension
     (i.e. computing a single node-pipeline extension via a string input), which uses
@@ -951,7 +969,9 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
     else:
         folder = tmp_path / "analyzer.zarr"
 
-    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=None, lazy=lazy
+    )
     analyzer.compute(["random_spikes", "templates"])
     # single string -> compute_one_extension -> BaseSpikeVectorExtension._run
     analyzer.compute("dummy_pipeline", param0=5.5)
@@ -962,11 +982,19 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
 
     if format == "binary_folder":
         assert (folder / "extensions" / "dummy_pipeline" / "amp.npy").is_file()
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        if lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
     elif format == "zarr":
         root = analyzer._get_zarr_root(mode="r")
         assert "amp" in root["extensions"]["dummy_pipeline"]
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        if lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
 
     if format != "memory":
         # data must survive a reload and recompute (overwrite) must work
@@ -978,7 +1006,7 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
         # save=False on a disk analyzer: computed in memory, nothing written to disk
         folder2 = tmp_path / ("analyzer_nosave" + (".zarr" if format == "zarr" else ""))
         analyzer2 = create_sorting_analyzer(
-            sorting, recording, format=format, folder=folder2, sparse=False, sparsity=None
+            sorting, recording, format=format, folder=folder2, sparse=False, sparsity=None, lazy=lazy
         )
         analyzer2.compute(["random_spikes", "templates"])
         analyzer2.compute("dummy_pipeline", param0=5.5, save=False)
