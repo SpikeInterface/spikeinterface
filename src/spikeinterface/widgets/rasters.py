@@ -477,8 +477,8 @@ class RasterWidget(BaseRasterWidget):
 
             if sorting.has_recording():
                 segment_start_stop_times.append(
-                    sorting.sorting.recording.get_start_time(seg_idx),
-                    sorting.recording.get_end_time(seg_idx),
+                    (sorting.get_start_time(seg_idx),
+                    sorting.get_end_time(seg_idx)),
                 )
             else:
                 segment_start_stop_times.append(
