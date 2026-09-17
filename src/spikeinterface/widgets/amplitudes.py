@@ -180,10 +180,13 @@ class AmplitudesWidget(BaseRasterWidget):
             for u in unit_ids
         ]
 
-        end_time_sec = np.max(list(dp.segment_start_stop_times.values()))
+        segment_times = dp.segment_start_stop_times.values()
+
+        start_time_sec = min(start for start, _ in segment_times)
+        end_time_sec = max(stop for _, stop in segment_times)
 
         self.view = vv_views.SpikeAmplitudes(
-            start_time_sec=0,
+            start_time_sec=start_time_sec,
             end_time_sec=end_time_sec,
             plots=sa_items,
             # hide_unit_selector=dp.hide_unit_selector,
