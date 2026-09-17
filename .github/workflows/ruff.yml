@@ -1,0 +1,23 @@
+name: Ruff Linting
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+    branches:
+      - main
+
+concurrency:  # Cancel previous workflows on the same pull request
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+  run:
+    name: Ruff Linting
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check
