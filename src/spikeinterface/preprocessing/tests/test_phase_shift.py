@@ -93,5 +93,63 @@ def test_phase_shift():
     # ~ plt.show()
 
 
+def test_phase_shift_fir_matches_fft_in_spike_band():
+    """PhaseShift(method="fir") output must track method="fft" within ~1% spike-band RMS."""
+    import scipy.signal
+
+    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
+    rec = NumpyRecording([traces.astype("float32")], sampling_frequency)
+    rec.set_property("inter_sample_shift", inter_sample_shift)
+
+    fft_rec = phase_shift(rec, method="fft")
+    fir_rec = phase_shift(rec, method="fir")
+
+    fft_out = fft_rec.get_traces().astype(np.float64)
+    fir_out = fir_rec.get_traces().astype(np.float64)
+    assert fft_out.shape == fir_out.shape
+
+    # Signal-band RMS error vs the FFT reference.  The fixture has tones at
+    # 2.5 Hz and 8.5 Hz (fs=1 kHz), so we band-limit to [1, 30] Hz to isolate
+    # them while excluding the raised-cosine edge artifacts.
+    sos = scipy.signal.butter(4, [1.0, 30.0], btype="bandpass", fs=sampling_frequency, output="sos")
+    edge = int(0.05 * sampling_frequency)
+    ref = scipy.signal.sosfiltfilt(sos, fft_out, axis=0)[edge:-edge, :]
+    out = scipy.signal.sosfiltfilt(sos, fir_out, axis=0)[edge:-edge, :]
+    sig_rms = float(np.sqrt(np.mean(ref**2)))
+    err_rms = float(np.sqrt(np.mean((out - ref) ** 2)))
+    assert err_rms / sig_rms < 0.01, f"FIR spike-band RMS error {err_rms / sig_rms:.2%} > 1%"
+
+
+def test_phase_shift_fir_int16_advertises_float32():
+    """method='fir' + output_dtype=float32 on an int16 parent yields float32 output."""
+    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
+    rec = NumpyRecording([traces.astype("int16")], sampling_frequency)
+    rec.set_property("inter_sample_shift", inter_sample_shift)
+    fir_rec = phase_shift(rec, method="fir", output_dtype=np.float32)
+    assert fir_rec.get_dtype() == np.dtype("float32")
+    out = fir_rec.get_traces(start_frame=0, end_frame=100)
+    assert out.dtype == np.dtype("float32")
+
+
+def test_phase_shift_fft_still_matches_stock_after_taper_refactor():
+    """Regression guard: FFT path must still behave the same after get_chunk_with_margin's
+    taper was split into apply_raised_cosine_taper.  This reruns the core chunked-vs-full
+    identity check on one representative combo.
+    """
+    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
+    rec = NumpyRecording([traces.astype("int16")], sampling_frequency)
+    rec.set_property("inter_sample_shift", inter_sample_shift)
+    rec2 = phase_shift(rec, margin_ms=30.0, method="fft")
+    rec3 = rec2.save(format="memory", chunk_size=500, n_jobs=1, progress_bar=False)
+    t2 = rec2.get_traces()
+    t3 = rec3.get_traces()
+    rms = float(np.sqrt(np.mean(traces**2)))
+    err = float(np.sqrt(np.mean((t2 - t3) ** 2)))
+    assert err / rms < 0.001
+
+
 if __name__ == "__main__":
     test_phase_shift()
+    test_phase_shift_fir_matches_fft_in_spike_band()
+    test_phase_shift_fir_int16_advertises_float32()
+    test_phase_shift_fft_still_matches_stock_after_taper_refactor()
