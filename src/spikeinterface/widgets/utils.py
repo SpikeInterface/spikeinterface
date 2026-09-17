@@ -430,6 +430,13 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
     )
 
 
+def segment_start_stop_times_to_boundaries(
+    segment_start_stop_times: dict[int, tuple[float, float]],
+) -> np.ndarray:
+    # The dictionary can follow an out-of-order segment_indices selection, so sort the boundaries chronologically.
+    return np.sort(np.asarray(list(segment_start_stop_times.values()), dtype=float).ravel())
+
+
 def compute_segment_durations_from_spike_vector(
     spike_vector: np.ndarray,
     segment_indices: list[int],

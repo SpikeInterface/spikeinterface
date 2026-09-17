@@ -3,7 +3,7 @@ from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from .utils import get_some_colors, validate_segment_indices, get_segment_durations
+from .utils import get_some_colors, validate_segment_indices, get_segment_durations, segment_start_stop_times_to_boundaries
 
 
 class BaseRasterWidget(BaseWidget):
@@ -230,10 +230,7 @@ class BaseRasterWidget(BaseWidget):
         # Add segment boundary lines if provided
         if dp.segment_start_stop_times is not None:
             # We only plot boundaries for sequential segments.
-            segment_boundaries = np.asarray(
-                list(dp.segment_start_stop_times.values()),
-                dtype=float
-            ).ravel()
+            segment_boundaries = segment_start_stop_times_to_boundaries(dp.segment_start_stop_times)
 
             if np.all(np.diff(segment_boundaries) > 0):
                 for boundary in segment_boundaries:
@@ -256,8 +253,7 @@ class BaseRasterWidget(BaseWidget):
         x_lim = dp.x_lim
 
         if x_lim is None and dp.segment_start_stop_times is not None:
-            selected_segment_times = list(dp.segment_start_stop_times.values())
-            x_lim = (selected_segment_times[0][0], selected_segment_times[-1][1])
+            x_lim = (segment_boundaries.min(), segment_boundaries.max())
             scatter_ax.set_xlim(x_lim)
 
         if dp.sort_by_depth and dp.depth_dict is not None:
