@@ -7,7 +7,6 @@ from .utils import (
     get_some_colors,
     validate_segment_indices,
     get_segment_durations,
-    segment_start_stop_times_to_boundaries,
 )
 
 
@@ -250,7 +249,7 @@ class BaseRasterWidget(BaseWidget):
         if dp.segment_start_stop_times is not None:
 
             # We only plot boundaries for sequential segments.
-            segment_boundaries = segment_start_stop_times_to_boundaries(dp.segment_start_stop_times)
+            segment_boundaries = np.array(list(dp.segment_start_stop_times.values())).ravel()
 
             if np.all(np.diff(segment_boundaries) > 0):
                 for boundary in segment_boundaries:
