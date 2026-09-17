@@ -159,7 +159,6 @@ class BaseSorter:
         rec_attributes_file = output_folder / "recording_attributes.json"
         rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding="utf8")
 
-
         return output_folder
 
     @classmethod
