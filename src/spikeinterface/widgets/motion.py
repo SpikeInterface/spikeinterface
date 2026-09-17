@@ -155,7 +155,6 @@ class DriftRasterMapWidget(BaseRasterWidget):
         color: str = "Gray",
         clim: tuple[float, float] | None = None,
         alpha: float = 1,
-        segment_index: int | list[int] | None = None,  # TODO: this is no longer used, need to re-insert
         backend: str | None = None,
         **backend_kwargs,
     ):
