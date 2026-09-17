@@ -6,6 +6,8 @@ import shutil
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
+    generate_recording,
+    NumpySorting,
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
@@ -400,12 +402,18 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
         if isinstance(value, np.ndarray):
             assert isinstance(value, array_class)
 
-    # check that the lazy mode does not overwrite existing extensions
+    # a lazy (but not read-only) analyzer is allowed to overwrite existing extensions
     sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
-    # reload the analyzer to check that the original extension is not overwritten
     sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
     random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
-    assert random_spikes_ext.params["max_spikes_per_unit"] != 10
+    assert random_spikes_ext.params["max_spikes_per_unit"] == 10
+
+    # check that a lazy+read-only analyzer does not overwrite existing extensions
+    sorting_analyzer_lazy_ro = load_sorting_analyzer(folder, format="auto", lazy=True, read_only=True)
+    sorting_analyzer_lazy_ro.compute("random_spikes", max_spikes_per_unit=20)
+    sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
+    random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
+    assert random_spikes_ext.params["max_spikes_per_unit"] != 20
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
@@ -1066,6 +1074,36 @@ def test_main_channel_from_templates_sparse_recordingless():
     recovered_main_channel_ids = np.asarray(analyzer.get_main_channels(outputs="id"))
     assert np.array_equal(recovered_main_channel_indices, expected_main_channel_indices)
     assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
+
+
+def test_merge_units_main_channel_id_disagreement():
+    """`SortingAnalyzer.merge_units()` must keep the donor unit's `main_channel_id` on disagreement,
+    matching `apply_merges_to_sorting` (see test_sorting_tools.py), even when `merge_unit_groups`
+    lists the units in the same relative order as `sorting.unit_ids` (not just the reversed order):
+    a defect that only manifests for out-of-order groups would still pass this case.
+    """
+    recording = generate_recording(num_channels=3, durations=[2.0], set_probe=True, seed=0)
+    recording = recording.rename_channels(new_channel_ids=["chA", "chB", "chC"])
+
+    # unit "b" has more spikes (5) than unit "a" (2); "a" is listed first in both `sorting.unit_ids`
+    # and `merge_unit_groups` below, so a positional (rather than spike-count) donor choice would
+    # silently pick "a" and still pass an order-reversed-only regression test.
+    times = np.array([0, 1, 100, 110, 120, 130, 140])
+    labels = np.array(["a", "a", "b", "b", "b", "b", "b"])
+    sorting = NumpySorting.from_samples_and_labels(
+        [times], [labels], recording.sampling_frequency, unit_ids=["a", "b", "c"]
+    )
+    sorting.set_property("main_channel_id", np.array(["chA", "chB", "chC"]))
+    sorting.register_recording(recording)
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    merged_analyzer, new_unit_ids = analyzer.merge_units(
+        merge_unit_groups=[["a", "b"]], new_id_strategy="append", return_new_unit_ids=True
+    )
+    merged_main_channel_id = merged_analyzer.sorting.get_property("main_channel_id")[
+        merged_analyzer.sorting.id_to_index(new_unit_ids[0])
+    ]
+    assert merged_main_channel_id == "chB"
 
 
 if __name__ == "__main__":

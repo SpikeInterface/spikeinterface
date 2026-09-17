@@ -175,8 +175,9 @@ the spiketrain, which are optimally organized for specific types of calculation.
 
 Computations involving combined recording-sorting information, such as fetching recording chunks and
 spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
-this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
-a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+this use case, we use an internal representation called the `spike_vector`, obtained by calling
+`sorting.to_spike_vector()`. This is a unique buffer: a numpy.array with dtype
+`[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
 
 For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
 spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
@@ -185,8 +186,8 @@ spikes from a single unit are concurrent in memory. For these other cases, we ca
 * order by unit, then segment, then sample
 * order by segment, then unit, then sample
 
-This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
-reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done,
+the reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
 details, but developers should keep memory layout in mind when implementing new features.
 
 
@@ -274,8 +275,24 @@ Once a :code:`SortingAnalyzer` object is saved to disk, it can be easily reloade
 
 .. code-block:: python
 
+    sorting_analyzer = si.load(folder="my-sorting-analyzer.zarr")
+    # or
     sorting_analyzer = si.load_sorting_analyzer(folder="my-sorting-analyzer.zarr")
 
+The :code:`SortingAnalyzer` can also be loaded in :code:`read_only` mode, which prevents any modification of the
+:code:`SortingAnalyzer` or its extensions.
+
+.. code-block:: python
+
+    sorting_analyzer = si.load_sorting_analyzer(folder="my-sorting-analyzer.zarr", read_only=True)
+
+Finally, the :code:`SortingAnalyzer` can be loaded in :code:`lazy` mode, which will not load the extensions data in
+memory as arrays, but keep them as memmap or zarr arrays. This is useful for very large datasets, where the extensions
+data can be very large and not fit in memory, but it can be slower to access the data.
+
+.. code-block:: python
+
+    sorting_analyzer = si.load_sorting_analyzer(folder="my-sorting-analyzer.zarr", lazy=True)
 
 .. note::
 
@@ -419,6 +436,24 @@ and merging unit groups.
 All computed extensions will be automatically propagated or merged when curating. Please refer to the
 :ref:`modules/curation:Curation module` documentation for more information.
 
+
+Handling very large datasets: ``lazy`` mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For very large datasets with tens-to-hundreds millions of spikes, the :code:`SortingAnalyzer` computations can be very
+memory intensive. By default, in fact, the :code:`SortingAnalyzer` computes and stores all the data in memory.
+However, it is possible to use a :code:`lazy` mode, which will compute the data on-the-fly and store them on-disk as they
+are computed. This makes some computations slower, but it allows to handle very large datasets without running out of memory.
+Note that the :code:`lazy` mode is only available for the :code:`zarr` and :code:`binary_folder` backends.
+
+.. code-block:: python
+
+    sorting_analyzer_lazy = create_sorting_analyzer(
+        sorting=sorting,
+        recording=recording,
+        format="zarr",
+        lazy=True, # compute on-the-fly and store on-disk
+    )
 
 Event
 -----

@@ -92,6 +92,7 @@ spikeinterface.core
     .. autofunction:: select_segment_sorting
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
+    .. autofunction:: read_zarr_array
     .. autofunction:: apply_merges_to_sorting
     .. autofunction:: spike_vector_to_spike_trains
     .. autofunction:: random_spikes_selection
@@ -216,6 +217,7 @@ spikeinterface.preprocessing
     .. autofunction:: get_motion_parameters_preset
     .. autofunction:: load_motion_info
     .. autofunction:: save_motion_info
+    .. autofunction:: decimate
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: detect_and_interpolate_bad_channels
@@ -411,6 +413,8 @@ spikeinterface.curation
     .. autofunction:: bombcell_label_units
     .. autofunction:: bombcell_get_default_thresholds
     .. autofunction:: model_based_label_units
+    .. autofunction:: get_required_metrics_from_model
+    .. autofunction:: check_required_metrics_are_present
     .. autofunction:: load_model
     .. autofunction:: train_model
     .. autofunction:: unitrefine_label_units
