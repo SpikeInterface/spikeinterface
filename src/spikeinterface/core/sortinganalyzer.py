@@ -487,6 +487,18 @@ class SortingAnalyzer:
         # extensions are not loaded at init
         self.extensions = dict()
 
+    def __del__(self):
+        # Best-effort cleanup: close any memmap handles held by loaded extensions so that the
+        # on-disk files are not locked when the object is garbage-collected.  This is a safety net
+        # for code that does not call close() explicitly; it is not guaranteed to fire promptly
+        # because the back-reference from each AnalyzerExtension to its SortingAnalyzer creates a
+        # reference cycle that requires the cyclic GC (not reference counting) to collect.
+        try:
+            for ext in self.__dict__.get("extensions", {}).values():
+                ext._close_memmaps()
+        except Exception:
+            pass
+
     def __repr__(self) -> str:
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
@@ -3088,26 +3100,37 @@ class AnalyzerExtension:
         self.data = dict()
 
     def __del__(self):
-        # Ensure open memmap file handles are released when the extension is garbage collected.
-        # Best-effort: __del__ must never raise.
-        self._release_data_file_handles()
+        # Best-effort: __del__ must never raise.  _close_memmaps is safe to call here.
+        self._close_memmaps()
 
-    def _release_data_file_handles(self):
-        # Close any open memmap file handles held in `data` (e.g. when an extension gathers or
-        # loads its data as a memmap). On Windows an open memmap prevents deleting the underlying
-        # file, so releasing the handles allows the extension folder to be removed (e.g. on
-        # recompute). This closes the file handle but leaves the (now unusable) array object and any
-        # non-memmap data in `data` untouched.
+    def _close_memmaps(self):
+        """
+        Close any open np.memmap handles held by this extension's data and null out the entries.
+
+        Closing the mmap handle releases the OS file lock; nulling the data dict entry drops the
+        numpy array view so the mapped memory is unmapped.  Both steps are required on Windows to
+        fully release the file before it can be deleted or overwritten.
+
+        Safe to call from ``__del__`` (never raises, accesses ``data`` via ``__dict__`` so it
+        works even when the object is being garbage-collected).  Non-memmap entries (e.g. a
+        DataFrame) are left untouched.
+        """
         data = self.__dict__.get("data", None)
         if not data:
             return
-        for value in data.values():
-            mmap = getattr(value, "_mmap", None) if isinstance(value, np.memmap) else None
+        for key, value in list(data.items()):
+            if not isinstance(value, np.memmap):
+                continue
+            mmap = getattr(value, "_mmap", None)
             if mmap is not None:
                 try:
                     mmap.close()
                 except Exception:
                     pass
+            try:
+                data[key] = None
+            except Exception:
+                pass
 
     def _default_run_info_dict(self):
         return dict(run_completed=False, runtime_s=None)
@@ -3603,14 +3626,15 @@ class AnalyzerExtension:
         Delete the extension in a folder (binary or zarr) and create an empty one.
         """
         if self.format == "binary_folder":
-            # Release open file handles (e.g. a memmap kept in `data` when gathering/extracting
-            # directly to npy) of a previously computed extension of the same name. On Windows an
-            # open memmap would otherwise prevent deleting the folder below. We deliberately do NOT
-            # remove it from `self.sorting_analyzer.extensions` nor clear its data: some extensions
-            # (e.g. metrics) read the previous extension back during their computation.
+            # Close any open memmap file handles on a previously registered extension of the same
+            # name so that shutil.rmtree below can delete the folder on Windows.  The extension
+            # stays in self.sorting_analyzer.extensions and any non-memmap data (e.g. a DataFrame
+            # of previously computed metrics) remains in its data dict so the new computation can
+            # read it back.  Nulling the memmap entries is safe: the files are about to be deleted
+            # so those arrays would be unreadable regardless.
             old_extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
             if old_extension is not None and old_extension is not self:
-                old_extension._release_data_file_handles()
+                old_extension._close_memmaps()
 
             extension_folder = self._get_binary_extension_folder()
             if extension_folder.is_dir():
@@ -3662,24 +3686,6 @@ class AnalyzerExtension:
         self.params = None
         self.run_info = self._default_run_info_dict()
         self.data = dict()
-
-    def _close_memmaps(self):
-        """
-        Close any open np.memmap handles held by this extension's data.
-
-        This must run before this extension's on-disk files are deleted/overwritten (e.g. when
-        recomputing an extension that a previous, possibly lazily-loaded, instance is still
-        registered for): on Windows a memory-mapped file cannot be deleted or rewritten while a
-        handle to it is still open. Only memmap-backed entries are touched: other already
-        materialized data (e.g. a DataFrame of previously computed metrics, used to carry forward
-        results that are not being recomputed) is left untouched.
-        """
-        for key, value in list(self.data.items()):
-            if isinstance(value, np.memmap):
-                mmap_obj = getattr(value, "_mmap", None)
-                if mmap_obj is not None:
-                    mmap_obj.close()
-                self.data[key] = None
 
     def set_params(self, save=True, **params):
         """

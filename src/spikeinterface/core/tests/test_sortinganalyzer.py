@@ -415,12 +415,8 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
     random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
     assert random_spikes_ext.params["max_spikes_per_unit"] != 20
 
-    # Windows: explicitly release memmap file handles so tmp_path cleanup does not hit PermissionError
-    import gc
-
-    del template_ext, template_data, spike_amplitudes_ext, spike_amplitudes_data, random_spikes_ext
+    # Windows: drop the SA objects so __del__ fires and closes all memmap handles before tmp_path cleanup.
     del sorting_analyzer_lazy, sorting_analyzer_reloaded, sorting_analyzer_lazy_ro
-    gc.collect()
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
