@@ -5,7 +5,6 @@ from spikeinterface.widgets.utils import (
     get_some_colors,
     validate_segment_indices,
     get_segment_durations,
-    segment_start_stop_times_to_boundaries,
 )
 import numpy as np
 
@@ -79,7 +78,7 @@ def test_get_segment_durations():
     # Check results
     expected_start_stop_times = np.array([(10, 15), (20, 30), (30, 45)], dtype=float)
     assert list(segment_start_stop_times) == segment_indices
-    start_stop_times = segment_start_stop_times_to_boundaries(segment_start_stop_times).reshape(-1, 2)
+    start_stop_times = np.array(list(segment_start_stop_times.values()))
     assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Check results
@@ -103,7 +102,7 @@ def test_get_segment_durations():
 
     expected_start_stop_times = [(4, 11)]
     assert list(segment_start_stop_times) == [0]
-    start_stop_times = segment_start_stop_times_to_boundaries(segment_start_stop_times).reshape(-1, 2)
+    start_stop_times = np.array(list(segment_start_stop_times.values()))
     assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Test that the calculated duration is reasonable
