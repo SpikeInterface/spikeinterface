@@ -2,6 +2,7 @@ import pytest
 
 from spikeinterface import generate_sorting
 from spikeinterface.widgets.utils import get_some_colors, validate_segment_indices, get_segment_durations
+import numpy as np
 
 
 def test_get_some_colors():
@@ -50,23 +51,29 @@ def test_validate_segment_indices():
     with pytest.raises(ValueError):
         validate_segment_indices([5], sorting_multiple)
 
-
 def test_get_segment_durations():
     from spikeinterface import generate_sorting
 
     # Test with a normal multi-segment sorting
     durations = [5.0, 10.0, 15.0]
+    t_starts = [10, 20, 30]
 
     # Create sorting with high fr to ensure spikes near the end segments
     sorting = generate_sorting(
         durations=durations,
         firing_rates=15.0,
+        t_starts=t_starts,
     )
 
     segment_indices = list(range(sorting.get_num_segments()))
 
     # Calculate durations
-    calculated_durations, _ = get_segment_durations(sorting, segment_indices)
+    calculated_durations, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
+
+    # Check results
+    expected_start_stop_times = np.array([(10, 15), (20, 30), (30, 45)], dtype=float)
+    start_stop_times = np.array(segment_start_stop_times, dtype=float)
+    assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Check results
     assert len(calculated_durations) == len(durations)
@@ -82,9 +89,14 @@ def test_get_segment_durations():
     sorting_single = generate_sorting(
         durations=[7.0],
         firing_rates=15.0,
+        t_starts=[4],
     )
 
-    single_duration, _ = get_segment_durations(sorting_single, [0])[0]
+    single_duration, segment_start_stop_times  = get_segment_durations(sorting_single, [0])
+
+    expected_start_stop_times = [(4, 11)]
+    start_stop_times = np.array(segment_start_stop_times, dtype=float)
+    assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Test that the calculated duration is reasonable
     assert single_duration <= 7.0

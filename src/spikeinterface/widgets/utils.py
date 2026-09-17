@@ -452,6 +452,6 @@ def compute_segment_durations_from_spike_vector(
         for idx, (start, end) in enumerate(segment_boundaries)
     ]
 
-    durations = np.array([end - start for (end, start) in segment_start_stop_times])
+    durations = np.array([end - start for (start, end) in segment_start_stop_times])
 
     return durations, segment_start_stop_times
