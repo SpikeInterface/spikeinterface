@@ -72,7 +72,8 @@ def test_get_segment_durations():
 
     # Check results
     expected_start_stop_times = np.array([(10, 15), (20, 30), (30, 45)], dtype=float)
-    start_stop_times = np.array(segment_start_stop_times, dtype=float)
+    assert list(segment_start_stop_times) == segment_indices
+    start_stop_times = np.array(list(segment_start_stop_times.values()), dtype=float)
     assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Check results
@@ -95,7 +96,8 @@ def test_get_segment_durations():
     single_duration, segment_start_stop_times  = get_segment_durations(sorting_single, [0])
 
     expected_start_stop_times = [(4, 11)]
-    start_stop_times = np.array(segment_start_stop_times, dtype=float)
+    assert list(segment_start_stop_times) == [0]
+    start_stop_times = np.array(list(segment_start_stop_times.values()), dtype=float)
     assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Test that the calculated duration is reasonable
