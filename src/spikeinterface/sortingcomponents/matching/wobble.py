@@ -326,6 +326,30 @@ class TemplateData:
         self.temporal, self.singular, self.spatial, self.temporal_jittered = self.compressed_templates
 
 
+def _find_strict_peaks(objective, order, threshold):
+    """Find values strictly greater than their neighbors within ``order`` samples."""
+    from scipy.ndimage import maximum_filter1d
+
+    if objective.size < 3:
+        return np.zeros(0, dtype=np.intp)
+    if np.isnan(objective).any():
+        from scipy.signal import argrelmax
+
+        peak_indices = argrelmax(objective, order=order)[0]
+        return peak_indices[objective[peak_indices] > threshold]
+
+    trailing_maximum = maximum_filter1d(objective, size=order, origin=(order - 1) // 2, mode="nearest")
+    left_maximum = np.empty_like(objective)
+    left_maximum[0] = objective[0]
+    left_maximum[1:] = trailing_maximum[:-1]
+
+    trailing_maximum = maximum_filter1d(objective[::-1], size=order, origin=(order - 1) // 2, mode="nearest")
+    right_maximum = np.empty_like(objective)
+    right_maximum[-1] = objective[-1]
+    right_maximum[:-1] = trailing_maximum[-2::-1]
+    return np.flatnonzero((objective > threshold) & (objective > left_maximum) & (objective > right_maximum))
+
+
 class WobbleMatch(BaseTemplateMatching):
     """Template matching method from the Paninski lab.
 
@@ -618,16 +642,16 @@ class WobbleMatch(BaseTemplateMatching):
         Finally, it generates a new spike train from the spike times, and returns it along with additional metrics about
         each spike.
         """
-        from scipy import signal
-
         # Get spike times (indices) using peaks in the objective
         objective_template_max = np.max(objective_normalized, axis=0)
         spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
         objective_windowed = objective_template_max[spike_window[0] : spike_window[1]]
-        spike_time_indices = signal.argrelmax(objective_windowed, order=template_meta.num_samples - 1)[0]
+        spike_time_indices = _find_strict_peaks(
+            objective_windowed,
+            order=template_meta.num_samples - 1,
+            threshold=params.threshold,
+        )
         spike_time_indices += template_meta.num_samples - 1
-        objective_spikes = objective_template_max[spike_time_indices]
-        spike_time_indices = spike_time_indices[objective_spikes > params.threshold]
 
         if len(spike_time_indices) == 0:  # No new spikes found
             return np.zeros((0, 2), dtype=np.int32), np.zeros(0), np.zeros(0)
