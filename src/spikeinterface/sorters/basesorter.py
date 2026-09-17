@@ -154,6 +154,12 @@ class BaseSorter:
                 "compatible binary file."
             )
 
+        # save recording attributes in case the recording is not serializable or removed after sorting
+        rec_attributes = recording.get_rec_attributes()
+        rec_attributes_file = output_folder / "recording_attributes.json"
+        rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding="utf8")
+
+
         return output_folder
 
     @classmethod
