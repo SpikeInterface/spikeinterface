@@ -3106,6 +3106,9 @@ class AnalyzerExtension:
         self.run_info = self._default_run_info_dict()
         self.data = dict()
 
+        # Flag to notify the run if it can save directly to disk
+        self._save_to_disk = False
+
     def __del__(self):
         # Best-effort: __del__ must never raise.  _close_memmaps is safe to call here.
         self._close_memmaps()

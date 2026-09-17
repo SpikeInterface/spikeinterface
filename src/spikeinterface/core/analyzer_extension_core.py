@@ -1555,7 +1555,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         # gather results directly to the final on-disk location (one npy file / zarr dataset per
         # nodepipeline variable) to avoid an extra in-memory copy. This is only done when we are
         # actually saving to a disk format (see AnalyzerExtension.run()); otherwise gather in memory.
-        gather_to_disk = getattr(self, "_save_to_disk", False) and self.format in ("binary_folder", "zarr")
+        gather_to_disk = self._save_to_disk and self.format in ("binary_folder", "zarr")
         if gather_to_disk:
             extension_folder = self.sorting_analyzer.folder / "extensions" / self.extension_name
             names = self.nodepipeline_variables
