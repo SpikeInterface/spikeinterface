@@ -21,7 +21,7 @@ def make_small_analyzer():
 
     extensions_to_compute = {
         "random_spikes": {"seed": 1205},
-        "noise_levels": {"seed": 1205},
+        "noise_levels": {"random_slices_kwargs": {"seed": 1205}},
         "waveforms": {},
         "templates": {"operators": ["average", "median"]},
         "spike_amplitudes": {},
