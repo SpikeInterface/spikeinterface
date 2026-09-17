@@ -154,7 +154,7 @@ def get_dataset():
         num_channels=10,
         num_units=5,
         generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=1.0),
         seed=2205,
     )
     recording.set_property("group", ["a"] * 5 + ["b"] * 5)

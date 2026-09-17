@@ -2328,7 +2328,7 @@ def generate_ground_truth_recording(
     upsample_factor=None,
     upsample_vector=None,
     generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
-    noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
+    noise_kwargs=dict(noise_levels=5.0),
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0, minimum_distance=20),
     generate_templates_kwargs=None,
     dtype="float32",

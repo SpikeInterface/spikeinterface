@@ -29,7 +29,7 @@ def get_dataset():
         num_channels=4,
         num_units=7,
         generate_sorting_kwargs=dict(firing_rates=5.0, refractory_period_ms=4.0),
-        noise_kwargs=dict(noise_levels=1.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=1.0),
         seed=2205,
     )
     return recording, sorting

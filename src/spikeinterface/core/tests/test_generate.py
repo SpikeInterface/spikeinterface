@@ -220,7 +220,6 @@ def test_noise_generator_several_noise_levels():
         dtype="float32",
         seed=32,
         noise_levels=1,
-        strategy="on_the_fly",
         noise_block_size=20000,
     )
     assert np.all(np.abs(get_noise_levels(rec1) - 1) < 0.1)
@@ -232,7 +231,6 @@ def test_noise_generator_several_noise_levels():
         dtype="float32",
         seed=32,
         noise_levels=[0, 1, 2, 3],
-        strategy="on_the_fly",
         noise_block_size=20000,
     )
     assert np.all(np.abs(get_noise_levels(rec2) - np.arange(4)) < 0.1)

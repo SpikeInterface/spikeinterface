@@ -18,7 +18,7 @@ def get_sorting_analyzer():
         sampling_frequency=10_000.0,
         num_channels=4,
         num_units=10,
-        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
+        noise_kwargs=dict(noise_levels=5.0),
         seed=2205,
     )
     recording.annotate(is_filtered=True)
