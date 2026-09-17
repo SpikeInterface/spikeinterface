@@ -7,6 +7,9 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 
 from probeinterface import Probe
 
+from spikeinterface.core import ms_to_samples
+from spikeinterface.core.generate import generate_templates
+
 
 def interpolate_templates(
     templates_array: np.ndarray,
@@ -106,15 +109,19 @@ def interpolate_templates(
     return new_templates_array
 
 
-def move_dense_templates(templates_array, displacements, source_probe, dest_probe=None, interpolation_method="cubic"):
+def move_all_dense_templates_by_displacement(
+    templates_array, displacements, source_probe, dest_probe=None, interpolation_method="cubic"
+):
     """
-    Move all templates_array given some displacements using spatial interpolation (cubic or linear).
+    Move all templates_array at onces given some displacements using spatial interpolation (cubic or linear).
     Optionally, the displaced templates can be remapped to another probe with a different geometry.
 
     This function operates on dense templates only.
 
     Note: in this function no checks are done to see if templates_array can be interpolatable after displacements.
     To check if the given displacements are interpolatable use the higher-level function move_templates().
+
+    See also move_templates_by_position(), more flexible.
 
     Parameters
     ----------
@@ -149,6 +156,69 @@ def move_dense_templates(templates_array, displacements, source_probe, dest_prob
         templates_array, src_channel_locations, moved_locations, interpolation_method=interpolation_method
     )
     return templates_array_moved
+
+
+def move_templates_by_position(
+    templates_array,
+    source_templates_locations,
+    source_probe,
+    dest_templates_locations,
+    dest_probe,
+    displacements,
+    interpolation_method="cubic",
+):
+    """
+
+
+    Parameters
+    ----------
+    templates_array : np.array
+        A numpy array with dense templates_array.
+        shape = (num_templates, num_samples, num_channels)
+    source_templates_locations : np.array
+        Positions of templates in the source probe coordinates.
+        shape : (num_templates, 2)
+    source_probe : Probe
+        The Probe object on which templates_array are defined
+    dest_templates_locations : np.array
+        Positions of templates in the dest probe coordinates.
+        shape : (num_templates, 2)
+    dest_probe : Probe
+        Destination Probe. Can be different geometry than the original.
+    displacements : np.array
+        Displacement vector
+        shape : (num_displacement, 2)
+    interpolation_method : "cubic" | "linear", default: "cubic"
+        The interpolation method.
+
+    Returns
+    -------
+    new_templates_array : np.array
+        shape = (num_displacement, num_templates, num_samples, num_channels)
+    """
+    num_displacement = displacements.shape[0]
+    num_templates = templates_array.shape[0]
+    num_samples = templates_array.shape[1]
+    num_channels = dest_probe.get_contact_count()
+
+    moved_templates_array = np.zeros(
+        (num_displacement, num_templates, num_samples, num_channels), dtype=templates_array.dtype
+    )
+    for i in range(num_templates):
+
+        shift = source_templates_locations[i : i + 1, :] - dest_templates_locations[i : i + 1, :]
+        src_channel_locations = source_probe.contact_positions
+        dest_channel_locations = dest_probe.contact_positions + shift
+        moved_locations = dest_channel_locations[np.newaxis, :, :] - displacements.reshape(-1, 1, 2)
+
+        moved_templates_array[:, i : i + 1, :, :] = interpolate_templates(
+            templates_array[i : i + 1, :, :],
+            src_channel_locations,
+            moved_locations,
+            interpolation_method=interpolation_method,
+        )
+
+    return moved_templates_array
 
 
 class DriftingTemplates(Templates):
@@ -262,7 +332,7 @@ class DriftingTemplates(Templates):
         displacements : np.array
             The displacement vector.
             shape = (1, 2)
-        **interpolation_kwargs : keyword arguments for `move_dense_templates` function
+        **interpolation_kwargs : keyword arguments for `move_all_dense_templates_by_displacement` function
 
         Returns
         -------
@@ -275,7 +345,7 @@ class DriftingTemplates(Templates):
         one_template_array = self.get_one_template_dense(unit_index)
         one_template_array = one_template_array[np.newaxis, :, :]
 
-        template_array_moved = move_dense_templates(
+        template_array_moved = move_all_dense_templates_by_displacement(
             one_template_array, displacement, self.probe, **interpolation_kwargs
         )
         # one motion one template keep only (num_samples, num_channels)
@@ -292,14 +362,187 @@ class DriftingTemplates(Templates):
         displacements : np.array
             The displacement vector.
             shape = (num_displacements, 2)
-        **interpolation_kwargs : keyword arguments for `move_dense_templates` function
+        **interpolation_kwargs : keyword arguments for `move_all_dense_templates_by_displacement` function
         """
         dense_static_templates = self.get_dense_templates()
 
-        self.templates_array_moved = move_dense_templates(
+        self.templates_array_moved = move_all_dense_templates_by_displacement(
             dense_static_templates, displacements, self.probe, **interpolation_kwargs
         )
         self.displacements = displacements
+
+
+def generate_drifting_templates_synthetic(
+    probe, unit_locations, displacements, sampling_frequency, generate_templates_kwargs, seed
+):
+    """
+    Generate synthetic drifting template by moving the location of the units.
+    This avoid interpolation and then can have units on border moving outside with correct shape.
+
+    Parameters
+    ----------
+    probe : Probe
+        The target probe on which the drifting templates will be defined.
+    unit_locations : np.array
+        The locations of the units in the probe coordinates.
+    displacements : np.array
+        The displacement vector (num_displacement, 2)
+    sampling_frequency : float
+        The sampling frequency of the templates.
+    generate_templates_kwargs : dict
+        Keyword arguments for `generate_templates` function.
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    drifting_templates : DriftingTemplates
+        The drifting templates object.
+    """
+    channel_locations = probe.contact_positions
+
+    templates_array = generate_templates(
+        channel_locations, unit_locations, sampling_frequency=sampling_frequency, seed=seed, **generate_templates_kwargs
+    )
+
+    num_displacement = displacements.shape[0]
+    templates_array_moved = np.zeros(shape=(num_displacement,) + templates_array.shape, dtype=templates_array.dtype)
+    for i in range(num_displacement):
+        unit_locations_moved = unit_locations.copy()
+        unit_locations_moved[:, :2] += displacements[i, :][np.newaxis, :]
+        templates_array_moved[i, :, :, :] = generate_templates(
+            channel_locations,
+            unit_locations_moved,
+            sampling_frequency=sampling_frequency,
+            seed=seed,
+            **generate_templates_kwargs,
+        )
+
+    ms_before = generate_templates_kwargs["ms_before"]
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
+    static_templates = Templates(
+        templates_array=templates_array,
+        sampling_frequency=sampling_frequency,
+        nbefore=nbefore,
+        probe=probe,
+        is_in_uV=True,
+    )
+
+    drifting_templates = DriftingTemplates.from_static_templates(static_templates)
+
+    drifting_templates.templates_array_moved = templates_array_moved
+    drifting_templates.displacements = displacements
+
+    return drifting_templates, static_templates
+
+
+def check_relocation_within_source_hull(templates, probe, unit_locations, displacements):
+    """
+    Check that relocating `templates` to `unit_locations` (see `move_templates_by_position()`)
+    will not produce fully invalid (all-zero) templates.
+
+    `move_templates_by_position` interpolates each unit's template by translating the destination
+    probe geometry so that it aligns with the template's own main channel, then calling
+    `griddata(..., fill_value=0)` (used by the default "cubic"/"linear" interpolation methods).
+    `griddata` only returns valid (non-zero) values for destination points that fall within the
+    convex hull of the source probe's channel locations. If a unit's target location is far enough
+    from its template's main channel, every destination channel can end up outside that hull, so the
+    whole interpolated template silently becomes zero.
+
+    Parameters
+    ----------
+    templates : Templates
+        The static templates to be relocated.
+    probe : Probe
+        The destination probe on which the relocated templates will be defined.
+    unit_locations : np.array
+        The target locations of the units, shape (num_units, 2) or (num_units, 3).
+    displacements : np.array
+        The displacement vectors that will be applied on top of the relocation, shape (num_displacement, 2).
+
+    Raises
+    ------
+    ValueError
+        If one or more units would produce a fully invalid (all-zero) template.
+    """
+    from scipy.spatial import Delaunay
+
+    main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
+    source_locations = templates.probe.contact_positions[main_channel_indices]
+    source_hull = Delaunay(templates.probe.contact_positions)
+
+    dest_positions = probe.contact_positions
+    displacements = np.asarray(displacements)
+
+    invalid_unit_ids = []
+    for unit_index in range(templates.num_units):
+        shift = source_locations[unit_index] - unit_locations[unit_index, :2]
+        moved_locations = (
+            dest_positions[np.newaxis, :, :] + shift[np.newaxis, np.newaxis, :] - displacements[:, np.newaxis, :]
+        )
+        is_inside_hull = source_hull.find_simplex(moved_locations.reshape(-1, 2)) >= 0
+        if not np.any(is_inside_hull):
+            invalid_unit_ids.append(templates.unit_ids[unit_index])
+
+    if len(invalid_unit_ids) > 0:
+        raise ValueError(
+            f"Relocation would produce fully invalid (all-zero) templates for unit(s) {invalid_unit_ids}: "
+            "the target location is too far from the source template's own spatial footprint for any "
+            "destination channel to fall within its interpolation range. Consider reducing the `margin_um` "
+            "in `generate_unit_locations_kwargs`, or passing more centered `unit_locations`."
+        )
+
+
+def generate_drifting_templates_by_interpolation(
+    templates, probe, unit_locations, displacements, interpolation_method="cubic"
+):
+    """
+    Generate drifting templates by interpolation of the static templates.
+    This is useful to generate drifting templates from real data.
+
+    Parameters
+    ----------
+    templates : Templates
+        The static templates, potentially higher density than the probe.
+    probe : Probe
+        The target probe on which the drifting templates will be defined.
+    unit_locations : np.array
+        The locations of the units in the probe coordinates.
+        If None, the main channel of the templates is used.
+    displacements : np.array
+        The displacement vector (num_displacement, 2)
+    interpolation_method : str, default: "cubic"
+        The interpolation method.
+
+    Returns
+    -------
+    drifting_templates : DriftingTemplates
+        The drifting templates object.
+    """
+    main_channel_indices = templates.get_main_channels("both", "extremum", outputs="index")
+
+    # We use the channel locations of the main channels of the templates as source locations for interpolation
+    source_templates_locations = templates.probe.contact_positions[main_channel_indices]
+
+    templates_array_moved = move_templates_by_position(
+        templates.templates_array,
+        source_templates_locations,
+        templates.probe,
+        unit_locations[:, :2],
+        probe,
+        displacements,
+        interpolation_method=interpolation_method,
+    )
+
+    drifting_templates = DriftingTemplates.from_precomputed_templates(
+        templates_array_moved,
+        displacements,
+        templates.sampling_frequency,
+        templates.nbefore,
+        probe,
+    )
+
+    return drifting_templates
 
 
 def make_linear_displacement(start, stop, num_step=10):
@@ -322,6 +565,8 @@ def make_linear_displacement(start, stop, num_step=10):
     """
     if num_step < 1:
         raise ValueError("make_linear_displacement needs num_step > 0")
+    start = np.array(start, dtype="float32")
+    stop = np.array(stop, dtype="float32")
     if num_step == 1:
         displacements = ((start + stop) / 2)[np.newaxis, :]
     else:
