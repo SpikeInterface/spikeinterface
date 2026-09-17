@@ -38,7 +38,7 @@ class ComputeSpikeTrainMetrics(BaseMetricExtension):
 
     extension_name = "spiketrain_metrics"
     depend_on = []
-    need_backward_compatibility_on_load = True
+    need_backward_compatibility_on_load = False
     metric_list = spiketrain_metrics
 
 
