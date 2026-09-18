@@ -438,7 +438,7 @@ All computed extensions will be automatically propagated or merged when curating
 
 
 Handling very large datasets: ``lazy`` mode
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For very large datasets with tens-to-hundreds millions of spikes, the :code:`SortingAnalyzer` computations can be very
 memory intensive. By default, in fact, the :code:`SortingAnalyzer` computes and stores all the data in memory.
@@ -1007,7 +1007,7 @@ LEGACY objects
 --------------
 
 WaveformExtractor
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 This is now a legacy object that can still be accessed through the :py:class:`MockWaveformExtractor`. It is kept
 for backward compatibility. You can convert a ``WaveformExtractor`` to a ``SortingAnalyzer``

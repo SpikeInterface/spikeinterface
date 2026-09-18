@@ -26,7 +26,7 @@ def import_figpack_or_sortingview(use_sortingview: bool):
 
         vv_base = vv_views
         warn(
-            "The 'sortingview' backend is deprecated and will be removed in version 0.105.0. "
+            "The 'sortingview' backend is deprecated and will be removed in version 0.106.0. "
             "Use the 'figpack' backend instead.",
         )
     else:

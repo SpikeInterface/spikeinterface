@@ -85,7 +85,7 @@ metric information. For example, you can get the list of available metrics and t
     'velocity_above': 'Velocity of the spike propagation above the max channel in um/ms',
     'velocity_below': 'Velocity of the spike propagation below the max channel in um/ms',
     'waveform_baseline_flatness': 'Ratio of max baseline amplitude to max waveform amplitude. Lower = flatter baseline.'
-}
+    }
 
 
 

@@ -15,18 +15,16 @@ class ChannelsAggregationRecording(BaseRecording):
 
     Do not use this class directly but use `si.aggregate_channels(...)`
 
+    Parameters
+    ----------
+    recording_list_or_dict : list or dict
+        The list or dictionary of recordings to aggregate.
+    renamed_channel_ids : list, optional
+        The new channel ids for the aggregated recording. If None, default unique consecutive ids are used.
+
     """
 
-    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None, recording_list=None):
-
-        if recording_list is not None:
-            warnings.warn(
-                "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            recording_list_or_dict = recording_list
-
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None):
         if isinstance(recording_list_or_dict, dict):
             recording_list = list(recording_list_or_dict.values())
             recording_ids = list(recording_list_or_dict.keys())
@@ -149,7 +147,20 @@ class ChannelsAggregationRecording(BaseRecording):
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
-        self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
+        self._kwargs = {"recording_list_or_dict": recording_list, "renamed_channel_ids": renamed_channel_ids}
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `recording_list' argument,
+        which is renamed to `recording_list_or_dict'.
+        """
+        if "recording_list" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording_list_or_dict"] = new_kwargs.pop("recording_list")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
     @property
     def recordings(self):
@@ -258,7 +269,6 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
 def aggregate_channels(
     recording_list_or_dict=None,
     renamed_channel_ids=None,
-    recording_list=None,
 ):
     """
     Aggregates channels of multiple recording into a single recording object
@@ -282,4 +292,4 @@ def aggregate_channels(
     values, are dropped.
     """
 
-    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)

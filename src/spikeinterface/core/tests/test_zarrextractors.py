@@ -4,13 +4,16 @@ from pathlib import Path
 import zarr
 
 from spikeinterface.core import (
-    ZarrRecordingExtractor,
-    ZarrSortingExtractor,
     generate_recording,
     generate_sorting,
     load,
 )
-from spikeinterface.core.zarrextractors import add_sorting_to_zarr_group, get_default_zarr_compressor
+from spikeinterface.core.zarrextractors import (
+    ZarrRecordingExtractor,
+    ZarrSortingExtractor,
+    add_sorting_to_zarr_group,
+    get_default_zarr_compressor,
+)
 
 
 def test_zarr_compression_options(tmp_path):
