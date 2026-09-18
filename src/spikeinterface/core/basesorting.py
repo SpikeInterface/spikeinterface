@@ -522,6 +522,7 @@ class BaseSorting(BaseExtractor):
         ----------
         format : str, default: "numpy_folder"
             The format to save the sorting in. Options are:
+
             - "numpy_folder": Saves the sorting in a binary numpy folder format.
             - "zarr": Saves the sorting in Zarr format.
             - "memory": Saves the sorting in memory (shared memory or numpy array).
@@ -1024,7 +1025,7 @@ class BaseSorting(BaseExtractor):
             warnings.warn(
                 "Sorting.to_spike_vector() with extremum_channel_inds is deprecated. "
                 "Use main_channel_indices instead"
-                "This will be removed in 0.016.0"
+                "This will be removed in 0.106.0"
             )
             main_channel_indices = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
 

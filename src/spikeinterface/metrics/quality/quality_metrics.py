@@ -248,13 +248,3 @@ def get_default_quality_metrics_params(metric_names=None):
         metric_names = list(set(metric_names) & set(default_params.keys()))
         metric_params = {m: default_params[m] for m in metric_names}
         return metric_params
-
-
-def get_default_qm_params(metric_names=None):
-    warnings.warn(
-        "`get_default_qm_params` is deprecated and will be removed in a version 0.105.0. "
-        "Please use `get_default_quality_metrics_params` instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return get_default_quality_metrics_params(metric_names=metric_names)

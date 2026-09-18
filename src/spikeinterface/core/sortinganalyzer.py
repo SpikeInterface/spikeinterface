@@ -62,7 +62,6 @@ def create_sorting_analyzer(
     sparse: bool = True,
     sparsity: ChannelSparsity | None = None,
     set_sparsity_by_dict_key: bool = False,
-    return_scaled: bool | None = None,
     return_in_uV: bool = True,
     overwrite: bool = False,
     backend_options: dict[str, Any] | None = None,
@@ -119,14 +118,9 @@ def create_sorting_analyzer(
     set_sparsity_by_dict_key : bool, default: False
         If True and passing recording and sorting dicts, will set the sparsity based on the dict keys,
         and other `sparsity_kwargs` are overwritten. If False, use other sparsity settings.
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
-        All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
-        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
-    return_in_uV : bool, default: None
+    return_in_uV : bool, default: True
         If True, all extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
         This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
-        If None, use return_scaled value.
     overwrite: bool, default: False
         If True, overwrite the folder if it already exists.
     backend_options : dict | None, default: None
@@ -270,7 +264,6 @@ def create_sorting_analyzer(
             sparse=sparse,
             sparsity=sparsity,
             main_channel_indices=main_channel_indices,
-            return_scaled=return_scaled,
             return_in_uV=return_in_uV,
             overwrite=overwrite,
             backend_options=backend_options,
@@ -329,15 +322,6 @@ def create_sorting_analyzer(
         )
     else:
         sparsity = None
-
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled if return_in_uV is None else return_in_uV
 
     # Handle return_in_uV parameter for recordings without scaling
     if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
@@ -452,9 +436,6 @@ class SortingAnalyzer:
         self.peak_sign = peak_sign
         self.peak_mode = peak_mode
         self._main_channel_indices = None
-
-        # For backward compatibility
-        self.return_scaled = return_in_uV
         self.folder: str | Path | None = None
 
         # this is used to store temporary recording
@@ -539,7 +520,6 @@ class SortingAnalyzer:
         folder: str | Path | None = None,
         lazy: bool = False,
         sparsity: ChannelSparsity | None = None,
-        return_scaled: bool | None = None,
         return_in_uV: bool = True,
         peak_sign: PeakSignType = "both",
         peak_mode: PeakModeType = "extremum",
@@ -549,13 +529,6 @@ class SortingAnalyzer:
         assert (
             main_channel_indices is not None
         ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled if return_in_uV is None else return_in_uV
 
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
@@ -2816,8 +2789,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         metrics_df : pandas.DataFrame
             A concatenated dataframe with all available metrics.
 
-        Note
-        ----
+        Notes
+        -----
         Duplicated columns are removed (can happen if several metric extensions have a metric with the same name).
         """
         import pandas as pd

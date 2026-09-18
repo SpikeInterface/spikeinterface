@@ -32,7 +32,14 @@ def test_select_peaks():
     )
 
     peak_locations = localize_peaks(
-        recording, peaks, method="center_of_mass", n_jobs=2, chunk_size=10000, progress_bar=True
+        recording,
+        peaks,
+        method="center_of_mass",
+        job_kwargs=dict(
+            n_jobs=2,
+            chunk_size=10000,
+            progress_bar=True,
+        ),
     )
 
     n_peaks = 100

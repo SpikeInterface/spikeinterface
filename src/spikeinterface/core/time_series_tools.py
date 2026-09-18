@@ -562,8 +562,6 @@ def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None,
     ----------
     time_series : TimeSeries
         The time_series object to get random chunks from
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the time_series has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
