@@ -263,7 +263,7 @@ class KilosortBase:
                 channel_ids = rec_attributes.get("channel_ids")
         else:
              recording = BaseSorter.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
-            channel_ids = recording.channel_ids if recording is not None else None            
+            channel_ids = recording.channel_ids if recording is not None else None
 
         keep_good_only = sorter_params.get("keep_good_only", False)
         sorting = KiloSortSortingExtractor(
