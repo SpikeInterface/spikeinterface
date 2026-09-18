@@ -522,6 +522,7 @@ class BaseSorting(BaseExtractor):
         ----------
         format : str, default: "numpy_folder"
             The format to save the sorting in. Options are:
+
             - "numpy_folder": Saves the sorting in a binary numpy folder format.
             - "zarr": Saves the sorting in Zarr format.
             - "memory": Saves the sorting in memory (shared memory or numpy array).

@@ -317,6 +317,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
         ----------
         format : str, default: "binary"
             The format to save the recording in. Options are:
+
             - "binary": Saves the recording in binary format.
             - "zarr": Saves the recording in Zarr format.
             - "memory": Saves the recording in memory (shared memory or numpy array).
@@ -351,13 +352,17 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                     Global filters for zarr (global)
                 - compressor_by_dataset: dict or None, default: None
                     Optional compressor per dataset:
+
                         - traces
                         - times
+
                     If None, the global compressor is used
                 - filters_by_dataset: dict or None, default: None
                     Optional filters per dataset:
+
                         - traces
                         - times
+
                     If None, the global filters are used
             * "memory" format:
                 - sharedmem : bool, default: True

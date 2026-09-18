@@ -17,7 +17,7 @@ from .numpyextractors import (
     NumpyEvent,
     NumpySnippets,
 )
-from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
+from .zarrextractors import read_zarr, read_zarr_array, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
 from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets

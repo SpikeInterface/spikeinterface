@@ -52,8 +52,9 @@ class DecimateRecording(BasePreprocessor):
     -------
     decimate_recording: DecimateRecording
         The decimated recording extractor object. With `antialias=False` the full traces of the
-        child recording segment correspond to the traces of the parent segment as follows:
-            ```<decimated_traces> = <parent_traces>[<decimation_offset>::<decimation_factor>]```
+        child recording segment correspond to the traces of the parent segment as follows::
+
+            <decimated_traces> = <parent_traces>[<decimation_offset>::<decimation_factor>]
 
     """
 

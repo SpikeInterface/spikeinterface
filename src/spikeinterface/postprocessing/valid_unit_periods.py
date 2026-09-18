@@ -39,8 +39,8 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     period_duration_s_absolute : float, default: 10.0
         Duration of individual periods used to define good periods, in seconds. Same across all units.
         Note: the margin size will be the same as the period size.
-            A period size of 10s sets the margin to 10s, which means that periods of 10+2*10=30s are used
-            to estimate the false positive and negative rates of the central 10s.
+        A period size of 10s sets the margin to 10s, which means that periods of 10+2*10=30s are used
+        to estimate the false positive and negative rates of the central 10s.
     period_target_num_spikes : int | None, default: 300
         Alternative to period_size_absolute, different for each unit: mean number of spikes that should be present in each estimation period.
         For neurons firing at 10 Hz, this would correspond to periods of 10s (100 spikes / 10 Hz = 10s).

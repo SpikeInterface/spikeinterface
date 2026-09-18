@@ -2718,8 +2718,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         metrics_df : pandas.DataFrame
             A concatenated dataframe with all available metrics.
 
-        Note
-        ----
+        Notes
+        -----
         Duplicated columns are removed (can happen if several metric extensions have a metric with the same name).
         """
         import pandas as pd
