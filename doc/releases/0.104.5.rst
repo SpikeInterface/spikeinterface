@@ -1,0 +1,16 @@
+.. _release0.104.5:
+
+SpikeInterface 0.104.5 release notes
+------------------------------------
+
+June 12th 2026
+
+Minor release with bug fixes
+
+core:
+
+* Propagate ``self.tmp_data_to_save`` when selecting units in ``BaseMeticExtension`` (#4616)
+
+Contributors:
+
+* @alejoe91
