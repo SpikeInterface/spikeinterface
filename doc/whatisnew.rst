@@ -66,7 +66,16 @@ Release notes
 Version 0.105.0
 ===============
 
-...
+* Added ``dartsort`` [Boussard2023]_ as an external sorter, run with ``run_sorter("dartsort")`` (#2125)
+* Generalized the chunking machinery: the recording-specific chunking code is now a reusable ``TimeSeries`` base class, plus ``TimeSeriesChunkExecutor``, so that any object chunkable along the time axis reuses the same parallelization and time handling (#4472, #4533)
+* ``main_channel_indices`` and the ``main_channel_id`` sorting property replace ``peak_sign`` across postprocessing and metrics. The main channel is now set once on the analyzer, and sorters such as Kilosort and ``dartsort`` set it directly (#4624, #4672, #4733, #4725)
+* ``SortingAnalyzer`` gained a ``lazy`` mode, which keeps the spike vector and extension data as memmaps / Zarr arrays and defers loading until first access, and an independent ``read_only`` mode (#4623, #4709, #4713) (see: :doc:`/modules/core`)
+* Node pipelines can gather results straight to disk with ``GatherToZarr``, so pipeline node extension data no longer has to fit in memory (#4703)
+* Reworked probe handling around ``ProbeGroup``: ``set_probe`` and ``set_probegroup`` now act in place, while the new ``select_channels_with_probe`` and ``select_channels_with_probegroup`` return a new recording (#4465)
+* Added the ``detect_and_remove_artifacts`` preprocessor, with ``"envelope"`` and ``"saturation"`` detection, a separate ``recording_to_detect``, and ``"zeros"`` / ``"noise"`` / ``"apodization"`` silencing modes (#4539)
+* Added antialiased decimation (``decimate(..., antialias=True)``) and support for non-integer resampling rates (#4621)
+* Added ``SortingAnalyzer.split_by()`` to split an aggregated analyzer into per-group analyzers (#4660), and ``read_kilosort4_motion`` to build a ``Motion`` object from a Kilosort4 output folder (#4518)
+* Significant speedups in multi-segment synchrony metrics (#4770), duplicated spike removal (#4614), amplitude scalings (#4764, #4759, #4786), PCA over all spikes (#4488), NWB sorting loading (#4662), spike vector handling (#4618, #4695, #4581), and import time (#4641, #4644, #4650, #4651)
 
 Versions 0.104.1/9
 ==================
