@@ -5,7 +5,12 @@ from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerE
 
 from spikeinterface.postprocessing import ComputeAmplitudeScalings
 from spikeinterface.core.base import spike_peak_dtype
-from spikeinterface.postprocessing.amplitude_scalings import _ordinary_scaling_slope, find_collisions, fit_collision
+from spikeinterface.postprocessing.amplitude_scalings import (
+    _ordinary_scaling_slope,
+    _unit_pair_overlap_matrix,
+    find_collisions,
+    fit_collision,
+)
 
 
 def test_ordinary_scaling_slope_float32_precision():
@@ -86,7 +91,7 @@ def test_find_collisions_with_margin_indices(monkeypatch):
             spikes,
             spikes_within_margin,
             delta_collision_samples=4,
-            sparsity_mask=sparsity_mask,
+            overlap_matrix=_unit_pair_overlap_matrix(sparsity_mask),
             spike_indices=spike_indices,
         )
 
@@ -94,6 +99,40 @@ def test_find_collisions_with_margin_indices(monkeypatch):
     np.testing.assert_array_equal(collisions[0], spikes_within_margin[[1, 0, 2]])
     np.testing.assert_array_equal(collisions[1], spikes_within_margin[[2, 0, 1, 3]])
     np.testing.assert_array_equal(collisions[2], spikes_within_margin[[3, 2]])
+
+
+def test_unit_pair_overlap_matrix_matches_naive_reference():
+    """
+    `_unit_pair_overlap_matrix` replaces a per-pair `np.any(sparsity_mask[i] & sparsity_mask[j])`
+    lookup (previously recomputed on every temporally-overlapping spike-pair candidate inside
+    `find_collisions`, millions of times on a realistic recording) with one matrix multiplication
+    computed once. Verify it agrees, entry by entry, with the direct naive reference on
+    NON-CONTIGUOUS per-unit channel subsets (a bounded/contiguous slice would pass even a mutant
+    that only checks a channel range), and on a unit with an entirely empty sparsity row (no
+    channels at all -- that unit must not spuriously overlap with anything, including itself).
+    """
+    rng = np.random.default_rng(99)
+    num_units, num_channels = 15, 24
+
+    sparsity_mask = np.zeros((num_units, num_channels), dtype=bool)
+    for unit_index in range(num_units):
+        if unit_index == 0:
+            continue  # unit 0: entirely empty sparsity row
+        num_active = rng.integers(1, num_channels // 2)
+        active_channels = rng.choice(num_channels, size=num_active, replace=False)  # non-contiguous
+        sparsity_mask[unit_index, active_channels] = True
+
+    overlap_matrix = _unit_pair_overlap_matrix(sparsity_mask)
+
+    assert overlap_matrix.shape == (num_units, num_units)
+    assert overlap_matrix.dtype == np.bool_
+    assert not overlap_matrix[0, :].any()  # the empty-row unit overlaps with nothing
+    assert not overlap_matrix[:, 0].any()
+
+    for i in range(num_units):
+        for j in range(num_units):
+            expected = np.any(sparsity_mask[i] & sparsity_mask[j])
+            assert overlap_matrix[i, j] == expected, f"mismatch at unit pair ({i}, {j})"
 
 
 class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
