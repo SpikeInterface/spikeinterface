@@ -5,7 +5,7 @@ Sorting objects
 The :py:class:`~spikeinterface.core.BaseSorting` is the basic class for handling spike sorted data.
 Here is how it works.
 
-A BaseSorting handles:
+A SortingExtractor handles:
 
   * spike trains retrieval across segments
   * dumping to/loading from dict-json
@@ -14,11 +14,10 @@ A BaseSorting handles:
 """
 
 import numpy as np
-import spikeinterface.core as si
 import spikeinterface.extractors as se
 
 ##############################################################################
-# We will create a :code:`BaseSorting` object from scratch using :code:`numpy` and the
+# We will create a :code:`SortingExtractor` object from scratch using :code:`numpy` and the
 # :py:class:`~spikeinterface.core.NumpySorting`
 #
 # Let's define the properties of the dataset:
@@ -45,7 +44,7 @@ sorting = se.NumpySorting.from_samples_and_labels([times0, times1], [labels0, la
 print(sorting)
 
 ##############################################################################
-# We can now print properties that the :code:`BaseSorting` retrieves from
+# We can now print properties that the :code:`SortingExtractor` retrieves from
 # the underlying sorted dataset.
 
 print("Unit ids = {}".format(sorting.get_unit_ids()))
@@ -55,23 +54,24 @@ st1 = sorting.get_unit_spike_train(unit_id=1, start_frame=0, end_frame=30000, se
 print("Num. events for first second of unit 1 seg1 = {}".format(len(st1)))
 
 ##############################################################################
-# The :code:`BaseSorting` object implements the :code:`save` method. We can for example
-# save our newly created sorting object to the "numpy_foler" format
-# (a simple format based on numpy used in :code:`spikeinterface`):
+# Some extractors also implement a :code:`write` function. We can for example
+# save our newly created sorting object to NPZ format (a simple format based
+# on numpy used in :code:`spikeinterface`):
+from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 
-folder_path = "my_sorting"
-sorting.save(format="numpy_folder", folder=folder_path)
+file_path = "my_sorting.npz"
+NpzSortingExtractor.write_sorting(sorting, file_path)
 
 ##############################################################################
-# We can now read it back with the load function:
+# We can now read it back with the proper extractor:
 
-sorting2 = si.load(folder_path)
+sorting2 = NpzSortingExtractor(file_path)
 print(sorting2)
 
 ##############################################################################
 # Unit properties are key value pairs that we can store for any unit.
 # We will now calculate unit firing rates and add them as properties to
-# the :code:`BaseSorting` object:
+# the :code:`SortingExtractor` object:
 
 firing_rates = []
 for unit_id in sorting2.get_unit_ids():
@@ -128,11 +128,11 @@ print(sorting2_loaded)
 # :code:`save()` function:
 
 
-sorting2.save(folder="./my_sorting_with_spike_trains")
+sorting2.save(folder="./my_sorting")
 
 import os
 
-pprint(os.listdir("./my_sorting_with_spike_trains"))
+pprint(os.listdir("./my_sorting"))
 
-sorting2_cached = load("./my_sorting_with_spike_trains")
+sorting2_cached = load("./my_sorting")
 print(sorting2_cached)
