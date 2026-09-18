@@ -221,6 +221,7 @@ preprocessing:
 
 sorters:
 
+* Save recording_attributes before run_sorter() (#4795)
 * Only use nonempty main channel indices when making an analyzer from templates (#4763)
 * Fix encoding error in shellscript on Windows (#4720)
 * Add ``read_kilosort4_motion`` function (#4518)
