@@ -496,9 +496,16 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 
 class OpenEphysArrowRecordingSegment(BaseRecordingSegment):
-    def __init__(self, dataset, channel_ids, **time_kwargs):
+    def __init__(self, filepath, channel_ids, batch_len, **time_kwargs):
         BaseRecordingSegment.__init__(self, **time_kwargs)
-        self._dataset = dataset
+
+        from pyarrow import memory_map
+        from pyarrow.ipc import RecordBatchFileReader
+
+        self._source = memory_map(filepath, "r")
+        self._reader = RecordBatchFileReader(self._source)
+        self.batch_len = batch_len
+
         self._all_channel_ids = channel_ids
 
     def get_num_samples(self) -> int:
@@ -507,7 +514,7 @@ class OpenEphysArrowRecordingSegment(BaseRecordingSegment):
         Returns:
             SampleIndex : Number of samples in the signal block
         """
-        return self._dataset.count_rows()
+        return 18_000_000
 
     def get_traces(
         self,
@@ -520,13 +527,43 @@ class OpenEphysArrowRecordingSegment(BaseRecordingSegment):
         else:
             channel_ids = list(self._all_channel_ids[channel_indices])
 
-        scanner = self._dataset.scanner(columns=channel_ids)
-        return np.column_stack(scanner.take(range(start_frame, end_frame)))
+        import pyarrow as pa
+
+        # Arrow saves data in "batch"es, in the time dimension, which we can
+        # load individually. We need to figure out which batches our requested
+        # samples are in.
+
+        batch_size = self.batch_len
+        first_batch_idx = start_frame // batch_size
+        last_batch_idx = (end_frame - 1) // batch_size
+
+        # This is super easy if our samples are in a single batch
+        if first_batch_idx == last_batch_idx:
+            batch = self._reader.get_batch(first_batch_idx)
+            local_start = start_frame % batch_size
+            sliced = batch.slice(local_start, end_frame - start_frame)
+            return np.column_stack([sliced.column(c).to_numpy(zero_copy_only=False) for c in channel_ids])
+
+        # Otherwise, we find all batches, then grab the data
+        slices = []
+        for b_idx in range(first_batch_idx, last_batch_idx + 1):
+            batch = self._reader.get_batch(b_idx)
+            b_start = b_idx * batch_size
+
+            local_start = max(0, start_frame - b_start)
+            local_end = min(batch.num_rows, end_frame - b_start)
+
+            slices.append(batch.slice(local_start, local_end - local_start).select(channel_ids))
+
+        table = pa.Table.from_batches(slices)
+        return np.column_stack([table[c].to_numpy(zero_copy_only=False) for c in channel_ids])
 
 
 class OpenEphysArrowRecording(BaseRecording):
     """
-    Recording class for the openephys arrow format, from
+    Recording class for the openephys arrow format, from ___
+
+    We assume
 
     Parameters
     ----------
@@ -564,25 +601,33 @@ class OpenEphysArrowRecording(BaseRecording):
         if importlib.util.find_spec("pyarrow") is None:
             raise ImportError("You need to add `pyarrow` to your environment to open .arrow files")
         else:
-            import pyarrow.dataset as ds
+            from pyarrow import memory_map
+            from pyarrow.ipc import RecordBatchFileReader
 
-        dataset = ds.dataset(file_path, format="arrow")
-        stream_names = dataset.schema.names
+        source = memory_map(file_path, "r")
+        reader = RecordBatchFileReader(source)
+
+        stream_names = reader.schema.names
         channel_ids = [name for name in stream_names if stream_name in name]
 
         if len(channel_ids) == 0:
             raise ValueError(f"Cannot find any data with `stream_name` = {stream_name}")
 
+        first_batch = reader.get_batch(0)
+        batch_len = first_batch.num_rows
+
         one_channel_index = stream_names.index(channel_ids[0])
 
-        # Arrow uses it's own DataType. For ints, it converts to numpy dtype without issue
-        ephys_type = dataset.schema[one_channel_index].type
+        # Arrow uses it's own DataType. For ints and floats, it converts to numpy dtype without issue
+        ephys_type = reader.schema[one_channel_index].type
         numpy_type = np.dtype(str(ephys_type))
+
+        source.close()
 
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=numpy_type)
 
         rec_segment = OpenEphysArrowRecordingSegment(
-            dataset, sampling_frequency=sampling_frequency, channel_ids=np.array(channel_ids)
+            file_path, batch_len=batch_len, sampling_frequency=sampling_frequency, channel_ids=np.array(channel_ids)
         )
 
         self.add_recording_segment(rec_segment)
