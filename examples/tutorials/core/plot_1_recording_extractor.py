@@ -5,7 +5,7 @@ Recording objects
 The :py:class:`~spikeinterface.core.BaseRecording` is the basic class for handling recorded data.
 Here is how it works.
 
-A RecordingExtractor handles:
+A BaseRecording handles:
 
   * traces retrieval across segments
   * dumping to/loading from dict-json
@@ -20,7 +20,7 @@ import numpy as np
 import spikeinterface.extractors as se
 
 ##############################################################################
-# We will create a :code:`RecordingExtractor` object from scratch using :code:`numpy` and the
+# We will create a :code:`BaseRecording` object from scratch using :code:`numpy` and the
 # :py:class:`~spikeinterface.core.NumpyRecording`.
 #
 # Let's define the properties of the dataset:
@@ -46,7 +46,7 @@ recording = se.NumpyRecording(traces_list=[traces0, traces1], sampling_frequency
 print(recording)
 
 ##############################################################################
-# We can now print properties that the :code:`RecordingExtractor` retrieves from the underlying recording.
+# We can now print properties that the :code:`BaseRecording` retrieves from the underlying recording.
 
 print(f"Number of channels = {len(recording.get_channel_ids())}")
 print(f"Sampling frequency = {recording.get_sampling_frequency()} Hz")
@@ -77,14 +77,14 @@ plot_probe(probe)
 # Some extractors also implement a :code:`write` function.
 
 file_paths = ["traces0.raw", "traces1.raw"]
-se.BinaryRecordingExtractor.write_recording(recording, file_paths)
+se.BinaryBaseRecording.write_recording(recording, file_paths)
 
 ##############################################################################
 # We can read the written recording back with the proper extractor.
 # Note that this new recording is now "on disk" and not "in memory" as the Numpy recording was.
 # This means that the loading is "lazy" and the data are not loaded into memory.
 
-recording2 = se.BinaryRecordingExtractor(
+recording2 = se.BinaryBaseRecording(
     file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=traces0.dtype
 )
 print(recording2)

@@ -171,7 +171,7 @@ def extract_peaks_svd(
         job_kwargs,
         gather_mode=gather_mode,
         gather_kwargs=gather_kwargs,
-        folder=features_folder,
+        dest=features_folder,
         names=out_names,
         job_name="Transform peaks svd",
     )
