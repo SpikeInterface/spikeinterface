@@ -8,36 +8,10 @@ spikeinterface.core
     .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
-    .. automethod:: BaseRecording.save_to_memory
-    .. automethod:: BaseRecording.save_to_folder
-    .. automethod:: BaseRecording.save_to_zarr
-    .. automethod:: BaseRecording.dump
-    .. automethod:: BaseRecording.dump_to_json
-    .. automethod:: BaseRecording.dump_to_pickle
-    .. automethod:: BaseRecording.remove_channels
-    .. automethod:: BaseRecording.set_probe
-    .. automethod:: BaseRecording.set_probegroup
-    .. automethod:: BaseRecording.remove_probe
-    .. automethod:: BaseRecording.select_channels_with_probe
-    .. automethod:: BaseRecording.select_channels_with_probegroup
-    .. automethod:: BaseRecording.split_by
     .. autoclass:: BaseSorting
         :members:
-    .. automethod:: BaseSorting.save_to_memory
-    .. automethod:: BaseSorting.save_to_folder
-    .. automethod:: BaseSorting.save_to_zarr
-    .. automethod:: BaseSorting.dump
-    .. automethod:: BaseSorting.dump_to_json
-    .. automethod:: BaseSorting.dump_to_pickle
     .. autoclass:: BaseSnippets
         :members:
-    .. automethod:: BaseSnippets.save_to_memory
-    .. automethod:: BaseSnippets.save_to_folder
-    .. automethod:: BaseSnippets.save_to_zarr
-    .. automethod:: BaseSnippets.dump
-    .. automethod:: BaseSnippets.dump_to_json
-    .. automethod:: BaseSnippets.dump_to_pickle
-    .. automethod:: BaseSnippets.remove_channels
     .. autoclass:: BaseEvent
         :members:
     .. autoclass:: SortingAnalyzer
