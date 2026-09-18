@@ -14,6 +14,7 @@ A SortingExtractor handles:
 """
 
 import numpy as np
+import spikeinterface.core as si
 import spikeinterface.extractors as se
 
 ##############################################################################
@@ -54,17 +55,17 @@ st1 = sorting.get_unit_spike_train(unit_id=1, start_frame=0, end_frame=30000, se
 print("Num. events for first second of unit 1 seg1 = {}".format(len(st1)))
 
 ##############################################################################
-# Some extractors also implement a :code:`write` function. We can for example
-# save our newly created sorting object to NPZ format (a simple format based
-# on numpy used in :code:`spikeinterface`):
+# Some extractors also implement a :code:`save` method. We can for example
+# save our newly created sorting object to the "numpy_foler" format
+# (a simple format based on numpy used in :code:`spikeinterface`):
 
-file_path = "my_sorting.npz"
-se.NpzSortingExtractor.write_sorting(sorting, file_path)
+folder_path = "my_sorting"
+sorting.save(format="numpy_folder", folder=folder_path)
 
 ##############################################################################
-# We can now read it back with the proper extractor:
+# We can now read it back with the load function:
 
-sorting2 = se.NpzSortingExtractor(file_path)
+sorting2 = si.load(folder_path)
 print(sorting2)
 
 ##############################################################################
@@ -127,11 +128,11 @@ print(sorting2_loaded)
 # :code:`save()` function:
 
 
-sorting2.save(folder="./my_sorting")
+sorting2.save(folder="./my_sorting_with_spike_trains")
 
 import os
 
-pprint(os.listdir("./my_sorting"))
+pprint(os.listdir("./my_sorting_with_spike_trains"))
 
-sorting2_cached = load("./my_sorting")
+sorting2_cached = load("./my_sorting_with_spike_trains")
 print(sorting2_cached)
