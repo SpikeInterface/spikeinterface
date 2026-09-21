@@ -3,8 +3,8 @@ from contextlib import nullcontext
 import numpy as np
 import pytest
 
-from spikeinterface.core import NumpyRecording
-from spikeinterface.preprocessing import resample
+from spikeinterface.core import NumpyRecording, MockRecording
+from spikeinterface.preprocessing import resample, astype
 
 DEBUG = False
 # DEBUG = True
@@ -557,6 +557,20 @@ def test_resample_gap_tolerance_filtering():
     seg_strict = resampled_strict.segments[0]
     n_sections_strict = len(seg_strict._sec_n_out)
     assert n_sections_strict == 3, f"Expected 3 sections with 1ms tolerance, found {n_sections_strict}"
+
+
+def test_time_handling():
+    """Test frame slicing after resampling, for correct propagation of lazy time vectors."""
+    recording = MockRecording(num_channels=4, durations=[2], sampling_frequency=30000)
+    recording.set_times(recording.get_times() + 100)
+
+    recording_rs = resample(recording, resample_rate=20000)
+    recording_frames = recording_rs.frame_slice(start_frame=0, end_frame=200)
+    np.testing.assert_array_equal(recording_frames.get_times(), recording_rs.get_times()[:200])
+
+    recording_pre = astype(recording_rs, "float32")
+    recording_pre_frames = recording_pre.frame_slice(start_frame=0, end_frame=200)
+    np.testing.assert_array_equal(recording_pre_frames.get_times(), recording_rs.get_times()[:200])
 
 
 if __name__ == "__main__":
