@@ -702,7 +702,7 @@ Parallel processing and job_kwargs
 The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SpikeInterface for parallel
 processing of recordings.
 In general, parallelization is achieved by splitting the recording in many small time chunks and processing
-them in parallel (for more details, see the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class).
+them in parallel (for more details, see the :py:class:`~spikeinterface.core.TimeSeriesChunkExecutor` class).
 
 Many functions support parallel processing (e.g., :py:func:`~spikeinterface.core.extract_waveforms`, :code:`save`,
 and many more). All of these functions, in addition to other arguments, also accept the so-called **job_kwargs**.
