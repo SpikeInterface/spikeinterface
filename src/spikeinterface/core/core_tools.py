@@ -953,4 +953,4 @@ def _ensure_seed(seed):
     # a new signal for all call with seed=None but the dump/load will still work
     if seed is None:
         seed = np.random.default_rng(seed=None).integers(0, 2**63)
-    return seed
+    return int(seed)
