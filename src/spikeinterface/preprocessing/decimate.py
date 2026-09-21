@@ -146,7 +146,6 @@ class DecimateRecordingSegment(BaseRecordingSegment):
     ):
         if parent_recording_segment._time_vector is not None:
             time_vector = parent_recording_segment._time_vector[decimation_offset::decimation_factor]
-            decimated_sampling_frequency = None
             t_start = None
         else:
             time_vector = None

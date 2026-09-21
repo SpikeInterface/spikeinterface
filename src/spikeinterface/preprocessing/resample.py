@@ -215,7 +215,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             ]
             time_vector = np.concatenate(tv_pieces) if self._has_gaps else tv_pieces[0]
 
-            BaseRecordingSegment.__init__(self, sampling_frequency=None, t_start=None, time_vector=time_vector)
+            BaseRecordingSegment.__init__(self, sampling_frequency=resample_rate, t_start=None, time_vector=time_vector)
         else:
             BaseRecordingSegment.__init__(
                 self, sampling_frequency=resample_rate, t_start=parent_recording_segment._t_start
