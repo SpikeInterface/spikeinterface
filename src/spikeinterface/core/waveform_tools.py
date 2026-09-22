@@ -420,6 +420,7 @@ def extract_waveforms_to_single_buffer(
     copy=True,
     job_name=None,
     verbose=False,
+    zarr_target_chunk_bytes: int = 10 * 1024 * 1024,
     **job_kwargs,
 ):
     """
@@ -473,6 +474,8 @@ def extract_waveforms_to_single_buffer(
         need to be referenced as long as all_waveforms will be used otherwise it might produce segmentation
         faults which are hard to debug.
         Also when copy=False the SharedMemory will need to be unlink manually if proper cleanup of resources is desired.
+    zarr_target_chunk_bytes: int, default: 10 * 1024 * 1024
+        Target chunk size in bytes for zarr storage.
 
     {}
 
@@ -533,9 +536,9 @@ def extract_waveforms_to_single_buffer(
 
         assert file_path is not None, "zarr mode requires a `file_path` pointing inside a .zarr store"
         store_path, dataset_path = _split_zarr_store_path(file_path)
-        # chunk along the first (spike) axis so that a chunk is about 10 MiB
+        # chunk along the first (spike) axis so that a chunk is about zarr_target_chunk_bytes
         row_nbytes = int(n_samples) * int(num_chans) * dtype.itemsize
-        chunk0 = max(1, (10 * 1024 * 1024) // max(1, row_nbytes))
+        chunk0 = max(1, zarr_target_chunk_bytes // max(1, row_nbytes))
         zarr_root = zarr.open(str(store_path), mode="a")
         all_waveforms = zarr_root.create_dataset(
             name=dataset_path,
