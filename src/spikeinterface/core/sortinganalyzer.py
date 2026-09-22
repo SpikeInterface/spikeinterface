@@ -1103,7 +1103,13 @@ class SortingAnalyzer:
             if recording.check_serializability("json"):
                 _write_object_array(zarr_root, "recording", check_json(rec_dict), codec="json")
             elif recording.check_serializability("pickle"):
-                _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
+                try:
+                    _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
+                except:
+                    warnings.warn(
+                        "Failed to serialize recording with Pickle Codec! "
+                        "The recording link will be lost for future load"
+                    )
             else:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
