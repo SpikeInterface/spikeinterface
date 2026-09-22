@@ -4,6 +4,7 @@ from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
 from .rasters import BaseRasterWidget
+from .utils import compute_segment_durations_from_spike_vector
 from spikeinterface.core.motion import Motion
 
 
@@ -155,7 +156,6 @@ class DriftRasterMapWidget(BaseRasterWidget):
         color: str = "Gray",
         clim: tuple[float, float] | None = None,
         alpha: float = 1,
-        segment_index: int | list[int] | None = None,
         backend: str | None = None,
         **backend_kwargs,
     ):
@@ -229,7 +229,10 @@ class DriftRasterMapWidget(BaseRasterWidget):
             segment_locations = filtered_locations[segment_mask]
 
             # Convert peak times to seconds
-            spike_times = segment_peaks["sample_index"] / sampling_frequency
+            if recording is None:
+                spike_times = segment_peaks["sample_index"] / sampling_frequency
+            else:
+                spike_times = recording.sample_index_to_time(segment_peaks["sample_index"], segment_index=seg_idx)
 
             # Store in dict of dicts format (using 0 as the "unit" id)
             spike_train_data[seg_idx] = {0: spike_times}
@@ -257,19 +260,17 @@ class DriftRasterMapWidget(BaseRasterWidget):
         else:
             color_kwargs = dict(color=color, c=None, alpha=alpha)
 
-        # Calculate segment durations for x-axis limits
+        # Calculate segment start/stop times for x-axis limits
         if recording is not None:
-            durations = [recording.get_duration(seg_idx) for seg_idx in segment_indices]
+            segment_start_stop_times = {
+                seg_idx: (recording.get_start_time(seg_idx), recording.get_end_time(seg_idx))
+                for seg_idx in segment_indices
+            }
         else:
             # Find boundaries between segments using searchsorted
-            segment_boundaries = [
-                np.searchsorted(filtered_peaks["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
-            ]
-
-            # Calculate durations from max sample in each segment
-            durations = [
-                (filtered_peaks["sample_index"][end - 1] + 1) / sampling_frequency for (_, end) in segment_boundaries
-            ]
+            _, segment_start_stop_times = compute_segment_durations_from_spike_vector(
+                filtered_peaks, segment_indices, sampling_frequency
+            )
 
         plot_data = dict(
             spike_train_data=spike_train_data,
@@ -280,7 +281,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             scatter_decimate=scatter_decimate,
             title="Peak depth",
             y_label="Depth [um]",
-            durations=durations,
+            segment_start_stop_times=segment_start_stop_times,
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
