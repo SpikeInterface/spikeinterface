@@ -222,11 +222,10 @@ class ComputeWaveforms(AnalyzerExtension):
             verbose=verbose,
             **job_kwargs,
         )
-        if isinstance(all_waveforms, np.ndarray):
-            self.data["waveforms"] = all_waveforms
-        else:
-            # TODO: remove asarray when materialize is in
-            self.data["waveforms"] = np.asarray(all_waveforms)
+        if not self.sorting_analyzer._lazy and not isinstance(all_waveforms, np.ndarray):
+            all_waveforms = materialize_array(all_waveforms)
+
+        self.data["waveforms"] = all_waveforms
 
     def _set_params(
         self,
