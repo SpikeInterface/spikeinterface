@@ -8,41 +8,10 @@ spikeinterface.core
     .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
-    .. automethod:: BaseRecording.save
-    .. automethod:: BaseRecording.save_to_memory
-    .. automethod:: BaseRecording.save_to_folder
-    .. automethod:: BaseRecording.save_to_zarr
-    .. automethod:: BaseRecording.dump
-    .. automethod:: BaseRecording.dump_to_json
-    .. automethod:: BaseRecording.dump_to_pickle
-    .. automethod:: BaseRecording.remove_channels
-    .. automethod:: BaseRecording.set_probe
-    .. automethod:: BaseRecording.set_probegroup
-    .. automethod:: BaseRecording.remove_probe
-    .. automethod:: BaseRecording.select_channels_with_probe
-    .. automethod:: BaseRecording.select_channels_with_probegroup
-    .. automethod:: BaseRecording.split_by
     .. autoclass:: BaseSorting
         :members:
-    .. automethod:: BaseSorting.save
-    .. automethod:: BaseSorting.save_to_memory
-    .. automethod:: BaseSorting.save_to_folder
-    .. automethod:: BaseSorting.save_to_zarr
-    .. automethod:: BaseSorting.dump
-    .. automethod:: BaseSorting.dump_to_json
-    .. automethod:: BaseSorting.dump_to_pickle
-    .. automethod:: BaseSorting.split_by
-    .. automethod:: BaseSorting.register_recording
     .. autoclass:: BaseSnippets
         :members:
-    .. automethod:: BaseSnippets.save
-    .. automethod:: BaseSnippets.save_to_memory
-    .. automethod:: BaseSnippets.save_to_folder
-    .. automethod:: BaseSnippets.save_to_zarr
-    .. automethod:: BaseSnippets.dump
-    .. automethod:: BaseSnippets.dump_to_json
-    .. automethod:: BaseSnippets.dump_to_pickle
-    .. automethod:: BaseSnippets.remove_channels
     .. autoclass:: BaseEvent
         :members:
     .. autoclass:: SortingAnalyzer
@@ -56,7 +25,6 @@ spikeinterface.core
     .. autoclass:: Motion
         :members:
     .. autoclass:: BinaryRecordingExtractor
-    .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
     .. autoclass:: NumpyFolderSorting
     .. autoclass:: NpyFolderSnippets
@@ -201,8 +169,8 @@ spikeinterface.preprocessing
 .. automodule:: spikeinterface.preprocessing
 
     .. autofunction:: apply_preprocessing_pipeline
-    .. autofunction:: get_preprocessing_dict_from_analyzer
-    .. autofunction:: get_preprocessing_dict_from_file
+    .. autofunction:: get_preprocessing_list_from_analyzer
+    .. autofunction:: get_preprocessing_list_from_file
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
@@ -254,7 +222,6 @@ spikeinterface.postprocessing
 .. automodule:: spikeinterface.postprocessing
 
     .. autofunction:: compute_noise_levels
-    .. autofunction:: compute_template_metrics
     .. autofunction:: compute_principal_components
     .. autofunction:: compute_spike_amplitudes
     .. autofunction:: compute_unit_locations
@@ -439,7 +406,6 @@ Deprecated
     :noindex:
 
     .. autofunction:: apply_sortingview_curation
-    .. autofunction:: get_potential_auto_merge
     .. autoclass:: CurationSorting
     .. autoclass:: MergeUnitsSorting
     .. autoclass:: SplitUnitSorting

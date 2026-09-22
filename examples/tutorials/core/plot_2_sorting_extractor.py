@@ -57,14 +57,15 @@ print("Num. events for first second of unit 1 seg1 = {}".format(len(st1)))
 # Some extractors also implement a :code:`write` function. We can for example
 # save our newly created sorting object to NPZ format (a simple format based
 # on numpy used in :code:`spikeinterface`):
+from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 
 file_path = "my_sorting.npz"
-se.NpzSortingExtractor.write_sorting(sorting, file_path)
+NpzSortingExtractor.write_sorting(sorting, file_path)
 
 ##############################################################################
 # We can now read it back with the proper extractor:
 
-sorting2 = se.NpzSortingExtractor(file_path)
+sorting2 = NpzSortingExtractor(file_path)
 print(sorting2)
 
 ##############################################################################

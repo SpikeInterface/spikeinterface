@@ -9,7 +9,7 @@ from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
 from spikeinterface.core.base import unit_period_dtype
-from spikeinterface.core.core_tools import slice_rows
+from spikeinterface.core.core_tools import materialize_array, slice_rows
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sorting_tools import cast_periods_to_unit_period_dtype, remap_unit_indices_in_vector
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
@@ -39,8 +39,8 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     period_duration_s_absolute : float, default: 10.0
         Duration of individual periods used to define good periods, in seconds. Same across all units.
         Note: the margin size will be the same as the period size.
-            A period size of 10s sets the margin to 10s, which means that periods of 10+2*10=30s are used
-            to estimate the false positive and negative rates of the central 10s.
+        A period size of 10s sets the margin to 10s, which means that periods of 10+2*10=30s are used
+        to estimate the false positive and negative rates of the central 10s.
     period_target_num_spikes : int | None, default: 300
         Alternative to period_size_absolute, different for each unit: mean number of spikes that should be present in each estimation period.
         For neurons firing at 10 Hz, this would correspond to periods of 10s (100 spikes / 10 Hz = 10s).
@@ -190,17 +190,18 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         new_extension_data = {}
         new_valid_periods, _ = remap_unit_indices_in_vector(
-            self.data["valid_unit_periods"], self.sorting_analyzer.unit_ids, unit_ids
+            materialize_array(self.data["valid_unit_periods"]), self.sorting_analyzer.unit_ids, unit_ids
         )
         new_extension_data["valid_unit_periods"] = new_valid_periods
         all_periods = self.data.get("all_periods", None)
         if all_periods is not None:
+            all_periods = materialize_array(all_periods)
             new_all_periods, keep_mask = remap_unit_indices_in_vector(
                 vector=all_periods, all_old_unit_ids=self.sorting_analyzer.unit_ids, all_new_unit_ids=unit_ids
             )
             new_extension_data["all_periods"] = new_all_periods
-            new_extension_data["fps"] = self.data["fps"][keep_mask]
-            new_extension_data["fns"] = self.data["fns"][keep_mask]
+            new_extension_data["fps"] = slice_rows(self.data["fps"], keep_mask)
+            new_extension_data["fns"] = slice_rows(self.data["fns"], keep_mask)
 
         return new_extension_data
 
@@ -212,7 +213,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         merged_unit_ids = np.concatenate(merge_unit_groups)
         untouched_unit_ids = [u for u in self.sorting_analyzer.unit_ids if u not in merged_unit_ids]
         new_valid_periods, _ = remap_unit_indices_in_vector(
-            vector=self.data["valid_unit_periods"],
+            vector=materialize_array(self.data["valid_unit_periods"]),
             all_old_unit_ids=self.sorting_analyzer.unit_ids,
             all_new_unit_ids=new_sorting_analyzer.unit_ids,
             keep_old_unit_ids=untouched_unit_ids,
@@ -227,13 +228,13 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         if recompute:
             new_all_periods, keep_all_periods_mask = remap_unit_indices_in_vector(
-                vector=self.data["all_periods"],
+                vector=materialize_array(self.data["all_periods"]),
                 all_old_unit_ids=self.sorting_analyzer.unit_ids,
                 all_new_unit_ids=new_sorting_analyzer.unit_ids,
                 keep_old_unit_ids=untouched_unit_ids,
             )
-            new_fps = self.data["fps"][keep_all_periods_mask]
-            new_fns = self.data["fns"][keep_all_periods_mask]
+            new_fps = slice_rows(self.data["fps"], keep_all_periods_mask)
+            new_fns = slice_rows(self.data["fns"], keep_all_periods_mask)
 
             # recompute for merged units
             valid_periods_merged, all_periods_merged, fps_merged, fns_merged = self._compute_valid_periods(
@@ -279,7 +280,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         split_unit_ids = list(split_units.keys())
         untouched_unit_ids = [u for u in self.sorting_analyzer.unit_ids if u not in split_unit_ids]
         new_valid_periods, _ = remap_unit_indices_in_vector(
-            vector=self.data["valid_unit_periods"],
+            vector=materialize_array(self.data["valid_unit_periods"]),
             all_old_unit_ids=self.sorting_analyzer.unit_ids,
             all_new_unit_ids=new_sorting_analyzer.unit_ids,
             keep_old_unit_ids=untouched_unit_ids,
@@ -293,13 +294,13 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         if recompute:
             new_all_periods, keep_all_periods_mask = remap_unit_indices_in_vector(
-                vector=self.data["all_periods"],
+                vector=materialize_array(self.data["all_periods"]),
                 all_old_unit_ids=self.sorting_analyzer.unit_ids,
                 all_new_unit_ids=new_sorting_analyzer.unit_ids,
                 keep_old_unit_ids=untouched_unit_ids,
             )
-            new_fps = self.data["fps"][keep_all_periods_mask]
-            new_fns = self.data["fns"][keep_all_periods_mask]
+            new_fps = slice_rows(self.data["fps"], keep_all_periods_mask)
+            new_fns = slice_rows(self.data["fns"], keep_all_periods_mask)
 
             # recompute for split units
             new_unit_ids = np.concatenate(new_unit_ids)

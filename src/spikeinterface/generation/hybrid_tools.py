@@ -4,12 +4,12 @@ from typing import Literal
 import numpy as np
 
 from spikeinterface.core import BaseRecording, BaseSorting, Templates, ms_to_samples
+from spikeinterface.core.core_tools import _ensure_seed
 from spikeinterface.core.generate import (
     generate_templates,
     generate_unit_locations,
     generate_sorting,
     InjectTemplatesRecording,
-    _ensure_seed,
     synthesize_amplitude_factor,
 )
 

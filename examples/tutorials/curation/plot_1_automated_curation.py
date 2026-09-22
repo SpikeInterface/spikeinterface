@@ -43,8 +43,8 @@ import spikeinterface.widgets as sw
 # model and some metadata about the model.
 
 model, model_info = sc.load_model(
-    repo_id = "SpikeInterface/toy_tetrode_model",
-    trusted = ['numpy.dtype']
+    repo_id="SpikeInterface/toy_tetrode_model",
+    trust_model=True
 )
 
 
@@ -87,9 +87,9 @@ print(set(model.feature_names_in_).issubset(set(all_metric_names)))
 # a confidence for each unit contained in the ``sorting_analyzer``.
 
 labels = sc.model_based_label_units(
-    sorting_analyzer = sorting_analyzer,
-    repo_id = "SpikeInterface/toy_tetrode_model",
-    trusted = ['numpy.dtype']
+    sorting_analyzer=sorting_analyzer,
+    repo_id="SpikeInterface/toy_tetrode_model",
+    trust_model=True
 )
 
 print(labels)

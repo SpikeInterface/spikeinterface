@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.105.0"
+version = "0.105.1"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -27,8 +27,8 @@ dependencies = [
     # for release we need pypi, so this needs to be commented
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo>=0.14.4",
-    # "probeinterface>=0.3.2",
+    # "neo>=0.14.5",
+    # "probeinterface>=0.4.0",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0", # For supporting zarr < 3
@@ -95,13 +95,13 @@ preprocessing = [
 postprocessing = [
     "spikeinterface[preprocessing]",
     "scipy",
-    "scikit-learn<1.8",
+    "scikit-learn",
     "numba>=0.59",
     "matplotlib>=3.6",
 ]
 
 metrics = [
-    "scikit-learn<1.8",
+    "scikit-learn",
     "scipy",
     "pandas",
     "numba>=0.59",
@@ -127,7 +127,7 @@ sorters = [
 sortingcomponents = [
     "spikeinterface[preprocessing]",
     "scipy",
-    "scikit-learn<1.8",
+    "scikit-learn",
     "numba>=0.59",
     "networkx",
     "hdbscan>=0.8.33",
@@ -149,7 +149,7 @@ curation = [
     "spikeinterface[postprocessing]",
     "spikeinterface[comparison]",
     "pandas",
-    "scikit-learn<1.8",
+    "scikit-learn",
     "skops",
     "huggingface_hub",
     "numba>=0.59",
@@ -226,7 +226,7 @@ docs = [
     "networkx",
     "seaborn",
     "skops", # For automated curation
-    "scikit-learn<1.8", # For automated curation
+    "scikit-learn", # For automated curation
     "huggingface_hub", # For automated curation
 ]
 
