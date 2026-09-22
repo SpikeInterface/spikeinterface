@@ -38,6 +38,7 @@ motion_options_preset = {
             win_step_um=400.0,
             win_scale_um=400.0,
             win_margin_um=None,
+            batching_mode="offline",
         ),
         "interpolate_motion_kwargs": dict(
             border_mode="force_extrapolate", spatial_interpolation_method="kriging", sigma_um=20.0, p=2
@@ -406,7 +407,7 @@ def compute_motion(
             gather_mode=gather_mode,
             gather_kwargs=None,
             squeeze_output=False,
-            folder=None,
+            dest=None,
             names=None,
         )
         t1 = time.perf_counter()

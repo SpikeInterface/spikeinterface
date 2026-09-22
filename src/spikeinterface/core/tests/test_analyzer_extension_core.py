@@ -235,6 +235,16 @@ def test_ComputeTemplates(format, sparse, create_cache_folder):
     templates = temp_ext.get_templates(outputs="Templates")
     assert isinstance(templates, Templates)
 
+    for unit_ids in (sorting_analyzer.unit_ids[::-1], sorting_analyzer.unit_ids[[3, 1]]):
+        sub = sorting_analyzer.select_units(unit_ids)
+        sub_ext = sub.get_extension("templates")
+        for unit_id in unit_ids:
+            for operator in ("average", "std"):
+                np.testing.assert_array_equal(
+                    sub_ext.get_unit_template(unit_id, operator=operator),
+                    temp_ext.get_unit_template(unit_id, operator=operator),
+                )
+
     # import matplotlib.pyplot as plt
     # for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
     #     fig, ax = plt.subplots()

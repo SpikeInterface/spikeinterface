@@ -43,9 +43,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         use_names_as_ids: bool = False,
         gap_tolerance_ms: float | None = None,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
-        if gap_tolerance_ms is not None:
-            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
+        neo_kwargs = self.map_to_neo_kwargs(file_path, gap_tolerance_ms=gap_tolerance_ms)
         neo_kwargs["load_nev"] = False  # Avoid loading spikes release in neo 0.12.0
 
         # trick to avoid to select automatically the correct stream_id
@@ -63,8 +61,10 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update({"file_path": str(Path(file_path).absolute()), "gap_tolerance_ms": gap_tolerance_ms})
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
+    def map_to_neo_kwargs(cls, file_path, gap_tolerance_ms=None):
         neo_kwargs = {"filename": str(file_path)}
+        if gap_tolerance_ms is not None:
+            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
         return neo_kwargs
 
 
@@ -109,9 +109,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         nsx_to_load: int | list | str | None = None,
         gap_tolerance_ms: float | None = None,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
-        if gap_tolerance_ms is not None:
-            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
+        neo_kwargs = self.map_to_neo_kwargs(file_path, gap_tolerance_ms=gap_tolerance_ms)
         NeoBaseSortingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -130,8 +128,10 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         }
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
+    def map_to_neo_kwargs(cls, file_path, gap_tolerance_ms=None):
         neo_kwargs = {"filename": str(file_path)}
+        if gap_tolerance_ms is not None:
+            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
         return neo_kwargs
 
 

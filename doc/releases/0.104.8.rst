@@ -1,0 +1,16 @@
+.. _release0.104.8:
+
+SpikeInterface 0.104.8 release notes
+------------------------------------
+
+June 30th 2026
+
+Minor release with bug fixes for figpack metrics and curation
+
+extractors:
+
+* Figpack metrics serialization and curation args (#4632)
+
+Contributors:
+
+* @alejoe91

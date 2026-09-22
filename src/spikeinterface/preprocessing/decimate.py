@@ -1,20 +1,25 @@
-import numpy as np
+import warnings
+
 from spikeinterface.core.core_tools import (
     define_function_handling_dict_from_class,
 )
 
 from .basepreprocessor import BasePreprocessor
 from .filter import fix_dtype
+from ._resampling_tools import get_polyphase_filter, get_num_resampled_samples
+from .resample import get_polyphase_resampled_traces
 from spikeinterface.core import BaseRecordingSegment
 
 
 class DecimateRecording(BasePreprocessor):
     """
-    Decimate the recording extractor traces using array slicing
+    Decimate the recording extractor traces.
 
-    Important: This uses simple array slicing for decimation rather than eg scipy.decimate.
-    This might introduce aliasing, or skip across signal of interest.
-    Consider  spikeinterface.preprocessing.ResampleRecording for safe resampling.
+    By default this uses simple array slicing
+    (``<parent_traces>[<decimation_offset>::<decimation_factor>]``), which is fast but applies no
+    anti-aliasing filter and so might introduce aliasing, or skip across signal of interest. Set
+    `antialias=True` to low-pass filter before downsampling using ``scipy.signal.resample_poly`` (the
+    same anti-aliased decimation used by ``spikeinterface.preprocessing.ResampleRecording``).
 
     Parameters
     ----------
@@ -29,13 +34,27 @@ class DecimateRecording(BasePreprocessor):
         to ensure that the decimated recording has at least one frame. Consider combining DecimateRecording
         with FrameSliceRecording for fine control on the recording start and end frames.
         The same decimation offset is applied to all segments from the parent recording.
+    antialias : bool | None, default: None
+        If True, apply an anti-aliasing low-pass filter before downsampling, using
+        ``scipy.signal.resample_poly`` with a Kaiser-windowed FIR filter. If False,
+        traces are downsampled by plain array slicing with no filtering, and `margin_ms`
+        is ignored. If omitted or None, currently behaves as False and emits a FutureWarning:
+        a future release will enable antialiasing by default. Pass True or False explicitly
+        to select the behavior and silence the transition warning.
+    margin_ms : float | None, default: None
+        Additional context in ms on each side of a chunk. Only used when `antialias=True`.
+        If None, use the FIR filter's finite support. An explicit nonnegative value requests
+        at least that much context; filter support and sample-grid alignment are always retained.
+    dtype : dtype or None, default: None
+        The dtype of the returned traces. If None, the dtype of the parent recording is used.
 
     Returns
     -------
     decimate_recording: DecimateRecording
-        The decimated recording extractor object. The full traces of the child recording segment
-        correspond to the traces of the parent segment as follows:
-            ```<decimated_traces> = <parent_traces>[<decimation_offset>::<decimation_factor>]```
+        The decimated recording extractor object. With `antialias=False` the full traces of the
+        child recording segment correspond to the traces of the parent segment as follows::
+
+            <decimated_traces> = <parent_traces>[<decimation_offset>::<decimation_factor>]
 
     """
 
@@ -44,14 +63,17 @@ class DecimateRecording(BasePreprocessor):
         recording,
         decimation_factor,
         decimation_offset=0,
+        antialias=None,
+        margin_ms=None,
+        dtype=None,
     ):
         # Original sampling frequency
         self._orig_samp_freq = recording.get_sampling_frequency()
         if not isinstance(decimation_factor, int) or decimation_factor <= 0:
             raise ValueError(f"Expecting strictly positive integer for `decimation_factor` arg")
         self._decimation_factor = decimation_factor
-        if not isinstance(decimation_offset, int) or decimation_factor < 0:
-            raise ValueError(f"Expecting positive integer for `decimation_factor` arg")
+        if not isinstance(decimation_offset, int) or decimation_offset < 0:
+            raise ValueError("Expecting a nonnegative integer for `decimation_offset` arg")
         parent_min_n_samp = min(
             [recording.get_num_samples(segment_index) for segment_index in range(recording.get_num_segments())]
         )
@@ -63,7 +85,26 @@ class DecimateRecording(BasePreprocessor):
         self._decimation_offset = decimation_offset
         decimated_sampling_frequency = self._orig_samp_freq / self._decimation_factor
 
-        BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency)
+        # fix_dtype doesn't always returns the str, make sure it does
+        dtype = fix_dtype(recording, dtype).str
+
+        if antialias is None:
+            warnings.warn(
+                "The default for `antialias` will change to True in a future release. "
+                "Currently, decimation uses slicing without an anti-aliasing filter. "
+                "Pass antialias=True to enable the filter, "
+                "or antialias=False to explicitly retain slicing.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            antialias = False
+
+        if antialias:
+            filter_coefficients, margin = get_polyphase_filter(self._orig_samp_freq, 1, decimation_factor, margin_ms)
+        else:
+            filter_coefficients, margin = None, 0
+
+        BasePreprocessor.__init__(self, recording, sampling_frequency=decimated_sampling_frequency, dtype=dtype)
 
         for parent_segment in recording.segments:
             self.add_recording_segment(
@@ -74,6 +115,9 @@ class DecimateRecording(BasePreprocessor):
                     decimation_factor,
                     decimation_offset,
                     self._dtype,
+                    antialias,
+                    margin,
+                    filter_coefficients,
                 )
             )
 
@@ -81,6 +125,9 @@ class DecimateRecording(BasePreprocessor):
             recording=recording,
             decimation_factor=decimation_factor,
             decimation_offset=decimation_offset,
+            antialias=antialias,
+            margin_ms=margin_ms,
+            dtype=dtype,
         )
 
 
@@ -93,17 +140,18 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         decimation_factor,
         decimation_offset,
         dtype,
+        antialias=False,
+        margin=0,
+        filter_coefficients=None,
     ):
         if parent_recording_segment._time_vector is not None:
             time_vector = parent_recording_segment._time_vector[decimation_offset::decimation_factor]
-            decimated_sampling_frequency = None
             t_start = None
         else:
             time_vector = None
-            if parent_recording_segment._t_start is None:
-                t_start = None
-            else:
-                t_start = parent_recording_segment._t_start + (decimation_offset / parent_rate)
+            t_start = parent_recording_segment._t_start
+            if decimation_offset:
+                t_start = (0.0 if t_start is None else t_start) + decimation_offset / parent_rate
 
         # Do not use BasePreprocessorSegment bcause we have to reset the sampling rate!
         BaseRecordingSegment.__init__(
@@ -113,25 +161,40 @@ class DecimateRecordingSegment(BaseRecordingSegment):
         self._decimation_factor = decimation_factor
         self._decimation_offset = decimation_offset
         self._dtype = dtype
+        self._antialias = antialias
+        self._margin = margin
+        self._filter_coefficients = filter_coefficients
 
     def get_num_samples(self):
         parent_n_samp = self._parent_segment.get_num_samples()
         assert self._decimation_offset < parent_n_samp  # Sanity check (already enforced). Formula changes otherwise
-        return int(np.ceil((parent_n_samp - self._decimation_offset) / self._decimation_factor))
+        return get_num_resampled_samples(parent_n_samp - self._decimation_offset, 1, self._decimation_factor)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        # Account for offset and end when querying parent traces
-        parent_start_frame = self._decimation_offset + start_frame * self._decimation_factor
-        parent_end_frame = parent_start_frame + (end_frame - start_frame) * self._decimation_factor
+        if not self._antialias:
+            # Simple array slicing, no anti-aliasing filter.
+            parent_start_frame = self._decimation_offset + start_frame * self._decimation_factor
+            parent_end_frame = parent_start_frame + (end_frame - start_frame) * self._decimation_factor
+            return self._parent_segment.get_traces(
+                parent_start_frame,
+                parent_end_frame,
+                channel_indices,
+            )[
+                :: self._decimation_factor
+            ].astype(self._dtype)
 
-        # And now we can decimate without offsetting
-        return self._parent_segment.get_traces(
-            parent_start_frame,
-            parent_end_frame,
+        return get_polyphase_resampled_traces(
+            self._parent_segment,
+            start_frame,
+            end_frame,
             channel_indices,
-        )[
-            :: self._decimation_factor
-        ].astype(self._dtype)
+            1,
+            self._decimation_factor,
+            self._margin,
+            self._dtype,
+            self._filter_coefficients,
+            decimation_offset=self._decimation_offset,
+        )
 
 
 decimate = define_function_handling_dict_from_class(source_class=DecimateRecording, name="decimate")

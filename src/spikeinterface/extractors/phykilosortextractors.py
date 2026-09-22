@@ -7,17 +7,18 @@ from spikeinterface.core import (
     BaseSorting,
     BaseSortingSegment,
     read_python,
-    generate_ground_truth_recording,
+    MockRecording,
     ChannelSparsity,
     ComputeTemplates,
     create_sorting_analyzer,
     SortingAnalyzer,
+    aggregate_channels,
 )
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
-from probeinterface import read_prb, Probe
+from probeinterface import read_prb, Probe, ProbeGroup
 
 
 class BasePhyKilosortSortingExtractor(BaseSorting):
@@ -35,6 +36,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         If True, empty units are removed from the sorting extractor.
     load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
+    channel_ids : list | np.ndarray | None, default None
+        The channel_ids of the recording passed to `run_sorter`
 
     Notes
     -----
@@ -66,6 +69,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         keep_good_only: bool = False,
         remove_empty_units: bool = False,
         load_all_cluster_properties: bool = True,
+        channel_ids: list | np.ndarray | None = None,
     ):
         try:
             import pandas as pd
@@ -131,6 +135,17 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         if cluster_info is None:
             cluster_info = pd.DataFrame({"cluster_id": unique_unit_ids})
             cluster_info["group"] = ["unsorted"] * len(unique_unit_ids)
+
+        # we need to add main_channel_ids before selecting good units etc.
+        if channel_ids is not None:
+            # if the user has a non-trivial channel_map (from passing bad channel ids or otherwise)
+            # we need to remap the channel_ids
+            channel_map = np.load(phy_folder / "channel_map.npy").reshape(-1).astype("int64", copy=False)
+            channel_ids = np.asarray(channel_ids)[channel_map]
+            main_channel_indices = _make_main_channel_indices_from_templates(phy_folder)
+            if main_channel_indices is not None:
+                main_channel_ids = channel_ids[main_channel_indices]
+                cluster_info["main_channel_id"] = main_channel_ids
 
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):
@@ -333,13 +348,20 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         The loaded Sorting object.
     """
 
-    def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):
+    def __init__(
+        self,
+        folder_path: Path | str,
+        keep_good_only: bool = False,
+        remove_empty_units: bool = True,
+        channel_ids: list | np.ndarray | None = None,
+    ):
         BasePhyKilosortSortingExtractor.__init__(
             self,
             folder_path,
             exclude_cluster_groups=None,
             keep_good_only=keep_good_only,
             remove_empty_units=remove_empty_units,
+            channel_ids=channel_ids,
         )
 
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "keep_good_only": keep_good_only}
@@ -349,7 +371,9 @@ read_phy = define_function_from_class(source_class=PhySortingExtractor, name="re
 read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")
 
 
-def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offset_to_uV=None) -> SortingAnalyzer:
+def read_kilosort_as_analyzer(
+    folder_path, recording=None, unwhiten=True, gain_to_uV=None, offset_to_uV=None
+) -> SortingAnalyzer:
     """
     Load Kilosort output into a SortingAnalyzer. Output from Kilosort version 4.1 and
     above are supported. The function may work on older versions of Kilosort output,
@@ -359,8 +383,11 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     ----------
     folder_path : str or Path
         Path to the output Phy folder (containing the params.py).
+    recording : BaseRecording
+        A spikeinterface Recording object which will be attached to the analyzer.
+        This should be the recording passed to Kilosort.
     unwhiten : bool, default: True
-        Unwhiten the templates computed by kilosort.
+        Unwhiten the templates computed by Kilosort.
     gain_to_uV : float | None, default: None
         The gain to apply to convert traces to uV
     offset_to_uV : float | None, default: None
@@ -390,32 +417,42 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
 
     # kilosort occasionally contains a few spikes just beyond the recording end point, which can lead
     # to errors later. To avoid this, we pad the recording with an extra second of blank time.
-    duration = sorting.segments[0]._all_spike_times[-1] / sampling_frequency + 1
+    duration = sorting.get_last_spike_frame(segment_index=0) / sampling_frequency + 1
 
     if (phy_path / "probe.prb").is_file():
         probegroup = read_prb(phy_path / "probe.prb")
-        if len(probegroup.probes) > 0:
-            warnings.warn("Found more than one probe. Selecting the first probe in ProbeGroup.")
-        probe = probegroup.probes[0]
     elif (phy_path / "channel_positions.npy").is_file():
         probe = Probe(si_units="um")
         channel_positions = np.load(phy_path / "channel_positions.npy")
         probe.set_contacts(channel_positions)
-        probe.set_device_channel_indices(range(probe.get_contact_count()))
+        probe.set_device_channel_indices(np.arange(len(channel_positions)))
+        probegroup = ProbeGroup()
+        probegroup.add_probe(probe)
     else:
-        AssertionError(f"Cannot read probe layout from folder {phy_path}.")
+        raise AssertionError(f"Cannot read probe layout from folder {phy_path}.")
 
-    # to make the initial analyzer, we'll use a fake recording and set it to None later
-    recording, _ = generate_ground_truth_recording(
-        probe=probe,
-        sampling_frequency=sampling_frequency,
-        durations=[duration],
-        num_units=1,
-        seed=1205,
-    )
+    if recording is not None:
+        channel_map = np.load(phy_path / "channel_map.npy")
+        recording = recording.select_channels(recording.channel_ids[channel_map])
+        user_gave_recording = True
+
+    else:
+        user_gave_recording = False
+
+        # to make the initial analyzer, we'll use a fake recording and set it to None later
+        recordings = []
+        for probe in probegroup.probes:
+            one_recording = MockRecording(
+                sampling_frequency=sampling_frequency,
+                durations=[duration],
+                num_channels=probe.get_contact_count(),
+            )
+            one_recording.set_probe(probe)
+            recordings.append(one_recording)
+        recording = aggregate_channels(recordings)
 
     sparsity = _make_sparsity_from_templates(sorting, recording, phy_path)
-    main_channel_indices = _make_main_channel_indices_from_templates(sorting, recording, phy_path)
+    main_channel_indices = _make_main_channel_indices_from_templates(phy_path)
 
     sorting_analyzer = create_sorting_analyzer(
         sorting, recording, sparse=True, sparsity=sparsity, main_channel_indices=main_channel_indices
@@ -435,7 +472,9 @@ def read_kilosort_as_analyzer(folder_path, unwhiten=True, gain_to_uV=None, offse
     )
     _make_locations(sorting_analyzer, phy_path)
 
-    sorting_analyzer._recording = None
+    if not user_gave_recording:
+        sorting_analyzer._recording = None
+
     return sorting_analyzer
 
 
@@ -451,14 +490,9 @@ def _make_locations(sorting_analyzer, kilosort_output_path):
     else:
         return
 
-    # Check that the spike locations vector is the same size as the spike vector
+    # When recording is given, need to trim spike locations to match spikes in sorting
     num_spikes = len(sorting_analyzer.sorting.to_spike_vector())
-    num_spike_locs = len(locs_np)
-    if num_spikes != num_spike_locs:
-        warnings.warn(
-            "The number of spikes does not match the number of spike locations in `spike_positions.npy`. Skipping spike locations."
-        )
-        return
+    locs_np = locs_np[:num_spikes]
 
     num_dims = len(locs_np[0])
     column_names = ["x", "y", "z"][:num_dims]
@@ -490,14 +524,20 @@ def _make_sparsity_from_templates(sorting, recording, kilosort_output_path):
     return ChannelSparsity(mask, unit_ids=unit_ids, channel_ids=channel_ids)
 
 
-def _make_main_channel_indices_from_templates(sorting, recording, kilosort_output_path):
+def _make_main_channel_indices_from_templates(kilosort_output_path):
     """Constructs the `main_channel_indices` from kilosort output, by finding the
     channel containing the largest peak-to-peak value."""
 
-    templates = np.load(kilosort_output_path / "templates.npy")
-    # main channel indices are the argmax of the ptp of the templates, which is the channel with
-    # the largest peak-to-peak amplitude
-    main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+    templates_filepath = kilosort_output_path / "templates.npy"
+
+    if templates_filepath.is_file():
+        templates = np.load(kilosort_output_path / "templates.npy")
+        # main channel indices are the argmax of the ptp of the templates, which is the channel with
+        # the largest peak-to-peak amplitude
+        main_channel_indices = np.argmax(np.ptp(templates, axis=1), axis=1)
+    else:
+        main_channel_indices = None
+
     return main_channel_indices
 
 

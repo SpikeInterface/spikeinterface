@@ -29,7 +29,6 @@ def extract_waveforms_to_buffers(
     nbefore,
     nafter,
     mode="memmap",
-    return_scaled=None,
     return_in_uV=True,
     folder=None,
     dtype=None,
@@ -62,8 +61,6 @@ def extract_waveforms_to_buffers(
         N samples after spike
     mode: "memmap" | "shared_memory", default: "memmap"
         The mode to use for the buffer
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: True
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -89,15 +86,6 @@ def extract_waveforms_to_buffers(
         Optionally return in case of shared_memory if copy=False.
         Dictionary to "construct" array in workers process (memmap file or sharemem info)
     """
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled
-
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     if dtype is None:
@@ -425,7 +413,6 @@ def extract_waveforms_to_single_buffer(
     nbefore,
     nafter,
     mode="memmap",
-    return_scaled=None,
     return_in_uV=True,
     file_path=None,
     dtype=None,
@@ -465,11 +452,8 @@ def extract_waveforms_to_single_buffer(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: "memmap" | "shared_memory" | "zarr", default: "memmap"
-        The mode to use for the buffer. In "zarr" mode the waveforms are written directly to a zarr
-        dataset (workers return their block and the main process writes it, so parallel writes are safe).
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
+    mode: "memmap" | "shared_memory", default: "memmap"
+        The mode to use for the buffer
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -501,16 +485,6 @@ def extract_waveforms_to_single_buffer(
         Optionally return in case of shared_memory if copy=False.
         Dictionary to "construct" array in workers process (memmap file or sharemem info)
     """
-
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled
-
     n_samples = nbefore + nafter
 
     if dtype is None:
@@ -528,7 +502,8 @@ def extract_waveforms_to_single_buffer(
     if sparsity_mask is None:
         num_chans = recording.get_num_channels()
     else:
-        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
+        # `initial` keeps this working for a sorting with no unit, where the mask has no row
+        num_chans = int(np.max(np.sum(sparsity_mask, axis=1), initial=0))  # This is a numpy scalar, so we cast to int
     shape = (int(num_spikes), int(n_samples), int(num_chans))
 
     zarr_writer = None
@@ -913,7 +888,6 @@ def estimate_templates(
     nbefore: int,
     nafter: int,
     operator: str = "average",
-    return_scaled=None,
     return_in_uV=True,
     sparsity_mask=None,
     job_name=None,
@@ -931,14 +905,12 @@ def estimate_templates(
     spikes: 1d numpy array with several fields
         Spikes handled as a unique vector.
         This vector can be obtained with: `spikes = sorting.to_spike_vector()`
-    unit_ids: list ot numpy
+    unit_ids: list or numpy.ndarray
         List of unit_ids
     nbefore: int
         Number of samples to cut out before a spike
     nafter: int
         Number of samples to cut out after a spike
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: True
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -951,15 +923,6 @@ def estimate_templates(
         The average templates with shape (num_units, nbefore + nafter, num_channels)
 
     """
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled
-
     if job_name is None:
         job_name = "estimate_templates"
 
@@ -1012,7 +975,6 @@ def estimate_templates_with_accumulator(
     unit_ids: list | np.ndarray,
     nbefore: int,
     nafter: int,
-    return_scaled=None,
     return_in_uV=True,
     sparsity_mask=None,
     job_name=None,
@@ -1041,8 +1003,6 @@ def estimate_templates_with_accumulator(
         Number of samples to cut out before a spike
     nafter: int
         Number of samples to cut out after a spike
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: True
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -1056,26 +1016,23 @@ def estimate_templates_with_accumulator(
     templates_array: np.array
         The average templates with shape (num_units, nbefore + nafter, num_channels)
     """
-
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled
-
-    assert spikes.size > 0, "estimate_templates() need non empty sorting"
-
     job_kwargs = fix_job_kwargs(job_kwargs)
     num_worker = job_kwargs["n_jobs"]
 
     if sparsity_mask is None:
         num_chans = int(recording.get_num_channels())
     else:
-        num_chans = int(max(np.sum(sparsity_mask, axis=1)))  # This is a numpy scalar, so we cast to int
+        # `initial` keeps this working for a sorting with no unit, where the mask has no row
+        num_chans = int(np.max(np.sum(sparsity_mask, axis=1), initial=0))  # This is a numpy scalar, so we cast to int
     num_units = len(unit_ids)
+
+    if spikes.size == 0:
+        # A sorting with no unit (or with only empty units) is valid, there is simply nothing to
+        # accumulate. Returning zeros avoids allocating an empty shared memory buffer.
+        template_means = np.zeros((num_units, nbefore + nafter, num_chans), dtype="float32")
+        if return_std:
+            return template_means, np.zeros_like(template_means)
+        return template_means
 
     shape = (num_worker, num_units, nbefore + nafter, num_chans)
 

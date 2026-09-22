@@ -14,6 +14,7 @@ import warnings
 
 from spikeinterface.core import load, BaseRecordingSnippets, BaseRecording
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.recording_tools import get_rec_attributes
 from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
@@ -150,9 +151,14 @@ class BaseSorter:
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
             raise RuntimeError(
-                "This recording is not serializable and so can not be sorted. Consider `recording.save()` to save a "
+                "This recording is not serializable and so can not be sorted. Consider `recording.save(folder=...)` to save a "
                 "compatible binary file."
             )
+
+        # save recording attributes in case the recording is not serializable or removed after sorting
+        rec_attributes = get_rec_attributes(recording)
+        rec_attributes_file = output_folder / "recording_attributes.json"
+        rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding="utf8")
 
         return output_folder
 

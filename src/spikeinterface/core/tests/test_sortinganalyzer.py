@@ -6,6 +6,8 @@ import shutil
 
 from spikeinterface.core import (
     generate_ground_truth_recording,
+    generate_recording,
+    NumpySorting,
     create_sorting_analyzer,
     load_sorting_analyzer,
     get_available_analyzer_extensions,
@@ -322,7 +324,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
 
 def test_SortingAnalyzer_tmp_recording(dataset):
     recording, sorting = dataset
-    recording_cached = recording.save(mode="memory")
+    recording_cached = recording.save(format="memory")
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False, sparsity=None)
     sorting_analyzer.set_temporary_recording(recording_cached)
@@ -400,12 +402,21 @@ def test_load_in_lazy_mode(tmp_path, dataset, format):
         if isinstance(value, np.ndarray):
             assert isinstance(value, array_class)
 
-    # check that the lazy mode does not overwrite existing extensions
+    # a lazy (but not read-only) analyzer is allowed to overwrite existing extensions
     sorting_analyzer_lazy.compute("random_spikes", max_spikes_per_unit=10)
-    # reload the analyzer to check that the original extension is not overwritten
     sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
     random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
-    assert random_spikes_ext.params["max_spikes_per_unit"] != 10
+    assert random_spikes_ext.params["max_spikes_per_unit"] == 10
+
+    # check that a lazy+read-only analyzer does not overwrite existing extensions
+    sorting_analyzer_lazy_ro = load_sorting_analyzer(folder, format="auto", lazy=True, read_only=True)
+    sorting_analyzer_lazy_ro.compute("random_spikes", max_spikes_per_unit=20)
+    sorting_analyzer_reloaded = load_sorting_analyzer(folder, format="auto", lazy=True)
+    random_spikes_ext = sorting_analyzer_reloaded.get_extension("random_spikes")
+    assert random_spikes_ext.params["max_spikes_per_unit"] != 20
+
+    # Drop lazy SAs so their memmaps are released before tmp_path cleanup.
+    del sorting_analyzer_lazy, sorting_analyzer_reloaded, sorting_analyzer_lazy_ro
 
 
 def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
@@ -736,6 +747,49 @@ def test_excess_spikes(dataset):
         create_sorting_analyzer(sorting=sorting, recording=recording.time_slice(0, 1))
 
 
+@pytest.mark.parametrize("sparse", [False, True])
+def test_analyzer_with_no_unit(dataset, sparse):
+    """
+    A sorting with no unit is a valid sorting, so the core extensions should run on it and
+    return empty results rather than raising.
+    """
+    recording, sorting = dataset
+    empty_sorting = sorting.select_units([])
+    assert len(empty_sorting.unit_ids) == 0
+
+    sorting_analyzer = create_sorting_analyzer(empty_sorting, recording, format="memory", sparse=sparse)
+    sorting_analyzer.compute(["random_spikes", "noise_levels", "waveforms", "templates"])
+
+    random_spikes = sorting_analyzer.get_extension("random_spikes").get_data()
+    assert random_spikes.shape == (0,)
+
+    waveforms = sorting_analyzer.get_extension("waveforms").get_data()
+    assert waveforms.shape[0] == 0
+
+    templates = sorting_analyzer.get_extension("templates").get_data()
+    assert templates.shape[0] == 0
+
+
+def test_analyzer_with_only_empty_units(dataset):
+    """
+    Units that exist but have no spike at all should give all-zero templates instead of raising.
+    """
+    from spikeinterface.core import NumpySorting
+
+    recording, _ = dataset
+    no_spikes = np.zeros(0, dtype="int64")
+    sorting = NumpySorting.from_samples_and_labels(
+        [no_spikes], [no_spikes], sampling_frequency=recording.sampling_frequency, unit_ids=np.array([0, 1])
+    )
+
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    sorting_analyzer.compute(["random_spikes", "noise_levels", "templates"])
+
+    templates = sorting_analyzer.get_extension("templates").get_data()
+    assert templates.shape[0] == 2
+    assert np.all(templates == 0)
+
+
 def test_extensions_sorting():
 
     # nothing happens if all parents are on the left of the children
@@ -802,11 +856,13 @@ def _compute_reference_pipeline_data(dataset):
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
+@pytest.mark.parametrize("lazy", [True, False])
+def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
-    When computing node-pipeline extensions on a disk-backed analyzer, the results are gathered
+    When computing node-pipeline extensions on a disk-backed analyzer in lazy mode, the results are gathered
     directly to their final location (npy files for binary_folder, zarr datasets for zarr) instead
-    of being accumulated in memory and copied afterwards. This test checks that:
+    of being accumulated in memory and copied afterwards.
+    This test checks that:
       * the auto gather_mode selection matches the analyzer format
       * the data is written in place and kept as a memmap / zarr.Array (no extra copy)
       * the values match a plain in-memory computation and survive a reload
@@ -826,7 +882,9 @@ def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
     else:
         folder = tmp_path / "analyzer.zarr"
 
-    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=None, lazy=lazy
+    )
     analyzer.compute(["random_spikes", "templates"])
     analyzer.compute({"dummy_pipeline": {"param0": 5.5}})
 
@@ -838,12 +896,20 @@ def test_compute_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
         # written directly to the final npy file and kept as a memmap (not re-copied by _save_data)
         amp_file = folder / "extensions" / "dummy_pipeline" / "amp.npy"
         assert amp_file.is_file()
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        if not lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
     elif format == "zarr":
         # written directly as a zarr dataset in the extension group
         root = analyzer._get_zarr_root(mode="r")
         assert "amp" in root["extensions"]["dummy_pipeline"]
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        if not lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
 
     if format != "memory":
         # data must survive a reload from disk
@@ -877,7 +943,8 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
 
 
 @pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
-def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format):
+@pytest.mark.parametrize("lazy", [True, False])
+def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """
     Same as test_compute_pipeline_extension_gather_to_disk but through compute_one_extension
     (i.e. computing a single node-pipeline extension via a string input), which uses
@@ -897,7 +964,9 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
     else:
         folder = tmp_path / "analyzer.zarr"
 
-    analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False, sparsity=None)
+    analyzer = create_sorting_analyzer(
+        sorting, recording, format=format, folder=folder, sparse=False, sparsity=None, lazy=lazy
+    )
     analyzer.compute(["random_spikes", "templates"])
     # single string -> compute_one_extension -> BaseSpikeVectorExtension._run
     analyzer.compute("dummy_pipeline", param0=5.5)
@@ -908,11 +977,19 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
 
     if format == "binary_folder":
         assert (folder / "extensions" / "dummy_pipeline" / "amp.npy").is_file()
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        if lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.memmap)
     elif format == "zarr":
         root = analyzer._get_zarr_root(mode="r")
         assert "amp" in root["extensions"]["dummy_pipeline"]
-        assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        if lazy:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
+        else:
+            assert isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], np.ndarray)
+            assert not isinstance(analyzer.get_extension("dummy_pipeline").data["amp"], zarr.Array)
 
     if format != "memory":
         # data must survive a reload and recompute (overwrite) must work
@@ -924,7 +1001,7 @@ def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format
         # save=False on a disk analyzer: computed in memory, nothing written to disk
         folder2 = tmp_path / ("analyzer_nosave" + (".zarr" if format == "zarr" else ""))
         analyzer2 = create_sorting_analyzer(
-            sorting, recording, format=format, folder=folder2, sparse=False, sparsity=None
+            sorting, recording, format=format, folder=folder2, sparse=False, sparsity=None, lazy=lazy
         )
         analyzer2.compute(["random_spikes", "templates"])
         analyzer2.compute("dummy_pipeline", param0=5.5, save=False)
@@ -938,7 +1015,7 @@ def test_select_channels(dataset):
     sorting_analyzer.compute(["random_spikes", "templates", "noise_levels"])
     # select channels
     keep_channel_ids = recording.channel_ids[::2]
-    sorting_analyzer2 = sorting_analyzer.select_channels(channel_ids=keep_channel_ids)
+    sorting_analyzer2 = sorting_analyzer._select_channels(channel_ids=keep_channel_ids)
 
     assert np.array_equal(sorting_analyzer2.channel_ids, keep_channel_ids)
     assert np.array_equal(sorting_analyzer2.get_channel_locations(), recording.get_channel_locations(keep_channel_ids))
@@ -955,6 +1032,92 @@ def test_select_channels(dataset):
     assert len(sorting_analyzer2.get_extension("noise_levels").data["noise_levels"]) == len(keep_channel_ids)
     for p in sorting_analyzer2.rec_attributes["properties"].values():
         assert len(p) == len(keep_channel_ids)
+
+
+def test_select_channels_sparse_waveforms_templates(dataset):
+    """
+    Test that `_select_channels` selects the correct waveforms and templates when the analyzer
+    is sparse.
+
+    The actual code uses fancy indexing etc, so this test is designed to _not_ do this, and instead
+    just loop over all units and channels to check consistency.
+    """
+
+    recording, sorting = dataset
+    # Make a sparse analyzer
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs={"method": "radius", "radius_um": 30}
+    )
+    sorting_analyzer.compute(["random_spikes", "waveforms", "templates"])
+
+    # Select channels, in a non-monotonic way
+    select_channel_ids = np.array(["3", "8", "7"])
+    analyzer_selected = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+
+    # Prepare the data
+    original_id_index_map = dict(
+        zip(sorting_analyzer.channel_ids, sorting_analyzer.channel_ids_to_indices(sorting_analyzer.channel_ids))
+    )
+    selected_id_index_map = dict(
+        zip(analyzer_selected.channel_ids, analyzer_selected.channel_ids_to_indices(analyzer_selected.channel_ids))
+    )
+
+    original_templates = sorting_analyzer.get_extension("templates").get_data()
+    selected_templates = analyzer_selected.get_extension("templates").get_data()
+
+    original_waveforms = sorting_analyzer.get_extension("waveforms")
+    selected_waveforms = analyzer_selected.get_extension("waveforms")
+
+    for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
+
+        original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
+        selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
+
+        original_waveforms_one_unit = original_waveforms.get_waveforms_one_unit(unit_id)
+        selected_waveforms_one_unit = selected_waveforms.get_waveforms_one_unit(unit_id)
+
+        for channel_id in select_channel_ids:
+            if channel_id in original_units_to_channels:
+
+                # Check templates, which are dense
+                original_channel_index = original_id_index_map[channel_id]
+                selected_channel_index = selected_id_index_map[channel_id]
+
+                original_channel = original_templates[unit_index, :, original_channel_index]
+                selected_channel = selected_templates[unit_index, :, selected_channel_index]
+
+                assert np.all(original_channel == selected_channel)
+
+                # Now check waveforms and PCs, which are sparse
+                channel_index_in_original = np.where(original_units_to_channels == channel_id)[0][0]
+                original_unit_waveform = original_waveforms_one_unit[:, :, channel_index_in_original]
+
+                channel_index_in_selected = np.where(selected_units_to_channels == channel_id)[0][0]
+                selected_unit_waveform = selected_waveforms_one_unit[:, :, channel_index_in_selected]
+
+                assert np.all(original_unit_waveform == selected_unit_waveform)
+
+
+def test_select_channels_independent(dataset):
+    """
+    Test that `_select_channels` is independent of channel id order.
+    """
+    recording, sorting = dataset
+    # Make a sparse analyzer
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs={"method": "radius", "radius_um": 30}
+    )
+
+    select_channel_ids = np.array(["3", "7", "8"])
+    sa_one = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+
+    # Make another analyzer with select_channel_ids ['7', '3', '8']
+    shuffle_order = np.array([1, 0, 2])
+    second_channel = select_channel_ids[shuffle_order]
+    sa_two = sorting_analyzer._select_channels(channel_ids=second_channel)
+
+    assert np.all(sa_one.sparsity.mask == sa_two.sparsity.mask[:, shuffle_order])
+    assert np.all(sa_one.get_channel_locations() == sa_two.get_channel_locations()[shuffle_order])
 
 
 def test_main_channel_from_templates_dense_recordingless(tmp_path):
@@ -1079,13 +1242,66 @@ def test_main_channel_from_templates_sparse_recordingless():
     assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
 
 
+def test_merge_units_main_channel_id_disagreement():
+    """`SortingAnalyzer.merge_units()` must keep the donor unit's `main_channel_id` on disagreement,
+    matching `apply_merges_to_sorting` (see test_sorting_tools.py), even when `merge_unit_groups`
+    lists the units in the same relative order as `sorting.unit_ids` (not just the reversed order):
+    a defect that only manifests for out-of-order groups would still pass this case.
+    """
+    recording = generate_recording(num_channels=3, durations=[2.0], set_probe=True, seed=0)
+    recording = recording.rename_channels(new_channel_ids=["chA", "chB", "chC"])
+
+    # unit "b" has more spikes (5) than unit "a" (2); "a" is listed first in both `sorting.unit_ids`
+    # and `merge_unit_groups` below, so a positional (rather than spike-count) donor choice would
+    # silently pick "a" and still pass an order-reversed-only regression test.
+    times = np.array([0, 1, 100, 110, 120, 130, 140])
+    labels = np.array(["a", "a", "b", "b", "b", "b", "b"])
+    sorting = NumpySorting.from_samples_and_labels(
+        [times], [labels], recording.sampling_frequency, unit_ids=["a", "b", "c"]
+    )
+    sorting.set_property("main_channel_id", np.array(["chA", "chB", "chC"]))
+    sorting.register_recording(recording)
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    merged_analyzer, new_unit_ids = analyzer.merge_units(
+        merge_unit_groups=[["a", "b"]], new_id_strategy="append", return_new_unit_ids=True
+    )
+    merged_main_channel_id = merged_analyzer.sorting.get_property("main_channel_id")[
+        merged_analyzer.sorting.id_to_index(new_unit_ids[0])
+    ]
+    assert merged_main_channel_id == "chB"
+
+
+@pytest.mark.parametrize("unit_indices", [[4, 3, 2, 1, 0], [3, 1]])
+def test_select_units_reordered_sparsity(dataset, unit_indices):
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs=dict(method="best_channels", num_channels=3)
+    )
+    mask = sorting_analyzer.sparsity.mask
+    assert len({tuple(row) for row in mask}) == sorting.unit_ids.size
+
+    sub = sorting_analyzer.select_units(sorting_analyzer.unit_ids[unit_indices])
+
+    assert np.array_equal(sub.sparsity.unit_ids, sub.unit_ids)
+    for k, unit_id in enumerate(sub.unit_ids):
+        assert np.array_equal(sub.sparsity.mask[k], mask[sorting.id_to_index(unit_id)])
+
+
 if __name__ == "__main__":
-    tmp_path = Path("test_SortingAnalyzer")
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp()) / "test_SortingAnalyzer"
+
     dataset = get_dataset()
-    test_SortingAnalyzer_memory(tmp_path, dataset)
-    test_SortingAnalyzer_binary_folder(tmp_path, dataset)
-    test_SortingAnalyzer_zarr(tmp_path, dataset)
+    # test_SortingAnalyzer_memory(tmp_path, dataset)
+    # test_SortingAnalyzer_binary_folder(tmp_path, dataset)
+    # test_SortingAnalyzer_zarr(tmp_path, dataset)
     test_SortingAnalyzer_tmp_recording(dataset)
+    # test_extension()
+    # test_extension_params()
+    # test_runtime_dependencies(dataset)
     test_extension()
     test_extension_params()
     test_runtime_dependencies(dataset)

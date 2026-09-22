@@ -8,6 +8,7 @@ on:
 env:
   KACHERY_API_KEY: ${{ secrets.KACHERY_API_KEY }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SPIKEINTERFACE_DATASET_FOLDER: ${{ github.workspace }}/spikeinterface_datasets
 
 jobs:
   full-tests-with-codecov:
@@ -48,9 +49,10 @@ jobs:
           # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
-          path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: ${{ runner.os }}-datasets
+          path: spikeinterface_datasets
+          key: datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: datasets
+          enableCrossOsArchive: true
       - name: Install packages
         uses: ./.github/actions/build-test-environment
       - name: Pip list
@@ -58,6 +60,7 @@ jobs:
       - name: run tests
         env:
           HDF5_PLUGIN_PATH: ${{ github.workspace }}/hdf5_plugin_path_maxwell
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY

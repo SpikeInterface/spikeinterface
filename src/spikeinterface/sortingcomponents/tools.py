@@ -412,7 +412,7 @@ def cache_preprocessing(
         if total_memory is None:
             mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
             if mem_ok:
-                recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+                recording = recording.save(format="memory", sharedmem=True, **job_kwargs)
             else:
                 import warnings
 
@@ -421,11 +421,11 @@ def cache_preprocessing(
 
     elif mode == "folder":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_folder(folder=folder, **job_kwargs)
+        recording = recording.save(folder=folder, format="binary", **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "zarr":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_zarr(folder=folder, **job_kwargs)
+        recording = recording.save(folder=folder, format="zarr", **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "no-cache":
         recording = recording
@@ -433,11 +433,11 @@ def cache_preprocessing(
         mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
         if mem_ok:
             # first try memory first
-            recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+            recording = recording.save(format="memory", sharedmem=True, **job_kwargs)
             cache_info["mode"] = "memory"
         elif folder is not None:
             # then try folder
-            recording = recording.save_to_folder(folder=folder, **job_kwargs)
+            recording = recording.save(folder=folder, format="binary", **job_kwargs)
             cache_info["mode"] = "folder"
             cache_info["folder"] = folder
         else:
@@ -483,6 +483,8 @@ def create_sorting_analyzer_with_existing_templates(
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
+    all_main_channel_indices = templates.get_main_channels()
+
     if remove_empty:
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         non_empty_sorting = sorting.remove_empty_units()
@@ -490,12 +492,16 @@ def create_sorting_analyzer_with_existing_templates(
         templates_array = templates_array[non_empty_unit_indices]
         sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
         sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
+        main_channel_indices = all_main_channel_indices[non_empty_unit_indices]
     else:
         non_empty_sorting = sorting
+        main_channel_indices = all_main_channel_indices
 
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
+    sa = create_sorting_analyzer(
+        non_empty_sorting, recording, format="memory", sparsity=sparsity, main_channel_indices=main_channel_indices
+    )
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
     sa.extensions["templates"].params = {

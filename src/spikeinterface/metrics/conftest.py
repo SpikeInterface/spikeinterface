@@ -21,10 +21,11 @@ def make_small_analyzer():
 
     extensions_to_compute = {
         "random_spikes": {"seed": 1205},
-        "noise_levels": {"seed": 1205},
+        "noise_levels": {"random_slices_kwargs": {"seed": 1205}},
         "waveforms": {},
         "templates": {"operators": ["average", "median"]},
         "spike_amplitudes": {},
+        "amplitude_scalings": {},
         "spike_locations": {},
         "principal_components": {},
     }
@@ -70,6 +71,6 @@ def sorting_analyzer_simple():
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
-    sorting_analyzer.compute(["spike_amplitudes", "spike_locations"], **job_kwargs)
+    sorting_analyzer.compute(["spike_amplitudes", "spike_locations", "amplitude_scalings"], **job_kwargs)
 
     return sorting_analyzer
