@@ -280,17 +280,20 @@ class ComputePrincipalComponents(AnalyzerExtension):
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
+            # read all requested rows at once: per-unit reads on a remote zarr array re-fetch the same chunks
+            selected_projections = slice_rows(all_projections, selected_inds)
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection, local_chan_inds = self.get_projections_one_unit(unit_id, sparse=True)
+                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
+                local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+                sparse_projection = selected_projections[spike_mask][:, :, : local_chan_inds.size]
 
                 # keep only requested channels
                 channel_mask = np.isin(local_chan_inds, channel_indices)
                 sparse_projection = sparse_projection[:, :, channel_mask]
                 local_chan_inds = local_chan_inds[channel_mask]
 
-                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
                 proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
                 # inject in requested channels
                 channel_mask = np.isin(channel_indices, local_chan_inds)
