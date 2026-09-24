@@ -2421,7 +2421,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             else:
                 extension_instance.run(save=save, verbose=verbose)
             if not self._lazy:
-
                 for variable_name in extension_instance.data.keys():
                     # Materialize the data if not in lazy mode
                     if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):

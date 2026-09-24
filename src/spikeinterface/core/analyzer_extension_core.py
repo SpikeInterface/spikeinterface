@@ -192,6 +192,10 @@ class ComputeWaveforms(AnalyzerExtension):
             file_path = self._get_binary_extension_folder() / "waveforms.npy"
             mode = "memmap"
             copy = False
+        elif self.format == "zarr":
+            file_path = self._get_binary_extension_folder() / "waveforms"
+            mode = "zarr"
+            copy = False
         else:
             file_path = None
             mode = "shared_memory"
@@ -218,6 +222,8 @@ class ComputeWaveforms(AnalyzerExtension):
             verbose=verbose,
             **job_kwargs,
         )
+        if not self.sorting_analyzer._lazy and not isinstance(all_waveforms, np.ndarray):
+            all_waveforms = materialize_array(all_waveforms)
 
         self.data["waveforms"] = all_waveforms
 
