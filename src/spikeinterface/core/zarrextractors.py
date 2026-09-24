@@ -755,6 +755,9 @@ def add_sorting_to_zarr_group(
     if sorting.check_serializability("json"):
         zarr_group.attrs["provenance"] = check_json(sorting.to_dict(recursive=True, relative_to=relative_to))
     else:
+        warnings.warn(
+            "The sorting provenance is not serializable! " "The sorting provenance link will be lost for future load"
+        )
         zarr_group.attrs["provenance"] = None
 
     num_segments = sorting.get_num_segments()
@@ -798,6 +801,10 @@ def add_recording_to_zarr_group(
     if recording.check_serializability("json"):
         zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True, relative_to=relative_to))
     else:
+        warnings.warn(
+            "The recording provenance is not serializable! "
+            "The recording provenance link will be lost for future load"
+        )
         zarr_group.attrs["provenance"] = None
 
     # save data (done the subclass)
