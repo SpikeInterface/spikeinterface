@@ -8,6 +8,7 @@ See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
 """
 
+import importlib.util
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +21,9 @@ from spikeinterface.extractors.neuropixels_utils import (
     compute_saturation_threshold_from_probe,
 )
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
+
+from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core import BaseRecording, BaseRecordingSegment
 
 
 def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
@@ -475,6 +479,167 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     def map_to_neo_kwargs(cls, folder_path, experiment_names=None):
         neo_kwargs = {"dirname": str(folder_path), "experiment_names": experiment_names}
         return neo_kwargs
+
+
+class OpenEphysArrowRecordingSegment(BaseRecordingSegment):
+    def __init__(self, filepath, channel_ids, batch_len, **time_kwargs):
+        BaseRecordingSegment.__init__(self, **time_kwargs)
+
+        from pyarrow import memory_map
+        from pyarrow.ipc import RecordBatchFileReader
+
+        self._source = memory_map(filepath, "r")
+        self._reader = RecordBatchFileReader(self._source)
+        self.batch_len = batch_len
+
+        self._all_channel_ids = channel_ids
+
+    def get_num_samples(self) -> int:
+        """Returns the number of samples in this signal block
+
+        Returns:
+            SampleIndex : Number of samples in the signal block
+        """
+        return 18_000_000
+
+    def get_traces(
+        self,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list[int | str] | None = None,
+    ) -> np.ndarray:
+        if channel_indices is None:
+            channel_ids = list(self._all_channel_ids)
+        else:
+            channel_ids = list(self._all_channel_ids[channel_indices])
+
+        import pyarrow as pa
+
+        # Arrow saves data in "batch"es, in the time dimension, which we can
+        # load individually. We need to figure out which batches our requested
+        # samples are in.
+
+        batch_size = self.batch_len
+        first_batch_idx = start_frame // batch_size
+        last_batch_idx = (end_frame - 1) // batch_size
+
+        # This is super easy if our samples are in a single batch
+        if first_batch_idx == last_batch_idx:
+            batch = self._reader.get_batch(first_batch_idx)
+            local_start = start_frame % batch_size
+            sliced = batch.slice(local_start, end_frame - start_frame)
+            return np.column_stack([sliced.column(c).to_numpy(zero_copy_only=False) for c in channel_ids])
+
+        # Otherwise, we find all batches, then grab the data
+        slices = []
+        for b_idx in range(first_batch_idx, last_batch_idx + 1):
+            batch = self._reader.get_batch(b_idx)
+            b_start = b_idx * batch_size
+
+            local_start = max(0, start_frame - b_start)
+            local_end = min(batch.num_rows, end_frame - b_start)
+
+            slices.append(batch.slice(local_start, local_end - local_start).select(channel_ids))
+
+        table = pa.Table.from_batches(slices)
+        return np.column_stack([table[c].to_numpy(zero_copy_only=False) for c in channel_ids])
+
+
+class OpenEphysArrowRecording(BaseRecording):
+    """
+    Recording class for the openephys arrow format, from ___
+
+    We assume
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the directory where the zarr array is stored
+    sampling_frequency : float
+        The sampling frequency
+    stream_name : str, default: AmplifierData
+        The stream name of the data you want to load. By default, the ephys AP stream is
+        called "AmplifierData".
+    gain_to_uV : float or array-like, default: None
+        The gain to apply to the traces
+    offset_to_uV : float or array-like, default: None
+        The offset to apply to the traces
+    is_filtered : bool or None, default: None
+        If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    storage_options : dict or None: None
+        Storage options passed to the `zarr.open` function
+
+    Returns
+    -------
+    recording : ZarrArrayRecording
+        The recording Extractor
+    """
+
+    def __init__(
+        self,
+        file_path: str | Path,
+        sampling_frequency: float,
+        stream_name="AmplifierData",
+        gain_to_uV: float | np.ndarray | None = None,
+        offset_to_uV: float | np.ndarray | None = None,
+        is_filtered: bool | None = None,
+    ):
+        if importlib.util.find_spec("pyarrow") is None:
+            raise ImportError("You need to add `pyarrow` to your environment to open .arrow files")
+        else:
+            from pyarrow import memory_map
+            from pyarrow.ipc import RecordBatchFileReader
+
+        source = memory_map(file_path, "r")
+        reader = RecordBatchFileReader(source)
+
+        stream_names = reader.schema.names
+        channel_ids = [name for name in stream_names if stream_name in name]
+
+        if len(channel_ids) == 0:
+            raise ValueError(f"Cannot find any data with `stream_name` = {stream_name}")
+
+        first_batch = reader.get_batch(0)
+        batch_len = first_batch.num_rows
+
+        one_channel_index = stream_names.index(channel_ids[0])
+
+        # Arrow uses it's own DataType. For ints and floats, it converts to numpy dtype without issue
+        ephys_type = reader.schema[one_channel_index].type
+        numpy_type = np.dtype(str(ephys_type))
+
+        source.close()
+
+        BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=numpy_type)
+
+        rec_segment = OpenEphysArrowRecordingSegment(
+            file_path, batch_len=batch_len, sampling_frequency=sampling_frequency, channel_ids=np.array(channel_ids)
+        )
+
+        self.add_recording_segment(rec_segment)
+
+        if is_filtered is not None:
+            self.annotate(is_filtered=is_filtered)
+
+        if gain_to_uV is not None:
+            self.set_channel_gains(gain_to_uV)
+
+        if offset_to_uV is not None:
+            self.set_channel_offsets(offset_to_uV)
+
+        self._kwargs = {
+            "file_path": str(Path(file_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+            "num_channels": len(channel_ids),
+            "dtype": numpy_type.str,
+            "channel_ids": channel_ids,
+            "gain_to_uV": gain_to_uV,
+            "offset_to_uV": offset_to_uV,
+            "is_filtered": is_filtered,
+        }
+
+
+read_openephys_arrow = define_function_from_class(source_class=OpenEphysArrowRecording, name="read_openephys_arrow")
 
 
 def read_openephys(folder_path, **kwargs):
