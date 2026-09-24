@@ -1977,12 +1977,9 @@ class SortingAnalyzer:
 
             mergeable_unit_groups = []
             unmergeable_unit_groups = []
-            new_unit_ids_mergeable = [] if new_unit_ids is not None else None
-            for i, (merge_unit_group, mergeable) in enumerate(zip(merge_unit_groups, mergeable.values())):
+            for merge_unit_group, mergeable in zip(merge_unit_groups, mergeable.values()):
                 if mergeable:
                     mergeable_unit_groups.append(merge_unit_group)
-                    if new_unit_ids_mergeable is not None:
-                        new_unit_ids_mergeable.append(new_unit_ids[i])
                 else:
                     unmergeable_unit_groups.append(merge_unit_group)
 
@@ -1995,14 +1992,9 @@ class SortingAnalyzer:
                     warnings.warn(warning_message)
         else:
             mergeable_unit_groups = merge_unit_groups
-            new_unit_ids_mergeable = new_unit_ids
-
-        if len(mergeable_unit_groups) == 0:
-            warnings.warn("No mergeable unit groups found.")
-            return self if not return_new_unit_ids else (self, [])
 
         new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, mergeable_unit_groups, new_unit_ids_mergeable, new_id_strategy
+            self.unit_ids, mergeable_unit_groups, new_unit_ids, new_id_strategy
         )
         all_unit_ids = _get_ids_after_merging(self.unit_ids, mergeable_unit_groups, new_unit_ids=new_unit_ids)
 
