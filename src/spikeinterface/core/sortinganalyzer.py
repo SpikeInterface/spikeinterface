@@ -3408,6 +3408,8 @@ class AnalyzerExtension:
                             ext_data.loc[:, col] = ext_data_[col][:]
                     ext_data = ext_data.convert_dtypes()
                 elif "object" in ext_data_.attrs:
+                    if lazy:
+                        continue
                     ext_data = ext_data_[0]
                 else:
                     ext_data = ext_data_ if lazy else np.array(ext_data_[:])
