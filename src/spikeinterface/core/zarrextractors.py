@@ -453,6 +453,9 @@ class ZarrSpikeVector:
             arr["segment_index"][s0:s1] = seg_idx
         return arr if dtype is None else arr.astype(dtype)
 
+    def copy(self):
+        return np.copy(np.asarray(self))
+
 
 class ZarrSortingExtractor(BaseSorting):
     """
