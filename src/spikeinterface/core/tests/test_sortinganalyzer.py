@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import warnings
 import numpy as np
 
 import shutil
@@ -1270,6 +1271,28 @@ def test_merge_units_main_channel_id_disagreement():
         merged_analyzer.sorting.id_to_index(new_unit_ids[0])
     ]
     assert merged_main_channel_id == "chB"
+
+
+def test_no_mergeable_units_with_external_unit_ids(dataset):
+    """
+    Test that merge_units is robust against no mergeable units left
+    """
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs=dict(method="best_channels", num_channels=3)
+    )
+    merge_unit_groups = [["0", "1"], ["2", "3"]]
+    new_unit_ids = ["8", "9"]
+    with pytest.warns(UserWarning, match="No mergeable unit groups found."):
+        _, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups=merge_unit_groups,
+            new_unit_ids=new_unit_ids,
+            sparsity_overlap=1,
+            raise_error_if_overlap_fails=False,
+            return_new_unit_ids=True,
+        )
+    # Assert that no merges were made
+    assert len(new_unit_ids) == 0
 
 
 @pytest.mark.parametrize("unit_indices", [[4, 3, 2, 1, 0], [3, 1]])
