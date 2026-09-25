@@ -453,6 +453,9 @@ class ZarrSpikeVector:
             arr["segment_index"][s0:s1] = seg_idx
         return arr if dtype is None else arr.astype(dtype)
 
+    def copy(self):
+        return np.copy(np.asarray(self))
+
 
 class ZarrSortingExtractor(BaseSorting):
     """
@@ -559,6 +562,7 @@ class ZarrSortingExtractor(BaseSorting):
         folder_path: str | Path,
         overwrite: bool = False,
         storage_options: dict | None = None,
+        relative_to: str | Path | None = None,
         **kwargs,
     ):
         """
@@ -567,7 +571,7 @@ class ZarrSortingExtractor(BaseSorting):
         folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
         zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
         zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrSortingExtractor)
-        add_sorting_to_zarr_group(sorting, zarr_root, **kwargs)
+        add_sorting_to_zarr_group(sorting, zarr_root, relative_to=relative_to, **kwargs)
         return ZarrSortingExtractor(folder_path, storage_options=storage_options)
 
 
@@ -734,7 +738,9 @@ def add_properties_and_annotations(zarr_group: zarr.Group, recording_or_sorting:
     zarr_group.attrs["annotations"] = check_json(recording_or_sorting._annotations)
 
 
-def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kwargs):
+def add_sorting_to_zarr_group(
+    sorting: BaseSorting, zarr_group: zarr.Group, relative_to: str | Path | None = None, **kwargs
+):
     """
     Add a sorting extractor to a zarr group.
 
@@ -748,6 +754,14 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
         Other arguments passed to the zarr compressor
     """
     from numcodecs import Delta
+
+    if sorting.check_serializability("json"):
+        zarr_group.attrs["provenance"] = check_json(sorting.to_dict(recursive=True, relative_to=relative_to))
+    else:
+        warnings.warn(
+            "The sorting provenance is not serializable! " "The sorting provenance link will be lost for future load"
+        )
+        zarr_group.attrs["provenance"] = None
 
     num_segments = sorting.get_num_segments()
     zarr_group.attrs["sampling_frequency"] = float(sorting.sampling_frequency)
@@ -777,12 +791,23 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
     add_properties_and_annotations(zarr_group, sorting)
 
 
-def add_recording_to_zarr_group(recording: BaseRecording, zarr_group: zarr.Group, verbose=False, dtype=None, **kwargs):
+def add_recording_to_zarr_group(
+    recording: BaseRecording,
+    zarr_group: zarr.Group,
+    verbose=False,
+    dtype=None,
+    relative_to: str | Path | None = None,
+    **kwargs,
+):
     zarr_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
     if recording.check_serializability("json"):
-        zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True))
+        zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True, relative_to=relative_to))
     else:
+        warnings.warn(
+            "The recording provenance is not serializable! "
+            "The recording provenance link will be lost for future load"
+        )
         zarr_group.attrs["provenance"] = None
 
     # save data (done the subclass)
