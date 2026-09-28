@@ -841,19 +841,19 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
     chunks = None
     shards = None
     target_chunk_size_bytes = kwargs.get("target_chunk_size_bytes")
-    if target_chunk_size_bytes is not None:
-        spike_num_bytes = spikes.dtype.itemsize
-        target_chunk_size = target_chunk_size_bytes // spike_num_bytes
-        chunks = (target_chunk_size,)
-        shard_factor = kwargs.get("shard_factor")
-        if shard_factor is not None:
-            shards = (target_chunk_size * shard_factor,)
-    else:
-        chunks = (len(spikes),)
 
     # We need https://github.com/zarr-developers/zarr-python/pull/3996 released before being able to
     # access the structured array lazily. Until then, we always materialise it.
     # For now, let's keep the old by field implementation
+    # if target_chunk_size_bytes is not None:
+    #     spike_num_bytes = spikes.dtype.itemsize
+    #     target_chunk_size = target_chunk_size_bytes // spike_num_bytes
+    #     chunks = (target_chunk_size,)
+    #     shard_factor = kwargs.get("shard_factor")
+    #     if shard_factor is not None:
+    #         shards = (target_chunk_size * shard_factor,)
+    # else:
+    #     chunks = (len(spikes),)
     # spikes = zarr_group.create_array(
     #     name="spikes",
     #     data=spikes,
@@ -861,11 +861,21 @@ def add_sorting_to_zarr_group(sorting: BaseSorting, zarr_group: zarr.Group, **kw
     #     shards=shards,
     #     **codec_kwargs
     # )
-    # save sub fields
+
+    # Save sub fields: in this case chunks and shards are set per field
     spikes_group = zarr_group.create_group(name="spikes")
     spikes = sorting.to_spike_vector()
     for field in spikes.dtype.fields:
         if field != "segment_index":
+            if target_chunk_size_bytes is not None:
+                spike_num_bytes = spikes[field].dtype.itemsize
+                target_chunk_size = target_chunk_size_bytes // spike_num_bytes
+                chunks = (target_chunk_size,)
+                shard_factor = kwargs.get("shard_factor")
+                if shard_factor is not None:
+                    shards = (target_chunk_size * shard_factor,)
+            else:
+                chunks = (len(spikes),)
             codec_kwargs = build_codec_pipeline(filters=Delta(dtype=spikes[field].dtype.str), compressors=compressor)
             spikes_group.create_array(name=field, data=spikes[field], chunks=chunks, shards=shards, **codec_kwargs)
 
