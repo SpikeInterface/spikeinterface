@@ -730,7 +730,8 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        _ = sorting.save(folder=sorting_folder, relative_to=folder)
+        mmap_mode = "r" if lazy else None
+        sorting_cached = sorting.save(folder=sorting_folder, relative_to=folder, mmap_mode=mmap_mode)
 
         # Save sparsity
         if sparsity is not None:
@@ -765,7 +766,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting,
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="binary_folder",
@@ -1031,9 +1032,7 @@ class SortingAnalyzer:
         backend_options: dict | None,
         lazy: bool = False,
     ) -> "SortingAnalyzer":
-        # used by create and save_as
-
-        from .zarrextractors import add_sorting_to_zarr_group
+        from .zarrextractors import add_sorting_to_zarr_group, ZarrSortingExtractor
 
         is_remote = is_path_remote(folder)
         if not is_remote:
@@ -1063,6 +1062,7 @@ class SortingAnalyzer:
         relative_to = None if is_remote else folder
         # Save the sorting output
         add_sorting_to_zarr_group(sorting, sorting_group, relative_to=folder, **saving_options)
+        sorting_cached = ZarrSortingExtractor(folder / "sorting", lazy_spike_vector=lazy)
 
         # Save sparsity
         if sparsity is not None:
@@ -1106,7 +1106,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting,
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="zarr",
