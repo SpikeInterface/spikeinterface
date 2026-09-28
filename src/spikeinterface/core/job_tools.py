@@ -21,7 +21,9 @@ from spikeinterface.core.core_tools import (
 )
 
 _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel processing:
+
     * chunk_duration or chunk_size or chunk_memory or total_memory
+
         - chunk_size : int
             Number of samples per chunk
         - chunk_memory : str
@@ -30,12 +32,15 @@ _shared_job_kwargs_doc = """**job_kwargs : keyword arguments for parallel proces
             Total memory usage (e.g. "500M", "2G")
         - chunk_duration : str or float or None
             Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
+
     * n_jobs : int | float
         Number of workers that will be requested during multiprocessing. Note that
         the OS determines how this is distributed, but for convenience one can use
+
         * -1 the number of workers is the same as the number of cores available to this
           process, respecting CPU affinity restrictions where possible
         * float between 0 and 1 uses a fraction of that core count
+
     * progress_bar : bool
         If True, a progress bar is printed
     * mp_context : "fork" | "spawn" | None, default: None

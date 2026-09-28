@@ -149,8 +149,8 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # Compute time_vector or t_start, following the pattern from DecimateRecordingSegment.
         # Do not use BasePreprocessorSegment because we have to reset the sampling rate!
-        if parent_recording_segment._time_vector is not None:
-            parent_tv = np.asarray(parent_recording_segment._time_vector)
+        if parent_recording_segment.has_time_vector():
+            parent_tv = np.asarray(parent_recording_segment.get_times())
 
             # Detect gaps in the parent time vector.
             # A true gap means at least one dropped sample, so dt >= 2 * expected_dt.
@@ -215,7 +215,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             ]
             time_vector = np.concatenate(tv_pieces) if self._has_gaps else tv_pieces[0]
 
-            BaseRecordingSegment.__init__(self, sampling_frequency=None, t_start=None, time_vector=time_vector)
+            BaseRecordingSegment.__init__(self, sampling_frequency=resample_rate, t_start=None, time_vector=time_vector)
         else:
             BaseRecordingSegment.__init__(
                 self, sampling_frequency=resample_rate, t_start=parent_recording_segment._t_start
