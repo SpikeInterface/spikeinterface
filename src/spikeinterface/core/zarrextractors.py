@@ -759,7 +759,7 @@ def add_sorting_to_zarr_group(
         zarr_group.attrs["provenance"] = check_json(sorting.to_dict(recursive=True, relative_to=relative_to))
     else:
         warnings.warn(
-            "The sorting provenance is not serializable! " "The sorting provenance link will be lost for future load"
+            "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
         )
         zarr_group.attrs["provenance"] = None
 
