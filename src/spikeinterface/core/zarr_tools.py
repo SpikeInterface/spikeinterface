@@ -54,7 +54,7 @@ def adjust_chunks_shards_and_job_kwargs(
     else:
         chunk_size = ensure_chunk_size(time_series, **job_kwargs)
         chunks = (
-            (chunk_size,) + extra_chunks if extra_chunks is not None else (chunk_size, time_series.get_shape(0)[1:])
+            (chunk_size,) + extra_chunks if extra_chunks is not None else (chunk_size,) + time_series.get_shape(0)[1:]
         )
 
     if shards is not None:
