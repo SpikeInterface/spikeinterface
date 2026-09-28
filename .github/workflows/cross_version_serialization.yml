@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - id: set
         env:
           # Support floor: oldest minor to test. Below this, installs fail on the CI
@@ -86,12 +86,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           enable-cache: false
 
       - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
@@ -106,7 +106,7 @@ jobs:
           else
             spec="spikeinterface[full]==$SI_VERSION"
           fi
-          uv run --isolated --no-project --python 3.11 \
+          uv run --isolated --no-project --python 3.12 \
             --with "$spec" \
             python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
