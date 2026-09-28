@@ -92,6 +92,7 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_binary")
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -138,6 +139,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
 
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_zarr")
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
 
