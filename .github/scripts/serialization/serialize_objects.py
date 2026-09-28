@@ -36,20 +36,26 @@ for entry in OBJECTS:
         check_extra_data = None
     for fmt in entry["formats"]:
         dest = out_dir / f"{entry['id']}{FIXTURE_SUFFIX[fmt]}"
-        if fmt == "json":
-            obj.dump_to_json(dest)
-        elif fmt == "pickle":
-            obj.dump_to_pickle(dest)
-        elif fmt == "binary":
-            obj.save(folder=dest, format="binary", overwrite=True)
-        elif fmt == "binary_parallel":
-            obj.save(folder=dest, format="binary", overwrite=True, n_jobs=2)
-        elif fmt == "numpy_folder":
-            obj.save(folder=dest, format="numpy_folder", overwrite=True)
-        elif fmt == "zarr":
-            obj.save(folder=dest, format="zarr", overwrite=True)
-        elif fmt == "zarr_parallel":
-            obj.save(folder=dest, format="zarr", overwrite=True, n_jobs=2)
+        if isinstance(obj, BaseExtractor):
+            if fmt == "json":
+                obj.dump_to_json(dest)
+            elif fmt == "pickle":
+                obj.dump_to_pickle(dest)
+            elif fmt == "binary":
+                obj.save(folder=dest, format="binary", overwrite=True)
+            elif fmt == "binary_parallel":
+                obj.save(folder=dest, format="binary", overwrite=True, n_jobs=2)
+            elif fmt == "numpy_folder":
+                obj.save(folder=dest, format="numpy_folder", overwrite=True)
+            elif fmt == "zarr":
+                obj.save(folder=dest, format="zarr", overwrite=True)
+            elif fmt == "zarr_parallel":
+                obj.save(folder=dest, format="zarr", overwrite=True, n_jobs=2)
+        elif isinstance(obj, SortingAnalyzer):
+            if dest.is_dir():
+                import shutil
+                shutil.rmtree(dest)
+            obj.save_as(folder=dest, format=fmt)
         print(f"  wrote {dest.name} ({fmt})")
     if check_extra_data is not None:
         json_dest = out_dir / f"{entry['id']}.json"
