@@ -41,11 +41,7 @@ psd_hf_threshold : float, default: 0.02
     For coherence+psd - an absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
     Traces are retrieved with ``return_in_uV=True`` before computing the PSD, so this
     threshold refers to microvolts regardless of the stored sample units. The recording
-    must have correct gains and offsets for conversion to microvolts. For example, for
-    samples stored in volts, set channel gains to 1e6 and offsets to 0; for samples
-    already in microvolts, use gains of 1 and offsets of 0. In both cases a threshold
-    of 0.02 means 0.02 uV^2/Hz. Setting a gain of 1 on volt-valued samples would instead
-    underestimate their PSD in microvolt units by a factor of 1e12.
+    must have correct gains and offsets for conversion to microvolts.
     Channels with average power at >80% Nyquist larger than this threshold will be labeled as noise.
     IBL suggests 0.02 for AP data and 1.4 for LFP data.
 dead_channel_threshold : float, default: -0.5
