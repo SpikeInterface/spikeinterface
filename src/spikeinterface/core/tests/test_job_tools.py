@@ -58,7 +58,7 @@ def test_get_usable_cpu_count_fallback(monkeypatch, os_func_name, return_value, 
     assert get_usable_cpu_count() == expected
 
 
-def test_ensure_n_jobs():
+def test_ensure_n_jobs(create_cache_folder):
     recording = generate_recording()
 
     n_jobs = ensure_n_jobs(recording)
@@ -71,7 +71,8 @@ def test_ensure_n_jobs():
     assert n_jobs == 1
 
     # check serializable
-    n_jobs = ensure_n_jobs(recording.save(), n_jobs=-1)
+    folder = create_cache_folder / "rec_test_ensure_n_jobs"
+    n_jobs = ensure_n_jobs(recording.save(folder=folder), n_jobs=-1)
     assert n_jobs > 1
 
 
@@ -348,13 +349,18 @@ def test_get_best_job_kwargs():
 
 
 if __name__ == "__main__":
+    import tempfile
+    from pathlib import Path
+
+    tmp_path = Path(tempfile.mkdtemp())
+
     # test_divide_segment_into_chunks()
-    # test_ensure_n_jobs()
+    test_ensure_n_jobs(tmp_path)
     # test_ensure_chunk_size()
     # test_ChunkExecutor()
     # test_fix_job_kwargs()
     # test_split_job_kwargs()
-    test_worker_index()
+    # test_worker_index()
     # test_get_best_job_kwargs()
 
     # quick_becnhmark()

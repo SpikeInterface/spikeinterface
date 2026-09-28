@@ -21,7 +21,7 @@ from .recording_tools import get_noise_levels
 from .template import Templates
 from .sorting_tools import random_spikes_selection, select_sorting_periods_mask, spike_vector_to_indices
 from .job_tools import fix_job_kwargs, split_job_kwargs
-from .core_tools import ms_to_samples
+from .core_tools import ms_to_samples, slice_rows, materialize_array
 
 
 class ComputeRandomSpikes(AnalyzerExtension):
@@ -80,7 +80,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
 
         selected_mask = np.zeros(spikes.size, dtype=bool)
@@ -96,7 +96,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
         new_data = dict()
         random_spikes_indices = self.data["random_spikes_indices"]
         if keep_mask is None:
-            new_data["random_spikes_indices"] = random_spikes_indices.copy()
+            new_data["random_spikes_indices"] = materialize_array(random_spikes_indices)
         else:
             spikes = self.sorting_analyzer.sorting.to_spike_vector()
             selected_mask = np.zeros(spikes.size, dtype=bool)
@@ -106,7 +106,7 @@ class ComputeRandomSpikes(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         new_data = dict()
-        new_data["random_spikes_indices"] = self.data["random_spikes_indices"].copy()
+        new_data["random_spikes_indices"] = materialize_array(self.data["random_spikes_indices"])
         return new_data
 
     def _get_data(self):
@@ -247,13 +247,13 @@ class ComputeWaveforms(AnalyzerExtension):
         # random_spikes_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[random_spikes_indices]
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
-        new_data["waveforms"] = self.data["waveforms"][keep_spike_mask, :, :]
+        new_data["waveforms"] = slice_rows(self.data["waveforms"], keep_spike_mask)
 
         return new_data
 
@@ -275,12 +275,17 @@ class ComputeWaveforms(AnalyzerExtension):
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
-            waveforms = waveforms[valid]
+            # slice_rows already returns an independent, materialized array
+            waveforms = slice_rows(waveforms, valid)
         else:
-            waveforms = waveforms.copy()
+            waveforms = materialize_array(waveforms)
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
+            if keep_mask is None:
+                # about to mutate waveforms in place below (sparse realignment): we need a genuinely
+                # independent, writable buffer rather than sharing the original reference/zarr handle
+                waveforms = materialize_array(waveforms)
             # we need a realignement inside each group because we take the channel intersection sparsity
             for group_ids in merge_unit_groups:
                 group_indices = self.sorting_analyzer.sorting.ids_to_indices(group_ids)
@@ -301,7 +306,7 @@ class ComputeWaveforms(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only affects random spikes, not waveforms
-        new_data = dict(waveforms=self.data["waveforms"].copy())
+        new_data = dict(waveforms=materialize_array(self.data["waveforms"]))
         return new_data
 
     def get_waveforms_one_unit(self, unit_id, force_dense: bool = False):
@@ -328,7 +333,7 @@ class ComputeWaveforms(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         spike_mask = some_spikes["unit_index"] == unit_index
-        wfs = waveforms[spike_mask, :, :]
+        wfs = slice_rows(waveforms, spike_mask)
 
         if self.sorting_analyzer.sparsity is not None:
             chan_inds = self.sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
@@ -526,7 +531,7 @@ class ComputeTemplates(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
-            wfs = waveforms[spike_mask, :, :]
+            wfs = slice_rows(waveforms, spike_mask)
             if wfs.shape[0] == 0:
                 continue
 
@@ -562,11 +567,11 @@ class ComputeTemplates(AnalyzerExtension):
         return nafter
 
     def _select_units_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
 
         new_data = dict()
         for key, arr in self.data.items():
-            new_data[key] = arr[keep_unit_indices, :, :]
+            new_data[key] = slice_rows(arr, keep_unit_indices)
 
         return new_data
 
@@ -575,7 +580,7 @@ class ComputeTemplates(AnalyzerExtension):
 
         new_data = {}
         for key, arr in self.data.items():
-            new_data[key] = arr[:, :, keep_channel_indices]
+            new_data[key] = slice_rows(arr, keep_channel_indices, axis=2)
 
         return new_data
 
@@ -600,9 +605,9 @@ class ComputeTemplates(AnalyzerExtension):
                     for count, merge_unit_id in enumerate(merge_group):
                         weights[count] = counts[merge_unit_id]
                     weights /= weights.sum()
-                    new_data[key][unit_index] = (arr[keep_unit_indices, :, :] * weights[:, np.newaxis, np.newaxis]).sum(
-                        0
-                    )
+                    new_data[key][unit_index] = (
+                        slice_rows(arr, keep_unit_indices) * weights[:, np.newaxis, np.newaxis]
+                    ).sum(0)
                     if new_sorting_analyzer.sparsity is not None:
                         chan_ids = new_sorting_analyzer.sparsity.unit_id_to_channel_indices[unit_id]
                         mask = ~np.isin(np.arange(arr.shape[2]), chan_ids)
@@ -625,7 +630,7 @@ class ComputeTemplates(AnalyzerExtension):
             unsplit_unit_ids = [unit_id for unit_id in self.sorting_analyzer.unit_ids if unit_id not in split_units]
             new_indices = np.array([new_analyzer_unit_ids.index(unit_id) for unit_id in unsplit_unit_ids])
             old_indices = self.sorting_analyzer.sorting.ids_to_indices(unsplit_unit_ids)
-            new_array[new_indices, ...] = arr[old_indices, ...]
+            new_array[new_indices, ...] = slice_rows(arr, old_indices)
 
             for split_unit_id, new_splits in zip(split_units, new_unit_ids):
                 if new_sorting_analyzer.has_extension("waveforms"):
@@ -809,26 +814,32 @@ class ComputeNoiseLevels(AnalyzerExtension):
 
     def _set_params(self, **noise_level_params):
         params = noise_level_params.copy()
+        # ensure that random_slices_kwargs is always present and has a seed for reproducibility
+        if "random_slices_kwargs" not in params:
+            params["random_slices_kwargs"] = dict()
+        if params["random_slices_kwargs"].get("seed") is None:
+            from spikeinterface.core.core_tools import _ensure_seed
+
+            params["random_slices_kwargs"]["seed"] = _ensure_seed(params["random_slices_kwargs"].get("seed"))
         return params
 
     def _select_units_extension_data(self, unit_ids):
         # this does not depend on units
-        return self.data
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _select_channels_extension_data(self, channel_ids):
         # this does not depend on channels
         channel_indices = self.sorting_analyzer.channel_ids_to_indices(channel_ids)
-        return dict(noise_levels=self.data["noise_levels"][channel_indices])
+        return dict(noise_levels=slice_rows(self.data["noise_levels"], channel_indices))
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
-        # this does not depend on units
-        return self.data.copy()
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # this does not depend on units
-        return self.data.copy()
+        return dict(noise_levels=materialize_array(self.data["noise_levels"]))
 
     def _run(self, verbose=False, **job_kwargs):
         self.data["noise_levels"] = get_noise_levels(
@@ -1541,13 +1552,23 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
     def _run(self, verbose=False, **job_kwargs):
         from spikeinterface.core.node_pipeline import run_node_pipeline
 
-        # TODO: should we save directly to npy in binary_folder format / or to zarr?
-        # if self.sorting_analyzer.format == "binary_folder":
-        #     gather_mode = "npy"
-        #     extension_folder = self.sorting_analyzer.folder / "extenstions" / self.extension_name
-        #     gather_kwargs = {"folder": extension_folder}
-        gather_mode = "memory"
-        gather_kwargs = {}
+        # gather results directly to the final on-disk location (one npy file / zarr dataset per
+        # nodepipeline variable) to avoid an extra in-memory copy. This is only done when we are
+        # actually saving to a disk format (see AnalyzerExtension.run()); otherwise gather in memory.
+        gather_to_disk = self._save_to_disk and self.format in ("binary_folder", "zarr")
+        if gather_to_disk:
+            extension_folder = self.sorting_analyzer.folder / "extensions" / self.extension_name
+            names = self.nodepipeline_variables
+            if self.format == "binary_folder":
+                gather_mode = "npy"
+                dest = [extension_folder / f"{name}.npy" for name in names]
+            else:
+                gather_mode = "zarr"
+                dest = [extension_folder / name for name in names]
+        else:
+            gather_mode = "memory"
+            dest = None
+            names = None
 
         job_kwargs = fix_job_kwargs(job_kwargs)
         nodes = self.get_pipeline_nodes()
@@ -1557,7 +1578,8 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             job_kwargs=job_kwargs,
             job_name=self.extension_name,
             gather_mode=gather_mode,
-            gather_kwargs=gather_kwargs,
+            dest=dest,
+            names=names,
             verbose=False,
         )
         if isinstance(data, tuple):
@@ -1608,13 +1630,18 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
 
         all_data = self.data[return_data_name]
+        # data gathered directly into a zarr store (e.g. by the node pipeline) is kept as a
+        # zarr.Array handle. On a non-lazy analyzer we materialize it to a numpy array (this mirrors
+        # the non-lazy load convention). A memmap is an np.ndarray subclass so it is left untouched.
+        if not self.sorting_analyzer._lazy and not isinstance(all_data, np.ndarray):
+            all_data = np.asarray(all_data)
         keep_mask = None
         if periods is not None:
             keep_mask = select_sorting_periods_mask(
                 self.sorting_analyzer.sorting,
                 periods,
             )
-            all_data = all_data[keep_mask]
+            all_data = slice_rows(all_data, keep_mask)
             # since we have the mask already, we can use it directly to avoid double computation
             spike_vector = self.sorting_analyzer.sorting.to_spike_vector(concatenated=True)
             sliced_spike_vector = spike_vector[keep_mask]
@@ -1628,7 +1655,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
 
         if outputs == "numpy":
             if copy and not self.sorting_analyzer._lazy:
-                return all_data.copy()  # return a copy to avoid modification
+                return materialize_array(all_data)
             else:
                 return all_data
         elif outputs == "by_unit":
@@ -1646,7 +1673,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
                 data_by_units[segment_index] = {}
                 for unit_id in unit_ids:
                     inds = spike_indices[segment_index][unit_id]
-                    data_by_units[segment_index][unit_id] = all_data[inds]
+                    data_by_units[segment_index][unit_id] = slice_rows(all_data, inds)
 
             if concatenated:
                 data_by_units_concatenated = {
@@ -1660,7 +1687,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             raise ValueError(f"Wrong .get_data(outputs={outputs}); possibilities are `numpy` or `by_unit`")
 
     def _select_units_extension_data(self, unit_ids):
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
 
         spikes = self.sorting_analyzer.sorting.to_spike_vector()
         keep_spike_mask = np.isin(spikes["unit_index"], keep_unit_indices)
@@ -1668,7 +1695,7 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         new_data = dict()
         for data_name in self.nodepipeline_variables:
             if self.data.get(data_name) is not None:
-                new_data[data_name] = self.data[data_name][keep_spike_mask]
+                new_data[data_name] = slice_rows(self.data[data_name], keep_spike_mask)
 
         return new_data
 
@@ -1679,15 +1706,19 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
         for data_name in self.nodepipeline_variables:
             if self.data.get(data_name) is not None:
                 if keep_mask is None:
-                    new_data[data_name] = self.data[data_name].copy()
+                    new_data[data_name] = materialize_array(self.data[data_name])
                 else:
-                    new_data[data_name] = self.data[data_name][keep_mask]
+                    new_data[data_name] = slice_rows(self.data[data_name], keep_mask)
 
         return new_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only changes random spikes assignments
-        return self.data.copy()
+        new_data = dict()
+        for data_name in self.nodepipeline_variables:
+            if self.data.get(data_name) is not None:
+                new_data[data_name] = materialize_array(self.data[data_name])
+        return new_data
 
 
 def _update_data_after_merge_or_split(old_analyzer, new_analyzer, old_arr, new_sub_arr, new_unit_ids):

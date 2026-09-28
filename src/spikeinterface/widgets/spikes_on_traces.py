@@ -37,8 +37,6 @@ class SpikesOnTracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -74,7 +72,6 @@ class SpikesOnTracesWidget(BaseWidget):
         unit_colors=None,
         sparsity=None,
         mode="auto",
-        return_scaled=None,
         return_in_uV=False,
         cmap="RdBu",
         show_channel_ids=False,
@@ -90,16 +87,6 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FurtureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
-
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(sorting_analyzer, "unit_locations")
 

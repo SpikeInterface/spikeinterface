@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 from itertools import chain
 import importlib.util
-
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_dense_templates_array
 from spikeinterface.core.sparsity import ChannelSparsity
@@ -61,7 +61,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
+        new_similarity = slice_rows(self.data["similarity"], unit_indices)
+        new_similarity = new_similarity[:, unit_indices]
         return dict(similarity=new_similarity)
 
     def _merge_extension_data(
@@ -92,7 +93,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             other_sparsity=new_sorting_analyzer.sparsity,
         )
 
-        old_similarity = self.data["similarity"]
+        old_similarity = materialize_array(self.data["similarity"])
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         n = all_new_unit_ids.size
@@ -105,7 +106,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
         # copy old similarity
         for old_ind1, unit_ind1 in zip(old_units_inds, sub_units_inds):
-            s = self.data["similarity"][old_ind1, old_units_inds]
+            s = old_similarity[old_ind1, old_units_inds]
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
 
