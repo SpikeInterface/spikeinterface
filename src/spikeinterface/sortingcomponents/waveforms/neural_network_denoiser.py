@@ -1,6 +1,8 @@
 import json
+import warnings
 import importlib.util
-from typing import List, Optional
+from pathlib import Path
+import numpy as np
 
 if importlib.util.find_spec("torch") is not None:
     import torch
@@ -11,86 +13,209 @@ else:
     HAVE_TORCH = False
 
 if importlib.util.find_spec("huggingface_hub") is not None:
-    from huggingface_hub import hf_hub_download
+    from huggingface_hub import hf_hub_download, list_repo_files
 
-    HAVE_HUGGINFACE = True
+    HAVE_HUGGINGFACE = True
 else:
-    HAVE_HUGGINFACE = False
+    HAVE_HUGGINGFACE = False
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class SingleChannelToyDenoiser(WaveformsNode):
+class SingleChannelDenoiser(WaveformsNode):
+    """
+    Denoiser for temporal dimension of waveforms. It takes as input a WaveformsNode and outputs denoised waveforms.
+
+    Parameters
+    ----------
+    recording: BaseRecording
+        The recording object.
+    return_output: bool, default: True
+        Whether to return the output of the node.
+    parents: list of PipelineNode
+        The parent nodes of this node. Must include a WaveformsNode.
+    model_folder: str | None, default: None
+        Path to a folder containing the model .pt file and a .json file with temporal parameters
+    repo_id: str | None, default: None
+        Huggingface repo id to download the model from. Must contain a .pt file and a .json file with temporal parameters
+    model_name: str | None, default: None
+        Name of the model to use. If there are multiple .pt files in the model_folder, this specifies which one to use.
+    model: nn.Module | None, default: None
+        The instantiated torch model to use.
+        If None, the model will be loaded from model_folder or repo_id.
+        Note that in this case the code can only check for the shape of the input layer, not for the correct
+        waveform temporal parameters.
+    """
+
     def __init__(
-        self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[PipelineNode]] = None
+        self,
+        recording: BaseRecording,
+        return_output: bool = True,
+        parents: list[PipelineNode] | None = None,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+        model_name: str | None = None,
+        model: "nn.Module | None" = None,
     ):
-        assert HAVE_TORCH, "To use the SingleChannelToyDenoiser you need to install torch"
-        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
-        if waveform_extractor is None:
+        assert HAVE_TORCH, "To use the SingleChannelDenoiser you need to install torch"
+        waveform_node = find_parent_of_type(parents, WaveformsNode)
+        if waveform_node is None:
             raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
 
         super().__init__(
             recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
+            waveform_node.ms_before,
+            waveform_node.ms_after,
             return_output=return_output,
             parents=parents,
         )
+        if model is None:
+            if model_folder is None and repo_id is None:
+                raise ValueError("You need to specify either model_folder or repo_id")
+            if model_folder is not None and repo_id is not None:
+                raise ValueError("You cannot specify both model_folder and repo_id")
+            spike_size = waveform_node.nbefore + waveform_node.nafter
+            # Load model
+            try:
+                self.denoiser, model_relative_path = self.load_model(
+                    model_folder=model_folder, repo_id=repo_id, model_name=model_name, spike_size=spike_size
+                )
+            except RuntimeError as e:
+                raise ValueError(
+                    f"Failed to load model. Check consistency between waveform node shapes and model output layer"
+                )
 
-        self.assert_model_and_waveform_temporal_match(waveform_extractor)
+            self.assert_model_and_waveform_temporal_match(
+                waveform_node, model_folder=model_folder, repo_id=repo_id, model_relative_path=model_relative_path
+            )
+        else:
+            self.denoiser = model
+            # Check output model to ensure it matches the expected waveform size
+            expected_output_size = waveform_node.nbefore + waveform_node.nafter
+            model_output_size = model.out.out_features
+            if model_output_size != expected_output_size:
+                raise ValueError(
+                    f"Model output size {model_output_size} does not match expected output size {expected_output_size}"
+                )
 
-        # Load model
-        self.denoiser = self.load_model()
-
-    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):
+    def assert_model_and_waveform_temporal_match(
+        self,
+        waveform_node: WaveformsNode,
+        model_relative_path: str,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+    ):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """
         # Extract temporal parameters from the waveform extractor
-        waveforms_ms_before = waveform_extractor.ms_before
-        waveforms_ms_after = waveform_extractor.ms_after
-        waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
+        waveforms_ms_before = waveform_node.ms_before
+        waveforms_ms_after = waveform_node.ms_after
+        waveforms_sampling_frequency = waveform_node.recording.sampling_frequency
 
-        # Load the model temporal parameters
-        repo_id = "SpikeInterface/test_repo"
-        subfolder = "mearec_toy_model"
-        filename = "params.json"
+        json_file_path = None
+        if model_folder is not None:
+            json_file_path = Path(model_folder) / str(model_relative_path).replace(".pt", ".json")
+        else:
+            try:
+                filename = str(model_relative_path).replace(".pt", ".json")
+                json_file_path = hf_hub_download(repo_id=repo_id, filename=filename)
+            except Exception as e:
+                warnings.warn(f"Could not download json file from repo {repo_id}. Model might misbehave")
 
-        json_file_path = hf_hub_download(repo_id=repo_id, subfolder=subfolder, filename=filename)
+        if json_file_path is None or not Path(json_file_path).exists():
+            warnings.warn(f"Could not find json file for model {model_relative_path}. Model might misbehave")
+            return
+
         # Load the json file in the json_file_path_variable
         with open(json_file_path, "r") as json_file:
-            peak_interval_dict = json.load(json_file)
+            model_info = json.load(json_file)
 
-        model_ms_before = peak_interval_dict["ms_before"]
-        model_ms_after = peak_interval_dict["ms_after"]
-        model_sampling_frequency = peak_interval_dict["sampling_frequency"]
+        model_ms_before = model_info.get("ms_before")
+        model_ms_after = model_info.get("ms_after")
+        model_sampling_frequency = model_info.get("sampling_frequency")
+        model_num_samples = model_info.get("num_samples")
+        model_nbefore = model_info.get("nbefore")
 
-        ms_before_mismatch = waveforms_ms_before != model_ms_before
-        ms_after_missmatch = waveforms_ms_after != model_ms_after
-        sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
-        if ms_before_mismatch or ms_after_missmatch or sampling_frequency_mismatch:
-            exception_string = (
-                "Model and waveforms mismatch \n"
-                f"{model_ms_before=} and {waveforms_ms_after=} \n"
-                f"{model_ms_after=} and {waveforms_ms_after=} \n"
-                f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
-            )
-            raise ValueError(exception_string)
+        if model_num_samples is not None:
+            if model_num_samples != waveform_node.nbefore + waveform_node.nafter:
+                raise ValueError(
+                    f"Model num_samples {model_num_samples} does not match waveform extractor num_samples {waveform_node.num_samples}"
+                )
+        if model_ms_before is not None:
+            if abs(model_ms_before - waveforms_ms_before) > 0.1:
+                raise ValueError(
+                    f"Difference between model ms_before {model_ms_before} and waveform extractor ms_before {waveforms_ms_before} is too large"
+                )
+        if model_ms_after is not None:
+            if abs(model_ms_after - waveforms_ms_after) > 0.1:
+                raise ValueError(
+                    f"Difference between model ms_after {model_ms_after} and waveform extractor ms_after {waveforms_ms_after} is too large"
+                )
+        if model_sampling_frequency is not None:
+            if not np.isclose(model_sampling_frequency, waveforms_sampling_frequency, rtol=1e-3):
+                raise ValueError(
+                    f"Difference between sampling_frequency {model_sampling_frequency} does not match waveform extractor sampling_frequency {waveforms_sampling_frequency}"
+                )
+        if model_nbefore is not None:
+            if abs(model_nbefore - waveform_node.nbefore) > 5:
+                raise ValueError(
+                    f"Difference between model nbefore {model_nbefore} and waveform extractor nbefore {waveform_node.nbefore} is too large"
+                )
 
-    def load_model(self):
-        assert HAVE_HUGGINFACE, "To download models from Hugginface you need to install huggingface_hub"
+    @staticmethod
+    def load_model(
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+        model_name: str | None = None,
+        spike_size: int = 121,
+    ):
+        if model_folder is not None:
+            pt_files = [f for f in Path(model_folder).iterdir("") if f.suffix == ".pt"]
+            if len(pt_files) == 1:
+                model_path = pt_files[0]
+            else:
+                if model_name is not None:
+                    raise ValueError(f"Multiple models found in {model_folder}. Please specify model_name")
+                assert (
+                    model_name is not None
+                ), "If there are multiple .pt files in the repo, you need to specify the model_name"
+                filename = [f for f in pt_files if model_name in f]
+                if len(filename) == 0:
+                    raise ValueError(f"Model {model_name} not found in repo {repo_id}")
+                elif len(filename) > 1:
+                    raise ValueError(f"Multiple models found for {model_name} in repo {repo_id}: {filename}")
+                else:
+                    model_path = filename[0]
+            model_relative_path = model_path.relative_to(model_folder)
+        else:
+            assert HAVE_HUGGINGFACE, "To download models from Huggingface you need to install huggingface_hub"
 
-        repo_id = "SpikeInterface/test_repo"
-        subfolder = "mearec_toy_model"
-        filename = "toy_model_marec.pt"
+            repo_filenames = list_repo_files(repo_id=repo_id)
 
-        model_path = hf_hub_download(repo_id=repo_id, subfolder=subfolder, filename=filename)
-        denoiser = SingleChannel1dCNNDenoiser(pretrained_path=model_path, spike_size=128)
+            pt_files = [f for f in repo_filenames if f.endswith(".pt")]
+            if len(pt_files) == 1:
+                filename = pt_files[0]
+            else:
+                assert (
+                    model_name is not None
+                ), "If there are multiple .pt files in the repo, you need to specify the model_name"
+                filename = [f for f in pt_files if model_name in f]
+                if len(filename) == 0:
+                    raise ValueError(f"Model {model_name} not found in repo {repo_id}")
+                elif len(filename) > 1:
+                    raise ValueError(f"Multiple models found for {model_name} in repo {repo_id}: {filename}")
+                else:
+                    filename = filename[0]
+            model_path = hf_hub_download(repo_id=repo_id, filename=filename)
+            model_relative_path = filename
+
+        denoiser = SingleChannel1dCNNDenoiser(pretrained_path=model_path, spike_size=spike_size)
         denoiser = denoiser.load()
-
-        return denoiser
+        model_name = Path(model_path).stem
+        return denoiser, model_relative_path
 
     def compute(self, traces, peaks, waveforms):
         num_channels = waveforms.shape[2]

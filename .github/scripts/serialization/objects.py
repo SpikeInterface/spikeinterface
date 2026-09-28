@@ -34,11 +34,14 @@ FIXTURE_SUFFIX = {
     "json": ".json",
     "pickle": ".pkl",
     "binary": "_binary",
+    "binary_parallel": "_binary_parallel",
     "numpy_folder": "_numpy_folder",
     "zarr": ".zarr",
     "binary_folder": "_binary_folder",
+    "zarr_parallel": "_parallel.zarr",
 }
 
+DEFAULT_DURATION = 2.0  # seconds, for recordings and sortings
 
 # --- json (recipe) entries: moved class + a second class -------------------------
 
@@ -52,7 +55,12 @@ def _build_noise_generator_recording():
     except ImportError:
         from spikeinterface.core.generate import NoiseGeneratorRecording
 
-    return NoiseGeneratorRecording(num_channels=4, sampling_frequency=30000.0, durations=[1.0, 1.5], seed=0)
+    return NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=30000.0,
+        durations=[DEFAULT_DURATION, DEFAULT_DURATION + 0.5],
+        seed=0,
+    )
 
 
 def _check_noise_generator_recording(rec, check_extra_data=None):
@@ -65,7 +73,7 @@ def _check_noise_generator_recording(rec, check_extra_data=None):
 def _build_mock_recording():
     from spikeinterface.core import generate_recording
 
-    return generate_recording(num_channels=4, durations=[1.0], sampling_frequency=30000.0, seed=0)
+    return generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
 
 
 def _check_mock_recording(rec, check_extra_data=None):
@@ -83,7 +91,7 @@ def _build_recording_with_properties():
     import numpy as np
     from spikeinterface.core import generate_recording
 
-    rec = generate_recording(num_channels=4, durations=[1.0], sampling_frequency=30000.0, seed=0)
+    rec = generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
     rec.set_property("quality", np.array(["good", "good", "bad", "good"]))
     rec.annotate(experimenter="test")
     return rec
@@ -100,7 +108,7 @@ def _build_recording_with_probe():
     from probeinterface import generate_linear_probe
     from spikeinterface.core import generate_recording
 
-    rec = generate_recording(num_channels=8, durations=[1.0], sampling_frequency=30000.0, seed=0)
+    rec = generate_recording(num_channels=8, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
     probe = generate_linear_probe(num_elec=8)
     probe.set_device_channel_indices(np.arange(8))
     if parse(si_version) <= parse("0.105.0"):
@@ -110,7 +118,21 @@ def _build_recording_with_probe():
     return rec_with_probe
 
 
-def _check_recording_with_probe(rec, check_extra_data=None):
+def _build_recording_with_timestamps():
+    rec = _build_mock_recording()
+    times = rec.get_times(segment_index=0) + 100
+    rec.set_times(times, segment_index=0)
+    return rec
+
+
+def _check_recording_with_timestamps(rec):
+    import numpy as np
+    expected_times = np.arange(int(DEFAULT_DURATION * 30000)) / 30000.0 + 100
+    times = rec.get_times(segment_index=0)
+    assert np.allclose(times, expected_times)
+
+
+def _check_recording_with_probe(rec):
     import numpy as np
 
     assert rec.get_num_channels() == 8
@@ -127,7 +149,7 @@ def _build_recording_with_interleaved_probes():
     from probeinterface import ProbeGroup, generate_linear_probe
     from spikeinterface.core import generate_recording
 
-    rec = generate_recording(num_channels=8, durations=[1.0], sampling_frequency=30000.0, seed=0)
+    rec = generate_recording(num_channels=8, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
     probe0 = generate_linear_probe(num_elec=4)
     probe1 = generate_linear_probe(num_elec=4)
     probe1.move([100.0, 0.0])
@@ -170,7 +192,7 @@ def _build_preprocessed_chain():
     from spikeinterface.core import generate_recording
     from spikeinterface.preprocessing import common_reference, scale
 
-    rec = generate_recording(num_channels=4, durations=[1.0], sampling_frequency=30000.0, seed=0)
+    rec = generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
     # Two nested scipy-free preprocessing wrappers (scale then common_reference): this
     # exercises recursive parent reload without pulling scipy into the environments.
     return common_reference(scale(rec, gain=2.0))
@@ -187,7 +209,7 @@ def _check_preprocessed_chain(rec, check_extra_data=None):
 def _build_sorting():
     from spikeinterface.core import generate_sorting
 
-    return generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[1.0])
+    return generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[DEFAULT_DURATION])
 
 
 def _check_sorting(sorting, check_extra_data=None):
@@ -201,7 +223,7 @@ def _build_sorting_with_properties():
     import numpy as np
     from spikeinterface.core import generate_sorting
 
-    sorting = generate_sorting(num_units=4, sampling_frequency=30000.0, durations=[1.0])
+    sorting = generate_sorting(num_units=4, sampling_frequency=30000.0, durations=[DEFAULT_DURATION])
     sorting.set_property("quality", np.array(["good", "good", "bad", "good"]))
     sorting.annotate(experimenter="test")
     return sorting
@@ -259,19 +281,25 @@ OBJECTS = [
         "id": "recording_with_properties",
         "build": _build_recording_with_properties,
         "check": _check_recording_with_properties,
-        "formats": ["binary", "zarr"],
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
+    },
+    {
+        "id": "recording_with_timestamps",
+        "build": _build_recording_with_timestamps,
+        "check": _check_recording_with_timestamps,
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
     },
     {
         "id": "recording_with_probe",
         "build": _build_recording_with_probe,
         "check": _check_recording_with_probe,
-        "formats": ["binary", "zarr"],
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
     },
     {
         "id": "recording_with_interleaved_probes",
         "build": _build_recording_with_interleaved_probes,
         "check": _check_recording_with_interleaved_probes,
-        "formats": ["binary", "zarr"],
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
     },
     {
         "id": "preprocessed_chain",

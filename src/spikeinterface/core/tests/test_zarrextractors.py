@@ -4,8 +4,6 @@ from pathlib import Path
 import zarr
 
 from spikeinterface.core import (
-    ZarrRecordingExtractor,
-    ZarrSortingExtractor,
     generate_recording,
     generate_sorting,
     load,
@@ -13,6 +11,8 @@ from spikeinterface.core import (
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.zarr_tools import check_compressors_match
 from spikeinterface.core.zarrextractors import (
+    ZarrRecordingExtractor,
+    ZarrSortingExtractor,
     add_sorting_to_zarr_group,
     get_default_zarr_compressor,
 )
@@ -66,13 +66,13 @@ def test_ZarrSortingExtractor(tmp_path):
     np_sorting = generate_sorting()
 
     # store in root standard normal way
-    folder = tmp_path / "zarr_sorting"
+    folder = tmp_path / "zarr_sorting.zarr"
     ZarrSortingExtractor.write_sorting(np_sorting, folder)
     sorting = ZarrSortingExtractor(folder)
     sorting = load(sorting.to_dict())
 
     # store the sorting in a sub group (for instance SortingResult)
-    folder = tmp_path / "zarr_sorting_sub_group"
+    folder = tmp_path / "zarr_sorting_sub_group.zarr"
     zarr_root = zarr.open(folder, mode="w")
     zarr_sorting_group = zarr_root.create_group("sorting")
     add_sorting_to_zarr_group(sorting, zarr_sorting_group)
@@ -83,7 +83,7 @@ def test_ZarrSortingExtractor(tmp_path):
 
 def test_sharding_options(tmp_path):
     recording = generate_recording(durations=[10], num_channels=20)
-    folder = tmp_path / "zarr_sharding"
+    folder = tmp_path / "zarr_sharding.zarr"
 
     # explicitly specify chunks and shards
     ZarrRecordingExtractor.write_recording(recording, folder, chunks=(1000, 5), shards=(5000, 10), n_jobs=2)
@@ -93,29 +93,32 @@ def test_sharding_options(tmp_path):
     check_recordings_equal(recording, recording_zarr)
 
     # specify shard_factor and chunk_size
-    folder = tmp_path / "zarr_sharding_factor"
+    folder = tmp_path / "zarr_sharding_factor.zarr"
     ZarrRecordingExtractor.write_recording(
-        recording, folder, chunk_size=1000, channel_chunk_size=2, shard_factor=5, n_jobs=2
+        recording, folder, chunk_size=1000, channel_chunk_size=2, shard_factor=(5, 2), n_jobs=2
     )
     recording_zarr = ZarrRecordingExtractor(folder)
     assert recording_zarr._root["traces_seg0"].chunks == (1000, 2)
-    assert recording_zarr._root["traces_seg0"].shards == (5000, 10)
+    assert recording_zarr._root["traces_seg0"].shards == (5000, 4)
     check_recordings_equal(recording, recording_zarr)
 
     # raise error if both shards and shard_factor are provided
     with pytest.raises(ValueError):
+        folder = tmp_path / "shards_and_shard_factor.zarr"
         ZarrRecordingExtractor.write_recording(
             recording, folder, chunk_size=1000, channel_chunk_size=2, shard_factor=5, shards=(5000, 10), n_jobs=2
         )
 
     # raise error if shards is smaller than chunks
     with pytest.raises(AssertionError):
+        folder = tmp_path / "shards_smaller_than_chunks.zarr"
         ZarrRecordingExtractor.write_recording(
             recording, folder, chunk_size=1000, channel_chunk_size=2, shards=(500, 10), n_jobs=2
         )
 
     # raise error if shards is not a multiple of chunks
     with pytest.raises(AssertionError):
+        folder = tmp_path / "shards_not_multiple_of_chunks.zarr"
         ZarrRecordingExtractor.write_recording(
             recording, folder, chunk_size=1000, channel_chunk_size=2, shards=(5500, 10), n_jobs=2
         )

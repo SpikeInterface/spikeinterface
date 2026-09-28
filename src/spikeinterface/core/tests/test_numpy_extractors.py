@@ -160,7 +160,7 @@ def test_NumpyEvent():
 
 if __name__ == "__main__":
     # test_NumpyRecording()
-    test_SharedMemoryRecording()
-    # test_NumpySorting()
+    # test_SharedMemoryRecording()
+    test_NumpySorting()
     # test_SharedMemorySorting()
     # test_NumpyEvent()

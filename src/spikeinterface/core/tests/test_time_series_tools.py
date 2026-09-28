@@ -139,7 +139,7 @@ def test_write_memory_recording():
     recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
-    recording = recording.save()
+    # recording = recording.save()
 
     # write with loop
     traces_list, shms = write_memory(recording, dtype=None, verbose=True, n_jobs=1)

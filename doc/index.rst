@@ -12,6 +12,7 @@ amazing algorithms and formats that we interface with. See them all, and how to 
 `references page <https://spikeinterface.readthedocs.io/en/latest/references.html>`_. In the past year, we have added support
 for the following tools:
 
+- *dartsort*. `DARTsort: A modular drift tracking spike sorter for high-density multi-electrode probes <https://www.biorxiv.org/content/10.1101/2023.08.11.553023v1>`_ (`docs <https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters>`_)
 - Bombcell. `Bombcell: automated curation and cell classification of spike-sorted electrophysiology data. <https://doi.org/10.5281/zenodo.8172822>`_ (`docs <https://spikeinterface.readthedocs.io/en/latest/how_to/auto_label_units.html#bombcell>`_)
 - SLAy. `SLAy-ing oversplitting errors in high-density electrophysiology spike sorting <https://www.biorxiv.org/content/10.1101/2025.06.20.660590v2>`_ (`docs <https://spikeinterface.readthedocs.io/en/latest/modules/curation.html#auto-merging-units>`_)
 - Lupin, Spykingcicus2 and Tridesclous2. `Opening the black box: a modular approach to spike sorting <https://www.biorxiv.org/content/10.64898/2026.01.23.701239v1>`_ (`docs <https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#supported-spike-sorters>`_)

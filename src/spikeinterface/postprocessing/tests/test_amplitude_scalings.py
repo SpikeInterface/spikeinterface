@@ -4,6 +4,96 @@ import pytest
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 from spikeinterface.postprocessing import ComputeAmplitudeScalings
+from spikeinterface.core.base import spike_peak_dtype
+from spikeinterface.postprocessing.amplitude_scalings import _ordinary_scaling_slope, find_collisions, fit_collision
+
+
+def test_ordinary_scaling_slope_float32_precision():
+    """
+    The closed-form slope must not lose precision for float32 template/waveform
+    inputs relative to an independent float64 `linregress` oracle. At amplitude-scale
+    magnitudes (raw ADC/uV range), accumulating in float32 instead of float64 produces
+    an error orders of magnitude above float64 rounding noise.
+    """
+    from scipy.stats import linregress
+
+    rng = np.random.default_rng(2205)
+    template = rng.normal(scale=300, size=90).astype(np.float32)
+    local_waveform = (1.4 * template + rng.normal(scale=20, size=90).astype(np.float32)).astype(np.float32)
+
+    slope = _ordinary_scaling_slope(template.copy(), local_waveform.copy())
+    oracle = linregress(template.astype(np.float64), local_waveform.astype(np.float64)).slope
+
+    assert abs(slope - oracle) < 1e-9
+
+
+def test_fit_collision_recovers_positive_coefficients():
+    """
+    `fit_collision` must recover the known, positive scaling factors of two temporally
+    overlapping spikes, and must be insensitive to a constant offset added to the traces
+    (this exercises the centered non-negative least-squares fit: `positive=True` plus
+    `fit_intercept=True` reproduced by centering before `scipy.optimize.nnls`).
+    """
+    cut_out_before, cut_out_after = 5, 10
+    nbefore = cut_out_before
+    template_length = nbefore + cut_out_after
+
+    rng = np.random.default_rng(7)
+    template_0 = rng.normal(scale=200, size=template_length).astype(np.float32)
+    template_1 = rng.normal(scale=200, size=template_length).astype(np.float32)
+    all_templates = np.stack([template_0, template_1])[:, :, np.newaxis]
+    sparsity_mask = np.ones((2, 1), dtype=bool)
+
+    true_scalings = np.array([1.3, 0.7])
+    spike_0_sample, spike_1_sample = 20, 23  # 3 samples apart: their cut-out windows overlap
+
+    traces = np.zeros((50, 1), dtype=np.float32)
+    traces[spike_0_sample - cut_out_before : spike_0_sample + cut_out_after, 0] += true_scalings[0] * template_0
+    traces[spike_1_sample - cut_out_before : spike_1_sample + cut_out_after, 0] += true_scalings[1] * template_1
+    traces += 50.0  # constant offset: must not bias the fit if centering is correct
+    traces += rng.normal(scale=0.5, size=traces.shape).astype(np.float32)  # small noise
+
+    collision = np.array(
+        [(spike_0_sample, 0), (spike_1_sample, 1)],
+        dtype=[("sample_index", "int64"), ("unit_index", "int64")],
+    )
+
+    recovered = fit_collision(collision, traces, nbefore, all_templates, sparsity_mask, cut_out_before, cut_out_after)
+
+    assert np.all(recovered >= 0)  # positive=True
+    np.testing.assert_allclose(recovered, true_scalings, atol=0.05)
+
+
+def test_find_collisions_with_margin_indices(monkeypatch):
+    dtype = spike_peak_dtype + [("in_margin", "bool")]
+    spikes_within_margin = np.array(
+        [
+            (8, 0, -1.0, 0, 1, True),
+            (10, 0, -1.0, 0, 0, False),
+            (10, 1, -1.0, 0, 1, False),
+            (13, 2, -1.0, 0, 2, False),
+            (30, 1, -1.0, 0, 1, True),
+        ],
+        dtype=dtype,
+    )
+    spike_indices = np.flatnonzero(~spikes_within_margin["in_margin"])
+    spikes = spikes_within_margin[spike_indices]
+    sparsity_mask = np.array([[True, False], [True, True], [False, True]])
+
+    with monkeypatch.context() as patch_context:
+        patch_context.setattr(np, "where", lambda *_: pytest.fail("spike indices were searched again"))
+        collisions = find_collisions(
+            spikes,
+            spikes_within_margin,
+            delta_collision_samples=4,
+            sparsity_mask=sparsity_mask,
+            spike_indices=spike_indices,
+        )
+
+    assert set(collisions) == {0, 1, 2}
+    np.testing.assert_array_equal(collisions[0], spikes_within_margin[[1, 0, 2]])
+    np.testing.assert_array_equal(collisions[1], spikes_within_margin[[2, 0, 1, 3]])
+    np.testing.assert_array_equal(collisions[2], spikes_within_margin[[3, 2]])
 
 
 class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):

@@ -14,13 +14,13 @@ from probeinterface import generate_multi_columns_probe, get_probe, generate_tet
 
 from spikeinterface import Templates
 from spikeinterface.core import ms_to_samples
+from spikeinterface.core.core_tools import _ensure_seed
 from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_sorting,
     generate_templates,
     synthesize_amplitude_factor,
     _ensure_unit_params,
-    _ensure_seed,
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise

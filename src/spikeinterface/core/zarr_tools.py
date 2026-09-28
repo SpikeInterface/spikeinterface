@@ -3,8 +3,81 @@ import warnings
 import numpy as np
 import zarr
 
+from spikeinterface.core.job_tools import ensure_chunk_size
+
 # metadata keys that are not members of a group (zarr v2 and v3)
 _ZARR_METADATA_KEYS = (".zarray", ".zattrs", ".zgroup", ".zmetadata", "zarr.json")
+
+
+def adjust_chunks_shards_and_job_kwargs(
+    chunks=None, extra_chunks=None, shards=None, shard_factor=None, job_kwargs=None, time_series=None
+):
+    """
+    Adjust chunks, shards, and job_kwargs for zarr storage.
+
+    Parameters
+    ----------
+    chunks : tuple or None
+        Chunking dimensions for the zarr dataset.
+    extra_chunks : tuple or None
+        Extra chunking dimensions for the zarr dataset.
+    shards : tuple or None
+        Sharding configuration for the zarr dataset.
+    shard_factor : int or tuple or None
+        Factor to determine shard sizes based on chunks.
+    job_kwargs : dict or None
+        Job-related keyword arguments, including 'chunk_size'.
+    time_series : TimeSeries or None
+        The time series object being stored.
+
+    Returns
+    -------
+    chunks : tuple
+        Adjusted chunking dimensions.
+    shards : tuple or None
+        Adjusted sharding configuration.
+    job_kwargs : dict
+        Updated job-related keyword arguments.
+    """
+
+    # Chunking and sharding
+    if shards is not None and shard_factor is not None:
+        raise ValueError("Cannot specify both 'shards' and 'shard_factor' in zarr_kwargs")
+    if chunks is not None and extra_chunks is not None:
+        raise ValueError("Cannot specify both 'chunks' and 'extra_chunks' in zarr_kwargs")
+
+    # If not specified by chunk, we set the chunk size in the first dimension (time) to be the chunk size that we use
+    # for the job executor, and the chunk size in the second dimension (channels) to be either the provided
+    # channel_chunk_size or the total number of channels (no chunking in channels).
+    if chunks is not None:
+        job_kwargs["chunk_size"] = chunks[0]
+    else:
+        chunk_size = ensure_chunk_size(time_series, **job_kwargs)
+        chunks = (
+            (chunk_size,) + extra_chunks if extra_chunks is not None else (chunk_size, time_series.get_shape(0)[1:])
+        )
+
+    if shards is not None:
+        assert len(shards) == len(chunks), "Shards and chunks must have the same number of dimensions"
+        for dim in range(len(chunks)):
+            assert (
+                shards[dim] >= chunks[dim] and shards[dim] % chunks[dim] == 0
+            ), "Shard size must be a multiple of chunk size"
+        # When sharding is used, chunk_size in job_kwargs is used to determine the number of samples per chunk to
+        # write in each job. Each process will write all chunks in a shard.
+        job_kwargs["chunk_size"] = shards[0]
+    elif shard_factor is not None:
+        # If shard_factor is an integer, we only apply it to the first dimension. If it's an iterable,
+        # we apply it to all dimensions.
+        if isinstance(shard_factor, (int, np.integer)):
+            shards = (chunks[0] * shard_factor,) + chunks[1:]
+        else:
+            if len(shard_factor) != len(chunks):
+                raise ValueError("shard_factor must have the same length as chunks when it is an iterable")
+            shards = tuple(chunks[dim] * shard_factor[dim] for dim in range(len(chunks)))
+        job_kwargs["chunk_size"] = shards[0]
+
+    return chunks, shards, job_kwargs
 
 
 def check_compressors_match(comp1, comp2, skip_typesize=True):

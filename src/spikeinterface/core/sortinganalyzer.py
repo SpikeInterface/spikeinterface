@@ -14,6 +14,7 @@ from packaging.version import parse
 from time import perf_counter
 
 import numpy as np
+import zarr
 
 import probeinterface
 import spikeinterface
@@ -60,6 +61,7 @@ def create_sorting_analyzer(
     format: Literal["memory", "binary_folder", "zarr"] = "memory",
     folder: str | Path | None = None,
     main_channel_indices: np.ndarray | None = None,
+    lazy: bool = False,
     peak_sign: PeakSignType = "both",
     peak_mode: PeakModeType = "extremum",
     num_spikes_for_main_channel: int = 100,
@@ -67,7 +69,6 @@ def create_sorting_analyzer(
     sparse: bool = True,
     sparsity: ChannelSparsity | None = None,
     set_sparsity_by_dict_key: bool = False,
-    return_scaled: bool | None = None,
     return_in_uV: bool = True,
     overwrite: bool = False,
     backend_options: dict[str, Any] | None = None,
@@ -124,14 +125,9 @@ def create_sorting_analyzer(
     set_sparsity_by_dict_key : bool, default: False
         If True and passing recording and sorting dicts, will set the sparsity based on the dict keys,
         and other `sparsity_kwargs` are overwritten. If False, use other sparsity settings.
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
-        All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
-        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
-    return_in_uV : bool, default: None
+    return_in_uV : bool, default: True
         If True, all extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
         This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
-        If None, use return_scaled value.
     overwrite: bool, default: False
         If True, overwrite the folder if it already exists.
     backend_options : dict | None, default: None
@@ -271,10 +267,10 @@ def create_sorting_analyzer(
             recording=aggregated_recording,
             format=format,
             folder=folder,
+            lazy=lazy,
             sparse=sparse,
             sparsity=sparsity,
             main_channel_indices=main_channel_indices,
-            return_scaled=return_scaled,
             return_in_uV=return_in_uV,
             overwrite=overwrite,
             backend_options=backend_options,
@@ -334,15 +330,6 @@ def create_sorting_analyzer(
     else:
         sparsity = None
 
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled if return_in_uV is None else return_in_uV
-
     # Handle return_in_uV parameter for recordings without scaling
     if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
         warnings.warn("create_sorting_analyzer: recording does not have scaling to uV, forcing return_in_uV=False")
@@ -353,6 +340,7 @@ def create_sorting_analyzer(
         recording,
         format=format,
         folder=folder,
+        lazy=lazy,
         main_channel_indices=main_channel_indices,
         peak_sign=peak_sign,
         peak_mode=peak_mode,
@@ -365,7 +353,7 @@ def create_sorting_analyzer(
 
 
 def load_sorting_analyzer(
-    folder, load_extensions=True, format="auto", backend_options=None, lazy=False
+    folder, load_extensions=True, format="auto", backend_options=None, lazy=False, read_only=False
 ) -> "SortingAnalyzer":
     """
     Load a SortingAnalyzer object from disk.
@@ -387,6 +375,10 @@ def load_sorting_analyzer(
 
             * storage_options: dict | None (fsspec storage options)
             * saving_options: dict | None (additional saving options for creating and saving datasets)
+    lazy : bool, default: False
+        If True, the extensions are not loaded at load time, but only when they are accessed for the first time.
+    read_only : bool, default: False
+        If True, the SortingAnalyzer is loaded in read-only mode. This means that the extensions cannot be modified or deleted.
 
     Returns
     -------
@@ -395,7 +387,12 @@ def load_sorting_analyzer(
 
     """
     return SortingAnalyzer.load(
-        folder, load_extensions=load_extensions, format=format, backend_options=backend_options, lazy=lazy
+        folder,
+        load_extensions=load_extensions,
+        format=format,
+        backend_options=backend_options,
+        lazy=lazy,
+        read_only=read_only,
     )
 
 
@@ -425,14 +422,15 @@ class SortingAnalyzer:
         self,
         sorting: BaseSorting,
         recording: BaseRecording | None = None,
+        format: Literal["memory", "binary_folder", "zarr"] = "memory",
         rec_attributes: dict | None = None,
-        format: str | None = None,
         sparsity: ChannelSparsity | None = None,
         return_in_uV: bool = True,
         peak_sign: PeakSignType = "both",
         peak_mode: PeakModeType = "extremum",
         backend_options: dict | None = None,
         lazy: bool = False,
+        read_only: bool = False,
     ):
         # very fast init because checks are done in load and create
         self.sorting = sorting
@@ -445,9 +443,6 @@ class SortingAnalyzer:
         self.peak_sign = peak_sign
         self.peak_mode = peak_mode
         self._main_channel_indices = None
-
-        # For backward compatibility
-        self.return_scaled = return_in_uV
         self.folder: str | Path | None = None
 
         # this is used to store temporary recording
@@ -463,9 +458,35 @@ class SortingAnalyzer:
 
         # the lazy flag is used to load the extensions in a lazy way (only when needed)
         self._lazy = lazy
+        # the read_only flag is used to load the extensions in a read-only way (cannot be modified)
+        self._read_only = read_only
+
+        if self.format == "memory":
+            if self._lazy:
+                warnings.warn(
+                    "Lazy mode is not supported for format='memory'. The extensions will be loaded in memory.",
+                )
+                self._lazy = False
+            if self._read_only:
+                warnings.warn(
+                    "Read-only mode is not supported for format='memory'. Extensions can be modified in memory, but changes will not be saved to disk.",
+                )
+                self._read_only = False
 
         # extensions are not loaded at init
         self.extensions = dict()
+
+    def __del__(self):
+        # Best-effort cleanup: close any memmap handles held by loaded extensions so that the
+        # on-disk files are not locked when the object is garbage-collected.  This is a safety net
+        # for code that does not call close() explicitly; it is not guaranteed to fire promptly
+        # because the back-reference from each AnalyzerExtension to its SortingAnalyzer creates a
+        # reference cycle that requires the cyclic GC (not reference counting) to collect.
+        try:
+            for ext in self.__dict__.get("extensions", {}).values():
+                ext._close_memmaps()
+        except Exception:
+            pass
 
     def __repr__(self) -> str:
         clsname = self.__class__.__name__
@@ -504,8 +525,8 @@ class SortingAnalyzer:
         main_channel_indices: np.ndarray,
         format: Literal["memory", "binary_folder", "zarr"] = "memory",
         folder: str | Path | None = None,
+        lazy: bool = False,
         sparsity: ChannelSparsity | None = None,
-        return_scaled: bool | None = None,
         return_in_uV: bool = True,
         peak_sign: PeakSignType = "both",
         peak_mode: PeakModeType = "extremum",
@@ -515,13 +536,6 @@ class SortingAnalyzer:
         assert (
             main_channel_indices is not None
         ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled if return_in_uV is None else return_in_uV
 
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
@@ -572,6 +586,7 @@ class SortingAnalyzer:
                 peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
+                lazy=lazy,
             )
         elif format == "zarr":
             assert folder is not None, "For format='zarr' folder must be provided"
@@ -585,6 +600,7 @@ class SortingAnalyzer:
                 peak_mode,
                 rec_attributes=None,
                 backend_options=backend_options,
+                lazy=lazy,
             )
         else:
             raise ValueError(f"SortingAnalyzer.create: wrong format {format}")
@@ -604,6 +620,7 @@ class SortingAnalyzer:
         format: Literal["auto", "binary_folder", "zarr"] = "auto",
         backend_options: dict | None = None,
         lazy: bool = False,
+        read_only: bool = False,
     ):
         """
         Load folder or zarr.
@@ -617,11 +634,11 @@ class SortingAnalyzer:
 
         if format == "binary_folder":
             sorting_analyzer = SortingAnalyzer.load_from_binary_folder(
-                folder, recording=recording, backend_options=backend_options, lazy=lazy
+                folder, recording=recording, backend_options=backend_options, lazy=lazy, read_only=read_only
             )
         elif format == "zarr":
             sorting_analyzer = SortingAnalyzer.load_from_zarr(
-                folder, recording=recording, backend_options=backend_options, lazy=lazy
+                folder, recording=recording, backend_options=backend_options, lazy=lazy, read_only=read_only
             )
         else:
             raise ValueError(f"SortingAnalyzer.load: wrong format {format}")
@@ -686,6 +703,7 @@ class SortingAnalyzer:
         peak_mode: PeakModeType,
         rec_attributes: dict | None,
         backend_options: dict | None,
+        lazy: bool = False,
     ) -> "SortingAnalyzer":
         # used by create and save_as
         folder = Path(folder)
@@ -720,7 +738,7 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        sorting.save(folder=sorting_folder)
+        sorting = sorting.save(folder=sorting_folder)
 
         # Dump sorting provenance
         if sorting.check_serializability("json"):
@@ -763,7 +781,22 @@ class SortingAnalyzer:
         if probegroup is not None:
             probeinterface.write_probeinterface(probegroup_file, probegroup)
 
-        return cls.load_from_binary_folder(folder, recording=recording, backend_options=backend_options)
+        # Create SortingAnalyzer
+        sorting_analyzer = SortingAnalyzer(
+            sorting=sorting,
+            recording=recording,
+            rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
+            format="binary_folder",
+            sparsity=sparsity,
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            backend_options=backend_options,
+            lazy=lazy,
+        )
+        sorting_analyzer.folder = folder
+
+        return sorting_analyzer
 
     @classmethod
     def _handle_backward_compatibility_settings_pre_init(cls, settings: dict[str, Any]):
@@ -909,6 +942,7 @@ class SortingAnalyzer:
         recording: BaseRecording | None = None,
         backend_options: dict | None = None,
         lazy: bool = False,
+        read_only: bool = False,
     ) -> "SortingAnalyzer":
         from .loading import load
 
@@ -924,33 +958,17 @@ class SortingAnalyzer:
         rec_attributes_file = folder / "recording_info" / "recording_attributes.json"
         probegroup_file = folder / "recording_info" / "probegroup.json"
 
-        # Check that rec_attributes_file exists, otherwise this is not a valid SortingAnalyzer folder
-        if not rec_attributes_file.is_file():
-            raise ValueError("This folder is not a SortingAnalyzer with format='binary_folder'")
+        # Check all required files are present
+        if not (settings_file.is_file() and sorting_folder.is_dir() and rec_attributes_file.is_file()):
+            raise ValueError(
+                f"Folder {folder} is not a valid SortingAnalyzer binary folder."
+                " Please ensure that you are loading a valid SortingAnalyzer folder."
+            )
 
         # Load settings file
-        analyzer_has_settings_file = settings_file.exists()
-        if analyzer_has_settings_file:
-            with open(settings_file, "r") as f:
-                settings = json.load(f)
-        else:
-            # TODO: Remove support for analyzers that have no settings.json (throw an error instead)
-            settings = dict()
+        with open(settings_file, "r") as f:
+            settings = json.load(f)
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
-
-        # Create settings file (if not originally in the analyzer)
-        if not analyzer_has_settings_file:
-            # PATCH: Because SortingAnalyzer added settings.json during the development of 0.101.0 we need to save
-            # this as a bridge for early adopters. The else branch can be removed in version 0.102.0/0.103.0
-            # so that this can be simplified in the future
-            # See https://github.com/SpikeInterface/spikeinterface/issues/2788
-            warnings.warn(
-                "settings.json not found in this analyzer folder. Creating one with default settings.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            with open(settings_file, "w") as f:
-                json.dump(check_json(settings), f, indent=4)
 
         # Load sorting (in memory or lazy)
         if lazy:
@@ -1004,6 +1022,7 @@ class SortingAnalyzer:
             peak_mode=settings["peak_mode"],
             backend_options=backend_options,
             lazy=lazy,
+            read_only=read_only,
         )
         sorting_analyzer.folder = folder
 
@@ -1029,9 +1048,10 @@ class SortingAnalyzer:
         peak_mode: PeakModeType,
         rec_attributes: dict | None,
         backend_options: dict | None,
+        lazy: bool = False,
     ) -> "SortingAnalyzer":
         # used by create and save_as
-        import zarr
+
         from .zarrextractors import add_sorting_to_zarr_group
 
         is_remote = is_path_remote(folder)
@@ -1113,7 +1133,22 @@ class SortingAnalyzer:
         # Consolidate metadata (for faster reads)
         zarr.consolidate_metadata(zarr_root.store)
 
-        return cls.load_from_zarr(folder, recording=recording, backend_options=backend_options)
+        # Create SortingAnalyzer
+        sorting_analyzer = SortingAnalyzer(
+            sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
+            recording=recording,
+            rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
+            format="zarr",
+            sparsity=sparsity,
+            return_in_uV=return_in_uV,
+            peak_sign=peak_sign,
+            peak_mode=peak_mode,
+            backend_options=backend_options,
+            lazy=lazy,
+        )
+        sorting_analyzer.folder = folder
+
+        return sorting_analyzer
 
     @classmethod
     def load_from_zarr(
@@ -1122,8 +1157,9 @@ class SortingAnalyzer:
         recording: BaseRecording | None = None,
         backend_options: dict | None = None,
         lazy: bool = False,
+        read_only: bool = False,
     ) -> "SortingAnalyzer":
-        import zarr
+
         from .loading import load
 
         backend_options = {} if backend_options is None else backend_options
@@ -1150,6 +1186,18 @@ class SortingAnalyzer:
                     "This may lead to unexpected behavior in loading extensions. "
                     "Consider re-generating the SortingAnalyzer object."
                 )
+
+        # Check all required inputs exist
+        if (
+            zarr_root.attrs.get("settings") is None
+            or zarr_root.get("sorting") is None
+            or zarr_root.get("recording_info") is None
+            or zarr_root["recording_info"].attrs.get("recording_attributes") is None
+        ):
+            raise ValueError(
+                f"Folder {folder} is not a valid SortingAnalyzer Zarr folder."
+                " Please ensure that you are loading a valid SortingAnalyzer folder."
+            )
 
         # Load settings
         settings = zarr_root.attrs["settings"]
@@ -1211,6 +1259,7 @@ class SortingAnalyzer:
             peak_mode=settings["peak_mode"],
             backend_options=backend_options,
             lazy=lazy,
+            read_only=read_only,
         )
         sorting_analyzer.folder = folder
 
@@ -1279,7 +1328,6 @@ class SortingAnalyzer:
             if self.format == "binary_folder":
                 np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
             elif self.format == "zarr":
-                import zarr
 
                 zarr_root = self._get_zarr_root(mode="r+")
                 prop_values = self.sorting.get_property(key)
@@ -1536,11 +1584,17 @@ class SortingAnalyzer:
         new_sorting_analyzer : SortingAnalyzer
             The newly created SortingAnalyzer object.
         """
-        if self._lazy:
+        if self._read_only:
             raise ValueError(
-                "Cannot save, select, merge or split units when the SortingAnalyzer is lazy. "
-                "Please load the SortingAnalyzer with lazy=False."
+                "Cannot save, select, merge or split units when the SortingAnalyzer is read-only. "
+                "Please load the SortingAnalyzer with read_only=False."
             )
+        if self._lazy:
+            # extensions are only registered in self.extensions on first access when lazy, so a lazily
+            # loaded analyzer that hasn't touched every extension yet would otherwise silently lose any
+            # untouched extension during copy/select/merge/split below. Force-load the registry (this
+            # keeps each extension's data as a memmap/zarr handle, it does not eagerly materialize it).
+            self.load_all_saved_extension()
         if self.has_recording():
             recording = self._recording
         elif self.has_temporary_recording():
@@ -1559,7 +1613,7 @@ class SortingAnalyzer:
                 sparsity = self.sparsity
             elif has_removed and not has_merges and not has_splits:
                 # remove units
-                sparsity_mask = self.sparsity.mask[np.isin(self.unit_ids, unit_ids), :]
+                sparsity_mask = self.sparsity.mask[self.sorting.ids_to_indices(unit_ids), :]
                 sparsity = ChannelSparsity(sparsity_mask, unit_ids, self.channel_ids)
             elif has_merges:
                 # merge units
@@ -1614,7 +1668,6 @@ class SortingAnalyzer:
 
         if merge_unit_groups is None and split_units is None:
             # when only some unit_ids then the sorting must be sliced
-            # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
             sorting_provenance = sorting_provenance.select_units(unit_ids)
         elif merge_unit_groups is not None:
             assert split_units is None, "split_units must be None when merge_unit_groups is None"
@@ -1668,6 +1721,7 @@ class SortingAnalyzer:
                 self.peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
+                lazy=self._lazy,
             )
 
         elif format == "zarr":
@@ -1683,6 +1737,7 @@ class SortingAnalyzer:
                 self.peak_mode,
                 self.rec_attributes,
                 backend_options=backend_options,
+                lazy=self._lazy,
             )
         else:
             raise ValueError(f"SortingAnalyzer.save: unsupported format: {format}")
@@ -1772,7 +1827,6 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
-        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
         return self._save_or_select_or_merge_or_split(format=format, folder=folder, unit_ids=unit_ids)
@@ -1866,7 +1920,6 @@ class SortingAnalyzer:
         analyzer :  SortingAnalyzer
             The newly create sorting_analyzer with the selected units
         """
-        # TODO check that unit_ids are in same order otherwise many extension do handle it properly!!!!
         unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         if format == "zarr":
             folder = clean_zarr_folder_name(folder)
@@ -2074,6 +2127,8 @@ class SortingAnalyzer:
         return self._save_or_select_or_merge_or_split(format="memory", folder=None)
 
     def is_read_only(self) -> bool:
+        if self._read_only:
+            return True
         if self.format == "memory":
             return False
         elif self.format == "binary_folder":
@@ -2238,7 +2293,7 @@ class SortingAnalyzer:
             * a list: compute several extensions. The list contains the extension names. Additional parameters can be passed with the extension_params
             argument.
         save : bool, default: True
-            If True the extension is saved to disk (only if sorting analyzer format is not "memory")
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory").
         extension_params : dict or None, default: None
             If input is a list, this parameter can be used to specify parameters for each extension.
             The extension_params keys must be included in the input list.
@@ -2271,9 +2326,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 )
 
         """
-        if self._lazy:
-            # If the analyzer is lazy, we can compute extensions in memory but we won't save / overwrite any existing
-            # extension on disk. This is to avoid overwriting existing extensions when the analyzer is lazy.
+        if self._read_only:
+            # If the analyzer is read-only, we can compute extensions in memory but we won't save / overwrite any existing
+            # extension on disk. This is to avoid overwriting existing extensions when the analyzer is read-only.
             save = False
         if isinstance(input, str):
             return self.compute_one_extension(extension_name=input, save=save, verbose=verbose, **kwargs)
@@ -2314,8 +2369,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             The name of the extension.
             For instance "waveforms", "templates", ...
         save : bool, default: True
-            It the extension can be saved then it is saved.
-            If not then the extension will only live in memory as long as the object is deleted.
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory").
+            If False the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
 
         **kwargs:
@@ -2337,6 +2392,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         >>> wfs = compute_waveforms(sorting_analyzer, **some_params)
 
         """
+        if self._read_only:
+            save = False
         extension_class = get_extension_class(extension_name)
 
         for child in _get_children_dependencies(extension_name):
@@ -2368,6 +2425,12 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 extension_instance.run(save=save, verbose=verbose, **job_kwargs)
             else:
                 extension_instance.run(save=save, verbose=verbose)
+            if not self._lazy:
+
+                for variable_name in extension_instance.data.keys():
+                    # Materialize the data if not in lazy mode
+                    if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):
+                        extension_instance.data[variable_name] = np.array(extension_instance.data[variable_name])
         except (Exception, KeyboardInterrupt):
             if should_save:
                 extension_instance._delete_extension_folder()
@@ -2377,7 +2440,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         self.extensions[extension_name] = extension_instance
         return extension_instance
 
-    def compute_several_extensions(self, extensions, save=True, verbose=False, **job_kwargs):
+    def compute_several_extensions(
+        self, extensions, save=True, verbose=False, gather_mode=None, gather_kwargs=None, **job_kwargs
+    ):
         """
         Compute several extensions
 
@@ -2390,9 +2455,16 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         extensions : dict
             Keys are extension_names and values are params.
         save : bool, default: True
-            It the extension can be saved then it is saved.
+            If the extension can be saved then it is saved.
             If not then the extension will only live in memory as long as the object is deleted.
             save=False is convenient to try some parameters without changing an already saved extension.
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory" or read-only).
+        gather_mode : "memory" | "numpy" | "zarr" | None, default: None
+            Gather mode for node_pipeline extensions. If None, the results are gathered using the same format
+            as the SortingAnalyzer ("memory" for "memory", "npy" for "binary_folder", "zarr" for "zarr").
+        gather_kwargs : dict | None, default: None
+            Additional keyword arguments for the gather function. If None, default gather kwargs are used.
+            If True the extension is saved to disk (only if sorting analyzer format is not "memory").
 
         Returns
         -------
@@ -2405,6 +2477,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         >>> sorting_analyzer.compute_several_extensions({"waveforms": {"ms_before": 1.2}, "templates" : {"operators": ["average", "std"]}})
 
         """
+        if self._read_only:
+            save = False
         # Check dependencies: either already computed or in the extensions to compute
         extensions_to_compute = list(extensions.keys())
         for extension_name, extension_params in extensions.items():
@@ -2457,6 +2531,25 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             all_nodes = []
             result_routage = []
             extension_instances = {}
+
+            # decide how the pipeline results are gathered.
+            # when we save to a disk format we gather directly to the extension final location
+            # (npy files or zarr datasets) to avoid an extra in-memory copy. Otherwise (memory
+            # format, save=False or read-only analyzer) we gather in memory.
+            save_to_disk = save and not self.is_read_only()
+            if gather_mode is None:
+                if save_to_disk and self.format == "binary_folder":
+                    gather_mode = "npy"
+                elif save_to_disk and self.format == "zarr":
+                    gather_mode = "zarr"
+                else:
+                    gather_mode = "memory"
+            if gather_kwargs is None:
+                gather_kwargs = {}
+
+            # for disk gather modes we build one destination per output variable
+            gather_dest = [] if gather_mode in ("npy", "zarr") else None
+
             try:
                 for extension_name, extension_params in extensions_with_pipeline.items():
                     extension_class = get_extension_class(extension_name)
@@ -2464,8 +2557,13 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                         self.has_recording() or self.has_temporary_recording()
                     ), f"Extension {extension_name} requires the recording"
 
+                    extension_folder = self.folder / "extensions" / extension_name if gather_dest is not None else None
                     for variable_name in extension_class.nodepipeline_variables:
                         result_routage.append((extension_name, variable_name))
+                        if gather_mode == "npy":
+                            gather_dest.append(extension_folder / f"{variable_name}.npy")
+                        elif gather_mode == "zarr":
+                            gather_dest.append(extension_folder / variable_name)
 
                     extension_instance = extension_class(self)
                     extension_instance.set_params(save=save, **extension_params)
@@ -2473,6 +2571,13 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
                     nodes = extension_instance.get_pipeline_nodes()
                     all_nodes.extend(nodes)
+
+                # reset and save params before running so the pipeline can gather directly into the
+                # (freshly created) extension folders/groups (mirrors AnalyzerExtension.run())
+                if save_to_disk:
+                    for extension_instance in extension_instances.values():
+                        extension_instance._save_params()
+                        extension_instance._save_importing_provenance()
 
                 job_name = "Compute : " + " + ".join(extensions_with_pipeline.keys())
 
@@ -2482,7 +2587,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                     all_nodes,
                     job_kwargs=job_kwargs,
                     job_name=job_name,
-                    gather_mode="memory",
+                    gather_mode=gather_mode,
+                    dest=gather_dest,
+                    gather_kwargs=gather_kwargs,
                     squeeze_output=False,
                     verbose=verbose,
                 )
@@ -2497,9 +2604,24 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                     extension_instances[extension_name].run_info["run_completed"] = True
 
                 for extension_name, extension_instance in extension_instances.items():
+                    if save_to_disk:
+                        # params/provenance already saved above (before the run). Here we only persist
+                        # the run info and the data. For disk gather modes the data is already written
+                        # to its final location so _save_data() is a no-op for those variables.
+                        extension_instance._save_run_info()
+                        extension_instance._save_data()
+                        if self.format == "zarr":
+
+                            zarr.consolidate_metadata(self._get_zarr_root().store)
+                    if not self._lazy and gather_mode != "memory":
+                        # Materialize the data if not in lazy mode
+                        for variable_name in list(extension_instance.data.keys()):
+                            if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):
+                                extension_instance.data[variable_name] = np.array(
+                                    extension_instance.data[variable_name]
+                                )
                     self.extensions[extension_name] = extension_instance
-                    if save:
-                        extension_instance.save()
+
             except (Exception, KeyboardInterrupt):
                 for extension_name, extension_instance in extension_instances.items():
                     self.extensions.pop(extension_name, None)
@@ -2568,7 +2690,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
     def load_extension(self, extension_name: str):
         """
-        Load an extension from a folder or zarr into the `ResultSorting.extensions` dict.
+        Load an extension from a folder or zarr into the `SortingAnalyzer.extensions` dict.
 
         Parameters
         ----------
@@ -2609,7 +2731,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             if extension_folder.is_dir():
                 shutil.rmtree(extension_folder)
         if self.format == "zarr":
-            import zarr
 
             zarr_root = self._get_zarr_root(mode="r+")
             if extension_name in (root := zarr_root["extensions"]):
@@ -2620,13 +2741,15 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
         Delete the extension from the dict and also in the persistent zarr or folder.
         """
-
-        # delete from folder or zarr
-        if self.format != "memory" and not self._lazy:
-            if self.has_extension(extension_name):
-                # need a reload to reset the folder
-                ext = self.load_extension(extension_name)
-                ext.delete()
+        # Delete from folder or zarr
+        if self.format != "memory" and not self._read_only:
+            in_mem_extension = self.extensions.get(extension_name)
+            if in_mem_extension is not None:
+                # Call delete() on the already-loaded instance so it closes any open memmap handles
+                # before removing the on-disk files.  The original code reloaded the extension first
+                # (opening new memmaps) and then called delete() on the fresh copy — on Windows that
+                # left the new memmaps open long enough to cause a PermissionError during rmtree.
+                in_mem_extension.delete()
             else:
                 self._delete_extension_storage(extension_name)
 
@@ -2683,8 +2806,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         metrics_df : pandas.DataFrame
             A concatenated dataframe with all available metrics.
 
-        Note
-        ----
+        Notes
+        -----
         Duplicated columns are removed (can happen if several metric extensions have a metric with the same name).
         """
         import pandas as pd
@@ -2969,6 +3092,42 @@ class AnalyzerExtension:
         self.params = None
         self.run_info = self._default_run_info_dict()
         self.data = dict()
+
+        # Flag to notify the run if it can save directly to disk
+        self._save_to_disk = False
+
+    def __del__(self):
+        # Best-effort: __del__ must never raise.  _close_memmaps is safe to call here.
+        self._close_memmaps()
+
+    def _close_memmaps(self):
+        """
+        Close any open np.memmap handles held by this extension's data and null out the entries.
+
+        Closing the mmap handle releases the OS file lock; nulling the data dict entry drops the
+        numpy array view so the mapped memory is unmapped.  Both steps are required on Windows to
+        fully release the file before it can be deleted or overwritten.
+
+        Safe to call from ``__del__`` (never raises, accesses ``data`` via ``__dict__`` so it
+        works even when the object is being garbage-collected).  Non-memmap entries (e.g. a
+        DataFrame) are left untouched.
+        """
+        data = self.__dict__.get("data", None)
+        if not data:
+            return
+        for key, value in list(data.items()):
+            if not isinstance(value, np.memmap):
+                continue
+            mmap = getattr(value, "_mmap", None)
+            if mmap is not None:
+                try:
+                    mmap.close()
+                except Exception:
+                    pass
+            try:
+                data[key] = None
+            except Exception:
+                pass
 
     def _default_run_info_dict(self):
         return dict(run_completed=False, runtime_s=None)
@@ -3343,10 +3502,16 @@ class AnalyzerExtension:
         return new_extension
 
     def run(self, save=True, **kwargs):
-        if save and not self.sorting_analyzer.is_read_only():
+        save_to_disk = save and not self.sorting_analyzer.is_read_only()
+        if save_to_disk:
             # NB: this call to _save_params() also resets the folder or zarr group
             self._save_params()
             self._save_importing_provenance()
+
+        # let _run() know whether it may gather results directly to the final on-disk location.
+        # This is only valid when we actually save to a disk format (the folder/group has just
+        # been reset above). Otherwise _run() must gather in memory.
+        self._save_to_disk = save_to_disk
 
         t_start = perf_counter()
         self._run(**kwargs)
@@ -3354,11 +3519,10 @@ class AnalyzerExtension:
         self.run_info["runtime_s"] = t_end - t_start
         self.run_info["run_completed"] = True
 
-        if save and not self.sorting_analyzer.is_read_only():
+        if save_to_disk:
             self._save_run_info()
             self._save_data()
             if self.format == "zarr":
-                import zarr
 
                 zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
@@ -3370,7 +3534,6 @@ class AnalyzerExtension:
         self._save_data()
 
         if self.format == "zarr":
-            import zarr
 
             zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
@@ -3414,6 +3577,7 @@ class AnalyzerExtension:
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
+
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
@@ -3425,6 +3589,10 @@ class AnalyzerExtension:
                 del saving_options["compressor"]
 
             for ext_data_name, ext_data in self.data.items():
+                if isinstance(ext_data, zarr.Array):
+                    # the data was gathered directly into the extension group (e.g. by the node
+                    # pipeline), so it is already in its final location : nothing to copy
+                    continue
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, dict):
@@ -3432,7 +3600,10 @@ class AnalyzerExtension:
                     dict_group = extension_group.create_group(ext_data_name)
                     dict_group.attrs["dict_data"] = check_json(ext_data)
                 elif isinstance(ext_data, np.ndarray):
-                    extension_group.create_array(name=ext_data_name, data=ext_data, **saving_options)
+                    # only save the array if the dataset does not already exist, since it is created directly
+                    # by the run_node_pipeline() function in the case of nodepipeline extensions
+                    if ext_data_name not in extension_group:
+                        extension_group.create_array(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     df_group = extension_group.create_group(ext_data_name)
                     # first we save the index
@@ -3464,13 +3635,22 @@ class AnalyzerExtension:
         Delete the extension in a folder (binary or zarr) and create an empty one.
         """
         if self.format == "binary_folder":
+            # Close any open memmap file handles on a previously registered extension of the same
+            # name so that shutil.rmtree below can delete the folder on Windows.  The extension
+            # stays in self.sorting_analyzer.extensions and any non-memmap data (e.g. a DataFrame
+            # of previously computed metrics) remains in its data dict so the new computation can
+            # read it back.  Nulling the memmap entries is safe: the files are about to be deleted
+            # so those arrays would be unreadable regardless.
+            old_extension = self.sorting_analyzer.extensions.get(self.extension_name, None)
+            if old_extension is not None and old_extension is not self:
+                old_extension._close_memmaps()
+
             extension_folder = self._get_binary_extension_folder()
             if extension_folder.is_dir():
                 shutil.rmtree(extension_folder)
             extension_folder.mkdir(exist_ok=False, parents=True)
 
         elif self.format == "zarr":
-            import zarr
 
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
@@ -3486,7 +3666,6 @@ class AnalyzerExtension:
                 shutil.rmtree(extension_folder)
 
         elif self.format == "zarr":
-            import zarr
 
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             if self.extension_name in zarr_root["extensions"]:
@@ -3497,6 +3676,9 @@ class AnalyzerExtension:
         """
         Delete the extension from the folder or zarr and from the dict.
         """
+        # close any memmap handles onto these files first (e.g. from a lazy load) so the
+        # folder/files can actually be removed
+        self._close_memmaps()
         self._delete_extension_folder()
         self.params = None
         self.run_info = self._default_run_info_dict()
@@ -3520,6 +3702,11 @@ class AnalyzerExtension:
         # this ensure data is also deleted and corresponds to params
         # this also ensure the group is created
         if save:
+            # if a previous instance of this extension is still registered (e.g. loaded lazily),
+            # close any memmap handles it holds before we delete/overwrite its on-disk files
+            old_extension = self.sorting_analyzer.extensions.get(self.extension_name)
+            if old_extension is not None and old_extension is not self:
+                old_extension._close_memmaps()
             self._reset_extension_folder()
 
         params = self._set_params(**params)

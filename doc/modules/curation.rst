@@ -139,6 +139,7 @@ which applies a set of thresholds based on the available metrics (template/quali
         fail_label="bad",
         column_name="simple_threshold"
     )
+
 The returned ``labels`` is a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the ``simple_threshold`` column.
 
 

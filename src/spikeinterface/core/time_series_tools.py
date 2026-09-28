@@ -70,12 +70,20 @@ def write_binary(
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     if file_timestamps_paths is not None:
-        file_timestamps_path_dict = {
-            segment_index: file_path for segment_index, file_path in enumerate(file_timestamps_paths)
-        }
+        file_timestamps_path_list = (
+            [file_timestamps_paths] if not isinstance(file_timestamps_paths, list) else file_timestamps_paths
+        )
+        if len(file_timestamps_path_list) != num_segments:
+            raise ValueError(
+                "'file_timestamps_paths' must be a list of the same size as the number of segments in the time_series"
+            )
     else:
-        file_timestamps_path_dict = None
-    for segment_index, file_path in file_path_dict.items():
+        file_timestamps_path_list = [None] * num_segments
+
+    file_path_dict = {}
+    file_timestamps_path_dict = {}
+    for segment_index, file_path in enumerate(file_path_list):
+        file_path_dict[segment_index] = file_path
         num_samples = time_series.get_num_samples(segment_index=segment_index)
         data_size_bytes = sample_size_bytes * num_samples
         file_size_bytes = data_size_bytes + byte_offset
@@ -86,13 +94,12 @@ def write_binary(
             file.seek(file_size_bytes - 1)
             file.write(b"\0")
 
-        if file_timestamps_path_dict is not None:
-            file_timestamps_path = file_timestamps_path_dict[segment_index]
+        file_timestamps_path = file_timestamps_path_list[segment_index]
+        if file_timestamps_path is not None and time_series.has_time_vector(segment_index=segment_index):
+            file_timestamps_path_dict[segment_index] = file_timestamps_path
             with open(file_timestamps_path, "wb+") as file:
                 file.seek(num_samples * 8 - 1)  # 8 bytes for float64 timestamps
                 file.write(b"\0")
-
-        assert Path(file_path).is_file()
 
     # use executor (loop or workers)
     func = _write_binary_chunk
@@ -114,13 +121,22 @@ def _init_binary_worker(time_series, file_path_dict, dtype, byte_offset, file_ti
 
     file_dict = {segment_index: open(file_path, "rb+") for segment_index, file_path in file_path_dict.items()}
     worker_ctx["file_dict"] = file_dict
-    worker_ctx["file_timestamps_dict"] = file_timestamps_path_dict
+    if file_timestamps_path_dict is not None:
+        file_timestamps_dict = {
+            segment_index: open(file_timestamps_path, "rb+")
+            for segment_index, file_timestamps_path in file_timestamps_path_dict.items()
+        }
+        worker_ctx["file_timestamps_dict"] = file_timestamps_dict
+    else:
+        worker_ctx["file_timestamps_dict"] = None
 
     return worker_ctx
 
 
 # used by write_binary + TimeSeriesChunkExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    import gc
+
     # recover variables of the worker
     time_series = worker_ctx["time_series"]
     dtype = worker_ctx["dtype"]
@@ -139,15 +155,26 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     file.write(data.data)
     # flush is important!!
     file.flush()
+    del data
 
     if file_timestamps_dict is not None:
-        file_timestamps = file_timestamps_dict[segment_index]
-        timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
-        timestamps = timestamps.astype("float64", order="c", copy=False)
-        timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
-        file.seek(timestamp_byte_offset)
-        file.write(timestamps.data)
-        file.flush()
+        # Some segments might not have timestamps to save
+        if segment_index in file_timestamps_dict:
+            file_timestamps = file_timestamps_dict[segment_index]
+            timestamps = time_series.get_times(
+                start_frame=start_frame, end_frame=end_frame, segment_index=segment_index
+            )
+            timestamps = timestamps.astype("float64", order="c", copy=False)
+            timestamp_byte_offset = start_frame * 8  # 8 bytes for float64
+            file_timestamps.seek(timestamp_byte_offset)
+            file_timestamps.write(timestamps.data)
+            file_timestamps.flush()
+            del timestamps
+
+    # fix memory leak by forcing garbage collection (same issue as _write_zarr_chunk,
+    # e.g. reading compressed zarr chunks leaves reference cycles that the generational
+    # GC doesn't clear promptly in a tight chunk loop)
+    gc.collect()
 
 
 write_binary.__doc__ = write_binary.__doc__.format(_shared_job_kwargs_doc)
@@ -270,8 +297,9 @@ def _write_time_series_to_zarr(
     zarr_group,
     dataset_paths,
     dataset_timestamps_paths=None,
-    extra_chunks=None,
     dtype=None,
+    chunks=None,
+    shards=None,
     compressor_data=None,
     filters_data=None,
     compressor_times=None,
@@ -281,6 +309,7 @@ def _write_time_series_to_zarr(
 ):
     """
     Save the trace of a time_series object in several zarr format.
+    If shard
 
     Parameters
     ----------
@@ -292,10 +321,10 @@ def _write_time_series_to_zarr(
         List of paths to traces datasets in the zarr group
     dataset_timestamps_paths : list or None, default: None
         List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
-    extra_chunks : tuple or None, default: None
-        Extra chunking dimensions to use for the zarr dataset.
-        The first dimension is always time and controlled by the job_kwargs.
-        This is for example useful to chunk by channel, with `extra_chunks=(channel_chunk_size,)`.
+    chunks : tuple or None, default: None
+        Chunking dimensions to use for the zarr dataset.
+    shards : tuple or None, default: None
+        Sharding configuration for the zarr dataset.
     dtype : dtype, default: None
         Type of the saved data
     compressor_data : zarr compressor or None, default: None
@@ -332,13 +361,6 @@ def _write_time_series_to_zarr(
         dtype = time_series.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(time_series, **job_kwargs)
-
-    if extra_chunks is not None:
-        assert len(extra_chunks) == len(time_series.get_shape(0)[1:]), (
-            "extra_chunks should have the same length as the number of dimensions "
-            "of the time_series minus one (time axis)"
-        )
 
     # create zarr datasets files
     zarr_datasets = []
@@ -348,25 +370,29 @@ def _write_time_series_to_zarr(
         num_samples = time_series.get_num_samples(segment_index)
         dset_name = dataset_paths[segment_index]
         shape = time_series.get_shape(segment_index)
-        dset = zarr_group.create_dataset(
+        dset = zarr_group.create_array(
             name=dset_name,
             shape=shape,
-            chunks=(chunk_size,) + extra_chunks if extra_chunks is not None else (chunk_size,),
+            chunks=chunks,
+            shards=shards,
             dtype=dtype,
             filters=filters_data,
-            compressor=compressor_data,
+            compressors=compressor_data,
         )
         zarr_datasets.append(dset)
         if dataset_timestamps_paths[segment_index] is not None:
             tset_name = dataset_timestamps_paths[segment_index]
+            chunks_times = (chunks[0],) if chunks is not None else None
+            shards_times = (shards[0],) if shards is not None else None
             zarr_timestamps_datasets.append(
-                zarr_group.create_dataset(
+                zarr_group.create_array(
                     name=tset_name,
                     shape=(num_samples,),
-                    chunks=(chunk_size,),
+                    chunks=chunks_times,
+                    shards=shards_times,
                     dtype="float64",
                     filters=filters_times,
-                    compressor=compressor_times,
+                    compressors=compressor_times,
                 )
             )
         else:
@@ -389,7 +415,7 @@ def _write_time_series_to_zarr(
             t_starts[segment_index] = time_info["t_start"]
 
     if np.any(~np.isnan(t_starts)):
-        zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
+        zarr_group.create_array(name="t_starts", data=t_starts, compressors=None)
 
 
 def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_datasets=None):
@@ -535,8 +561,6 @@ def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None,
     ----------
     time_series : TimeSeries
         The time_series object to get random chunks from
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the time_series has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV

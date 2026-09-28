@@ -9,7 +9,10 @@ from probeinterface import generate_linear_probe
 from spikeinterface.generation import generate_recording
 
 from spikeinterface.core import generate_recording
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, detect_and_remove_bad_channels
+from spikeinterface.preprocessing.detect_bad_channels import DetectAndRemoveBadChannelsRecording
 
 # WARNING : this is not this package https://pypi.org/project/neurodsp/
 # BUT this one https://github.com/int-brain-lab/ibl-neuropixel
@@ -35,7 +38,7 @@ def test_remove_bad_channel():
     recording.set_channel_gains(1)
 
     # set noisy_channel_threshold so that we do detect some bad channels
-    new_rec = detect_and_remove_bad_channels(recording, noisy_channel_threshold=0, seed=1205)
+    new_rec = detect_and_remove_bad_channels(recording=recording, noisy_channel_threshold=0, seed=1205)
 
     # make sure they are removed
     bad_channel_ids = new_rec._kwargs["bad_channel_ids"]
@@ -58,6 +61,24 @@ def test_remove_bad_channel():
     new_rec_from_function = recording.remove_channels(remove_channel_ids=bad_channel_ids_from_function)
 
     assert np.all(new_rec_from_function.channel_ids == new_rec.channel_ids)
+
+
+def test_detect_and_remove_bad_channels_parent_recording_from_dict():
+    """
+    `DetectAndRemoveBadChannelsRecording` inherits `ChannelSliceRecording.__init__`, which always
+    serializes the wrapped recording under the legacy `parent_recording` key in `_kwargs`.
+    `BaseExtractor.from_dict` must keep reconstructing it from that key even though `__init__`'s
+    first parameter is now named `recording`.
+    """
+    recording = generate_recording(durations=[5], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    new_rec = DetectAndRemoveBadChannelsRecording(recording=recording, bad_channel_ids=[])
+    # We artificially rename 'recording' to 'parent_recording' in the kwargs to simulate legacy behavior
+    new_rec._kwargs["parent_recording"] = new_rec._kwargs.pop("recording")
+    reloaded = BaseExtractor.from_dict(new_rec.to_dict())
+    check_recordings_equal(new_rec, reloaded)
 
 
 def test_detect_bad_channels_std_mad():

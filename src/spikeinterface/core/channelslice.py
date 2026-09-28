@@ -12,9 +12,9 @@ class ChannelSliceRecording(BaseRecording):
 
     """
 
-    def __init__(self, parent_recording, channel_ids=None, renamed_channel_ids=None):
+    def __init__(self, recording, channel_ids=None, renamed_channel_ids=None):
         if channel_ids is None:
-            channel_ids = parent_recording.get_channel_ids()
+            channel_ids = recording.get_channel_ids()
         if renamed_channel_ids is None:
             renamed_channel_ids = channel_ids
         else:
@@ -25,7 +25,7 @@ class ChannelSliceRecording(BaseRecording):
         self._channel_ids = np.asarray(channel_ids)
         self._renamed_channel_ids = np.asarray(renamed_channel_ids)
 
-        parents_chan_ids = parent_recording.get_channel_ids()
+        parents_chan_ids = recording.get_channel_ids()
 
         # some checks
         # We use lists to compare numpy scalar types as their python versions (e.g. int vs int64())
@@ -41,25 +41,25 @@ class ChannelSliceRecording(BaseRecording):
             self._channel_ids.size == np.unique(self._channel_ids).size
         ), "ChannelSliceRecording : channel_ids are not unique"
 
-        sampling_frequency = parent_recording.get_sampling_frequency()
+        sampling_frequency = recording.get_sampling_frequency()
 
         BaseRecording.__init__(
             self,
             sampling_frequency=sampling_frequency,
             channel_ids=self._renamed_channel_ids,
-            dtype=parent_recording.get_dtype(),
+            dtype=recording.get_dtype(),
         )
 
-        self._parent_channel_indices = parent_recording.ids_to_indices(self._channel_ids)
+        self._parent_channel_indices = recording.ids_to_indices(self._channel_ids)
 
         # link recording segment
-        for parent_segment in parent_recording.segments:
+        for parent_segment in recording.segments:
             sub_segment = ChannelSliceRecordingSegment(parent_segment, self._parent_channel_indices)
             self.add_recording_segment(sub_segment)
 
         # copy annotation and properties
-        parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
-        self._parent = parent_recording
+        recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
+        self._parent = recording
 
         # change the wiring of the probe
         if self._parent.has_probe():
@@ -70,10 +70,23 @@ class ChannelSliceRecording(BaseRecording):
 
         # update dump dict
         self._kwargs = {
-            "parent_recording": parent_recording,
+            "recording": recording,
             "channel_ids": channel_ids,
             "renamed_channel_ids": renamed_channel_ids,
         }
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `parent_recording' argument,
+        which is renamed to `recording'.
+        """
+        if "parent_recording" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class ChannelSliceRecordingSegment(BaseRecordingSegment):
