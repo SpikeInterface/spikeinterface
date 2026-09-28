@@ -379,14 +379,16 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
 def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, electrical_series, backend="hdf5"):
     """
     Retrieves the indices of the electrodes from the electrical series.
-    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["zarr_link"].
+    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["_LINKS"]
+    or legacy electrical_series.attrs["zarr_link"].
+    See https://github.com/hdmf-dev/hdmf-zarr/pull/336
     """
     if "electrodes" not in electrical_series:
         if backend == "zarr":
             import zarr
 
             # links must be resolved
-            zarr_links = electrical_series.attrs["zarr_link"]
+            zarr_links = electrical_series.attrs.get("_LINKS", electrical_series.attrs.get("zarr_link", []))
             electrodes_path = None
             for zarr_link in zarr_links:
                 if zarr_link["name"] == "electrodes":
