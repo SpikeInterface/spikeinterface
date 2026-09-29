@@ -16,8 +16,9 @@ SORTERS = ["tridesclous2"]
 def create_recordings(folder, NUM_RECORDINGS=2, base_seed=42):
     recordings = []
     for i in range(NUM_RECORDINGS):
+
         recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
-        recording = recording.save(folder=folder / f"rec_for_generate_recording_{i}", format="binary")
+        recording = recording.save(folder=folder / f"rec_for_generate_recording_{i}", format="binary", overwrite=True)
 
         if i % 2 == 0:
             recording.set_channel_groups(["0"] * 4 + ["1"] * 4)
