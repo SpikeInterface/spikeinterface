@@ -56,6 +56,8 @@ for entry in OBJECTS:
                 import shutil
                 shutil.rmtree(dest)
             obj.save_as(folder=dest, format=fmt)
+        else:
+            raise TypeError(f"{entry['id']}: build() returned unsupported object {type(obj).__name__}")
         print(f"  wrote {dest.name} ({fmt})")
     if check_extra_data is not None:
         json_dest = out_dir / f"{entry['id']}.json"
