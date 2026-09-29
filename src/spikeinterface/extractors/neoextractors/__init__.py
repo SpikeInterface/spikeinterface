@@ -24,11 +24,11 @@ from .openephys import (
     OpenEphysLegacyRecordingExtractor,
     OpenEphysBinaryRecordingExtractor,
     OpenEphysBinaryEventExtractor,
-    # we treat OpenEphysArrowRecording like a neo extractor
-    OpenEphysArrowRecording,
+    # we treat BonsaiOnixArrowRecording like a neo extractor
+    BonsaiOnixArrowRecording,
     read_openephys,
     read_openephys_event,
-    read_openephys_arrow,
+    read_bonsai_onix_arrow,
 )
 from .plexon import PlexonRecordingExtractor, PlexonSortingExtractor, read_plexon, read_plexon_sorting
 from .plexon2 import (
@@ -66,7 +66,7 @@ neo_recording_extractors_dict = {
     NixRecordingExtractor: dict(wrapper_string="read_nix", wrapper_class=read_nix),
     OpenEphysBinaryRecordingExtractor: dict(wrapper_string="read_openephys", wrapper_class=read_openephys),
     OpenEphysLegacyRecordingExtractor: dict(wrapper_string="read_openephys", wrapper_class=read_openephys),
-    OpenEphysArrowRecording: dict(wrapper_string="read_openephys_arrow", wrapper_class=read_openephys_arrow),
+    BonsaiOnixArrowRecording: dict(wrapper_string="read_bonsai_onix_arrow", wrapper_class=read_bonsai_onix_arrow),
     PlexonRecordingExtractor: dict(wrapper_string="read_plexon", wrapper_class=read_plexon),
     Plexon2RecordingExtractor: dict(wrapper_string="read_plexon2", wrapper_class=read_plexon2),
     Spike2RecordingExtractor: dict(wrapper_string="read_spike2", wrapper_class=read_spike2),

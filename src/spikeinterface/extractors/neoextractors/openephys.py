@@ -481,7 +481,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
         return neo_kwargs
 
 
-class OpenEphysArrowRecordingSegment(BaseRecordingSegment):
+class BonsaiOnixArrowRecordingSegment(BaseRecordingSegment):
     def __init__(self, filepath, channel_ids, batch_len, **time_kwargs):
         BaseRecordingSegment.__init__(self, **time_kwargs)
 
@@ -545,7 +545,7 @@ class OpenEphysArrowRecordingSegment(BaseRecordingSegment):
         return np.column_stack([table[c].to_numpy(zero_copy_only=False) for c in channel_ids])
 
 
-class OpenEphysArrowRecording(BaseRecording):
+class BonsaiOnixArrowRecording(BaseRecording):
     """
     Recording class for the openephys arrow format, from ___
 
@@ -612,7 +612,7 @@ class OpenEphysArrowRecording(BaseRecording):
 
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=numpy_type)
 
-        rec_segment = OpenEphysArrowRecordingSegment(
+        rec_segment = BonsaiOnixArrowRecordingSegment(
             file_path, batch_len=batch_len, sampling_frequency=sampling_frequency, channel_ids=np.array(channel_ids)
         )
 
@@ -639,7 +639,9 @@ class OpenEphysArrowRecording(BaseRecording):
         }
 
 
-read_openephys_arrow = define_function_from_class(source_class=OpenEphysArrowRecording, name="read_openephys_arrow")
+read_bonsai_onix_arrow = define_function_from_class(
+    source_class=BonsaiOnixArrowRecording, name="read_bonsai_onix_arrow"
+)
 
 
 def read_openephys(folder_path, **kwargs):
