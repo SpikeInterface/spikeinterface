@@ -51,7 +51,11 @@ class PipelineNode:
             parents = [parents]
         self.parents = parents
 
-        self._kwargs = dict()
+        self._kwargs = dict(
+            time_series=time_series,
+            return_output=return_output,
+            parents=parents,
+        )
 
     def get_margin(self):
         # can optionally be overwritten
@@ -117,6 +121,8 @@ class PeakRetriever(PeakSource):
                 self.segment_slices.append(slice(i0, i1))
         else:
             self.segment_slices = None
+
+        self._kwargs.update(dict(peaks=peaks))
 
     def get_margin(self):
         return 0
@@ -228,6 +234,17 @@ class SpikeRetriever(PeakSource):
             self.segment_slices = None
         else:
             self.segment_slices = [slice(int(s0), int(s1)) for s0, s1 in segment_slices]
+
+        self._kwargs.update(
+            dict(
+                sorting=sorting,
+                channel_from_template=channel_from_template,
+                extremum_channel_inds=extremum_channel_inds,
+                radius_um=radius_um,
+                peak_sign=peak_sign,
+                include_spikes_in_margin=include_spikes_in_margin,
+            )
+        )
 
     def get_margin(self):
         return 0
@@ -366,6 +383,15 @@ class WaveformsNode(PipelineNode):
             self.nafter = ms_to_samples(ms_after, sampling_frequency)
         self.neighbours_mask = None
 
+        self._kwargs.update(
+            dict(
+                ms_before=ms_before,
+                ms_after=ms_after,
+                nbefore=nbefore,
+                nafter=nafter,
+            )
+        )
+
 
 class ExtractDenseWaveforms(WaveformsNode):
     def __init__(
@@ -488,6 +514,13 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.radius_um = radius_um
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
+
+        self._kwargs.update(
+            dict(
+                radius_um=radius_um,
+                sparsity_mask=sparsity_mask,
+            )
+        )
 
     def get_margin(self):
         return max(self.nbefore, self.nafter)

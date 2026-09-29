@@ -91,8 +91,8 @@ class AmplitudeFeature(PipelineNode):
 
         self.all_channels = all_channels
         self.peak_sign = peak_sign
-        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
         self._dtype = recording.get_dtype()
+        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
 
     def get_dtype(self):
         return self._dtype
@@ -125,8 +125,8 @@ class PeakToPeakFeature(PipelineNode):
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance <= radius_um
         self.all_channels = all_channels
-        self._kwargs.update(dict(radius_um=radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
+        self._kwargs.update(dict(radius_um=radius_um, all_channels=all_channels))
 
     def get_dtype(self):
         return self._dtype
@@ -168,6 +168,7 @@ class RandomProjectionsFeature(PipelineNode):
         self.radius_um = radius_um
         self.sparse = sparse
         self.noise_threshold = noise_threshold
+        self._dtype = recording.get_dtype()
         self._kwargs.update(
             dict(
                 projections=projections,
@@ -177,7 +178,6 @@ class RandomProjectionsFeature(PipelineNode):
                 feature=feature,
             )
         )
-        self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
