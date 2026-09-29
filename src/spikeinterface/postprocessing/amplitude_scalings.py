@@ -192,17 +192,22 @@ class AmplitudeScalingNode(PipelineNode):
         assert spike_retriever.include_spikes_in_margin, "Need SpikeRetriever with include_spikes_in_margin=True"
         if not handle_collisions:
             self._margin = max(nbefore, nafter)
+            overlap_matrix = None
         else:
             # in this case we extend the margin to be able to get with collisions outside the chunk
             margin_waveforms = max(nbefore, nafter)
             max_margin_collisions = delta_collision_samples + margin_waveforms
             self._margin = max_margin_collisions
+            # sparsity_mask is fixed for the node's lifetime, so the unit-pair overlap matrix
+            # is computed once here instead of once per chunk inside compute()/find_collisions.
+            overlap_matrix = _unit_pair_overlap_matrix(sparsity_mask)
 
         # for some edge cases a template can be zero, leading to problems later
         template_is_zero = [np.all(template == 0) for template in all_templates]
 
         self._all_templates = all_templates
         self._sparsity_mask = sparsity_mask
+        self._overlap_matrix = overlap_matrix
         self._nbefore = nbefore
         self._nafter = nafter
         self._cut_out_before = cut_out_before
@@ -232,6 +237,7 @@ class AmplitudeScalingNode(PipelineNode):
         offsets = self._offsets
         all_templates = self._all_templates
         sparsity_mask = self._sparsity_mask
+        overlap_matrix = self._overlap_matrix
         nbefore = self._nbefore
         cut_out_before = self._cut_out_before
         cut_out_after = self._cut_out_after
@@ -255,7 +261,7 @@ class AmplitudeScalingNode(PipelineNode):
                 local_spikes,
                 local_spikes_within_margin,
                 delta_collision_samples,
-                sparsity_mask,
+                overlap_matrix,
                 local_spike_indices,
             )
         else:
@@ -324,30 +330,34 @@ class AmplitudeScalingNode(PipelineNode):
 
 
 ### Collision handling ###
-def _are_units_spatially_overlapping(sparsity_mask, i, j):
+def _unit_pair_overlap_matrix(sparsity_mask):
     """
-    Returns True if the unit indices i and j are
-    spatially overlapping, False otherwise
+    Precompute, once, whether every pair of units shares at least one channel.
+
+    Unit-pair spatial overlap is a fixed fact of `sparsity_mask` alone: there are only
+    `num_units ** 2` possible (i, j) answers, independent of which spikes are being compared.
+    `find_collisions` looks this up once per temporally-overlapping spike-pair candidate
+    (millions of times on a realistic recording), so computing it here with one matrix
+    multiplication instead of a fresh `np.any(sparsity_mask[i] & sparsity_mask[j])` per lookup
+    removes an O(num_channels) recomputation of an already-known answer.
 
     Parameters
     ----------
-    sparsity_mask: boolean mask
+    sparsity_mask : boolean mask
         A num_units x num_channels boolean array indicating whether
         the unit is represented on the channel.
-    i: int
-        The first unit index
-    j: int
-        The second unit index
 
     Returns
     -------
-    bool
-        True if the units i and j are spatially overlapping, False otherwise
+    np.ndarray
+        A num_units x num_units boolean array where entry (i, j) is True if units i and j
+        are spatially overlapping, False otherwise.
     """
-    if np.any(sparsity_mask[i] & sparsity_mask[j]):
-        return True
-    else:
-        return False
+    # int32 avoids any risk of the dot-product overflowing (it accumulates at most num_channels
+    # per entry, far below the int32 range) while staying far cheaper than a bool broadcast that
+    # would materialize a full num_units x num_units x num_channels intermediate array.
+    sparsity_mask_int = np.asarray(sparsity_mask, dtype=np.int32)
+    return (sparsity_mask_int @ sparsity_mask_int.T) > 0
 
 
 def _ordinary_scaling_slope(template, local_waveform):
@@ -387,7 +397,7 @@ def _ordinary_scaling_slope(template, local_waveform):
     return covariance / template_variance
 
 
-def find_collisions(spikes, spikes_within_margin, delta_collision_samples, sparsity_mask, spike_indices):
+def find_collisions(spikes, spikes_within_margin, delta_collision_samples, overlap_matrix, spike_indices):
     """
     Finds the collisions between spikes.
 
@@ -415,9 +425,12 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
         another spike within a given margin
     delta_collision_samples: int
         The maximum number of samples between two spikes to consider them as overlapping
-    sparsity_mask: boolean mask
-        A num_units x num_channels boolean array indicating whether
-        the unit is represented on the channel.
+    overlap_matrix : np.ndarray
+        A num_units x num_units boolean array, as returned by `_unit_pair_overlap_matrix`,
+        where entry (i, j) is True if units i and j are spatially overlapping. Callers that
+        run this once per chunk (like `AmplitudeScalingNode.compute`) should precompute it
+        once from `sparsity_mask` and reuse it, since spatial overlap is a fixed fact of the
+        sparsity mask, not of the spikes being compared.
     spike_indices : np.ndarray
         The indices of `spikes` in `spikes_within_margin`. Providing these indices avoids
         searching `spikes_within_margin` once for every spike.
@@ -428,7 +441,8 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
         A dictionary with collisions. The key is the index of the spike with collision, the value is an
         array of overlapping spikes, including the spike itself at position 0.
     """
-    # TODO: refactor to speed-up
+    spikes_within_margin_unit_index = spikes_within_margin["unit_index"]
+
     collision_spikes_dict = {}
     for spike_index, (spike, spike_index_within_margin) in enumerate(zip(spikes, spike_indices, strict=True)):
         # find the spikes that fall within a temporal window around the spike peak
@@ -451,19 +465,16 @@ def find_collisions(spikes, spikes_within_margin, delta_collision_samples, spars
             (pre_possible_consecutive_spike_indices, post_possible_consecutive_spike_indices)
         )
 
-        # Build the collusion_spikes_dict including only
-        # spikes that overlap spatially
-        collision_spikes = []
-        for possible_overlapping_spike_index in possible_overlapping_spike_indices:
+        # Keep only the candidates that overlap spatially, looked up from the precomputed matrix
+        # instead of recomputed per candidate.
+        other_unit_indices = spikes_within_margin_unit_index[possible_overlapping_spike_indices]
+        overlaps = overlap_matrix[spike["unit_index"], other_unit_indices]
+        collision_spike_indices = possible_overlapping_spike_indices[overlaps]
 
-            if _are_units_spatially_overlapping(
-                sparsity_mask,
-                spike["unit_index"],
-                spikes_within_margin[possible_overlapping_spike_index]["unit_index"],
-            ):
-                collision_spikes.append(spikes_within_margin[possible_overlapping_spike_index])
-        if collision_spikes:
-            collision_spikes_dict[spike_index] = np.array([spike, *collision_spikes], dtype=spikes.dtype)
+        if collision_spike_indices.size:
+            collision_spikes_dict[spike_index] = np.array(
+                [spike, *spikes_within_margin[collision_spike_indices]], dtype=spikes.dtype
+            )
     return collision_spikes_dict
 
 
