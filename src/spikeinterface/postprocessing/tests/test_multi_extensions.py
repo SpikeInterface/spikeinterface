@@ -81,7 +81,7 @@ def get_dataset_to_merge(folder):
         generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=2.0, maximum_z=15.0, minimum_distance=20),
         seed=2205,
     )
-    recording = recording.save(folder / "recording_for_merge")
+    recording = recording.save(folder=folder / "recording_for_merge")
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
@@ -108,7 +108,7 @@ def get_dataset_to_split(folder):
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
-    recording = recording.save(folder / "recording_for_split")
+    recording = recording.save(folder=folder / "recording_for_split")
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
