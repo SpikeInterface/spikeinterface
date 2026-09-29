@@ -108,11 +108,12 @@ jobs:
           fi
           uv run --isolated --no-project --python 3.12 \
             --with "$spec" \
+            --with "numpy<2.5" \
             python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
       - name: Load fixtures with the branch
         run: |
           # [full] here too: loading the analyzer extensions unpickles e.g. the
           # scikit-learn PCA models written at generation time
-          uv pip install --system -e ".[full]" --group test-core
+          uv pip install --system -e ".[full]" "numpy<2.5" --group test-core
           pytest .github/scripts/serialization/test_cross_version_compatibility.py -v
