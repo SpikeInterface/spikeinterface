@@ -125,14 +125,14 @@ def _build_recording_with_timestamps():
     return rec
 
 
-def _check_recording_with_timestamps(rec):
+def _check_recording_with_timestamps(rec, check_extra_data=None):
     import numpy as np
     expected_times = np.arange(int(DEFAULT_DURATION * 30000)) / 30000.0 + 100
     times = rec.get_times(segment_index=0)
     assert np.allclose(times, expected_times)
 
 
-def _check_recording_with_probe(rec):
+def _check_recording_with_probe(rec, check_extra_data=None):
     import numpy as np
 
     assert rec.get_num_channels() == 8
