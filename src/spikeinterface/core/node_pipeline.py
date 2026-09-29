@@ -223,6 +223,7 @@ class SpikeRetriever(PeakSource):
         self.main_channel_indices = recording.ids_to_indices(main_channel_ids)
         self.spike_vector, segment_slices = sorting.to_spike_vector(return_slices=True)
         self.spike_sample_indices = np.asarray(self.spike_vector["sample_index"])
+        self._peaks = None
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
@@ -245,6 +246,13 @@ class SpikeRetriever(PeakSource):
                 include_spikes_in_margin=include_spikes_in_margin,
             )
         )
+
+    @property
+    def peaks(self):
+        if self._peaks is not None:
+            return self._peaks
+        self._peaks = sorting_to_peaks(self.sorting)
+        return self._peaks
 
     def get_margin(self):
         return 0
