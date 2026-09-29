@@ -110,10 +110,13 @@ class PeakRetriever(PeakSource):
         self.peaks = peaks
 
         # precompute segment slice
-        self.segment_slices = []
-        for segment_index in range(recording.get_num_segments()):
-            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
-            self.segment_slices.append(slice(i0, i1))
+        if recording.get_num_segments() > 1:
+            self.segment_slices = []
+            for segment_index in range(recording.get_num_segments()):
+                i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
+                self.segment_slices.append(slice(i0, i1))
+        else:
+            self.segment_slices = None
 
     def get_margin(self):
         return 0
@@ -122,15 +125,22 @@ class PeakRetriever(PeakSource):
         return base_peak_dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            peaks_in_segment = self.peaks[sl]
+        else:
+            peaks_in_segment = self.peaks
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         return i0, i1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            peaks_in_segment = self.peaks[sl]
+        else:
+            peaks_in_segment = self.peaks
+
         # i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         i0, i1 = peak_slice
         local_peaks = peaks_in_segment[i0:i1]
@@ -204,19 +214,20 @@ class SpikeRetriever(PeakSource):
 
         main_channel_ids = sorting.get_property("main_channel_id")
         assert main_channel_ids is not None, "SpikeRetriever needs the sorting to have `main_channel_id`s."
-        main_channel_indices = recording.ids_to_indices(main_channel_ids)
-        self.peaks = sorting_to_peaks(sorting, main_channel_indices, self._dtype)
+        self.main_channel_indices = recording.ids_to_indices(main_channel_ids)
+        self.spike_vector, segment_slices = sorting.to_spike_vector(return_slices=True)
+        self.spike_sample_indices = np.asarray(self.spike_vector["sample_index"])
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
             self.neighbours_mask = channel_distance <= radius_um
             self.peak_sign = peak_sign
 
-        # precompute segment slice
-        self.segment_slices = []
-        for segment_index in range(recording.get_num_segments()):
-            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
-            self.segment_slices.append(slice(i0, i1))
+        # For mono-segment, we avoid an extra slice, otherwise make them a tuple for slicing
+        if sorting.get_num_segments() == 1:
+            self.segment_slices = None
+        else:
+            self.segment_slices = [slice(int(s0), int(s1)) for s0, s1 in segment_slices]
 
     def get_margin(self):
         return 0
@@ -225,26 +236,34 @@ class SpikeRetriever(PeakSource):
         return self._dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
-        if self.include_spikes_in_margin:
-            i0, i1 = np.searchsorted(
-                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
-            )
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            sample_indices_in_segment = self.spike_sample_indices[sl]
         else:
-            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+            sample_indices_in_segment = self.spike_sample_indices
+        if self.include_spikes_in_margin:
+            i0, i1 = np.searchsorted(sample_indices_in_segment, [start_frame - max_margin, end_frame + max_margin])
+        else:
+            i0, i1 = np.searchsorted(sample_indices_in_segment, [start_frame, end_frame])
         return i0, i1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
         i0, i1 = peak_slice
+        if self.segment_slices is not None:
+            s0 = self.segment_slices[segment_index].start
+            spikes = self.spike_vector[s0 + i0 : s0 + i1]
+        else:
+            spikes = self.spike_vector[i0:i1]
 
-        local_peaks = peaks_in_segment[i0:i1]
+        local_peaks = np.zeros(spikes.size, dtype=self._dtype)
+        local_peaks["sample_index"] = spikes["sample_index"]
+        local_peaks["channel_index"] = self.main_channel_indices[spikes["unit_index"]]
+        local_peaks["amplitude"] = 0.0
+        local_peaks["segment_index"] = spikes["segment_index"]
+        local_peaks["unit_index"] = spikes["unit_index"]
 
         # make sample index local to traces
-        local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
 
         # handle flag for margin
