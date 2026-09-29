@@ -211,7 +211,6 @@ class SpikeRetriever(PeakSource):
                 category=FutureWarning,
                 stacklevel=2,
             )
-
         self._dtype = spike_peak_dtype
 
         self.include_spikes_in_margin = include_spikes_in_margin
@@ -223,6 +222,7 @@ class SpikeRetriever(PeakSource):
         self.main_channel_indices = recording.ids_to_indices(main_channel_ids)
         self.spike_vector, segment_slices = sorting.to_spike_vector(return_slices=True)
         self.spike_sample_indices = np.asarray(self.spike_vector["sample_index"])
+        self.sorting = sorting
         self._peaks = None
 
         if not channel_from_template:
