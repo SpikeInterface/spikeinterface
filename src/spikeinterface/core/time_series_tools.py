@@ -362,6 +362,12 @@ def _write_time_series_to_zarr(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
+    # place an ArrayBytesCodec passed as a compressor (e.g. WavPack) in the serializer slot
+    from .zarrextractors import build_codec_pipeline
+
+    codec_kwargs_data = build_codec_pipeline(filters=filters_data, compressors=compressor_data)
+    codec_kwargs_times = build_codec_pipeline(filters=filters_times, compressors=compressor_times)
+
     # create zarr datasets files
     zarr_datasets = []
     zarr_timestamps_datasets = []
@@ -376,8 +382,7 @@ def _write_time_series_to_zarr(
             chunks=chunks,
             shards=shards,
             dtype=dtype,
-            filters=filters_data,
-            compressors=compressor_data,
+            **codec_kwargs_data,
         )
         zarr_datasets.append(dset)
         if dataset_timestamps_paths[segment_index] is not None:
@@ -391,8 +396,7 @@ def _write_time_series_to_zarr(
                     chunks=chunks_times,
                     shards=shards_times,
                     dtype="float64",
-                    filters=filters_times,
-                    compressors=compressor_times,
+                    **codec_kwargs_times,
                 )
             )
         else:
