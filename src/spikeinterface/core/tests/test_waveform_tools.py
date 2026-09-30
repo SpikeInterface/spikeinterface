@@ -5,6 +5,7 @@ import platform
 
 import numpy as np
 
+import spikeinterface.core.waveform_tools as waveform_tools
 from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording, ms_to_samples
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
@@ -210,6 +211,106 @@ def test_estimate_templates_with_accumulator():
                 #     ax = axs[1]
                 #     ax.plot((templates - templates_loop)[unit_index, :, :].T.flatten(), color="k", ls="--")
                 # plt.show()
+
+
+class _SharedArrayRecorder:
+    """
+    Drop-in replacement for `make_shared_array` that records every segment it allocates and
+    whether `unlink()` was called on it.
+    """
+
+    def __init__(self):
+        self.segments = []
+
+    def __call__(self, shape, dtype):
+        from spikeinterface.core.core_tools import make_shared_array
+
+        arr, shm = make_shared_array(shape, dtype)
+        record = {"shm": shm, "unlinked": False}
+        self.segments.append(record)
+        real_unlink = shm.unlink
+
+        def tracked_unlink():
+            record["unlinked"] = True
+            real_unlink()
+
+        shm.unlink = tracked_unlink
+        return arr, shm
+
+    def cleanup(self):
+        # do not let a failing test leave real segments behind
+        for record in self.segments:
+            if not record["unlinked"]:
+                record["shm"].unlink()
+                record["unlinked"] = True
+
+
+@pytest.mark.parametrize("return_std", [False, True])
+def test_estimate_templates_with_accumulator_releases_shared_memory_on_error(monkeypatch, return_std):
+    # when the parallel run raises, the shared memory accumulator must still be unlinked.
+    # otherwise the segment survives the failure and python reports
+    # "There appear to be N leaked shared_memory objects to clean up at shutdown". See issue #4566.
+    recording, sorting = get_dataset()
+
+    nbefore = ms_to_samples(1.0, recording.sampling_frequency)
+    nafter = ms_to_samples(1.5, recording.sampling_frequency)
+    spikes = sorting.to_spike_vector()[::10]
+
+    recorder = _SharedArrayRecorder()
+    monkeypatch.setattr(waveform_tools, "make_shared_array", recorder)
+
+    def failing_worker(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(waveform_tools, "_worker_estimate_templates", failing_worker)
+
+    try:
+        with pytest.raises(RuntimeError, match="boom"):
+            estimate_templates_with_accumulator(
+                recording,
+                spikes,
+                sorting.unit_ids,
+                nbefore,
+                nafter,
+                return_in_uV=True,
+                return_std=return_std,
+                n_jobs=1,
+                chunk_duration="1s",
+                progress_bar=False,
+            )
+
+        assert len(recorder.segments) == (2 if return_std else 1)
+        assert all(record["unlinked"] for record in recorder.segments)
+    finally:
+        recorder.cleanup()
+
+
+def test_estimate_templates_with_accumulator_allocation_error_is_explicit(monkeypatch):
+    # a failed allocation of the shared accumulator is an opaque "OSError: [Errno 28] No space left
+    # on device". It should instead name the sizes that produced it. See issue #4566.
+    recording, sorting = get_dataset()
+
+    nbefore = ms_to_samples(1.0, recording.sampling_frequency)
+    nafter = ms_to_samples(1.5, recording.sampling_frequency)
+    spikes = sorting.to_spike_vector()[::10]
+
+    def no_space(shape, dtype):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(waveform_tools, "make_shared_array", no_space)
+
+    with pytest.raises(MemoryError, match="n_jobs"):
+        estimate_templates_with_accumulator(
+            recording,
+            spikes,
+            sorting.unit_ids,
+            nbefore,
+            nafter,
+            return_in_uV=True,
+            n_jobs=2,
+            chunk_duration="1s",
+            progress_bar=False,
+        )
 
 
 def test_estimate_templates():
