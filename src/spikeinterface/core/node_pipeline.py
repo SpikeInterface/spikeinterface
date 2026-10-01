@@ -251,7 +251,7 @@ class SpikeRetriever(PeakSource):
     def peaks(self):
         if self._peaks is not None:
             return self._peaks
-        self._peaks = sorting_to_peaks(self.sorting)
+        self._peaks = sorting_to_peaks(self.sorting, self.main_channel_indices)
         return self._peaks
 
     def get_margin(self):
