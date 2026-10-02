@@ -692,7 +692,7 @@ and use a `Delta <https://numcodecs.readthedocs.io/en/stable/delta.html>`_ filte
     filters = [Delta(dtype="int16")]
 
     recording_custom_comp = recording.save(folder="recording", format="zarr",
-                                           compressor=compressor, filters=filters,
+                                           compressors=compressor, filters=filters,
                                            **job_kwargs)
 
 

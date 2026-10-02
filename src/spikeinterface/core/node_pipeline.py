@@ -1128,12 +1128,12 @@ class GatherToZarr:
                 # pick the number of rows per chunk to target ~zarr_target_chunk_bytes per chunk
                 row_nbytes = int(np.prod(trailing_shape, dtype="int64")) * buf.dtype.itemsize
                 chunk0 = max(1, self.zarr_target_chunk_bytes[name] // max(1, row_nbytes))
-                self.arrays[i_name] = root.create_dataset(
+                self.arrays[i_name] = root.create_array(
                     name=internal_path,
                     shape=(0,) + trailing_shape,
                     chunks=(chunk0,) + trailing_shape,
                     dtype=buf.dtype,
-                    compressor=self.compressor,
+                    compressors=self.compressor,
                     overwrite=True,
                 )
             self.arrays[i_name].append(buf, axis=0)

@@ -270,11 +270,15 @@ def _guess_object_from_zarr(zarr_folder):
         return _guess_object_from_dict(spikeinterface_info)
 
     # here it is the old fashion and a bit ambiguous
-    if "templates_array" in zarr_root.keys():
+    # get_zarr_group_keys is used to be compatible with both zarr v2 and zarr v3 groups
+    from .zarr_tools import get_zarr_group_keys
+
+    root_keys = get_zarr_group_keys(zarr_root)
+    if "templates_array" in root_keys:
         return "Templates"
-    elif "channel_ids" in zarr_root.keys() and "unit_ids" not in zarr_root.keys():
+    elif "channel_ids" in root_keys and "unit_ids" not in root_keys:
         return "Recording"
-    elif "unit_ids" in zarr_root.keys() and "channel_ids" not in zarr_root.keys():
+    elif "unit_ids" in root_keys and "channel_ids" not in root_keys:
         return "Sorting"
 
 

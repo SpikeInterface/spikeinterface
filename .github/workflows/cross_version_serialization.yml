@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - id: set
         env:
           # Support floor: oldest minor to test. Below this, installs fail on the CI
@@ -63,7 +63,8 @@ jobs:
           candidates = [v for v in available if not v.is_prerelease and (v.major, v.minor) >= (floor.major, floor.minor)]
           minor_releases = [max(group) for _, group in groupby(candidates, key=lambda v: (v.major, v.minor))]
 
-          print(json.dumps([str(v) for v in minor_releases]))
+          # always round-trip against the branch itself as well
+          print(json.dumps([str(v) for v in minor_releases] + ['dev']))
           ")
 
           echo "list=$versions_to_test" >> "$GITHUB_OUTPUT"
@@ -85,21 +86,34 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           enable-cache: false
 
       - name: Generate fixtures with spikeinterface ${{ matrix.si-version }}
+        env:
+          SI_VERSION: ${{ matrix.si-version }}
         run: |
-          uv run --isolated --no-project --python 3.10 \
-            --with "spikeinterface[core]==${{ matrix.si-version }}" \
+          # "dev" means the checked-out branch; anything else is a release from PyPI.
+          # [full] is needed because the SortingAnalyzer fixture computes every
+          # extension (scikit-learn, numba, ...).
+          if [ "$SI_VERSION" = "dev" ]; then
+            spec=".[full]"
+          else
+            spec="spikeinterface[full]==$SI_VERSION"
+          fi
+          uv run --isolated --no-project --python 3.12 \
+            --with "$spec" \
+            --with "numpy<2.5" \
             python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
       - name: Load fixtures with the branch
         run: |
-          uv pip install --system -e . --group test-core
+          # [full] here too: loading the analyzer extensions unpickles e.g. the
+          # scikit-learn PCA models written at generation time
+          uv pip install --system -e ".[full]" "numpy<2.5" --group test-core
           pytest .github/scripts/serialization/test_cross_version_compatibility.py -v

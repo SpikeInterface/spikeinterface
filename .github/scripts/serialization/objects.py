@@ -17,10 +17,12 @@ Two axes are covered, chosen per entry via "formats":
     the full state (traces or spike trains, properties, annotations, probe) to disk.
     Targets the on-disk encoding axis: property and annotation preservation, and the
     probe representation. "binary" is recording-only, hence "numpy_folder" for sortings.
-"""
-from packaging.version import parse
-from spikeinterface import __version__ as si_version
 
+Additionally, the `check_extra_data` kwarg can be used to store additional information in a JSON file alongside the
+fixture, which is then passed to the check function. This is used for the SortingAnalyzer extension data keys,
+which are computed and stored in the fixture JSON to verify that they are reloaded correctly.
+
+"""
 
 # Filename suffix per format, relative to the fixtures dir (folder formats use a suffix
 # rather than an extension). Both the generator and the loader build a fixture path as
@@ -32,6 +34,7 @@ FIXTURE_SUFFIX = {
     "binary_parallel": "_binary_parallel",
     "numpy_folder": "_numpy_folder",
     "zarr": ".zarr",
+    "binary_folder": "_binary_folder",
     "zarr_parallel": "_parallel.zarr",
 }
 
@@ -57,7 +60,7 @@ def _build_noise_generator_recording():
     )
 
 
-def _check_noise_generator_recording(rec):
+def _check_noise_generator_recording(rec, check_extra_data=None):
     assert type(rec).__name__ == "NoiseGeneratorRecording", type(rec).__name__
     assert rec.get_num_channels() == 4
     assert rec.get_num_segments() == 2
@@ -70,7 +73,7 @@ def _build_mock_recording():
     return generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
 
 
-def _check_mock_recording(rec):
+def _check_mock_recording(rec, check_extra_data=None):
     from spikeinterface.core import BaseRecording
 
     assert isinstance(rec, BaseRecording), type(rec).__name__
@@ -91,7 +94,7 @@ def _build_recording_with_properties():
     return rec
 
 
-def _check_recording_with_properties(rec):
+def _check_recording_with_properties(rec, check_extra_data=None):
     assert rec.get_num_channels() == 4
     assert list(rec.get_property("quality")) == ["good", "good", "bad", "good"]
     assert rec.get_annotation("experimenter") == "test"
@@ -105,11 +108,9 @@ def _build_recording_with_probe():
     rec = generate_recording(num_channels=8, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
     probe = generate_linear_probe(num_elec=8)
     probe.set_device_channel_indices(np.arange(8))
-    if parse(si_version) <= parse("0.105.0"):
-        rec_with_probe = rec.set_probe(probe, in_place=False)  # old API returns a new recording; portable across versions
-    else:
-        rec_with_probe = rec.set_probe(probe)  # new API returns a new recording; portable across versions
-    return rec_with_probe
+    # old API (in_place=False by default) returns a new recording; new API is always in place and returns None
+    rec_with_probe = rec.set_probe(probe)
+    return rec_with_probe if rec_with_probe is not None else rec
 
 
 def _build_recording_with_timestamps():
@@ -119,14 +120,14 @@ def _build_recording_with_timestamps():
     return rec
 
 
-def _check_recording_with_timestamps(rec):
+def _check_recording_with_timestamps(rec, check_extra_data=None):
     import numpy as np
     expected_times = np.arange(int(DEFAULT_DURATION * 30000)) / 30000.0 + 100
     times = rec.get_times(segment_index=0)
     assert np.allclose(times, expected_times)
 
 
-def _check_recording_with_probe(rec):
+def _check_recording_with_probe(rec, check_extra_data=None):
     import numpy as np
 
     assert rec.get_num_channels() == 8
@@ -152,14 +153,12 @@ def _build_recording_with_interleaved_probes():
     probegroup.add_probe(probe1)
     probegroup.set_global_device_channel_indices([0, 2, 4, 6, 1, 3, 5, 7])
     # Interleave the two probes' channels: channel i alternates between probe0 and probe1.
-    if parse(si_version) <= parse("0.105.0"):
-        rec_with_probe = rec.set_probegroup(probegroup, in_place=False)  # old API returns a new recording; portable across versions
-    else:
-        rec_with_probe = rec.set_probegroup(probegroup)  # new API returns a new recording; portable across versions
-    return rec_with_probe
+    # old API (in_place=False by default) returns a new recording; new API is always in place and returns None
+    rec_with_probe = rec.set_probegroup(probegroup)
+    return rec_with_probe if rec_with_probe is not None else rec
 
 
-def _check_recording_with_interleaved_probes(rec):
+def _check_recording_with_interleaved_probes(rec, check_extra_data=None):
     import numpy as np
 
     assert rec.get_num_channels() == 8
@@ -192,7 +191,7 @@ def _build_preprocessed_chain():
     return common_reference(scale(rec, gain=2.0))
 
 
-def _check_preprocessed_chain(rec):
+def _check_preprocessed_chain(rec, check_extra_data=None):
     # The outer wrapper and the recursive parent chain must both reload (the kwargs
     # embed the parent recording dict, so this exercises recursive deserialization).
     assert type(rec).__name__ == "CommonReferenceRecording", type(rec).__name__
@@ -206,7 +205,7 @@ def _build_sorting():
     return generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[DEFAULT_DURATION])
 
 
-def _check_sorting(sorting):
+def _check_sorting(sorting, check_extra_data=None):
     assert sorting.get_num_units() == 5, sorting.get_num_units()
     assert sorting.get_num_segments() == 1
     spike_train = sorting.get_unit_spike_train(sorting.unit_ids[0], segment_index=0)
@@ -223,10 +222,39 @@ def _build_sorting_with_properties():
     return sorting
 
 
-def _check_sorting_with_properties(sorting):
+def _check_sorting_with_properties(sorting, check_extra_data=None):
     assert sorting.get_num_units() == 4
     assert list(sorting.get_property("quality")) == ["good", "good", "bad", "good"]
     assert sorting.get_annotation("experimenter") == "test"
+
+
+def _build_sorting_analyzer_with_extensions():
+    from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
+    recording, sorting = generate_ground_truth_recording(durations=[10, 5], num_channels=16, num_units=5, seed=0)
+    analyzer = create_sorting_analyzer(sorting, recording)
+    extensions = analyzer.get_computable_extensions()
+    analyzer.compute(extensions, n_jobs=-1)
+    # for SortingAnalyzer, we also save a JSON file with extension as
+    # keys and date entries as values to check that everything is reloaded correctly
+    check_extra_data = {}
+    for ext_name in analyzer.extensions:
+        ext = analyzer.get_extension(ext_name)
+        check_extra_data[ext_name] = list(ext.data.keys())
+    return analyzer, check_extra_data
+
+
+def _check_sorting_analyzer_with_extensions(analyzer, check_extra_data=None):
+    extensions = analyzer.get_saved_extension_names()
+    for extension in extensions:
+        extension = analyzer.get_extension(extension)  # just check it loads without error
+        ext_data = extension.get_data()
+        assert ext_data is not None, f"extension {extension} returned None data"
+    if check_extra_data is not None:
+        # Check that the extension data keys match what was saved in the fixture JSON.
+        for ext_name, expected_keys in check_extra_data.items():
+            ext = analyzer.get_extension(ext_name)
+            actual_keys = set(ext.data.keys())
+            assert actual_keys == set(expected_keys), f"extension {ext_name} keys mismatch: {actual_keys} != {set(expected_keys)}"
 
 
 OBJECTS = [
@@ -283,5 +311,11 @@ OBJECTS = [
         "build": _build_sorting_with_properties,
         "check": _check_sorting_with_properties,
         "formats": ["numpy_folder", "zarr"],
+    },
+    {
+        "id": "sorting_analyzer_with_extensions",
+        "build": _build_sorting_analyzer_with_extensions,
+        "check": _check_sorting_analyzer_with_extensions,  # no check; the extensions are computed and stored, but the analyzer itself is not serialized
+        "formats": ["binary_folder", "zarr"],
     },
 ]

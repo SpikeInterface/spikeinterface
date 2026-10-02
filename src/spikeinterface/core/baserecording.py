@@ -5,10 +5,11 @@ from pathlib import Path
 import numpy as np
 from probeinterface import read_probeinterface, write_probeinterface
 
+from .base import BaseExtractor
 from .time_series import TimeSeriesSegment, TimeSeries
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
-from .job_tools import split_job_kwargs
+from .job_tools import split_job_kwargs, _shared_job_kwargs_doc
 
 
 class BaseRecording(BaseRecordingSnippets, TimeSeries):
@@ -346,6 +347,18 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                     For cloud storage locations, this should not be None (in case of default values, use an empty dict)
                 - channel_chunk_size: int or None, default: None
                     Channels per chunk (only for BaseRecording)
+                - chunks: tuple | None, default: None
+                    Chunks for the traces dataset. If None, no chunking is done. Note that sharding requires chunking to be specified
+                    and that chunk dimensions need to be larger than shard dimensions (if shards is not None).
+                    If `chunks` is not None, it needs to be a tuple of length 2 with the chunk size for the time and channel
+                    dimensions respectively and `channel_chunk_size` should not be specified.
+                - shard_factor: int | tuple[int] | None, default: None
+                    If integer, the shard size will be set to chunk_size * shard_factor in the first dimension (time).
+                    If tuple, the shard_factor to be applied to each dimension. Note that `shard_factor` cannot
+                    be specified together with `shards`.
+                -shards: tuple | None, default: None
+                    Number of shard size. If None, no sharding is done. Note that shards dimensions need to be larger than
+                    chunk dimensions (if chunks is not None) and that sharding is only done on the first dimension.
                 - compressor: numcodecs.Codec or None, default: None
                     Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
                 - filters: list[numcodecs.Codec] or None, default: None
@@ -364,6 +377,7 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                         - times
 
                     If None, the global filters are used
+
             * "memory" format:
                 - sharedmem : bool, default: True
                     If True, the recording is saved in shared memory. If False, it is saved as
