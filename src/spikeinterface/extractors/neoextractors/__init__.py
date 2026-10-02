@@ -18,7 +18,12 @@ from .neuroscope import (
     read_neuroscope_sorting,
     read_neuroscope,
 )
-from .neuroexplorer import NeuroExplorerRecordingExtractor, read_neuroexplorer
+from .neuroexplorer import (
+    NeuroExplorerRecordingExtractor,
+    NeuroExplorerSortingExtractor,
+    read_neuroexplorer,
+    read_neuroexplorer_sorting,
+)
 from .nix import NixRecordingExtractor, read_nix
 from .openephys import (
     OpenEphysLegacyRecordingExtractor,
@@ -79,6 +84,9 @@ neo_sorting_extractors_dict = {
     PlexonSortingExtractor: dict(wrapper_string="read_plexon_sorting", wrapper_class=read_plexon_sorting),
     Plexon2SortingExtractor: dict(wrapper_string="read_plexon2_sorting", wrapper_class=read_plexon2_sorting),
     NeuroScopeSortingExtractor: dict(wrapper_string="read_neuroscope_sorting", wrapper_class=read_neuroscope_sorting),
+    NeuroExplorerSortingExtractor: dict(
+        wrapper_string="read_neuroexplorer_sorting", wrapper_class=read_neuroexplorer_sorting
+    ),
 }
 
 neo_event_extractors_dict = {
