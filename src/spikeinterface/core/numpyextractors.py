@@ -288,7 +288,7 @@ class NumpySorting(BaseSorting):
             self.add_sorting_segment(SpikeVectorSortingSegment(spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
-        self._cached_spike_vector = spikes
+        self._cached_time_ordered_spike_vector = spikes
 
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
@@ -521,7 +521,7 @@ class SharedMemorySorting(BaseSorting):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.shm_spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
-        self._cached_spike_vector = self.shm_spikes
+        self._cached_time_ordered_spike_vector = self.shm_spikes
 
         # this is very important for the shm.unlink()
         # only the main instance need to call it

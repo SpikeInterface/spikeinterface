@@ -48,14 +48,14 @@ class UnitsSelectionSorting(BaseSorting):
     def _compute_and_cache_spike_vector(self) -> None:
         from spikeinterface.core.sorting_tools import remap_unit_indices_in_vector
 
-        if self._parent_sorting._cached_spike_vector is None:
+        if self._parent_sorting._cached_time_ordered_spike_vector is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
-            if self._parent_sorting._cached_spike_vector is None:
+            if self._parent_sorting._cached_time_ordered_spike_vector is None:
                 return
 
         spike_vector, _ = remap_unit_indices_in_vector(
-            vector=self._parent_sorting._cached_spike_vector,
+            vector=self._parent_sorting._cached_time_ordered_spike_vector,
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
@@ -75,7 +75,7 @@ class UnitsSelectionSorting(BaseSorting):
                 (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
             )
             spike_vector = spike_vector[sort_indices]
-        self._cached_spike_vector = spike_vector
+        self._cached_time_ordered_spike_vector = spike_vector
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):

@@ -268,9 +268,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         # This is useless because phy is always one segment
         # spikes["segment_index"] = 0
 
-        self._cached_spike_vector = spikes
-        self._cached_spike_vector_segment_slices = np.zeros((1, 2), dtype="int64")
-        self._cached_spike_vector_segment_slices[0, 1] = n
+        self._cached_time_ordered_spike_vector = spikes
+        self._cached_time_ordered_segment_slices = np.zeros((1, 2), dtype="int64")
+        self._cached_time_ordered_segment_slices[0, 1] = n
 
 
 class PhySortingSegment(BaseSortingSegment):

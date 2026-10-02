@@ -46,13 +46,13 @@ class RemoveExcessSpikesSorting(BaseSorting):
         self._kwargs = {"sorting": sorting, "recording": recording}
 
     def _compute_and_cache_spike_vector(self) -> None:
-        if self._parent_sorting._cached_spike_vector is None:
+        if self._parent_sorting._cached_time_ordered_spike_vector is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
-            if self._parent_sorting._cached_spike_vector is None:
+            if self._parent_sorting._cached_time_ordered_spike_vector is None:
                 return
 
-        parent_spike_vector = self._parent_sorting._cached_spike_vector
+        parent_spike_vector = self._parent_sorting._cached_time_ordered_spike_vector
         num_segments = self._parent_sorting.get_num_segments()
 
         list_spike_vectors = []
@@ -64,7 +64,7 @@ class RemoveExcessSpikesSorting(BaseSorting):
             list_spike_vectors.append(spike_vector[start:end])
 
         spike_vector = np.concatenate(list_spike_vectors)
-        self._cached_spike_vector = spike_vector
+        self._cached_time_ordered_spike_vector = spike_vector
 
 
 class RemoveExcessSpikesSortingSegment(BaseSortingSegment):

@@ -525,10 +525,10 @@ class ZarrSortingExtractor(BaseSorting):
             # In version 0.104.X this was fully lexsorted, but we don't need it anymore because it's only important in the context of SpikeVectorBased extensions in the SortingAnalyzer, which stores its own copy of the Sorting object. This makes the extension data and the spike vector always matching their order.
             # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
-        self._cached_spike_vector = spikes
+        self._cached_time_ordered_spike_vector = spikes
         # pre-populate segment slices so _get_spike_vector_segment_slices() never
         # needs to materialise the full segment_index array
-        self._cached_spike_vector_segment_slices = np.asarray(segment_slices_list, dtype="int64")
+        self._cached_time_ordered_segment_slices = np.asarray(segment_slices_list, dtype="int64")
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
