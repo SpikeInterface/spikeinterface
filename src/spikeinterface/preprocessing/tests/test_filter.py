@@ -226,6 +226,27 @@ def test_filter_opencl():
     # plt.show()
 
 
+def test_filter_float32_coefficients():
+    # float32 and <=16-bit integer outputs filter with float32 sos coefficients (half the memory
+    # of float64); the result stays far below int16 quantization from the float64 computation
+    recording = generate_recording(durations=[1.0], num_channels=4)
+    rec32 = bandpass_filter(recording, freq_min=300.0, freq_max=6000.0, dtype="float32")
+    rec64 = bandpass_filter(recording, freq_min=300.0, freq_max=6000.0, dtype="float64")
+    recording_int16 = recording.astype("int16")
+    rec16 = bandpass_filter(recording_int16, freq_min=300.0, freq_max=6000.0, dtype="int16")
+    rec_i32 = bandpass_filter(recording_int16, freq_min=300.0, freq_max=6000.0, dtype="int32")
+    assert rec32._recording_segments[0].coeff.dtype == np.float32
+    assert rec16._recording_segments[0].coeff.dtype == np.float32
+    assert rec64._recording_segments[0].coeff.dtype == np.float64
+    assert rec_i32._recording_segments[0].coeff.dtype == np.float64
+    traces32, traces64 = rec32.get_traces(), rec64.get_traces()
+    assert traces32.dtype == np.float32
+    assert np.max(np.abs(traces32 - traces64)) < 1e-3 * np.std(traces64)
+    # integer output: rounding can only flip by one unit, for values sitting at .5
+    traces16, traces_i32 = rec16.get_traces().astype(int), rec_i32.get_traces().astype(int)
+    assert np.max(np.abs(traces16 - traces_i32)) <= 1
+
+
 if __name__ == "__main__":
     import tempfile
     from pathlib import Path

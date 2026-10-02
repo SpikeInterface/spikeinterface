@@ -170,6 +170,12 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         direction="forward-backward",
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
+        # scipy computes in the precision of the coefficients, so float64 sos coefficients make
+        # it filter in float64 (twice the memory of float32) whatever the output dtype. For these
+        # outputs float32 sos coefficients are accurate enough (error far below int16
+        # quantization). The "ba" form is numerically fragile, so it stays float64.
+        if filter_mode == "sos" and np.dtype(dtype) in (np.float32, np.int16):
+            coeff = np.asarray(coeff, dtype="float32")
         self.coeff = coeff
         self.filter_mode = filter_mode
         self.direction = direction
